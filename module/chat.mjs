@@ -16686,6 +16686,30 @@ function offerCopies(card, user, maneuver) {
 }
 
 /**
+ * Advanced Learner (2): "If a Character uses a Unique Ability that you meet the Prerequisites of, you may declare that Unique
+ * Ability is a Copied Technique. Gain access to it until the end of the Combat Encounter." Offered on its card to everyone on
+ * the scene with the Talent but its user - the Prerequisites the table's, said on it - once an Encounter, counted when taken.
+ */
+export function offerUniqueCopies(card, user, maneuver) {
+  const item = user?.items?.get(maneuver?.itemId ?? "");
+  if (!card || !item || !(item.system?.tags ?? []).includes("uniqueAbility") || !game.combat?.started) return;
+  const seen = new Map();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const other = token.actor;
+    if (!other || (other.type !== "character") || (other.uuid === user.uuid)) continue;
+    if (other.system?.effects?.slots?.["advancedLearner.copyUnique"] !== true) continue;
+    if (String(other.getFlag?.(SCOPE, "advancedLearnerEncounter") ?? "") === game.combat.id) continue;
+    seen.set(other.uuid, other);
+  }
+  const needs = String(item.system?.unique?.prerequisite ?? "").trim();
+  for (const other of seen.values()) {
+    offerMove(card, other, { key: `copyUnique:${other.uuid}`, flag: "advancedLearnerRound", name: `Copy ${item.name}`,
+      reason: `Advanced Learner - a Copied Technique for this Encounter${needs ? ` (Prerequisites: ${needs})` : ""}`,
+      copyFrom: { actorUuid: user.uuid, itemId: item.id, encounterOnce: "advancedLearnerEncounter" } });
+  }
+}
+
+/**
  * Whether a Technique is a Copied Technique for a Trait's effects - Majin See, Majin Do's, Neko Mimicry's, Feline Build's,
  * Quick Thinking's: Copied; or, with Quick Thinking (2), kept through Quick Learner (4) - "still considered 'Copied
  * Techniques' for all of your effects (except those of Quick Learner)". Quick Learner's own read the `copied` flag alone.
@@ -16793,16 +16817,32 @@ async function takeMoveOffer(message, actor, offer) {
     ui.notifications.warn(`${actor.name} has used ${offer.reason.split(" - ")[0]} this Round already.`);
     return;
   }
+  // Advanced Learner (2)'s once an Encounter.
+  const once = offer.move.copyFrom?.encounterOnce;
+  if (once && (actor.getFlag?.(SCOPE, once) === (game.combat?.id ?? "none"))) {
+    ui.notifications.warn(`${actor.name}: Advanced Learner - already used this Combat Encounter.`);
+    return;
+  }
   // Quick Learner's: copied first - a copy not made is no use spent.
   const copy = offer.move.copyFrom ? await copyTechnique(actor, offer.move.copyFrom) : null;
   if (offer.move.copyFrom && !copy) return;
+  if (once) await actor.setFlag(SCOPE, once, game.combat?.id ?? "none");
   // Perfect Mimicry (2): "When you declare a Copied Technique, you may use the required Maneuver ... as an Out-of-Sequence
   // Maneuver, but you must use the Copied Technique you declared" - offered on this card, once an Encounter.
   if (copy?.id && (actor.system?.effects?.slots?.["perfectMimicry.use"] === true)
     && (actor.getFlag?.(SCOPE, "perfectMimicryEncounter") !== (game.combat?.id ?? "none"))) {
-    requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique",
-      maneuverName: copy.name, reason: "Perfect Mimicry - the Copied Technique, out of sequence (1/Encounter)",
-      technique: { via: "", itemId: copy.id }, grants: { perfectMimicry: true } } });
+    // A Unique Ability copied - Advanced Learner's: "the required Maneuver" is the Unique Ability itself, a Standard one.
+    const unique = (copy.system?.tags ?? []).includes("uniqueAbility");
+    if (!unique) {
+      requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique",
+        maneuverName: copy.name, reason: "Perfect Mimicry - the Copied Technique, out of sequence (1/Encounter)",
+        technique: { via: "", itemId: copy.id }, grants: { perfectMimicry: true } } });
+    }
+    else if (copy.system?.type === "standard") {
+      requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "",
+        maneuverName: copy.name, reason: "Perfect Mimicry - the Copied Technique, out of sequence (1/Encounter)",
+        perfectMimicryItem: copy.id } });
+    }
   }
   // Ranger (3)'s: whom first - none picked, no use spent.
   if (offer.move.ranger && !await rangerBeside(message, actor)) return;
@@ -20754,6 +20794,22 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.terrifyingPresence) return terrifyOutOfSequence(actor);
   if (offer.terrifyingTechnique) return takeTerrifyingTechnique(message, actor);
   if (offer.mentalWarfare) return insultOutOfSequence(actor, offer.targetUuid);
+  // Perfect Mimicry (2) with a copied Unique Ability: it, out of sequence, once an Encounter.
+  if (offer.perfectMimicryItem) {
+    if (actor.getFlag?.(SCOPE, "perfectMimicryEncounter") === (game.combat?.id ?? "none")) {
+      ui.notifications.warn(`${actor.name}: Perfect Mimicry - already used this Combat Encounter.`);
+      return null;
+    }
+    const item = actor.items.get(offer.perfectMimicryItem);
+    if (!item) return null;
+    const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+    const used = await useManeuver(actor, definitionOf(item), { outOfSequence: true });
+    if (used) {
+      await actor.setFlag(SCOPE, "perfectMimicryEncounter", game.combat?.id ?? "none");
+      requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+    }
+    return used;
+  }
   if (offer.bagOfTricks) return takeBagOfTricks(message, actor);
   if (offer.frequentFlyer) return takeFrequentFlyer(message, actor);
   if (offer.ownOutOfSequence) return ownOutOfSequence(actor, offer.ownOutOfSequence);

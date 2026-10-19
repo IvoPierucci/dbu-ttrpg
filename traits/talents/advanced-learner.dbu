@@ -1,0 +1,21 @@
+id: advanced-learner
+name: Advanced Learner
+talentCategory: technique
+prerequisites: Quick Learner
+description: >
+  Your ability to quickly grasp techniques is exceptionally versatile, allowing you to learn more types of techniques.
+text: >
+  Advanced Learner: Your ability to quickly grasp techniques is exceptionally versatile, allowing you to learn more types of techniques.
+  –Prerequisites: Quick Learner
+  (1)-[Passive]: Reduce the Technique Point Cost of any Copied Technique that would be gained at the end of a Combat Encounter by 3.
+  (2)-[Triggered, 1/Encounter]: If a Character uses a Unique Ability that you meet the Prerequisites of, you may declare that Unique Ability is a Copied Technique. Gain access to it until the end of the Combat Encounter.
+
+---
+
+[passive]
+# (1) Kept through Quick Learner (4) as the Encounter ends: its TP Cost 3 lower - a Technique's Free TP, a Unique Ability's
+# change (combat.mjs).
+allow advancedLearner.tpOff;
+# (2) A Unique Ability used by anyone in a Combat Encounter: "Copy" offered on its card, once an Encounter - its Prerequisites
+# the table's - a Copied Technique as Quick Learner's are, held to their number (chat.mjs offerUniqueCopies).
+allow advancedLearner.copyUnique;

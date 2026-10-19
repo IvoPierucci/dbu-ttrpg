@@ -794,9 +794,16 @@ export function registerCombatHooks() {
           continue;
         }
         if (kept === "keep") {
+          // Advanced Learner (1): "Reduce the Technique Point Cost of any Copied Technique that would be gained at the end of a
+          // Combat Encounter by 3" - a Technique's Free TP, a Unique Ability's TP change.
+          const off = (actor.system?.effects?.slots?.["advancedLearner.tpOff"] === true)
+            ? ((item.system?.tags ?? []).includes("uniqueAbility")
+              ? { "system.unique.tpChange": (Number(item.system.unique?.tpChange) || 0) - 3 }
+              : { "system.signature.freeTP": (Number(item.system.signature?.freeTP) || 0) + 3 })
+            : {};
           // Whose it was, kept - Quick Thinking (2) has it count as Copied still (Neko Mimicry's (5) reads whose).
           await item.update({ name: item.name.replace(/ \(Copied\)$/, ""), "flags.dbu-ttrpg.keptCopy": item.getFlag("dbu-ttrpg", "copied"),
-            "flags.dbu-ttrpg.-=copied": null });
+            "flags.dbu-ttrpg.-=copied": null, ...off });
         }
         else await actor.deleteEmbeddedDocuments("Item", [item.id]);
       }

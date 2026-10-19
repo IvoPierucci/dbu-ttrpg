@@ -6415,6 +6415,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   }
   // Magic Blaster (2): a Magical Unique Ability or the Magic Trick used - the Energy Charge offered on its card, out of sequence.
   if (card) (await import("./chat.mjs")).offerMagicCharge(card, actor, maneuver);
+  // Advanced Learner (2): a Unique Ability used in a Combat Encounter - Copy, offered to whoever has the Talent.
+  if (card) (await import("./chat.mjs")).offerUniqueCopies(card, actor, maneuver);
 
   // Final Chance's held Defeat belongs to this card now.
   if (card && (actor.getFlag?.("dbu-ttrpg", "finalChance") === "pending")) {
