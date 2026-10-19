@@ -1,0 +1,30 @@
+id: eternal-rival
+name: Eternal Rival
+talentCategory: teamwork
+prerequisites: Chosen Rival, Tier of Power 3+
+description: >
+  Your competition with your rival is everlasting, both of you striving to surpass each other, and only reaching further and further heights!
+text: >
+  Eternal Rival: Your competition with your rival is everlasting, both of you striving to surpass each other, and only reaching further and further heights!
+  –Prerequisites: Chosen Rival, Tier of Power 3+
+  (1)-[Passive]: While your Rival is in a Combat Encounter, increase your Stress Bonus by 1.
+  (2)-[Passive]: Double the bonus from the 4th effect of Chosen Rival.
+  (3)-[Triggered/Start of Combat Round, 1/Encounter]: If you are adjacent to your Rival, you may request that they also trigger this effect. If both you and your Rival trigger this effect, both of you enter the Surging State until the end of the Combat Round. If you do, you must both select the same target for the first effect of the Surging State.
+
+---
+
+[passive]
+# (1) Your Rival a Combatant of the Combat Encounter under way (conditions.mjs rivalOf).
+if (rivalInEncounter) {
+    stressBonus += 1;
+}
+# (2) Chosen Rival (4)'s 1(T) once more.
+if (rivalOnlyAlly) {
+    combatRolls += 1(T);
+}
+
+# (3) On the Round's card, beside your Rival, the player's to tick: asked of them by ticking theirs - the second of you to tick
+# it chooses the Focus, and both enter the Surging State till the Round ends, that Focus for both (chat.mjs eternalRival).
+[triggered/start-of-round, 1/encounter, chosen, effect 3]
+requires besideRival;
+eternalRival();

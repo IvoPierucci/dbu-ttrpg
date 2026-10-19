@@ -245,6 +245,7 @@ function applyRequest(request) {
     case "deleteItem": return fromUuidSync(request.actorUuid)?.items.get(request.itemId)?.delete();
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
     case "jumpStart": return applyJumpStart(request.combatId, request.combatantId);
+    case "eternalSurge": return eternalSurge(request.actorUuid, request.focus);
     case "initiative": return applyInitiative(request.combatId, request.combatantId, request.initiative);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
@@ -16985,6 +16986,47 @@ export async function opportunist(actor, knockedUuid) {
   const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
   if (card) return requestEdit(card, { type: "offer", offer });
   return offerOutOfSequence(actor, offer);
+}
+
+/**
+ * Eternal Rival (3): "you may request that they also trigger this effect. If both you and your Rival trigger this effect, both of
+ * you enter the Surging State until the end of the Combat Round. If you do, you must both select the same target for the first
+ * effect of the Surging State." Ticking it on the Round's card is the asking; the second of the two to tick it chooses the
+ * Focus - an Opponent of theirs, not the Rival - and both enter it with that one, the Rival's through the GM.
+ */
+export async function eternalRival(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { rivalOf } = await import("./effects/conditions.mjs");
+  const known = rivalOf(actor);
+  const rival = known ? ((canvas?.tokens?.placeables ?? []).find(token => token.actor?.id === known.id)?.actor ?? known) : null;
+  if (!actor || !rival) return UNSPENT;
+  await actor.setFlag(SCOPE, "eternalRivalRound", roundKey());
+  if (rival.getFlag?.(SCOPE, "eternalRivalRound") !== roundKey()) {
+    ui.notifications.info(`Eternal Rival: ${rival.name} has to tick theirs this Round too.`);
+    return;
+  }
+  // The Focus, for both.
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.id !== rival.id) && !allies.has(token.actor.uuid)
+      && !token.actor.system?.defeated)
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  const focus = (opponents.length === 1) ? opponents[0].uuid : opponents.length
+    ? await askPlayerChoice(actor, `${actor.name}: Eternal Rival - the Focus for you both`,
+      opponents.map(each => ({ value: each.uuid, label: each.name })))
+    : "";
+  await eternalSurge(actor.uuid, focus ?? "");
+  if (rival.isOwner) return eternalSurge(rival.uuid, focus ?? "");
+  if (game.users.activeGM) game.socket.emit(CHANNEL, { type: "eternalSurge", actorUuid: rival.uuid, focus: focus ?? "" });
+}
+
+/** Eternal Rival (3)'s Surging, till the Round ends - its Focus set, not asked (surgingFocus's preset). */
+async function eternalSurge(actorUuid, focus) {
+  const actor = fromUuidSync(actorUuid ?? "");
+  if (!actor) return;
+  if (focus) await actor.setFlag(SCOPE, "surgingFocusPreset", focus);
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  return enterState(actor, "surging", 1, "round", "Eternal Rival");
 }
 
 /** Mental Warfare (2)'s Insult, out of sequence at that Opponent. */

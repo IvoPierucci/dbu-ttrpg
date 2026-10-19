@@ -111,11 +111,15 @@ function rivalOnlyAlly(self) {
 
 /** Synchronized Combatants (2): on a Square adjacent to your Partner, and your Partner your Ally - their tokens, side by side. */
 function besidePartner(self) {
-  const partner = partnerOf(self);
+  return besideChosen(self, partnerOf(self), { ally: true });
+}
+
+/** Two tokens on Squares adjacent - one an Ally of the other, where asked. */
+function besideChosen(self, other, { ally = false } = {}) {
   const mine = self?.getActiveTokens?.(false, true)?.[0];
-  const theirs = partner ? (globalThis.canvas?.tokens?.placeables ?? []).find(token => token.actor?.id === partner.id)?.document : null;
+  const theirs = other ? (globalThis.canvas?.tokens?.placeables ?? []).find(token => token.actor?.id === other.id)?.document : null;
   const grid = globalThis.canvas?.grid?.size;
-  if (!mine || !theirs || !grid || (mine.parent?.id !== theirs.parent?.id) || (mine.disposition !== theirs.disposition)) return false;
+  if (!mine || !theirs || !grid || (mine.parent?.id !== theirs.parent?.id) || (ally && (mine.disposition !== theirs.disposition))) return false;
   const gap = (p, q, pSize, qSize) => Math.max(0, Math.max(p - (q + qSize), q - (p + pSize)));
   const apart = Math.max(Math.ceil(gap(mine.x / grid, theirs.x / grid, mine.width ?? 1, theirs.width ?? 1)),
     Math.ceil(gap(mine.y / grid, theirs.y / grid, mine.height ?? 1, theirs.height ?? 1)));
@@ -404,6 +408,14 @@ const PREDICATES = {
   rivalOpponent: scope => rivalSide(scope.data?.parent) === "opponent",
   rivalAlly: scope => rivalSide(scope.data?.parent) === "ally",
   rivalOnlyAlly: scope => rivalOnlyAlly(scope.data?.parent),
+  // Eternal Rival (1): "While your Rival is in a Combat Encounter" - a Combatant of the one under way.
+  rivalInEncounter: scope => {
+    const rival = rivalOf(scope.data?.parent);
+    const combat = globalThis.game?.combat;
+    return Boolean(rival && combat?.started && (combat.combatants ?? []).some(combatant => combatant.actor?.id === rival.id));
+  },
+  // Eternal Rival (3): "If you are adjacent to your Rival" - whichever side they are on.
+  besideRival: scope => besideChosen(scope.data?.parent, rivalOf(scope.data?.parent)),
 
   alliesStanding: scope => {
     const self = scope.data?.parent;

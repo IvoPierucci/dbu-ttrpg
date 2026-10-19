@@ -170,6 +170,10 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  eternalRival: {
+    args: [0, 0],
+    doc: "Eternal Rival (3): ticked by both Rivals this Round - both Surging till it ends, one Focus (chat.mjs eternalRival)."
+  },
   opportunist: {
     args: [0, 0],
     doc: "Opportunist (1): the Exploit at the Opponent an Ally knocked through, offered on your latest card (chat.mjs "
