@@ -59,6 +59,8 @@ export function signatureOf(item) {
     // Inherited Creativity's: made for the Combat Encounter alone - no Technique Points, no Disadvantages.
     encounterOnly: Boolean(item?.flags?.["dbu-ttrpg"]?.encounterTechnique),
     freeTP: Math.max(0, Math.floor(Number(sig.freeTP) || 0)),
+    // Powerful Technique (3)'s Advantage, given - bought already, its TP refunded (techniqueTP).
+    powerfulFree: powerfulFreeOf(item),
     features: Array.from(sig.features ?? []).map(entry => ({
       id: entry.id, ranks: Math.max(1, Number(entry.ranks) || 1), choice: entry.choice ?? ""
     })).filter(entry => entry.id)
@@ -128,7 +130,7 @@ export function techniqueStartTP(sig) {
 export function techniqueTP(sig, slots = null) {
   // What an effect gives it is free and not the Technique's: no TP for it, and none counted towards its KP or its cap (the
   // user's) - God of War's Weapon Assisted. An Advantage or a Disadvantage alike.
-  const features = (sig.features ?? []).filter(entry => !givenFree(entry, slots)).reduce((sum, entry) =>
+  const features = (sig.features ?? []).filter(entry => !givenFree(entry, slots, sig)).reduce((sum, entry) =>
     sum + featureTP(featureDef(entry.id), entry.ranks), 0);
   const start = techniqueStartTP(sig);
   const built = Math.max(Math.min(MINIMUM_TP, start), start + features);
@@ -136,8 +138,22 @@ export function techniqueTP(sig, slots = null) {
 }
 
 /** A feature an effect gives - God of War's Weapon Assisted, "without spending Technique Points". */
-function givenFree(entry, slots) {
-  return slots?.[`technique.free.${entry.id}`] === true;
+function givenFree(entry, slots, sig = null) {
+  return (slots?.[`technique.free.${entry.id}`] === true) || (Boolean(sig?.powerfulFree) && (entry.id === sig.powerfulFree));
+}
+
+/**
+ * Powerful Technique (3): the Advantage it gives the Favored Technique - Ascended Signature on a Super, Maximum Charge on an
+ * Ultimate - "if your Favored Technique already possesses that Advantage, refund any Technique Points spent". "" where none.
+ */
+function powerfulFreeOf(item) {
+  const actor = item?.parent;
+  if (!actor?.items) return "";
+  const talents = Array.from(actor.items).filter(each => each.type === "talent");
+  const favored = talents.find(each => each.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique");
+  if (!item.id || ((favored?.system?.chosen ?? []).find(entry => entry.key === "favored-technique")?.value !== item.id)) return "";
+  if (!talents.some(each => each.flags?.["dbu-ttrpg"]?.sourceId === "powerful-technique")) return "";
+  return ["ultimate", "dramatic"].includes(item.system?.signature?.level) ? "maximum-charge" : "ascended-signature";
 }
 
 /**

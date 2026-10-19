@@ -1036,6 +1036,16 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     await actor.setFlag("dbu-ttrpg", "flexibleProfileEncounter", game.combat?.id ?? "none");
   }
   for (const key of ["flexAccToPs", "flexPsToAcc", "flexEfficiency", "flexProfile"]) delete answers[key];
+  // Powerful Technique (1), (2): the Favored Technique's Wound - not another Profile's, Flexible Technique (2)'s other Technique.
+  if ((actor.system.effects?.slots?.["powerful.technique"] === true) && isFavoredTechnique(actor, technique.itemId)
+    && !answers.flexibleProfile) {
+    const below = Math.max(0, ["healthy", "bruised", "injured", "critical"].indexOf(actor.system.threshold?.key ?? "healthy"));
+    const rows = [
+      ...(below ? [{ label: "Powerful Technique (Thresholds)", written: `+${below}(T)`, value: below * Math.max(1, Number(tier) || 1) }] : []),
+      ...(technique.ultimate ? [{ label: "Powerful Technique (Ultimate)", written: "+1(T)", value: Math.max(1, Number(tier) || 1) }] : [])
+    ];
+    if (rows.length) answers.woundExtra = [...(declared.woundExtra ?? []), ...rows];
+  }
   // Demonic Creativity's: the Condition Advantage, its Combat Condition asked, for 1 Demonic Power.
   if (answers.creativeCondition && creative) {
     const { featureCatalogue, featureChoiceOptions } = await import("./technique.mjs");

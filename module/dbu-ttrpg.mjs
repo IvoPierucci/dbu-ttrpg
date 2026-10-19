@@ -235,7 +235,9 @@ Hooks.on("deleteCombat", combat => initiativeRefresh(combat));
 Hooks.on("createToken", () => conduitRefresh());
 // Favored Technique (2): its Advantage read by the Technique itself - read again as the Talent comes, goes or is chosen anew.
 for (const hook of ["createItem", "updateItem", "deleteItem"]) {
-  Hooks.on(hook, item => { if (item.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique") item.parent?.reset?.(); });
+  Hooks.on(hook, item => {
+    if (["favored-technique", "powerful-technique"].includes(item.flags?.["dbu-ttrpg"]?.sourceId)) item.parent?.reset?.();
+  });
 }
 Hooks.on("deleteToken", () => conduitRefresh());
 Hooks.on("updateToken", (token, changes) => {

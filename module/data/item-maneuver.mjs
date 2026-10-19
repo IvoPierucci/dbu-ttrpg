@@ -916,6 +916,9 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
     // Favored Technique (2): "Apply that Advantage to your Favored Technique" - no TP for it, a rank where it has none.
     const favored = favoredAdvantage(this.parent);
     if (favored && !(this.advantages ?? []).includes(favored)) this.advantages = [...(this.advantages ?? []), favored];
+    // Powerful Technique (3): Ascended Signature on a Super, Maximum Charge on an Ultimate.
+    const powerful = powerfulAdvantage(this.parent);
+    if (powerful && !(this.advantages ?? []).includes(powerful)) this.advantages = [...(this.advantages ?? []), powerful];
   }
 
   /** The usage limit, split into the shape the rest of the system reads. */
@@ -955,4 +958,17 @@ export function favoredChoiceOf(item) {
     && (each.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique"));
   const choice = (talent?.system?.chosen ?? []).find(entry => entry.key === "favored-technique#3")?.value ?? "";
   return choice ? { [advantage]: choice } : {};
+}
+
+/**
+ * Powerful Technique (3): "Super Signature: Your Favored Technique gains the Ascended Signature Advantage. Ultimate Signature:
+ * Your Favored Technique gains the Maximum Charge Advantage." Where this Item is the Favored Technique and the Talent is held;
+ * "" where not.
+ */
+export function powerfulAdvantage(item) {
+  const actor = item?.parent;
+  if (!actor || (item.type !== "maneuver") || !isFavoredTechnique(actor, item.id)) return "";
+  if (!Array.from(actor.items ?? []).some(each => (each.type === "talent")
+    && (each.flags?.["dbu-ttrpg"]?.sourceId === "powerful-technique"))) return "";
+  return ["ultimate", "dramatic"].includes(item.system?.signature?.level) ? "maximum-charge" : "ascended-signature";
 }

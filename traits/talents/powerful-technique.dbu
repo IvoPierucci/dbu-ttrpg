@@ -1,0 +1,24 @@
+id: powerful-technique
+name: Powerful Technique
+talentCategory: technique
+prerequisites: Favored Technique
+description: >
+  Your Favored Technique has become truly powerful, leaving others in awe of its might.
+text: >
+  Powerful Technique: Your Favored Technique has become truly powerful, leaving others in awe of its might.
+  –Prerequisites: Favored Technique
+  (1)-[Passive]: Increase the Wound Rolls of your Favored Technique by 1(T) for each Health Threshold you are below.
+  (2)-[Passive]: If your Favored Technique is an Ultimate Signature, increase your Wound Roll for that Attacking Maneuver by 1(T).
+  (3)-[Passive]: Your Favored Technique gains an Advantage depending on if they are a Super or Ultimate Signature (if your Favored Technique already possesses that Advantage, refund any Technique Points spent and reduce the TP Cost of your Favored Technique accordingly):
+  * Super Signature: Your Favored Technique gains the Ascended Signature Advantage.
+  * Ultimate Signature: Your Favored Technique gains the Maximum Charge Advantage.
+
+---
+
+[passive]
+# (1), (2) Added to the Favored Technique's Wound as it is declared - not on another Profile through Flexible Technique (2):
+# 1(T) for each Health Threshold you are below, and 1(T) more where it is an Ultimate (use-maneuver.mjs
+# askTechniqueDeclaration).
+allow powerful.technique;
+# (3) Read by the Technique itself off this Talent: Ascended Signature on a Super, Maximum Charge on an Ultimate - no TP for
+# it; bought already, its TP given back (item-maneuver.mjs powerfulAdvantage; technique.mjs techniqueTP).
