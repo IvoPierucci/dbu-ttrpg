@@ -1,0 +1,20 @@
+id: herculean-power
+name: Herculean Power
+talentCategory: super-stack
+prerequisites: Hefty Muscle, Force Score of 12+
+description: >
+  Your godly might calls forth a wellspring of power in your strongest attacks.
+text: >
+  Herculean Power: Your godly might calls forth a wellspring of power in your strongest attacks.
+  –Prerequisites: Hefty Muscle, Force Score of 12+
+  (1)-[Passive]: If you would use a Signature Technique, apply the bonus from the first effect of Hefty Muscle twice to that Attacking Maneuver.
+  (2)-[Passive]: All of your Ultimate Signature Techniques are Absolute Attacks.
+
+---
+
+[passive]
+# (1) A Signature Technique, Physical or Energy, with Hefty Muscle held: its (1) once more on the Wound - a row of its own
+# (chat.mjs woundParts).
+allow herculean.signature;
+# (2) An Ultimate Signature Technique: an Absolute Attack, unasked (chat.mjs postAttack).
+allow herculean.ultimate;

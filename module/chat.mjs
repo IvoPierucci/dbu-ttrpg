@@ -20983,6 +20983,9 @@ export async function postAttack(actor, target, maneuver,
       : null);
 
   const absolute = Boolean(((maneuver.absolute || technique?.absolute) && maneuver.attacking)
+    // Herculean Power (2): "All of your Ultimate Signature Techniques are Absolute Attacks."
+    || (!reflecting && maneuver.attacking && maneuver.signature && !maneuver.signatureTechnique && maneuver.ultimate
+      && (actor.system.effects?.slots?.["herculean.ultimate"] === true))
     || (!reflecting && maneuver.attacking && await askSizeMatters(actor, everyone))
     // Hefty Muscle (2): "you may declare that it is an Absolute Attack".
     || (!reflecting && maneuver.attacking && await askHeftyAbsolute(actor)));
@@ -24105,12 +24108,20 @@ function woundParts(attacker, attack) {
   const sinister = attack.viaExploit && (attacker.system.effects?.slots?.["draconic.exploitWound"] === true);
   // Exploit Expert (1): made through the Exploit Maneuver.
   const expert = attack.viaExploit ? attacker.system.effects?.slots?.["wound.viaExploit"] : null;
+  // Herculean Power (1): "If you would use a Signature Technique, apply the bonus from the first effect of Hefty Muscle twice" -
+  // its 1(T), 2(T) at 3 Super Stacks, once more on a Physical or Energy one.
+  const herculean = attack.technique && (attacker.system.effects?.slots?.["herculean.signature"] === true)
+    && ["physical", "energy"].includes(attack.foundation)
+    && Array.from(attacker.items ?? []).some(item => (item.type === "talent") && (item.flags?.[SCOPE]?.sourceId === "hefty-muscle"));
+  const heftyTimes = ((Number(attacker.system.superStack?.stacks) || 0) >= 3) ? 2 : 1;
   // Precision Kata (2): "If you score a Critical Result on your Strike Roll for an Attacking Maneuver made with your Focused
   // Foundation, increase your Wound Roll for that Attacking Maneuver by 2(T)."
   const kata = (attacker.system.effects?.slots?.["precisionKata.wound"] === true) && (attack.result?.strike?.outcome === "critical")
     && (attacker.system.effects?.slots?.[`focused.${attack.foundation}`] === true);
   return [
     ...(kata ? [{ label: "Precision Kata (Critical)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
+    ...(herculean ? [{ label: "Herculean Power (Hefty Muscle again)", written: `+${heftyTimes}(T)`,
+      value: heftyTimes * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...((Number(expert?.add) || 0) ? [{ label: (expert.parts ?? []).map(part => part.source).find(Boolean) ?? "Exploit",
       value: Number(expert.add) }] : []),
     ...(sinister ? [{ label: "Draconic Physique (Exploit)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
