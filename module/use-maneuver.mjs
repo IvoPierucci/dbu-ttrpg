@@ -4886,11 +4886,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
     // Hidden: "that enemy cannot target you with any Maneuver or effect" - but for the Search Maneuver, which targets
     // nobody else: "Target an Opponent that is Hidden from you".
-    const { whyHidden, isHiddenFrom, SEARCH_MANEUVER } = await import("./hidden.mjs");
+    // And the Sense: "except the Sense/Search Maneuvers". An attack aimed at several, asked again once declared - an AoE may.
+    const { whyHidden, isHiddenFrom, SEARCH_MANEUVER, SENSE_MANEUVER } = await import("./hidden.mjs");
     const searching = maneuver.id === SEARCH_MANEUVER;
+    const several = maneuver.attacking && ((game.user.targets?.size ?? 0) > 1);
     const unseen = searching
       ? (isHiddenFrom(targetActor, actor) ? "" : `${targetActor.name} is not Hidden from ${actor.name}.`)
-      : whyHidden(actor, targetActor);
+      : ((maneuver.id === SENSE_MANEUVER) || several) ? "" : whyHidden(actor, targetActor);
     if (unseen) {
       ui.notifications.warn(unseen);
       return false;
@@ -5922,6 +5924,19 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     maneuver = { ...maneuver, capacityCost: cost };
   }
 
+  // Hidden: an attack at an Oblivious one's Hidden - only as an AoE that targets another too, or a Sphere of Huge or more on its
+  // user - asked now it is declared, before anything is paid.
+  if (declared && targetActor) {
+    const { hiddenAimRefusal } = await import("./hidden.mjs");
+    const aimed = [...new Map([targetActor, ...Array.from(game.user.targets ?? []).map(token => token.actor)]
+      .filter(other => other && (other.uuid !== actor.uuid)).map(other => [other.uuid, other])).values()];
+    const refused = hiddenAimRefusal(actor, aimed, declared.area ?? declared.technique?.area ?? PROFILES[declared.profile]?.area ?? null);
+    if (refused) {
+      ui.notifications.warn(refused);
+      return false;
+    }
+  }
+
   // A Movement's price is what was chosen rather than what the file lists: "N/A", until
   // you decide to go faster. Everything else pays what its Profile and its effects say.
   let price = crossing
@@ -6327,7 +6342,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         ...(snatching ? { pickpocket: { applied: false, steals: "basic", itemId: snatching.itemId, snatch: true,
           ...(snatching.majinDama ? { majinDama: true, sleeping: snatching.majinDama.sleeping } : {}) } } : {}),
         // Search's: won, no longer Oblivious of them.
-        ...((maneuver.id === "search") ? { search: { applied: false } } : {}),
+        ...(((maneuver.id === "search") || ((maneuver.id === "sense") && targetActor
+          && (targetActor.system?.hiddenFrom ?? []).some(entry => entry?.uuid === actor.uuid))) ? { search: { applied: false } } : {}),
         // Winning leaves a Condition, and whether it leaves a second one depends on what
         // the target was carrying when it settles - so nothing about that is decided here
         // either. The flag is on the card because the Clash's own roll needs it: the
@@ -6442,6 +6458,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   }
   // Magic Blaster (2): a Magical Unique Ability or the Magic Trick used - the Energy Charge offered on its card, out of sequence.
   if (card) (await import("./chat.mjs")).offerMagicCharge(card, actor, maneuver);
+  // Hidden: "If a Hidden Character initiates a Clash through a Special Maneuver or Unique Ability against an Oblivious
+  // Character, they stop being Hidden for that Character after concluding that Maneuver."
+  if (card && targetActor && card.getFlag?.("dbu-ttrpg", "clash") && (maneuver.special || (maneuver.tags ?? []).includes("uniqueAbility"))
+    && (actor.system?.hiddenFrom ?? []).some(entry => entry?.uuid === targetActor.uuid)) {
+    await (await import("./hidden.mjs")).revealTo(actor, targetActor, `a Clash through ${maneuver.name}`);
+  }
   // Advanced Learner (2): a Unique Ability used in a Combat Encounter - Copy, offered to whoever has the Talent.
   if (card) (await import("./chat.mjs")).offerUniqueCopies(card, actor, maneuver);
 

@@ -6678,34 +6678,39 @@ export async function postManeuver(actor, maneuver,
 }
 
 /**
- * Hidden (the user's ruling): "If someone Hidden uses the Power Up, Energy Charge or Transformation Maneuver, the
- * Oblivious may use the Search Maneuver targeting them as an Out-of-Sequence Maneuver, even without access to it."
- * Offered on that Maneuver's card to each of them.
+ * Hidden: "If a Hidden Character uses the Power Up Maneuver, Energy Charge Maneuver, Transformation Maneuver, or any Attacking
+ * Maneuver that has an AoE, an Oblivious Character may initiate a Clash (Perception/Clairvoyance vs Stealth/Concealment) against
+ * that Hidden Character as an Out-of-Sequence Maneuver. If they win, they stop being Hidden." Offered on that Maneuver's card to
+ * each of them.
  */
-function offerSearches(card, actor, maneuver) {
+function offerSearches(card, actor, maneuver, { aoe = false } = {}) {
   if (!card || !actor) return;
-  const loud = ["power-up", "energy-charge"].includes(maneuver?.id) || (maneuver?.tags ?? []).includes("transformation");
+  const loud = aoe || ["power-up", "energy-charge"].includes(maneuver?.id) || (maneuver?.tags ?? []).includes("transformation");
   if (!loud) return;
   for (const entry of actor.system?.hiddenFrom ?? []) {
     if (!entry?.uuid) continue;
-    requestEdit(card, { type: "offer", offer: { actorUuid: entry.uuid, actorName: entry.name, maneuverId: "search",
-      maneuverName: "Search", targetUuid: actor.uuid, reason: `${actor.name} used ${maneuver.name}`, search: true } });
+    requestEdit(card, { type: "offer", offer: { actorUuid: entry.uuid, actorName: entry.name, maneuverId: "",
+      maneuverName: "Clash: find them", targetUuid: actor.uuid,
+      reason: `${actor.name} used ${maneuver.name} - Perception/Clairvoyance vs Stealth/Concealment`, search: true } });
   }
 }
 
-/** That Search, taken: no Action, and whether they have the Maneuver or not; its Clash, won, ends the Hidden. */
+/** That Clash, taken: out of sequence, Perception or Clairvoyance - asked - against Stealth or Concealment; won, found. */
 async function takeSearch(message, actor, offer) {
   const target = fromUuidSync(offer.targetUuid ?? "");
-  const search = getManeuver("search");
-  if (!target || !search) return;
+  if (!target) return;
   const { isHiddenFrom } = await import("./hidden.mjs");
   if (!isHiddenFrom(target, actor)) {
     ui.notifications.warn(`${target.name} is not Hidden from ${actor.name}.`);
     return;
   }
+  const skill = await askPlayerChoice(actor, `${actor.name}: find ${target.name}`,
+    [{ value: "perception", label: "Perception" }, { value: "clairvoyance", label: "Clairvoyance" }]);
+  if (!skill) return;
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
-  await recordManeuverType(actor, search.type);
-  return postSkillClash(actor, target, { ...search, name: `${search.name} (Out-of-Sequence)` }, { search: { applied: false } });
+  await recordManeuverType(actor, "outOfSequence", { messageId: message.id });
+  return postSkillClash(actor, target, { name: "Find (Out-of-Sequence)", type: "outOfSequence",
+    clash: { skill, defenderSkills: ["stealth", "concealment"] } }, { search: { applied: false } });
 }
 
 /**
@@ -6808,6 +6813,8 @@ function offerExploits(card, actor, maneuver) {
     if (!other || (other.type !== "character")) continue;
     if (other.uuid === actor.uuid) continue;
     if (!other.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    // Hidden: "You do not trigger the Exploit Maneuver from any Oblivious Characters."
+    if ((actor.system?.hiddenFrom ?? []).some(entry => entry?.uuid === other.uuid)) continue;
     if (outpaces && Number.isFinite(initiativeOf(other)) && Number.isFinite(initiativeOf(actor))
       && (initiativeOf(other) < initiativeOf(actor))) continue;
     seen.set(other.uuid, other);
@@ -13503,6 +13510,13 @@ async function frozenTurnAfterAttack(attack, message = null) {
   await boomEnds(attack);
   await rangerRetreatEnds(attack);
   await silentFootstepsAttacked(attack);
+  // Hidden: found "after concluding that Maneuver" - by those it hit, and by one it was the second aimed at this Round.
+  const concluding = fromUuidSync(attack?.attackerUuid ?? "");
+  if (concluding && (concluding.system?.hiddenFrom ?? []).length) {
+    const hitNow = new Set((attack.result?.targets ?? []).filter(branch => branch.hit).map(branch => branch.uuid));
+    await (await import("./hidden.mjs")).revealAfterAttack(concluding,
+      attackTargets(attack).map(entry => ({ uuid: entry.uuid, hit: hitNow.has(entry.uuid) })));
+  }
   await reservedEnds(attack);
   // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
@@ -20417,6 +20431,12 @@ function flankerParts(attacker, target, roll) {
   return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Flanking", value: Number(slot.add) }];
 }
 
+/** Hidden: "Increase your Combat Rolls against Characters who are Oblivious of you by 2(bT)." */
+function hiddenRollParts(roller, other) {
+  if (!roller || !other || (roller.uuid === other.uuid) || !(roller.system?.hiddenFrom ?? []).some(entry => entry?.uuid === other.uuid)) return [];
+  return [{ label: `Hidden from ${other.name}`, written: "+2(bT)", value: 2 * Math.max(1, Number(roller.system.baseTierOfPower) || 1) }];
+}
+
 /** Terrifying Technique (1): "Increase the Wound Rolls of your Signature Techniques against Characters with the Shaken Combat Condition by 1(T)." */
 function shakenTechniqueParts(attacker, attack, target) {
   const slot = attacker?.system?.effects?.slots?.["wound.signatureVsShaken"];
@@ -21018,6 +21038,12 @@ async function takeOutOfSequence(message, actor, offer) {
   // costs its own Counter Action - an Out-of-Sequence Maneuver waives an Action Cost, and
   // this one is not the Out-of-Sequence Maneuver, it is what hands one over.
   if (maneuver.exploit) {
+    // Hidden: "You do not trigger the Exploit Maneuver from any Oblivious Characters" - whatever offered it.
+    const provoker = fromUuidSync(offer.targetUuid ?? "");
+    if (provoker && (provoker.system?.hiddenFrom ?? []).some(entry => entry?.uuid === actor.uuid)) {
+      ui.notifications.warn(`${provoker.name} is Hidden from ${actor.name}: no Exploit.`);
+      return;
+    }
     // Scarlet Spotter (2): once a Round, spent here.
     if (offer.grants?.unscathed) {
       if (actor.getFlag?.(SCOPE, "unscathedRound") === roundKey()) {
@@ -21136,9 +21162,9 @@ async function takeOutOfSequence(message, actor, offer) {
       ui.notifications.warn(`${maneuver.name}: ${actor.name} cannot target themselves. Target another token.`);
       return;
     }
-    // Hidden, out of sequence as in it: they cannot be targeted.
+    // Hidden, out of sequence as in it: they cannot be targeted - an attack at several asked again once declared.
     const { whyHidden } = await import("./hidden.mjs");
-    const unseen = whyHidden(actor, target);
+    const unseen = (maneuver.attacking && ((game.user.targets?.size ?? 0) > 1)) ? "" : whyHidden(actor, target);
     if (unseen) {
       ui.notifications.warn(unseen);
       return;
@@ -21300,6 +21326,18 @@ async function takeOutOfSequence(message, actor, offer) {
     const { askMovement } = await import("./use-maneuver.mjs");
     crossing = await askMovement(actor);
     if (!crossing) return;
+  }
+
+  // Hidden: an attack at an Oblivious one's Hidden, only as the AoE that may - asked before anything is paid.
+  if (declared && target && !reflecting) {
+    const { hiddenAimRefusal } = await import("./hidden.mjs");
+    const aimed = [...new Map([target, ...Array.from(game.user.targets ?? []).map(token => token.actor)]
+      .filter(other => other && (other.uuid !== actor.uuid)).map(other => [other.uuid, other])).values()];
+    const refused = hiddenAimRefusal(actor, aimed, declared.area ?? declared.technique?.area ?? PROFILES[declared.profile]?.area ?? null);
+    if (refused) {
+      ui.notifications.warn(refused);
+      return;
+    }
   }
 
   // An Out-of-Sequence Maneuver ignores its Action Cost, but not its Ki cost.
@@ -22018,6 +22056,8 @@ export async function postAttack(actor, target, maneuver,
   }
   // Quick Learner: a Signature Technique used in a Combat Encounter - Copy, offered to whoever has the Talent.
   if (card && maneuver.signature && !maneuver.signatureTechnique && game.combat?.started) offerCopies(card, actor, maneuver);
+  // Hidden, and an attack with an AoE: whoever is Oblivious of them may Clash to find them.
+  if (card && madeNow && !reflecting && attackArea(madeNow)) offerSearches(card, actor, maneuver, { aoe: true });
 
   // Disarming Demeanor (3): the attack in place of a cancelled one, answered by the Defend that one was answered with.
   const carried = actor.getFlag?.(SCOPE, "counterCarried");
@@ -23628,6 +23668,7 @@ async function resolveAttackWork(message, attack) {
       ...brigandParts(attacker, target, "strike"), ...flankerParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
       ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target),
       ...smallerParts(attacker, target), ...analyticParts(attacker, target, "strike"), ...obliviousParts(attacker, target),
+      ...hiddenRollParts(attacker, target),
       ...markedParts(attacker, target)]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
@@ -23647,7 +23688,7 @@ async function resolveAttackWork(message, attack) {
     const oblivious = Boolean(hit && attacker && (attacker.uuid !== target.uuid)
       && (await import("./hidden.mjs")).isHiddenFrom(attacker, target));
     // Hidden from them: "hit an enemy with 1 attack" ends it.
-    if (hit && attacker) (await import("./hidden.mjs")).revealOnHit(attacker, target);
+    // Hit, Hidden from them: found once the Maneuver is concluded (frozenTurnAfterAttack).
     // Invisible: "If you hit an Opponent with an Attacking Maneuver, increase the Natural Result of their next Skill
     // Check to find you as part of the Search Maneuver by 1" - kept on them, spent by their Search against you.
     if (hit && attacker && (attacker.uuid !== target.uuid) && ((Number(attacker.system.states?.invisible) || 0) > 0)) {
@@ -25703,6 +25744,7 @@ async function rollAttackWoundWork(message, attack) {
       ...rangeParts(attacker, attack, target, "wound"),
       ...heelParts(attacker, target),
       ...shakenTechniqueParts(attacker, attack, target),
+      ...hiddenRollParts(attacker, target),
       ...largerParts(attacker, target),
       ...analyticParts(attacker, target, "wound"),
       // Full Counter (2): the Might of the one who Jolted, on this attack's Wound against them.
@@ -25984,6 +26026,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...markedParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Supporting Defender: an Ally beside the attacker.
   parts.push(...supportParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
+  // Hidden from the attacker - an AoE's: 2(bT).
+  parts.push(...hiddenRollParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
   parts.push(...telepathicDodge(actor, attack));
   // Refined Combat's Fleet-Footed.
@@ -26385,6 +26429,8 @@ const DEFENCES = {
       ...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }),
       // Supporting Defender: an Ally beside the attacker.
       ...supportParts(actor, fromUuidSync(attack?.attackerUuid ?? "")),
+      // Hidden from the attacker: 2(bT).
+      ...hiddenRollParts(actor, fromUuidSync(attack?.attackerUuid ?? "")),
       ...zenCounterParts(actor, attack)
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.parry.parts(actor, attack),

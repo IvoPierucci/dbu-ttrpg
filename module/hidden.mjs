@@ -1,24 +1,31 @@
 /**
- * Hidden and Oblivious - the user's rulings (2026-09-30), there being no rule text any more.
+ * Hidden and Oblivious - the written rules (the user's, 2026-10-22). "When you become Hidden, you are 'Hidden' in relation to
+ * another Character, who becomes known as an 'Oblivious Character' for your effects." One relation, seen from each end.
  *
- * One relation between two characters, seen from each end: A is Hidden from B when B does not know where A is, and B
- * is then Oblivious of A. Never a state of its own - being Hidden from B says nothing about C.
+ *   - Oblivious Characters cannot target you with any Maneuver but the Sense and the Search - unless it is an AoE that targets
+ *     another Character too, or a Sphere of Huge or more centred on its user (hiddenAimRefusal).
+ *   - You do not trigger the Exploit Maneuver from them (chat.mjs offerExploits, takeOutOfSequence).
+ *   - Your Combat Rolls against them 2(bT) higher (chat.mjs hiddenRollParts).
  *
- *   - B cannot target A with any Maneuver or effect.
- *   - A stops being Hidden from B once A has hit B with an attack, or made 2 attacks aimed at B, or ends their turn
- *     within B's Melee Range.
+ * Found: ending your turn within their Melee Range (with no Feature between - the table's); after concluding an Attacking
+ * Maneuver that hit them, or the second one aimed at them this Combat Round; after concluding a Special Maneuver or a Unique
+ * Ability that opened a Clash against them; a Clash (Perception/Clairvoyance vs Stealth/Concealment) won by them out of
+ * sequence, as you use the Power Up, the Energy Charge, a Transformation or an attack with an AoE; their Search or Sense won.
  *
- * Kept on the Hidden one, as `system.hiddenFrom`: whom from, and how many attacks they have aimed at them since.
+ * Kept on the Hidden one, as `system.hiddenFrom`: whom from, and how many attacks were aimed at them this Combat Round.
  */
 
-import { squaresBetween } from "./maneuvers.mjs";
+import { squaresBetween, MAGNITUDES, magnitudeIndex } from "./maneuvers.mjs";
 
 /** The Hide and Search Maneuvers, by their files. */
 export const HIDE_MANEUVER = "hide";
 export const SEARCH_MANEUVER = "search";
 
-/** "Made 2 attacks" at them: the second one ends it. */
+/** "Targeted by a second Attacking Maneuver ... during the same Combat Round": the second one ends it. */
 export const HIDDEN_ATTACKS = 2;
+
+/** The Maneuvers an Oblivious Character may target them with all the same. */
+export const SENSE_MANEUVER = "sense";
 
 /** Whom this character is Hidden from. */
 export function hiddenEntries(actor) {
@@ -34,6 +41,22 @@ export function isHiddenFrom(hider, seeker) {
 /** Why `actor` cannot aim at `target`, or "": "that enemy cannot target you with any Maneuver or effect". */
 export function whyHidden(actor, target) {
   return isHiddenFrom(target, actor) ? `${target.name} is Hidden from ${actor.name}.` : "";
+}
+
+/**
+ * Why `actor` cannot aim this at `targets`, or "": "Oblivious Characters cannot target you with any Maneuver ... unless that
+ * Maneuver is an AoE and either: targets at least 1 other Character, or is a Sphere AoE with a Magnitude of Huge or more and
+ * the Target Square is a Square the user occupies." `area` the Maneuver's, or null.
+ */
+export function hiddenAimRefusal(actor, targets, area = null) {
+  const hidden = (targets ?? []).filter(other => other && isHiddenFrom(other, actor));
+  if (!hidden.length) return "";
+  if (area) {
+    if ((targets ?? []).some(other => other && !isHiddenFrom(other, actor))) return "";
+    if ((String(area.shape ?? "").toLowerCase() === "sphere") && area.centredOnSelf
+      && (magnitudeIndex(area) >= MAGNITUDES.indexOf("huge"))) return "";
+  }
+  return whyHidden(actor, hidden[0]);
 }
 
 /** Everyone on the scene Hidden from this character - whom they are Oblivious of. */
@@ -80,20 +103,34 @@ export async function revealTo(hider, seeker, reason = "") {
   await say(hider, `${hider.name} is no longer Hidden from ${seeker.name}${reason ? ` - ${reason}` : ""}.`);
 }
 
-/** An attack aimed at someone you are Hidden from: the second one ends it. */
+/** This Combat Round, as a key. */
+function roundNow() {
+  return `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+}
+
+/** An attack aimed at someone you are Hidden from, counted with its Combat Round - ended once the second is concluded. */
 export async function countHiddenAttack(attacker, target) {
   if (!isHiddenFrom(attacker, target)) return;
   const entries = hiddenEntries(attacker);
   const entry = entries.find(each => each.uuid === target.uuid);
-  const attacks = (Number(entry.attacks) || 0) + 1;
-  if (attacks >= HIDDEN_ATTACKS) return revealTo(attacker, target, `${attacks} attacks at them`);
-  return write(attacker, entries.map(each => (each.uuid === target.uuid) ? { ...each, attacks } : each));
+  const attacks = ((entry.round === roundNow()) ? (Number(entry.attacks) || 0) : 0) + 1;
+  return write(attacker, entries.map(each => (each.uuid === target.uuid) ? { ...each, attacks, round: roundNow() } : each));
 }
 
-/** An attack that hit someone you are Hidden from ends it - not an Invisible attacker's: "You remain Hidden". */
-export async function revealOnHit(attacker, target) {
-  if (isInvisible(attacker)) return;
-  return revealTo(attacker, target, "hit by an attack");
+/**
+ * An Attacking Maneuver concluded: Hidden no longer from those it hit - not an Invisible attacker's: "You remain Hidden" - nor
+ * from one it was the second aimed at this Combat Round. `aimed` [{uuid, hit}].
+ */
+export async function revealAfterAttack(attacker, aimed) {
+  for (const { uuid, hit } of aimed ?? []) {
+    const entry = hiddenEntries(attacker).find(each => each.uuid === uuid);
+    const seeker = entry ? globalThis.fromUuidSync?.(uuid) : null;
+    if (!seeker) continue;
+    if (hit && !isInvisible(attacker)) await revealTo(attacker, seeker, "hit by an Attacking Maneuver");
+    else if ((entry.round === roundNow()) && ((Number(entry.attacks) || 0) >= HIDDEN_ATTACKS)) {
+      await revealTo(attacker, seeker, "a second Attacking Maneuver at them this Round");
+    }
+  }
 }
 
 /** Whether this character is in the Invisible Special State. */
