@@ -1,0 +1,10 @@
+id: beast-man
+name: Beast-Man
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's: the system does not
+# control which Racial Traits a character has). Its Factor Traits are the files in the folder of its name.
+requirement: >
+  Android, Bio-Android, Custom Species, Demon, Earthling
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  You're not a monster, you're a Beast-Man! Half-man, half-animal, you're your own best friend... or worst nightmare. Whether you possess your furry features at all times, or transform into a ram-paging beast in the light of the full moon, one thing is certain: the beast is on the prowl.

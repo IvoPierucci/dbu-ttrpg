@@ -1,0 +1,23 @@
+id: part-beast
+name: Part Beast
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1) Two Bestial Traits, chosen as it is gained - in the Other Traits list, gone with it.
+grantsOther: bestial
+grantsOtherCount: 2
+description: >
+  These unique souls are anthropomorphic animals, capable of combining their bestial features with the benefits of a humanoid body, creating a powerful fighter with the best of both worlds.
+text: >
+  Part Beast (Body): These unique souls are anthropomorphic animals, capable of combining their bestial features with the benefits of a humanoid body, creating a powerful fighter with the best of both worlds.
+  (1)-[Passive]: Select and gain two Bestial Traits.
+  (2)-[Passive]: Increase the Dice Score of your Perception Skill Checks by 2 and reduce the Critical Target of your Strike and Dodge Rolls by 1.
+
+---
+
+[passive]
+# (2)
+skill.perception += 2;
+criticalTarget.strike -= 1;
+criticalTarget.dodge -= 1;

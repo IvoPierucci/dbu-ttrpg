@@ -12,6 +12,8 @@
  * change is a mark with a clock on it, and the Level is read off both.
  */
 
+import { traitAside } from "./aside.mjs";
+
 export const LIGHT_LEVEL_MIN = -2;
 export const LIGHT_LEVEL_MAX = 2;
 
@@ -36,7 +38,7 @@ export function lightLevelOf(system, getTrait = null, { treated = true } = {}) {
   // Or on an Option chosen on it - Weather Environment's Light. Not asked (`treated: false`), the Level as it is.
   const towardOf = id => Number(getTrait(id ?? "")?.lightTowardNormal) || 0;
   const toward = (getTrait && treated) ? items.filter(item => ["racial", "talent"].includes(item.type)
-    && !(item.flags?.["dbu-ttrpg"]?.bestialOff && items.some(other => other.id === item.flags["dbu-ttrpg"].bestialOff)))
+    && !traitAside(item, items, system?.parent))
     .reduce((sum, item) => sum + towardOf(item.flags?.["dbu-ttrpg"]?.sourceId)
       + (item.system?.chosen ?? []).filter(entry => entry.key === "option").reduce((more, entry) => more + towardOf(entry.value), 0), 0) : 0;
   return (level > 0) ? Math.max(0, level - toward) : Math.min(0, level + toward);

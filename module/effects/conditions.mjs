@@ -10,6 +10,7 @@
 
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
+import { traitAside } from "../aside.mjs";
 
 /** Whether a key is a published Combat Condition - set by traits.mjs at load, to keep the import one way. */
 let isCombatCondition = () => false;
@@ -461,7 +462,7 @@ const PREDICATES = {
   holdsTrait: (scope, id) => {
     const items = Array.from(scope.data?.parent?.items ?? []);
     return items.some(item => (item.type === "racial") && (item.flags?.["dbu-ttrpg"]?.sourceId === String(id))
-      && !(item.flags?.["dbu-ttrpg"]?.bestialOff && items.some(other => other.id === item.flags["dbu-ttrpg"].bestialOff)));
+      && !traitAside(item, items, scope.data?.parent));
   },
 
   /** In that Battle Weather - Weather Resilient's "within your selected Battle Weather". */

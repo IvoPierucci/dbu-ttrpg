@@ -4,6 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
+import { traitAside } from "../aside.mjs";
 import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
@@ -4955,6 +4956,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       factorTip: factorSummary(item.system.factor),
       // Set aside by the Bestial Limit - and what it gave way to.
       bestialOff: bestialOff(item, this.actor.items),
+      // Were-Beast's: a Were-Trait or the Normal Trait, and whether it applies this Round.
+      wereMark: item.flags?.["dbu-ttrpg"]?.wereTrait ? "Were-Trait" : item.flags?.["dbu-ttrpg"]?.normalTrait ? "Normal Trait" : "",
+      wereAside: ["were", "normal"].includes(traitAside(item, this.actor.items, this.actor)),
       bestialOffFor: this.actor.items.get(item.flags?.["dbu-ttrpg"]?.bestialOff ?? "")?.name ?? "",
       // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
       open: Boolean(this.#openSections[`trait-${item.id}`]),

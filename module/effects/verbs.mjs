@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  wereChoice: {
+    args: [0, 0],
+    doc: "Were-Beast (4): the Normal Trait or the Were-Traits for this Combat Round, asked (chat.mjs wereChoice)."
+  },
   terrifyingVisage: {
     args: [0, 0],
     doc: "Terrifying Visage (3): the Power Up or the Transformation Maneuver out of sequence, which asked (chat.mjs terrifyingVisage)."

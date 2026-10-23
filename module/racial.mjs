@@ -41,6 +41,7 @@
 
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { getRace, subraceName } from "./races.mjs";
+import { traitAside } from "./aside.mjs";
 
 /** The Item type a Racial Trait is. */
 export const RACIAL_TYPE = "racial";
@@ -398,7 +399,7 @@ export async function bestialLimit(actor, added) {
   if (!actor || !isBestial(added)) return;
   const { askPlayerChoice } = await import("./chat.mjs");
   for (;;) {
-    const applying = Array.from(actor.items ?? []).filter(item => isBestial(item) && !bestialOff(item, actor.items));
+    const applying = Array.from(actor.items ?? []).filter(item => isBestial(item) && !traitAside(item, actor.items, actor));
     if (applying.length <= BESTIAL_LIMIT) return;
     const picked = await askPlayerChoice(actor, `${actor.name}: Bestial Limit - ${BESTIAL_LIMIT} at most; which stops applying?`,
       applying.map(item => ({ value: item.id, label: (item.id === added.id) ? `${item.name} (just gained)` : item.name })));
@@ -823,8 +824,14 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   // Feline Build's: two, of the four it names.
   const from = listOf(trait.grantsOtherFrom);
   for (const group of listOf(trait.grantsOther)) {
-    for (let n = 0; n < Math.max(1, Number(trait.grantsOtherCount) || 1); n++) await grantOtherTrait(actor, item, group, from);
+    for (let n = 0; n < Math.max(1, Number(trait.grantsOtherCount) || 1); n++) {
+      const given = await grantOtherTrait(actor, item, group, from);
+      // Were-Beast (1): "These are known as your 'Were-Traits'" - applying only in a Round chosen for them (aside.mjs).
+      if (given && trait.wereTraits) await given.setFlag("dbu-ttrpg", "wereTrait", true);
+    }
   }
+  // Were-Beast (2): "the Secondary Racial Trait you exchanged for this Factor Trait becomes known as your 'Normal Trait'" - which, asked.
+  if (trait.asksNormalTrait) await askNormalTrait(actor, item);
   return item;
 }
 
@@ -844,6 +851,24 @@ async function grantWeapon(actor, item, trait) {
   data.system.equipped = activeIntegrated(actor.items.contents, "weapon").length < INTEGRATED_ACTIVE.weapon;
   data.flags = { "dbu-ttrpg": { grantedBy: item.id } };
   await actor.createEmbeddedDocuments("Item", [data]);
+}
+
+/** Were-Beast (2): which of the character's own Racial Traits is the Normal Trait - or none, the table's. */
+async function askNormalTrait(actor, item) {
+  const own = ownedRacialTraits(actor).filter(each => (each.id !== item.id) && !each.system?.factor);
+  if (!own.length) return;
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${item.name} - your Normal Trait` },
+    content: `<p class="dbu-respond-hint">The Secondary Racial Trait exchanged for it: kept, applying in every Combat Round your Were-Traits are not chosen for.</p>
+      <label class="dbu-respond-option"><span class="dbu-respond-name">Normal Trait</span>
+      <select name="normal">${own.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select></label>`,
+    buttons: [{ action: "take", label: "Mark it", default: true, callback: (event, button, dialog) => dialog.element.querySelector('[name="normal"]')?.value ?? "" },
+      { action: "later", label: "None" }],
+    rejectClose: false
+  });
+  const normal = own.find(each => each.id === picked);
+  if (normal) await normal.setFlag("dbu-ttrpg", "normalTrait", true);
 }
 
 /** The Dragon Ball set asked for - its name, Size Category and stars - or null if backed out of. */

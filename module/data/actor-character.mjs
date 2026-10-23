@@ -1,3 +1,4 @@
+import { traitAside } from "../aside.mjs";
 const { fields } = foundry.data;
 
 import { alliesHolding, alliesInMelee, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
@@ -1887,7 +1888,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // left. A Bestial Trait the Bestial Limit set aside, not.
     {
       const items = Array.from(this.parent?.items ?? []);
-      const aside = item => Boolean(item.flags?.["dbu-ttrpg"]?.bestialOff) && items.some(other => other.id === item.flags["dbu-ttrpg"].bestialOff);
+      const aside = item => Boolean(traitAside(item, items, this.parent));
       for (const item of items.filter(each => ["racial", "talent"].includes(each.type) && !aside(each))) {
         const held = String(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.holdsState ?? "");
         if (held) this.states = { ...(this.states ?? {}), [held]: Math.max(1, Number(this.states?.[held]) || 0) };

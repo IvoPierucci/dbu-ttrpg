@@ -513,6 +513,7 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "wereChoice": return (await import("../chat.mjs")).wereChoice(actor);
     case "terrifyingVisage": return (await import("../chat.mjs")).terrifyingVisage(actor);
     case "innateWeapon": return (await import("../chat.mjs")).innateWeapon(actor);
     case "lightConsume": return (await import("../chat.mjs")).lightConsume(actor, context?.targets?.[0] ?? null);

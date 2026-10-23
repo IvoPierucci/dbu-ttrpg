@@ -1,0 +1,39 @@
+id: were-beast
+name: Were-Beast
+order: 2
+category: body
+importance: secondary
+# (1) Two Bestial Traits, chosen as it is gained, their Options with them - the Were-Traits (`wereTraits`). (2) Which of your Racial
+# Traits is the Normal Trait, asked (`asksNormalTrait`). (3) Whether you and your ARC chose a Trigger, asked (its `choose: list`).
+grantsOther: bestial
+grantsOtherCount: 2
+wereTraits: true
+asksNormalTrait: true
+choose: list
+choices: With a Trigger, Without a Trigger
+addendumTitle: Were-Triggers
+addendum: >
+  When gaining the Were-Beast Factor Trait, you and your ARC may choose a 'Trigger' (you must both agree on the Trigger). A Trigger is a narrative device, such as the moon's presence, that is required to gain access to your Were-Traits through the 4th effect of the Were-Beast Factor Trait - when the Trigger isn't present, you cannot gain your Were-Traits through this effect. However, when the Trigger is present, you cannot select your Normal Trait through that same effect.
+
+  If you possess a Trigger, your Racial Life Modifier is increased by 2.
+description: >
+  Awakening their bestial side under some arcane condition known only to them, these unfortunate souls turn into animals.
+text: >
+  Were-Beast (Body): Awakening their bestial side under some arcane condition known only to them, these unfortunate souls turn into animals.
+  (1)-[Ruling]: Upon gaining this Factor Trait, select 2 Bestial Traits. These are known as your 'Were-Traits'. When you select your Were-Traits, any Option effects or choices made for their effects are decided then and remain as such when you gain access to them.
+  (2)-[Ruling]: Upon gaining this Factor Trait, the Secondary Racial Trait you exchanged for this Factor Trait becomes known as your 'Normal Trait'. Any Option effects or choices made for the effects of your Normal Trait are decided upon gaining this Factor Trait and remain as such when you regain access to it.
+  (3)-[Addendum]: Please refer to the 'Were-Triggers' box below.
+  (4)-[Triggered/Start of Combat Round]: You may choose to either; regain access to your Normal Trait until the end of the Combat Round, OR gain access to your Were-Traits until the end of this Combat Round.
+
+---
+
+# (1), (2) The Were-Traits apply only in a Combat Round chosen for them; the Normal Trait in every other - out of a Combat Encounter
+# too (aside.mjs). (3) Whether the Trigger is present is the table's to say as (4) is asked.
+[passive]
+if ($with-a-trigger) {
+    racialLifeModifier += 2;
+}
+
+# (4) Which, asked as the Round begins (chat.mjs wereChoice). Automatic by default, its Triggered/Automatic button - asked either way.
+[triggered/start-of-round, effect 4]
+wereChoice();

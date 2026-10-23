@@ -16,6 +16,7 @@
 import { compile as compileScript } from "./effects/parser.mjs";
 import { applyPassives, applySlot, PRIORITY } from "./effects/interpreter.mjs";
 import { PHASES } from "./effects/slots.mjs";
+import { traitAside } from "./aside.mjs";
 import { integratedProblem, integratedRoom, isIntegrated } from "./integrated.mjs";
 
 /**
@@ -1507,8 +1508,7 @@ export function wieldedWeapons(items) {
 function grantorSetAside(items, item) {
   const list = Array.from(items ?? []);
   const grantor = list.find(other => other.id === item.flags?.["dbu-ttrpg"]?.grantedBy);
-  const by = grantor?.flags?.["dbu-ttrpg"]?.bestialOff;
-  return Boolean(by) && list.some(other => other.id === by);
+  return Boolean(grantor) && Boolean(traitAside(grantor, list, grantor.parent));
 }
 
 /**

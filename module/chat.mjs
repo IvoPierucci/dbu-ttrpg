@@ -19472,6 +19472,21 @@ export async function terrifyingVisage(actor) {
   return used ? used : UNSPENT;
 }
 
+/**
+ * Were-Beast (4): "You may choose to either; regain access to your Normal Trait until the end of the Combat Round, OR gain access to your
+ * Were-Traits until the end of this Combat Round." Asked as it begins - the Trigger's presence the table's.
+ */
+export async function wereChoice(actor) {
+  const items = Array.from(actor?.items ?? []);
+  const were = items.filter(item => item.flags?.[SCOPE]?.wereTrait).map(item => item.name);
+  const normal = items.find(item => item.flags?.[SCOPE]?.normalTrait)?.name ?? "";
+  const kind = await askPlayerChoice(actor, `${actor.name}: Were-Beast - this Combat Round`,
+    [{ value: "normal", label: `Your Normal Trait${normal ? ` (${normal})` : ""}` },
+      { value: "were", label: `Your Were-Traits${were.length ? ` (${were.join(", ")})` : ""}` }]);
+  if (!["normal", "were"].includes(kind)) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.wereChoice`]: { round: roundKey(), kind } });
+}
+
 /** A button on an attack's card. */
 function cardButton(container, label, tooltip, run) {
   const button = document.createElement("button");

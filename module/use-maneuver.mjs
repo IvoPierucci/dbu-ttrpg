@@ -75,6 +75,7 @@ import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   drawnBonuses, borrowedCategory, withBorrowed, buddyOnlyTechniques, activeBuddy, activeBuddies, buddyHeader,
   buddyAttribute, targetableBuddy } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
+import { traitAside } from "./aside.mjs";
 import { emptiesCapacity } from "./signature.mjs";
 import { ULTIMATES_PER_ENCOUNTER, buildArea, choicesOf, isBuilt, isUltimate, signatureOf,
   techniqueKiPerTier } from "./technique.mjs";
@@ -309,9 +310,11 @@ function permitted(actor, maneuver) {
   // Bestial Traits and the Feral State: "Any Unique Ability granted by a Bestial Trait can be used even in the Feral State." One
   // whose Bestial Trait the Bestial Limit set aside is not applied with it.
   const bestial = (maneuver.tags ?? []).includes("uniqueAbility") ? bestialGrantOf(actor, maneuver) : null;
-  const bestialAside = bestial?.flags?.["dbu-ttrpg"]?.bestialOff;
-  if (bestialAside && actor.items.get(bestialAside)) {
-    ui.notifications.warn(`${maneuver.name}: ${bestial.name} is not applied (Bestial Limit).`);
+  // And any Trait's not applying right now - the Bestial Limit's, Were-Beast's Were-Traits and Normal Trait (aside.mjs).
+  const giver = (maneuver.tags ?? []).includes("uniqueAbility")
+    ? actor.items?.get(actor.items.get(maneuver.itemId ?? "")?.flags?.["dbu-ttrpg"]?.grantedBy ?? "") : null;
+  if (giver && (giver.type === "racial") && traitAside(giver, actor.items, actor)) {
+    ui.notifications.warn(`${maneuver.name}: ${giver.name} is not applying right now.`);
     return false;
   }
   const feralBestial = Boolean(bestial) && ((Number(actor.system?.states?.feral) || 0) > 0);
