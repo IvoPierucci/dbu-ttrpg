@@ -8883,7 +8883,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       twice: ((slot === "strike") && (actor.system.effects?.slots?.["strike.baseDieTwice"] === true))
         // Critical Wound (1): a Wound Roll's. Masterful Dodge (1): a Dodge Roll's.
         || ((slot === "wound") && (actor.system.effects?.slots?.["wound.baseDieTwice"] === true))
-        || ((slot === "dodge") && (actor.system.effects?.slots?.["dodge.baseDieTwice"] === true)) });
+        || ((slot === "dodge") && (actor.system.effects?.slots?.["dodge.baseDieTwice"] === true))
+        // Willpower (2): a Saving Throw's.
+        || (String(slot ?? "").startsWith("save.") && (actor.system.effects?.slots?.["save.baseDieTwice"] === true)) });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
   // Profile Focus (2): "you score a Critical Result on both Combat Rolls regardless of your Natural Result".
@@ -9500,7 +9502,7 @@ const CLASH_ROLLS = ({
     // "...and Saving Throws in Clashes against a Seen Opponent by ... 1(T)." The other
     // half of the same sentence, and a different number - which is why they are two rows.
     parts: (actor, clash, uuid) => [...seenBonus(actor, clashOpponent(clash, uuid), "save"), ...saveDefendingParts(actor, clash, uuid),
-      ...moraleClashParts(actor, clash, uuid)],
+      ...moraleClashParts(actor, clash, uuid), ...willpowerParts(actor, clash, uuid)],
 
     options: (actor, clash, uuid) => ({
       criticalTarget: actor.system.savingThrows[savePicked(clash, uuid)]?.criticalTarget ?? null,
@@ -9635,6 +9637,13 @@ function skillLabel(actor, key) {
 function savesOffered(clash, uuid) {
   const theirs = clash.defenderSaves ?? [];
   return ((uuid === clash.defenderUuid) && theirs.length) ? theirs : (clash.saves ?? []);
+}
+
+/** Willpower (1): "Choose a Saving Throw, increase the Dice Score for any Clashes involving that Saving Throw by 1(T)." */
+function willpowerParts(actor, clash, uuid) {
+  const key = savePicked(clash, uuid);
+  return (actor?.system?.effects?.slots?.[`willpower.save.${key}`] === true)
+    ? [{ label: "Willpower", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }] : [];
 }
 
 function savePicked(clash, uuid) {

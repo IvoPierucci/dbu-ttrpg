@@ -1,0 +1,21 @@
+id: willpower
+name: Willpower
+talentCategory: miscellaneous
+prerequisites: N/A
+# (1)'s Saving Throw, chosen as it is gained.
+choose: savingThrow
+description: >
+  Through sheer determination, you are able to power through events that would otherwise have an adverse effect on you.
+text: >
+  Willpower: Through sheer determination, you are able to power through events that would otherwise have an adverse effect on you.
+  –Prerequisites: N/A
+  (1)-[Passive]: Choose a Saving Throw, increase the Dice Score for any Clashes involving that Saving Throw by 1(T).
+  (2)-[Passive]: Roll your Base Die twice for any Saving Throw and use the highest result.
+
+---
+
+[passive]
+# (1) A Saving Throw Clash rolled with the chosen one: 1(T) (chat.mjs willpowerParts).
+allow willpower.save.$choice;
+# (2) Every Saving Throw - a Clash's, or rolled from the sheet: 2 Base Dice, the highest kept (chat.mjs rollSide; the sheet).
+allow save.baseDieTwice;
