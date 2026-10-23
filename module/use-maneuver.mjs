@@ -5207,6 +5207,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askHeavyWound(actor, declared);
     // Dual Wielding Specialist (2): 2+ Weapons wielded - half the Might on an Armed Attack's Wound, asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askDualWound(actor, declared);
+    // Twin Weapon Specialist (2), (3): 2(T) on the Wound, an Energy Charge.
+    declared = await (await import("./maneuvers.mjs")).askTwinWeapon(actor, declared, maneuver);
     // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, targetActor);
     // Profile Focus (2): its Profile's attack - both rolls a Critical Result, asked once an Encounter.

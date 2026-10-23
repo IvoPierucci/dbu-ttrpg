@@ -66,6 +66,18 @@ function initiativeAgainstAll(actor, holds) {
   return (opponents.length > 0) && opponents.every(entry => Number.isFinite(entry.initiative) && holds(entry.initiative, own.initiative));
 }
 
+/** Two Weapons wielded or more of one Weapon Category - its Category as it stands (gear.mjs activeForm). */
+export function twinWielded(items) {
+  const counts = new Map();
+  for (const item of items ?? []) {
+    const crafted = item?.system?.crafted;
+    if ((item?.type !== "gear") || (crafted?.kind !== "weapon") || !item.system?.equipped || crafted.destroyed) continue;
+    const category = crafted.activeCategory || crafted.category || "";
+    counts.set(category, (counts.get(category) ?? 0) + 1);
+  }
+  return [...counts.values()].some(count => count >= 2);
+}
+
 /**
  * Synchronized Combatants (1): "Choose a Character. If that Character has also chosen you through this effect, that Character
  * is your Partner." The world's Actor, or null.
@@ -408,6 +420,8 @@ const PREDICATES = {
   rivalOpponent: scope => rivalSide(scope.data?.parent) === "opponent",
   rivalAlly: scope => rivalSide(scope.data?.parent) === "ally",
   rivalOnlyAlly: scope => rivalOnlyAlly(scope.data?.parent),
+  // Twin Weapon Specialist (1): "While you are wielding 2+ Weapons of the same Weapon Category" - each as it stands.
+  twinWeapons: scope => twinWielded(Array.from(scope.data?.parent?.items ?? [])),
   // Dual Wielding Specialist: "While you are wielding 2+ Weapons".
   weaponsWieldedAtLeast: (scope, count) => Array.from(scope.data?.parent?.items ?? []).filter(item => (item.type === "gear")
     && (item.system?.crafted?.kind === "weapon") && item.system?.equipped && !item.system?.crafted?.destroyed).length

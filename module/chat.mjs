@@ -21850,7 +21850,7 @@ export async function postAttack(actor, target, maneuver,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], strikeExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
-                                   uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
+                                   uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false, twinCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
@@ -21876,6 +21876,8 @@ export async function postAttack(actor, target, maneuver,
   if (overwhelm?.charge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Glass Shards (7): "you may apply an Energy Charge to that Attacking Maneuver".
   if (shardCharge && !reflecting) charges = (Number(charges) || 0) + 1;
+  // Twin Weapon Specialist (3): an Energy Charge.
+  if (twinCharge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Power of the Hera (4): "apply an equal amount of Energy Charges to that Attacking Maneuver" - the Greed spent.
   if (greedCharges && !reflecting) charges = (Number(charges) || 0) + (Number(greedCharges) || 0);
   // Fight against Power (3): an Energy Charge for every 2 stacks of Tension.
@@ -22300,6 +22302,14 @@ export async function postAttack(actor, target, maneuver,
   }
   // Quick Learner: a Signature Technique used in a Combat Encounter - Copy, offered to whoever has the Talent.
   if (card && maneuver.signature && !maneuver.signatureTechnique && game.combat?.started) offerCopies(card, actor, maneuver);
+  // Twin Weapon Specialist (2): this Round's attacks made with a Weapon, its Category with it.
+  if (card && madeNow && !reflecting && madeNow.weapon?.itemId && !madeNow.weapon.unarmed && game.combat?.started
+    && (actor.system?.effects?.slots?.["twin.wound"] === true)) {
+    const kept = actor.getFlag?.(SCOPE, "twinAttacks");
+    const list = (kept?.round === roundKey()) ? (kept.list ?? []) : [];
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.twinAttacks`]: { round: roundKey(),
+      list: [...list, { itemId: madeNow.weapon.itemId, category: madeNow.weapon.category ?? "" }] } });
+  }
   // Iaijutsu Specialist (2): an Armed Attack - its Weapon sheathed, out of sequence.
   if (card && madeNow && !reflecting && madeNow.weapon?.itemId && !madeNow.weapon.unarmed
     && (actor.system?.effects?.slots?.["iaijutsu.sheathe"] === true) && actor.items?.get(madeNow.weapon.itemId)?.system?.equipped) {

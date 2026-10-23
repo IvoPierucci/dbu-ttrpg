@@ -1,0 +1,26 @@
+id: twin-weapon-specialist
+name: Twin Weapon Specialist
+talentCategory: weapon
+prerequisites: Dual Wielding Specialist
+description: >
+  Wielding matching Weapons together with terrifying precision, you maximize your offensive ability.
+text: >
+  Twin Weapon Specialist: Wielding matching Weapons together with terrifying precision, you maximize your offensive ability.
+  –Prerequisites: Dual Wielding Specialist
+  (1)-[Passive]: While you are wielding 2+ Weapons of the same Weapon Category, increase your Wound Rolls by 1(T).
+  (2)-[Triggered, 1/Round]: If you make an Attacking Maneuver after having made 2+ Attacking Maneuvers with 2+ different Weapons of the same Weapon Category during this Combat Round, increase the Wound Roll of that Attacking Maneuver by 2(T).
+  (3)-[Triggered, 1/Encounter]: If you trigger the second effect of Twin Weapon Specialist, or use an Ultimate Signature Technique that has the Weapon Assisted Advantage while wielding 2+ Weapons of the same Weapon Category, you may apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Two Weapons wielded or more of one Weapon Category - as each stands (a Transforming one's in use).
+if (twinWeapons) {
+    wound += 1(T);
+}
+# (2) This Round's attacks made with a Weapon kept, its Category with it (chat.mjs postAttack): two or more of them with two
+# different Weapons of one Category - asked as an attack is declared, once a Round, 2(T) on its Wound (maneuvers.mjs
+# askTwinWeapon).
+allow twin.wound;
+# (3) With (2) taken, or an Ultimate with Weapon Assisted while (1) holds: an Energy Charge, asked, once an Encounter.
+allow twin.charge;

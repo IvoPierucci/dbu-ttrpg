@@ -1800,6 +1800,49 @@ export async function askDualWound(actor, declared) {
   return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: "Dual Wielding Specialist (1/2 Might)", value: half }] };
 }
 
+/**
+ * Twin Weapon Specialist (2): "If you make an Attacking Maneuver after having made 2+ Attacking Maneuvers with 2+ different Weapons
+ * of the same Weapon Category during this Combat Round, increase the Wound Roll of that Attacking Maneuver by 2(T)." (3): "If you
+ * trigger the second effect ..., or use an Ultimate Signature Technique that has the Weapon Assisted Advantage while wielding 2+
+ * Weapons of the same Weapon Category, you may apply an Energy Charge". Each asked as an attack is declared - once a Round, once
+ * an Encounter.
+ */
+export async function askTwinWeapon(actor, declared, maneuver = null) {
+  if (!declared) return declared;
+  const slots = actor?.system?.effects?.slots ?? {};
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const encounter = game.combat?.id ?? "none";
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  let out = declared;
+  let triggered = false;
+  if ((slots["twin.wound"] === true) && (actor.getFlag?.("dbu-ttrpg", "twinWoundRound") !== round)) {
+    const kept = actor.getFlag?.("dbu-ttrpg", "twinAttacks");
+    const list = (kept?.round === round) ? (kept.list ?? []) : [];
+    const byCategory = new Map();
+    for (const entry of list) byCategory.set(entry.category, [...(byCategory.get(entry.category) ?? []), entry.itemId]);
+    const twinned = [...byCategory.values()].some(ids => (ids.length >= 2) && (new Set(ids).size >= 2));
+    if (twinned && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: "Twin Weapon Specialist" },
+      content: `<p data-tooltip="Two attacks this Round with two Weapons of one Category. Once a Round.">+2(T) Wound on this attack?</p>`,
+      rejectClose: false })) {
+      await actor.setFlag("dbu-ttrpg", "twinWoundRound", round);
+      out = { ...out, woundExtra: [...(out.woundExtra ?? []), { label: "Twin Weapon Specialist", written: "+2(T)", value: 2 * tier }] };
+      triggered = true;
+    }
+  }
+  if ((slots["twin.charge"] === true) && (actor.getFlag?.("dbu-ttrpg", "twinChargeEncounter") !== encounter)) {
+    const { twinWielded } = await import("./effects/conditions.mjs");
+    const assisted = Boolean(maneuver?.ultimate) && (out.advantages ?? []).includes("weapon-assisted")
+      && twinWielded(Array.from(actor.items ?? []));
+    if ((triggered || assisted) && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: "Twin Weapon Specialist" },
+      content: `<p data-tooltip="Once an Encounter.">An Energy Charge on this attack?</p>`, rejectClose: false })) {
+      await actor.setFlag("dbu-ttrpg", "twinChargeEncounter", encounter);
+      out = { ...out, twinCharge: true };
+    }
+  }
+  return out;
+}
+
 /** Dueling Specialist (2) on an attack's Strike, as it is declared. */
 export async function askDuelingStrike(actor, declared) {
   if (!declared) return declared;
