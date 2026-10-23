@@ -1,0 +1,21 @@
+id: blood-in-the-water
+name: Blood in the Water
+order: 4
+description: >
+  Sensing your enemy’s weaknesses, you grow bolder, hoping for a quick kill while they’re too weak to fight back.
+text: >
+  Blood in the Water: Sensing your enemy’s weaknesses, you grow bolder, hoping for a quick kill while they’re too weak to fight back.
+  (1)-[Passive]: Increase your Wound Rolls against Opponent(s) by 1(bT) for each Health Threshold they are below.
+  (2)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with one of your Attacking Maneuvers, reduce the Dice Score of their Steadfast Check by 2.
+
+---
+
+[passive]
+# (1) Counted against each target as its Wound is worked out (chat.mjs, beside Inherited Aggression's).
+wound.perTargetThreshold += 1(bT);
+
+# (2) An Opponent knocked through by your attack (knock-through): 2 off their Steadfast Check for it, kept on them till it is rolled
+# (chat.mjs bloodSteadfast). Automatic by default, its Triggered/Automatic button.
+[triggered/knock-through, 1/round, effect 2]
+requires knockedOpponent;
+bloodSteadfast();

@@ -1,0 +1,21 @@
+id: claws
+name: Claws
+order: 7
+grantsWeapon: slashing
+grantsWeaponGrade: 2
+grantsWeaponName: Claws
+description: >
+  While some species evolved claws purely for grip while running, yours evolved them for combat. You can rend your enemy’s flesh with your claws.
+text: >
+  Claws: While some species evolved claws purely for grip while running, yours evolved them for combat. You can rend your enemy’s flesh with your claws.
+  (1)-[Passive]: Create a Physical Weapon of the Slashing Category with a Craftsmanship Grade of 2 (you cannot select the Transforming Weapon Quality for this Weapon). This Weapon becomes Integrated while you possess this Bestial Trait.
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with your first Physical Attack after moving into their Melee Range this Combat Round, make a Clash (Impulsive) against them. If you win, they are knocked Prone.
+
+---
+
+# (1) Its header's `grantsWeapon`: the Weapon made on the Gear tab as it is gained - Integrated, Active where there is room, gone with
+# it (racial.mjs). Its Qualities are the player's on the Weapon's sheet; the Transforming one is not for it.
+[passive]
+# (2) Your Movement into an Opponent's Melee Range, said on its card: your first Physical Attack at them this Round carries it - hit,
+# a button for the Clash (Impulsive), once a Round; won, Prone (chat.mjs clawsButtons).
+allow claws.prone;

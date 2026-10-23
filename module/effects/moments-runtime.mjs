@@ -304,7 +304,7 @@ export async function stacksGained(actor, names, counts = {}) {
   // Star's - with how many.
   // And Power's - Greed of the Hera's "Each time you gain a stack(s) of Power".
   for (const [name, moment] of [["overwhelm", "overwhelm-gained"], ["demonicpower", "demonic-power-gained"],
-    ["power", "power-gained"], ["negativeenergy", "negative-energy-gained"]]) {
+    ["power", "power-gained"], ["negativeenergy", "negative-energy-gained"], ["sunlight", "sunlight-gained"]]) {
     if (!names.includes(name)) continue;
     const context = { gained: Math.max(1, Number(counts[name]) || 1) };
     await offerTriggers(actor, moment, context);
@@ -321,7 +321,7 @@ export async function stacksGained(actor, names, counts = {}) {
 }
 
 /** The Resources whose stacks gained are a Moment where an effect writes them - Comfort's. */
-const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower", "power", "negativeenergy"]);
+const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower", "power", "negativeenergy", "sunlight"]);
 
 /** A character an effect named, by uuid or by name, or nothing. */
 function named(who) {
@@ -513,6 +513,10 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "alternateSight": return (await import("../chat.mjs")).alternateSight(actor, context?.targets?.[0] ?? null);
+    case "arborealSurge": return (await import("../chat.mjs")).arborealSurge(actor);
+    case "uproot": return (await import("../chat.mjs")).uproot(actor);
+    case "bloodSteadfast": return (await import("../chat.mjs")).bloodSteadfast(actor, context?.knockedUuid);
     case "yakiSwarm": return (await import("../chat.mjs")).yakiSwarm(actor);
     case "kindheartedBoost": return (await import("../chat.mjs")).kindheartedBoost(actor, context?.targets?.[0] ?? null);
     case "battleBornMove": return (await import("../chat.mjs")).battleBornMove(actor);

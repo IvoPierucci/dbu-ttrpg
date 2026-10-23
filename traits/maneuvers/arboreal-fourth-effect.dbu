@@ -1,0 +1,21 @@
+id: arboreal-fourth-effect
+name: Arboreal: Uproot
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: arboreal
+fromEffect: 4
+source: Core Rule
+description: >
+  Arboreal's fourth effect, as a Maneuver: during your turn, you stop being Rooted.
+text: >
+  (4)-[1/Round]: As an Instant Maneuver during your turn, you stop being Rooted.
+
+---
+
+# During your turn alone (chat.mjs uproot).
+[on used]
+uproot();

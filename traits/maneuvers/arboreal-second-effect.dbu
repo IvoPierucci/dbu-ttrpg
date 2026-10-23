@@ -1,0 +1,21 @@
+id: arboreal-second-effect
+name: Arboreal: Ki Surge
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: arboreal
+fromEffect: 2
+source: Core Rule
+description: >
+  Arboreal's second effect, as a Maneuver: a stack of Sunlight for a Ki Surge.
+text: >
+  (2)-[1/Round]: As a Standard Action with an Action Cost of 1 Action, you may spend a stack of Sunlight to use a Ki Surge.
+
+---
+
+# A stack of Sunlight spent, the Ki Surge (chat.mjs arborealSurge) - none held, nothing done.
+[on used]
+arborealSurge();

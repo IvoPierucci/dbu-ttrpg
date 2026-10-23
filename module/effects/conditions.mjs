@@ -9,11 +9,18 @@
  */
 
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
+import { lightLevelOf } from "../light.mjs";
 
 /** Whether a key is a published Combat Condition - set by traits.mjs at load, to keep the import one way. */
 let isCombatCondition = () => false;
 export function useCombatConditionCheck(fn) {
   isCombatCondition = fn;
+}
+
+/** The Trait files by id - set by traits.mjs at load, the same way: what the Light Level reads (lightNormalOrHigher). */
+let traitLookup = null;
+export function useTraitLookup(fn) {
+  traitLookup = fn;
 }
 
 /** The most of a Resource a character may hold, nothing for no ceiling - set by traits.mjs at load, the same way. */
@@ -441,6 +448,12 @@ const PREDICATES = {
     && (item.system?.crafted?.kind === "apparel") && item.system?.equipped && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true)),
   // A Combat Encounter running.
   inCombat: () => Boolean(globalThis.game?.combat?.started),
+  /** Arboreal (1): "if the Light Level ... is Normal or higher" - the Level this character is in, as they treat it. */
+  lightNormalOrHigher: scope => lightLevelOf(scope.data, traitLookup) >= 0,
+
+  /** In Cover - the Battlefields tab's, or set by an effect (Burrowing Beast's Underground, a Feature carried). */
+  inCover: scope => Boolean(scope.data?.battlefield?.cover?.active),
+
   // "While you have an Integrated Majin-Dama".
   hasIntegratedDama: scope => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
     && (item.system?.gearId === "majin-dama") && (item.system?.integrated === true)),

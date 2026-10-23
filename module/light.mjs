@@ -29,5 +29,12 @@ export function lightLevelOf(system, getTrait = null) {
     ? Object.entries(system?.conditions ?? {}).reduce((total, [key, stacks]) =>
       total + (Math.max(0, Number(stacks) || 0) * (Number(getTrait(key)?.lightShift) || 0)), 0)
     : 0;
-  return Math.max(LIGHT_LEVEL_MIN, Math.min(LIGHT_LEVEL_MAX, set + shift));
+  const level = Math.max(LIGHT_LEVEL_MIN, Math.min(LIGHT_LEVEL_MAX, set + shift));
+  // Alternate Sight (1): "Treat the Light Level as if it was 1 level closer to Normal (0)" - its header's `lightTowardNormal`, on
+  // a Trait or Talent held and applied (a Bestial Trait the Bestial Limit set aside, not).
+  const items = Array.from(system?.parent?.items ?? []);
+  const toward = getTrait ? items.filter(item => ["racial", "talent"].includes(item.type)
+    && !(item.flags?.["dbu-ttrpg"]?.bestialOff && items.some(other => other.id === item.flags["dbu-ttrpg"].bestialOff)))
+    .reduce((sum, item) => sum + (Number(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.lightTowardNormal) || 0), 0) : 0;
+  return (level > 0) ? Math.max(0, level - toward) : Math.min(0, level + toward);
 }

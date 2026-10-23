@@ -1,0 +1,15 @@
+id: rooted
+name: Rooted
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Arboreal (3)'s mark - its effects are Arboreal's own script.
+combatCondition: no
+source: Core Rule
+description: >
+  Arboreal: rooted to the spot - no Movement, Soak 2(bT) a Sunlight, Defense Value 2(bT) less.
+text: >
+  Rooted (Arboreal (3)): You cannot use the Movement Maneuver or any other effect that would allow you to move. Increase your Soak Value by 2(bT) for each stack of Sunlight you possess. Reduce your Defense Value by 2(bT). If an Opponent makes a Clash that would result in an effect to move you on a win, increase your Dice Score for that Clash by 2(T).
+
+---
+
+[passive]

@@ -1,0 +1,22 @@
+id: camouflage-first-effect
+name: Camouflage
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 8
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: camouflage
+fromEffect: 1
+source: Core Rule
+description: >
+  Camouflage's first effect, as a Maneuver: 1 Action and 8(bT) Ki - the Invisible Special State.
+text: >
+  (1)-[1/Round]: Spend 1 Action and 8(bT) Ki Points to enter the Invisible Special State. You can exit the Invisible State at any time as an Instant Maneuver.
+
+---
+
+# The Invisible State, its mark beside it for (2).
+[on used]
+enterState(invisible, 1);
+gain(camouflaged);

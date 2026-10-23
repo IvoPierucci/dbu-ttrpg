@@ -383,6 +383,8 @@ async function beginTurn(actor) {
   await (await import("./chat.mjs")).spectatorTurnStart(actor);
   // "It's Up to You, Now." (a Desperation Effect): a Defeated Ally's - Entrusted as the turn begins.
   if (!actor.system.defeated) await (await import("./desperation.mjs")).itsUpToYou(actor);
+  // Burrowing Beast (6): "[Automatic/Start of Turn]: You stop being Underground" - the Cover as it was.
+  await (await import("./chat.mjs")).leaveUnderground(actor);
   // Kindhearted Saiyan (2): "until the start of your next turn" - this one.
   await (await import("./chat.mjs")).kindheartedEnds(actor);
   // Will of Nine Lives (2): the Majin-Dama put aside "until the start of your next turn" - Active again.

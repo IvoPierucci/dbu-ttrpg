@@ -1,0 +1,24 @@
+id: alternate-sight
+name: Alternate Sight
+order: 1
+# (1) One Level closer to Normal, Dark or Bright alike.
+lightTowardNormal: 1
+description: >
+  Your eyes are clearly designed to work in a different way than most, allowing you to see in the dark.
+text: >
+  Alternate Sight: Your eyes are clearly designed to work in a different way than most, allowing you to see in the dark.
+  (1)-[Passive]: Treat the Light Level as if it was 1 level closer to Normal (0).
+  (2)-[Passive]: Increase the Dice Score of your Perception Skill Checks by 1.
+  (3)-[Passive]: Increase the Natural Result of your Dodge Rolls by 1.
+  (4)-[1/Round]: As an Instant Maneuver, target an Opponent who is not Hidden from you. Make a Skill Clash (Perception vs Perception/Stealth) against them. If you win, increase the Strike and Wound Rolls of your next Attacking Maneuver made against that Opponent during this Combat Round by 1(T) and 2(T) respectively.
+
+---
+
+# (1) Its header's `lightTowardNormal`, read wherever the Light Level you are in is (light.mjs lightLevelOf).
+[passive]
+# (2) The roll, shown as the Skill's number on the sheet.
+skill.perception += 1;
+# (3)
+dodge.natural += 1;
+# (4) Its own Maneuver, on the Maneuvers tab (maneuvers/alternate-sight-fourth-effect.dbu): won, your next attack at them this Round -
+# Strike 1(T), Wound 2(T) (chat.mjs alternateSight).

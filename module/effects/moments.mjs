@@ -147,6 +147,8 @@ const TABLE = [
   { key: "unique-clash-won", label: "You win a Clash for the effects of a Unique Ability", provides: [],
     doc: "Fired for whoever won a Clash a Unique Ability called for - theirs or the one they answered - with who lost "
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },
+  { key: "sunlight-gained", label: "You gain a stack of Sunlight", provides: [],
+    doc: "Fired as Arboreal's Sunlight is gained (moments-runtime.mjs stacksGained) - its (6)." },
   { key: "comfort-gained", label: "You gain a stack of Comfort", provides: [],
     doc: "Fired as Comfortable Count's Comfort is gained (moments-runtime.mjs stacksGained). What is the player's is asked "
        + "in a window first." },

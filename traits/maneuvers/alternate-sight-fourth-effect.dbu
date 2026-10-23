@@ -1,0 +1,21 @@
+id: alternate-sight-fourth-effect
+name: Alternate Sight
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+fromTrait: alternate-sight
+fromEffect: 4
+source: Core Rule
+description: >
+  Alternate Sight's fourth effect, as a Maneuver: a Perception Clash at an Opponent - won, your next attack at them this Round Strike 1(T), Wound 2(T).
+text: >
+  (4)-[1/Round]: As an Instant Maneuver, target an Opponent who is not Hidden from you. Make a Skill Clash (Perception vs Perception/Stealth) against them. If you win, increase the Strike and Wound Rolls of your next Attacking Maneuver made against that Opponent during this Combat Round by 1(T) and 2(T) respectively.
+
+---
+
+# Not at one Hidden from you; the Clash on its card - won, the mark, spent by your next attack at them this Round (chat.mjs).
+[on used]
+alternateSight();

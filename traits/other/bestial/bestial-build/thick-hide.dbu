@@ -1,0 +1,12 @@
+id: thick-hide
+name: Thick Hide
+order: 1
+optionOf: bestial-build
+description: >
+text: >
+
+---
+
+[passive]
+soakValue += 2(T);
+save.corporeal += 1(T);

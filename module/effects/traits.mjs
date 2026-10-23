@@ -14,7 +14,7 @@
  */
 
 import { PRIORITY, applySlot } from "./interpreter.mjs";
-import { useCombatConditionCheck, useResourceCeiling } from "./conditions.mjs";
+import { useCombatConditionCheck, useResourceCeiling, useTraitLookup } from "./conditions.mjs";
 
 const ROOT = "systems/dbu-ttrpg/traits";
 
@@ -108,6 +108,8 @@ export function combatConditionKey(key) {
 useCombatConditionCheck(combatConditionKey);
 // And a Resource's ceiling, for `roomFor` - Power of the Hera's.
 useResourceCeiling((name, actor) => resourceLimits(actor)[name] ?? 0);
+// And the files themselves, for what a predicate reads off them - the Light Level's (lightNormalOrHigher).
+useTraitLookup(id => getTrait(id));
 
 /**
  * The Resources the library declares, and the most of each that may be held.

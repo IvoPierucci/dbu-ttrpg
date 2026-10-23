@@ -1,0 +1,20 @@
+id: camouflage-exit
+name: Camouflage: Exit
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+fromTrait: camouflage
+fromEffect: 1
+source: Core Rule
+description: >
+  Camouflage's first effect: out of the Invisible State, as an Instant Maneuver.
+text: >
+  (1)-[1/Round]: Spend 1 Action and 8(bT) Ki Points to enter the Invisible Special State. You can exit the Invisible State at any time as an Instant Maneuver.
+
+---
+
+[on used]
+leaveState(invisible);
+remove(camouflaged);

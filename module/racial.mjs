@@ -193,7 +193,8 @@ export function racialTraitFiles() {
 
 /** A Racial Trait's Options - or a Talent's - in the order its text lists them (their `order:`), not by name (the user's). */
 export function racialOptionsOf(id) {
-  return [...traitsOfKind("races"), ...traitsOfKind("factors"), ...traitsOfKind("talents")].filter(trait => trait.optionOf === id)
+  return [...traitsOfKind("races"), ...traitsOfKind("factors"), ...traitsOfKind("talents"), ...traitsOfKind("other")]
+    .filter(trait => trait.optionOf === id)
     .sort((a, b) => (orderOf(a) - orderOf(b)) || a.name.localeCompare(b.name));
 }
 
@@ -429,7 +430,8 @@ export function ownedOtherTraits(actor) {
 /** Every Other Trait there is, for its picker: by group, then by name. */
 export function otherTraitsInOrder() {
   const rank = trait => { const at = Object.keys(OTHER_GROUPS).indexOf(trait.owner ?? ""); return (at < 0) ? 99 : at; };
-  return traitsOfKind("other").slice().sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
+  // Not an Option of one - Bestial Build's Thick Hide - which is chosen as that one is gained.
+  return traitsOfKind("other").filter(trait => !trait.optionOf).sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
 }
 
 /** A label as a choice's value: "Enormous" -> "enormous". */
@@ -803,6 +805,9 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
     const data = await damaItemData(actor, { grantedBy: item.id });
     if (data) await actor.createEmbeddedDocuments("Item", [data]);
   }
+  // A Weapon it makes - Claws': "Create a Physical Weapon of the Slashing Category with a Craftsmanship Grade of 2 ... This Weapon
+  // becomes Integrated while you possess this Bestial Trait" - on the Gear tab, gone with it.
+  if (trait.grantsWeapon) await grantWeapon(actor, item, trait);
   // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
   for (const option of chosenOptions(item)) await madeByOption(actor, item, option);
@@ -815,6 +820,24 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
     for (let n = 0; n < Math.max(1, Number(trait.grantsOtherCount) || 1); n++) await grantOtherTrait(actor, item, group, from);
   }
   return item;
+}
+
+/** A Trait's `grantsWeapon`: that Category's Weapon at `grantsWeaponGrade`, named `grantsWeaponName` - Integrated, Active if room. */
+async function grantWeapon(actor, item, trait) {
+  const category = getTrait(String(trait.grantsWeapon));
+  if (!category) return;
+  const { craftedItemFrom, composeEffects } = await import("./gear.mjs");
+  const data = craftedItemFrom("weapon", actor, getTrait);
+  if (!data) return;
+  data.name = String(trait.grantsWeaponName ?? category.name);
+  Object.assign(data.system.crafted, { category: category.id, weaponType: category.weaponType,
+    grade: Number(trait.grantsWeaponGrade) || 1, qualities: [] });
+  data.system.crafted.effects = composeEffects(data.system.crafted, "", { getTrait });
+  const { activeIntegrated, INTEGRATED_ACTIVE } = await import("./integrated.mjs");
+  data.system.integrated = true;
+  data.system.equipped = activeIntegrated(actor.items.contents, "weapon").length < INTEGRATED_ACTIVE.weapon;
+  data.flags = { "dbu-ttrpg": { grantedBy: item.id } };
+  await actor.createEmbeddedDocuments("Item", [data]);
 }
 
 /** The Dragon Ball set asked for - its name, Size Category and stars - or null if backed out of. */

@@ -1,0 +1,12 @@
+id: slender
+name: Slender
+order: 2
+optionOf: bestial-build
+description: >
+text: >
+
+---
+
+[passive]
+defenseValue += 1(T);
+save.impulsive += 1(T);

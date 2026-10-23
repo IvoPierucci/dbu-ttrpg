@@ -415,6 +415,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
       signatureInstant: DBUCharacterSheet._onSignatureInstant,
       glassInstant: DBUCharacterSheet._onGlassInstant,
+      burrowInstant: DBUCharacterSheet._onBurrowInstant,
       spiritInstant: DBUCharacterSheet._onSpiritInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
       flipInstant: DBUCharacterSheet._onFlipInstant,
@@ -1633,6 +1634,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             flipInstant: (maneuver.id === "flip") && (this.actor.system.effects?.slots?.["flip.asInstant"] === true),
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
             glassInstant: Boolean(maneuver.movement) && (this.actor.system.effects?.slots?.["movement.glassInstant"] === true),
+            // Burrowing Beast (5): "While you are in Cover, you may use the Movement Maneuver as an Instant Maneuver" - once a Round.
+            burrowInstant: Boolean(maneuver.movement) && (this.actor.system.effects?.slots?.["movement.burrowInstant"] === true)
+              && Boolean(this.actor.system.battlefield?.cover?.active),
             // Demonic Creativity: "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an
             // Action Cost of 1 as an Out-of-Sequence Maneuver."
             creativeOutOfSequence: (this.actor.system.effects?.slots?.["demonicPower.outOfSequence"] === true)
@@ -6081,6 +6085,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant", presetActions: 3, spiritSurge: true })) return;
     return this.actor.setFlag("dbu-ttrpg", "spiritInstantEncounter", encounter);
+  }
+
+  /** Burrowing Beast (5): the Movement Maneuver as an Instant, in Cover - once a Round. */
+  static async _onBurrowInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["movement.burrowInstant"] !== true)) return;
+    if (!this.actor.system.battlefield?.cover?.active) return ui.notifications.warn(`${this.actor.name} is not in Cover.`);
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "burrowMoveRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
+    }
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    return this.actor.setFlag("dbu-ttrpg", "burrowMoveRound", round);
   }
 
   static async _onGlassInstant(event, target) {

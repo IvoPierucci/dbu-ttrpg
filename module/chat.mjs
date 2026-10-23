@@ -936,6 +936,8 @@ async function settleClashEffects(messageId, clash) {
   }
   if (clash.catsPaw && clash.result && !clash.catsPaw.applied) await settleCatsPaw(message, clash);
   if (clash.tuffleFusion && clash.result && !clash.tuffleFusion.applied) await settleTuffleFusion(message, clash);
+  if (clash.alternateSight && clash.result && !clash.alternateSight.applied) await settleAlternateSight(message, clash);
+  if (clash.clawsProne && clash.result && !clash.clawsProne.applied) await settleClaws(message, clash);
   if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
     await settleCutthroatClash(message, clash);
   }
@@ -7059,6 +7061,16 @@ export async function postManeuver(actor, maneuver,
     offerMove(card, actor, { key: `fleet:${actor.uuid}`, flag: "fleetRound", name: "Fleet of Foot",
       reason: "an Opponent whose Melee Range you entered - 1(T) on your next Strike at them this turn", fleet: true });
   }
+  // Burrowing Beast (1): the Movement in the Standard Environment, the ground soft enough - Underground, once a Round.
+  if (maneuver?.movement && card && await undergroundOpen(actor)) {
+    offerMove(card, actor, { key: `underground:${actor.uuid}`, flag: "undergroundRound", name: "Go Underground",
+      reason: "Burrowing Beast - in Cover till the start of your next turn", underground: true });
+  }
+  // Claws (2): the Movement into an Opponent's Melee Range - your first Physical Attack at them this Round.
+  if (maneuver?.movement && card && (actor.system?.effects?.slots?.["claws.prone"] === true)) {
+    offerMove(card, actor, { key: `claws:${actor.uuid}`, flag: "clawsMoveRound", name: "Claws",
+      reason: "an Opponent whose Melee Range you entered - hit by your first Physical Attack this Round, a Clash for Prone", claws: true });
+  }
   // Ranger (3): the movement ended beside a Character - a stack of Tension for an Ally or an Opponent there.
   if (maneuver?.movement && card && (actor.system?.effects?.slots?.["ranger.afterMove"] === true)
     && ((Number(actor.system.resources?.tension?.stacks) || 0) > 0)) {
@@ -9373,7 +9385,8 @@ function clashParts(kind, actor, clash, uuid) {
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
     ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
-    ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid)];
+    ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
+    ...rootedClashBonus(actor, clash, uuid)];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -17975,6 +17988,10 @@ async function takeMoveOffer(message, actor, offer) {
   if (offer.move.ranger && !await rangerBeside(message, actor)) return;
   // Fleet of Foot (2)'s: whom - none picked, no use spent.
   if (offer.move.fleet && !await fleetTarget(message, actor)) return;
+  // Claws (2)'s, the same.
+  if (offer.move.claws && !await clawsTarget(message, actor)) return;
+  // Burrowing Beast (1)'s: Underground.
+  if (offer.move.underground) await goUnderground(actor);
   // High Speed Ace (2)'s: its mark, till the Round ends.
   if (offer.move.highSpeed) {
     const { setCondition } = await import("./conditions.mjs");
@@ -20862,6 +20879,155 @@ export async function glassSoldiers(actor) {
 }
 
 /**
+ * Alternate Sight (4): "target an Opponent who is not Hidden from you. Make a Skill Clash (Perception vs Perception/Stealth) against
+ * them. If you win, increase the Strike and Wound Rolls of your next Attacking Maneuver made against that Opponent during this
+ * Combat Round by 1(T) and 2(T) respectively."
+ */
+export async function alternateSight(actor, target) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { isHiddenFrom } = await import("./hidden.mjs");
+  const why = !target ? "Alternate Sight: target an Opponent first."
+    : ((target.uuid === actor.uuid) || alliesOnScene(actor).some(ally => ally.uuid === target.uuid)) ? `${target.name} is not an Opponent.`
+    : isHiddenFrom(target, actor) ? `${target.name} is Hidden from ${actor.name}.` : "";
+  if (why) {
+    ui.notifications.warn(why);
+    return UNSPENT;
+  }
+  return postSkillClash(actor, target, { name: "Alternate Sight", type: "instant",
+    clash: { skill: "perception", defenderSkills: ["perception", "stealth"] } }, { alternateSight: { applied: false } });
+}
+
+/** Alternate Sight (4)'s Clash settled: won, the mark - spent by the next attack at them this Round (postAttack). */
+async function settleAlternateSight(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, alternateSight: { ...clash.alternateSight, applied: true } });
+  const actor = fromUuidSync(clash.challengerUuid);
+  if (!actor || (whoWonClash(clash.result) !== "challenger")) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.alternateSight`]: { uuid: clash.defenderUuid, round: roundKey() } });
+  return settledNote(message, `Alternate Sight: ${actor.name}'s next attack at ${clash.defenderName} this Round - Strike +1(T), Wound +2(T).`);
+}
+
+/** Arboreal (2): "you may spend a stack of Sunlight to use a Ki Surge." */
+export async function arborealSurge(actor) {
+  const held = Number(actor?.system?.resources?.sunlight?.stacks) || 0;
+  if (!held) {
+    ui.notifications.warn(`${actor.name} has no Sunlight to spend.`);
+    return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  }
+  await setResource(actor, "sunlight", held - 1);
+  return takeSurge(actor, { source: "Arboreal", kind: "ki" });
+}
+
+/** Arboreal (4): "As an Instant Maneuver during your turn, you stop being Rooted." */
+export async function uproot(actor) {
+  if (game.combat?.started && (game.combat.combatant?.actor?.uuid !== actor.uuid)) {
+    ui.notifications.warn(`${actor.name}: only during your turn.`);
+    return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  }
+  const { setCondition } = await import("./conditions.mjs");
+  return setCondition(actor, "rooted", 0);
+}
+
+/**
+ * Arboreal (3), Rooted: "If an Opponent makes a Clash that would result in an effect to move you on a win, increase your Dice Score
+ * for that Clash by 2(T)." The Clash opened at you that moves you won - the Thrust's (or one marked `movesLoser`).
+ */
+function rootedClashBonus(actor, clash, uuid) {
+  if ((uuid !== clash?.defenderUuid) || !((Number(actor?.system?.conditions?.rooted) || 0) > 0)
+    || (actor.system?.effects?.slots?.["arboreal.rootedClash"] !== true) || !(clash.thrust || clash.movesLoser)) return [];
+  return [{ label: "Rooted (Arboreal)", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
+/** Blood in the Water (2): "reduce the Dice Score of their Steadfast Check by 2" - kept on them till it is rolled. */
+export async function bloodSteadfast(actor, knockedUuid) {
+  const knocked = fromUuidSync(knockedUuid ?? "");
+  if (!actor || !knocked) return;
+  return requestActorUpdate(knocked, { [`flags.${SCOPE}.bloodSteadfast`]: (Number(knocked.getFlag?.(SCOPE, "bloodSteadfast")) || 0) + 2 });
+}
+
+/**
+ * Burrowing Beast (1), (2): "you can go 'Underground'" - "While you are Underground, you have Cover": the Cover set to the ground's
+ * Hardness Rank, what was there kept to be given back as (6) ends it - "[Automatic/Start of Turn]: You stop being Underground".
+ */
+async function goUnderground(actor) {
+  const cover = actor.system.battlefield?.cover ?? {};
+  await actor.update({ [`flags.${SCOPE}.underground`]: { coverBefore: { active: Boolean(cover.active), rank: Number(cover.rank) || 0 } },
+    "system.battlefield.cover.active": true, "system.battlefield.cover.rank": Number(actor.system.battlefield?.groundRank) || 0 });
+}
+
+export async function leaveUnderground(actor) {
+  const held = actor?.getFlag?.(SCOPE, "underground");
+  if (!held) return;
+  await actor.update({ [`flags.${SCOPE}.-=underground`]: null,
+    "system.battlefield.cover.active": Boolean(held.coverBefore?.active),
+    "system.battlefield.cover.rank": Number(held.coverBefore?.rank) || 0 });
+}
+
+/** Whether Burrowing Beast (1) may be offered: the Standard Environment, the ground Hardness Rank 3 or less, not Underground yet. */
+async function undergroundOpen(actor) {
+  if ((actor?.system?.effects?.slots?.["burrowing.underground"] !== true) || actor.getFlag?.(SCOPE, "underground")) return false;
+  const { STANDARD_ENVIRONMENT, environmentIdOf } = await import("./environments.mjs");
+  if (environmentIdOf(actor.system, getTrait) !== STANDARD_ENVIRONMENT) return false;
+  return (Number(actor.system.battlefield?.groundRank) || 0) <= 3;
+}
+
+/**
+ * Claws (2): "If you hit an Opponent with your first Physical Attack after moving into their Melee Range this Combat Round, make a
+ * Clash (Impulsive) against them. If you win, they are knocked Prone." Whom, asked among the Opponents whose Melee Range you stand
+ * in - held for your first Physical Attack at them this Round. False where none was picked.
+ */
+async function clawsTarget(message, actor) {
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const near = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid) && !token.actor.system?.defeated
+      && !whyNotWithinMelee(token.actor, actor, ""))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!near.length) {
+    ui.notifications.info(`${actor.name}: no Opponent's Melee Range reached.`);
+    return false;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Claws`,
+    [...near.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const who = near.find(each => each.uuid === picked);
+  if (!who) return false;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.clawsTarget`]: { uuid: who.uuid, name: who.name, round: roundKey() } });
+  return true;
+}
+
+/** Claws (2): the attack carrying it hit them - a button for the Clash (Impulsive), once a Round. */
+function clawsButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker?.isOwner || !attack.claws || attack.clawsDone || (attacker.getFlag?.(SCOPE, "clawsRound") === roundKey())) return;
+  const entry = targetResults(attack).find(each => (each.uuid === attack.claws) && each.own?.hit);
+  const target = entry ? fromUuidSync(entry.uuid) : null;
+  if (!target) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = `Claws: a Clash at ${target.name}`;
+  button.dataset.tooltip = "Impulsive, once a Round - won, they are knocked Prone.";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    if (attacker.getFlag?.(SCOPE, "clawsRound") === roundKey()) return;
+    await attacker.setFlag(SCOPE, "clawsRound", roundKey());
+    const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+    requestEdit(message, { type: "attack", attack: { ...fresh, clawsDone: true } });
+    await postSaveClash(attacker, target, { maneuverName: "Claws", saves: ["impulsive"], reason: "Win and they are knocked Prone.",
+      clawsProne: { applied: false } });
+  });
+  container.append(button);
+}
+
+async function settleClaws(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, clawsProne: { ...clash.clawsProne, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Claws: they keep their feet.");
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "prone", Math.max(1, Number(target.system?.conditions?.prone) || 0));
+  return settledNote(message, `Claws: ${target.name} is knocked Prone.`);
+}
+
+/**
  * Yaki Swarm (1): "spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent, select an unoccupied Square within a Large Sphere AoE
  * and create a 'Yaki' on that Square." How many asked, paid and said - the Minions and their Squares the table's.
  */
@@ -23486,6 +23652,19 @@ export async function postAttack(actor, target, maneuver,
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
+  // Alternate Sight (4): won this Round at one of them - this attack's Strike 1(T), its Wound 2(T); spent.
+  const sighted = reflecting ? null : actor.getFlag?.(SCOPE, "alternateSight");
+  if (sighted && (sighted.round === roundKey()) && everyone.some(who => who?.uuid === sighted.uuid)) {
+    const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+    strikeExtra = [...strikeExtra, { label: "Alternate Sight", written: "+1(T)", value: tier }];
+    woundExtra = [...woundExtra, { label: "Alternate Sight", written: "+2(T)", value: 2 * tier }];
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.alternateSight`]: null });
+  }
+  // Claws (2): your first Physical Attack at the one whose Melee Range you moved into this Round - carried by it; spent either way.
+  const clawed = reflecting ? null : actor.getFlag?.(SCOPE, "clawsTarget");
+  const clawsAt = (clawed && (clawed.round === roundKey()) && (foundation === "physical") && everyone.some(who => who?.uuid === clawed.uuid))
+    ? clawed.uuid : "";
+  if (clawsAt) await requestActorUpdate(actor, { [`flags.${SCOPE}.clawsTarget`]: null });
   // Hidden from any of them: "made 2 attacks" at them ends it.
   const { countHiddenAttack } = await import("./hidden.mjs");
   for (const aimed of everyone) await countHiddenAttack(actor, aimed);
@@ -23621,6 +23800,8 @@ export async function postAttack(actor, target, maneuver,
           ...(woundExtra.length ? { woundExtra } : {}),
           // What was added to the Strike as it was declared - Injuring Wound's 1(bT) off it.
           ...(strikeExtra.length ? { strikeExtra } : {}),
+          // Claws (2): whom it carries the Clash at, as it hits them.
+          ...(clawsAt ? { claws: clawsAt } : {}),
           // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
@@ -27647,7 +27828,9 @@ async function rollAttackWoundWork(message, attack) {
     // which is the same place a Guard halves it.
     const woundParts = [...analysisBonus(attacker, target), ...mindReadBonus(attacker, target),
       { label: "God Meteor", value: godMeteorPinned(attacker, target) },
-      { label: "Inherited Aggression", value: aggressionAgainst(attacker, target) },
+      // Inherited Aggression's, Blood in the Water (1)'s - named by whatever gave it.
+      { label: (attacker.system.effects?.slots?.["wound.perTargetThreshold"]?.parts ?? []).map(part => part.source).filter(Boolean)
+          .join(", ") || "Inherited Aggression", value: aggressionAgainst(attacker, target) },
       // Demonic Combat (2): against one suffering from a Combat Condition.
       // And Perfected Tactics (1)'s - the line named by whatever gave it.
       { label: (attacker.system.effects?.slots?.["wound.vsConditioned"]?.parts ?? []).map(part => part.source).filter(Boolean)
@@ -31533,6 +31716,9 @@ export async function rollSteadfastCheck(actor) {
   // Wrath of the Dragon (4): 2 off it for each spent on them - used up by this Check.
   const wrath = Number(actor.getFlag?.(SCOPE, "wrathSteadfast")) || 0;
   if (wrath) await actor.unsetFlag(SCOPE, "wrathSteadfast");
+  // Blood in the Water (2): the same, its own.
+  const blood = Number(actor.getFlag?.(SCOPE, "bloodSteadfast")) || 0;
+  if (blood) await actor.unsetFlag(SCOPE, "bloodSteadfast");
   if (karmicSpent) {
     await setResource(actor, "negativeenergy", (Number(actor.system.resources?.negativeenergy?.stacks) || 0) - karmicSpent);
   }
@@ -31549,7 +31735,8 @@ export async function rollSteadfastCheck(actor) {
   // Checks" - is its own term, named, so the card says where it came from.
   const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : "",
     thresholdDice ? String(thresholdDice) : "", lifeSpent ? `${lifeSpent}[Earthling Resolve]` : "",
-    karmicSpent ? `${karmicSpent}[Karmic Reflection]` : "", wrath ? `-${wrath}[Wrath of the Dragon]` : ""].filter(Boolean);
+    karmicSpent ? `${karmicSpent}[Karmic Reflection]` : "", wrath ? `-${wrath}[Wrath of the Dragon]` : "",
+    blood ? `-${blood}[Blood in the Water]` : ""].filter(Boolean);
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   // Failed, what may pass it instead is asked first - before anything that failing does.
@@ -32616,6 +32803,8 @@ function renderAttack(message, html) {
   if (!result) telepathicTeamworkButtons(message, attack, container);
   // Cat's Paw (1): an Opponent in your Melee Range attacking - the Clash, before it is settled.
   if (!result?.wound) catsPawButtons(message, attack, container);
+  // Claws (2): the first Physical Attack after moving into their Melee Range, hit - the Clash (Impulsive).
+  if (result) clawsButtons(message, attack, container);
   // Balanced Defender (2): targeted - Ki for the Defense Value and Soak Value, before it is settled.
   if (!result) balancedButtons(message, attack, container);
   // Combat Observation, Dedicated Watcher: a Counter Action for 1(T) - your attack's Strike and Wound or your Defense and Soak; an

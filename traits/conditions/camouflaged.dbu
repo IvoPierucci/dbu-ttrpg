@@ -1,0 +1,15 @@
+id: camouflaged
+name: Camouflaged
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Camouflage (1)'s mark - the Invisible State is its own, read by (2).
+combatCondition: no
+source: Core Rule
+description: >
+  Camouflage: Invisible by its first effect - 6(bT) Ki at the start of each turn.
+text: >
+  Camouflage (2): If you are in the Invisible State due to the first effect of Camouflage, reduce your Ki Points by 6(bT) at the start of your turn.
+
+---
+
+[passive]

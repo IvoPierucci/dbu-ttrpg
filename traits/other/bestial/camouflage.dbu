@@ -1,0 +1,24 @@
+id: camouflage
+name: Camouflage
+order: 6
+description: >
+  You possess, via some biological means, the ability to hide from predators and other dangers.
+text: >
+  Camouflage: You possess, via some biological means, the ability to hide from predators and other dangers.
+  (1)-[1/Round]: Spend 1 Action and 8(bT) Ki Points to enter the Invisible Special State. You can exit the Invisible State at any time as an Instant Maneuver.
+  (2)-[Automatic/Start of Turn]: If you are in the Invisible State due to the first effect of Camouflage, reduce your Ki Points by 6(bT).
+
+---
+
+# (1) Its own Maneuvers, on the Maneuvers tab (maneuvers/camouflage-*.dbu): in, 1 Action and 8(bT) Ki; out, as an Instant - its
+# mark (Camouflaged) saying the Invisible State is Camouflage's.
+
+# (2) Your turn begins Invisible by Camouflage: 6(bT) Ki Points.
+[automatic/start-of-turn, effect 2]
+requires inState("invisible") && hasCondition("camouflaged");
+ki.value -= 6(bT);
+
+# The Invisible State gone some other way: its mark with it.
+[automatic/start-of-turn]
+requires hasCondition("camouflaged") && !inState("invisible");
+remove(camouflaged);

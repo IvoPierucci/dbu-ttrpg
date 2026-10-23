@@ -1,0 +1,21 @@
+id: arboreal-third-effect
+name: Arboreal: Rooted
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: arboreal
+fromEffect: 3
+source: Core Rule
+description: >
+  Arboreal's third effect, as a Maneuver: you become Rooted.
+text: >
+  (3)-[1/Round, Ruling]: As a Standard Action with an Action Cost of 1 Action, you become ‘Rooted’.
+
+---
+
+# Rooted - its mark; what it does is Arboreal's own script.
+[on used]
+gain(rooted);

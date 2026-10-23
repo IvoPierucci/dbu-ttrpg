@@ -1,0 +1,48 @@
+id: arboreal
+name: Arboreal
+order: 2
+# Sunlight, its Resource - lost when the Combat Encounter ends, as every Resource is.
+resource: sunlight
+resourceLabel: Sunlight
+resourceMax: 2
+description: >
+  While most beasts of note are mammals or insects, you are instead animate flora, which allows you to utilize the sun’s energy in place of your own. (Inspired by the Hombrew from Gyrobbio of the DBU Discord)
+text: >
+  Arboreal: While most beasts of note are mammals or insects, you are instead animate flora, which allows you to utilize the sun’s energy in place of your own. (Inspired by the Hombrew from Gyrobbio of the DBU Discord)
+  (1)-[Triggered/Start of Turn, Resource]: Gain a stack of Sunlight (max. 2) if the Light Level (see — Light Levels) is Normal or higher.
+  (2)-[1/Round]: As a Standard Action with an Action Cost of 1 Action, you may spend a stack of Sunlight to use a Ki Surge.
+  (3)-[1/Round, Ruling]: As a Standard Action with an Action Cost of 1 Action, you become ‘Rooted’. While you are Rooted:
+  * You cannot use the Movement Maneuver or any other effect that would allow you to move.
+  * Increase your Soak Value by 2(bT) for each stack of Sunlight you possess.
+  * Reduce your Defense Value by 2(bT).
+  * If an Opponent makes a Clash that would result in an effect to move you on a win, increase your Dice Score for that Clash by 2(T).
+  (4)-[1/Round]: As an Instant Maneuver during your turn, you stop being Rooted.
+  (5)-[Automatic]: If you are moved for any reason while Rooted, you stop being Rooted.
+  (6)-[Triggered, 1/Round]: If you gain a stack of Sunlight while you are Rooted, regain Life Points equal to your Surgency.
+
+---
+
+[passive]
+# (3) Rooted (its mark): the Movement Maneuver shut - any other way to move the table's; Soak 2(bT) a Sunlight; Defense Value 2(bT)
+# less; a Clash that would move you on a win - the Thrust's - 2(T) on your side (chat.mjs rootedClashBonus).
+if (hasCondition("rooted")) {
+    forbid maneuver.movement;
+    defenseValue -= 2(bT);
+}
+if (hasCondition("rooted") && hasResource("sunlight")) {
+    soakValue += sunlight.stacks * 2(bT);
+}
+allow arboreal.rootedClash;
+# (2), (3), (4) Their own Maneuvers, on the Maneuvers tab (maneuvers/arboreal-*-effect.dbu). (5) Your token moved while Rooted: no
+# longer (dbu-ttrpg.mjs, its updateToken hook).
+
+# (1) Your turn begins in Normal Light or brighter - the Level you are in, as you treat it: a stack. Automatic by default, its
+# Triggered/Automatic button.
+[triggered/start-of-turn, effect 1]
+requires lightNormalOrHigher;
+sunlight.stacks += 1;
+
+# (6) A stack of Sunlight gained while Rooted (moment sunlight-gained): your Surgency in Life Points, once a Round.
+[triggered/sunlight-gained, 1/round, effect 6]
+requires hasCondition("rooted");
+life.value += surgency;

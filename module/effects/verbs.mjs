@@ -403,6 +403,22 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  alternateSight: {
+    args: [0, 0],
+    doc: "Alternate Sight (4): a Perception Clash at the targeted Opponent - won, your next attack at them this Round (chat.mjs alternateSight)."
+  },
+  arborealSurge: {
+    args: [0, 0],
+    doc: "Arboreal (2): a stack of Sunlight spent for a Ki Surge (chat.mjs arborealSurge)."
+  },
+  uproot: {
+    args: [0, 0],
+    doc: "Arboreal (4): no longer Rooted - during your turn alone (chat.mjs uproot)."
+  },
+  bloodSteadfast: {
+    args: [0, 0],
+    doc: "Blood in the Water (2): 2 off the knocked Opponent's Steadfast Check (chat.mjs bloodSteadfast)."
+  },
   yakiSwarm: {
     args: [0, 0],
     doc: "Yaki Swarm (1): 1 or 2 Yaki, 4(bT) Ki each - paid and said (chat.mjs yakiSwarm)."

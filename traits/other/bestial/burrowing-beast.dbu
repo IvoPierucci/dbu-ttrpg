@@ -1,0 +1,27 @@
+id: burrowing-beast
+name: Burrowing Beast
+order: 5
+description: >
+  With a body built for digging through the soil, you stay safely hidden underground.
+text: >
+  Burrowing Beast: With a body built for digging through the soil, you stay safely hidden underground.
+  (1)-[1/Round, Ruling]: When using the Movement Maneuver while in the Standard Environment, you can go ‘Underground’ if the Hardness value for the ground is 3 or less.
+  (2)-[Passive]: While you are Underground, you have Cover.
+  (3)-[Passive]: While you are in Cover, increase your Defense Value by 1(bT).
+  (4)-[Passive]: While you are in Cover, your use of the Movement Maneuver does not trigger the Exploit Maneuver.
+  (5)-[1/Round]: While you are in Cover, you may use the Movement Maneuver as an Instant Maneuver
+  (6)-[Automatic/Start of Turn]: You stop being Underground.
+
+---
+
+[passive]
+# (1) Offered on your Movement's card in the Standard Environment, the ground's Hardness Rank 3 or less, once a Round; (2) taken, the
+# Cover set to the ground's Rank till you come out - (6) at the start of your turn, the Cover as it was (chat.mjs goUnderground).
+allow burrowing.underground;
+# (3), (4) In Cover - the Battlefields tab's, or Underground.
+if (inCover) {
+    defenseValue += 1(bT);
+    forbid movement.provokes;
+}
+# (5) The Movement Maneuver's Instant button, in Cover, once a Round (actor-character-sheet.mjs).
+allow movement.burrowInstant;

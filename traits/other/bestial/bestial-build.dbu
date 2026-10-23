@@ -1,0 +1,20 @@
+id: bestial-build
+name: Bestial Build
+order: 3
+options: 1
+optionEffect: 2
+description: >
+  Animals come in a variety of shapes, sizes, and anatomies. Because of this, some have varying methods of self-defense.
+text: >
+  Bestial Build: Animals come in a variety of shapes, sizes, and anatomies. Because of this, some have varying methods of self-defense.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Option]: Upon gaining this Bestial Trait, choose one of the following effects:
+  * Thick Hide [Passive]: Increase your Soak Value by 2(T) and your Corporeal Saving Throw by 1(T).
+  * Slender [Passive]: Increase your Defense Value and Impulsive Saving Throw by 1(T).
+
+---
+
+# (2) Its Option, chosen as it is gained (bestial-build/*.dbu).
+[passive]
+# (1)
+racialLifeModifier += 2;

@@ -310,6 +310,14 @@ Hooks.on("deleteToken", () => conduitRefresh());
 Hooks.on("updateToken", (token, changes) => {
   if (["disposition", "x", "y"].some(key => key in (changes ?? {}))) conduitRefresh();
 });
+// Arboreal (5): "If you are moved for any reason while Rooted, you stop being Rooted" - the token moved, by whoever moved it.
+Hooks.on("updateToken", async (token, changes, options, userId) => {
+  if ((userId !== game.user.id) || !["x", "y"].some(key => key in (changes ?? {}))) return;
+  const actor = token.actor;
+  if (!((Number(actor?.system?.conditions?.rooted) || 0) > 0)) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "rooted", 0);
+});
 Hooks.on("updateItem", item => { if (READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)) conduitRefresh(); });
 
 Hooks.once("setup", async () => {
