@@ -203,6 +203,7 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
   const kind = CRAFTED[crafted?.kind];
   if (!kind) return null;
   const grade = kind.grades[crafted.grade] ?? kind.grades[1];
+  const extraSlots = (crafted.kind === "weapon") ? Math.max(0, Math.floor(Number(data?.effects?.slots?.["weapon.qualitySlots"]?.add) || 0)) : 0;
   const category = getTrait?.(crafted.category) ?? null;
 
   // The Craft DC the Grade gives, moved by the Category - Standard Clothing's one lower -
@@ -240,10 +241,11 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
     perBaseTier,
     fromQualities,
     bonus: perBaseTier * (Number(baseTier) || 1),
-    slots: grade.slots,
+    // Variety Specialist (1): its owner's Weapons, a Quality Slot more each.
+    slots: grade.slots + extraSlots,
     qualities: count,
     used,
-    over: Math.max(0, used - grade.slots),
+    over: Math.max(0, used - grade.slots - extraSlots),
     // What the Armor Category's Damage Reduction is multiplied by - Sleek Design's "Halve the
     // Damage Reduction gained from this Armor", `piece.armorDamageReduction *= 1/2;` - 1 where
     // nothing says so. Read as written: the halving is the point, not a whole number.

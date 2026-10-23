@@ -3112,7 +3112,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static #overSlots(item) {
     if (!item.system.crafted?.kind) return 0;
     return craftedReading(item.system.crafted,
-      { getTrait, difficulties: DBUCharacterData.DIFFICULTIES })?.over ?? 0;
+      { getTrait, difficulties: DBUCharacterData.DIFFICULTIES, data: item.actor?.system ?? null })?.over ?? 0;
   }
 
   /**
@@ -4445,6 +4445,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await item.update(changes);
     // Iaijutsu Specialist (3): a Standard Weapon drawn, the only one in hand - in a Combat Encounter.
     if (drawing && game.combat?.started) await (await import("../chat.mjs")).iaijutsuDraw(this.actor, item, drawnCard);
+    // Variety Specialist (3): a Weapon equipped - in a Combat Encounter.
+    if (drawing && game.combat?.started) await (await import("../chat.mjs")).varietyEquip(this.actor, item, drawnCard);
   }
 
   /**

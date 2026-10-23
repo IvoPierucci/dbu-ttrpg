@@ -1,0 +1,24 @@
+id: variety-specialist
+name: Variety Specialist
+talentCategory: weapon
+prerequisites: Weapon Specialist
+description: >
+  Constantly switching your Weapon, your tactics leave your enemies guessing.
+text: >
+  Variety Specialist: Constantly switching your Weapon, your tactics leave your enemies guessing.
+  –Prerequisites: Weapon Specialist
+  (1)-[Passive]: All of your Weapons gain 1 additional Quality Slot.
+  (2)-[Triggered, 1/Encounter]: If you use the Disarm Maneuver and win the Clash for its effects, you may equip the removed Weapon as an Out-of-Sequence Maneuver.
+  (3)-[Triggered, 1/Round, 3/Encounter]: If you equip a Weapon, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. You can only apply this effect to each Weapon once per Combat Encounter.
+
+---
+
+[passive]
+# (1) Each of your Weapons' Quality Slots 1 more (gear.mjs craftedReading).
+weapon.qualitySlots += 1;
+# (2) The Disarm's Clash won: the Weapon taken out of their grip into yours, out of sequence - offered on its card, once an
+# Encounter (chat.mjs takeVarietyGrab).
+allow variety.grab;
+# (3) A Weapon equipped in a Combat Encounter - drawn from the sheet, or taken through (2): the Basic Attack out of sequence,
+# offered - once a Round, three times an Encounter, each Weapon once an Encounter, counted when taken (chat.mjs varietyEquip).
+allow variety.equip;

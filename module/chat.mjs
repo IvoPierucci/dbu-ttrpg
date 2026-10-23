@@ -1393,7 +1393,41 @@ async function settleDisarm(message, clash) {
   const weapon = held.find(item => item.id === id);
   if (!weapon) return;
   await requestActorUpdate(target, { items: [{ _id: weapon.id, "system.equipped": false }] });
+  // Variety Specialist (2): "you may equip the removed Weapon as an Out-of-Sequence Maneuver" - offered here, once an Encounter.
+  if ((actor.system?.effects?.slots?.["variety.grab"] === true)
+    && (actor.getFlag?.(SCOPE, "varietyGrabEncounter") !== (game.combat?.id ?? "none"))) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "",
+      maneuverName: `Equip ${weapon.name}`, reason: "Variety Specialist - the Weapon you Disarmed (1/Encounter)",
+      varietyGrab: { fromUuid: target.uuid, itemId: weapon.id } } });
+  }
   return settledNote(message, `${weapon.name} is out of ${target.name}'s grip - on a Square adjacent to them, of ${actor.name}'s choice.`);
+}
+
+/**
+ * Variety Specialist (2), taken: the Disarmed Weapon theirs no more and in your hand - out of sequence, once an Encounter - and
+ * (3)'s Basic Attack offered for it.
+ */
+async function takeVarietyGrab(message, actor, grab) {
+  if (actor.getFlag?.(SCOPE, "varietyGrabEncounter") === (game.combat?.id ?? "none")) {
+    return ui.notifications.warn(`${actor.name}: Variety Specialist - already used this Combat Encounter.`);
+  }
+  const owner = fromUuidSync(grab?.fromUuid ?? "");
+  const weapon = owner?.items?.get(grab?.itemId ?? "");
+  if (!weapon || weapon.system?.equipped) return ui.notifications.warn("That Weapon is no longer lying there.");
+  const { wieldProblem } = await import("./gear.mjs");
+  const data = { ...weapon.toObject(), system: { ...weapon.toObject().system, equipped: false } };
+  delete data._id;
+  const problem = wieldProblem(actor.items.contents, { ...data, system: data.system }, getTrait, actor.system.weaponsWielded);
+  if (problem) return ui.notifications.warn(problem);
+  await actor.setFlag(SCOPE, "varietyGrabEncounter", game.combat?.id ?? "none");
+  data.system.equipped = true;
+  const [made] = (await actor.createEmbeddedDocuments("Item", [data])) ?? [];
+  if (owner.isOwner) await weapon.delete();
+  else if (game.users.activeGM) game.socket.emit(CHANNEL, { type: "deleteItem", actorUuid: owner.uuid, itemId: weapon.id });
+  await recordManeuverType(actor, "outOfSequence", { messageId: message.id });
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  await settledNote(message, `${actor.name} takes ${weapon.name} in hand (Variety Specialist).`);
+  if (made) await varietyEquip(actor, made, message);
 }
 
 /** A won drain Clash drains, into the Device; a lost one takes nothing. */
@@ -17598,6 +17632,28 @@ export async function iaijutsuDraw(actor, item, card = null) {
   return offerOutOfSequence(actor, offer);
 }
 
+/**
+ * Variety Specialist (3): "If you equip a Weapon, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. You can only
+ * apply this effect to each Weapon once per Combat Encounter." Offered on the card that says so - or one of its own; once a Round,
+ * three times an Encounter, each Weapon once, counted when taken.
+ */
+export async function varietyEquip(actor, item, card = null) {
+  if (!actor || !item || !game.combat?.started || (actor.system?.effects?.slots?.["variety.equip"] !== true)) return;
+  if (!varietyOpen(actor, item.id)) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    reason: `Variety Specialist - ${item.name} equipped`, grants: { variety: item.id } };
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
+/** Variety Specialist (3)'s limits: once a Round, three times an Encounter, this Weapon not yet. */
+function varietyOpen(actor, itemId) {
+  const used = actor.getFlag?.(SCOPE, "variety") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const mine = (used.encounter === encounter) ? used : { ids: [] };
+  return (used.round !== roundKey()) && ((mine.ids ?? []).length < 3) && !(mine.ids ?? []).includes(itemId);
+}
+
 /** Iaijutsu Specialist (3)'s once a Round, three times an Encounter - not spent yet. */
 function iaijutsuOpen(actor) {
   const used = actor.getFlag?.(SCOPE, "iaijutsu") ?? {};
@@ -21103,6 +21159,17 @@ async function takeOutOfSequence(message, actor, offer) {
     }
     await actor.setFlag(SCOPE, "superiorSyncEncounter", game.combat?.id ?? "none");
   }
+  // Variety Specialist (3)'s, once a Round, three times an Encounter, each Weapon once.
+  if (offer.grants?.variety) {
+    if (!varietyOpen(actor, offer.grants.variety)) {
+      ui.notifications.warn(`${actor.name}: Variety Specialist - used up for now.`);
+      return null;
+    }
+    const used = actor.getFlag?.(SCOPE, "variety") ?? {};
+    const encounter = game.combat?.id ?? "none";
+    const ids = (used.encounter === encounter) ? (used.ids ?? []) : [];
+    await actor.setFlag(SCOPE, "variety", { encounter, round: roundKey(), ids: [...ids, offer.grants.variety] });
+  }
   // Iaijutsu Specialist (3)'s, once a Round, three times an Encounter.
   if (offer.grants?.iaijutsu) {
     if (!iaijutsuOpen(actor)) {
@@ -21148,6 +21215,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.terrifyingTechnique) return takeTerrifyingTechnique(message, actor);
   if (offer.mentalWarfare) return insultOutOfSequence(actor, offer.targetUuid);
   if (offer.iaijutsuSheathe) return takeIaijutsuSheathe(message, actor, offer.iaijutsuSheathe);
+  if (offer.varietyGrab) return takeVarietyGrab(message, actor, offer.varietyGrab);
   // Perfect Mimicry (2) with a copied Unique Ability: it, out of sequence, once an Encounter.
   if (offer.perfectMimicryItem) {
     if (actor.getFlag?.(SCOPE, "perfectMimicryEncounter") === (game.combat?.id ?? "none")) {
