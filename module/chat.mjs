@@ -18260,6 +18260,27 @@ function offerRebuke(message, actor, attacker) {
  * triggered this effect." Offered on the attack's card to each such Ally, at that Opponent - once a Round for whoever has it,
  * counted when one is taken.
  */
+/**
+ * Weapon Master (2): "If you deal Damage to an Opponent with an Armed Attack, you may use the Basic Attack Maneuver as an
+ * Out-of-Sequence Maneuver. If you do, that Attacking Maneuver must be an Armed Attack." On the attack's card, once - its limits
+ * counted when taken.
+ */
+function offerWeaponMaster(message, actor) {
+  if (actor.system?.defeated || (actor.system?.effects?.slots?.["weaponMaster.strike"] !== true) || !weaponMasterOpen(actor)) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.weaponMaster && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", reason: "Weapon Master - an Armed Attack's Damage (it must be Armed too)",
+    grants: { weaponMaster: true, armedOnly: true } } });
+}
+
+/** Weapon Master (2)'s once a Round, three times an Encounter - not spent yet. */
+function weaponMasterOpen(actor) {
+  const used = actor.getFlag?.(SCOPE, "weaponMaster") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  return (used.round !== roundKey()) && (count < 3);
+}
+
 function offerBrigandStrike(message, attack, actor, target) {
   if (actor.system?.defeated || (actor.system?.effects?.slots?.["brigand.allyStrike"] !== true)) return;
   if (actor.getFlag?.(SCOPE, "brigandRound") === roundKey()) return;
@@ -21159,6 +21180,17 @@ async function takeOutOfSequence(message, actor, offer) {
     }
     await actor.setFlag(SCOPE, "superiorSyncEncounter", game.combat?.id ?? "none");
   }
+  // Weapon Master (2)'s, once a Round, three times an Encounter.
+  if (offer.grants?.weaponMaster) {
+    if (!weaponMasterOpen(actor)) {
+      ui.notifications.warn(`${actor.name}: Weapon Master - used up for now.`);
+      return null;
+    }
+    const used = actor.getFlag?.(SCOPE, "weaponMaster") ?? {};
+    const encounter = game.combat?.id ?? "none";
+    const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+    await actor.setFlag(SCOPE, "weaponMaster", { encounter, round: roundKey(), count: count + 1 });
+  }
   // Variety Specialist (3)'s, once a Round, three times an Encounter, each Weapon once.
   if (offer.grants?.variety) {
     if (!varietyOpen(actor, offer.grants.variety)) {
@@ -21551,6 +21583,11 @@ async function takeOutOfSequence(message, actor, offer) {
     // A Kamikaze Ghost's blast is made with no Weapon.
     if (!granted?.unarmed) declared = await armOutOfSequence(actor, maneuver, declared, target, granted?.modifiers ?? []);
     if (!declared) return;
+    // Weapon Master (2)'s: "that Attacking Maneuver must be an Armed Attack".
+    if (granted?.armedOnly && (!declared.weapon || declared.weapon.unarmed)) {
+      ui.notifications.warn(`${maneuver.name}: it must be an Armed Attack.`);
+      return;
+    }
     // Elemental Blade, the same out of sequence.
     const { elementalBlade } = await import("./use-maneuver.mjs");
     const bladed = await elementalBlade(actor, maneuver, declared);
@@ -22315,7 +22352,9 @@ export async function postAttack(actor, target, maneuver,
                 + (Number(uncappedCharges) || 0),
           // Dice Categories the Technique's features add to each Charge: Maximum Charge, Super Beam.
           chargeCategories: reflecting ? (reflecting.chargeCategories ?? 0)
-            : ((technique?.chargeCategories ?? 0) + blaster.dice + gambitDice(actor)),
+            : ((technique?.chargeCategories ?? 0) + blaster.dice + gambitDice(actor)
+              // Weapon Master (1): an Armed Attack's.
+              + ((weapon && !weapon.unarmed) ? (Number(actor.system.effects?.slots?.["charges.armedCategory"]?.add) || 0) : 0)),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
           // die - and it is their attack being thrown back, not the reflector's.
           signature: reflecting
@@ -28978,6 +29017,9 @@ async function applyAttackDamage(message, target, attack) {
     && alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid)) await cutthroatAllyHit(armsUser, target);
   // Greed of the Hera (2): Damage dealt to an Opponent by an attack with an AoE - the Basic Attack, out of sequence.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && attackArea(attack)) offerGreedStrike(message, armsUser, target);
+  // Weapon Master (2): Damage dealt to an Opponent by an Armed Attack - the Basic Attack out of sequence, itself Armed.
+  if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && attack.weapon && !attack.weapon.unarmed
+    && !alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid)) offerWeaponMaster(message, armsUser);
   // Brigand Combat (2): Damage dealt to an Opponent - an Ally beside them it targeted and did not harm, the Basic Attack at them.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerBrigandStrike(message, attack, armsUser, target);
   // Skill of the Watcher (5): Damage dealt through the Exploit Maneuver, or none taken from an attack Defended against.

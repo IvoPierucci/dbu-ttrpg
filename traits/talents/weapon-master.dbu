@@ -1,0 +1,20 @@
+id: weapon-master
+name: Weapon Master
+talentCategory: weapon
+prerequisites: 2+ Weapon Talents
+description: >
+  Your Weapon Attacks are able to conduct your ki, dealing more damage when you land them successfully.
+text: >
+  Weapon Master: Your Weapon Attacks are able to conduct your ki, dealing more damage when you land them successfully.
+  –Prerequisites: 2+ Weapon Talents
+  (1)-[Passive]: Increase the Dice Category of your Energy Charges by 1 Category for your Armed Attacks.
+  (2)-[Triggered, 1/Round, 3/Encounter]: If you deal Damage to an Opponent with an Armed Attack, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, that Attacking Maneuver must be an Armed Attack.
+
+---
+
+[passive]
+# (1) An Armed Attack's Energy Charges a Dice Category up (chat.mjs postAttack).
+charges.armedCategory += 1;
+# (2) Damage dealt to an Opponent by an Armed Attack: the Basic Attack out of sequence, offered on its card - itself an Armed
+# Attack; once a Round, three times an Encounter, counted when taken (chat.mjs offerWeaponMaster; grants.weaponMaster).
+allow weaponMaster.strike;
