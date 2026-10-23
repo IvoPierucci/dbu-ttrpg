@@ -28,5 +28,9 @@ text: >
 swaggerChoose();
 
 # (2) As they end - the start of your next turn, before anything answers it - a stack of Swagger for each, where an Attacking
-# Maneuver of yours was made since they were chosen (chat.mjs swaggerEnds; combat.mjs beginTurn). No most named.
+# Maneuver of yours was made since they were chosen (chat.mjs swaggerEnds; combat.mjs beginTurn). No most named. This block is its
+# Triggered/Automatic button: its Moment is never fired - Automatic, gained without asking; Triggered, asked.
+[triggered/swagger-ended, effect 2]
+allow swagger.gain;
+
 # (3) Its own Maneuver, on the Maneuvers tab (maneuvers/swaggering-wager-third-effect.dbu).

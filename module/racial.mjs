@@ -1006,7 +1006,11 @@ export async function toggledBlocks(item) {
 
 /** Gained - or its Option changed - its toggles start Automatic (the user's). A Talent's too. */
 export async function automateAll(actor, item) {
-  const ids = await toggledBlocks(item);
+  // But one marked to start Triggered (`startsTriggered`).
+  const { compile } = await import("./effects/parser.mjs");
+  const later = new Set((compile(item?.system?.script ?? "").program?.blocks ?? [])
+    .filter(block => block.modifiers?.startsTriggered).map(block => `${item.id}#${block.index}`));
+  const ids = (await toggledBlocks(item)).filter(id => !later.has(id));
   if (!actor || !ids.length) return;
   await actor.setFlag("dbu-ttrpg", "automatic", [...new Set([...(actor.getFlag("dbu-ttrpg", "automatic") ?? []), ...ids])]);
 }

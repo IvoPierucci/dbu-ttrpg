@@ -14682,6 +14682,10 @@ export async function swaggerEnds(actor) {
   if (!held) return;
   await actor.unsetFlag(SCOPE, "swagger");
   if (!held.attacked || !(Number(held.count) > 0) || !hasTalentItem(actor, "swaggering-wager")) return;
+  // Its button: Automatic, gained; Triggered, asked.
+  const automatic = triggersFor(actor, ["swagger-ended"]).some(entry => (actor.getFlag?.(SCOPE, "automatic") ?? []).includes(entry.blockId));
+  if (!automatic && ((await askPlayerChoice(actor, `${actor.name}: Swaggering Wager`,
+    [{ value: "yes", label: `Gain ${held.count} Swagger` }, { value: "no", label: "No" }])) !== "yes")) return;
   await setResource(actor, "swagger", (Number(actor.system.resources?.swagger?.stacks) || 0) + Number(held.count));
 }
 
@@ -14698,9 +14702,10 @@ const SWAGGER_ROLLS = Object.freeze([
 ]);
 
 /**
- * Swaggering Wager (3): "spend a number of Swagger Stacks" - one of its effects a use, asked: 1-3, a Combat Roll each 1(T) till
- * the start of your next turn ("This effect cannot stack" - one already raised is not offered); 2, a Counter Action; 3, the Basic
- * Attack out of sequence; 4, an Action - not a Minion's.
+ * Swaggering Wager (3): "spend a number of Swagger Stacks to gain the effects listed below" - as many of them as the Swagger
+ * held pays for, each once (the user's), asked one after another till Done: 1 a Combat Roll, 1(T) till the start of your next
+ * turn ("This effect cannot stack" - one already raised is not offered); 2, a Counter Action; 3, the Basic Attack out of sequence
+ * (paid only if it is used); 4, an Action - not a Minion's.
  */
 export async function swaggerSpend(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
@@ -14709,47 +14714,43 @@ export async function swaggerSpend(actor) {
     ui.notifications.warn(`${actor?.name ?? "They"} have no Swagger.`);
     return UNSPENT;
   }
-  const open = SWAGGER_ROLLS.filter(roll => !((Number(actor.system.conditions?.[roll.condition]) || 0) > 0));
-  const subsets = [];
-  for (let mask = 1; mask < (1 << open.length); mask++) {
-    const subset = open.filter((roll, at) => mask & (1 << at));
-    if (subset.length <= stacks) subsets.push(subset);
-  }
-  const options = [
-    ...subsets.map(subset => ({ value: `rolls:${subset.map(roll => roll.key).join(",")}`,
-      label: `${subset.map(roll => roll.label).join(", ")} +1(T) (${subset.length} Swagger)` })),
-    ...((stacks >= 2) ? [{ value: "counter", label: "1 Counter Action (2 Swagger)" }] : []),
-    ...((stacks >= 3) ? [{ value: "basic", label: "Basic Attack out of sequence (3 Swagger)" }] : []),
-    ...(((stacks >= 4) && !actor.system?.minion) ? [{ value: "action", label: "1 Action (4 Swagger)" }] : [])
+  const EFFECTS = [
+    ...SWAGGER_ROLLS.filter(roll => !((Number(actor.system.conditions?.[roll.condition]) || 0) > 0))
+      .map(roll => ({ value: roll.key, label: `${roll.label} +1(T)`, cost: 1, roll })),
+    { value: "counter", label: "1 Counter Action", cost: 2 },
+    { value: "basic", label: "Basic Attack out of sequence", cost: 3 },
+    ...(actor.system?.minion ? [] : [{ value: "action", label: "1 Action", cost: 4 }])
   ];
-  if (!options.length) return UNSPENT;
-  const picked = await askPlayerChoice(actor, `${actor.name}: Swaggering Wager - ${stacks} Swagger`, options);
-  if (!picked) return UNSPENT;
-  const spend = n => setResource(actor, "swagger", stacks - n);
-  if (String(picked).startsWith("rolls:")) {
-    const rolls = String(picked).slice(6).split(",").map(key => SWAGGER_ROLLS.find(roll => roll.key === key)).filter(Boolean);
-    await spend(rolls.length);
-    const { setCondition } = await import("./conditions.mjs");
-    for (const roll of rolls) {
-      if (!await setCondition(actor, roll.condition, 1)) continue;
-      await lasting(actor, { kind: KINDS.CONDITION, key: roll.condition, edge: EDGES.START, next: true, source: "Swaggering Wager" });
-    }
-    return;
+  const picked = [];
+  let left = stacks;
+  for (;;) {
+    const open = EFFECTS.filter(effect => (effect.cost <= left) && !picked.includes(effect));
+    if (!open.length) break;
+    const chosen = await askPlayerChoice(actor,
+      `${actor.name}: Swaggering Wager - ${left} Swagger left${picked.length ? ` (${picked.map(effect => effect.label).join(", ")})` : ""}`,
+      [...open.map(effect => ({ value: effect.value, label: `${effect.label} (${effect.cost} Swagger)` })),
+        { value: "done", label: picked.length ? "Done" : "Cancel" }]);
+    const effect = open.find(each => each.value === chosen);
+    if (!effect) break;
+    picked.push(effect);
+    left -= effect.cost;
   }
-  if (picked === "counter") {
-    await spend(2);
-    return actor.update({ "system.actionsSpent.converted": (Number(actor.system.actionsSpent?.converted) || 0) + 1 });
+  if (!picked.length) return UNSPENT;
+  const basic = picked.find(effect => effect.value === "basic");
+  // All but the Basic Attack's, paid now.
+  await setResource(actor, "swagger", stacks - picked.filter(effect => effect !== basic).reduce((sum, effect) => sum + effect.cost, 0));
+  const { setCondition } = await import("./conditions.mjs");
+  for (const effect of picked.filter(each => each.roll)) {
+    if (!await setCondition(actor, effect.roll.condition, 1)) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key: effect.roll.condition, edge: EDGES.START, next: true, source: "Swaggering Wager" });
   }
-  if (picked === "basic") {
-    const used = await ownOutOfSequence(actor, "basic-attack");
-    if (used) await setResource(actor, "swagger", Math.max(0, (Number(actor.system.resources?.swagger?.stacks) || 0) - 3));
-    return used;
+  if (picked.some(effect => effect.value === "counter")) {
+    await actor.update({ "system.actionsSpent.converted": (Number(actor.system.actionsSpent?.converted) || 0) + 1 });
   }
-  if (picked === "action") {
-    await spend(4);
-    return steadyAction(actor);
+  if (picked.some(effect => effect.value === "action")) await steadyAction(actor);
+  if (basic && await ownOutOfSequence(actor, "basic-attack")) {
+    await setResource(actor, "swagger", Math.max(0, (Number(actor.system.resources?.swagger?.stacks) || 0) - basic.cost));
   }
-  return UNSPENT;
 }
 
 /** The Sake Bottles a character holds. */
@@ -14774,6 +14775,8 @@ export async function sakeDrink(actor) {
   if (!item) return UNSPENT;
   const left = Math.max(0, (Number(item.system.charges) || 0) - 1);
   await item.update({ "system.charges": left });
+  // Drunk entered - its first level, or a level higher in it already - till the start of your next turn.
+  await (await import("./effects/moments-runtime.mjs")).enterState(actor, "drunk", 1, "start-of-next-turn", item.name);
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(`${actor.name} uses 1 ${item.system.chargesLabel || "Alcohol"} from ${item.name} `
       + `(${left} left) out of sequence (Experienced Drunk), and ${item.system.chargeUseNote || "enters the Drunk Special State"}.`)}</p>` });

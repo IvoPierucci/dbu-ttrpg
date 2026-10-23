@@ -20,7 +20,8 @@ text: >
 
 ---
 
-# Which, asked - one a use (chat.mjs swaggerSpend): a Combat Roll a stack, each one not already raised; 2 for a Counter Action;
-# 3 for the Basic Attack out of sequence; 4 for an Action, not a Minion's.
+# Which, asked one after another till Done - as many as the Swagger pays for, each once (the user's; chat.mjs swaggerSpend): a
+# Combat Roll a stack, each one not already raised; 2 for a Counter Action; 3 for the Basic Attack out of sequence, paid only if it
+# is used; 4 for an Action, not a Minion's.
 [on used]
 swaggerSpend();

@@ -29,6 +29,7 @@ allow feral.woundNudge;
 # maneuvers.mjs askFerocious).
 allow ferocious.signature;
 
-# (3) Feral (Wild) till the start of your next turn. Automatic by default, its Triggered/Automatic button.
-[triggered/start-of-turn, effect 3]
+# (3) Feral till the start of your next turn - its first level, or a level higher in it already. Its Triggered/Automatic
+# button, Triggered as it is gained (the user's).
+[triggered/start-of-turn, startsTriggered, effect 3]
 enterState(feral, 1, start-of-next-turn);

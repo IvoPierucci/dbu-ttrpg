@@ -4284,6 +4284,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
     const left = Math.max(0, (item.system.charges ?? 0) - 1);
     await item.update({ "system.charges": left });
+    // The Sake Bottle's Drink: Drunk entered - its first level, or a level higher in it already - till the start of the next turn.
+    if (item.system.gearId === "sake-bottle") {
+      await (await import("../effects/moments-runtime.mjs")).enterState(this.actor, "drunk", 1, "start-of-next-turn", item.name);
+    }
     return ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: `<p>${Handlebars.escapeExpression(`${this.actor.name} uses 1 ${item.system.chargesLabel || "charge"} from `

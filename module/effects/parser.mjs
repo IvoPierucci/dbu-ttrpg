@@ -187,6 +187,9 @@ class Parser {
           // Triggered/Automatic button all the same - Automatic, it answers by itself; Triggered, the window asks (the
           // user's: Heroic Style's and Calculating Style's).
           case "toggle": modifiers.toggle = true; break;
+          // `startsTriggered` - its Triggered/Automatic button starts on Triggered as it is gained, where every other starts
+          // Automatic (the user's: Ferocious Fighter's Feral every turn).
+          case "startsTriggered": modifiers.startsTriggered = true; break;
           // `effect 4` - which of the Trait's printed effects, "(4)-[Triggered]", this block is: how it is named on the
           // sheet (the user's).
           case "effect":
