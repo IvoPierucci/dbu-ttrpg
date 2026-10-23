@@ -578,7 +578,7 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // A Combat Condition put on an Opponent this Combat Encounter (Honorable Demon's).
   "inflictedThisEncounter",
   // Arboreal's Normal Light or brighter; Burrowing Beast's Cover.
-  "lightNormalOrHigher", "inCover", "inSky", "defeatedMinion",
+  "lightNormalOrHigher", "inCover", "inSky", "defeatedMinion", "lightNotNormal",
   // An Integrated Majin-Dama held (Feline Rally's, Will of Nine Lives').
   "hasIntegratedDama",
   // The Shaken inflicted, through the Direct Hit option of the Defend Maneuver (Unflinching Resilience's).

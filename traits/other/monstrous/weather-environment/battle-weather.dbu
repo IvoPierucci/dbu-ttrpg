@@ -1,0 +1,16 @@
+id: battle-weather
+name: Battle Weather
+order: 1
+optionOf: weather-environment
+# The Battle Weather, chosen as this is.
+choose: weather
+description: >
+text: >
+
+---
+
+[passive]
+# (2) In it: Combat Rolls 1(T).
+if (inWeather("$choice")) {
+    combatRolls += 1(T);
+}

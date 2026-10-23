@@ -1,0 +1,28 @@
+id: super-elastic-body
+name: Super Elastic Body
+order: 15
+description: >
+  Your flesh is stretchy, squishy, and otherwise impermeable to conventional forms of attack – allowing you to easily reflect and repel kinetic assaults. (by Comeau in the DBU Discord)
+text: >
+  Super Elastic Body: Your flesh is stretchy, squishy, and otherwise impermeable to conventional forms of attack – allowing you to easily reflect and repel kinetic assaults. (by Comeau in the DBU Discord)
+  (1)-[Passive]: Increase your Damage Reduction against Physical and Energy Attacks by 2(T).
+  (2)-[Triggered]: If you would use the Reflect Maneuver, increase your Strike Rolls by 1(T) for the duration of that Maneuver.
+  (3)-[Triggered, 1/Round]: If you avoid an Attacking Maneuver through the effects of the Parry option of the Defend Maneuver, you may use the Launch Maneuver as an Out-of-Sequence Maneuver against the attacking Character as if they were in a Grapple with you as the Grappler.
+  (4)-[Triggered, 1/Round]: If you would use the Direct Hit option of the Defend Maneuver against an Opponent’s Physical or Energy Attack and receive no Damage while not using the second effect of the Shield Weapon Category, you may treat it as though you avoided that Attacking Maneuver through the effect of the Parry option of the Defend Maneuver instead.
+  (5)-[Passive]: While you possess any stacks of the Slowed Combat Condition or you are currently suffering the effects of the Freezing Climate Battle Weather, ignore all other effects of this Trait.
+
+---
+
+[passive]
+# (5) Slowed, or in the Cold Weather (its "freezing" climate): none of the rest.
+if (!hasCondition("slowed") && !inWeather("cold-weather")) {
+    # (1) Against each Physical or Energy Attack, with its Damage Reduction (chat.mjs).
+    allow elastic.reduction;
+    # (2) The Reflect's attack - its Strike 1(T) (chat.mjs postAttack).
+    allow elastic.reflect;
+    # (3) A Parry that turned it aside: the Launch at its maker offered on its card, as if Grappling them, once a Round.
+    allow elastic.launch;
+    # (4) A Direct Hit at an Opponent's Physical or Energy Attack for no Damage: what a Parry that turned it aside offers - Reflect,
+    # Attack Absorption, the Launch - once a Round. The Shield's Block is the player's to leave out.
+    allow elastic.directHit;
+}

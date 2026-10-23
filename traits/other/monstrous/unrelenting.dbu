@@ -1,0 +1,23 @@
+id: unrelenting
+name: Unrelenting
+order: 18
+description: >
+  Thanks to your monstrous power, you continue to get back up no matter how many times you’ve been knocked down.
+text: >
+  Unrelenting: Thanks to your monstrous power, you continue to get back up no matter how many times you’ve been knocked down.
+  (1)-[Passive]: Increase the Dice Score of your Steadfast Checks by 1.
+  (2)-[Passive]: For each Health Threshold you are below, increase your Soak Value and Surgency by 1(T).
+  (3)-[Triggered/Defeated]: Use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+steadfast.dice += 1;
+# (2)
+soakValue.perThreshold += 1(T);
+surgency.perThreshold += 1(T);
+
+# (3) Offered on the Defeated card: the Surge Maneuver out of sequence, a Healing Surge (chat.mjs lionsHeart).
+[triggered/defeated, effect 3]
+lionsHeart();

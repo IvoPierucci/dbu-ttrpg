@@ -4125,6 +4125,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
     const tier = actor?.system?.tierOfPower ?? 1;
     // An Advancement's change to it - Efficient Barrier's 2(T) off - still held to the floor below.
     cost += (Number(maneuver.kiCostPerTierChange) || 0) * Math.max(1, tier);
+    // Unique Monstrosity (2): "Reduce the Ki Point Cost of the Unique Ability you chose for the first effect of Unique Monstrosity by
+    // 2(T)" - the one it gave.
+    const given = actor?.items?.get?.(actor.items.get?.(maneuver.itemId ?? "")?.flags?.["dbu-ttrpg"]?.grantedBy ?? "");
+    if (given?.flags?.["dbu-ttrpg"]?.sourceId === "unique-monstrosity") cost -= 2 * Math.max(1, tier);
     cost += (Number(maneuver.kiCostPerBaseTierChange) || 0) * Math.max(1, actor?.system?.baseTierOfPower ?? 1);
     const floor = (listed >= 4 * Math.max(1, tier)) ? Math.ceil(listed / 2) : 0;
     cost = Math.max(cost, floor);

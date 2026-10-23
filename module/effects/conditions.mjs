@@ -478,6 +478,9 @@ const PREDICATES = {
   weatherConnected: (scope, profile) => weatherProfiles()
     .includes(String(profile ?? "").trim().replace(/([A-Z])/g, "-$1").toLowerCase()),
 
+  /** Weather Environment's Light (2): "While the Light Level is not Normal" - as it is, not as they treat it. */
+  lightNotNormal: scope => lightLevelOf(scope.data, traitLookup, { treated: false }) !== 0,
+
   /** In Cover - the Battlefields tab's, or set by an effect (Burrowing Beast's Underground, a Feature carried). */
   inCover: scope => Boolean(scope.data?.battlefield?.cover?.active),
 

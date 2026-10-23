@@ -19438,6 +19438,40 @@ async function regainPools(actor, life = 0, ki = 0) {
     ...(ki ? { "system.ki.value": Math.min(Number(kiPool.max) || 0, (Number(kiPool.value) || 0) + ki) } : {}) });
 }
 
+/**
+ * Super Elastic Body (3): "you may use the Launch Maneuver as an Out-of-Sequence Maneuver against the attacking Character as if they were
+ * in a Grapple with you as the Grappler" - offered on the card, once a Round.
+ */
+function offerElasticLaunch(message, attack, actor) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!actor || !attacker || (attacker.uuid === actor.uuid) || (actor.system?.effects?.slots?.["elastic.launch"] !== true)) return;
+  if ((actor.getFlag?.(SCOPE, "elasticLaunchRound") === roundKey()) || alliesOnScene(actor).some(ally => ally.uuid === attacker.uuid)) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.elasticLaunch && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "", maneuverName: "Launch",
+    targetUuid: attacker.uuid, reason: "Super Elastic Body - as if Grappling them, once a Round", elasticLaunch: true } });
+}
+
+async function takeElasticLaunch(message, actor, offer) {
+  if (actor.getFlag?.(SCOPE, "elasticLaunchRound") === roundKey()) return ui.notifications.warn("Super Elastic Body: already used this Combat Round.");
+  const target = fromUuidSync(offer.targetUuid ?? "");
+  if (!target) return;
+  await actor.setFlag(SCOPE, "elasticLaunchRound", roundKey());
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return postGrappleCheck(actor, target, { maneuverName: "Super Elastic Body - Launch", kind: "launch", telekinetic: true,
+    reason: `Win and ${target.name} moves up to ${Math.max(0, actor.system.might ?? 0)} Squares in any direction.` });
+}
+
+/** Terrifying Visage (3): "you may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver." */
+export async function terrifyingVisage(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const how = await askPlayerChoice(actor, `${actor.name}: Terrifying Visage`,
+    [{ value: "power-up", label: "The Power Up Maneuver" }, { value: "transformation", label: "The Transformation Maneuver" },
+      { value: "none", label: "Neither" }]);
+  if (!["power-up", "transformation"].includes(how)) return UNSPENT;
+  const used = await ownOutOfSequence(actor, how);
+  return used ? used : UNSPENT;
+}
+
 /** A button on an attack's card. */
 function cardButton(container, label, tooltip, run) {
   const button = document.createElement("button");
@@ -20482,6 +20516,7 @@ async function artfulParry(message, target) {
     offerAbsorb(message, attack, target, "Attack Absorption - your Parry turned it aside");
     offerWildCounter(message, attack, target);
     await offerShockTornado(message, attack, target);
+    offerElasticLaunch(message, attack, target);
   }
   await answerFor(target, "critical-scored", {});
 }
@@ -23497,6 +23532,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.mysticalGaze) return takeMysticalGaze(message, actor, offer);
   if (offer.catsPaw) return takeCatsPaw(message, actor, offer.catsPaw);
   if (offer.slimyGrab) return takeSlimyGrab(message, actor, offer);
+  if (offer.elasticLaunch) return takeElasticLaunch(message, actor, offer);
   if (offer.healingSurge) return takeHealingSurge(message, actor);
   // Perfect Mimicry (2) with a copied Unique Ability: it, out of sequence, once an Encounter.
   if (offer.perfectMimicryItem) {
@@ -24317,6 +24353,10 @@ export async function postAttack(actor, target, maneuver,
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Super Elastic Body (2): "If you would use the Reflect Maneuver, increase your Strike Rolls by 1(T) for the duration of that Maneuver."
+  if (reflecting && (actor.system.effects?.slots?.["elastic.reflect"] === true)) {
+    strikeExtra = [...strikeExtra, { label: "Super Elastic Body", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
   // Ravaging Charger (2): "Increase the Strike Rolls of your Attacking Maneuvers with the Charging Assault Advantage by 1(T)."
   if ((advantages ?? []).includes("charging-assault") && (actor.system.effects?.slots?.["ravaging.strike"] === true) && !reflecting) {
@@ -26717,6 +26757,8 @@ async function resolveAttackWork(message, attack) {
     // Wild Counter: the Basic Attack back at its maker. Shock Tornado: the Thrust.
     offerWildCounter(message, attack, target);
     await offerShockTornado(message, attack, target);
+    // Super Elastic Body (3): the Launch at its maker.
+    offerElasticLaunch(message, attack, target);
   }
 }
 
@@ -28638,7 +28680,10 @@ async function rollAttackWoundWork(message, attack) {
       + fullCounter + wiseReduction + (Number(own.taiChiReduction) || 0)
       + (Number(own.greedReduction) || 0) + (Number(own.toughReduction) || 0)
       // Party Tactics (3): a stack of an Ally's Tension, for this attack.
-      + (attack.partyReduction ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0));
+      + (attack.partyReduction ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
+      // Super Elastic Body (1): "Increase your Damage Reduction against Physical and Energy Attacks by 2(T)."
+      + (((target.system.effects?.slots?.["elastic.reduction"] === true) && ["physical", "energy"].includes(attack.foundation))
+        ? 2 * Math.max(1, Number(target.system.tierOfPower) || 1) : 0));
 
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);
@@ -31513,6 +31558,18 @@ async function applyAttackDamage(message, target, attack) {
   // Light Consumption (2): "you regain Ki Points equal to 1/2 of the Dice Score. For every 1/5 of your Maximum Ki Point Pool regained as
   // Ki Points, gain 1(bT) Light Stack(s)."
   if ((attack.consumed ?? []).includes(target.uuid)) await lightRegain(target, Number(attack.result?.wound?.total) || 0);
+  // Super Elastic Body (4): a Direct Hit at an Opponent's Physical or Energy Attack for no Damage - "as though you avoided that Attacking
+  // Maneuver through the effect of the Parry option" - what that offers, once a Round.
+  if ((own.defense === "directHit") && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)
+    && ["physical", "energy"].includes(attack.foundation) && (target.system?.effects?.slots?.["elastic.directHit"] === true)
+    && (target.getFlag?.(SCOPE, "elasticDirectRound") !== roundKey()) && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)) {
+    await requestActorUpdate(target, { [`flags.${SCOPE}.elasticDirectRound`]: roundKey() });
+    offerReflect(message, attack, target, "Reflect - Super Elastic Body: your Direct Hit as a Parry");
+    offerAbsorb(message, attack, target, "Attack Absorption - Super Elastic Body: your Direct Hit as a Parry");
+    offerWildCounter(message, attack, target);
+    await offerShockTornado(message, attack, target);
+    offerElasticLaunch(message, attack, target);
+  }
   // Slimy Consistency (3): a Physical Attack's hit for no Damage - the Grapple, the Basic Attack, or a Might Clash for their Weapon.
   if (own.hit && (damage <= 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerSlimy(message, attack, target, armsUser);
   // Retractable Limbs (3): an Opponent's Called Shot avoided, or for no Damage - the Basic Attack, out of sequence, once a Round.

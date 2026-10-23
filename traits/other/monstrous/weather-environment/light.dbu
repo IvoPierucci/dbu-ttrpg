@@ -1,0 +1,15 @@
+id: light
+name: Light
+order: 2
+optionOf: weather-environment
+lightTowardNormal: 2
+description: >
+text: >
+
+---
+
+[passive]
+# (1) Its header's `lightTowardNormal`: every Light Level treated as Normal (light.mjs). (2) The Level not Normal as it is: Wound 3(T).
+if (lightNotNormal) {
+    wound += 3(T);
+}

@@ -23,7 +23,7 @@ export const LIGHT_LEVEL_MAX = 2;
  * so no mark is named here. Handed the Trait lookup, as `qualitiesOf` is; without one there
  * are no headers to read and the Level is the one set.
  */
-export function lightLevelOf(system, getTrait = null) {
+export function lightLevelOf(system, getTrait = null, { treated = true } = {}) {
   const set = Number(system?.battlefield?.lightLevel) || 0;
   const shift = getTrait
     ? Object.entries(system?.conditions ?? {}).reduce((total, [key, stacks]) =>
@@ -33,8 +33,11 @@ export function lightLevelOf(system, getTrait = null) {
   // Alternate Sight (1): "Treat the Light Level as if it was 1 level closer to Normal (0)" - its header's `lightTowardNormal`, on
   // a Trait or Talent held and applied (a Bestial Trait the Bestial Limit set aside, not).
   const items = Array.from(system?.parent?.items ?? []);
-  const toward = getTrait ? items.filter(item => ["racial", "talent"].includes(item.type)
+  // Or on an Option chosen on it - Weather Environment's Light. Not asked (`treated: false`), the Level as it is.
+  const towardOf = id => Number(getTrait(id ?? "")?.lightTowardNormal) || 0;
+  const toward = (getTrait && treated) ? items.filter(item => ["racial", "talent"].includes(item.type)
     && !(item.flags?.["dbu-ttrpg"]?.bestialOff && items.some(other => other.id === item.flags["dbu-ttrpg"].bestialOff)))
-    .reduce((sum, item) => sum + (Number(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.lightTowardNormal) || 0), 0) : 0;
+    .reduce((sum, item) => sum + towardOf(item.flags?.["dbu-ttrpg"]?.sourceId)
+      + (item.system?.chosen ?? []).filter(entry => entry.key === "option").reduce((more, entry) => more + towardOf(entry.value), 0), 0) : 0;
   return (level > 0) ? Math.max(0, level - toward) : Math.min(0, level + toward);
 }

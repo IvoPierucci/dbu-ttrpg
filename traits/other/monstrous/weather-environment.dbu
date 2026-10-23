@@ -1,0 +1,21 @@
+id: weather-environment
+name: Weather Environment
+order: 19
+options: 1
+optionEffect: 1
+resistsChosenWeather: true
+description: >
+  Your monstrous body is adapted to be particularly effective in a specific environmental condition.
+text: >
+  Weather Environment: Your monstrous body is adapted to be particularly effective in a specific environmental condition.
+  (1)-[Option]: Upon gaining access to this Monster Trait, select one of the following:
+  * Battle Weather [Passive]: Choose a Battle Weather upon gaining this effect. You do not suffer the effects of your chosen Battle Weather.
+  * Light [Passive]: Ignore the penalties from Light Levels.
+  (2)-[Choice]: Depending on your choice for the Option effect of Weather Environment, gain the following effects:
+  * Battle Weather [Passive]: While in your chosen Battle Weather, increase your Combat Rolls by 1(T).
+  * Light [Passive]: While the Light Level is not Normal, increase your Wound Rolls by 3(T).
+
+---
+
+# (1), (2) Its Option, chosen as it is gained, its Choice in the same file (weather-environment/*.dbu). The Battle Weather chosen is felt
+# at Tier 0 (its header's `resistsChosenWeather`).

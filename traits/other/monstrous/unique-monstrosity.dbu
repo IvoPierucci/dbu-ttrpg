@@ -1,0 +1,16 @@
+id: unique-monstrosity
+name: Unique Monstrosity
+order: 17
+grantsUniqueChoice: 20
+description: >
+  Your mutated physique is so unique that you are able to perform techniques that few others can.
+text: >
+  Unique Monstrosity: Your mutated physique is so unique that you are able to perform techniques that few others can.
+  (1)-[Passive]: Upon gaining this Trait, select any Unique Ability with a TP Cost of 20 or less. You must still meet any Prerequisites, except those of a listed Attribute Score and if the listed Skill Ranks required are 2 or less. You gain access to that Unique Ability while you possess this Trait.
+  (2)-[Passive]: Reduce the Ki Point Cost of the Unique Ability you chose for the first effect of Unique Monstrosity by 2(T).
+
+---
+
+# (1) Its header's `grantsUniqueChoice`: one of 20 TP or less, chosen as it is gained, gone with it - its Prerequisites the player's to keep,
+# less an Attribute Score's and Skill Ranks of 2 or less.
+# (2) That one's Ki Point Cost 2(T) lower (maneuvers.mjs, the Unique Ability's floor still under it).

@@ -1,0 +1,23 @@
+id: terrifying-visage
+name: Terrifying Visage
+order: 16
+description: >
+  Your appearance is grotesque or otherworldly, horrifying all who lay eyes upon you.
+text: >
+  Terrifying Visage: Your appearance is grotesque or otherworldly, horrifying all who lay eyes upon you.
+  (1)-[Passive]: Increase the Natural Result of your Intimidation Skill Checks by 1.
+  (2)-[Passive]: Gain access to the Terrify Maneuver if you do not possess it.
+  (3)-[Triggered, 1/Round]: If you win a Clash using the Terrify Maneuver, you may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+skill.intimidation.natural += 1;
+# (2)
+allow maneuver.terrify;
+
+# (3) The Terrify's Clash won: which, asked - never Automatic, out of sequence (chat.mjs terrifyingVisage).
+[triggered/clash-win, 1/round, outOfSequence, effect 3]
+requires wonTerrify;
+terrifyingVisage();
