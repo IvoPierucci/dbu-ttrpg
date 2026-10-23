@@ -433,6 +433,12 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     return Object.entries(PROFILES).filter(([, profile]) => profile.label && Array.isArray(profile.foundations)
       && (!foundation || profile.foundations.includes(foundation))).map(([key, profile]) => [key, profile.label]);
   }
+  // Category Specialist's "Select a Weapon Category" - not the Shield, which is no attack's.
+  if (kind === "weaponCategory") {
+    const { traitsOfKind } = await import("./effects/traits.mjs");
+    return traitsOfKind("crafting", "weapon-categories").filter(each => each.weaponType && (each.id !== "shield"))
+      .sort((a, b) => a.name.localeCompare(b.name)).map(each => [each.id, each.name]);
+  }
   // Unique Technique's "a Profile of the same Foundation as your Favored Technique" - any Profile where none is chosen yet.
   if (kind === "uniqueProfile") {
     const { PROFILES } = await import("./maneuvers.mjs");

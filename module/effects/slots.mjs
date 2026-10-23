@@ -911,6 +911,11 @@ const PATTERNS = [
   { match: /^basicAttack\.([\w-]+)\.uses$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "More uses of that Profile through the Basic Attack each Combat Round (maneuvers.mjs whyNotThisProfile)." },
   // And its Surging 1(T): the Strike Roll of an attack of that Profile - main, second or applied.
+  // Category Specialist: `strike.preferred.<category>` - the Strike with a Weapon of it; `preferred.<category>` - which it is.
+  { match: /^strike\.preferred\.([\w-]+)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "Added to a Strike made with a Weapon of that Weapon Category (Category Specialist's; gear.mjs weaponAttack)." },
+  { match: /^preferred\.([\w-]+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "Category Specialist's Preferred Category (maneuvers.mjs askCategoryWound)." },
   { match: /^strike\.profile\.([\w-]+)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "Added to the Strike Roll of an Attacking Maneuver of that Profile (chat.mjs profileSlotStrike)." },
   // Way of the Serene's: "Your Dodge Rolls have their Critical Target reduced by 1".

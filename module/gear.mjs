@@ -1607,7 +1607,10 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
       ...perTier(`${size.label} Weapon`, size.strike),
       // An Integrated Weapon ignores it: "Items that are Integrated ... ignore any initial Penalties".
       ...((weaponSpecialist(attacker) || isIntegrated(item)) ? [] : perTier("Weapon Penalty", -WEAPON_PENALTY_PER_TIER)),
-      ...own("weapon.strike")
+      ...own("weapon.strike"),
+      // Category Specialist (2): your Preferred Category's.
+      ...(applySlot(data.effects?.slots, `strike.preferred.${as.category}`, 0)
+        ? [{ label: "Preferred Category", value: applySlot(data.effects?.slots, `strike.preferred.${as.category}`, 0) }] : [])
     ],
     wound: [...perTier(`${size.label} Weapon`, size.wound), ...own("weapon.wound")],
     strikeNatural: applySlot(slots, "weapon.strikeNatural", 0),

@@ -5182,6 +5182,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ({ maneuver, declared } = bladed);
     // Eye of the Dragon's Way of the Weaponmaster: an Armed Attack - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askEyeWeapon(actor, declared);
+    // Category Specialist (3): a Weapon of the Preferred Category - asked, once a Round.
+    declared = await (await import("./maneuvers.mjs")).askCategoryWound(actor, declared);
     // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, targetActor);
     // Profile Focus (2): its Profile's attack - both rolls a Critical Result, asked once an Encounter.

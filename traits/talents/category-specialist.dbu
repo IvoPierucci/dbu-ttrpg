@@ -1,0 +1,23 @@
+id: category-specialist
+name: Category Specialist
+talentCategory: weapon
+prerequisites: 2+ Weapon Talents
+# (1) "Select a Weapon Category" - asked as it is gained; changeable on its Options tab.
+choose: weaponCategory
+description: >
+  You are extraordinarily adept in the use of a particular type of weapon.
+text: >
+  Category Specialist: You are extraordinarily adept in the use of a particular type of weapon.
+  –Prerequisites: 2+ Weapon Talents
+  (1)-[Ruling]: Select a Weapon Category. That Weapon Category becomes known as your Preferred Category.
+  (2)-[Passive]: Increase your Strike Rolls with your Preferred Category by 1(T).
+  (3)-[Triggered, 1/Round]: When making an Attacking Maneuver with a Weapon of your Preferred Category, you may increase your Wound Roll for that Attacking Maneuver by 1(T) for each Weapon Talent you possess (maximum 4(T)).
+
+---
+
+[passive]
+# (2) A Strike made with a Weapon of your Preferred Category - an attack's or a Parry's (gear.mjs weaponAttack).
+strike.preferred.$choice += 1(T);
+# (3) Asked as an attack is declared with one, once a Round: 1(T) a Weapon Talent you hold, 4(T) at most, on its Wound
+# (maneuvers.mjs askCategoryWound).
+allow preferred.$choice;

@@ -1,5 +1,5 @@
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
-import { printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
+import { getTrait, printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
 import { featureAsks, withGranted } from "./signature.mjs";
 
 /**
@@ -1713,6 +1713,32 @@ export async function askEyeWeapon(actor, declared) {
   if (!yes) return declared;
   await actor.setFlag("dbu-ttrpg", "eyeWeaponRound", round);
   return { ...declared, eyeWeapon: true };
+}
+
+/**
+ * Category Specialist (3): "When making an Attacking Maneuver with a Weapon of your Preferred Category, you may increase your Wound
+ * Roll for that Attacking Maneuver by 1(T) for each Weapon Talent you possess (maximum 4(T))." Asked as it is declared, once a
+ * Round - a row on its Wound.
+ */
+export async function askCategoryWound(actor, declared) {
+  const category = declared?.weapon?.category ?? "";
+  if (!category || declared.weapon.unarmed || (actor?.system?.effects?.slots?.[`preferred.${category}`] !== true)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "categorySpecialistRound") === round) return declared;
+  const held = Array.from(actor.items ?? []).filter(item => (item.type === "talent")
+    && (getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.talentCategory === "weapon")).length;
+  const times = Math.min(4, held);
+  if (!times) return declared;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Category Specialist" },
+    content: `<p data-tooltip="1(T) for each Weapon Talent you possess, 4(T) at most. Once a Round.">+${times}(T) Wound on this attack with your Preferred Category?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "categorySpecialistRound", round);
+  return { ...declared, woundExtra: [...(declared.woundExtra ?? []),
+    { label: `Category Specialist (${held} Weapon Talent${(held === 1) ? "" : "s"})`, written: `+${times}(T)`, value: times * tier }] };
 }
 
 /**
