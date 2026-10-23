@@ -14557,6 +14557,50 @@ async function takeBagOfTricks(message, actor) {
 }
 
 /**
+ * Weapon Fixer (1): "spend any number of Ki Points to have that Weapon regain Life Points equal to 2x the amount of Ki Points
+ * spent. If that Weapon was destroyed, it stops being destroyed until the end of the Combat Encounter." (2): "If you use the first
+ * effect of Weapon Fixer to fix a destroyed Weapon, increase your Wound Rolls with that Weapon by 2(T) for the remainder of the
+ * Combat Encounter" - asked, once an Encounter. Which Weapon and how much asked; nothing chosen, not spent.
+ */
+export async function weaponFixer(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { craftedReading } = await import("./gear.mjs");
+  const reading = item => craftedReading(item.system?.crafted, { getTrait, difficulties: {}, data: actor.system,
+    baseTier: actor.system?.baseTierOfPower ?? 1 });
+  const weapons = Array.from(actor?.items ?? []).filter(item => (item.system?.crafted?.kind === "weapon")
+    && ((Number(item.system.crafted.lifeLost) || 0) > 0) && !reading(item)?.unbreakable);
+  if (!weapons.length) return UNSPENT;
+  const id = (weapons.length === 1) ? weapons[0].id : await askPlayerChoice(actor, `${actor.name}: Weapon Fixer - which Weapon`,
+    weapons.map(item => ({ value: item.id, label: `${item.name}${item.system.crafted.destroyed ? " (destroyed)" : ""}` })));
+  const item = weapons.find(each => each.id === id);
+  if (!item) return UNSPENT;
+  const lost = Number(item.system.crafted.lifeLost) || 0;
+  const most = Math.min(Math.ceil(lost / 2), Number(actor.system.ki?.value) || 0, Number(actor.system.capacity?.remaining) || 0);
+  if (most <= 0) return UNSPENT;
+  const ki = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Weapon Fixer - ${item.name}`, most,
+    "Ki Points - twice as many Life Points back"));
+  if (!(ki > 0) || !await spendManeuverCost(actor, { name: "Weapon Fixer" }, ki)) return UNSPENT;
+  const encounter = game.combat?.id ?? "none";
+  const wasDestroyed = Boolean(item.system.crafted.destroyed);
+  const changes = { "system.crafted.lifeLost": Math.max(0, lost - 2 * ki) };
+  if (wasDestroyed) {
+    changes["system.crafted.destroyed"] = false;
+    changes[`flags.${SCOPE}.fixedUntil`] = encounter;
+  }
+  // (2): asked, once an Encounter.
+  if (wasDestroyed && (actor.getFlag?.(SCOPE, "weaponFixerEncounter") !== encounter)
+    && ((await askPlayerChoice(actor, `${actor.name}: Weapon Fixer - ${item.name} fixed`,
+      [{ value: "yes", label: "+2(T) Wound with it for the Encounter (1/Encounter)" }, { value: "no", label: "No" }])) === "yes")) {
+    changes[`flags.${SCOPE}.fixerWound`] = encounter;
+    await actor.setFlag(SCOPE, "weaponFixerEncounter", encounter);
+  }
+  await item.update(changes);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">Weapon Fixer: ${Handlebars.escapeExpression(item.name)} regains ${2 * ki} Life Points`
+      + `${wasDestroyed ? " - no longer destroyed till the Encounter ends" : ""}.</div>` });
+}
+
+/**
  * Steady Momentum (2): "gain 1 Action. Any Actions gained by this effect remain until the end of your turn or the end of the Combat
  * Round (whichever happens last)" - this Round's, kept with it (actor-character.mjs).
  */

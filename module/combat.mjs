@@ -828,6 +828,13 @@ export function registerCombatHooks() {
  * recovered. If it was destroyed during the Combat Encounter, it is completely repaired."
  */
 async function regenerateWeapons(actor) {
+  // Weapon Fixer (1): "it stops being destroyed until the end of the Combat Encounter" - destroyed again, no longer in hand; its
+  // (2)'s Wound gone with the Encounter.
+  const fixed = Array.from(actor.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.fixedUntil || item.flags?.["dbu-ttrpg"]?.fixerWound);
+  for (const item of fixed) {
+    await item.update({ ...(item.flags["dbu-ttrpg"].fixedUntil ? { "system.crafted.destroyed": true, "system.equipped": false } : {}),
+      "flags.dbu-ttrpg.-=fixedUntil": null, "flags.dbu-ttrpg.-=fixerWound": null });
+  }
   const { regenerating, sheathMending } = await import("./gear.mjs");
   const { getTrait } = await import("./effects/traits.mjs");
   // A Buddy kept from being called for the Encounter - saved with a Karma Point, or dismissed by

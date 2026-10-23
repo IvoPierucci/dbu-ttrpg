@@ -170,6 +170,11 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  weaponFixer: {
+    args: [0, 0],
+    doc: "Weapon Fixer (1), (2): Ki for twice as many of a Weapon's Life Points, a destroyed one whole till the Encounter ends "
+       + "(chat.mjs weaponFixer)."
+  },
   steadyAction: {
     args: [0, 0],
     doc: "Steady Momentum (2): an Action more this Combat Round (chat.mjs steadyAction)."

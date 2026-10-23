@@ -1,0 +1,20 @@
+id: weapon-fixer-talent
+name: Weapon Fixer
+talentCategory: weapon
+prerequisites: Weapon Specialist
+description: >
+  You are able to repair your weapon mid-fight, using your ki.
+text: >
+  Weapon Fixer: You are able to repair your weapon mid-fight, using your ki.
+  –Prerequisites: Weapon Specialist
+  (1)-[Triggered/Start of Turn]: If you have a Weapon, you can spend any number of Ki Points to have that Weapon regain Life Points equal to 2x the amount of Ki Points spent. If that Weapon was destroyed, it stops being destroyed until the end of the Combat Encounter.
+  (2)-[Triggered, 1/Encounter]: If you use the first effect of Weapon Fixer to fix a destroyed Weapon, increase your Wound Rolls with that Weapon by 2(T) for the remainder of the Combat Encounter.
+
+---
+
+# (1) On your turn's card, ticked: which Weapon, and how many Ki Points - twice as many Life Points back to it; destroyed, whole
+# again till the Encounter ends, then broken again (chat.mjs weaponFixer; combat.mjs).
+# (2) A destroyed one fixed so: asked, once an Encounter - 2(T) on the Wound of attacks made with it till the Encounter ends
+# (gear.mjs weaponAttack).
+[triggered/start-of-turn, chosen, effect 1]
+weaponFixer();

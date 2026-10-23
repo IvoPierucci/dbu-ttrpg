@@ -1615,6 +1615,9 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
         ? [{ label: "Preferred Category", value: applySlot(data.effects?.slots, `strike.preferred.${as.category}`, 0) }] : [])
     ],
     wound: [...perTier(`${size.label} Weapon`, size.wound), ...own("weapon.wound"),
+      // Weapon Fixer (2): this Encounter's.
+      ...(((item?.flags?.["dbu-ttrpg"]?.fixerWound ?? "") && (item.flags["dbu-ttrpg"].fixerWound === globalThis.game?.combat?.id))
+        ? perTier("Weapon Fixer", 2) : []),
       // Dueling Specialist (1): "While you are only wielding a single Weapon of the Standard Size" - it.
       ...((applySlot(data.effects?.slots, "wound.dueling", 0) && (as.size === "standard")
         && (wieldedWeapons(Array.from(attacker?.items ?? [])).length === 1))
