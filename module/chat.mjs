@@ -8,7 +8,7 @@ import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelPar
 import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { chosenAsItHappens, reactiveFor, usesLeft } from "./effects/registry.mjs";
-import { evaluate as evaluateCondition } from "./effects/conditions.mjs";
+import { bondOf, evaluate as evaluateCondition, partnerOf as partnerOfSync } from "./effects/conditions.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
@@ -14791,8 +14791,12 @@ function refinedParts(actor, other) {
 function partyParts(actor) {
   const holders = actor ? alliesWithin(actor, "party.rolls", SPHERE_RADIUS.minor - 1) : [];
   const kind = actor?.getFlag?.(SCOPE, "kindhearted");
+  // Twinned Spirits (2): "Your Partner has their Combat Rolls increased by 1(T)" - theirs who holds it.
+  const twin = actor ? partnerOfSync(actor) : null;
+  const twinned = (twin?.system?.effects?.slots?.["twinned.rolls"] === true) ? Math.max(1, Number(twin.system.tierOfPower) || 1) : 0;
   return [...(holders.length ? [{ label: "Party Tactics", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : []),
-    ...((Number(kind?.value) || 0) ? [{ label: `Kindhearted Saiyan (${kind.name ?? ""})`, written: "+1(T)", value: Number(kind.value) }] : [])];
+    ...((Number(kind?.value) || 0) ? [{ label: `Kindhearted Saiyan (${kind.name ?? ""})`, written: "+1(T)", value: Number(kind.value) }] : []),
+    ...(twinned ? [{ label: `Twinned Spirits (${twin.name})`, written: "+1(T)", value: twinned }] : [])];
 }
 
 /** Dedicated Spotter's Spectators: the Allies of `actor` in the Spectator State holding `slot`. */
@@ -20367,7 +20371,7 @@ function conduitClashButtons(message, clash, container) {
     const yardrat = token.actor;
     if (!yardrat?.isOwner || seen.has(yardrat.uuid) || yardrat.system?.defeated || [ally.uuid, challenger.uuid].includes(yardrat.uuid)
       || (yardrat.system?.effects?.slots?.["conduit.shift"] !== true)
-      || (yardrat.getFlag?.(SCOPE, "bonded")?.uuid !== ally.uuid)) continue;
+      || (bondOf(yardrat)?.uuid !== ally.uuid)) continue;
     seen.add(yardrat.uuid);
     const used = yardrat.getFlag?.(SCOPE, "conduitRound") === roundKey();
     const button = document.createElement("button");
@@ -20498,7 +20502,7 @@ function spiritualStrikeButtons(message, attack, container) {
     const yardrat = token.actor;
     if (!yardrat?.isOwner || seen.has(yardrat.uuid) || yardrat.system?.defeated || (yardrat.uuid === ally.uuid)
       || (yardrat.system?.effects?.slots?.["warrior.bondStrike"] !== true)
-      || (yardrat.getFlag?.(SCOPE, "bonded")?.uuid !== ally.uuid) || (attack.spiritualStrike ?? []).includes(yardrat.uuid)) continue;
+      || (bondOf(yardrat)?.uuid !== ally.uuid) || (attack.spiritualStrike ?? []).includes(yardrat.uuid)) continue;
     seen.add(yardrat.uuid);
     const button = document.createElement("button");
     button.type = "button";
@@ -20527,7 +20531,7 @@ function spiritualStrikeButtons(message, attack, container) {
  * Range - their Ki paid, and as many Life Points yours, there and then, while the Defeat can still be caught.
  */
 export async function warriorEmpower(actor) {
-  const ally = fromUuidSync(actor?.getFlag?.(SCOPE, "bonded")?.uuid ?? "");
+  const ally = fromUuidSync(bondOf(actor)?.uuid ?? "");
   if (!ally || ally.system?.defeated) return;
   const { squaresAway } = await import("./maneuvers.mjs");
   const squares = squaresAway(ally, actor);
@@ -20551,7 +20555,8 @@ export async function warriorEmpower(actor) {
  */
 export async function bondTo(actor, allyUuid) {
   const ally = fromUuidSync(allyUuid ?? "");
-  if (!actor || !ally) return;
+  // Twinned Spirits (1): "you cannot become Bonded with any other Character".
+  if (!actor || !ally || (actor.system?.effects?.slots?.["twinned.partner"] === true)) return;
   const before = fromUuidSync(actor.getFlag?.(SCOPE, "bonded")?.uuid ?? "");
   await requestActorUpdate(actor, { [`flags.${SCOPE}.bonded`]: { uuid: ally.uuid, name: ally.name } });
   if (actor.system?.effects?.slots?.["pacifist.bondRolls"] !== true) return;
@@ -20647,7 +20652,7 @@ function bondButtons(message, attack, container) {
     const yardrat = token.actor;
     if (!yardrat?.isOwner || seen.has(yardrat.uuid) || yardrat.system?.defeated) continue;
     seen.add(yardrat.uuid);
-    const bond = yardrat.getFlag?.(SCOPE, "bonded");
+    const bond = bondOf(yardrat);
     const slots = yardrat.system.effects?.slots ?? {};
     if (!bond?.uuid || (bond.uuid === yardrat.uuid)) continue;
     const base = Math.max(1, Number(yardrat.system.baseTierOfPower) || 1);
@@ -20854,6 +20859,23 @@ export async function glassSoldiers(actor) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
     data-tooltip="Each on a Square with Glass, which loses it: a Feature - Resilient, Glass and Reflective, Hardness Rank 2.">
     ${many} Glass Soldier${(many === 1) ? "" : "s"} - ${many * step} Ki.</div>` });
+}
+
+/**
+ * Yaki Swarm (1): "spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent, select an unoccupied Square within a Large Sphere AoE
+ * and create a 'Yaki' on that Square." How many asked, paid and said - the Minions and their Squares the table's.
+ */
+export async function yakiSwarm(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const each = 4 * Math.max(1, Number(actor?.system?.baseTierOfPower) || 1);
+  const count = Number(await askPlayerChoice(actor, `${actor.name}: Yaki Swarm`,
+    [{ value: "1", label: `1 Yaki - ${each} Ki` }, { value: "2", label: `2 Yaki - ${2 * each} Ki` }])) || 0;
+  if (!count) return UNSPENT;
+  const { spendManeuverCost } = await import("./maneuvers.mjs");
+  if (!await spendManeuverCost(actor, { name: "Yaki Swarm" }, count * each)) return UNSPENT;
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="Each on an unoccupied Square within a Large Sphere: a Minion of the Custom Species Race - Squadron Species, Combative Organism, Blazing Speed, the Beast-Man Factor (Claws, Burrowing Beast), Minion Species.">
+    Yaki Swarm: ${count} Yaki - ${count * each} Ki.</div>` });
 }
 
 const BATTLE_BORN = Object.freeze({ battlebornstrike: "Strike", battleborndodge: "Dodge", battlebornwound: "Wound" });
@@ -24235,7 +24257,7 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   // Spiritual Pacifist (3): "If you are hit by an Attacking Maneuver, your Bonded Ally may use the Intervene Maneuver without
   // spending a Counter Action" - the one they are Bonded to stepping in for them, asked, once a Round of the Pacifist's.
   const pacifistFree = !protector && !refinedFree && (allyActor.system?.effects?.slots?.["pacifist.freeIntervene"] === true)
-    && (allyActor.getFlag?.(SCOPE, "bonded")?.uuid === actor.uuid) && (allyActor.getFlag?.(SCOPE, "pacifistInterveneRound") !== roundKey())
+    && (bondOf(allyActor)?.uuid === actor.uuid) && (allyActor.getFlag?.(SCOPE, "pacifistInterveneRound") !== roundKey())
     && ((await askPlayerChoice(actor, `${actor.name}: Spiritual Pacifist - ${allyActor.name}, Bonded`,
       [{ value: "yes", label: "Intervene without a Counter Action" }, { value: "no", label: "No" }])) === "yes");
   if (pacifistFree) await requestActorUpdate(allyActor, { [`flags.${SCOPE}.pacifistInterveneRound`]: roundKey() });

@@ -1,0 +1,21 @@
+id: yaki-swarm-first-effect
+name: Yaki Swarm
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: yaki-swarm
+fromEffect: 1
+source: Core Rule
+description: >
+  Yaki Swarm's first effect, as a Maneuver: up to 8(bT) Ki, a Yaki for every 4(bT) - Minions within a Large Sphere.
+text: >
+  (1)-[1/Round, Ruling]: As a Standard Maneuver with an Action Cost of 1 Action, spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent, select an unoccupied Square within a Large Sphere AoE and create a ‘Yaki’ on that Square. A Yaki is a Minion of the Custom Species Race with the following Racial Traits, Inherent Factors, and Flaws: Squadron Species (Primary), Combative Organism (Primary), Blazing Speed, Beast-Man Factor (Part Beast – Claws and Burrowing Beast Bestial Traits), Minion Species.
+
+---
+
+# How many asked - 4(bT) Ki each, paid - and said (chat.mjs yakiSwarm); the Minions the table's.
+[on used]
+yakiSwarm();

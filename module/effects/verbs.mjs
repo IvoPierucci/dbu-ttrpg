@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  yakiSwarm: {
+    args: [0, 0],
+    doc: "Yaki Swarm (1): 1 or 2 Yaki, 4(bT) Ki each - paid and said (chat.mjs yakiSwarm)."
+  },
   kindheartedBoost: {
     args: [0, 0],
     doc: "Kindhearted Saiyan (2): a stack of Battle Born spent - the targeted Ally's Combat Rolls 1(T) till the start of your next turn (chat.mjs kindheartedBoost)."

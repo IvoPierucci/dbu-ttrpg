@@ -1,0 +1,21 @@
+id: twinned-spirits
+name: Twinned Spirits
+talentCategory: racial
+race: yardrat
+prerequisites: Yardrat, Synchronized Combatants Talent
+description: >
+  Through extreme synchronization, your battle partner has effectively become an extension of your own soul.
+text: >
+  Twinned Spirits: Through extreme synchronization, your battle partner has effectively become an extension of your own soul.
+  –Prerequisites: Yardrat, Synchronized Combatants Talent
+  (1)-[Passive]: You are always Bonded to your Partner, but you cannot become Bonded with any other Character.
+  (2)-[Passive]: Your Partner has their Combat Rolls increased by 1(T).
+
+---
+
+[passive]
+# (1) Your Bonded Ally is your Partner (Synchronized Combatants'), whatever Power of the Weak (4) says - never another (conditions.mjs
+# bondOf, bondOpen).
+allow twinned.partner;
+# (2) Read by your Partner on every Combat Roll: 1(T), yours (chat.mjs partyParts).
+allow twinned.rolls;

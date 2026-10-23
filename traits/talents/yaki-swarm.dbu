@@ -1,0 +1,19 @@
+id: yaki-swarm
+name: Yaki Swarm
+talentCategory: racial
+race: yardrat
+prerequisites: Yardrat, Master of Minions Talent
+description: >
+  You have bonded with creatures found on your homeworld, and can bring them into battle alongside you at-will.
+text: >
+  Yaki Swarm: You have bonded with creatures found on your homeworld, and can bring them into battle alongside you at-will.
+  –Prerequisites: Yardrat, Master of Minions Talent
+  (1)-[1/Round, Ruling]: As a Standard Maneuver with an Action Cost of 1 Action, spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent, select an unoccupied Square within a Large Sphere AoE and create a ‘Yaki’ on that Square. A Yaki is a Minion of the Custom Species Race with the following Racial Traits, Inherent Factors, and Flaws: Squadron Species (Primary), Combative Organism (Primary), Blazing Speed, Beast-Man Factor (Part Beast – Claws and Burrowing Beast Bestial Traits), Minion Species.
+  (2)-[Passive]: Yaki can become Bonded through the 4th effect of Power of the Weak despite being Minions.
+  (3)-[Passive]: While a Yaki is a Bonded Ally, they have their Combat Rolls increased by 1(T).
+
+---
+
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/yaki-swarm-first-effect.dbu): 1 or 2 Yaki, 4(bT) Ki each, said on its card -
+# the Minions themselves, and their Squares within the Large Sphere, the table's.
+# Not built: (2), (3) - which Minion is a Yaki, and whose, wait on the user's design of Minions.

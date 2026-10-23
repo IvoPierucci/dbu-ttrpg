@@ -89,6 +89,18 @@ export function partnerOf(actor) {
   return mutualChoice(actor, "synchronized-combatants");
 }
 
+/**
+ * Power of the Weak (4)'s Bonded Ally, as { uuid, name } - or, with Twinned Spirits (1), "You are always Bonded to your Partner, but
+ * you cannot become Bonded with any other Character": the Partner, or none.
+ */
+export function bondOf(actor) {
+  if (actor?.system?.effects?.slots?.["twinned.partner"] === true) {
+    const partner = partnerOf(actor);
+    return partner ? { uuid: partner.uuid, name: partner.name } : null;
+  }
+  return actor?.getFlag?.("dbu-ttrpg", "bonded") ?? null;
+}
+
 /** Chosen Rival (1): "If that Character has also chosen you through this effect, that Character is your Rival." */
 export function rivalOf(actor) {
   return mutualChoice(actor, "chosen-rival");
@@ -410,7 +422,7 @@ const PREDICATES = {
 
   /** Spiritual Warrior (6): a Bonded Ally (Power of the Weak's), not Defeated. */
   bondedAlly: scope => {
-    const bond = scope.data?.parent?.getFlag?.("dbu-ttrpg", "bonded");
+    const bond = bondOf(scope.data?.parent);
     const ally = bond?.uuid ? globalThis.fromUuidSync?.(bond.uuid) : null;
     return Boolean(ally) && !ally.system?.defeated;
   },
@@ -491,14 +503,17 @@ const PREDICATES = {
 
   /**
    * Power of the Weak (4): the Ally Empowered (moment empowered-ally) not Bonded to you already, nor to another - "You cannot
-   * be Bonded with a Character that another Yardrat is already Bonded to."
+   * be Bonded with a Character that another Yardrat is already Bonded to." Nor "(except a Minion)" one marked a Minion - unless
+   * Spiritual Leadership (1); and never with Twinned Spirits (1), Bonded to the Partner alone.
    */
   bondOpen: scope => {
     const self = scope.data?.parent;
     const ally = scope.context?.allyUuid;
-    if (!self || !ally || (self.getFlag?.("dbu-ttrpg", "bonded")?.uuid === ally)) return false;
+    if (!self || !ally || (bondOf(self)?.uuid === ally) || (self.system?.effects?.slots?.["twinned.partner"] === true)) return false;
+    const empowered = globalThis.fromUuidSync?.(ally);
+    if (empowered?.system?.minion && (self.system?.effects?.slots?.["leadership.bondMinion"] !== true)) return false;
     const others = [...(globalThis.game?.actors ?? []), ...(globalThis.canvas?.tokens?.placeables ?? []).map(token => token.actor)];
-    return !others.some(other => other && (other.uuid !== self.uuid) && (other.getFlag?.("dbu-ttrpg", "bonded")?.uuid === ally));
+    return !others.some(other => other && (other.uuid !== self.uuid) && (bondOf(other)?.uuid === ally));
   },
 
   /** Wrath of the Dragon (5): the one failing an Opponent not at Long Range (moment opponent-steadfast-failed). */

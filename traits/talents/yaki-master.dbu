@@ -1,0 +1,16 @@
+id: yaki-master
+name: Yaki Master
+talentCategory: racial
+race: yardrat
+prerequisites: Yaki Swarm Talent, Battle Yardrat Awakening
+description: >
+  Your swarm of bonded Yaki fight together as one, anticipating your needs.
+text: >
+  Yaki Master: Your swarm of bonded Yaki fight together as one, anticipating your needs.
+  –Prerequisites: Yaki Swarm Talent, Battle Yardrat Awakening
+  (1)-[Passive]: While you are not Bonded, all of your Yaki are considered Bonded for the 3rd effect of Yaki Swarm.
+  (2)-[Triggered/Start of Combat Round]: If you are not Bonded, target one of your Yaki Minions. That Yaki gains access to its Act Phase this Combat Round and gains 1 Counter Action.
+
+---
+
+# Not built: both effects are your Yaki's - Minions wait on the user's design (and the Battle Yardrat Awakening on Awakenings).

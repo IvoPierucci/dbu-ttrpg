@@ -513,6 +513,7 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "yakiSwarm": return (await import("../chat.mjs")).yakiSwarm(actor);
     case "kindheartedBoost": return (await import("../chat.mjs")).kindheartedBoost(actor, context?.targets?.[0] ?? null);
     case "battleBornMove": return (await import("../chat.mjs")).battleBornMove(actor);
     case "tuffleFusion": return (await import("../chat.mjs")).tuffleFusion(actor, context?.targets?.[0] ?? null);

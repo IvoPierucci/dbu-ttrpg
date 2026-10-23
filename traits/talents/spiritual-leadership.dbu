@@ -1,0 +1,20 @@
+id: spiritual-leadership
+name: Spiritual Leadership
+talentCategory: racial
+race: yardrat
+prerequisites: Yardrat, Master of Minions Talent
+description: >
+  Though you may take command, you still offer support to those who follow you.
+text: >
+  Spiritual Leadership: Though you may take command, you still offer support to those who follow you.
+  –Prerequisites: Yardrat, Master of Minions Talent
+  (1)-[Passive]: You may apply the 4th effect of Power of the Weak if you give Ki Points to a Minion through the Empower Maneuver.
+  (2)-[Passive]: While you are Bonded to one of your Minions, they do not skip their Act Phase.
+  (3)-[Passive]: All of your Minions have their Maximum Life Points increased by 2 for each Power Level reached (after all calculations).
+
+---
+
+[passive]
+# (1) Power of the Weak (4) on an Ally marked a Minion (conditions.mjs bondOpen).
+allow leadership.bondMinion;
+# Not built: (2), (3) - Minions, their Act Phase and whose they are, wait on the user's design.
