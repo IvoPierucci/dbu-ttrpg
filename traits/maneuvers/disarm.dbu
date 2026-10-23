@@ -1,0 +1,26 @@
+id: disarm
+name: Disarm
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+exploitOnLoss: true
+source: Core Rule
+description: >
+  A Clash of your Strike against their Strike or Dodge, at an Opponent wielding a Weapon within your Melee Range: win, and the
+  Weapon is out of their grip.
+text: >
+  Disarm Maneuver [1/Round]: Take a Weapon away from your foe!
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: If you fail the clash for the Disarm Maneuver, trigger the Exploit Maneuver of the target.
+  –Effect: Target an Opponent wielding a Weapon within your Melee Range. Make a Clash (Strike vs Strike/Dodge). If you win, the Weapon is removed from their grip and lands on a Square adjacent to that Opponent of your choice.
+
+---
+
+# The one targeted: an Opponent - of another disposition - wielding a Weapon, within your Melee Range (use-maneuver.mjs). The
+# Clash, Strike against their Strike or Dodge (chat.mjs postDisarmClash). Won: which Weapon, where they wield several, asked of
+# you - no longer wielded; where it lands, the map's. Lost: their Exploit offered on its card (`exploitOnLoss`).

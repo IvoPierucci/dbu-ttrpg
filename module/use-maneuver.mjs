@@ -4769,6 +4769,27 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // The Disarm Maneuver: an Opponent wielding a Weapon, within your Melee Range - its Clash.
+  if (maneuver.id === "disarm") {
+    const { wieldedWeapons } = await import("./gear.mjs");
+    const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+    const theirs = targetActor?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    const refused = !targetActor ? "Target an Opponent first."
+      : ((own !== undefined) && (own === theirs)) ? `${targetActor.name} is not an Opponent.`
+      : !wieldedWeapons(Array.from(targetActor.items ?? [])).length ? `${targetActor.name} wields no Weapon.`
+      : whyNotWithinMelee(actor, targetActor, maneuver.name);
+    if (refused) {
+      ui.notifications.warn(refused);
+      return false;
+    }
+    await payActions(actor, maneuver, actionsSpent);
+    await recordManeuverUse(actor, maneuver);
+    await recordManeuverType(actor, maneuver.type);
+    const { postDisarmClash } = await import("./chat.mjs");
+    await postDisarmClash(actor, targetActor, maneuver);
+    return true;
+  }
+
   if (maneuver.powerDrain) {
     const { drainStore } = await import("./gear.mjs");
     const store = drainStore(actor.items);

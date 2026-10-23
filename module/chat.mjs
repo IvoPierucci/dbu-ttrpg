@@ -1023,6 +1023,10 @@ async function settleClashEffects(messageId, clash) {
     await settleDrain(message, clash);
   }
 
+  if (clash.disarm && clash.result && !clash.disarm.applied) {
+    await settleDisarm(message, clash);
+  }
+
   if (clash.handcuff && clash.result && !clash.handcuff.applied) {
     await settleHandcuff(message, clash);
   }
@@ -1339,6 +1343,57 @@ export async function postDrainClash(actor, target, maneuver, actions, store) {
       }
     }
   });
+}
+
+/** The Disarm Maneuver's Clash: "Make a Clash (Strike vs Strike/Dodge)." */
+export async function postDisarmClash(actor, target, maneuver) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        [RESPONDABLE_FLAG]: false,
+        [CLASH_FLAG]: {
+          category: "strike",
+          clashLabel: "Clash (Strike vs Strike/Dodge)",
+          maneuverName: maneuver.name,
+          reason: `Win and ${target.name}'s Weapon is out of their grip; lose and ${target.name} may Exploit.`,
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          defenderRoll: "",
+          disarm: { applied: false },
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/**
+ * The Disarm Maneuver's Clash settled: won, "the Weapon is removed from their grip and lands on a Square adjacent to that
+ * Opponent of your choice" - which, where they wield several, asked of the winner; no longer wielded, where it lies the map's.
+ * Lost: "trigger the Exploit Maneuver of the target".
+ */
+async function settleDisarm(message, clash) {
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, disarm: { ...clash.disarm, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") {
+    offerExploitTo(message, target, actor, `${clash.maneuverName} - the Clash was lost`, "disarm");
+    return settledNote(message, `${target.name} keeps hold of their Weapon.`);
+  }
+  const held = wieldedWeapons(Array.from(target.items ?? []));
+  if (!held.length) return settledNote(message, `${target.name} wields no Weapon now.`);
+  const id = (held.length === 1) ? held[0].id : await askPlayerChoice(actor, `${actor.name}: Disarm - which Weapon`,
+    held.map(item => ({ value: item.id, label: item.name })));
+  const weapon = held.find(item => item.id === id);
+  if (!weapon) return;
+  await requestActorUpdate(target, { items: [{ _id: weapon.id, "system.equipped": false }] });
+  return settledNote(message, `${weapon.name} is out of ${target.name}'s grip - on a Square adjacent to them, of ${actor.name}'s choice.`);
 }
 
 /** A won drain Clash drains, into the Device; a lost one takes nothing. */
@@ -9226,6 +9281,11 @@ const CLASH_ROLLS = ({
       ...(((uuid === clash.challengerUuid) && (clash.grapple?.kind === "pin"))
         ? [{ label: "Pinning", written: "-1(bT)",
              value: -Math.max(1, actor.system.baseTierOfPower ?? 1) }]
+        : []),
+      // Weapon Specialist (2): "Increase your Dice Score for a Clash made through the Disarm Maneuver by 1(bT)."
+      ...(((uuid === clash.challengerUuid) && clash.disarm && (Number(actor.system.effects?.slots?.["clash.disarm"]?.add) || 0))
+        ? [{ label: (actor.system.effects.slots["clash.disarm"].parts ?? []).map(part => part.source).find(Boolean) ?? "Disarm",
+             value: Number(actor.system.effects.slots["clash.disarm"].add) }]
         : [])
     ],
 

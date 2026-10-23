@@ -191,6 +191,8 @@ const TABLE = [
   { key: "wound.perThresholdOrAlly", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "Added to the Wound Roll once for each Health Threshold you, or the Ally deepest below, is below - whichever "
        + "is more (Inherited Fury)." },
+  { key: "clash.disarm", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Your side of the Disarm Maneuver's Clash (Weapon Specialist's; chat.mjs CLASH_ROLLS.strike)." },
   { key: "clash.morale", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Your side of any Clash answered with the Morale Saving Throw (Improved Taunt's; chat.mjs moraleClashParts)." },
   { key: "roll.luckyCritical", phase: PHASES.REACTIVE, kind: F, ops: ["allow", "set"],

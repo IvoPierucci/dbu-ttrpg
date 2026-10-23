@@ -15,4 +15,5 @@ text: >
 [passive]
 # (1) No Weapon Penalty on a Strike made with a Weapon - an attack's or a Parry's (gear.mjs weaponSpecialist).
 allow weapon.noPenalty;
-# (2) Waits on the Disarm Maneuver, not built yet.
+# (2) Your side of the Disarm Maneuver's Clash (chat.mjs).
+clash.disarm += 1(bT);
