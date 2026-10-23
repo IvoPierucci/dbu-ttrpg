@@ -1,0 +1,20 @@
+id: scholars-intellect
+name: Scholar’s Intellect
+talentCategory: racial
+race: neo-tuffle
+prerequisites: Neo-Tuffle
+description: >
+  Thanks to the mighty intellect instilled in you by your forebears, you display superior knowledge and skills.
+text: >
+  Scholar’s Intellect: Thanks to the mighty intellect instilled in you by your forebears, you display superior knowledge and skills.
+  –Prerequisites: Neo-Tuffle
+  (1)-[Passive]: Increase the Dice Score of any Skill Clash made against your Inferior by 1.
+  (2)-[Triggered, 1/Round]: When rolling for a Skill Clash, you may spend up to 2 Revenge Points to increase the Dice Score of that Skill Clash by 1 for each Revenge Point spent.
+
+---
+
+[passive]
+# (1) A Skill Clash between you and your Inferior this Round (Tuffle Superiority's), whichever side opened it (chat.mjs scholarClashBonus).
+allow scholar.inferior;
+# (2) Boxes in your window before a Skill Clash's roll, once a Round: a Revenge Point each, 1 each (chat.mjs scholarRevengeOpen).
+allow scholar.revenge;

@@ -1,0 +1,23 @@
+id: tuffle-fusion
+name: Tuffle Fusion
+talentCategory: racial
+race: neo-tuffle
+prerequisites: Neo-Tuffle, Parasite Subrace
+# The Save chosen as it is gained (1).
+choose: list
+choices: Corporeal, Impulsive
+description: >
+  You absorb another of your kin into yourself, becoming something greater than the sum of your respective parts.
+text: >
+  Tuffle Fusion: You absorb another of your kin into yourself, becoming something greater than the sum of your respective parts.
+  –Prerequisites: Neo-Tuffle, Parasite Subrace
+  (1)-[Passive]: Select either the Corporeal Save or the Impulsive Save. Apply your Racial Saving Throw Bonus to your selected Save in addition to the Cognitive Save.
+  (2)-[1/Encounter]: As a Standard Maneuver with an Action Cost of 2 Actions, target another Character of the Neo-Tuffle Race and Parasite Subrace within your Melee Range. Make a Clash (Impulsive/Corporeal) against them. If you win, make a Clash (Cognitive) against them. If you win both Clashes, enter a Fusion with the Parasitic Fusion Method using yourself and that Character as the Fused Characters. If the target applied the effects of Willing Failure to both Clashes, the control of the Fusion follows the usual rules, but if not and you won both Clashes, the Fusion is controlled solely by you.
+
+---
+
+[passive]
+# (1) Chosen as it is gained.
+allow save.racial.$choice;
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/tuffle-fusion-second-effect.dbu): both Clashes on their cards, the Fusion and who
+# controls it said - the Fusion itself (the Parasitic Fusion Method) the table's, Fusions not being in this system yet.

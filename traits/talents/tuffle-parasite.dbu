@@ -1,0 +1,19 @@
+id: tuffle-parasite
+name: Tuffle Parasite
+talentCategory: racial
+race: neo-tuffle
+prerequisites: Neo-Tuffle, Parasite Subrace
+description: >
+  You are able to leave behind a piece of yourself in the people you’ve possessed.
+text: >
+  Tuffle Parasite: You are able to leave behind a piece of yourself in the people you’ve possessed.
+  –Prerequisites: Neo-Tuffle, Parasite Subrace
+  (1)-[Passive]: Increase your maximum number of Minions by 2.
+  (2)-[Triggered]: If you make a Cognitive Clash against a Character you were previously the Possessing Character of during this Combat Encounter, increase your Dice Score of that Clash by 1(T).
+  (3)-[Triggered]: If you win both Clashes for the effects of the Possess Maneuver against a Minion, they become your Minion. This effect does not apply if that Minion is a Special Minion.
+  (4)-[1/Encounter]: As an Instant Maneuver while you are a Possessing Character, you may remove the Overtaken Awakening from the Character you are a Possessing Character of. If you do, make a Clash (Cognitive) against them. If you win, that Character becomes your Minion for the remainder of the Combat Encounter (depending on circumstances, your ARC may allow them to remain as your Minion indefinitely).
+
+---
+
+# Not built: (1), (3) Minions wait on the user's design; (2), (3), (4) are a Possessing Character's - the Possess Maneuver (its text
+# waited on) and the Overtaken Awakening (Awakenings are not built) are not in this system yet.

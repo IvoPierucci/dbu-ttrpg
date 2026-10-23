@@ -1,0 +1,22 @@
+id: mutualism
+name: Mutualism
+talentCategory: racial
+race: neo-tuffle
+prerequisites: Neo-Tuffle, Parasite Subrace
+description: >
+  While you may use your host’s body for safety and strength, you are willing to give, not just take, ensuring that your host benefits too.
+text: >
+  Mutualism: While you may use your host’s body for safety and strength, you are willing to give, not just take, ensuring that your host benefits too.
+  –Prerequisites: Neo-Tuffle, Parasite Subrace
+  (1)-[Ruling]: While you are a Possessing Character of a Character that is not being controlled by you, you are in ‘Symbiosis’ and the Character that has you as a Possessing Character is your ‘Host Ally’.
+  (2)-[Passive]: While in Symbiosis, your Host Ally has their Combat Rolls and Surgency increased by 1(T).
+  (3)-[Passive]: While in Symbiosis, the 9th effect of Overtaken loses the [Automatic/Start of Turn] Keyword and gains the [Triggered/Start of Turn] Keyword.
+  (4)-[1/Round]: While in Symbiosis, you may use a Standard Maneuver with an Action Cost of 1 Action as an Instant Maneuver during your Host Ally’s turn. If you do, it originates from the Square your Host Ally is occupying, and they are considered the Character who used it for the effects of any of your Opponents/Allies.
+  (5)-[1/Round]: If you are in Symbiosis, you may remove the Overtaken Awakening from your Host Ally as an Instant Maneuver.
+  (6)-[Triggered, 1/Round]: If you win both Clashes for the effects of the Possess Maneuver, you can choose not to take control of the targeted Character.
+  (7)-[Triggered/Start of Combat Round]: If you are a Possessing Character of a Character that is not being controlled by you, that Character may regain Life or Ki Points (you decide) equal to 1/2 of your Surgency.
+
+---
+
+# Not built: every effect is a Possessing Character's - the Possess Maneuver (its text waited on) and the Overtaken Awakening
+# (Awakenings are not built) are not in this system yet.

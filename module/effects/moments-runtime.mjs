@@ -513,6 +513,7 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "tuffleFusion": return (await import("../chat.mjs")).tuffleFusion(actor, context?.targets?.[0] ?? null);
     case "felineRallyKi": return (await import("../chat.mjs")).felineRallyKi(actor);
     case "catBurglarCopy": return (await import("../chat.mjs")).catBurglarCopy(actor, context?.opponentUuid ?? "");
     case "progenitor": return (await import("../chat.mjs")).progenitor(actor);

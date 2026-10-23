@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  tuffleFusion: {
+    args: [0, 0],
+    doc: "Tuffle Fusion (2): the Impulsive/Corporeal Clash at the target, then the Cognitive one - both won, the Fusion said (chat.mjs tuffleFusion)."
+  },
   felineRallyKi: {
     args: [0, 0],
     doc: "Feline Rally (2): each Ally on the scene 3(bT) Ki Points (chat.mjs felineRallyKi)."

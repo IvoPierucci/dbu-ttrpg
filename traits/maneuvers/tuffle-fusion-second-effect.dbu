@@ -1,0 +1,21 @@
+id: tuffle-fusion-second-effect
+name: Tuffle Fusion
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/encounter
+fromTrait: tuffle-fusion
+fromEffect: 2
+source: Core Rule
+description: >
+  Tuffle Fusion's second effect, as a Maneuver: two Clashes at a Parasite Neo-Tuffle in your Melee Range - both won, a Fusion.
+text: >
+  (2)-[1/Encounter]: As a Standard Maneuver with an Action Cost of 2 Actions, target another Character of the Neo-Tuffle Race and Parasite Subrace within your Melee Range. Make a Clash (Impulsive/Corporeal) against them. If you win, make a Clash (Cognitive) against them. If you win both Clashes, enter a Fusion with the Parasitic Fusion Method using yourself and that Character as the Fused Characters. If the target applied the effects of Willing Failure to both Clashes, the control of the Fusion follows the usual rules, but if not and you won both Clashes, the Fusion is controlled solely by you.
+
+---
+
+# The Impulsive/Corporeal Clash at the target; won, the Cognitive one; both won, the Fusion and its control said (chat.mjs tuffleFusion).
+[on used]
+tuffleFusion();

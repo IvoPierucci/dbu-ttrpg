@@ -935,6 +935,7 @@ async function settleClashEffects(messageId, clash) {
     await settleWhack(message, clash);
   }
   if (clash.catsPaw && clash.result && !clash.catsPaw.applied) await settleCatsPaw(message, clash);
+  if (clash.tuffleFusion && clash.result && !clash.tuffleFusion.applied) await settleTuffleFusion(message, clash);
   if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
     await settleCutthroatClash(message, clash);
   }
@@ -9371,7 +9372,7 @@ function clashParts(kind, actor, clash, uuid) {
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
     ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
-    ...corsairClashBonus(actor, clash, uuid)];
+    ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid)];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -9406,6 +9407,31 @@ function reservedClashEntry(actor, clash) {
     || !((Number(actor.system.resources?.holdingback?.stacks) || 0) > 0)) return null;
   return reactiveFor(actor).find(entry => entry.available && (entry.program.blocks?.[0]?.moment === "defending")
     && (actor.items?.get(entry.sourceId)?.flags?.[SCOPE]?.sourceId === "reserved-combatant")) ?? null;
+}
+
+/** Scholar's Intellect (1): "Increase the Dice Score of any Skill Clash made against your Inferior by 1." */
+function scholarClashBonus(actor, clash, uuid) {
+  if (((clash?.category ?? "skill") !== "skill") || (actor?.system?.effects?.slots?.["scholar.inferior"] !== true)) return [];
+  const other = (uuid === clash.challengerUuid) ? clash.defenderUuid : clash.challengerUuid;
+  const inferior = actor.getFlag?.(SCOPE, "inferior");
+  if (!other || !inferior?.uuid || (inferior.uuid !== other) || (inferior.round !== roundKey())) return [];
+  return [{ label: "Scholar's Intellect (your Inferior)", value: 1 }];
+}
+
+/**
+ * Scholar's Intellect (2): "When rolling for a Skill Clash, you may spend up to 2 Revenge Points to increase the Dice Score of that
+ * Skill Clash by 1 for each Revenge Point spent." How many it could spend - its boxes - or 0, once a Round.
+ */
+function scholarRevengeOpen(actor, clash) {
+  if (((clash?.category ?? "skill") !== "skill") || (actor?.system?.effects?.slots?.["scholar.revenge"] !== true)) return 0;
+  if (actor.getFlag?.(SCOPE, "scholarRound") === roundKey()) return 0;
+  return Math.min(2, Number(actor.system.resources?.revengepoints?.stacks) || 0);
+}
+
+/** Scholar's Intellect (2)'s, on the side that spent them. */
+function scholarRevengeBonus(clash, uuid) {
+  const spent = Number((clash?.scholarSpent ?? []).find(entry => entry.uuid === uuid)?.points) || 0;
+  return spent ? [{ label: `Scholar's Intellect (${spent} Revenge Point${(spent === 1) ? "" : "s"})`, value: spent }] : [];
 }
 
 /** Thief (4)'s, on the side that spent its Tension. */
@@ -10542,6 +10568,8 @@ async function clashStage(message, actor) {
   const corsair = corsairOpen(actor, opened);
   // Reserved Combatant (3): a Unique Ability's Clash against you - "or are targeted by ... a Unique Ability".
   const reserved = reservedClashEntry(actor, opened);
+  // Scholar's Intellect (2): a Revenge Point a box, up to 2, once a Round.
+  const scholar = scholarRevengeOpen(actor, opened);
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
     { urgent: Boolean(opened.urgent), senses,
       boxes: [...(thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
@@ -10549,7 +10577,9 @@ async function clashStage(message, actor) {
         ...(corsair ? [{ name: "corsair", label: `Sorcering Corsair: +${corsair.label}`,
           tip: "Once a Round: they are beside one of your Allies." }] : []),
         ...(reserved ? [{ name: "reserved", label: "Reserved Combatant: Holding Back ignored",
-          tip: "For this Unique Ability - its stacks still held. Three times a Round." }] : [])],
+          tip: "For this Unique Ability - its stacks still held. Three times a Round." }] : []),
+        ...Array.from({ length: scholar }, (_, index) => ({ name: `scholar${index + 1}`,
+          label: `Scholar's Intellect: ${index ? "a 2nd" : "a"} Revenge Point, +1`, tip: "Once a Round - up to 2 Revenge Points." }))],
       formula: { base: DBUCharacterData.BASE_DIE,
       dice: [...(kind.options?.(actor, { ...opened, ...answer }, actor.uuid)?.combatRoll ? combatDiceGroups(actor) : []),
         ...((actor.uuid === opened.challengerUuid) && opened.challengerDice
@@ -10572,6 +10602,9 @@ async function clashStage(message, actor) {
   }
   const corsairTaken = Boolean(corsair) && (ready.boxes ?? []).includes("corsair");
   if (corsairTaken) await requestActorUpdate(actor, { [`flags.${SCOPE}.corsairRound`]: roundKey() });
+  const scholarPoints = ["scholar1", "scholar2"].filter(name => (ready.boxes ?? []).includes(name)).length;
+  const scholarSpent = scholarPoints ? await spendRevenge(actor, scholarPoints) : 0;
+  if (scholarSpent) await requestActorUpdate(actor, { [`flags.${SCOPE}.scholarRound`]: roundKey() });
   const thiefTaken = Boolean(thief) && (ready.boxes ?? []).includes("thief");
   if (thiefTaken) {
     await setResource(actor, "tension", Math.max(0, (Number(actor.system.resources?.tension?.stacks) || 0) - 1));
@@ -10583,6 +10616,8 @@ async function clashStage(message, actor) {
     ...answer,
     ...(thiefTaken ? { thiefBy: [...new Set([...(clash.thiefBy ?? []), actor.uuid])] } : {}),
     ...(corsairTaken ? { corsairBy: [...new Set([...(clash.corsairBy ?? []), actor.uuid])] } : {}),
+    ...(scholarSpent ? { scholarSpent: [...(clash.scholarSpent ?? []).filter(entry => entry.uuid !== actor.uuid),
+      { uuid: actor.uuid, points: scholarSpent }] } : {}),
     // Per sense, a list of who said so - not an object keyed by them: a uuid has dots in
     // it, and a write would turn it into nested keys.
     sensesBy: Object.fromEntries(Object.keys(DBUCharacterData.SENSES).map(sense => [sense,
@@ -20732,6 +20767,44 @@ export async function glassSoldiers(actor) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
     data-tooltip="Each on a Square with Glass, which loses it: a Feature - Resilient, Glass and Reflective, Hardness Rank 2.">
     ${many} Glass Soldier${(many === 1) ? "" : "s"} - ${many * step} Ki.</div>` });
+}
+
+/**
+ * Tuffle Fusion (2): "target another Character of the Neo-Tuffle Race and Parasite Subrace within your Melee Range. Make a Clash
+ * (Impulsive/Corporeal) against them. If you win, make a Clash (Cognitive) against them." The first Clash; the second as it is won.
+ */
+export async function tuffleFusion(actor, target) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const why = !target ? "Tuffle Fusion: target a Character first."
+    : (target.uuid === actor.uuid) ? "Tuffle Fusion: another Character."
+    : ((target.system?.race !== "neo-tuffle") || (target.system?.subrace !== "parasite")) ? `${target.name} is no Parasite Neo-Tuffle.`
+    : whyNotWithinMelee(actor, target, "Tuffle Fusion");
+  if (why) {
+    ui.notifications.warn(why);
+    return UNSPENT;
+  }
+  return postSaveClash(actor, target, { maneuverName: "Tuffle Fusion", saves: ["impulsive", "corporeal"],
+    reason: "Win and a Cognitive Clash follows - both won, a Fusion.", tuffleFusion: { applied: false, stage: 1, willing: [] } });
+}
+
+/**
+ * Tuffle Fusion's Clash settled: the first won, the Cognitive one; both won, "enter a Fusion with the Parasitic Fusion Method ...
+ * If the target applied the effects of Willing Failure to both Clashes, the control of the Fusion follows the usual rules, but if
+ * not and you won both Clashes, the Fusion is controlled solely by you." Said - Fusions are the table's.
+ */
+async function settleTuffleFusion(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, tuffleFusion: { ...clash.tuffleFusion, applied: true } });
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Tuffle Fusion: no Fusion.");
+  const willing = [...(clash.tuffleFusion.willing ?? []), clash.result?.defender?.outcome === "willing"];
+  if (clash.tuffleFusion.stage === 1) {
+    return postSaveClash(actor, target, { maneuverName: "Tuffle Fusion", saves: ["cognitive"],
+      reason: "Win and you enter a Fusion with them.", tuffleFusion: { applied: false, stage: 2, willing } });
+  }
+  const control = willing.every(Boolean) ? "its control by the usual rules" : `controlled solely by ${actor.name}`;
+  return settledNote(message, `Tuffle Fusion: ${actor.name} and ${target.name} enter a Fusion (the Parasitic Fusion Method) - ${control}.`);
 }
 
 /**
