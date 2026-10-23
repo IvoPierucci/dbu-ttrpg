@@ -1,0 +1,22 @@
+id: vigor
+name: Vigor
+talentCategory: threshold
+prerequisites: N/A
+description: >
+  Your body is conditioned for the harsh realities of battle.
+text: >
+  Vigor: Your body is conditioned for the harsh realities of battle.
+  –Prerequisites: N/A
+  (1)-[Passive]: For each Health Threshold you are below, increase your Soak Value by 1(bT).
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase your Strike and Dodge Rolls by 1(bT).
+
+---
+
+[passive]
+# (1) Times each Health Threshold you are below (actor-character.mjs perThreshold).
+soakValue.perThreshold += 1(bT);
+# (2) Below Injured - Injured or Critical.
+if (belowThreshold("injured")) {
+    strike += 1(bT);
+    dodge += 1(bT);
+}
