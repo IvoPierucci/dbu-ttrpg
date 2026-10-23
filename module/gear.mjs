@@ -1612,7 +1612,11 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
       ...(applySlot(data.effects?.slots, `strike.preferred.${as.category}`, 0)
         ? [{ label: "Preferred Category", value: applySlot(data.effects?.slots, `strike.preferred.${as.category}`, 0) }] : [])
     ],
-    wound: [...perTier(`${size.label} Weapon`, size.wound), ...own("weapon.wound")],
+    wound: [...perTier(`${size.label} Weapon`, size.wound), ...own("weapon.wound"),
+      // Dueling Specialist (1): "While you are only wielding a single Weapon of the Standard Size" - it.
+      ...((applySlot(data.effects?.slots, "wound.dueling", 0) && (as.size === "standard")
+        && (wieldedWeapons(Array.from(attacker?.items ?? [])).length === 1))
+        ? [{ label: "Dueling Specialist", value: applySlot(data.effects?.slots, "wound.dueling", 0) }] : [])],
     strikeNatural: applySlot(slots, "weapon.strikeNatural", 0),
     kiCost: applySlot(slots, "weapon.kiCost", 0),
     energyCharges: applySlot(slots, "weapon.energyCharges", 0) + karmicCharge(slots, target),

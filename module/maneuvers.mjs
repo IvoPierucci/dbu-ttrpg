@@ -1716,6 +1716,34 @@ export async function askEyeWeapon(actor, declared) {
 }
 
 /**
+ * Dueling Specialist (2): "While the only Weapon you have equipped is a Standard Size Weapon and you make an Attacking Maneuver or
+ * use the Parry effect of the Defend Maneuver, you can increase your Strike Rolls by 2(T) for the duration of that Maneuver." Open:
+ * held, once a Round, one Weapon equipped and Standard. Asked; taken, its Round spent and its row - or null.
+ */
+export async function duelingStrikeRow(actor) {
+  if (actor?.system?.effects?.slots?.["dueling.strike"] !== true) return null;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "duelingStrikeRound") === round) return null;
+  const { wieldedWeapons, activeForm } = await import("./gear.mjs");
+  const held = wieldedWeapons(Array.from(actor.items ?? []));
+  if ((held.length !== 1) || (activeForm(held[0].system?.crafted)?.size !== "standard")) return null;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const answer = await askPlayerChoice(actor, `${actor.name}: Dueling Specialist`,
+    [{ value: "yes", label: "+2(T) Strike for this Maneuver (1/Round)" }, { value: "no", label: "No" }]);
+  if (answer !== "yes") return null;
+  await actor.setFlag("dbu-ttrpg", "duelingStrikeRound", round);
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  return { label: "Dueling Specialist", written: "+2(T)", value: 2 * tier };
+}
+
+/** Dueling Specialist (2) on an attack's Strike, as it is declared. */
+export async function askDuelingStrike(actor, declared) {
+  if (!declared) return declared;
+  const row = await duelingStrikeRow(actor);
+  return row ? { ...declared, strikeExtra: [...(declared.strikeExtra ?? []), row] } : declared;
+}
+
+/**
  * Category Specialist (3): "When making an Attacking Maneuver with a Weapon of your Preferred Category, you may increase your Wound
  * Roll for that Attacking Maneuver by 1(T) for each Weapon Talent you possess (maximum 4(T))." Asked as it is declared, once a
  * Round - a row on its Wound.

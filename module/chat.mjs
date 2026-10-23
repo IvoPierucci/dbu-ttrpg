@@ -30187,8 +30187,11 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
 
   // A Parry made with a Weapon in hand counts as made with it, by the table's ruling: its Size and
   // the Weapon Penalty on the Strike. Which one, asked where there is one.
-  const parryWith = (chosen.defence === "parry") ? await askParryWeapon(target) : [];
-  if (parryWith === null) return;
+  const parryWeapon = (chosen.defence === "parry") ? await askParryWeapon(target) : [];
+  if (parryWeapon === null) return;
+  // Dueling Specialist (2): the Parry's Strike 2(T) - asked, once a Round.
+  const dueling = (chosen.defence === "parry") ? await (await import("./maneuvers.mjs")).duelingStrikeRow(target) : null;
+  const parryWith = dueling ? [...parryWeapon, dueling] : parryWeapon;
 
   // Perfect Counter (2): "use the Parry option of the Defend Maneuver without spending a Counter Action" - asked, once a Round.
   const perfect = !free && (chosen.defence === "parry") && (target.system?.effects?.slots?.["counter.perfectParry"] === true)
