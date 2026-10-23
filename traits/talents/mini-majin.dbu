@@ -1,0 +1,21 @@
+id: mini-majin
+name: Mini Majin
+talentCategory: racial
+race: majin
+prerequisites: Majin, Master of Minions Talent
+description: >
+  You transform one of your Goops, creating a miniature version of yourself.
+text: >
+  Mini Majin: You transform one of your Goops, creating a miniature version of yourself.
+  –Prerequisites: Majin, Master of Minions Talent
+  (1)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action, you can spend 8(bT) Ki Points to create a Duplicate Minion. If you do, that Duplicate Minion’s base Size Category is a Size Category smaller than yours.
+  (2)-[Triggered/Threshold, 1/Encounter]: Create a Duplicate Minion. If you do, that Duplicate Minion’s base Size Category is a Size Category smaller than yours.
+
+---
+
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/mini-majin-first-effect.dbu): 8(bT) Ki paid, the Duplicate Minion and its Size
+# said on its card - the Minion itself the table's (Minions wait on the user's design).
+# (2) Knocked through a Health Threshold: the same, free, said - once an Encounter. Automatic by default, its Triggered/Automatic
+# button.
+[triggered/threshold, 1/encounter, effect 2]
+miniMajin(0);

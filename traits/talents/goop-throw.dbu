@@ -1,0 +1,17 @@
+id: goop-throw
+name: Goop Throw
+talentCategory: racial
+race: majin
+prerequisites: Majin, Primordial Majin Factor
+description: >
+  Throw your Goop at an Opponent!
+text: >
+  Goop Throw: Throw your Goop at an Opponent!
+  –Prerequisites: Majin, Primordial Majin Factor
+  (1)-[Passive]: Your Goop can use the Grapple Maneuver.
+  (2)-[Passive]: Increase the Magnitude for the 5th effect of From Goop by 1.
+  (3)-[Triggered, 1/Encounter]: If a Goop is created on a Square adjacent to an Opponent, that Goop may use the Grapple Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# Not built: From Goop (the Primordial Majin Factor's) and its Goops are not in this system yet - their texts are waited on.

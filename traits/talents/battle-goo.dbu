@@ -1,0 +1,18 @@
+id: battle-goo
+name: Battle Goo
+talentCategory: racial
+race: majin
+prerequisites: Majin, Primordial Majin Factor
+description: >
+  Your Goops are now combat-ready!
+text: >
+  Battle Goo: Your Goops are now combat-ready!
+  –Prerequisites: Majin, Primordial Majin Factor
+  (1)-[Passive]: Increase your maximum number of Minions by 2.
+  (2)-[Passive]: Increase the Life Points of your Goops by 2 for each Power Level reached (after all other calculations).
+  (3)-[Passive]: Your Goops gain access to (and can use) the Basic Attack Maneuver and Intervene Maneuver, but if a Goop uses the Intervene Maneuver, they are destroyed after using the Maneuver even if they have any Life Points remaining.
+
+---
+
+# Not built: From Goop (the Primordial Majin Factor's) and its Goops are not in this system yet - their texts are waited on.
+# (1) Minions wait on the user's design.

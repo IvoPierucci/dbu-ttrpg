@@ -1,0 +1,17 @@
+id: detached-limbs
+name: Detached Limbs
+talentCategory: racial
+race: majin
+prerequisites: Majin, Primordial Majin Factor
+description: >
+  You morph your Goop into a limb to attack an Opponent.
+text: >
+  Detached Limbs: You morph your Goop into a limb to attack an Opponent.
+  –Prerequisites: Majin, Primordial Majin Factor
+  (1)-[Passive]: Increase your Goop’s Soak Value by 1(bT).
+  (2)-[Triggered]: When making an Attacking Maneuver, you may have that Attacking Maneuver originate from one of your Goops as if you were occupying that Square, instead of the Square you currently occupy.
+  (3)-[Triggered, 1/Round]: If you use the 2nd effect of Detached Limbs, you may make a Clash (Impulsive) against a target of that Attacking Maneuver. If you win, they suffer from the Guard Down Combat Condition for the duration of that Attacking Maneuver.
+
+---
+
+# Not built: From Goop (the Primordial Majin Factor's) and its Goops are not in this system yet - their texts are waited on.

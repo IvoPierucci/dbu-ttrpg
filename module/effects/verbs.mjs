@@ -403,6 +403,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  miniMajin: {
+    args: [1, 1],
+    doc: "Mini Majin: a Duplicate Minion a Size Category smaller - the number its Ki per base Tier (0 free) - paid and said (chat.mjs miniMajin)."
+  },
+  aiiieee: {
+    args: [0, 0],
+    doc: "AIIIEEEEEEE (3): Life Points 1, then a Clash (Bluff vs Perception/Intuition) at each Opponent - won, Hidden (chat.mjs aiiieee)."
+  },
   glassKnights: {
     args: [0, 0],
     names: [],

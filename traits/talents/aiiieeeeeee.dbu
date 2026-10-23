@@ -1,0 +1,26 @@
+id: aiiieeeeeee
+name: AIIIEEEEEEE
+talentCategory: racial
+race: majin
+prerequisites: Majin, 2+ Skill Ranks in Bluff
+description: >
+  You explode violently upon defeat. That would surely kill anyone.
+text: >
+  AIIIEEEEEEE: You explode violently upon defeat. That would surely kill anyone.
+  –Prerequisites: Majin, 2+ Skill Ranks in Bluff
+  (1)-[Passive]: Increase your Skill Bonus for the Bluff Skill by 1.
+  (2)-[Passive]: Increase your Racial Life Modifier by 2.
+  (3)-[Triggered/Defeated]: Set your Life Points to 1, then make a Clash (Bluff vs Perception/Intuition) against all Opponents. If you win, you become Hidden to those Opponents.
+
+---
+
+[passive]
+# (1)
+skill.bluff += 1;
+# (2)
+racialLifeModifier += 2;
+
+# (3) Offered on the Defeated card: Life Points 1, then a Clash (Bluff vs Perception or Intuition) at each Opponent on the scene - won,
+# Hidden from them (chat.mjs aiiieee).
+[triggered/defeated, effect 3]
+aiiieee();

@@ -1,0 +1,26 @@
+id: roomy-biology
+name: Roomy Biology
+talentCategory: racial
+race: majin
+prerequisites: Majin
+description: >
+  Learning to make the best use of your supernatural anatomy, you’ve discovered that the interior of your body is an extra-dimensional space that you can control at-will.
+text: >
+  Roomy Biology: Learning to make the best use of your supernatural anatomy, you’ve discovered that the interior of your body is an extra-dimensional space that you can control at-will.
+  –Prerequisites: Majin
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: You cannot lose the second Clash for the Possess Maneuver if it is initiated by another Character.
+  (3)-[Addendum]: Please refer to the ‘Inner Room’ box below.
+  Inner Room: You may store Items and willing or Defeated Characters within your body. To do so costs 1 Action while holding or adjacent to the Item/Character. You may also remove any Item/Character at the cost of 1 Action, with any Character entering the Battlefield on a Square adjacent to you of your choice. The space inside of you is vast and may function as its own Battlefield. If a Combat Encounter is initiated within this space, you may create a Duplicate Minion to enter that Combat Encounter. This Duplicate Minion is of any Size Category of your choice and, if they die or are Defeated, you may create another at the start of a Combat Round (if you do, the former Duplicate Minion dies).
+  If a Character stops being Defeated within you and does not wish to remain there, or simply wish to leave at the start of their turn, they can make a Might Clash against you. If they succeed, they can exit your body and re-enter the Battlefield on a Square adjacent to you of their choice.
+  Any Absorbed Characters from your stacks of Absorption are stored within your body, but suffer the effects of the Sleeping Combat Condition. This Combat Condition cannot be removed while an Absorbed Character is inside of your body and they cannot be moved from the Square they occupy. A Character adjacent to an Absorbed Character can make a Standard Maneuver with an Action Cost of 2 Actions to make a Might Clash against you. If they win, you lose that stack of Absorption and that Absorbed Character can be moved.
+  While Adventuring, you can freely store or remove Items/Characters from within your body without spending any time. Any Character must be Willing or Defeated at the time, however. An Absorbed Character can be removed by making a Might Clash through an Adventuring Maneuver with a Time Cost of 1 Minute and a Session Limit of 2.
+
+---
+
+[passive]
+# (1)
+racialLifeModifier += 2;
+# Not built: (2) - the Possess Maneuver is not in this system yet (its text is waited on). (3) Inner Room - storing and letting out,
+# the space within as a Battlefield of its own, the Absorbed (Absorption is an Awakening, not built): the table's, the Might Clashes
+# made from the sheet.

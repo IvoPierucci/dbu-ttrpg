@@ -20712,6 +20712,43 @@ export async function glassSoldiers(actor) {
 }
 
 /**
+ * Mini Majin: "create a Duplicate Minion. If you do, that Duplicate Minion's base Size Category is a Size Category smaller than
+ * yours" - (1) for 8(bT) Ki, (2) free. Paid and said; the Minion itself is the table's (Minions wait on the user's design).
+ */
+export async function miniMajin(actor, perBaseTier = 0) {
+  if (!actor) return;
+  const cost = perBaseTier * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  if (cost) {
+    const { spendManeuverCost } = await import("./maneuvers.mjs");
+    if (!await spendManeuverCost(actor, { name: "Mini Majin" }, cost)) return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  }
+  const sizes = Object.keys(DBUCharacterData.SIZES);
+  const own = actor.system.size?.trueKey ?? actor.system.size?.key ?? "";
+  const smaller = sizes[Math.max(0, sizes.indexOf(own) - 1)];
+  const label = DBUCharacterData.SIZES[smaller]?.label ?? smaller ?? "one smaller";
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="A Duplicate Minion of ${Handlebars.escapeExpression(actor.name)}, its base Size Category one smaller than theirs.">
+    Mini Majin: a Duplicate Minion, ${Handlebars.escapeExpression(String(label))}${cost ? ` - ${cost} Ki` : ""}.</div>` });
+}
+
+/**
+ * AIIIEEEEEEE (3): "Set your Life Points to 1, then make a Clash (Bluff vs Perception/Intuition) against all Opponents. If you win,
+ * you become Hidden to those Opponents." Every token on the scene of another side, a Clash each - won, Hidden from them.
+ */
+export async function aiiieee(actor) {
+  if (!actor) return;
+  await requestActorUpdate(actor, { "system.life.value": 1 });
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const others = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
+    && (token.actor.type === "character") && ((own === undefined) || (token.document?.disposition !== own)))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  for (const other of others) {
+    await postSkillClash(actor, other, { name: "AIIIEEEEEEE", type: "outOfSequence",
+      clash: { skill: "bluff", defenderSkills: ["perception", "intuition"] } }, { hides: { applied: false } });
+  }
+}
+
+/**
  * Autonomous Glass Soldiers (1): "spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent ... create a 'Glass Knight'" - a
  * Minion of the Custom Species Race. Copy in the Mirror (1): "If you would create a Glass Knight, you may spend 4(bT) Ki Points to
  * instead create a Duplicate Minion of yourself known as a 'Glass Copy'." How many of each asked, paid and said; the Squares and

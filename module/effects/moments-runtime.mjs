@@ -513,6 +513,8 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "miniMajin": return (await import("../chat.mjs")).miniMajin(actor, Number(args[0]) || 0);
+    case "aiiieee": return (await import("../chat.mjs")).aiiieee(actor);
     case "glassKnights": return (await import("../chat.mjs")).glassKnights(actor);
     case "glassDecorations": return (await import("../chat.mjs")).glassDecorations(actor);
     case "glassSoldiersMove": {
