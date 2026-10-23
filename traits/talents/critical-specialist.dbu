@@ -1,0 +1,22 @@
+id: critical-specialist
+name: Critical Specialist
+talentCategory: weapon
+prerequisites: Weapon Specialist
+description: >
+  Focusing on targeting an opponent’s vitals, you attempt to finish your opponents swiftly.
+text: >
+  Critical Specialist: Focusing on targeting an opponent’s vitals, you attempt to finish your opponents swiftly.
+  –Prerequisites: Weapon Specialist
+  (1)-[Passive]: Decrease the Critical Target of your Strike Rolls when making an Armed Attack by 1.
+  (2)-[Triggered, 1/Round]: If you score a Critical Result on your Strike Roll for an Armed Attack, increase the Wound Roll of that Attacking Maneuver by 2(T).
+  (3)-[Triggered, 1/Encounter]: If you score a Critical Result on the Strike Roll for an Armed Attack, increase the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (1) An Armed Attack's Strike Roll (chat.mjs).
+criticalTarget.armed -= 1;
+# (2), (3) Its Strike a Critical Result: asked of you there and then - 2(T) on its Wound, once a Round; its Damage Category a step
+# up, once an Encounter; settled again, as answered (chat.mjs criticalSpecialistFor).
+allow criticalSpecialist.wound;
+allow criticalSpecialist.category;

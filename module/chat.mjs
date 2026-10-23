@@ -20677,6 +20677,32 @@ function shakenTechniqueParts(attacker, attack, target) {
   return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Against the Shaken", value: Number(slot.add) }];
 }
 
+/**
+ * Critical Specialist (2): "If you score a Critical Result on your Strike Roll for an Armed Attack, increase the Wound Roll of
+ * that Attacking Maneuver by 2(T)" - once a Round; (3): "increase the Damage Category of that Attacking Maneuver by 1 Category" -
+ * once an Encounter. Asked of whoever plays the attacker as the Strike is known; settled again, the answer it had kept.
+ */
+async function criticalSpecialistFor(attacker, attack, strike) {
+  if (!attacker || (strike?.outcome !== "critical") || !attack.weapon || attack.weapon.unarmed) return null;
+  if (attack.result?.critSpecialist) return attack.result.critSpecialist;
+  const slots = attacker.system?.effects?.slots ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const woundOpen = (slots["criticalSpecialist.wound"] === true) && (attacker.getFlag?.(SCOPE, "critSpecialistRound") !== roundKey());
+  const stepOpen = (slots["criticalSpecialist.category"] === true) && (attacker.getFlag?.(SCOPE, "critSpecialistEncounter") !== encounter);
+  if (!woundOpen && !stepOpen) return null;
+  const options = [
+    ...(woundOpen ? [{ value: "wound", label: "+2(T) Wound (1/Round)" }] : []),
+    ...(stepOpen ? [{ value: "step", label: "Damage Category a step up (1/Encounter)" }] : []),
+    ...((woundOpen && stepOpen) ? [{ value: "both", label: "Both" }] : []),
+    { value: "none", label: "Neither" }];
+  const picked = await askPlayerChoice(attacker, `${attacker.name}: Critical Specialist - a Critical Strike`, options);
+  const wound = woundOpen && ["wound", "both"].includes(picked);
+  const step = stepOpen && ["step", "both"].includes(picked);
+  if (wound) await requestActorUpdate(attacker, { [`flags.${SCOPE}.critSpecialistRound`]: roundKey() });
+  if (step) await requestActorUpdate(attacker, { [`flags.${SCOPE}.critSpecialistEncounter`]: encounter });
+  return (wound || step) ? { wound, step } : null;
+}
+
 /** Heel (1): "Increase the Wound Roll of your Attacking Maneuvers made against Opponents in a Grapple by 1(T)." */
 function heelParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["wound.vsGrappled"];
@@ -23814,7 +23840,9 @@ async function resolveAttackWork(message, attack) {
   // Diminishing Offense blunts the Strike Roll of every Attacking Maneuver made once
   // the round's free attacks are spent.
   // Transfiguration Beam: the Strike Roll's Critical Target 1 lower for an Energy or Magic Attack.
-  const ownCritical = Number(attacker.system.effects?.slots?.[`criticalTarget.${attack.foundation}`]?.add) || 0;
+  const ownCritical = (Number(attacker.system.effects?.slots?.[`criticalTarget.${attack.foundation}`]?.add) || 0)
+    // Critical Specialist (1): an Armed Attack's.
+    + ((attack.weapon && !attack.weapon.unarmed) ? (Number(attacker.system.effects?.slots?.["criticalTarget.armed"]?.add) || 0) : 0);
   // Critical Point (1): "If your Attacking Maneuver possesses 3+ Energy Charges, set the Critical Target for that Attacking
   // Maneuver's Strike Roll to 5."
   const chargedCritical = (attacker.system.effects?.slots?.["strike.criticalAtCharges"] === true)
@@ -23842,6 +23870,8 @@ async function resolveAttackWork(message, attack) {
   });
   // Critical Point (2): "Double this bonus if you score a Critical Result on the Strike Roll" - 2(T) more on it.
   if (attack.primed) primedCritical(attacker, strike);
+  // Critical Specialist (2), (3): an Armed Attack's Critical Strike - asked; settled again, as it was answered.
+  const critSpecialist = await criticalSpecialistFor(attacker, attack, strike);
 
   // From here it branches. What each of them did about that Strike is theirs alone, and
   // one of them being missed says nothing about the next.
@@ -24000,6 +24030,8 @@ async function resolveAttackWork(message, attack) {
       + (defender ? -1 : 0)
       + criticalStep
       + (defence.damageCategoryShift ?? 0)
+      // Critical Specialist (3): a step up.
+      + (critSpecialist?.step ? 1 : 0)
       // Divine Flex: "reduce the Damage Category of that Attacking Maneuver by 1 Category" - against the one who flexed.
       + (defenceFor(attack, uuid)?.divineFlex ? -1 : 0)
       // Jolt Counter (2): "increase the Damage Category of both your and your Opponent's Attacking Maneuver by 1 Category".
@@ -24119,7 +24151,7 @@ async function resolveAttackWork(message, attack) {
   requestEdit(message, {
     type: "attack",
     attack: { ...attack, ...(chased ? { hostileChased: true } : {}),
-      result: { strike, targets: branches, wound: null } }
+      result: { strike, targets: branches, wound: null, ...(critSpecialist ? { critSpecialist } : {}) } }
   });
   if (chased) await postHostileChase(attack, attacker);
   // An Exploit Para Para Dance provoked, hitting its dancer: the dance fails.
@@ -25105,7 +25137,10 @@ function woundParts(attacker, attack) {
   // Foundation, increase your Wound Roll for that Attacking Maneuver by 2(T)."
   const kata = (attacker.system.effects?.slots?.["precisionKata.wound"] === true) && (attack.result?.strike?.outcome === "critical")
     && (attacker.system.effects?.slots?.[`focused.${attack.foundation}`] === true);
+  // Critical Specialist (2): taken on its Critical Strike.
+  const critWound = Boolean(attack.result?.critSpecialist?.wound) && (attack.result?.strike?.outcome === "critical");
   return [
+    ...(critWound ? [{ label: "Critical Specialist", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(kata ? [{ label: "Precision Kata (Critical)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(herculean ? [{ label: "Herculean Power (Hefty Muscle again)", written: `+${heftyTimes}(T)`,
       value: heftyTimes * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
