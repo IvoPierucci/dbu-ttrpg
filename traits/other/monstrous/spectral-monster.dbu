@@ -1,0 +1,29 @@
+id: spectral-monster
+name: Spectral Monster
+order: 14
+description: >
+  You have the ability to shift your body to an incorporeal state, allowing you to pass through objects and avoid attacks. (Inspired by the Homebrew from Idios in the DBU Discord)
+text: >
+  Spectral Monster: You have the ability to shift your body to an incorporeal state, allowing you to pass through objects and avoid attacks. (Inspired by the Homebrew from Idios in the DBU Discord)
+  (1)-[1/Round]: As a Standard Action with an Action Cost of 1 Action and a Ki Point Cost of 6(bT), enter the Incorporeal Special State.
+  (2)-[1/Round]: As an Instant Maneuver during your turn, you can exit the Incorporeal Special State.
+  (3)-[Triggered, 1/Round]: If you are not in the Incorporeal State and are targeted by an Attacking Maneuver, you can spend a Counter Action and 10(bT) Ki Points to enter the Incorporeal State.
+  (4)-[Automatic/Start of Turn]: If you are in the Incorporeal State due to the effects of Spectral Monster, spend 6(bT) Ki Points.
+
+---
+
+[passive]
+# (1), (2) Its own Maneuvers, on the Maneuvers tab (maneuvers/spectral-monster-*.dbu) - its mark (Spectral) saying the State is its.
+# (3) Targeted: a button on the attack's card before it is settled, once a Round - a Counter Action and 10(bT) Ki (chat.mjs
+# spectralButtons).
+allow spectral.counter;
+
+# (4)
+[automatic/start-of-turn, effect 4]
+requires inState("incorporeal") && hasCondition("spectral-mark");
+ki.value -= 6(bT);
+
+# The Incorporeal State gone some other way: its mark with it.
+[automatic/start-of-turn]
+requires hasCondition("spectral-mark") && !inState("incorporeal");
+remove(spectral-mark);

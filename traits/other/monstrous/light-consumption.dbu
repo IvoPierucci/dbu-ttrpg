@@ -1,0 +1,35 @@
+id: light-consumption
+name: Light Consumption
+order: 9
+# Light Stacks, its Resource - lost when the Combat Encounter ends, as every Resource is.
+resource: lightstacks
+resourceLabel: Light Stacks
+description: >
+  From a planet consumed by darkness, you have the unnatural ability to absorb light and gain nutrition from it.
+text: >
+  Light Consumption: From a planet consumed by darkness, you have the unnatural ability to absorb light and gain nutrition from it.
+  (1)-[1/Round, Resource]: As a Standard Action with an Action Cost of 2 Actions, target an Opponent who meets any conditions from the list below. Make a Clash (Corporeal vs Corporeal/Impulsive) against that Opponent. If you win, apply the effects listed below:
+  * In a Transformation with the Light Dependent Aspect: The targeted Opponent exits the Transformation with the Light Dependent Aspect, but they do not gain Stress Exhaustion. Gain a number of Light Stacks equal to that Transformation’s Tier of Power Requirement plus 1/2 (rounded up) of that Opponent’s Tier of Power.
+  * Has any stacks of Power: The targeted Opponent loses their stacks of Power. Gain a number of Light Stacks equal to 1/2 (rounded up) of that Opponents Tier of Power for each stack of Power they had possessed.
+  (2)-[Triggered, 1/Round]: As a Counter Action with an Action Cost of 1 Counter Action, when you are targeted by an Attacking Maneuver that is of the Energy Foundation or the Light Profile, you can make a Might Clash against that attacking Character. If you win, you take no Damage from that Attacking Maneuver, but instead the attacking Character makes an Urgent Wound Roll for their Attacking Maneuver as if you were hit, and you regain Ki Points equal to 1/2 of the Dice Score. For every 1/5 of your Maximum Ki Point Pool regained as Ki Points, gain 1(bT) Light Stack(s).
+  (3)-[Automatic/Start of Combat Round]: Regain Ki Points equal to your amount of Light Stacks, then halve your number of Light Stacks.
+  (4)-[Automatic]: At the end of the Combat Round, reduce your Life Points by your number of Light Stacks. If your number of Light Stacks exceeds 2(bT), then reduce your Life Points by 1/5 of your Maximum Life Points.
+
+---
+
+[passive]
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/light-consumption-first-effect.dbu). The Light Dependent Aspect's half waits on
+# Transformations.
+# (2) Targeted by an Energy Attack or the Elemental (Light) Profile: a button on its card before it is settled - a Counter Action, a
+# Might Clash; won, it hits you for no Damage, its Wound Urgent, half its Dice Score your Ki (chat.mjs lightButtons).
+allow light.counter;
+
+# (3)
+[automatic/start-of-round]
+requires hasResource("lightstacks");
+lightDigest();
+
+# (4)
+[automatic/end-of-round]
+requires hasResource("lightstacks");
+lightBurn();

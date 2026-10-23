@@ -403,6 +403,38 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  innateWeapon: {
+    args: [0, 0],
+    doc: "Innate Weaponry (1): a Weapon of Craftsmanship Grade 4, its Category asked (chat.mjs innateWeapon)."
+  },
+  lightConsume: {
+    args: [0, 0],
+    doc: "Light Consumption (1): a Clash at an Opponent with Power - won, their Power as Light Stacks (chat.mjs lightConsume)."
+  },
+  lightDigest: {
+    args: [0, 0],
+    doc: "Light Consumption (3): Ki Points as many as the Light Stacks, then the Light Stacks halved (chat.mjs lightDigest)."
+  },
+  lightBurn: {
+    args: [0, 0],
+    doc: "Light Consumption (4): Life Points as many as the Light Stacks - past 2(bT), 1/5 of the Maximum (chat.mjs lightBurn)."
+  },
+  shedPlates: {
+    args: [0, 0],
+    doc: "Petrification Plating (4): every Plate off, Combat Rolls 1(T) each till the start of your next turn (chat.mjs shedPlates)."
+  },
+  shedding: {
+    args: [0, 0],
+    doc: "Shedding Transformation (2): Life Points 1, then the Transformation out of sequence or Legend Realized (chat.mjs shedding)."
+  },
+  spectralEnter: {
+    args: [0, 0],
+    doc: "Spectral Monster (1): the Incorporeal Special State (chat.mjs spectralEnter)."
+  },
+  spectralExit: {
+    args: [0, 0],
+    doc: "Spectral Monster (2): out of the Incorporeal Special State, during your turn (chat.mjs spectralExit)."
+  },
   bloodlustFeed: {
     args: [1, 1],
     doc: "Bloodlust (1): that many stacks of Bloodlust, the Round marked as fed (chat.mjs bloodlustFeed)."

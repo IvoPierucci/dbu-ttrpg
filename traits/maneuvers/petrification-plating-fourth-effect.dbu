@@ -1,0 +1,21 @@
+id: petrification-plating-fourth-effect
+name: Petrification Plating
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: petrification-plating
+fromEffect: 4
+source: Core Rule
+description: >
+  Petrification Plating's fourth effect, as a Maneuver: every Plate off - Combat Rolls 1(T) each till the start of your next turn.
+text: >
+  (4)-[1/Encounter]: As a Standard Action with an Action Cost of 1 Action, you can remove all of your Plates. Increase your Combat Rolls by 1(T) for every Plate removed until the start of your next turn.
+
+---
+
+# The Plates gone; Plates Shed, its mark, a stack each (chat.mjs shedPlates).
+[on used]
+shedPlates();

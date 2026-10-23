@@ -1,0 +1,22 @@
+id: innate-weaponry-first-effect
+name: Innate Weaponry
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 2/round
+fromTrait: innate-weaponry
+fromEffect: 1
+source: Core Rule
+description: >
+  Innate Weaponry's first effect, as a Maneuver: a Weapon of Craftsmanship Grade 4, made on the Gear tab.
+text: >
+  (1)-[2/Round]: As a Standard Maneuver with an Action Cost of 1 Action, create a Weapon with a Craftsmanship Grade of 4.
+
+---
+
+# Which Category, asked; the Weapon made on the Gear tab - Grade 4, its Qualities the player's on its sheet - gone with the Trait
+# (chat.mjs innateWeapon).
+[on used]
+innateWeapon();

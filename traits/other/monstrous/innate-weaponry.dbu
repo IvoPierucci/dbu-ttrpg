@@ -1,0 +1,17 @@
+id: innate-weaponry
+name: Innate Weaponry
+order: 8
+description: >
+  Able to produce a weapon from your very flesh, you are never left without a weapon at hand, making you always deadly.
+text: >
+  Innate Weaponry: Able to produce a weapon from your very flesh, you are never left without a weapon at hand, making you always deadly.
+  (1)-[2/Round]: As a Standard Maneuver with an Action Cost of 1 Action, create a Weapon with a Craftsmanship Grade of 4.
+  (2)-[Passive]: Increase the Strike and Wound Rolls of your Armed Attacks by 1(T).
+
+---
+
+[passive]
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/innate-weaponry-first-effect.dbu).
+# (2) An Armed Attack's (chat.mjs variableParts).
+strike.armed += 1(T);
+wound.armed += 1(T);

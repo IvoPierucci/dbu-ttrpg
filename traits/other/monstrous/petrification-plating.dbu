@@ -1,0 +1,35 @@
+id: petrification-plating
+name: Petrification Plating
+order: 10
+# Plates, its Resource - lost when the Combat Encounter ends, as every Resource is.
+resource: plate
+resourceLabel: Plates
+resourceMax: 3
+description: >
+  Your body is weighed down by some form of natural armor that you are able to shed to protect yourself.
+text: >
+  Petrification Plating: Your body is weighed down by some form of natural armor that you are able to shed to protect yourself.
+  (1)-[Triggered/Start of Combat Encounter, Triggered/Power]: Gain a Plate (max. 3).
+  (2)-[Passive]: For each Plate you possess: gain 1(bT) Damage Reduction, reduce the amount of Squares you move through by any means by 1(bT), and reduce the Combat Rolls of any Opponent you are grappling as the Grappler by 1(bT).
+  (3)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, you can spend 1 Plate to increase your Damage Reduction by 5(bT) for the duration of that Attacking Maneuver.
+  (4)-[1/Encounter]: As a Standard Action with an Action Cost of 1 Action, you can remove all of your Plates. Increase your Combat Rolls by 1(T) for every Plate removed until the start of your next turn.
+
+---
+
+[passive]
+# (2) Damage Reduction, and the Squares moved by any means as Speed lost; the one you Grapple, their Combat Rolls (chat.mjs partyParts).
+if (hasResource("plate")) {
+    damageReduction += plate.stacks * 1(bT);
+    speed.all -= plate.stacks * 1(bT);
+}
+allow plating.grip;
+# (3) Hit: a button on its card before its Wound, once a Round - a Plate for 5(bT) Damage Reduction (chat.mjs plateButtons).
+allow plating.spend;
+# (4) Its own Maneuver, on the Maneuvers tab (maneuvers/petrification-plating-fourth-effect.dbu).
+
+# (1) The Combat Encounter beginning, or the Power Up Maneuver: a Plate. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-encounter, effect 1]
+plate.stacks += 1;
+
+[triggered/power, effect 1]
+plate.stacks += 1;

@@ -1,0 +1,21 @@
+id: ravaging-charger
+name: Ravaging Charger
+order: 11
+description: >
+  Your monstrous body is built to charge opponents, slamming into them with your weight and momentum.
+text: >
+  Ravaging Charger: Your monstrous body is built to charge opponents, slamming into them with your weight and momentum.
+  (1)-[Passive]: Increase your Speeds by 1(T).
+  (2)-[Passive]: Increase the Strike Rolls of your Attacking Maneuvers with the Charging Assault Advantage by 1(T).
+  (3)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver that possesses the Charging Assault Advantage, make a Clash (Impulsive vs Impulsive/Corporeal) against them. If you win, apply 1/2 of your maximum Boosted Speed to the Wound Roll of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+speed.all += 1(T);
+# (2) A row on its Strike as it is declared (chat.mjs postAttack).
+allow ravaging.strike;
+# (3) Hit with it: a button on its card before its Wound, once a Round - the Clash; won, half your Boosted Speed on that Wound (chat.mjs
+# ravagingButtons).
+allow ravaging.wound;

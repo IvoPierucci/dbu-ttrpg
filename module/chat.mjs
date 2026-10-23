@@ -941,6 +941,10 @@ async function settleClashEffects(messageId, clash) {
   if (clash.venom && clash.result && !clash.venom.applied) await settleVenom(message, clash);
   if (clash.quills && clash.result && !clash.quills.applied) await settleQuills(message, clash);
   if (clash.dissipate && clash.result && !clash.dissipate.applied) await settleDissipate(message, clash);
+  if (clash.lightConsume && clash.result && !clash.lightConsume.applied) await settleLightConsume(message, clash);
+  if (clash.lightCounter && clash.result && !clash.lightCounter.applied) await settleLightCounter(message, clash);
+  if (clash.ravaging && clash.result && !clash.ravaging.applied) await settleRavaging(message, clash);
+  if (clash.slimyGrab && clash.result && !clash.slimyGrab.applied) await settleSlimyGrab(message, clash);
   if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
     await settleCutthroatClash(message, clash);
   }
@@ -4127,6 +4131,12 @@ function collisionHalved(target) {
   return (slots["collision.halved"] === true) || ((slots["shell.collision"] === true) && Boolean(target.system.naturalArmor?.active));
 }
 
+/** What of a Collision's Damage they take: none in the Incorporeal State ("You cannot suffer from Collision Damage"), halved, or all. */
+function collisionAmount(target, amount) {
+  if ((Number(target?.system?.states?.incorporeal) || 0) > 0) return 0;
+  return collisionHalved(target) ? Math.floor(amount / 2) : amount;
+}
+
 /**
  * What the Throw Maneuver's thrown thing does to the one it hit: Collision Damage - "reduce
  * your Life Points by the Hardness Value of the Feature you Collided with", at the base Tier
@@ -4151,7 +4161,7 @@ async function landThrown(attack, thrower, target) {
   const escape = Handlebars.escapeExpression;
   // Rubbery Body: "Halve any Collision Damage you receive." Sturdy Shell (3) too.
   const rubbery = collisionHalved(target);
-  await reduceLifePoints(target, rubbery ? Math.floor(value / 2) : value,
+  await reduceLifePoints(target, collisionAmount(target, value),
     { reason: `${thrown.name} (Collision Damage${rubbery ? ", halved" : ""})` });
   // Bouncy Physique: Collision Damage received - the Movement, out of sequence, on this note.
   const bounce = bouncyMovementOffer(target);
@@ -14848,12 +14858,17 @@ function refinedParts(actor, other) {
 function partyParts(actor) {
   const holders = actor ? alliesWithin(actor, "party.rolls", SPHERE_RADIUS.minor - 1) : [];
   const kind = actor?.getFlag?.(SCOPE, "kindhearted");
+  // Petrification Plating (2): "reduce the Combat Rolls of any Opponent you are grappling as the Grappler by 1(bT)" - for each Plate.
+  const grappler = (actor?.system?.grapple?.role === "grappled") ? fromUuidSync(actor.system.grapple.partner ?? "") : null;
+  const plates = (grappler?.system?.effects?.slots?.["plating.grip"] === true) ? (Number(grappler.system.resources?.plate?.stacks) || 0) : 0;
+  const gripped = plates ? -plates * Math.max(1, Number(grappler.system.baseTierOfPower) || 1) : 0;
   // Twinned Spirits (2): "Your Partner has their Combat Rolls increased by 1(T)" - theirs who holds it.
   const twin = actor ? partnerOfSync(actor) : null;
   const twinned = (twin?.system?.effects?.slots?.["twinned.rolls"] === true) ? Math.max(1, Number(twin.system.tierOfPower) || 1) : 0;
   return [...(holders.length ? [{ label: "Party Tactics", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : []),
     ...((Number(kind?.value) || 0) ? [{ label: `Kindhearted Saiyan (${kind.name ?? ""})`, written: "+1(T)", value: Number(kind.value) }] : []),
-    ...(twinned ? [{ label: `Twinned Spirits (${twin.name})`, written: "+1(T)", value: twinned }] : [])];
+    ...(twinned ? [{ label: `Twinned Spirits (${twin.name})`, written: "+1(T)", value: twinned }] : []),
+    ...(gripped ? [{ label: `Petrification Plating (${grappler.name})`, value: gripped }] : [])];
 }
 
 /** Dedicated Spotter's Spectators: the Allies of `actor` in the Spectator State holding `slot`. */
@@ -15381,15 +15396,19 @@ function variableParts(attacker, attack, roll) {
     const add = Number(slots["strike.unarmedWielding"]?.add) || 0;
     // Variable Champion (1): "While you are only wielding 1 Weapon" - an Armed Attack's.
     const single = Number(slots["strike.armedSingle"]?.add) || 0;
+    // Innate Weaponry (2): "Increase the Strike and Wound Rolls of your Armed Attacks by 1(T)."
+    const always = armed ? (Number(slots["strike.armed"]?.add) || 0) : 0;
     return [...((!armed && add && wielded) ? [{ label: "Variable Fighter (Unarmed)", value: add }] : []),
-      ...((armed && single && (wielded === 1)) ? [{ label: "Variable Champion (1 Weapon)", value: single }] : [])];
+      ...((armed && single && (wielded === 1)) ? [{ label: "Variable Champion (1 Weapon)", value: single }] : []),
+      ...(always ? [{ label: (slots["strike.armed"]?.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Armed Attack", value: always }] : [])];
   }
   const key = armed ? "variable-armed-mark" : "variable-unarmed-mark";
   // Weapon Arts (1): an Armed Attack's Wound.
   const arts = armed ? (Number(attacker.system?.effects?.slots?.["wound.armed"]?.add) || 0) : 0;
   return [...(((Number(attacker.system?.conditions?.[key]) || 0) > 0)
     ? [{ label: `Variable Fighter (${armed ? "Armed" : "Unarmed"})`, written: "+1(T)", value: tier }] : []),
-    ...(arts ? [{ label: "Weapon Arts", value: arts }] : [])];
+    ...(arts ? [{ label: (attacker.system.effects.slots["wound.armed"]?.parts ?? []).map(part => part.source).filter(Boolean).join(", ")
+      || "Weapon Arts", value: arts }] : [])];
 }
 
 /**
@@ -19419,6 +19438,324 @@ async function regainPools(actor, life = 0, ki = 0) {
     ...(ki ? { "system.ki.value": Math.min(Number(kiPool.max) || 0, (Number(kiPool.value) || 0) + ki) } : {}) });
 }
 
+/** A button on an attack's card. */
+function cardButton(container, label, tooltip, run) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = label;
+  button.dataset.tooltip = tooltip;
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    await run();
+  });
+  container.append(button);
+}
+
+/** Innate Weaponry (1): "create a Weapon with a Craftsmanship Grade of 4" - which Category asked; made on the Gear tab, gone with the Trait. */
+export async function innateWeapon(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const categories = traitsOfKind("crafting", "weapon-categories").filter(each => each.weaponType);
+  const id = await askPlayerChoice(actor, `${actor.name}: Innate Weaponry - a Weapon of Grade 4`,
+    categories.map(each => ({ value: each.id, label: each.name })));
+  const category = categories.find(each => each.id === id);
+  if (!category) return UNSPENT;
+  const { craftedItemFrom, composeEffects } = await import("./gear.mjs");
+  const data = craftedItemFrom("weapon", actor, getTrait);
+  if (!data) return UNSPENT;
+  data.name = `${category.name} (Innate Weaponry)`;
+  Object.assign(data.system.crafted, { category: category.id, weaponType: category.weaponType, grade: 4, qualities: [] });
+  data.system.crafted.effects = composeEffects(data.system.crafted, "", { getTrait });
+  const giver = Array.from(actor.items ?? []).find(item => item.flags?.[SCOPE]?.sourceId === "innate-weaponry");
+  data.flags = { [SCOPE]: { grantedBy: giver?.id ?? "" } };
+  await actor.createEmbeddedDocuments("Item", [data]);
+  ui.notifications.info(`${actor.name}: Innate Weaponry - ${data.name} on the Gear tab.`);
+  return true;
+}
+
+/** Light Consumption (1): "Has any stacks of Power" - the Clash (Corporeal vs Corporeal/Impulsive). */
+export async function lightConsume(actor, target) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const power = Number(target?.system?.resources?.power?.stacks) || 0;
+  if (!target || (target.uuid === actor.uuid) || !power) {
+    ui.notifications.warn("Light Consumption: target an Opponent with stacks of Power (one in a Light Dependent Transformation is the table's).");
+    return UNSPENT;
+  }
+  return postSaveClash(actor, target, { maneuverName: "Light Consumption", saves: ["corporeal"], defenderSaves: ["corporeal", "impulsive"],
+    reason: `Win and ${target.name}'s Power is yours as Light Stacks.`, lightConsume: { applied: false } });
+}
+
+async function settleLightConsume(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, lightConsume: { ...clash.lightConsume, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Light Consumption: nothing taken.");
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  const power = Number(target.system.resources?.power?.stacks) || 0;
+  const gained = power * Math.ceil(Math.max(1, Number(target.system.tierOfPower) || 1) / 2);
+  await setResource(target, "power", 0);
+  await setResource(actor, "lightstacks", (Number(actor.system.resources?.lightstacks?.stacks) || 0) + gained);
+  return settledNote(message, `Light Consumption: ${target.name}'s ${power} Power gone - ${gained} Light Stacks.`);
+}
+
+/** Light Consumption (3): "Regain Ki Points equal to your amount of Light Stacks, then halve your number of Light Stacks." */
+export async function lightDigest(actor) {
+  const stacks = Number(actor?.system?.resources?.lightstacks?.stacks) || 0;
+  if (!stacks) return;
+  await regainPools(actor, 0, stacks);
+  await setResource(actor, "lightstacks", Math.floor(stacks / 2));
+}
+
+/**
+ * Light Consumption (4): "At the end of the Combat Round, reduce your Life Points by your number of Light Stacks. If your number of
+ * Light Stacks exceeds 2(bT), then reduce your Life Points by 1/5 of your Maximum Life Points" - that, instead.
+ */
+export async function lightBurn(actor) {
+  const stacks = Number(actor?.system?.resources?.lightstacks?.stacks) || 0;
+  if (!stacks) return;
+  const many = stacks > (2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1));
+  const lost = many ? Math.floor((Number(actor.system.life?.max) || 0) / 5) : stacks;
+  return reduceLifePoints(actor, lost, { reason: "Light Consumption", own: true });
+}
+
+/** Light Consumption (2), the Damage it took the place of: half the Wound's Dice Score in Ki, 1(bT) Light Stacks for every fifth of the Maximum. */
+async function lightRegain(actor, woundTotal) {
+  const ki = Math.floor(Math.max(0, woundTotal) / 2);
+  if (!ki) return;
+  const fifth = Math.floor((Number(actor.system.ki?.max) || 0) / 5);
+  const room = Math.max(0, (Number(actor.system.ki?.max) || 0) - (Number(actor.system.ki?.value) || 0));
+  const regained = Math.min(ki, room);
+  await regainPools(actor, 0, ki);
+  const stacks = fifth ? Math.floor(regained / fifth) * Math.max(1, Number(actor.system.baseTierOfPower) || 1) : 0;
+  if (stacks) await setResource(actor, "lightstacks", (Number(actor.system.resources?.lightstacks?.stacks) || 0) + stacks);
+}
+
+/**
+ * Light Consumption (2): "when you are targeted by an Attacking Maneuver that is of the Energy Foundation or the Light Profile, you can
+ * make a Might Clash against that attacking Character" - a Counter Action, once a Round.
+ */
+function lightButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker || !((attack.foundation === "energy") || [attack.profile, ...extraProfilesOf(attack)].includes("elementalLight"))) return;
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attacker.uuid) || (target.system?.effects?.slots?.["light.counter"] !== true)) continue;
+    if ((target.getFlag?.(SCOPE, "lightCounterRound") === roundKey()) || (attack.consumed ?? []).includes(uuid)) continue;
+    cardButton(container, `Light Consumption - ${target.name}`, "A Counter Action, once a Round: a Might Clash - won, no Damage, half its Wound your Ki.", async () => {
+      const { spendActions } = await import("./combat.mjs");
+      if (!await spendActions(target, 1, "counter")) return;
+      await target.setFlag(SCOPE, "lightCounterRound", roundKey());
+      await postMightClash(target, attacker, { maneuverName: "Light Consumption",
+        reason: `Win and ${attacker.name}'s attack hits you for no Damage - its Wound Urgent, half of it your Ki.`,
+        lightCounter: { applied: false, messageId: message.id } });
+    });
+  }
+}
+
+async function settleLightCounter(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, lightCounter: { ...clash.lightCounter, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Light Consumption: the attack comes on.");
+  const card = game.messages.get(clash.lightCounter.messageId ?? "");
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack) return;
+  const uuid = clash.challengerUuid;
+  requestEdit(card, { type: "attack", attack: { ...attack, consumed: [...new Set([...(attack.consumed ?? []), uuid])],
+    autoHitUuids: [...new Set([...(attack.autoHitUuids ?? []), uuid])], urgentWound: true } });
+  return settledNote(message, `Light Consumption: ${clash.challengerName} takes the attack in - hit for no Damage, its Wound Urgent.`);
+}
+
+/** Petrification Plating (3): "If you are hit by an Attacking Maneuver, you can spend 1 Plate to increase your Damage Reduction by 5(bT)". */
+function plateButtons(message, attack, container) {
+  for (const entry of targetResults(attack).filter(each => each.own?.hit)) {
+    const target = fromUuidSync(entry.uuid);
+    if (!target?.isOwner || (entry.uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["plating.spend"] !== true)) continue;
+    if (!((Number(target.system.resources?.plate?.stacks) || 0) > 0) || (target.getFlag?.(SCOPE, "plateRound") === roundKey())) continue;
+    const value = 5 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+    cardButton(container, `Petrification Plating - ${target.name}`, `A Plate, once a Round: Damage Reduction ${value} more for this attack.`, async () => {
+      if (target.getFlag?.(SCOPE, "plateRound") === roundKey()) return;
+      await target.setFlag(SCOPE, "plateRound", roundKey());
+      await setResource(target, "plate", Math.max(0, (Number(target.system.resources?.plate?.stacks) || 0) - 1));
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, partyReduction: [...(fresh.partyReduction ?? []),
+        { uuid: entry.uuid, value, by: entry.uuid, plate: true }] } });
+    });
+  }
+}
+
+/** Petrification Plating (4): "remove all of your Plates. Increase your Combat Rolls by 1(T) for every Plate removed until the start of your next turn." */
+export async function shedPlates(actor) {
+  const plates = Number(actor?.system?.resources?.plate?.stacks) || 0;
+  if (!plates) {
+    ui.notifications.warn(`${actor.name} has no Plates to remove.`);
+    return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  }
+  await setResource(actor, "plate", 0);
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "plates-shed", plates);
+  const { expiresAt } = await import("./effects/moments-runtime.mjs");
+  await expiresAt(actor, "plates-shed", "start-of-next-turn", plates);
+  return true;
+}
+
+/**
+ * Ravaging Charger (3): "If you hit an Opponent with an Attacking Maneuver that possesses the Charging Assault Advantage, make a Clash
+ * (Impulsive vs Impulsive/Corporeal) against them. If you win, apply 1/2 of your maximum Boosted Speed to the Wound Roll" - once a Round.
+ */
+function ravagingButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker?.isOwner || (attacker.system?.effects?.slots?.["ravaging.wound"] !== true) || !(attack.advantages ?? []).includes("charging-assault")) return;
+  if ((attacker.getFlag?.(SCOPE, "ravagingRound") === roundKey()) || attack.ravaged) return;
+  const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
+  const hit = targetResults(attack).filter(each => each.own?.hit && (each.uuid !== attacker.uuid) && !allies.has(each.uuid))
+    .map(each => fromUuidSync(each.uuid)).filter(Boolean);
+  for (const target of hit) {
+    cardButton(container, `Ravaging Charger: a Clash at ${target.name}`, "Once a Round: Impulsive - won, half your Boosted Speed on this Wound.", async () => {
+      if (attacker.getFlag?.(SCOPE, "ravagingRound") === roundKey()) return;
+      await attacker.setFlag(SCOPE, "ravagingRound", roundKey());
+      requestEdit(message, { type: "attack", attack: { ...(message.getFlag(SCOPE, ATTACK_FLAG) ?? attack), ravaged: true } });
+      await postSaveClash(attacker, target, { maneuverName: "Ravaging Charger", saves: ["impulsive"], defenderSaves: ["impulsive", "corporeal"],
+        reason: "Win and half your Boosted Speed is on this Wound Roll.", ravaging: { applied: false, messageId: message.id } });
+    });
+  }
+}
+
+async function settleRavaging(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, ravaging: { ...clash.ravaging, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Ravaging Charger: no extra force.");
+  const attacker = fromUuidSync(clash.challengerUuid);
+  const card = game.messages.get(clash.ravaging.messageId ?? "");
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attacker || !attack) return;
+  const value = Math.floor((Number(attacker.system.speed?.boosted) || 0) / 2);
+  requestEdit(card, { type: "attack", attack: { ...attack, woundExtra: [...(attack.woundExtra ?? []), { label: "Ravaging Charger", value }] } });
+  return settledNote(message, `Ravaging Charger: +${value} on the Wound Roll.`);
+}
+
+/**
+ * Shedding Transformation (2): "Set your Life Points to 1 and then, you may either: use the Transformation Maneuver as an Out-of-Sequence
+ * Maneuver, or trigger Legend Realized."
+ */
+export async function shedding(actor) {
+  if (!actor) return;
+  await requestActorUpdate(actor, { "system.life.value": 1 });
+  const how = await askPlayerChoice(actor, `${actor.name}: Shedding Transformation`,
+    [{ value: "legend", label: "Legend Realized" }, { value: "transform", label: "The Transformation Maneuver, out of sequence" },
+      { value: "none", label: "Neither" }]);
+  if (how === "legend") return legendRealized(actor);
+  if (how === "transform") return ownOutOfSequence(actor, "transformation");
+}
+
+/** Slimy Consistency (3): "If you are hit by a Physical Attack that does not deal Damage" - offered on its card, once a Round between them. */
+function offerSlimy(message, attack, target, attacker) {
+  if ((attack.foundation !== "physical") || (target.system?.effects?.slots?.["slimy.counter"] !== true)) return;
+  if ((target.getFlag?.(SCOPE, "slimyRound") === roundKey()) || alliesOnScene(target).some(ally => ally.uuid === attacker.uuid)) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.grants?.roundFlag === "slimyRound") && (offer.actorUuid === target.uuid))) return;
+  const at = { actorUuid: target.uuid, actorName: target.name, targetUuid: attacker.uuid, reason: "Slimy Consistency - once a Round" };
+  requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "grapple", maneuverName: "Grapple", grants: { roundFlag: "slimyRound" } } });
+  requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "basic-attack", maneuverName: "Basic Attack", grants: { roundFlag: "slimyRound" } } });
+  const weaponId = (attack.weapon && !attack.weapon.unarmed && !attack.weapon.borrowed) ? (attack.weapon.itemId ?? "") : "";
+  if (weaponId) {
+    requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "", maneuverName: "A Might Clash for their Weapon",
+      slimyGrab: { weaponId }, grants: { roundFlag: "slimyRound" } } });
+  }
+}
+
+async function takeSlimyGrab(message, actor, offer) {
+  if (actor.getFlag?.(SCOPE, "slimyRound") === roundKey()) return ui.notifications.warn("Slimy Consistency: already used this Combat Round.");
+  const attacker = fromUuidSync(offer.targetUuid ?? "");
+  if (!attacker) return;
+  await actor.setFlag(SCOPE, "slimyRound", roundKey());
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return postMightClash(actor, attacker, { maneuverName: "Slimy Consistency",
+    reason: `Win and ${attacker.name}'s Weapon is Stored in you.`, slimyGrab: { applied: false, weaponId: offer.slimyGrab.weaponId } });
+}
+
+async function settleSlimyGrab(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, slimyGrab: { ...clash.slimyGrab, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Slimy Consistency: they keep their Weapon.");
+  const holder = fromUuidSync(clash.challengerUuid);
+  const owner = fromUuidSync(clash.defenderUuid);
+  const weapon = owner?.items?.get(clash.slimyGrab.weaponId ?? "");
+  if (!holder || !weapon) return;
+  const data = weapon.toObject();
+  delete data._id;
+  data.system.equipped = false;
+  data.flags = { ...(data.flags ?? {}), [SCOPE]: { ...(data.flags?.[SCOPE] ?? {}), innerRoom: true } };
+  await requestDeleteItem(owner, weapon.id);
+  await holder.createEmbeddedDocuments("Item", [data]);
+  return settledNote(message, `Slimy Consistency: ${weapon.name} is Stored in ${holder.name}.`);
+}
+
+/** The Incorporeal State's (2) holding them out of it: its mark, till the end of their next turn. */
+function incorporealLocked(actor) {
+  return (Number(actor?.system?.conditions?.["incorporeal-lock"]) || 0) > 0;
+}
+
+/** Incorporeal (2): Damage taken - out of the State, and not back in till the end of the next turn. */
+async function incorporealShaken(actor) {
+  const { leaveState, expiresAt } = await import("./effects/moments-runtime.mjs");
+  await leaveState(actor, "incorporeal");
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "spectral-mark", 0);
+  await setCondition(actor, "incorporeal-lock", 1);
+  await expiresAt(actor, "incorporeal-lock", "next-turn");
+}
+
+/** Incorporeal (1), asked: the Wound's Dice Score under 1/4 of their Maximum Life Points - no Damage, or null. */
+async function incorporealAnswer(target, wound, damage) {
+  if (!((Number(target?.system?.states?.incorporeal) || 0) > 0) || !(damage > 0)) return null;
+  if (!((Number(wound?.total) || 0) < ((Number(target.system.life?.max) || 0) / 4))) return null;
+  return (await askPlayerChoice(target, `${target.name}: Incorporeal - its Wound under a quarter of your Maximum Life Points`,
+    [{ value: "yes", label: "Take no Damage from it" }, { value: "no", label: "Take it" }])) === "yes";
+}
+
+/** Spectral Monster (1): "enter the Incorporeal Special State" - not while its (2) holds you out. */
+export async function spectralEnter(actor) {
+  if (incorporealLocked(actor)) {
+    ui.notifications.warn(`${actor.name} cannot enter the Incorporeal State till the end of their next turn.`);
+    return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  }
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  await enterState(actor, "incorporeal", 1, null, "Spectral Monster");
+  const { setCondition } = await import("./conditions.mjs");
+  return setCondition(actor, "spectral-mark", 1);
+}
+
+/** Spectral Monster (2): "As an Instant Maneuver during your turn, you can exit the Incorporeal Special State." */
+export async function spectralExit(actor) {
+  if (game.combat?.started && (game.combat.combatant?.actor?.uuid !== actor.uuid)) {
+    ui.notifications.warn(`${actor.name}: only during your turn.`);
+    return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  }
+  const { leaveState } = await import("./effects/moments-runtime.mjs");
+  await leaveState(actor, "incorporeal");
+  const { setCondition } = await import("./conditions.mjs");
+  return setCondition(actor, "spectral-mark", 0);
+}
+
+/**
+ * Spectral Monster (3): "If you are not in the Incorporeal State and are targeted by an Attacking Maneuver, you can spend a Counter Action
+ * and 10(bT) Ki Points to enter the Incorporeal State" - once a Round.
+ */
+function spectralButtons(message, attack, container) {
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["spectral.counter"] !== true)) continue;
+    if (((Number(target.system.states?.incorporeal) || 0) > 0) || incorporealLocked(target) || (target.getFlag?.(SCOPE, "spectralRound") === roundKey())) continue;
+    const cost = 10 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+    if ((Number(target.system.ki?.value) || 0) < cost) continue;
+    cardButton(container, `Spectral Monster - ${target.name}`, `A Counter Action and ${cost} Ki Points, once a Round: Incorporeal.`, async () => {
+      const { ki, capacity } = target.system;
+      if ((ki.value < cost) || (capacity.remaining < cost)) return ui.notifications.warn(`${target.name} cannot pay ${cost} Ki Points.`);
+      const { spendActions } = await import("./combat.mjs");
+      if (!await spendActions(target, 1, "counter")) return;
+      await requestActorUpdate(target, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost,
+        [`flags.${SCOPE}.spectralRound`]: roundKey() });
+      await spectralEnter(target);
+    });
+  }
+}
+
 /** Bloodlust (1): stacks of Bloodlust (max. 3), and this Round marked as one it was triggered in - for (3). */
 export async function bloodlustFeed(actor, stacks = 1) {
   if (!actor) return;
@@ -23159,6 +23496,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.watchful) return takeWatchful(message, actor, offer.watchful);
   if (offer.mysticalGaze) return takeMysticalGaze(message, actor, offer);
   if (offer.catsPaw) return takeCatsPaw(message, actor, offer.catsPaw);
+  if (offer.slimyGrab) return takeSlimyGrab(message, actor, offer);
   if (offer.healingSurge) return takeHealingSurge(message, actor);
   // Perfect Mimicry (2) with a copied Unique Ability: it, out of sequence, once an Encounter.
   if (offer.perfectMimicryItem) {
@@ -23979,6 +24317,10 @@ export async function postAttack(actor, target, maneuver,
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Ravaging Charger (2): "Increase the Strike Rolls of your Attacking Maneuvers with the Charging Assault Advantage by 1(T)."
+  if ((advantages ?? []).includes("charging-assault") && (actor.system.effects?.slots?.["ravaging.strike"] === true) && !reflecting) {
+    strikeExtra = [...strikeExtra, { label: "Ravaging Charger", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
   // Tail (Bestial) (2): "Increase the Strike Roll of your Tail Attack Maneuver by 1(T)."
   if (maneuver.tailAttack && (actor.system.effects?.slots?.["tailBeast.strike"] === true) && !reflecting) {
@@ -28351,13 +28693,19 @@ async function rollAttackWoundWork(message, attack) {
     // Elemental Adaptation (2): "Halve all Damage you receive from Attacking Maneuvers of your Resisted Element."
     const resistedBy = [attack.profile, ...extraProfilesOf(attack)].some(id => id
       && (target.system.effects?.slots?.[`resisted.${id}`] === true));
-    const damage = resistedBy ? Math.floor(unresisted / 2) : unresisted;
+    // Incorporeal (1): "If any Attacking Maneuver you are targeted by possesses a Wound Roll whose Dice Score is less than 1/4 of your
+    // Maximum Life Points, you receive no Damage from that Attacking Maneuver" - asked once.
+    const ghostly = previous?.incorporealNone ? true : await incorporealAnswer(target, wound, unresisted);
+    // Light Consumption (2): its Might Clash won - "you take no Damage from that Attacking Maneuver".
+    const consumed = (attack.consumed ?? []).includes(target.uuid);
+    const damage = (ghostly || consumed) ? 0 : (resistedBy ? Math.floor(unresisted / 2) : unresisted);
 
     await maybeShakeAttacker(attacker, attack, defence, damage, target);
 
     settledTargets.push({ ...own, ...woundAgainst, counterWound, effectiveWound, soak, reduction, damage,
       ...(halving ? { undyingHalved: true } : {}),
       ...(resistedBy ? { resistedHalved: true } : {}),
+      ...(ghostly ? { incorporealNone: true } : {}),
       ...(punchingDown ? { punchingDown } : {}),
       ...(extra.length ? { techniqueExtra: extra } : {}) });
   }
@@ -29989,7 +30337,7 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   const total = amount + Math.max(0, Number(extra) || 0);
   // Rubbery Body: "Halve any Collision Damage you receive" - all of it, what was added on top too.
   const ownHalving = collisionHalved(target);
-  const received = ownHalving ? Math.floor(total / 2) : total;
+  const received = collisionAmount(target, total);
   const changed = [
     doubled ? `doubled by ${doubledBy}` : "",
     halved ? `halved by ${halvedBy}` : "",
@@ -31159,6 +31507,14 @@ async function applyAttackDamage(message, target, attack) {
   if (((damage <= 0) || isAbsoluteMiss(own)) && armsUser && (armsUser.uuid !== target.uuid)) offerFelineTechnique(message, target);
   // Violent Rebuke (3): the Basic Attack back at whoever made it.
   if (armsUser && (armsUser.uuid !== target.uuid)) offerRebuke(message, target, armsUser);
+  // Incorporeal (2): "If you suffer Damage from an Attacking Maneuver, leave the Incorporeal State" - and not again till the end of the
+  // next turn.
+  if ((damage > 0) && ((Number(target.system?.states?.incorporeal) || 0) > 0)) await incorporealShaken(target);
+  // Light Consumption (2): "you regain Ki Points equal to 1/2 of the Dice Score. For every 1/5 of your Maximum Ki Point Pool regained as
+  // Ki Points, gain 1(bT) Light Stack(s)."
+  if ((attack.consumed ?? []).includes(target.uuid)) await lightRegain(target, Number(attack.result?.wound?.total) || 0);
+  // Slimy Consistency (3): a Physical Attack's hit for no Damage - the Grapple, the Basic Attack, or a Might Clash for their Weapon.
+  if (own.hit && (damage <= 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerSlimy(message, attack, target, armsUser);
   // Retractable Limbs (3): an Opponent's Called Shot avoided, or for no Damage - the Basic Attack, out of sequence, once a Round.
   if (((damage <= 0) || isAbsoluteMiss(own)) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)
     && (target.system?.effects?.slots?.["retractable.counter"] === true) && (target.getFlag?.(SCOPE, "retractableRound") !== roundKey())
@@ -32360,10 +32716,13 @@ export async function legendRealized(actor) {
   const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
   const roll = await new Roll(`${2 * tier}d10 + ${Math.max(0, Number(actor.system.powerLevel) || 0)}`).evaluate();
   const { life, ki } = actor.system;
-  await requestActorUpdate(actor, { "system.life.value": Math.min(life.max, life.value + roll.total),
+  // Shedding Transformation (1): "Double the amount of Life Points you gain from Legend Realized."
+  const lifeGain = roll.total * ((actor.system.effects?.slots?.["shedding.legend"] === true) ? 2 : 1);
+  await requestActorUpdate(actor, { "system.life.value": Math.min(life.max, life.value + lifeGain),
     "system.ki.value": Math.min(ki.max, ki.value + roll.total) });
   await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
-    flavor: `Legend Realized - ${roll.total} Life and Ki Points` });
+    flavor: (lifeGain !== roll.total) ? `Legend Realized - ${lifeGain} Life Points (Shedding Transformation), ${roll.total} Ki Points`
+      : `Legend Realized - ${roll.total} Life and Ki Points` });
   await offerTriggers(actor, "legend-realized");
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(actor, "legend-realized");
@@ -33214,6 +33573,12 @@ function renderAttack(message, html) {
   if (!result?.wound) adaptiveButtons(message, attack, container);
   // Dissipating Dodge (2): targeted - Ki for the Defense Value at Nano, before it is settled.
   if (!result) dissipatingButtons(message, attack, container);
+  // Light Consumption (2), Spectral Monster (3): targeted - a Counter Action, before it is settled.
+  if (!result) lightButtons(message, attack, container);
+  if (!result) spectralButtons(message, attack, container);
+  // Petrification Plating (3), Ravaging Charger (3): hit - before its Wound.
+  if (result && !result.wound) plateButtons(message, attack, container);
+  if (result && !result.wound) ravagingButtons(message, attack, container);
   // Telepathic Teamwork (2): an Ally's attack - 1(T) on its Strike, its Wound too at one Studied - before the Strike is rolled.
   if (!result) telepathicTeamworkButtons(message, attack, container);
   // Cat's Paw (1): an Opponent in your Melee Range attacking - the Clash, before it is settled.

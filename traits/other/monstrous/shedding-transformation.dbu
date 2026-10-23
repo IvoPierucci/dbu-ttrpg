@@ -1,0 +1,20 @@
+id: shedding-transformation
+name: Shedding Transformation
+order: 12
+description: >
+  Your monstrous power emerges when you would otherwise be defeated.
+text: >
+  Shedding Transformation: Your monstrous power emerges when you would otherwise be defeated.
+  (1)-[Passive]: Double the amount of Life Points you gain from Legend Realized.
+  (2)-[Triggered/Defeated]: Set your Life Points to 1 and then, you may either: use the Transformation Maneuver as an Out-of-Sequence Maneuver, or trigger Legend Realized.
+
+---
+
+[passive]
+# (1) Legend Realized's Life Points, doubled (chat.mjs legendRealized).
+allow shedding.legend;
+
+# (2) Offered on the Defeated card: Life Points 1, then which - the Transformation Maneuver out of sequence (said: Transformations are
+# not built), or Legend Realized (chat.mjs shedding).
+[triggered/defeated, effect 2]
+shedding();

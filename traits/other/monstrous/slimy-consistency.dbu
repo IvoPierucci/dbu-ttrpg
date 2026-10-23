@@ -1,0 +1,24 @@
+id: slimy-consistency
+name: Slimy Consistency
+order: 13
+description: >
+  Your body’s unusual physiology makes you unnaturally slimy, allowing you to protect yourself in unusual ways.
+text: >
+  Slimy Consistency: Your body’s unusual physiology makes you unnaturally slimy, allowing you to protect yourself in unusual ways.
+  (1)-[Passive, Ruling]: As a Standard Action with an Action Cost of 1 Action, you may ‘Store’ any Basic Items, Accessories, pieces of Apparel, or Weapons. While they are Stored, they cannot be targeted by the Snatch Maneuver.
+  (2)-[2/Round]: As an Instant Maneuver, you may remove any Stored Items and gain access to them again, or equip any Stored Weapons/Apparel/Accessories.
+  (3)-[Triggered, 1/Round]: If you are hit by a Physical Attack that does not deal Damage, you may either:
+  * Use the Grapple Maneuver as an Out-of-Sequence Maneuver against the Opponent who used the Attacking Maneuver.
+  * Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver against the Opponent who used the Attacking Maneuver.
+  * If the Physical Attack was an Armed Attack, make a Might Clash against the Opponent who used the Attacking Maneuver. If you win, you may Store their Weapon inside of your body, un-equipping it from them.
+
+---
+
+[passive]
+# (1), (2) The Gear tab's Store / Take out, as Roomy Biology's Inner Room (gear.mjs inInnerRoom) - Accessories too; stored for 1 Action,
+# taken out as an Instant, twice a Round (actor-character-sheet.mjs). No Snatch takes them.
+allow innerRoom.store;
+allow slimy.store;
+# (3) Hit by a Physical Attack for no Damage: offered on its card, once a Round between them - the Grapple or the Basic Attack at its
+# maker, out of sequence; an Armed one, a Might Clash too - won, their Weapon yours, Stored (chat.mjs).
+allow slimy.counter;

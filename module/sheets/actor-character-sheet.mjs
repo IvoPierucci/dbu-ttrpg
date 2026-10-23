@@ -1157,7 +1157,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Roomy Biology's Inner Room: stored there, or storable - not Integrated, not Natural Armor.
         innerRoom: item.flags?.["dbu-ttrpg"]?.innerRoom === true,
         innerRoomable: (this.actor.system.effects?.slots?.["innerRoom.store"] === true) && !item.system.integrated
-          && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true),
+          && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true)
+          // Roomy Biology's Inner Room takes no Accessory; Slimy Consistency's Store does.
+          && ((item.system?.itemType !== "accessory") || (this.actor.system.effects?.slots?.["slimy.store"] === true)),
         typeLabel: DBUCharacterSheet.#gearTypeLabel(item, type),
         // Built with more Qualities than its Slots: said on the row, and it works as it is.
         overSlots: DBUCharacterSheet.#overSlots(item),
@@ -5173,11 +5175,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onInnerRoom(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item) return;
-    if (game.combat?.started) {
+    const storing = item.flags?.["dbu-ttrpg"]?.innerRoom !== true;
+    // Slimy Consistency (2): "As an Instant Maneuver, you may remove any Stored Items" - twice a Round, no Action.
+    const slimy = this.actor.system.effects?.slots?.["slimy.store"] === true;
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    const taken = this.actor.getFlag("dbu-ttrpg", "slimyTaken") ?? {};
+    const takenNow = (taken.round === round) ? (Number(taken.n) || 0) : 0;
+    if (game.combat?.started && !storing && slimy && (takenNow < 2)) {
+      await this.actor.setFlag("dbu-ttrpg", "slimyTaken", { round, n: takenNow + 1 });
+    }
+    else if (game.combat?.started) {
       const { spendActions } = await import("../combat.mjs");
       if (!await spendActions(this.actor, 1)) return;
     }
-    const storing = item.flags?.["dbu-ttrpg"]?.innerRoom !== true;
     return item.update({ "flags.dbu-ttrpg.innerRoom": storing,
       ...(storing ? { "system.equipped": false, "system.layer": "" } : {}) });
   }

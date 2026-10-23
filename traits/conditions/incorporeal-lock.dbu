@@ -1,0 +1,14 @@
+id: incorporeal-lock
+name: Incorporeal Shaken Off
+kind: conditions
+# Not a Combat Condition: the Incorporeal State's (2) - read as it is entered (chat.mjs incorporealLocked).
+combatCondition: no
+source: Core Rule
+description: >
+  The Incorporeal State left by Damage: not entered again till the end of your next turn.
+text: >
+  Incorporeal State (2): If you exit the Incorporeal state through this effect, you may not enter it again until the end of your next turn.
+
+---
+
+[passive]

@@ -1,0 +1,15 @@
+id: plates-shed
+name: Plates Shed
+kind: conditions
+# Not a Combat Condition: Petrification Plating (4)'s - a stack for every Plate removed.
+combatCondition: no
+source: Core Rule
+description: >
+  Petrification Plating: Combat Rolls 1(T) for every Plate removed, till the start of your next turn.
+text: >
+  Petrification Plating (4): Increase your Combat Rolls by 1(T) for every Plate removed until the start of your next turn.
+
+---
+
+[passive]
+combatRolls += stacks * 1(T);

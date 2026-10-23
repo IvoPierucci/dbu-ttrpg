@@ -1,0 +1,21 @@
+id: spectral-monster-second-effect
+name: Spectral Monster: Exit
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: spectral-monster
+fromEffect: 2
+source: Core Rule
+description: >
+  Spectral Monster's second effect, as a Maneuver: out of the Incorporeal Special State, during your turn.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver during your turn, you can exit the Incorporeal Special State.
+
+---
+
+# During your turn alone (chat.mjs spectralExit).
+[on used]
+spectralExit();

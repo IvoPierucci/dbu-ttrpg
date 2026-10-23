@@ -513,6 +513,14 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "innateWeapon": return (await import("../chat.mjs")).innateWeapon(actor);
+    case "lightConsume": return (await import("../chat.mjs")).lightConsume(actor, context?.targets?.[0] ?? null);
+    case "lightDigest": return (await import("../chat.mjs")).lightDigest(actor);
+    case "lightBurn": return (await import("../chat.mjs")).lightBurn(actor);
+    case "shedPlates": return (await import("../chat.mjs")).shedPlates(actor);
+    case "shedding": return (await import("../chat.mjs")).shedding(actor);
+    case "spectralEnter": return (await import("../chat.mjs")).spectralEnter(actor);
+    case "spectralExit": return (await import("../chat.mjs")).spectralExit(actor);
     case "bloodlustFeed": return (await import("../chat.mjs")).bloodlustFeed(actor, Number(args[0]) || 1);
     case "bloodlustStarve": return (await import("../chat.mjs")).bloodlustStarve(actor);
     case "broodMinion": return (await import("../chat.mjs")).broodMinion(actor);

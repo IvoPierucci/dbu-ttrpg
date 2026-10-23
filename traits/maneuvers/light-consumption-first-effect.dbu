@@ -1,0 +1,21 @@
+id: light-consumption-first-effect
+name: Light Consumption
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+fromTrait: light-consumption
+fromEffect: 1
+source: Core Rule
+description: >
+  Light Consumption's first effect, as a Maneuver: a Clash (Corporeal vs Corporeal/Impulsive) at an Opponent with Power - won, their Power yours as Light Stacks.
+text: >
+  (1)-[1/Round, Resource]: As a Standard Action with an Action Cost of 2 Actions, target an Opponent who meets any conditions from the list below. Make a Clash (Corporeal vs Corporeal/Impulsive) against that Opponent. If you win, apply the effects listed below:
+
+---
+
+# At an Opponent with stacks of Power (or in a Transformation, the table's till Transformations exist) - the Clash (chat.mjs lightConsume).
+[on used]
+lightConsume();

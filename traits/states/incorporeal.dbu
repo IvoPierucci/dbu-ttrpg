@@ -1,0 +1,26 @@
+id: incorporeal
+name: Incorporeal
+kind: state
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+specialState: true
+description: >
+  Spectral: an attack's Wound under 1/4 of your Maximum Life Points deals you nothing; Damage ends it; no Attacking Maneuvers; you pass
+  through what is in the way; no Collision Damage.
+text: >
+  (1)-[Triggered]: If any Attacking Maneuver you are targeted by possesses a Wound Roll whose Dice Score is less than 1/4 of your Maximum Life Points, you receive no Damage from that Attacking Maneuver.
+  (2)-[Automatic]: If you suffer Damage from an Attacking Maneuver, leave the Incorporeal State. If you exit the Incorporeal state through this effect, you may not enter it again until the end of your next turn.
+  (3)-[Passive]: Increase your Grapple Checks as the Grappled by 2(T).
+  (4)-[Passive]: You may not use any Attacking Maneuvers.
+  (5)-[Passive]: For the sake of Collision, the Square you occupy is always considered to be empty. Additionally, you may pass through Characters and Features during any movement without colliding with them.
+  (6)-[Passive]: You cannot suffer from Collision Damage.
+
+---
+
+# (1) Asked of whoever plays you as the Damage is worked out, the Wound's Dice Score under a quarter of your Maximum Life Points (chat.mjs
+# incorporealAnswer). (2) Damage taken from an attack: out of it, the Incorporeal Shaken Off mark till the end of your next turn
+# (chat.mjs applyAttackDamage). (5) Squares and movement are the table's. (6) Collision Damage none (chat.mjs collisionTaken).
+[passive]
+# (3)
+grapple.defending += 2(T);
+# (4)
+forbid attackingManeuvers;

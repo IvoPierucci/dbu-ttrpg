@@ -1,0 +1,21 @@
+id: spectral-monster-first-effect
+name: Spectral Monster
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 6
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: spectral-monster
+fromEffect: 1
+source: Core Rule
+description: >
+  Spectral Monster's first effect, as a Maneuver: 1 Action and 6(bT) Ki - the Incorporeal Special State.
+text: >
+  (1)-[1/Round]: As a Standard Action with an Action Cost of 1 Action and a Ki Point Cost of 6(bT), enter the Incorporeal Special State.
+
+---
+
+# Refused while the Incorporeal State's own (2) keeps you out of it (chat.mjs spectralEnter).
+[on used]
+spectralEnter();

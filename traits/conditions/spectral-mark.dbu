@@ -1,0 +1,14 @@
+id: spectral-mark
+name: Spectral
+kind: conditions
+# Not a Combat Condition: Spectral Monster's mark - the Incorporeal State is its own, read by (4).
+combatCondition: no
+source: Core Rule
+description: >
+  Spectral Monster: Incorporeal by its effects - 6(bT) Ki at the start of each turn.
+text: >
+  Spectral Monster (4): If you are in the Incorporeal State due to the effects of Spectral Monster, spend 6(bT) Ki Points at the start of your turn.
+
+---
+
+[passive]
