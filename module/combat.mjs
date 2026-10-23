@@ -381,6 +381,8 @@ async function beginTurn(actor) {
   // turn in the same breath - so the answer has to be read after the Moment, not before.
   // Spectator (2): leaving it asked before the Moment - its (3) reads whether it was.
   await (await import("./chat.mjs")).spectatorTurnStart(actor);
+  // "It's Up to You, Now." (a Desperation Effect): a Defeated Ally's - Entrusted as the turn begins.
+  if (!actor.system.defeated) await (await import("./desperation.mjs")).itsUpToYou(actor);
   // Swaggering Wager (2): what (1) chose ended with the edge above - its Swagger, before (1) is asked again.
   await (await import("./chat.mjs")).swaggerEnds(actor);
   // Galaxy at the Brink (3): Greed of the Hera's 7th ignored and a Ki Surge - asked before the Moment it would answer.
@@ -755,7 +757,16 @@ export function registerCombatHooks() {
       for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.finishTechnique)) {
         await item.update({ "system.unique.finishTechnique": "" });
       }
+      // Instant Recovery (Damage & Recovery): "After you have overcome a Combat Encounter ... regain 1/10th of your Maximum Life
+      // Points and Ki Point Pool" - rounded down.
+      const lifeNow = Number(actor.system.life?.value) || 0;
+      const lifeMax = Number(actor.system.life?.max) || 0;
+      const kiNow = Number(actor.system.ki?.value) || 0;
+      const kiMax = Number(actor.system.ki?.max) || 0;
+      if (actor.getFlag?.("dbu-ttrpg", "defeatSettled")) await actor.unsetFlag("dbu-ttrpg", "defeatSettled");
       await actor.update({
+        "system.life.value": Math.max(lifeNow, Math.min(lifeMax, lifeNow + Math.floor(lifeMax / 10))),
+        "system.ki.value": Math.max(kiNow, Math.min(kiMax, kiNow + Math.floor(kiMax / 10))),
         "system.talentUses.encounter": [],
         "system.armedTalents": [],
         "system.usedManeuvers": [],
@@ -1042,6 +1053,19 @@ export function registerDefeatHooks() {
     if (actor.type !== "character") return;
     if (foundry.utils.getProperty(changes, "system.life.value") === undefined) return;
     options.dbuWasDefeated = actor.system.defeated;
+    // Will to Survive (Damage & Recovery): "If you are Defeated and one of you or your Ally's effects causes you to regain Life
+    // Points, you immediately stop being Defeated. You can only apply Will to Survive once per Combat Encounter." A Defeat that
+    // stands (not one still being answered): the first time, up; after it, the Life held where it was - and said.
+    const min = Number(actor.system.life?.min) || 0;
+    const next = Number(foundry.utils.getProperty(changes, "system.life.value"));
+    if (game.combat?.started && actor.system.defeated && actor.getFlag?.("dbu-ttrpg", "defeatSettled") && (next > min)) {
+      if ((Number(actor.system.defeatsEscaped) || 0) >= 1) {
+        if ("system.life.value" in changes) changes["system.life.value"] = actor.system.life.value;
+        else foundry.utils.setProperty(changes, "system.life.value", actor.system.life.value);
+        ui.notifications.warn(`${actor.name} stays Defeated: Will to Survive has been applied already this Combat Encounter.`);
+      }
+      else foundry.utils.setProperty(changes, "system.defeatsEscaped", (Number(actor.system.defeatsEscaped) || 0) + 1);
+    }
     // Where they stood before the Life changed. A Health Threshold is derived from Life,
     // so crossing one leaves no record of its own - the only way to know it happened is
     // to have looked just before.
@@ -1101,8 +1125,8 @@ export function registerDefeatHooks() {
     }
 
     if (!now) {
-      // Healed back above zero. Nothing to announce: the sheet already shows it, and
-      // getting up under your own steam is not the once-per-Encounter rescue.
+      // Healed back above zero. Nothing to announce: the sheet already shows it - Will to Survive counted as it was written.
+      if (actor.getFlag?.("dbu-ttrpg", "defeatSettled")) await actor.unsetFlag("dbu-ttrpg", "defeatSettled");
       return;
     }
 
@@ -1110,7 +1134,7 @@ export function registerDefeatHooks() {
     // Held back here and begun when it is.
     if (options.dbuDefeatHeld) return;
 
-    return beginDefeat(actor, { silenced: Boolean(options.dbuSilenced) });
+    return beginDefeat(actor, { silenced: Boolean(options.dbuSilenced), knockedBy: options.dbuKnockedBy ?? "" });
   });
 }
 
@@ -1120,8 +1144,10 @@ export function registerDefeatHooks() {
  * `silenced` is Complete Annihilation's: "If an Opponent is Defeated by this Attacking Maneuver,
  * they cannot activate any effects with the Triggered/Defeated Keyword" - so nothing is offered.
  */
-export async function beginDefeat(actor, { silenced = false } = {}) {
+export async function beginDefeat(actor, { silenced = false, knockedBy = "" } = {}) {
   {
+    // "You Can't Die...!" (a Desperation Effect): Defeated by an Attacking Maneuver - a Defeated Ally's Karma, their Life 1.
+    if (knockedBy && await (await import("./desperation.mjs")).youCantDie(actor)) return;
     // Something may still catch them. Whatever answers this writes Life Points, and
     // the character is re-derived before the second Moment is even considered.
     if (!silenced) await fireMoment(actor, "defeated", { damage: 0 });
@@ -1141,6 +1167,9 @@ export async function beginDefeat(actor, { silenced = false } = {}) {
       : await anybodyAnswers("defeated", who, actor.uuid);
 
     if (!pending) {
+      // Settled: every State left; Will to Survive from here on (registerDefeatHooks).
+      await (await import("./conditions.mjs")).leaveStatesOnDefeat(actor);
+      await actor.setFlag("dbu-ttrpg", "defeatSettled", true);
       await fireMoment(actor, "defeat-resolved");
       // Petrification's Slowed, from this character's uses of it, gone with their Defeat.
       const { petrifierDefeated, endShapeshift } = await import("./chat.mjs");
@@ -1151,6 +1180,8 @@ export async function beginDefeat(actor, { silenced = false } = {}) {
 
     await announce("defeated", {
       title: pending ? `${actor.name} - incoming defeat` : `${actor.name} is Defeated`,
+      // Who did it, whose intent it is to declare (Death or KO) - an attack's maker.
+      knockedBy,
       subjectUuid: actor.uuid,
       subjectName: actor.name,
       subjects: who,

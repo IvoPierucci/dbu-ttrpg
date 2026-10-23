@@ -1085,7 +1085,8 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   delete answers.creativeCondition;
   // Way of the Warrior's: the Life Points given up, as much on the Ki Wager - free, beside Genki's.
   if (answers.lifeWager > 0) {
-    await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - answers.lifeWager) });
+    const { ownLifeLoss } = await import("./conditions.mjs");
+    await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - ownLifeLoss(actor, answers.lifeWager)) });
     answers.freeWager = (Number(declared.freeWager) || 0) + answers.lifeWager;
     // Eye of the Dragon's Way of the Warrior: the whole 10(bT) - an Energy Charge, past the most.
     if ((answers.lifeWager >= 10 * Math.max(1, Number(actor.system.baseTierOfPower) || 1))
@@ -5262,6 +5263,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askTwinWeapon(actor, declared, maneuver);
     // Masterful Integration (1): an Integrated Item destroyed for an Energy Charge - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askMasterfulCharge(actor, declared);
+    // "Now's Your Chance!" (a Desperation Effect): a Defeated Ally's Ki on its Wound Roll.
+    declared = await (await import("./desperation.mjs")).nowsYourChance(actor, declared);
     // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, targetActor);
     // Profile Focus (2): its Profile's attack - both rolls a Critical Result, asked once an Encounter.
@@ -6583,6 +6586,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).offerWeatherSummoning(actor);
   // "When you use the Power Up Maneuver" - its Triggered effects offered in a window then and there (God of Peace's).
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).answerPower(actor, card);
+  // "Bring Out Your Power!" (a Desperation Effect): a Defeated Ally's Karma - a stack of Power more.
+  if (maneuver.powerUp) await (await import("./desperation.mjs")).bringOutYourPower(actor);
   // Master of Openings (2): an Opponent's Exploit, offered on the Power Up's card.
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).openingsOffers(card, actor);
   // Superior Synchronization (2): a Partner's Power Up or Transformation - the same offered on its card.

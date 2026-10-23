@@ -2395,12 +2395,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const compactDefense = (this.superStack.stacks === 1) ? slot(this, "superStack.compactDefense") : 0;
     if (compactDefense) this.defenseValue += compactDefense;
 
-    // Soak Value: the Tenacity Modifier, except that the Soak a character provides
-    // for themselves never falls below their Tier of Power. External effects can
-    // reduce the result further, down to a floor of 0 - nothing writes such a penalty
-    // yet, so in practice only the Tier of Power minimum applies today.
+    // Soak Value: the Tenacity Modifier - "You have a Minimum Soak Value of 1(bT) regardless of your Tenacity Modifier (this
+    // Minimum Soak Value can be reduced through other factors)" (Damage & Recovery): the base Tier of Power. External effects
+    // can reduce the result further, down to a floor of 0.
     const ownSoak = DBUCharacterData.applySizeModifier(
-      Math.max(atts.tenacity.mod, this.tierOfPower),
+      Math.max(atts.tenacity.mod, this.baseTierOfPower),
       this.size.soakModifier
     );
     // Worked out unfloored first, because how far a reduction went *past* zero is a

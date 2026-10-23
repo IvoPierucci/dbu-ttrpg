@@ -3607,8 +3607,10 @@ export async function spendLifeWager(actor, declared) {
   const thresholds = Object.keys(model.THRESHOLDS ?? {});
   const through = Boolean(model.thresholdKey) && (thresholds.indexOf(model.thresholdKey(life.value - wager, life.max))
     > thresholds.indexOf(model.thresholdKey(life.value, life.max)));
+  // Dead (2): a Life Wager is your own effect - half of it taken.
+  const { ownLifeLoss } = await import("./conditions.mjs");
   await actor.update({
-    "system.life.value": life.value - wager,
+    "system.life.value": life.value - ownLifeLoss(actor, wager),
     "system.capacity.spent": capacity.spent + wager
   });
   // Through a Health Threshold by your own wager: Reduced Momentum.

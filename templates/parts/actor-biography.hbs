@@ -13,6 +13,10 @@
       <button type="button" class="karma-step" data-action="stepKarma" data-step="1"
               data-tooltip="Regain one">+</button>
     </div>
+    {{#if system.defeated}}
+    <button type="button" class="dbu-clash-button" data-action="justTakeIt"
+            data-tooltip="A Desperation Effect, 1 Karma, once a Combat Encounter: any amount of your Ki Points to an Ally of your choice.">Just Take It, But Finish Them Now!</button>
+    {{/if}}
 
     <div class="alignment" data-tooltip="{{alignmentNow.text}}">
       <span class="karma-label">Alignment</span>

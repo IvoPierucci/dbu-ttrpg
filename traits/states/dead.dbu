@@ -1,0 +1,31 @@
+id: dead
+name: Dead
+kind: state
+levels: 1
+# A Special State (the user's terminology): no Narrative Requirement - "those dead Characters that are still relevant to your
+# story should be in the Dead Special State at all times" (Damage & Recovery). Entered by dying on a Defeated card (Death).
+specialState: true
+description: >
+  Stress Bonus 2 and Steadfast 1 higher; your own Life Point losses halved; Combat Rolls and Soak Value 1(bT) lower. Die again:
+  erased from existence.
+text: >
+  Dead
+  (1)-[Passive]: Increase your Stress Bonus by 2 and the Dice Score of your Steadfast Checks by 1.
+  (2)-[Passive]: Halve any Life Points you lose through your own effects (this still counts as having lost the full amount for your effects).
+  (3)-[Passive]: Halve the amount of Ki Points you lose through the Draining Aspect.
+  (4)-[Passive]: Reduce your Combat Rolls and Soak Value by 1(bT).
+  (5)-[Automatic]: If you die, you are instead erased from existence.
+
+---
+
+[passive from 1]
+# (1)
+stressBonus += 2;
+steadfast.dice += 1;
+# (2) What your own effects take of your Life Points, halved - a Life Wager, Life Points spent (conditions.mjs ownLifeLoss).
+allow life.ownLossHalved;
+# (4)
+combatRolls -= 1(bT);
+soakValue -= 1(bT);
+# (3) The Draining Aspect is not in this system yet (Transformations). (5) Dying again on a Defeated card: erased, said there
+# (chat.mjs deathButtons).

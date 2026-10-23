@@ -261,6 +261,12 @@ async function writeStateful(actor, slots) {
         && /^(condition|quality|battlefield|high):/.test(part.sourceId ?? "")).reduce((sum, part) => sum + Number(part.value), 0);
       if (lost > 0) raised += lost - Math.floor(lost / 2);
     }
+    // Dead (2): what your own effects take - not a Condition's, a Quality's, the Battlefield's - halved, rounded down.
+    if ((key === "life.value") && (actor.system.effects?.slots?.["life.ownLossHalved"] === true)) {
+      const own = -(slots[key]?.parts ?? []).filter(part => (part.op === "add") && (Number(part.value) < 0)
+        && !/^(condition|quality|battlefield|high):/.test(part.sourceId ?? "")).reduce((sum, part) => sum + Number(part.value), 0);
+      if (own > 0) raised += own - Math.floor(own / 2);
+    }
     // Raised no further than the most there may be; what was already above it is left.
     const settled = (cap && (raised > before)) ? Math.min(raised, Math.max(before, cap(actor))) : raised;
     if (write) {

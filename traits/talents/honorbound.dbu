@@ -17,5 +17,6 @@ text: >
 [passive]
 # (1)
 surgency += 1(T);
-# Not built: (2) - the Desperate Effects and their Karma Point Costs are not in this system yet; (3) - the Tamagami Factor and
-# Protector of the Dragon Ball are not (their texts are waited on).
+# (2) The first Desperation Effect of each Defeat, 1 Karma less (desperation.mjs desperationCost).
+allow honorbound.desperation;
+# Not built: (3) - the Tamagami Factor and Protector of the Dragon Ball are not in this system (their texts are waited on).

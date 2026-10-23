@@ -1,4 +1,5 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
+import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { entryEffectLine } from "./racial.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
@@ -5769,7 +5770,7 @@ function offerableTo(situation, message) {
       return reason ? { ...effect, blocked: reason, available: false } : effect;
     }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor),
     ...luckyRerollOptions(situation.actor),
-    ...taiChiRerollOptions(situation, message), ...nudgeOptions(situation)];
+    ...taiChiRerollOptions(situation, message), ...nudgeOptions(situation), ...cantLoseOptions(situation, message)];
 }
 
 /** Earthling Resolve (2)'s reroll, by the key it is picked with in the window. */
@@ -5869,6 +5870,42 @@ async function takeNudge(message, situation, key) {
   await requestActorUpdate(situation.actor, { [`flags.${SCOPE}.nudge.${id}`]: { round: roundKey(), count: count + 1 } });
   return resettleAttack(message, situation,
     { spent: [], slots: {}, queue: [{ verb: "reroll", forced: true, shift: Number(step), label: option.name }] });
+}
+
+/** "You Can't Lose...!", by the key it is picked with - `cant-lose:<uuid>`, whose Karma it is. */
+const CANT_LOSE = "cant-lose";
+
+/**
+ * "You Can't Lose...!" (a Desperation Effect): "If an Ally loses a Clash against an Opponent, they can reroll that Clash. If the
+ * Clash used Skills, increase their Dice Score by 1d4. If the Clash used Attribute Modifiers, Combat Rolls, Saving Throws, or Might,
+ * increase their Dice Score by 2(T)." Beside the Karmic Effects of the side that lost, for each Defeated Ally with the Karma.
+ */
+function cantLoseOptions(situation, message) {
+  if (!situation?.lost || !situation.actor) return [];
+  // Against an Opponent: the other side of a Clash, or of the attack, not an Ally of theirs.
+  const allies = alliesOnScene(situation.actor);
+  const clash = message?.getFlag?.(SCOPE, CLASH_FLAG);
+  const attack = message?.getFlag?.(SCOPE, ATTACK_FLAG);
+  const other = clash ? ((situation.uuid === clash.challengerUuid) ? clash.defenderUuid : clash.challengerUuid)
+    : (situation.answering ? attack?.attackerUuid : null);
+  if (other && allies.some(ally => ally.uuid === other)) return [];
+  return desperationHolders(situation.actor, "cant-lose", alliesOnScene).map(holder => ({
+    key: `${CANT_LOSE}:${holder.uuid}`, trait: true, when: "after",
+    name: `You Can't Lose...! (${holder.name})`,
+    text: "Reroll it - 1d4 more on a Skill Clash, 2(T) on any other.",
+    costLabel: `${desperationCost(holder, desperationEffect("cant-lose"))} of ${holder.name}'s Karma`, available: true }));
+}
+
+async function takeCantLose(message, situation, key) {
+  const holder = fromUuidSync(String(key).slice(CANT_LOSE.length + 1));
+  if (!holder || !cantLoseOptions(situation, message).some(effect => effect.key === key)) return;
+  if (!await payDesperation(holder, "cant-lose")) return;
+  const tier = Math.max(1, Number(situation.actor.system?.tierOfPower) || 1);
+  const skill = (situation.kind === "clash") && (situation.category === "skill");
+  const given = { spent: [], queue: [{ verb: "reroll", forced: true, label: "You Can't Lose...!" }],
+    slots: skill ? { "roll.dice": [{ formula: "1d4", source: "You Can't Lose...!" }] }
+      : { "roll.total": { add: 2 * tier, label: "You Can't Lose...! (+2(T))" } } };
+  return (situation.kind === "clash") ? resettleClash(message, situation, given) : resettleAttack(message, situation, given);
 }
 
 /** Lucky's reroll, by the key it is picked with in the window - `lucky:<uuid>`, whose Lucky it is. */
@@ -6218,6 +6255,7 @@ export async function takeAfterTheFact(message, situation, key) {
   if (key === DAMA_REROLL) return takeDamaReroll(message, situation);
   if (String(key).startsWith(`${LUCKY_REROLL}:`)) return takeLuckyReroll(message, situation, key);
   if (String(key).startsWith(`${NUDGE}:`)) return takeNudge(message, situation, key);
+  if (String(key).startsWith(`${CANT_LOSE}:`)) return takeCantLose(message, situation, key);
   if ((key === TAI_CHI_REROLL) || (key === TAI_CHI_MIGHT)) return takeTaiChiReroll(message, situation, key);
   const { actor } = situation;
   const effect = allKarmicEffects().find(e => e.key === key);
@@ -7298,7 +7336,8 @@ async function maliceOutOfSequence(actor, card) {
     rejectClose: false
   });
   if (!choice || (choice === "cancel") || !card) return;
-  await actor.update({ "system.life.value": (Number(actor.system.life.value) || 0) - cost });
+  const { ownLifeLoss } = await import("./conditions.mjs");
+  await actor.update({ "system.life.value": (Number(actor.system.life.value) || 0) - ownLifeLoss(actor, cost) });
   const offer = (choice === "signature")
     ? { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique", maneuverName: "Signature Technique",
         reason: "Majin Malice", technique: { via: "", any: true } }
@@ -25896,7 +25935,7 @@ function thresholdsBelow(actor) {
 }
 
 /** Their Allies on the scene: the tokens of their own token's disposition, but theirs. */
-function alliesOnScene(actor) {
+export function alliesOnScene(actor) {
   const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
   if (own === undefined) return [];
   return [...new Map((canvas?.tokens?.placeables ?? [])
@@ -29558,6 +29597,8 @@ async function applyAttackDamage(message, target, attack) {
   if (armsUser && (armsUser.uuid !== target.uuid)) offerRebuke(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerUnscathedExploit(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
+  // Death: "If you are the target of an Attacking Maneuver while Defeated, treat the intent as if it was Death."
+  if (wasDefeated && armsUser && (armsUser.uuid !== target.uuid)) await deathByAttack(target);
   // "If you are hit by an Attacking Maneuver and take no Damage" - Bio-Suit's.
   if (own.hit && (damage <= 0) && !isAbsoluteMiss(own)) await answerFor(target, "hit-unharmed");
   // Unflinching Resilience (2): by an Armed Attack with a Physical Weapon - that Weapon's Life Points, by their Soak Value.
@@ -29902,7 +29943,7 @@ async function applyInterventionDamage(message, attack, entry) {
  * appears once rather than once per connected player.
  */
 export async function postMoment(moment, {
-  title, subjectUuid = "", subjectName = "", subjects = [], pending = false, detail = "", threshold = ""
+  title, subjectUuid = "", subjectName = "", subjects = [], pending = false, detail = "", threshold = "", knockedBy = ""
 } = {}) {
   return ChatMessage.create({
     speaker: subjectUuid
@@ -29917,6 +29958,8 @@ export async function postMoment(moment, {
           moment, title, subjectUuid, subjectName, subjects, pending, detail,
           // Which Health Threshold, on a Threshold's card - what answering it is answering.
           ...(threshold ? { threshold } : {}),
+          // A Defeated card's: who did it - whose the Death or KO intent is to declare.
+          ...(knockedBy ? { knockedBy } : {}),
           // Who has answered it. The card keeps offering until they have, so a player
           // who was away when it was posted still finds it waiting.
           applied: [],
@@ -30068,6 +30111,11 @@ function renderMoment(message, html) {
     buttons.append(apply);
   }
 
+  // Death (Damage & Recovery): "When you are Defeated by the Attacking Maneuver, Unique Ability, or effect of a Character, they
+  // can declare their intent; Death or KO. If it is Death, then your Character will die unless you spend 1 Karma Point to
+  // survive." Settled, the intent asked of whoever did it (or the GM); Death, the one Defeated pays or dies.
+  if ((card.moment === "defeated") && !card.pending && subject) deathButtons(message, card, subject, buttons);
+
   // A defeat that something might still answer is not settled yet, and saying so is the
   // whole point of announcing it before it stands. Somebody has to say when it does.
   if (card.pending && (subject?.isOwner || game.user.isGM)) {
@@ -30082,6 +30130,56 @@ function renderMoment(message, html) {
   }
 
   if (buttons.childElementCount) content.append(buttons);
+}
+
+/** The Defeated card's Death or KO, and what Death asks of the one Defeated. */
+function deathButtons(message, card, subject, buttons) {
+  const button = (label, tooltip, run) => {
+    const made = document.createElement("button");
+    made.type = "button";
+    made.className = "dbu-clash-button";
+    made.textContent = label;
+    made.dataset.tooltip = tooltip;
+    made.addEventListener("click", run);
+    buttons.append(made);
+  };
+  const knocker = card.knockedBy ? fromUuidSync(card.knockedBy) : null;
+  if (!card.intent && (game.user.isGM || knocker?.isOwner)) {
+    button("Death", "Their intent: Death - they die unless they spend 1 Karma Point. Your own effects and an attack at someone "
+      + "already Defeated are Death.", () => requestEdit(message, { type: "moment", moment: { ...card, intent: "death" } }));
+    button("KO", "Their intent: KO - Defeated, not dead. Collision is always KO.",
+      () => requestEdit(message, { type: "moment", moment: { ...card, intent: "ko", detail: "KO." } }));
+  }
+  if ((card.intent === "death") && !card.deathSettled && subject.isOwner) {
+    const karma = Number(subject.system.karma) || 0;
+    if (karma >= 1) {
+      button("Survive (1 Karma)", "Spend 1 Karma Point: Defeated, not dead.", async () => {
+        await subject.update({ "system.karma": karma - 1 });
+        requestEdit(message, { type: "moment", moment: { ...card, deathSettled: "survived", detail: "Death intent - survived (1 Karma)." } });
+      });
+    }
+    button("Die", "The Dead Special State - or, Dead already, erased from existence.", async () => {
+      const dead = (Number(subject.system.states?.dead) || 0) > 0;
+      if (!dead) await (await import("./effects/moments-runtime.mjs")).enterState(subject, "dead", 1, null, "Death");
+      requestEdit(message, { type: "moment", moment: { ...card, deathSettled: "died",
+        detail: dead ? `${subject.name} is erased from existence.` : `${subject.name} dies - the Dead Special State.` } });
+    });
+  }
+}
+
+/**
+ * "If you are the target of an Attacking Maneuver while Defeated, treat the intent as if it was Death" - on their last Defeated
+ * card, still open.
+ */
+async function deathByAttack(target) {
+  const card = game.messages.contents.slice().reverse().find(each => {
+    const moment = each.getFlag?.(SCOPE, MOMENT_FLAG);
+    return (moment?.moment === "defeated") && (moment.subjectUuid === target.uuid);
+  });
+  const moment = card?.getFlag?.(SCOPE, MOMENT_FLAG);
+  if (!moment || moment.deathSettled) return;
+  requestEdit(card, { type: "moment", moment: { ...moment, pending: false, intent: "death",
+    detail: "Targeted by an Attacking Maneuver while Defeated: Death intent." } });
 }
 
 /**
@@ -30269,6 +30367,9 @@ async function settleDefeat(message, card) {
   }
 
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  // Settled: every State left; Will to Survive from here on (combat.mjs registerDefeatHooks).
+  await (await import("./conditions.mjs")).leaveStatesOnDefeat(actor);
+  await actor.setFlag(SCOPE, "defeatSettled", true);
   await fireMoment(actor, "defeat-resolved");
   await petrifierDefeated(actor);
   await endShapeshift(actor, "Defeated");
@@ -30424,7 +30525,8 @@ export async function rollSteadfastCheck(actor) {
     await setResource(actor, "negativeenergy", (Number(actor.system.resources?.negativeenergy?.stacks) || 0) - karmicSpent);
   }
   if (lifeSpent) {
-    await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - (lifeSpent * lifeStep)),
+    const { ownLifeLoss } = await import("./conditions.mjs");
+    await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - ownLifeLoss(actor, lifeSpent * lifeStep)),
       [`flags.${SCOPE}.resolveLifeEncounter`]: game.combat?.id ?? "none" });
   }
 

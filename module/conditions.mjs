@@ -217,6 +217,24 @@ export async function lowerState(actor, key, by = 1) {
   return true;
 }
 
+/**
+ * Defeated (Damage & Recovery): "When you become Defeated, you instantly leave any Transformation or State you are currently in at
+ * the time of Defeat" - every State but the Dead Special State, which is what being dead is; their clocks with them.
+ */
+export async function leaveStatesOnDefeat(actor) {
+  const held = Object.keys(actor?.system?.states ?? {}).filter(key => (key !== "dead") && ((Number(actor.system.states[key]) || 0) > 0));
+  for (const key of held) await setState(actor, key, 0);
+}
+
+/**
+ * Dead (2): "Halve any Life Points you lose through your own effects (this still counts as having lost the full amount for your
+ * effects)." What a Life cost of your own takes of you, really - rounded down.
+ */
+export function ownLifeLoss(actor, amount) {
+  const whole = Math.max(0, Number(amount) || 0);
+  return (actor?.system?.effects?.slots?.["life.ownLossHalved"] === true) ? Math.floor(whole / 2) : whole;
+}
+
 /** Leave every State at once, which is what returning to your Normal State means. */
 export async function clearStates(actor) {
   if (foundry.utils.isEmpty(actor.system.states ?? {})) return true;

@@ -62,7 +62,10 @@ function initiativeAgainstAll(actor, holds) {
   const own = combat?.combatants?.find(entry => entry.actor?.uuid === actor?.uuid);
   if (!own || !Number.isFinite(own.initiative)) return false;
   const side = own.token?.disposition;
-  const opponents = Array.from(combat.combatants ?? []).filter(entry => (entry.id !== own.id) && (entry.token?.disposition !== side));
+  // A Defeated one's "turn in the Initiative Order is skipped and ultimately ignored for calculating Initiative Advantage".
+  if (actor?.system?.defeated) return false;
+  const opponents = Array.from(combat.combatants ?? []).filter(entry => (entry.id !== own.id) && (entry.token?.disposition !== side)
+    && !entry.actor?.system?.defeated);
   return (opponents.length > 0) && opponents.every(entry => Number.isFinite(entry.initiative) && holds(entry.initiative, own.initiative));
 }
 

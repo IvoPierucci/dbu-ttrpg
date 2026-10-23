@@ -512,6 +512,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stepCondition: DBUCharacterSheet._onStepCondition,
       useConditionAbility: DBUCharacterSheet._onUseConditionAbility,
       stepKarma: DBUCharacterSheet._onStepKarma,
+      justTakeIt: DBUCharacterSheet._onJustTakeIt,
       travel: DBUCharacterSheet._onTravel,
       useAdventuring: DBUCharacterSheet._onUseAdventuring,
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
@@ -5116,6 +5117,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Enter or leave a State. */
+  /** "Just Take It, But Finish Them Now!" - a Desperation Effect, from the Defeated character's sheet. */
+  static async _onJustTakeIt() {
+    return (await import("../desperation.mjs")).justTakeIt(this.actor);
+  }
+
   static async _onToggleState(event, target) {
     return toggleState(this.actor, target.dataset.state);
   }
