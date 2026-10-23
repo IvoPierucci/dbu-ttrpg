@@ -1,0 +1,21 @@
+id: practiced-charger
+name: Practiced Charger
+talentCategory: miscellaneous
+prerequisites: N/A
+description: >
+  You have become extremely skilled at gathering energy into your attacks.
+text: >
+  Practiced Charger: You have become extremely skilled at gathering energy into your attacks.
+  –Prerequisites: N/A
+  (1)-[Passive]: Reduce the Ki Point Cost of the Energy Charge Maneuver to 1(bT).
+  (2)-[Triggered, 1/Round]: At the end of your turn, if all of your Actions (minimum 3) were spent using the Energy Charge Maneuver this turn, you may use the Energy Charge Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Its own price set to 1(bT) - what lowers it besides still does (maneuvers.mjs maneuverKiCost).
+energy-charge.kiCost = 1(bT);
+# (2) The last of your Actions spent on the Energy Charge Maneuver, every one of them (3 at least) on it this turn: on that
+# card, the Energy Charge Maneuver out of sequence - your turn's end, there being nothing left to do in it; once a Round,
+# counted when taken (chat.mjs offerPracticedCharger).
+allow practiced.charge;

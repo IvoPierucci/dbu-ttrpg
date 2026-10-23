@@ -16756,6 +16756,23 @@ async function settleKiDeception(message, clash) {
   await settledNote(message, `${attack.maneuverName}: +1 Energy Charge.`);
 }
 
+/**
+ * Practiced Charger (2): "At the end of your turn, if all of your Actions (minimum 3) were spent using the Energy Charge Maneuver
+ * this turn, you may use the Energy Charge Maneuver as an Out-of-Sequence Maneuver." On the card of the Energy Charge that spent
+ * the last of them - none left, it is the turn's end - once a Round, counted when taken.
+ */
+export function offerPracticedCharger(card, actor) {
+  if (!card || !game.combat?.started || (actor?.system?.effects?.slots?.["practiced.charge"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "practicedRound") === roundKey()) return;
+  const counted = actor.getFlag?.(SCOPE, "practicedCharges") ?? {};
+  const turn = `${game.combat.id}:${game.combat.round ?? 0}:${game.combat.turn ?? 0}`;
+  const spent = (counted.turn === turn) ? (Number(counted.n) || 0) : 0;
+  const all = Number(actor.system.actions?.standard) || 0;
+  if ((all < 3) || (spent < all) || (actionsLeft(actor) > 0)) return;
+  requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "energy-charge",
+    maneuverName: "Energy Charge", reason: "Practiced Charger - every Action this turn an Energy Charge", grants: { practiced: true } } });
+}
+
 /** Energy Gathering, with a Genki Dramatic Finisher: the Energy Charge Maneuver, out of sequence, for it. */
 export function offerGenkiCharge(card, actor, charges) {
   requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "energy-charge",
@@ -21584,6 +21601,14 @@ async function takeOutOfSequence(message, actor, offer) {
     && (fromUuidSync(offer.grants.powerGifterFrom)?.getFlag?.(SCOPE, "powerGifterRound") === roundKey())) {
     ui.notifications.warn("Power Gifter - already used this Combat Round.");
     return null;
+  }
+  // Practiced Charger (2)'s, once a Round.
+  if (offer.grants?.practiced) {
+    if (actor.getFlag?.(SCOPE, "practicedRound") === roundKey()) {
+      ui.notifications.warn(`${actor.name}: Practiced Charger - already used this Combat Round.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "practicedRound", roundKey());
   }
   // Variable Champion (2)'s, once an Encounter - either of the two its card offered.
   if (offer.grants?.variableChampion) {

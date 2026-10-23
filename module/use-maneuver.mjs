@@ -4785,6 +4785,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
     await recordManeuverUse(actor, maneuver);
     await (await import("./maneuvers.mjs")).noteEnergyCharge(actor);
+    // Practiced Charger (2): the Actions this turn spent on it.
+    const chargeSpent = outOfSequence ? 0 : actionCostOf(maneuver).amount;
+    if (chargeSpent) {
+      const counted = actor.getFlag?.("dbu-ttrpg", "practicedCharges") ?? {};
+      const turn = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}:${game.combat?.turn ?? 0}`;
+      await actor.setFlag("dbu-ttrpg", "practicedCharges",
+        { turn, n: ((counted.turn === turn) ? (Number(counted.n) || 0) : 0) + chargeSpent });
+    }
     const card = await postManeuver(actor, maneuver, { foundation: null });
     await recordManeuverType(actor, maneuver.type, { messageId: card?.id, maneuverId: maneuver.id });
     // Point Blank Shot (2): the declared Attacking Maneuver, out of sequence, offered on this card. Iron Fist (2) the same.
@@ -4792,6 +4800,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await (await import("./chat.mjs")).offerIronFist(card, actor);
     // Terrifying Technique (2): the Favored Technique declared - the Terrify out of sequence on this card.
     await (await import("./chat.mjs")).terrifyingTechniqueOffer(card, actor);
+    // Practiced Charger (2): every Action this turn on it - the Energy Charge Maneuver out of sequence, on this card.
+    (await import("./chat.mjs")).offerPracticedCharger(card, actor);
     return true;
   }
 
