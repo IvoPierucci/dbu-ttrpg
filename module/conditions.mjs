@@ -163,7 +163,57 @@ export async function setState(actor, key, level) {
   if (wanted <= 0) delete states[key];
   else states[key] = wanted;
 
-  await actor.update({ "system.states": replaceObject(states) });
+  // Set outright - by hand, or left: what entering effects had summed is this now, and a State left takes its clocks with it.
+  await actor.update({ "system.states": replaceObject(states), ...stateSumChange(key, wanted) });
+  if (wanted <= 0) {
+    const { clockOff, KINDS } = await import("./durations.mjs");
+    await clockOff(actor, KINDS.STATE, [key]);
+  }
+  return true;
+}
+
+/**
+ * The levels the effects that entered a State have put on you, summed past the State's most (the user's ruling): "Whenever you
+ * enter a State, unless said otherwise, it is the first level; an effect that enters you into a State with levels while you are
+ * in it raises its level for the duration it would enter you for. Leaving it while another effect had raised it - because it
+ * entered you into the State you were in - is going down a level, the sum of the effects entering you into it having fallen."
+ * Kept on the character beside the level itself, which is the sum held to the State's most.
+ */
+function stateSumChange(key, sum) {
+  return (sum > 0) ? { [`flags.dbu-ttrpg.stateSums.${key}`]: sum } : { [`flags.dbu-ttrpg.stateSums.-=${key}`]: null };
+}
+
+function stateSumOf(actor, key) {
+  return Math.max(Number(actor.getFlag?.("dbu-ttrpg", "stateSums")?.[key]) || 0, Number(actor.system.states?.[key]) || 0);
+}
+
+/**
+ * Entered by an effect: out of it, at `level` (the first, unless the effect says); in it, a level higher. What it added, for its
+ * clock to take back as it ends (lowerState) - or 0, where it is no State this system knows.
+ */
+export async function raiseState(actor, key, level = 1) {
+  const definition = statesFor(actor).find(s => s.key === key);
+  if (!definition) {
+    ui.notifications?.warn(`"${key}" is not a State this system knows.`);
+    return 0;
+  }
+  const inIt = (Number(actor.system.states?.[key]) || 0) > 0;
+  const added = inIt ? 1 : Math.max(1, Math.round(Number(level) || 1));
+  const sum = (inIt ? stateSumOf(actor, key) : 0) + added;
+  const states = { ...actor.system.states, [key]: Math.min(definition.levels, sum) };
+  await actor.update({ "system.states": replaceObject(states), ...stateSumChange(key, sum) });
+  return added;
+}
+
+/** An effect that entered a State ended: what it added taken off the sum - a level down, or out of it at none. */
+export async function lowerState(actor, key, by = 1) {
+  const definition = statesFor(actor).find(s => s.key === key);
+  if (!definition || !((Number(actor.system.states?.[key]) || 0) > 0)) return false;
+  const sum = Math.max(0, stateSumOf(actor, key) - Math.max(1, Number(by) || 1));
+  const states = { ...actor.system.states };
+  if (sum > 0) states[key] = Math.min(definition.levels, sum);
+  else delete states[key];
+  await actor.update({ "system.states": replaceObject(states), ...stateSumChange(key, sum) });
   return true;
 }
 
@@ -308,9 +358,10 @@ export async function offerStatesOnEntering(actor, entered) {
     });
     if (chosen !== "take") continue;
 
-    await setState(actor, on.state, 1);
+    const added = await raiseState(actor, on.state, 1);
+    if (!added) continue;
     const { EDGES, KINDS, lasting } = await import("./durations.mjs");
-    await lasting(actor, { kind: KINDS.STATE, key: on.state,
+    await lasting(actor, { kind: KINDS.STATE, key: on.state, levels: added,
       edge: (on.edge === "start") ? EDGES.START : EDGES.END, source: item.name });
     await item.update({ "system.entersOn.spent": true });
   }

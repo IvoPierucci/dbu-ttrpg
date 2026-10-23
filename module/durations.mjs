@@ -23,7 +23,7 @@
  * from keeping every buff on them for the rest of the Encounter.
  */
 
-import { setState, setCondition, replaceObject } from "./conditions.mjs";
+import { lowerState, setCondition, replaceObject } from "./conditions.mjs";
 
 /** The edges a duration can end on. */
 export const EDGES = Object.freeze({
@@ -91,7 +91,7 @@ export function edgesToWait(edge, { next = false, theirTurn = false } = {}) {
  * out must not take away another's.
  */
 export async function lasting(actor, { kind, key, edge, next = false, source = "",
-                                       on = "", until = "", extra = 0 }) {
+                                       on = "", until = "", extra = 0, levels = 0 }) {
   if (!actor || !kind || !key) return false;
 
   const entry = {
@@ -110,7 +110,9 @@ export async function lasting(actor, { kind, key, edge, next = false, source = "
     // Whose thing this is, where that is not the character keeping the clock. "They
     // suffer from Guard Down until the end of your turn" is one rule split across two
     // characters: the edges counted are yours and the Condition is theirs.
-    ...(on && (on !== actor.uuid) ? { on } : {})
+    ...(on && (on !== actor.uuid) ? { on } : {}),
+    // A State's: the levels the effect that entered it added, taken back as it ends.
+    ...((kind === KINDS.STATE) && (Number(levels) > 0) ? { levels: Number(levels) } : {})
   };
 
   // Relayed when the character keeping the clock is not this client's. Elemental (Dark)
@@ -352,7 +354,8 @@ async function takeOff(owner, entry) {
   const actor = entry.on ? fromUuidSync(entry.on) : owner;
   if (!actor) return false;
 
-  if (entry.kind === KINDS.STATE) return setState(actor, entry.key, 0);
+  // What the effect that entered it added - a level, in it already - taken back (conditions.mjs raiseState).
+  if (entry.kind === KINDS.STATE) return lowerState(actor, entry.key, entry.levels ?? 1);
 
   if (entry.kind === KINDS.CONDITION) {
     // One stack, not the whole Condition - the same rule a Resource already followed and

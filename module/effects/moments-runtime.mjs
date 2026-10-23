@@ -902,17 +902,14 @@ export async function expiresAt(actor, name, duration, stacks = 1) {
 export async function enterState(actor, name, level, duration, source = "") {
   if (!name) return false;
 
-  const { setState } = await import("../conditions.mjs");
+  const { raiseState } = await import("../conditions.mjs");
   const key = String(name).toLowerCase();
 
-  // Already in it, and nothing happens: you cannot enter a State you are standing in,
-  // and an effect that would put you in it again cannot lengthen your stay either. So
-  // this is refused outright rather than quietly resetting the clock - a second
-  // Arrogant Declaration must not buy another turn of Superior.
-  if (Number(actor.system.states?.[key]) > 0) return false;
-
+  // Out of it, its first level unless the effect says; in it already, a level higher for as long as this would have entered you
+  // - and down again as that ends (the user's ruling; conditions.mjs raiseState).
   const wanted = Number.isFinite(Number(level)) && (Number(level) > 0) ? Number(level) : 1;
-  if (!await setState(actor, key, wanted)) return false;
+  const added = await raiseState(actor, key, wanted);
+  if (!added) return false;
 
   if (!duration) return true;
 
@@ -933,7 +930,7 @@ export async function enterState(actor, name, level, duration, source = "") {
     return true;
   }
 
-  return lasting(actor, { kind: KINDS.STATE, key, ...clock, source: source || key });
+  return lasting(actor, { kind: KINDS.STATE, key, ...clock, levels: added, source: source || key });
 }
 
 /** Leave a State - named, or all of them, which is what Defeat does. */
