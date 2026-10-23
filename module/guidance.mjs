@@ -63,3 +63,13 @@ export function guidingAllies(actor, slot, { range = false } = {}) {
 export function bestTier(holders) {
   return holders.reduce((top, holder) => Math.max(top, Number(holder.system?.tierOfPower) || 1), 0);
 }
+
+/** The Allies of `actor` on the scene in the Spectator State holding `slot` - Way of the Champion's, read by each Ally. */
+export function spectatingAllies(actor, slot) {
+  const own = tokenOf(actor)?.disposition;
+  if (own === undefined) return [];
+  return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.document?.disposition === own))
+    .map(token => [token.actor.uuid, token.actor])).values()]
+    .filter(holder => ((Number(holder.system?.states?.spectator) || 0) > 0) && (holder.system?.effects?.slots?.[slot] === true));
+}

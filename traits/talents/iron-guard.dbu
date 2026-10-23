@@ -1,0 +1,21 @@
+id: iron-guard
+name: Iron Guard
+talentCategory: racial
+race: earthling
+prerequisites: Earthling, Experienced Fighter Racial Trait
+description: >
+  You quickly brace yourself for incoming damage.
+text: >
+  Iron Guard: You quickly brace yourself for incoming damage.
+  –Prerequisites: Earthling, Experienced Fighter Racial Trait
+  (1)-[Passive]: Increase your Soak Value by 1(T).
+  (2)-[Triggered]: If you trigger the 2nd effect of Experienced Fighter, instead of applying its usual effects, increase your Soak Value by 2(T) against the next Attacking Maneuver that hits you during this Combat Round. Reduce the Damage Category of that Attacking Maneuver by 1 Category for the sake of your Damage Calculation.
+
+---
+
+[passive]
+# (1)
+soakValue += 1(T);
+# (2) A fourth choice in Experienced Fighter (2)'s question: readied this Round - the next attack to hit you, Soak 2(T) and its
+# Damage Category a step down for your Damage (chat.mjs experiencedFighter, ironGuarded).
+allow experienced.ironGuard;

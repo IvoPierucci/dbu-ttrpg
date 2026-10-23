@@ -1,0 +1,23 @@
+id: zooming-third-eye
+name: Zooming Third Eye
+talentCategory: racial
+race: earthling
+prerequisites: Earthling, Triclops Factor
+description: >
+  Thanks to the uncanny vision granted by your third eye, none can escape your sight.
+text: >
+  Zooming Third Eye: Thanks to the uncanny vision granted by your third eye, none can escape your sight.
+  –Prerequisites: Earthling, Triclops Factor
+  (1)-[Passive]: Increase your Perception Skill Bonus by 2.
+  (2)-[Passive]: You cannot suffer from the Long Range Penalty.
+  (3)-[Passive]: Increase the Strike Rolls of your Signature Techniques by 1(T).
+
+---
+
+[passive]
+# (1)
+skill.perception += 2;
+# (2) (maneuvers.mjs longRangePenalty).
+allow longRange.ignore;
+# (3) (technique-attack.mjs techniqueStrikeParts).
+strike.signature += 1(T);

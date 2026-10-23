@@ -1,6 +1,6 @@
 const { fields } = foundry.data;
 
-import { bestTier, guidingAllies } from "../guidance.mjs";
+import { bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
@@ -2423,14 +2423,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Health Threshold" - Injured or Critical.
     const bulkTimes = ((this.effects?.slots?.["superStack.adamantine"] === true)
       && ["injured", "critical"].includes(this.threshold?.key)) ? 2 : 1;
+    // Way of the Champion (1): "Increase the ... Soak Value of your Allies by 1(T) while you are in the Spectator State" - read off
+    // them, the best Tier of those holding it.
+    const champions = this.parent ? spectatingAllies(this.parent, "champion.allies") : [];
+    const champion = champions.length ? Math.max(1, bestTier(champions)) : 0;
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel, {
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel + champion, {
         parts: [
           { label: "Own Soak", value: ownSoak },
           { label: (bulkTimes > 1) ? "Solid Bulk (twice, Adamantine Muscle)" : "Solid Bulk", value: this.superStack.solidBulk * bulkTimes },
           ...soakBelow.parts,
           ...(battery ? [{ label: "Power Battery", value: battery }] : []),
-          ...(steel ? [{ label: "Steel Muscle", value: steel }] : [])
+          ...(steel ? [{ label: "Steel Muscle", value: steel }] : []),
+          ...(champion ? [{ label: "Way of the Champion", value: champion }] : [])
         ]
       })
         + this.externalModifiers.soak,

@@ -1,0 +1,19 @@
+id: mystic-power-mark
+name: Mystic Power
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Mystic Power (2)'s, for the one Unique Ability - off as its attack is done or its Clash settled, the
+# Round's end at the latest.
+combatCondition: no
+source: Core Rule
+description: >
+  Mystic Power: your Might and Saving Throws 1(T) higher for this Unique Ability.
+text: >
+  Mystic Power (2): If you trigger the 2nd effect of Experienced Fighter, instead of applying its usual effects, increase your Might
+  and Saving Throws by 1(T) for the duration of the next Unique Ability you use during this Combat Round.
+
+---
+
+[passive]
+might += 1(T);
+save.all += 1(T);

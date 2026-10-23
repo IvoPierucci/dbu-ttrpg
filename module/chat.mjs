@@ -561,6 +561,8 @@ async function applyClash(messageId, clash) {
   } finally {
     afflicting = before;
   }
+  // Mystic Power (2): a Unique Ability's Clash settled - its mark off either side.
+  if (clash?.result) await mysticPowerEnds(...parties);
   // Patient Sniper (1): an Opponent moved by the winner - Knockback, a Launch, a Push.
   if (message && clash?.result && clash.collision && (whoWonClash(clash.result) === "challenger")) {
     sniperOffers(message, parties.find(party => party.uuid === clash.challengerUuid),
@@ -14710,6 +14712,12 @@ function spotters(actor, slot) {
     && (ally.system?.effects?.slots?.[slot] === true));
 }
 
+/** Way of the Champion (1): "Increase the Wound Rolls ... of your Allies by 1(T) while you are in the Spectator State." */
+function championWoundParts(attacker) {
+  const holders = attacker ? spotters(attacker, "champion.allies") : [];
+  return holders.length ? [{ label: "Way of the Champion", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : [];
+}
+
 /** Dedicated Spotter (1): "While in the Spectator State, increase the Strike Rolls of your Allies by 1(T)" - the best Tier of them. */
 function spotterParts(attacker) {
   const holders = attacker ? spotters(attacker, "spotter.strike") : [];
@@ -15715,6 +15723,8 @@ export async function reservedEnds(attack, actor = null) {
   }
   // Ferocious Fighter (4): the Signature Technique concluded - Wild's (1) back.
   const maker = actor ?? fromUuidSync(attack?.attackerUuid ?? "");
+  // Mystic Power (2): its Unique Ability's attack done.
+  if (attack) await mysticPowerEnds(maker);
   if ((Number(maker?.system?.conditions?.["ferocious-mark"]) || 0) > 0) await setCondition(maker, "ferocious-mark", 0);
 }
 
@@ -21094,11 +21104,57 @@ const READIED = Object.freeze({
  */
 export async function experiencedFighter(actor, target) {
   if (!actor || !target || (target.uuid === actor.uuid)) return;
+  const slots = actor.system?.effects?.slots ?? {};
+  // Iron Guard (2), Mystic Power (2): "instead of applying its usual effects" - two more, this Round's.
+  const choices = { ...READIED,
+    ...((slots["experienced.ironGuard"] === true) ? { iron: "Iron Guard - Soak 2(T), a Damage Category lower, the next attack to hit you this Round" } : {}),
+    ...((slots["experienced.mysticPower"] === true) ? { mystic: "Mystic Power - Might and Saving Throws 1(T), your next Unique Ability this Round" } : {}) };
   const picked = await askPlayerChoice(actor, `${actor.name}: Experienced Fighter - ${target.name}`,
-    Object.entries(READIED).map(([value, label]) => ({ value, label })));
-  if (!READIED[picked]) return;
-  await requestActorUpdate(actor, { [`flags.${SCOPE}.readied`]: { kind: picked, targetUuid: target.uuid,
-    combatId: game.combat?.id ?? "none" } });
+    Object.entries(choices).map(([value, label]) => ({ value, label })));
+  if (!choices[picked]) return;
+  // Way of the Champion (2): "rather than applying its effects to you, you may apply them to an Ally of your choice" - once a Round.
+  let holder = actor;
+  if ((slots["champion.share"] === true) && (actor.getFlag?.(SCOPE, "championShareRound") !== roundKey())) {
+    const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated);
+    const whose = allies.length ? await askPlayerChoice(actor, `${actor.name}: Way of the Champion - for whom`,
+      [{ value: actor.uuid, label: "Yourself" }, ...allies.map(ally => ({ value: ally.uuid, label: ally.name }))]) : actor.uuid;
+    const ally = allies.find(each => each.uuid === whose);
+    if (ally) {
+      holder = ally;
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.championShareRound`]: roundKey() });
+    }
+  }
+  await requestActorUpdate(holder, { [`flags.${SCOPE}.readied`]: { kind: picked, targetUuid: target.uuid,
+    combatId: game.combat?.id ?? "none", round: roundKey() } });
+  if (holder !== actor) ui.notifications.info(`${actor.name}: Way of the Champion - ${choices[picked].split(" - ")[0]} readied for ${holder.name}.`);
+}
+
+/** Iron Guard (2), readied this Round - spent on the next attack to hit them: Soak 2(T), its Damage Category a step down. */
+async function ironGuarded(entry) {
+  const target = entry.actor ?? fromUuidSync(entry.uuid);
+  const readied = readiedOf(target);
+  if (!entry.own?.hit || isAbsoluteMiss(entry.own) || (readied?.kind !== "iron") || (readied.round !== roundKey())) return entry;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.readied`]: null });
+  return { ...entry, own: { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, -1),
+    ironSoak: 2 * Math.max(1, Number(target.system?.tierOfPower) || 1) } };
+}
+
+/** Mystic Power (2), readied this Round: the Unique Ability now used - its mark, till it is done or the Round ends. */
+export async function mysticPowerOn(actor) {
+  const readied = readiedOf(actor);
+  if ((readied?.kind !== "mystic") || (readied.round !== roundKey())) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.readied`]: null });
+  const { setCondition } = await import("./conditions.mjs");
+  if (!await setCondition(actor, "mystic-power-mark", 1)) return;
+  await lasting(actor, { kind: KINDS.CONDITION, key: "mystic-power-mark", edge: EDGES.ROUND, source: "Mystic Power" });
+}
+
+/** Mystic Power's mark off: its Unique Ability's attack done, or its Clash settled. */
+async function mysticPowerEnds(...people) {
+  const { setCondition } = await import("./conditions.mjs");
+  for (const who of people.filter(Boolean)) {
+    if ((Number(who.system?.conditions?.["mystic-power-mark"]) || 0) > 0) await setCondition(who, "mystic-power-mark", 0);
+  }
 }
 
 /** What Experienced Fighter (2) holds readied, this Encounter's, or null. */
@@ -26109,6 +26165,8 @@ function woundParts(attacker, attack) {
   return [
     // Variable Fighter (2).
     ...variableParts(attacker, attack, "wound"),
+    // Way of the Champion (1): an Ally in the Spectator State.
+    ...championWoundParts(attacker),
     ...(critWound ? [{ label: "Critical Specialist", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(kata ? [{ label: "Precision Kata (Critical)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(herculean ? [{ label: "Herculean Power (Hefty Muscle again)", written: `+${heftyTimes}(T)`,
@@ -26901,10 +26959,13 @@ async function rollAttackWoundWork(message, attack) {
   const spotted = await spotterCategory(message, attacker, attack, wound);
   // And Assassinate (2)'s, bought as it hit.
   const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0) + (spotted ? 1 : 0);
-  const reached = raised
+  const raisedFor = raised
     ? targets.map(entry => ({ ...entry, own: entry.own?.hit
       ? { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, raised) } : entry.own }))
     : targets;
+  // Iron Guard (2): readied this Round - the first attack to hit them, its Damage Category a step down and Soak 2(T).
+  const reached = [];
+  for (const entry of raisedFor) reached.push(await ironGuarded(entry));
 
   // Whoever stepped in front of somebody takes the Wound Roll in their place. Settled
   // before the loop, because it changes two lines at once: the Ally takes nothing and
@@ -26974,7 +27035,7 @@ async function rollAttackWoundWork(message, attack) {
 
     // Only what the Damage Category leaves of the Soak Value counts, and the defence
     // adjusts what survives that.
-    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0)
+    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0) + (Number(own.ironSoak) || 0)
       // Refined Combat (1) against one Studied, and Defender's half Surgency for this attack.
       + refinedParts(target, attacker).reduce((sum, part) => sum + part.value, 0) + (Number(own.refinedSoak) || 0)
       // Draconic Physique (2): an Impaired Opponent's attack.

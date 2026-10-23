@@ -1,0 +1,21 @@
+id: mystic-power
+name: Mystic Power
+talentCategory: racial
+race: earthling
+prerequisites: Earthling, Experienced Fighter Racial Trait
+description: >
+  Your combat experience encompasses strange and unusual abilities.
+text: >
+  Mystic Power: Your combat experience encompasses strange and unusual abilities.
+  –Prerequisites: Earthling, Experienced Fighter Racial Trait
+  (1)-[Passive]: Reduce the Ki Point Cost of your Unique Abilities by 1(T).
+  (2)-[Triggered]: If you trigger the 2nd effect of Experienced Fighter, instead of applying its usual effects, increase your Might and Saving Throws by 1(T) for the duration of the next Unique Ability you use during this Combat Round.
+
+---
+
+[passive]
+# (1) Never below nothing.
+unique.kiCost -= 1(T);
+# (2) A choice in Experienced Fighter (2)'s question: readied this Round - your next Unique Ability, Might and Saving Throws 1(T)
+# till its attack is done or its Clash settled, the Round's end at the latest (mystic-power-mark; use-maneuver.mjs useManeuver).
+allow experienced.mysticPower;

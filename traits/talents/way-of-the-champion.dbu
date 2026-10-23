@@ -1,0 +1,21 @@
+id: way-of-the-champion
+name: Way of the Champion
+talentCategory: racial
+race: earthling
+prerequisites: Earthling, Experienced Fighter Racial Trait
+description: >
+  As a champion of the people, you empower others to become great in their own right!
+text: >
+  Way of the Champion: As a champion of the people, you empower others to become great in their own right!
+  –Prerequisites: Earthling, Experienced Fighter Racial Trait
+  (1)-[Passive]: Increase the Wound Rolls and Soak Value of your Allies by 1(T) while you are in the Spectator State.
+  (2)-[Triggered, 1/Round]: If you use Experienced Fighter, rather than applying its effects to you, you may apply them to an Ally of your choice.
+
+---
+
+[passive]
+# (1) Spectator: your Allies' Wound Rolls (chat.mjs) and Soak Value (read by each Ally, again as tokens move or a State changes)
+# 1(T), yours - the best of those holding it.
+allow champion.allies;
+# (2) Experienced Fighter (2) used: asked, once a Round - which Ally it is readied for instead of you (chat.mjs experiencedFighter).
+allow champion.share;

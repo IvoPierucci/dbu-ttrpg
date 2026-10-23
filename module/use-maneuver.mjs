@@ -4537,6 +4537,8 @@ export async function useManeuver(actor, maneuver, options = {}) {
     if (ferocious) await ferociousUndo(actor);
     return false;
   }
+  // Mystic Power (2): readied this Round - the Unique Ability now used, Might and Saving Throws 1(T) for it.
+  if ((maneuver?.tags ?? []).includes("uniqueAbility")) await (await import("./chat.mjs")).mysticPowerOn(actor);
   const used = await useManeuverThrough(actor, maneuver, options);
   if (ferocious && !used) await ferociousUndo(actor);
   if (used && geneticFlag && game.combat?.started) await actor.setFlag("dbu-ttrpg", geneticFlag, round);

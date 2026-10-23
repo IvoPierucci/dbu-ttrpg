@@ -184,7 +184,7 @@ Hooks.on("updateActor", async (actor, changes, options, userId) => {
 // Synchronized Combatants (2): beside your Partner - read again as a token moves, too, or a choice of it changes.
 const READ_OFF_OTHERS = new Set(["conduit-of-spirit", "synchronized-combatants", "chosen-rival"]);
 // Attendant's Focus (2): what it gives is read by everyone else - so with one on the scene, everyone is read again.
-const READ_BY_OTHERS = new Set(["attendants-focus"]);
+const READ_BY_OTHERS = new Set(["attendants-focus", "way-of-the-champion"]);
 function conduitRefresh() {
   const actors = new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor));
   const everyone = [...actors].some(actor => Array.from(actor?.items ?? []).some(item => READ_BY_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)));
@@ -194,7 +194,7 @@ function conduitRefresh() {
     if (actor.sheet?.rendered) actor.sheet.render();
   }
 }
-Hooks.on("updateActor", (actor, changes) => { if (changes.system?.life) conduitRefresh(); });
+Hooks.on("updateActor", (actor, changes) => { if (changes.system?.life || changes.system?.states) conduitRefresh(); });
 
 // All Sizes Fit Me (2): a Size Category changed - by whatever changed it, by whoever made the change.
 async function sizeWatch(actor, userId) {
