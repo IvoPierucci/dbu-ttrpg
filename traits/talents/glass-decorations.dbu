@@ -1,0 +1,22 @@
+id: glass-decorations
+name: Glass Decorations
+talentCategory: racial
+race: glass-tribe
+prerequisites: Glass Tribe
+description: >
+  You form beautiful sculptures out of glass, placed directly onto the battlefield.
+text: >
+  Glass Decorations: You form beautiful sculptures out of glass, placed directly onto the battlefield.
+  –Prerequisites: Glass Tribe
+  (1)-[Passive]: Increase the Strike and Wound Rolls of your Attacking Maneuvers of the Glass Profile by 1(T) if they target an Opponent adjacent to a Feature with the Glass Feature Quality.
+  (2)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action, you may spend up to 8(bT) Ki Points. For every 2(bT) Ki Points, you may select a Square that is not at Long Range. Create a Feature with a Hardness Rank of 2 and the Glass Feature Quality.
+  (3)-[Triggered, 1/Round]: If you create a Feature(s) with the Glass Feature Quality, you may apply either the Sharp or Reflective Feature Quality to those Feature(s).
+
+---
+
+[passive]
+# (1) Beside a Glass Feature is the table's, as Body of Glass's is - its 1(T) on the Strike and Wound said there.
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/glass-decorations-second-effect.dbu): how many asked, 2(bT) Ki each, paid
+# and said - the Squares and the Features the table's. (3) Asked there, once a Round: Sharp or Reflective on them (chat.mjs
+# glassDecorations).
+allow glass.decorationQuality;

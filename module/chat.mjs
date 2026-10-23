@@ -20649,6 +20649,59 @@ export async function glassSoldiers(actor) {
 }
 
 /**
+ * Autonomous Glass Soldiers (1): "spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent ... create a 'Glass Knight'" - a
+ * Minion of the Custom Species Race. Copy in the Mirror (1): "If you would create a Glass Knight, you may spend 4(bT) Ki Points to
+ * instead create a Duplicate Minion of yourself known as a 'Glass Copy'." How many of each asked, paid and said; the Squares and
+ * the Minions are the table's (Minions wait on the user's design).
+ */
+export async function glassKnights(actor) {
+  if (!actor) return;
+  const step = 4 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const ki = Number(actor.system.ki?.value) || 0;
+  const most = Math.min(2, Math.floor(ki / step));
+  const many = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Autonomous Glass Soldiers`, most, `Glass Knights (${step} Ki each)`));
+  if (!(many > 0)) return;
+  const copiesMost = (actor.system.effects?.slots?.["glass.copies"] === true) ? Math.min(many, Math.floor((ki - many * step) / step)) : 0;
+  const copies = copiesMost ? Math.min(copiesMost, await askPlayerAmount(actor, `${actor.name}: Copy in the Mirror`, copiesMost,
+    `Glass Copies instead (${step} Ki more each)`)) : 0;
+  const { spendManeuverCost } = await import("./maneuvers.mjs");
+  if (!await spendManeuverCost(actor, { name: "Autonomous Glass Soldiers" }, (many + copies) * step)) return;
+  const knights = many - copies;
+  const said = [knights ? `${knights} Glass Knight${(knights === 1) ? "" : "s"}` : "", copies ? `${copies} Glass Cop${(copies === 1) ? "y" : "ies"}` : ""]
+    .filter(Boolean).join(" and ");
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="Each on an unoccupied Square with Glass, which loses it. A Glass Knight: a Minion of the Custom Species Race - Abnormal Anatomy (Primary), Armored Exoskeleton (Primary), Combative Organism, Squadron Species, Minion Species. A Glass Copy: a Duplicate Minion of ${Handlebars.escapeExpression(actor.name)}.">
+    ${said} - ${(many + copies) * step} Ki.</div>` });
+}
+
+/**
+ * Glass Decorations (2): "you may spend up to 8(bT) Ki Points. For every 2(bT) Ki Points, you may select a Square that is not at Long
+ * Range. Create a Feature with a Hardness Rank of 2 and the Glass Feature Quality." (3): "you may apply either the Sharp or
+ * Reflective Feature Quality to those Feature(s)" - asked, once a Round. Paid and said; the Squares and the Features the table's.
+ */
+export async function glassDecorations(actor) {
+  if (!actor) return;
+  const step = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const most = Math.min(4, Math.floor((Number(actor.system.ki?.value) || 0) / step));
+  const many = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Glass Decorations`, most, `Glass Features (${step} Ki each)`));
+  if (!(many > 0)) return;
+  const { spendManeuverCost } = await import("./maneuvers.mjs");
+  if (!await spendManeuverCost(actor, { name: "Glass Decorations" }, many * step)) return;
+  let quality = "";
+  if ((actor.system.effects?.slots?.["glass.decorationQuality"] === true) && (actor.getFlag?.(SCOPE, "decorationRound") !== roundKey())) {
+    const picked = await askPlayerChoice(actor, `${actor.name}: Glass Decorations - on them`,
+      [{ value: "Sharp", label: "Sharp" }, { value: "Reflective", label: "Reflective" }, { value: "", label: "Neither" }]);
+    if (picked) {
+      quality = picked;
+      await actor.setFlag(SCOPE, "decorationRound", roundKey());
+    }
+  }
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="Each on a Square not at Long Range: a Feature of Hardness Rank 2 with the Glass Feature Quality.">
+    ${many} Glass Feature${(many === 1) ? "" : "s"}${quality ? ` - ${quality} too` : ""} - ${many * step} Ki.</div>` });
+}
+
+/**
  * Warriors of Glass (3): "you may move any number of Glass Soldiers by a number of Squares up to 1/2 of your Force or Magic
  * Score (whichever is higher). You cannot cause Collision with this movement." How far, said; the moving is the table's.
  */

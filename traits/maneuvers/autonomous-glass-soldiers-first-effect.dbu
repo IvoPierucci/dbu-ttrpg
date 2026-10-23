@@ -1,0 +1,22 @@
+id: autonomous-glass-soldiers-first-effect
+name: Autonomous Glass Soldiers
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: autonomous-glass-soldiers
+fromEffect: 1
+source: Core Rule
+description: >
+  Autonomous Glass Soldiers's first effect, as a Maneuver: up to 8(bT) Ki, a Glass Knight for every 4(bT) on a Glass Square.
+text: >
+  (1)-[1/Round, Ruling]: As a Standard Maneuver with an Action Cost of 1 Action, spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent, select an unoccupied square with the Glass Environmental Quality and create a ‘Glass Knight’ (that square loses the Glass Environmental Quality after the Glass Knight is created).
+
+---
+
+# How many asked - 4(bT) Ki each, 2 at most - with Copy in the Mirror how many are Glass Copies instead, paid and said on its card
+# (chat.mjs glassKnights).
+[on used]
+glassKnights();

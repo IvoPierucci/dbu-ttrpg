@@ -1,0 +1,21 @@
+id: glass-decorations-second-effect
+name: Glass Decorations
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: glass-decorations
+fromEffect: 2
+source: Core Rule
+description: >
+  Glass Decorations's second effect, as a Maneuver: up to 8(bT) Ki, a Glass Feature of Hardness Rank 2 for every 2(bT).
+text: >
+  (2)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action, you may spend up to 8(bT) Ki Points. For every 2(bT) Ki Points, you may select a Square that is not at Long Range. Create a Feature with a Hardness Rank of 2 and the Glass Feature Quality.
+
+---
+
+# How many asked - 2(bT) Ki each, 4 at most - and (3) Sharp or Reflective on them, paid and said (chat.mjs glassDecorations).
+[on used]
+glassDecorations();

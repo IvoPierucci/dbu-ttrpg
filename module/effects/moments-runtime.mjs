@@ -513,6 +513,8 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "glassKnights": return (await import("../chat.mjs")).glassKnights(actor);
+    case "glassDecorations": return (await import("../chat.mjs")).glassDecorations(actor);
     case "glassSoldiersMove": {
       const { glassSoldiersMove } = await import("../chat.mjs");
       return glassSoldiersMove(actor);

@@ -1,0 +1,20 @@
+id: copy-in-the-mirror
+name: Copy in the Mirror
+talentCategory: racial
+race: glass-tribe
+prerequisites: Glass Tribe, Autonomous Glass Soldiers Talent
+description: >
+  Taking direct control over one of your Glass Soldiers, you create a second self.
+text: >
+  Copy in the Mirror: Taking direct control over one of your Glass Soldiers, you create a second self.
+  –Prerequisites: Glass Tribe, Autonomous Glass Soldiers Talent
+  (1)-[Triggered, Ruling]: If you would create a Glass Knight, you may spend 4(bT) Ki Points to instead create a Duplicate Minion of yourself known as a ‘Glass Copy’.
+  (2)-[Passive]: Your Glass Copies are treated as Glass Knights for all of your effects.
+
+---
+
+[passive]
+# (1) Asked as Autonomous Glass Soldiers (1) creates them: how many are Glass Copies instead, 4(bT) Ki more each (chat.mjs
+# glassKnights). The Duplicate Minion itself the table's.
+allow glass.copies;
+# (2) The table's, as the Glass Knights are.

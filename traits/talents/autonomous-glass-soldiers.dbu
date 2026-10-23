@@ -1,0 +1,19 @@
+id: autonomous-glass-soldiers
+name: Autonomous Glass Soldiers
+talentCategory: racial
+race: glass-tribe
+prerequisites: Glass Tribe, Master of Minions Talent, Warriors of Glass Racial Trait
+description: >
+  You can imbue some of your Glass Soldiers with a semblance of life.
+text: >
+  Autonomous Glass Soldiers: You can imbue some of your Glass Soldiers with a semblance of life.
+  –Prerequisites: Glass Tribe, Master of Minions Talent, Warriors of Glass Racial Trait
+  (1)-[1/Round, Ruling]: As a Standard Maneuver with an Action Cost of 1 Action, spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent, select an unoccupied square with the Glass Environmental Quality and create a ‘Glass Knight’ (that square loses the Glass Environmental Quality after the Glass Knight is created). A Glass Knight is a Minion of the Custom Species Race with the following Racial Traits and Flaws: Abnormal Anatomy (Primary), Armored Exoskeleton (Primary), Combative Organism, Squadron Species, Minion Species.
+  (2)-[Passive]: Glass Knights count as Glass Soldiers for your effects (except the 5th effect of Warriors of Glass).
+  (3)-[Passive]: Glass Knights have their Combat Rolls increased by 1(T) while occupying a square with the Glass Environmental Quality.
+
+---
+
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/autonomous-glass-soldiers-first-effect.dbu): how many asked, 4(bT) Ki each, paid
+# and said - the Squares and the Minions themselves the table's (Minions wait on the user's design).
+# (2), (3) Of the Glass Knights, Minions - the table's.

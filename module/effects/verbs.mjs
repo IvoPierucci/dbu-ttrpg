@@ -403,6 +403,16 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  glassKnights: {
+    args: [0, 0],
+    names: [],
+    doc: "Autonomous Glass Soldiers (1)'s: how many Glass Knights, 4(bT) Ki each - Copy in the Mirror's Glass Copies among them - paid and said (chat.mjs glassKnights)."
+  },
+  glassDecorations: {
+    args: [0, 0],
+    names: [],
+    doc: "Glass Decorations (2), (3)'s: how many Glass Features, 2(bT) Ki each, and Sharp or Reflective on them, paid and said (chat.mjs glassDecorations)."
+  },
   glassSoldiersMove: {
     args: [0, 0],
     names: [],
