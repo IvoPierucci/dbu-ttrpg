@@ -1,0 +1,24 @@
+id: saiyan-soul
+name: Saiyan Soul
+talentCategory: racial
+race: saiyan
+prerequisites: Saiyan
+description: >
+  As the battle wages ever onward, you adapt to the ever-changing tides of war.
+text: >
+  Saiyan Soul: As the battle wages ever onward, you adapt to the ever-changing tides of war.
+  –Prerequisites: Saiyan
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: While you have your maximum number of Battle Born stacks, increase your Wound Rolls by 1(T).
+  (3)-[2/Round]: As an Instant Maneuver, move up to 2 of your Battle Born stacks applied to a Combat Roll to another Combat Roll of your choice.
+
+---
+
+[passive]
+# (1)
+racialLifeModifier += 2;
+# (2) Every Combat Roll at its 2 (or past it, Born for Battle (3)'s).
+if (stacksAtLeast(2, "battlebornstrike") && stacksAtLeast(2, "battleborndodge") && stacksAtLeast(2, "battlebornwound")) {
+    wound += 1(T);
+}
+# (3) Its own Maneuver, on the Maneuvers tab (maneuvers/saiyan-soul-third-effect.dbu).

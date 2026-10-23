@@ -3495,7 +3495,8 @@ async function settleGrapple(message, clash) {
   // Tail Restraint: no Tail Attack while in this Grapple. And a Saiyan's (Saiyan Heritage's 4th, while Tailed): "you are
   // immediately knocked Prone and cannot remove the Prone Combat Condition until you escape the Grapple".
   const { hasTail } = await import("./racial.mjs");
-  const saiyan = hasTail(grappled);
+  // Saiyan Tail Resistance (2): "Ignore the 4th effect of Saiyan Heritage."
+  const saiyan = hasTail(grappled) && (grappled.system?.effects?.slots?.["tailResistance.ignore"] !== true);
   await requestActorUpdate(grappled, { [`flags.${SCOPE}.tailRestrained`]: true });
   if (saiyan) {
     // The hold first, as Tased's is: the Prone cannot come off while it is there.
@@ -14783,10 +14784,15 @@ function refinedParts(actor, other) {
  * Rolls when using the Parry effect of the Defend Maneuver, made against that Opponent by 1(T)." The defender's Allies with it,
  * not Defeated, beside the attacker - an Opponent of theirs; the same Talent once, the highest Tier's.
  */
-/** Party Tactics (1): "Increase the Combat Rolls of all Allies within a Minor Sphere AoE (centered on you) by 1(T)." */
+/**
+ * Party Tactics (1): "Increase the Combat Rolls of all Allies within a Minor Sphere AoE (centered on you) by 1(T)." And another
+ * Ally's on every Combat Roll: Kindhearted Saiyan (2)'s, till the start of its giver's next turn.
+ */
 function partyParts(actor) {
   const holders = actor ? alliesWithin(actor, "party.rolls", SPHERE_RADIUS.minor - 1) : [];
-  return holders.length ? [{ label: "Party Tactics", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : [];
+  const kind = actor?.getFlag?.(SCOPE, "kindhearted");
+  return [...(holders.length ? [{ label: "Party Tactics", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : []),
+    ...((Number(kind?.value) || 0) ? [{ label: `Kindhearted Saiyan (${kind.name ?? ""})`, written: "+1(T)", value: Number(kind.value) }] : [])];
 }
 
 /** Dedicated Spotter's Spectators: the Allies of `actor` in the Spectator State holding `slot`. */
@@ -20767,6 +20773,74 @@ export async function glassSoldiers(actor) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
     data-tooltip="Each on a Square with Glass, which loses it: a Feature - Resilient, Glass and Reflective, Hardness Rank 2.">
     ${many} Glass Soldier${(many === 1) ? "" : "s"} - ${many * step} Ki.</div>` });
+}
+
+const BATTLE_BORN = Object.freeze({ battlebornstrike: "Strike", battleborndodge: "Dodge", battlebornwound: "Wound" });
+
+/**
+ * Kindhearted Saiyan (2): "As an Instant Maneuver during an Ally's turn, you may spend a stack of Battle Born to target that Ally.
+ * That Ally has their Combat Rolls increased by 1(T) until the start of your next turn." Which Combat Roll's stack, asked where
+ * more than one has any.
+ */
+export async function kindheartedBoost(actor, target) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const held = Object.keys(BATTLE_BORN).filter(key => (Number(actor.system.resources?.[key]?.stacks) || 0) > 0);
+  const why = !target ? "Kindhearted Saiyan: target the Ally whose turn it is."
+    : !alliesOnScene(actor).some(ally => ally.uuid === target.uuid) ? `${target.name} is not an Ally of ${actor.name}.`
+    : (game.combat?.combatant?.actor?.uuid !== target.uuid) ? `Kindhearted Saiyan: only during ${target.name}'s turn.`
+    : !held.length ? `${actor.name} has no Battle Born to spend.` : "";
+  if (why) {
+    ui.notifications.warn(why);
+    return UNSPENT;
+  }
+  const key = (held.length === 1) ? held[0] : await askPlayerChoice(actor, `${actor.name}: Kindhearted Saiyan - spend which Battle Born?`,
+    held.map(each => ({ value: each, label: `${BATTLE_BORN[each]} (${actor.system.resources[each].stacks})` })));
+  if (!held.includes(key)) return UNSPENT;
+  await setResource(actor, key, (Number(actor.system.resources[key].stacks) || 0) - 1);
+  const value = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  await requestActorUpdate(target, { [`flags.${SCOPE}.kindhearted`]: { by: actor.uuid, name: actor.name, value } });
+  ui.notifications.info(`Kindhearted Saiyan: ${target.name}'s Combat Rolls +${value} till the start of ${actor.name}'s next turn.`);
+  return true;
+}
+
+/** Kindhearted Saiyan (2) "until the start of your next turn": its giver's turn begun - off whoever has it from them. */
+export async function kindheartedEnds(actor) {
+  for (const other of new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor).filter(Boolean))) {
+    if (other.getFlag?.(SCOPE, "kindhearted")?.by === actor.uuid) await requestActorUpdate(other, { [`flags.${SCOPE}.kindhearted`]: null });
+  }
+}
+
+/**
+ * Saiyan Soul (3): "move up to 2 of your Battle Born stacks applied to a Combat Roll to another Combat Roll of your choice." From
+ * which, to which and how many, asked - none past its 2 ("you can only have up to 2 stacks of Battle Born on a single Combat Roll").
+ */
+export async function battleBornMove(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const stacks = key => Number(actor.system.resources?.[key]?.stacks) || 0;
+  const from = Object.keys(BATTLE_BORN).filter(key => stacks(key) > 0);
+  if (!from.length) {
+    ui.notifications.warn(`${actor.name} has no Battle Born to move.`);
+    return UNSPENT;
+  }
+  const source = (from.length === 1) ? from[0] : await askPlayerChoice(actor, `${actor.name}: Saiyan Soul - move Battle Born from`,
+    from.map(key => ({ value: key, label: `${BATTLE_BORN[key]} (${stacks(key)})` })));
+  if (!from.includes(source)) return UNSPENT;
+  const to = Object.keys(BATTLE_BORN).filter(key => (key !== source) && (stacks(key) < 2));
+  if (!to.length) {
+    ui.notifications.warn(`${actor.name}: Saiyan Soul - every other Combat Roll has its 2 already.`);
+    return UNSPENT;
+  }
+  const destination = await askPlayerChoice(actor, `${actor.name}: Saiyan Soul - to`,
+    to.map(key => ({ value: key, label: `${BATTLE_BORN[key]} (${stacks(key)})` })));
+  if (!to.includes(destination)) return UNSPENT;
+  const most = Math.min(2, stacks(source), 2 - stacks(destination));
+  const moved = (most < 2) ? most : Number(await askPlayerChoice(actor, `${actor.name}: Saiyan Soul - how many`,
+    [{ value: "1", label: "1" }, { value: "2", label: "2" }])) || 0;
+  if (!moved) return UNSPENT;
+  await setResource(actor, source, stacks(source) - moved);
+  await setResource(actor, destination, stacks(destination) + moved);
+  ui.notifications.info(`${actor.name}: Saiyan Soul - ${moved} Battle Born from ${BATTLE_BORN[source]} to ${BATTLE_BORN[destination]}.`);
+  return true;
 }
 
 /**

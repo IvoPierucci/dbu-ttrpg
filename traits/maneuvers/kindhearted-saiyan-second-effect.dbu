@@ -1,0 +1,22 @@
+id: kindhearted-saiyan-second-effect
+name: Kindhearted Saiyan
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+fromTrait: kindhearted-saiyan
+fromEffect: 2
+source: Core Rule
+description: >
+  Kindhearted Saiyan's second effect, as a Maneuver: a stack of Battle Born on an Ally's turn - their Combat Rolls 1(T) till yours.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver during an Ally’s turn, you may spend a stack of Battle Born to target that Ally. That Ally has their Combat Rolls increased by 1(T) until the start of your next turn.
+
+---
+
+# The Ally whose turn it is, targeted: which Combat Roll's stack, asked where more than one has any - their Combat Rolls 1(T), yours,
+# till the start of your next turn (chat.mjs kindheartedBoost; combat.mjs beginTurn).
+[on used]
+kindheartedBoost();

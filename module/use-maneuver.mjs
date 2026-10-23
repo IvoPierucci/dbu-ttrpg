@@ -4526,6 +4526,9 @@ async function revertTransfiguration(actor, target, maneuver) {
  * Range - and the choice is spent once a Maneuver is made.
  */
 export async function useManeuver(actor, maneuver, options = {}) {
+  // Tail Proficiency (3): a Tail Attack through it alone - once an Encounter, the Simple Profile, no variant asked.
+  const { tailProficiencyOnly, tailProfiles } = await import("./maneuvers.mjs");
+  if (tailProficiencyOnly(actor, maneuver)) maneuver = { ...maneuver, encounterLimit: 1, tailVariant: "simple-only", ...tailProfiles("") };
   // Ferocious Fighter (4): a Signature Technique while Feral - asked; not used after all, given back.
   const { askFerocious, ferociousUndo } = await import("./maneuvers.mjs");
   const ferocious = await askFerocious(actor, maneuver);

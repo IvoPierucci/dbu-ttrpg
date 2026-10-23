@@ -1,6 +1,6 @@
 const { fields } = foundry.data;
 
-import { alliesHolding, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
+import { alliesHolding, alliesInMelee, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
@@ -2427,15 +2427,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // them, the best Tier of those holding it.
     const champions = this.parent ? spectatingAllies(this.parent, "champion.allies") : [];
     const champion = champions.length ? Math.max(1, bestTier(champions)) : 0;
+    // Kindhearted Saiyan (1): "All Allies within your Melee Range have their Soak Value increased by 1(T)" - the best Tier of those.
+    const kindhearted = this.parent ? alliesInMelee(this.parent, "kindhearted.soak") : [];
+    const kind = kindhearted.length ? Math.max(1, bestTier(kindhearted)) : 0;
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel + champion, {
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel + champion + kind, {
         parts: [
           { label: "Own Soak", value: ownSoak },
           { label: (bulkTimes > 1) ? "Solid Bulk (twice, Adamantine Muscle)" : "Solid Bulk", value: this.superStack.solidBulk * bulkTimes },
           ...soakBelow.parts,
           ...(battery ? [{ label: "Power Battery", value: battery }] : []),
           ...(steel ? [{ label: "Steel Muscle", value: steel }] : []),
-          ...(champion ? [{ label: "Way of the Champion", value: champion }] : [])
+          ...(champion ? [{ label: "Way of the Champion", value: champion }] : []),
+          ...(kind ? [{ label: "Kindhearted Saiyan", value: kind }] : [])
         ]
       })
         + this.externalModifiers.soak,
@@ -2488,11 +2492,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Extra Dice ride alongside the Base Die and grow with the Tier of Power. The
     // ceiling on raising them uses the BASE Tier, so a Breakthrough does not widen
     // how far an effect may push them.
-    const extraCategory = tierExtraDiceCategory(this.tierOfPower);
-
     // Critical Extra Dice: a d4 at Tier 1, one Category higher per Tier above that.
     // An effect can push them further, but no further than the shared ceiling.
     const increaseLimit = maxCategoryIncrease(this.baseTierOfPower);
+    // Raised by an effect - Primal Rage (1)'s - under the same ceiling.
+    const extraCategory = tierExtraDiceCategory(this.tierOfPower)
+      + Math.min(Math.max(0, Number(this.effects?.slots?.["dice.extra.category"]?.add) || 0), increaseLimit);
     // The Greater Dice, raised by an effect - Arrogance (1)'s - under the same ceiling.
     const greaterCategory = greaterDiceCategory(this.tierOfPower)
       + Math.min(Math.max(0, Number(this.effects?.slots?.["dice.greater.category"]?.add) || 0), increaseLimit);

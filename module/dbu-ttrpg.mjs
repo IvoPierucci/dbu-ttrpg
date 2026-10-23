@@ -181,6 +181,23 @@ Hooks.on("updateItem", async (item, changes, options, userId) => {
   }
 });
 
+// Saiyan Tail Resistance (3), Tail Proficiency (4): "If your effect for the Option effect of Saiyan Heritage becomes Tailless, lose
+// this Talent and gain another Talent that you meet the Prerequisites for" - its Progression row emptied, which next the player's.
+async function taillessTalents(item, userId) {
+  if ((userId !== game.user.id) || (item?.type !== "racial") || (item.flags?.["dbu-ttrpg"]?.sourceId !== "saiyan-heritage")) return;
+  const actor = item.parent;
+  const { racialOptionOf } = await import("./racial.mjs");
+  if (!actor || (racialOptionOf(item) !== "tailless")) return;
+  const rows = actor.system.progression ?? [];
+  const lost = row => Boolean(row.talent) && (getTrait(row.talent)?.tailedOnly === true);
+  const names = rows.filter(lost).map(row => getTrait(row.talent)?.name ?? row.talent);
+  if (!names.length) return;
+  await actor.update({ "system.progression": rows.map(row => (lost(row) ? { ...row, talent: "" } : row)) });
+  ui.notifications.info(`${actor.name} is Tailless: ${names.join(", ")} lost - choose another Talent on its Progression row.`);
+}
+Hooks.on("createItem", (item, options, userId) => taillessTalents(item, userId));
+Hooks.on("updateItem", (item, changes, options, userId) => taillessTalents(item, userId));
+
 // Talents come from the Progression tab: the Talent Addition rows reached, or the Power Level moved - made to match, by
 // whoever made the change.
 Hooks.on("updateActor", async (actor, changes, options, userId) => {
@@ -194,7 +211,7 @@ Hooks.on("updateActor", async (actor, changes, options, userId) => {
 // Synchronized Combatants (2): beside your Partner - read again as a token moves, too, or a choice of it changes.
 const READ_OFF_OTHERS = new Set(["conduit-of-spirit", "synchronized-combatants", "chosen-rival"]);
 // Attendant's Focus (2): what it gives is read by everyone else - so with one on the scene, everyone is read again.
-const READ_BY_OTHERS = new Set(["attendants-focus", "way-of-the-champion", "feline-rally"]);
+const READ_BY_OTHERS = new Set(["attendants-focus", "way-of-the-champion", "feline-rally", "kindhearted-saiyan"]);
 function conduitRefresh() {
   const actors = new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor));
   const everyone = [...actors].some(actor => Array.from(actor?.items ?? []).some(item => READ_BY_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)));

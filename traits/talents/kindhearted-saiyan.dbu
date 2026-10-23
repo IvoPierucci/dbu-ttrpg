@@ -1,0 +1,19 @@
+id: kindhearted-saiyan
+name: Kindhearted Saiyan
+talentCategory: racial
+race: saiyan
+prerequisites: Saiyan
+description: >
+  Thanks to your benevolent nature, your comrades benefit from your thirst for battle.
+text: >
+  Kindhearted Saiyan: Thanks to your benevolent nature, your comrades benefit from your thirst for battle.
+  –Prerequisites: Saiyan
+  (1)-[Passive]: All Allies within your Melee Range have their Soak Value increased by 1(T).
+  (2)-[1/Round]: As an Instant Maneuver during an Ally’s turn, you may spend a stack of Battle Born to target that Ally. That Ally has their Combat Rolls increased by 1(T) until the start of your next turn.
+
+---
+
+[passive]
+# (1) Read by each Ally in your Melee Range: 1(T), yours - the best of those holding it (actor-character.mjs, guidance.mjs alliesInMelee).
+allow kindhearted.soak;
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/kindhearted-saiyan-second-effect.dbu).

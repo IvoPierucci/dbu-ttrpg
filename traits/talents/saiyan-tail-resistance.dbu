@@ -1,0 +1,24 @@
+id: saiyan-tail-resistance
+name: Saiyan Tail Resistance
+talentCategory: racial
+race: saiyan
+prerequisites: Saiyan, Tailed chosen for the 5th effect of Saiyan Heritage
+# Lost as Saiyan Heritage's Option becomes Tailless: its Progression row emptied, another Talent the player's (dbu-ttrpg.mjs).
+tailedOnly: true
+description: >
+  You have overcome the inherent weakness of your tail.
+text: >
+  Saiyan Tail Resistance: You have overcome the inherent weakness of your tail.
+  –Prerequisites: Saiyan, Tailed chosen for the 5th effect of Saiyan Heritage
+  (1)-[Passive]: Increase your Soak Value by 1(bT).
+  (2)-[Passive]: Ignore the 4th effect of Saiyan Heritage.
+  (3)-[Automatic]: If your effect for the Option effect of Saiyan Heritage becomes Tailless, lose this Talent and gain another Talent that you meet the Prerequisites for.
+
+---
+
+[passive]
+# (1)
+soakValue += 1(bT);
+# (2) Grabbed by the Tail: not knocked Prone, nor held so - the Tail Restraint itself still keeps the Tail Attack shut (chat.mjs).
+allow tailResistance.ignore;
+# (3) Its header's `tailedOnly`.

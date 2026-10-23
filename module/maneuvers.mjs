@@ -3424,8 +3424,22 @@ function whyNotGod(actor, maneuver) {
 
 export function openedWithoutGear(actor, maneuver) {
   if (granted(actor?.system?.effects?.slots, `maneuver.${maneuver.id}`)) return true;
+  // Tail Proficiency (3): "You may use the Tail Attack Maneuver" - held to its own terms (tailProficiencyOnly).
+  if ((maneuver.id === "tail-attack") && (actor?.system?.effects?.slots?.["tailProficiency.attack"] === true)) return true;
   return Boolean((actor?.system?.specialManeuvers ?? [])
     .find(entry => entry.maneuver === maneuver.id)?.open);
+}
+
+/**
+ * Tail Proficiency (3): "[1/Encounter]: You may use the Tail Attack Maneuver, but your Profile for that Attacking Maneuver is
+ * Simple." The Tail Attack open through it alone - not by an effect, a Skill or an Item of its own.
+ */
+export function tailProficiencyOnly(actor, maneuver) {
+  const slots = actor?.system?.effects?.slots;
+  if (!maneuver?.tailAttack || (slots?.["tailProficiency.attack"] !== true)) return false;
+  if (granted(slots, "maneuver.tail-attack")) return false;
+  if ((actor?.system?.specialManeuvers ?? []).find(entry => entry.maneuver === "tail-attack")?.open) return false;
+  return !(actor?.items ?? []).some(item => (item.type === "gear") && (item.system?.grantsManeuver === "tail-attack"));
 }
 
 /** The four kinds a Maneuver can be. Dodging is not among them: it is not a Maneuver. */

@@ -1,0 +1,26 @@
+id: primal-rage
+name: Primal Rage
+talentCategory: racial
+race: saiyan
+prerequisites: Saiyan, 2+ Raging Talents
+description: >
+  Your unrelenting ire burns deep within the depths of your soul, igniting in a fiery blaze of fury when you’ve been hurt.
+text: >
+  Primal Rage: Your unrelenting ire burns deep within the depths of your soul, igniting in a fiery blaze of fury when you’ve been hurt.
+  –Prerequisites: Saiyan, 2+ Raging Talents
+  (1)-[Passive]: While in the Raging State, increase your Tier of Power Extra Dice by 1 Dice Category.
+  (2)-[Triggered/Raging, 1/Encounter]: If you are below the Bruised Health Threshold, gain a stack of Battle Born.
+
+---
+
+[passive]
+# (1) Under the ceiling every Dice Category raise is held to.
+if (inState("raging")) {
+    dice.extra.category += 1;
+}
+
+# (2) Entering the Raging State below the Bruised Health Threshold (Bruised or worse): a stack of Battle Born, put where you say.
+# Automatic by default, its Triggered/Automatic button.
+[triggered/state/raging, 1/encounter, effect 2]
+requires belowThreshold("bruised");
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);

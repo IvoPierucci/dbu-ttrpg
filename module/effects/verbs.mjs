@@ -403,6 +403,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  kindheartedBoost: {
+    args: [0, 0],
+    doc: "Kindhearted Saiyan (2): a stack of Battle Born spent - the targeted Ally's Combat Rolls 1(T) till the start of your next turn (chat.mjs kindheartedBoost)."
+  },
+  battleBornMove: {
+    args: [0, 0],
+    doc: "Saiyan Soul (3): up to 2 Battle Born stacks moved from one Combat Roll to another (chat.mjs battleBornMove)."
+  },
   tuffleFusion: {
     args: [0, 0],
     doc: "Tuffle Fusion (2): the Impulsive/Corporeal Clash at the target, then the Cognitive one - both won, the Fusion said (chat.mjs tuffleFusion)."

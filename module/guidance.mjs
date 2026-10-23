@@ -88,3 +88,8 @@ export function alliesWithin(actor, slot, gap) {
 export function alliesHolding(actor, slot) {
   return alliesWithin(actor, slot, Infinity);
 }
+
+/** The Allies of `actor` on the scene, not Defeated, holding `slot`, with `actor` in their Melee Range (Kindhearted Saiyan's). */
+export function alliesInMelee(actor, slot) {
+  return alliesWithin(actor, slot, Infinity).filter(holder => withinGuidance(holder, actor, Math.max(0, Number(holder.system?.meleeRange) || 0)));
+}

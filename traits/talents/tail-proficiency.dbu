@@ -1,0 +1,29 @@
+id: tail-proficiency
+name: Tail Proficiency
+talentCategory: racial
+race: saiyan
+prerequisites: Saiyan, Tailed chosen for the 5th effect of Saiyan Heritage
+# Lost as Saiyan Heritage's Option becomes Tailless: its Progression row emptied, another Talent the player's (dbu-ttrpg.mjs).
+tailedOnly: true
+description: >
+  With training, you are able to use your tail for combat purposes.
+text: >
+  Tail Proficiency: With training, you are able to use your tail for combat purposes.
+  –Prerequisites: Saiyan, Tailed chosen for the 5th effect of Saiyan Heritage
+  (1)-[Passive]: Increase your Wound Rolls by 1(T).
+  (2)-[Passive]: While in the Oozaru Transformation, increase your Strike Rolls by 1(T).
+  (3)-[1/Encounter]: You may use the Tail Attack Maneuver, but your Profile for that Attacking Maneuver is Simple.
+  (4)-[Automatic]: If your effect for the Option effect of Saiyan Heritage becomes Tailless, lose this Talent and gain another Talent that you meet the Prerequisites for.
+
+---
+
+[passive]
+# (1)
+wound += 1(T);
+# (2) Waits on Transformations - the Oozaru is not built yet.
+# (3) The Tail Attack opened while the tail is had; through this alone, once an Encounter and the Simple Profile only - no
+# variant asked (use-maneuver.mjs, maneuvers.mjs tailProficiencyOnly).
+if (tailed) {
+    allow tailProficiency.attack;
+}
+# (4) Its header's `tailedOnly`.

@@ -1,0 +1,21 @@
+id: saiyan-soul-third-effect
+name: Saiyan Soul
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 2/round
+fromTrait: saiyan-soul
+fromEffect: 3
+source: Core Rule
+description: >
+  Saiyan Soul's third effect, as a Maneuver: up to 2 Battle Born stacks moved from one Combat Roll to another.
+text: >
+  (3)-[2/Round]: As an Instant Maneuver, move up to 2 of your Battle Born stacks applied to a Combat Roll to another Combat Roll of your choice.
+
+---
+
+# From which, to which and how many, asked - no Combat Roll past its 2 by it (chat.mjs battleBornMove).
+[on used]
+battleBornMove();
