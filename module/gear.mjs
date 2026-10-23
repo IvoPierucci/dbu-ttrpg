@@ -1129,6 +1129,8 @@ export function equipPlan(items, item, layer, { inCombat = false, wearer = null,
   const crafted = item?.system?.crafted;
   if (!crafted?.kind || !APPAREL_LAYERS[layer]) return refuse("That is not a Layer.");
   if (item.system?.equipped) return refuse(`${item.name} is already worn.`);
+  // Roomy Biology's Inner Room: stored, not worn.
+  if (inInnerRoom(item)) return refuse("Stored in the Inner Room: take it out first.");
   // Naturist (2): "You cannot willingly equip any piece of Apparel during a Combat Encounter."
   if (inCombat && (wearer?.system?.effects?.slots?.["apparel.noEquip"] === true) && !isNaturalArmor(item)) {
     return refuse("Naturist: no Apparel put on during a Combat Encounter.");
@@ -2904,8 +2906,21 @@ export function heldBy(items, capsule) {
  * longer there - and an Item held by nothing is an Item in the character's hands.
  */
 export function isStored(items, item) {
+  return inCapsule(items, item) || inInnerRoom(item);
+}
+
+/** Inside one of the character's Capsules. */
+export function inCapsule(items, item) {
   const id = item.system?.storedIn;
   return Boolean(id) && (items ?? []).some(other => other.id === id);
+}
+
+/**
+ * Roomy Biology's Inner Room (the user's ruling): a Basic Item, Apparel or Weapon stored within the Majin's body - neither worn nor
+ * wielded nor in hand while it is, and no Snatch takes it.
+ */
+export function inInnerRoom(item) {
+  return item?.flags?.["dbu-ttrpg"]?.innerRoom === true;
 }
 
 /**
@@ -2983,6 +2998,7 @@ export function wornAccessories(items) {
 export function equipProblem(items, item) {
   if (!isAccessory(item)) return `${item?.name ?? "That"} is not an Accessory.`;
   if (item.system.equipped) return "";
+  if (inInnerRoom(item)) return `${item.name} is stored in the Inner Room.`;
   if (isStored(items, item)) return `${item.name} is inside a Capsule.`;
   const worn = wornAccessories(items).filter(other => other.id !== item.id);
   // "Nor benefit from the same Accessory's effects twice (even if it was Integrated)."

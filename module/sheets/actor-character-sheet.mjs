@@ -515,6 +515,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       justTakeIt: DBUCharacterSheet._onJustTakeIt,
       toggleDefeated: DBUCharacterSheet._onToggleDefeated,
       geneticDonors: DBUCharacterSheet._onGeneticDonors,
+      innerRoom: DBUCharacterSheet._onInnerRoom,
       travel: DBUCharacterSheet._onTravel,
       useAdventuring: DBUCharacterSheet._onUseAdventuring,
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
@@ -1142,14 +1143,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.gear = { basic: [], apparel: [], weapon: [], buddy: [] };
     const gearItems = this.actor.items.filter(owned => owned.type === "gear");
     for (const item of gearItems) {
-      // Inside a Capsule, it is shown on the Capsule's row rather than its own.
-      if (isStored(gearItems, item)) continue;
+      // Inside a Capsule, it is shown on the Capsule's row rather than its own - in the Inner Room, on its own, marked.
+      if (isStored(gearItems, item) && !item.flags?.["dbu-ttrpg"]?.innerRoom) continue;
       const type = GEAR_TYPES[item.system.itemType] ?? GEAR_TYPES.basic;
       const held = item.system.capsule ? heldBy(gearItems, item) : null;
       context.gear[type.list]?.push({
         itemId: item.id,
         name: item.name,
         img: item.img,
+        // Roomy Biology's Inner Room: stored there, or storable - not Integrated, not Natural Armor.
+        innerRoom: item.flags?.["dbu-ttrpg"]?.innerRoom === true,
+        innerRoomable: (this.actor.system.effects?.slots?.["innerRoom.store"] === true) && !item.system.integrated
+          && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true),
         typeLabel: DBUCharacterSheet.#gearTypeLabel(item, type),
         // Built with more Qualities than its Slots: said on the row, and it works as it is.
         overSlots: DBUCharacterSheet.#overSlots(item),
@@ -5133,6 +5138,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!this.actor.system.defeated) return;
     const min = Number(this.actor.system.life?.min) || 0;
     return this.actor.update({ "system.life.value": min + 1 }, { dbuForceUp: true });
+  }
+
+  /**
+   * Roomy Biology's Inner Room: "To do so costs 1 Action while holding or adjacent to the Item ... You may also remove any Item ... at
+   * the cost of 1 Action" - in a Combat Encounter; freely out of one ("While Adventuring, you can freely store or remove"). Stored,
+   * it is taken off or out of hand.
+   */
+  static async _onInnerRoom(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    if (game.combat?.started) {
+      const { spendActions } = await import("../combat.mjs");
+      if (!await spendActions(this.actor, 1)) return;
+    }
+    const storing = item.flags?.["dbu-ttrpg"]?.innerRoom !== true;
+    return item.update({ "flags.dbu-ttrpg.innerRoom": storing,
+      ...(storing ? { "system.equipped": false, "system.layer": "" } : {}) });
   }
 
   /** Genetic Catalogue (1): which characters are the Donors, and their abilities copied. */

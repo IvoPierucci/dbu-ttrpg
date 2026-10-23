@@ -4123,8 +4123,10 @@ async function askSnatch(actor, target, maneuver) {
     ? Array.from(target.items ?? []).filter(item => (item.type === "gear") && (item.system.crafted?.kind === "weapon")
       && !item.system.equipped && !item.system.integrated)
     : [];
+  // Roomy Biology's Inner Room: what is stored within them is not taken (the user's).
+  const { inInnerRoom } = await import("./gear.mjs");
   const items = [...Array.from(target.items ?? []).filter(item => (item.type === "gear") && (item.system.itemType === "basic")),
-    ...weapons, ...dama.map(entry => entry.item)];
+    ...weapons, ...dama.map(entry => entry.item)].filter(item => !inInnerRoom(item));
   if (!items.length) {
     ui.notifications.warn(`${target.name} has no Basic Item to take.`);
     return null;

@@ -21,6 +21,8 @@ text: >
 [passive]
 # (1)
 racialLifeModifier += 2;
-# Not built: (2) - the Possess Maneuver is not in this system yet (its text is waited on). (3) Inner Room - storing and letting out,
-# the space within as a Battlefield of its own, the Absorbed (Absorption is an Awakening, not built): the table's, the Might Clashes
-# made from the sheet.
+# (3) Inner Room (the user's ruling): a Basic Item, Apparel or Weapon stored on the Gear tab - 1 Action in a Combat Encounter, free out
+# of one - neither worn, wielded nor in hand while it is, and no Snatch takes it (gear.mjs inInnerRoom).
+allow innerRoom.store;
+# Not built: (2) - the Possess Maneuver is not in this system yet (its text is waited on). Inner Room's Characters, the space within
+# as a Battlefield of its own, the Absorbed (Absorption is an Awakening, not built): the table's, the Might Clashes made from the sheet.

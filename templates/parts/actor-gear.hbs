@@ -172,6 +172,11 @@
                 data-item-id="{{row.itemId}}"
                 data-tooltip="Where they land is the table's. Whoever moves through them presses the card.">Scatter</button>
         {{/if}}
+        {{#if row.innerRoom}}<span class="gear-type" data-tooltip="Roomy Biology: stored within you - not worn, wielded or in hand, and no Snatch takes it">Inner Room</span>{{/if}}
+        {{#if row.innerRoomable}}
+        <button type="button" class="gear-act" data-action="innerRoom" data-item-id="{{row.itemId}}"
+                data-tooltip="Roomy Biology's Inner Room - 1 Action in a Combat Encounter, free out of one">{{#if row.innerRoom}}Take out{{else}}Store{{/if}}</button>
+        {{/if}}
         <button type="button" class="gear-control" data-action="editItem"
                 data-item-id="{{row.itemId}}" data-tooltip="Edit">&#9998;</button>
         <button type="button" class="gear-remove" data-action="deleteItem"
@@ -228,6 +233,11 @@
         <button type="button" class="gear-act" data-action="layerGear" data-item-id="{{../itemId}}"
                 data-layer="{{layer.key}}" {{#if layer.blocked}}disabled data-tooltip="{{layer.blocked}}"{{else}}{{#if layer.cost}}data-tooltip="{{layer.cost}}"{{/if}}{{/if}}>Equip {{layer.label}}</button>
         {{/each}}
+        {{/if}}
+        {{#if row.innerRoom}}<span class="gear-type" data-tooltip="Roomy Biology: stored within you - not worn, wielded or in hand, and no Snatch takes it">Inner Room</span>{{/if}}
+        {{#if row.innerRoomable}}
+        <button type="button" class="gear-act" data-action="innerRoom" data-item-id="{{row.itemId}}"
+                data-tooltip="Roomy Biology's Inner Room - 1 Action in a Combat Encounter, free out of one">{{#if row.innerRoom}}Take out{{else}}Store{{/if}}</button>
         {{/if}}
         <button type="button" class="gear-control" data-action="editItem"
                 data-item-id="{{row.itemId}}" data-tooltip="Edit">&#9998;</button>
@@ -296,6 +306,11 @@
         {{#if row.wielded}}<span class="gear-type">Wielded</span>{{/if}}
         <button type="button" class="gear-act" data-action="wieldGear" data-item-id="{{row.itemId}}"
                 {{#if row.wieldBlocked}}disabled data-tooltip="{{row.wieldBlocked}}"{{else}}{{#if row.wieldCost}}data-tooltip="{{row.wieldCost}}"{{/if}}{{/if}}>{{#if row.wielded}}Sheathe{{else}}Wield{{/if}}</button>
+        {{/if}}
+        {{#if row.innerRoom}}<span class="gear-type" data-tooltip="Roomy Biology: stored within you - not worn, wielded or in hand, and no Snatch takes it">Inner Room</span>{{/if}}
+        {{#if row.innerRoomable}}
+        <button type="button" class="gear-act" data-action="innerRoom" data-item-id="{{row.itemId}}"
+                data-tooltip="Roomy Biology's Inner Room - 1 Action in a Combat Encounter, free out of one">{{#if row.innerRoom}}Take out{{else}}Store{{/if}}</button>
         {{/if}}
         <button type="button" class="gear-control" data-action="editItem"
                 data-item-id="{{row.itemId}}" data-tooltip="Edit">&#9998;</button>
