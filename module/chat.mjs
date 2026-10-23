@@ -1240,6 +1240,31 @@ function bagOpen(actor, clash, uuid) {
   return Boolean(uniqueClashOf(clash));
 }
 
+/**
+ * Sorcering Corsair (2): "If you use a Unique Ability that initiates a Clash against an Opponent with one of its effects, and that
+ * Opponent is adjacent to one of your Allies" - "Might/Saving Throw/Combat Roll: Increase your Dice Score for this Clash by 1(T).
+ * Skill: ... by 2." What it would add - or null where it cannot, or was had this Round.
+ */
+function corsairOpen(actor, clash) {
+  if ((actor?.uuid !== clash?.challengerUuid) || (actor.system?.effects?.slots?.["corsair.clash"] !== true)) return null;
+  if ((actor.getFlag?.(SCOPE, "corsairRound") === roundKey()) || !uniqueClashOf(clash)) return null;
+  const opponent = fromUuidSync(clash.defenderUuid ?? "");
+  const allies = alliesOnScene(actor);
+  if (!opponent || allies.some(ally => ally.uuid === opponent.uuid)) return null;
+  const at = opponent.getActiveTokens?.(false, true)?.[0];
+  if (!at || !allies.some(ally => (ally.getActiveTokens?.(false, true) ?? []).some(token => squaresBetween(token, at) === 0))) return null;
+  const skill = (clash.category ?? "skill") === "skill";
+  const value = skill ? 2 : Math.max(1, Number(actor.system?.tierOfPower) || 1);
+  return { value, label: skill ? "2" : "1(T)" };
+}
+
+function corsairClashBonus(actor, clash, uuid) {
+  if (!(clash?.corsairBy ?? []).includes(uuid)) return [];
+  const skill = (clash.category ?? "skill") === "skill";
+  return [{ label: "Sorcering Corsair", ...(skill ? {} : { written: "+1(T)" }),
+    value: skill ? 2 : Math.max(1, Number(actor?.system?.tierOfPower) || 1) }];
+}
+
 function bagClashBonus(actor, clash, uuid) {
   if (((clash?.category ?? "skill") === "skill") || !bagOpen(actor, clash, uuid)) return [];
   const slot = actor.system.effects.slots["clash.uniqueAny"];
@@ -9344,7 +9369,8 @@ function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
-    ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid)];
+    ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
+    ...corsairClashBonus(actor, clash, uuid)];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -10503,12 +10529,16 @@ async function clashStage(message, actor) {
   // and Urgent here means what it means everywhere: it cannot be failed on purpose.
   // Thief (4): a stack of Tension on a Skill or Saving Throw Clash against an Opponent - a box, once a Round.
   const thief = thiefClashOpen(actor, opened);
+  // Sorcering Corsair (2): a Clash your Unique Ability opened at an Opponent beside one of your Allies - a box, once a Round.
+  const corsair = corsairOpen(actor, opened);
   // Reserved Combatant (3): a Unique Ability's Clash against you - "or are targeted by ... a Unique Ability".
   const reserved = reservedClashEntry(actor, opened);
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
     { urgent: Boolean(opened.urgent), senses,
       boxes: [...(thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
         tip: "Once a Round. Won, the Basic Attack or a Signature Technique out of sequence at them." }] : []),
+        ...(corsair ? [{ name: "corsair", label: `Sorcering Corsair: +${corsair.label}`,
+          tip: "Once a Round: they are beside one of your Allies." }] : []),
         ...(reserved ? [{ name: "reserved", label: "Reserved Combatant: Holding Back ignored",
           tip: "For this Unique Ability - its stacks still held. Three times a Round." }] : [])],
       formula: { base: DBUCharacterData.BASE_DIE,
@@ -10531,6 +10561,8 @@ async function clashStage(message, actor) {
     const { setCondition } = await import("./conditions.mjs");
     await setCondition(actor, "reserved-mark", 1);
   }
+  const corsairTaken = Boolean(corsair) && (ready.boxes ?? []).includes("corsair");
+  if (corsairTaken) await requestActorUpdate(actor, { [`flags.${SCOPE}.corsairRound`]: roundKey() });
   const thiefTaken = Boolean(thief) && (ready.boxes ?? []).includes("thief");
   if (thiefTaken) {
     await setResource(actor, "tension", Math.max(0, (Number(actor.system.resources?.tension?.stacks) || 0) - 1));
@@ -10541,6 +10573,7 @@ async function clashStage(message, actor) {
     ...clash,
     ...answer,
     ...(thiefTaken ? { thiefBy: [...new Set([...(clash.thiefBy ?? []), actor.uuid])] } : {}),
+    ...(corsairTaken ? { corsairBy: [...new Set([...(clash.corsairBy ?? []), actor.uuid])] } : {}),
     // Per sense, a list of who said so - not an object keyed by them: a uuid has dots in
     // it, and a write would turn it into nested keys.
     sensesBy: Object.fromEntries(Object.keys(DBUCharacterData.SENSES).map(sense => [sense,
@@ -15144,6 +15177,27 @@ export async function sakeBottle(actor) {
   if (picked !== "new") return;
   const { gearItemFrom } = await import("./gear.mjs");
   return actor.createEmbeddedDocuments("Item", [gearItemFrom(definition, actor)]);
+}
+
+/**
+ * Style and Greed (2): "If you hit an Opponent with an Attacking Maneuver, you may reduce the Break Value of your Top Layer of Apparel
+ * by 1 to gain a stack of Greed." Asked as the hit lands, where there is a Top Layer to lower and Greed short of its most.
+ */
+async function styleGreed(attacker) {
+  if (attacker?.system?.effects?.slots?.["styleGreed.greed"] !== true) return;
+  const { topLayerPiece, breakApparel } = await import("./gear.mjs");
+  const top = topLayerPiece(Array.from(attacker.items ?? []));
+  if (!top) return;
+  const { resourceLimits } = await import("./effects/traits.mjs");
+  const held = Number(attacker.system.resources?.greed?.stacks) || 0;
+  const most = resourceLimits(attacker).greed ?? 0;
+  if (most && (held >= most)) return;
+  const yes = (await askPlayerChoice(attacker, `${attacker.name}: Style and Greed`,
+    [{ value: "yes", label: `${top.name} 1 Break Value lower - a stack of Greed` }, { value: "no", label: "No" }])) === "yes";
+  if (!yes) return;
+  const said = await breakApparel(attacker, getTrait, { amount: 1 });
+  await setResource(attacker, "greed", held + 1);
+  if (said) ui.notifications.info(`Style and Greed: ${said}`);
 }
 
 /**
@@ -26065,6 +26119,8 @@ async function answerHit(message, attack, attacker, struck) {
   await burningFuryBreak(attacker, struck);
   // Assassinate (2): one Oblivious of you hit - 5(bT) Ki for the Damage Category, asked.
   if (await assassinateCategory(attacker, struck)) answer.marks.assassinated = true;
+  // Style and Greed (2): the Top Layer's Break Value 1 lower for a stack of Greed, asked.
+  await styleGreed(attacker);
   // Furious Flex (2): the Top Layer destroyed, asked - twice its Apparel Bonus on this Wound Roll.
   const flexed = await furiousFlexAsk(attacker);
   if (flexed) Object.assign(answer.marks, { furiousWound: flexed.value, furiousName: flexed.name });
@@ -30018,8 +30074,9 @@ async function applyAttackDamage(message, target, attack) {
         (Number(target.system.ki?.value) || 0) + revengeGained * 3 * Math.max(1, Number(target.system.baseTierOfPower) || 1)) });
     }
   }
-  // Cutthroat Teamwork (3) and (4): an Ally, not a Minion, dealt Damage by it.
-  if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && !target.system?.minion
+  // Cutthroat Teamwork (3) and (4): an Ally, not a Minion, dealt Damage by it - a Minion too, with Marauding Captain (1).
+  if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
+    && (!target.system?.minion || (armsUser.system?.effects?.slots?.["marauding.minions"] === true))
     && alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid)) await cutthroatAllyHit(armsUser, target);
   // Greed of the Hera (2): Damage dealt to an Opponent by an attack with an AoE - the Basic Attack, out of sequence.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && attackArea(attack)) offerGreedStrike(message, armsUser, target);

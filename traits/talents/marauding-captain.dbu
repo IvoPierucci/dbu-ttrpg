@@ -1,0 +1,19 @@
+id: marauding-captain
+name: Marauding Captain
+talentCategory: racial
+race: heran
+prerequisites: Herans, Cutthroat Teamwork
+description: >
+  You treat all those who work under your command as expendable.
+text: >
+  Marauding Captain: You treat all those who work under your command as expendable.
+  –Prerequisites: Herans, Cutthroat Teamwork
+  (1)-[Passive]: For Cutthroat Teamwork, ignore the ‘(that is not a Minion)’ parts of that Trait’s effects.
+  (2)-[Passive]: All of your Minions have their Soak Value increased by 1(T).
+
+---
+
+[passive]
+# (1) Cutthroat Teamwork (3), (4): an Ally dealt Damage counts, Minion or not (chat.mjs).
+allow marauding.minions;
+# (2) Whose Minions they are is not kept - the table's (Minions wait on the user's design).

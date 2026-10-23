@@ -1,0 +1,24 @@
+id: style-and-greed
+name: Style and Greed
+talentCategory: racial
+race: heran
+prerequisites: Herans
+description: >
+  You take everything you can get your greedy hands on, and you make sure you look good doing it.
+text: >
+  Style and Greed: You take everything you can get your greedy hands on, and you make sure you look good doing it.
+  –Prerequisites: Herans
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Triggered]: If you hit an Opponent with an Attacking Maneuver, you may reduce the Break Value of your Top Layer of Apparel by 1 to gain a stack of Greed.
+  (3)-[Triggered, 1/Encounter]: If any piece of your Apparel is destroyed, regain Life and Ki Points equal to 1/2 of your Surgency.
+
+---
+
+[passive]
+# (1)
+racialLifeModifier += 2;
+# (2) An Opponent hit: asked as it lands - the Top Layer's Break Value 1 lower, a stack of Greed (Greed of the Hera's Resource;
+# chat.mjs styleGreed).
+allow styleGreed.greed;
+# (3) A piece of yours broken: half your Surgency in Life and Ki Points, once an Encounter (dbu-ttrpg.mjs, as it breaks).
+allow styleGreed.heal;

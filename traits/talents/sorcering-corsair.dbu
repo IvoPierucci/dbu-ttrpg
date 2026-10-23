@@ -1,0 +1,23 @@
+id: sorcering-corsair
+name: Sorcering Corsair
+talentCategory: racial
+race: heran
+prerequisites: Herans
+description: >
+  With the mystical might at your disposal, no one is safe from being plundered by your hand.
+text: >
+  Sorcering Corsair: With the mystical might at your disposal, no one is safe from being plundered by your hand.
+  –Prerequisites: Herans
+  (1)-[Passive]: Reduce the Ki Point Cost of your Unique Abilities by 1(T).
+  (2)-[Triggered, 1/Round]: If you use a Unique Ability that initiates a Clash against an Opponent with one of its effects, and that Opponent is adjacent to one of your Allies, apply the following effect depending on the type of Clash:
+  * Might/Saving Throw/Combat Roll: Increase your Dice Score for this Clash by 1(T).
+  * Skill: Increase your Dice Score for this Clash by 2.
+
+---
+
+[passive]
+# (1) Never below nothing.
+unique.kiCost -= 1(T);
+# (2) A Clash your Unique Ability opened at an Opponent beside one of your Allies: a box in your window before the roll, once a Round
+# - 2 on a Skill Clash, 1(T) on any other (chat.mjs corsairOpen, corsairClashBonus).
+allow corsair.clash;

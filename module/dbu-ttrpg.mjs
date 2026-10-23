@@ -164,11 +164,21 @@ Hooks.on("updateItem", async (item, changes, options, userId) => {
   if (!foundry.utils.hasProperty(changes, "system.crafted.breakLost") && !foundry.utils.hasProperty(changes, "system.crafted.destroyed")) return;
   if (item.flags?.["dbu-ttrpg"]?.naturalArmor === true) return;
   const actor = item.parent;
-  if (!actor || (actor.getFlag("dbu-ttrpg", "apparelBrokenEncounter") === game.combat.id)) return;
+  if (!actor) return;
   const { craftedReading } = await import("./gear.mjs");
   const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
   if (!item.system.crafted.destroyed && !((Number(reading?.breakValue) || 0) > 0 && (reading.breakLeft === 0))) return;
-  await actor.setFlag("dbu-ttrpg", "apparelBrokenEncounter", game.combat.id);
+  if (actor.getFlag("dbu-ttrpg", "apparelBrokenEncounter") !== game.combat.id) await actor.setFlag("dbu-ttrpg", "apparelBrokenEncounter", game.combat.id);
+  // Style and Greed (3): "If any piece of your Apparel is destroyed, regain Life and Ki Points equal to 1/2 of your Surgency" -
+  // once an Encounter.
+  if ((actor.system.effects?.slots?.["styleGreed.heal"] === true) && (actor.getFlag("dbu-ttrpg", "styleGreedEncounter") !== game.combat.id)) {
+    const back = Math.floor((Number(actor.system.surgency) || 0) / 2);
+    const { life, ki } = actor.system;
+    await actor.update({ "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + back),
+      "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back),
+      "flags.dbu-ttrpg.styleGreedEncounter": game.combat.id });
+    ui.notifications.info(`${actor.name}: Style and Greed - ${item.name} destroyed, ${back} Life and Ki Points back.`);
+  }
 });
 
 // Talents come from the Progression tab: the Talent Addition rows reached, or the Power Level moved - made to match, by
