@@ -408,6 +408,17 @@ const PREDICATES = {
   rivalOpponent: scope => rivalSide(scope.data?.parent) === "opponent",
   rivalAlly: scope => rivalSide(scope.data?.parent) === "ally",
   rivalOnlyAlly: scope => rivalOnlyAlly(scope.data?.parent),
+  // Light Weapons Specialist (1): "While you are only wielding a single Weapon of the Small Size" - one Weapon wielded, of that
+  // Size (its Form's).
+  singleWeaponOf: (scope, size) => {
+    const items = Array.from(scope.data?.parent?.items ?? []);
+    const held = items.filter(item => (item.type === "gear") && (item.system?.crafted?.kind === "weapon") && item.system?.equipped
+      && !item.system?.crafted?.destroyed);
+    if (held.length !== 1) return false;
+    // Its Size as it stands - a Transforming Weapon's in use (gear.mjs activeForm).
+    const crafted = held[0].system.crafted;
+    return String(crafted.activeSize || crafted.weaponSize || "") === String(size ?? "").toLowerCase();
+  },
   // Bag of Tricks (3): the Clash won one your own Unique Ability opened, against an Opponent (moment unique-clash-won).
   ownUniqueWon: scope => {
     const self = scope.data?.parent;

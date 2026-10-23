@@ -1632,7 +1632,7 @@ async function askModifierNote(modifier, target = null) {
  *
  * @returns {Promise<boolean>} false when nothing was paid and nothing should happen
  */
-async function applyModifiers(actor, applied) {
+async function applyModifiers(actor, applied, { maneuver = null, declared = null } = {}) {
   if (!applied.length) return true;
 
   // Pinpoint Combat (2): "When making an Attacking Maneuver, you may spend 2 stacks of Critical Eye to use the Called Shot
@@ -1669,6 +1669,23 @@ async function applyModifiers(actor, applied) {
     await actor.setFlag("dbu-ttrpg", "attentiveCalledEncounter", encounter);
     applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
   }
+  // Light Weapons Specialist (2): "When you use the Basic Attack Maneuver to make an Armed Attack with a Small Size Weapon, spend
+  // 4(bT) Ki Points to make that Attacking Maneuver a Called Shot without spending an Action" - asked, once a Round.
+  let lightKi = 0;
+  const lightRound = actor.getFlag?.("dbu-ttrpg", "lightCalledRound") === round;
+  if (called && (applied.find(entry => entry === called)?.actions > 0) && !lightRound
+    && (actor.system.effects?.slots?.["lightWeapons.calledShot"] === true) && ((maneuver?.id ?? "") === "basic-attack")
+    && declared?.weapon && !declared.weapon.unarmed && (declared.weapon.weaponSize === "small")) {
+    const cost = 4 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+    if (await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - Light Weapons Specialist` },
+      content: `<p data-tooltip="A Small Weapon's Basic Attack. Once a Round.">The Called Shot for ${cost} Ki Points instead of its Action?</p>`,
+      rejectClose: false })) {
+      lightKi = cost;
+      applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
+      await actor.setFlag("dbu-ttrpg", "lightCalledRound", round);
+    }
+  }
   // Scarlet Spotter (1): "If you target an Opponent with a Called Shot, you may spend 2 stacks of Critical Eye to ignore that
   // Opponent's Damage Reduction" - asked, with 2 more held than Pinpoint Combat took; marked on the Called Shot itself.
   const aimed = applied.find(entry => (entry.modifier?.id ?? entry.id) === "called-shot");
@@ -1683,7 +1700,7 @@ async function applyModifiers(actor, applied) {
   }
 
   const actions = { standard: 0, counter: 0 };
-  let ki = 0;
+  let ki = lightKi;
   for (const entry of applied) {
     actions[entry.kind] += entry.actions;
     ki += entry.ki;
@@ -5988,7 +6005,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return false;
   }
 
-  if (!await applyModifiers(actor, modifiers)) return false;
+  if (!await applyModifiers(actor, modifiers, { maneuver, declared })) return false;
 
   // The Ki an Energy-Suction Device stores may pay for the whole of an Energy or Magic
   // attack instead, off the character's Capacity.

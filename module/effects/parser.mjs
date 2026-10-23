@@ -506,7 +506,9 @@ const PREDICATE_NAMES = new Set([
   // Room for another stack of that Resource - Power of the Hera's Power.
   "roomFor",
   // That Talent held, by its id - Tai Chi Expert's, on Tai Chi Practitioner.
-  "hasTalent"
+  "hasTalent",
+  // One Weapon wielded, of that Size (Light Weapons Specialist's).
+  "singleWeaponOf"
 ]);
 
 /** The ones written without brackets, because they take nothing. */
