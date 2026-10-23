@@ -17563,6 +17563,49 @@ async function eternalSurge(actorUuid, focus) {
   return enterState(actor, "surging", 1, "round", "Eternal Rival");
 }
 
+/**
+ * Iaijutsu Specialist (2): "After making an Armed Attack, you may sheathe the Weapon used as an Out-of-Sequence Maneuver." Put
+ * away as the sheet puts one away - into an empty Sheath/Holster, if they like - and counted as an Out-of-Sequence Maneuver.
+ */
+async function takeIaijutsuSheathe(message, actor, itemId) {
+  const item = actor.items?.get(itemId);
+  if (!item?.system?.equipped) return ui.notifications.warn(`${item?.name ?? "That Weapon"} is not in hand.`);
+  const { emptySheath, drawChanges } = await import("./gear.mjs");
+  const empty = emptySheath(actor.items.contents);
+  const sheath = (empty && await foundry.applications.api.DialogV2.confirm({ window: { title: item.name }, rejectClose: false,
+    content: `<p>Put it in ${Handlebars.escapeExpression(empty.name)}?</p>` })) ? empty : null;
+  const { item: changes } = drawChanges(actor, item, false, { getTrait, sheath });
+  await item.update(changes);
+  await recordManeuverType(actor, "outOfSequence", { messageId: message.id });
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return settledNote(message, `${actor.name} sheathes ${item.name} (Iaijutsu Specialist).`);
+}
+
+/**
+ * Iaijutsu Specialist (3): "If you Unsheathe a Standard Size Weapon, making it the only Weapon you have equipped, you can make a
+ * Basic Attack Maneuver as an Out-of-Sequence Maneuver." Offered on the card that says it was drawn - or one of its own out of a
+ * Combat Encounter's turn order; once a Round, three times an Encounter, counted when taken.
+ */
+export async function iaijutsuDraw(actor, item, card = null) {
+  if (!actor || !item || (actor.system?.effects?.slots?.["iaijutsu.draw"] !== true)) return;
+  const { wieldedWeapons, activeForm } = await import("./gear.mjs");
+  const held = wieldedWeapons(Array.from(actor.items ?? []));
+  if ((held.length !== 1) || (held[0].id !== item.id) || (activeForm(item.system?.crafted)?.size !== "standard")) return;
+  if (!iaijutsuOpen(actor)) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    reason: `Iaijutsu Specialist - ${item.name} drawn`, grants: { iaijutsu: true } };
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
+/** Iaijutsu Specialist (3)'s once a Round, three times an Encounter - not spent yet. */
+function iaijutsuOpen(actor) {
+  const used = actor.getFlag?.(SCOPE, "iaijutsu") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  return (used.round !== roundKey()) && (count < 3);
+}
+
 /** Mental Warfare (2)'s Insult, out of sequence at that Opponent. */
 async function insultOutOfSequence(actor, targetUuid) {
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
@@ -21034,6 +21077,17 @@ async function takeOutOfSequence(message, actor, offer) {
     }
     await actor.setFlag(SCOPE, "superiorSyncEncounter", game.combat?.id ?? "none");
   }
+  // Iaijutsu Specialist (3)'s, once a Round, three times an Encounter.
+  if (offer.grants?.iaijutsu) {
+    if (!iaijutsuOpen(actor)) {
+      ui.notifications.warn(`${actor.name}: Iaijutsu Specialist - used up for now.`);
+      return null;
+    }
+    const used = actor.getFlag?.(SCOPE, "iaijutsu") ?? {};
+    const encounter = game.combat?.id ?? "none";
+    const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+    await actor.setFlag(SCOPE, "iaijutsu", { encounter, round: roundKey(), count: count + 1 });
+  }
   // Power Gifter (2)'s, once a Round - the other of the two its note offered, or another Empower's, taken already.
   if (offer.grants?.powerGifterFrom
     && (fromUuidSync(offer.grants.powerGifterFrom)?.getFlag?.(SCOPE, "powerGifterRound") === roundKey())) {
@@ -21067,6 +21121,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.terrifyingPresence) return terrifyOutOfSequence(actor);
   if (offer.terrifyingTechnique) return takeTerrifyingTechnique(message, actor);
   if (offer.mentalWarfare) return insultOutOfSequence(actor, offer.targetUuid);
+  if (offer.iaijutsuSheathe) return takeIaijutsuSheathe(message, actor, offer.iaijutsuSheathe);
   // Perfect Mimicry (2) with a copied Unique Ability: it, out of sequence, once an Encounter.
   if (offer.perfectMimicryItem) {
     if (actor.getFlag?.(SCOPE, "perfectMimicryEncounter") === (game.combat?.id ?? "none")) {
@@ -22245,6 +22300,13 @@ export async function postAttack(actor, target, maneuver,
   }
   // Quick Learner: a Signature Technique used in a Combat Encounter - Copy, offered to whoever has the Talent.
   if (card && maneuver.signature && !maneuver.signatureTechnique && game.combat?.started) offerCopies(card, actor, maneuver);
+  // Iaijutsu Specialist (2): an Armed Attack - its Weapon sheathed, out of sequence.
+  if (card && madeNow && !reflecting && madeNow.weapon?.itemId && !madeNow.weapon.unarmed
+    && (actor.system?.effects?.slots?.["iaijutsu.sheathe"] === true) && actor.items?.get(madeNow.weapon.itemId)?.system?.equipped) {
+    requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "",
+      maneuverName: `Sheathe ${madeNow.weapon.name}`, reason: "Iaijutsu Specialist - after an Armed Attack",
+      iaijutsuSheathe: madeNow.weapon.itemId } });
+  }
   // Hidden, and an attack with an AoE: whoever is Oblivious of them may Clash to find them.
   if (card && madeNow && !reflecting && attackArea(madeNow)) offerSearches(card, actor, maneuver, { aoe: true });
 

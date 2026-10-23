@@ -4400,6 +4400,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const item = this.actor.items.get(target.dataset.itemId);
     if (item?.system.crafted?.kind !== "weapon") return;
     const drawing = !item.system.equipped;
+    // The card that says so - Iaijutsu Specialist (3)'s Basic Attack is offered on it.
+    let drawnCard = null;
     if (drawing) {
       const problem = wieldProblem(this.actor.items.contents, item, getTrait, this.actor.system.weaponsWielded);
       if (problem) {
@@ -4419,7 +4421,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         return;
       }
       await recordManeuverUse(this.actor, noEffort);
-      await ChatMessage.create({
+      drawnCard = await ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ actor: this.actor }),
         content: `<p>${Handlebars.escapeExpression(this.actor.name)} `
           + `${drawing ? "draws" : "puts away"} ${Handlebars.escapeExpression(item.name)}: `
@@ -4440,7 +4442,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (firstKey) {
       await this.actor.update({ "system.usedManeuvers": [...(this.actor.system.usedManeuvers ?? []), firstKey] });
     }
-    return item.update(changes);
+    await item.update(changes);
+    // Iaijutsu Specialist (3): a Standard Weapon drawn, the only one in hand - in a Combat Encounter.
+    if (drawing && game.combat?.started) await (await import("../chat.mjs")).iaijutsuDraw(this.actor, item, drawnCard);
   }
 
   /**
