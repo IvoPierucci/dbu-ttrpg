@@ -1,6 +1,6 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
-import { bestTier, guidanceRangeGap, guidingAllies, withinGuidance } from "./guidance.mjs";
+import { alliesWithin, bestTier, guidanceRangeGap, guidingAllies, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
@@ -14739,6 +14739,12 @@ function refinedParts(actor, other) {
  * Rolls when using the Parry effect of the Defend Maneuver, made against that Opponent by 1(T)." The defender's Allies with it,
  * not Defeated, beside the attacker - an Opponent of theirs; the same Talent once, the highest Tier's.
  */
+/** Party Tactics (1): "Increase the Combat Rolls of all Allies within a Minor Sphere AoE (centered on you) by 1(T)." */
+function partyParts(actor) {
+  const holders = actor ? alliesWithin(actor, "party.rolls", SPHERE_RADIUS.minor - 1) : [];
+  return holders.length ? [{ label: "Party Tactics", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : [];
+}
+
 /** Dedicated Spotter's Spectators: the Allies of `actor` in the Spectator State holding `slot`. */
 function spotters(actor, slot) {
   return alliesOnScene(actor).filter(ally => ((Number(ally.system?.states?.spectator) || 0) > 0)
@@ -15242,7 +15248,7 @@ export async function variableFighter(actor, armed) {
  */
 function variableParts(attacker, attack, roll) {
   if (!attacker || !attack) return [];
-  const armed = Boolean(attack.weapon && !attack.weapon.unarmed);
+  const armed = Boolean(attack.weapon && !attack.weapon.unarmed && !attack.weapon.borrowed);
   const tier = Math.max(1, Number(attacker.system?.tierOfPower) || 1);
   if (roll === "strike") {
     const slots = attacker.system?.effects?.slots ?? {};
@@ -15254,8 +15260,11 @@ function variableParts(attacker, attack, roll) {
       ...((armed && single && (wielded === 1)) ? [{ label: "Variable Champion (1 Weapon)", value: single }] : [])];
   }
   const key = armed ? "variable-armed-mark" : "variable-unarmed-mark";
-  return ((Number(attacker.system?.conditions?.[key]) || 0) > 0)
-    ? [{ label: `Variable Fighter (${armed ? "Armed" : "Unarmed"})`, written: "+1(T)", value: tier }] : [];
+  // Weapon Arts (1): an Armed Attack's Wound.
+  const arts = armed ? (Number(attacker.system?.effects?.slots?.["wound.armed"]?.add) || 0) : 0;
+  return [...(((Number(attacker.system?.conditions?.[key]) || 0) > 0)
+    ? [{ label: `Variable Fighter (${armed ? "Armed" : "Unarmed"})`, written: "+1(T)", value: tier }] : []),
+    ...(arts ? [{ label: "Weapon Arts", value: arts }] : [])];
 }
 
 /**
@@ -24827,6 +24836,8 @@ function strikeParts(attacker, attack) {
     ...variableParts(attacker, attack, "strike"),
     // Dedicated Spotter (1): an Ally in the Spectator State calling it out.
     ...spotterParts(attacker),
+    // Party Tactics (1): an Ally beside you.
+    ...partyParts(attacker),
     ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
     ...profileSlotStrike(attacker, attack),
@@ -26276,6 +26287,8 @@ function woundParts(attacker, attack) {
     ...variableParts(attacker, attack, "wound"),
     // Way of the Champion (1): an Ally in the Spectator State.
     ...championWoundParts(attacker),
+    // Party Tactics (1): an Ally beside you.
+    ...partyParts(attacker),
     ...(critWound ? [{ label: "Critical Specialist", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(kata ? [{ label: "Precision Kata (Critical)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(herculean ? [{ label: "Herculean Power (Hefty Muscle again)", written: `+${heftyTimes}(T)`,
@@ -27264,7 +27277,9 @@ async function rollAttackWoundWork(message, attack) {
     if (wiseReduction) spendWriting(target, defending, "damageReduction");
     const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic + taunted
       + fullCounter + wiseReduction + (Number(own.taiChiReduction) || 0)
-      + (Number(own.greedReduction) || 0) + (Number(own.toughReduction) || 0));
+      + (Number(own.greedReduction) || 0) + (Number(own.toughReduction) || 0)
+      // Party Tactics (3): a stack of an Ally's Tension, for this attack.
+      + (attack.partyReduction ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0));
 
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);
@@ -27481,6 +27496,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...telepathicDodge(actor, attack));
   // Angelic Guidance (1): an Angel guiding them, beside them or in their Guidance Range - their 1(T).
   parts.push(...guidanceDodgeParts(actor));
+  // Party Tactics (1): an Ally beside you.
+  parts.push(...partyParts(actor));
   // Refined Combat's Fleet-Footed.
   parts.push(...fleetDodge(actor, attack));
   // Power of the Weak (3).
@@ -29821,6 +29838,54 @@ function unitedRows(attack) {
 }
 
 /** The United Attack buttons on an open attack: join, for this user's characters; refuse, for the one asked. */
+/**
+ * Party Tactics (2): "If an Ally uses an Attacking Maneuver, you may spend a stack of Tension to apply an Energy Charge to that
+ * Attacking Maneuver." (3): "If an Ally is targeted by an Attacking Maneuver, you may spend a stack of Tension to increase that
+ * Ally's Damage Reduction by 3(T) for the duration of that Attacking Maneuver." Buttons for whoever plays one holding them, till
+ * its Wound Roll is made - each once a Round, once on this card.
+ */
+function partyButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker) return;
+  const mine = (canvas?.tokens?.placeables ?? []).map(token => token.actor).filter((each, index, all) => each?.isOwner
+    && (all.indexOf(each) === index) && ((Number(each.system?.resources?.tension?.stacks) || 0) > 0) && !each.system?.defeated);
+  const button = (label, tooltip, run) => {
+    const made = document.createElement("button");
+    made.type = "button";
+    made.className = "dbu-clash-button";
+    made.textContent = label;
+    made.dataset.tooltip = tooltip;
+    made.addEventListener("click", run);
+    container.append(made);
+  };
+  for (const holder of mine) {
+    const allies = alliesOnScene(holder);
+    const slots = holder.system?.effects?.slots ?? {};
+    if ((slots["party.charge"] === true) && (holder.uuid !== attacker.uuid) && allies.some(ally => ally.uuid === attacker.uuid)
+      && (holder.getFlag?.(SCOPE, "partyChargeRound") !== roundKey()) && !(attack.partyCharge ?? []).includes(holder.uuid)) {
+      button(`Party Tactics: an Energy Charge - ${holder.name}`, "A stack of Tension, once a Round.", async () => {
+        await setResource(holder, "tension", (Number(holder.system.resources?.tension?.stacks) || 0) - 1);
+        await holder.setFlag(SCOPE, "partyChargeRound", roundKey());
+        const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+        requestEdit(message, { type: "attack", attack: { ...fresh, energyCharges: (Number(fresh.energyCharges) || 0) + 1,
+          partyCharge: [...(fresh.partyCharge ?? []), holder.uuid] } });
+      });
+    }
+    if ((slots["party.reduction"] === true) && (holder.getFlag?.(SCOPE, "partyReductionRound") !== roundKey())) {
+      for (const target of attackTargets(attack).filter(entry => (entry.uuid !== holder.uuid) && allies.some(ally => ally.uuid === entry.uuid))) {
+        if ((attack.partyReduction ?? []).some(entry => entry.uuid === target.uuid)) continue;
+        button(`Party Tactics: ${target.name}'s Damage Reduction 3(T) - ${holder.name}`, "A stack of Tension, once a Round.", async () => {
+          await setResource(holder, "tension", (Number(holder.system.resources?.tension?.stacks) || 0) - 1);
+          await holder.setFlag(SCOPE, "partyReductionRound", roundKey());
+          const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+          requestEdit(message, { type: "attack", attack: { ...fresh, partyReduction: [...(fresh.partyReduction ?? []),
+            { uuid: target.uuid, value: 3 * Math.max(1, Number(holder.system.tierOfPower) || 1), by: holder.uuid }] } });
+        });
+      }
+    }
+  }
+}
+
 /** "Now's Your Chance!": one button for each Defeated Ally of the attacker the reader plays, with the Karma - not given yet here. */
 function yourChanceButtons(message, attack, container) {
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
@@ -32021,6 +32086,8 @@ function renderAttack(message, html) {
   if (!result) weakButtons(message, attack, container);
   // "Now's Your Chance!" (a Desperation Effect): a Defeated Ally of its maker - Ki on its Wound, till it is rolled.
   if (!result?.wound) yourChanceButtons(message, attack, container);
+  // Party Tactics (2), (3): a stack of Tension - an Energy Charge on an Ally's attack; an Ally's Damage Reduction against it.
+  if (!result?.wound) partyButtons(message, attack, container);
   // Balanced Defender (2): targeted - Ki for the Defense Value and Soak Value, before it is settled.
   if (!result) balancedButtons(message, attack, container);
   // Spiritual Warrior (3): your Bonded Ally's attack - the Basic Attack at the same Opponent.

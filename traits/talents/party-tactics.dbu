@@ -1,0 +1,23 @@
+id: party-tactics
+name: Party Tactics
+talentCategory: racial
+race: konatsian
+prerequisites: Konatsian, 2+ Teamwork Talents
+description: >
+  Supporting other members of your group is one of your most important roles.
+text: >
+  Party Tactics: Supporting other members of your group is one of your most important roles.
+  –Prerequisites: Konatsian, 2+ Teamwork Talents
+  (1)-[Passive]: Increase the Combat Rolls of all Allies within a Minor Sphere AoE (centered on you) by 1(T).
+  (2)-[Triggered, 1/Round]: If an Ally uses an Attacking Maneuver, you may spend a stack of Tension to apply an Energy Charge to that Attacking Maneuver.
+  (3)-[Triggered, 1/Round]: If an Ally is targeted by an Attacking Maneuver, you may spend a stack of Tension to increase that Ally’s Damage Reduction by 3(T) for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) A Minor Sphere centred on you - the Squares beside you: an Ally's Strike, Dodge and Wound Rolls 1(T), yours (chat.mjs partyParts).
+allow party.rolls;
+# (2), (3) Buttons on the attack's card till its Wound Roll is made, for whoever plays you - a stack of Tension each, once a Round
+# each: an Ally's attack, an Energy Charge; an Ally aimed at, their Damage Reduction 3(T) against it (chat.mjs partyButtons).
+allow party.charge;
+allow party.reduction;

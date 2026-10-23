@@ -73,3 +73,13 @@ export function spectatingAllies(actor, slot) {
     .map(token => [token.actor.uuid, token.actor])).values()]
     .filter(holder => ((Number(holder.system?.states?.spectator) || 0) > 0) && (holder.system?.effects?.slots?.[slot] === true));
 }
+
+/** The Allies of `actor` on the scene, not Defeated, holding `slot`, with `gap` Squares or fewer between them - Party Tactics' Minor Sphere. */
+export function alliesWithin(actor, slot, gap) {
+  const own = tokenOf(actor)?.disposition;
+  if (own === undefined) return [];
+  return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.document?.disposition === own))
+    .map(token => [token.actor.uuid, token.actor])).values()]
+    .filter(holder => !holder.system?.defeated && (holder.system?.effects?.slots?.[slot] === true) && withinGuidance(holder, actor, gap));
+}

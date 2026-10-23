@@ -6074,6 +6074,30 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
   }
 
+  // Weapon Arts (2): "If you use a Signature Technique of the Energy or Magic Foundation while wielding a Physical Weapon (except a
+  // Shield), you may apply the effects of that Weapon's Weapon Category to that Attacking Maneuver" - asked, once a Round; borrowed
+  // as Spirit Sword's is, the attack still Unarmed.
+  const artsRound = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (declared && !declared.weapon && (maneuver.tags ?? []).includes("signature") && ["energy", "magic"].includes(declared.foundation)
+    && (actor.system.effects?.slots?.["weaponArts.category"] === true) && (actor.getFlag?.("dbu-ttrpg", "weaponArtsRound") !== artsRound)) {
+    const held = wieldedWeapons(actor.items.contents).filter(item => (item.system?.crafted?.weaponType === "physical")
+      && (item.system?.crafted?.category !== "shield") && !item.system?.crafted?.destroyed);
+    if (held.length) {
+      const { askPlayerChoice } = await import("./chat.mjs");
+      const id = await askPlayerChoice(actor, `${actor.name}: Weapon Arts - a Weapon Category on ${maneuver.name}`,
+        [...held.map(item => ({ value: item.id, label: `${item.name}'s (${getTrait(item.system.crafted.category)?.name ?? item.system.crafted.category})` })),
+          { value: "none", label: "None" }]);
+      const item = held.find(each => each.id === id);
+      const lent = item ? borrowedCategory(item.system.crafted.category, actor, { profile: declared.profile, kiWager: declared.kiWager ?? 0,
+        target: targetActor, area: declared.area ?? PROFILES[declared.profile]?.area ?? null, sizes: Object.keys(DBUCharacterData.SIZES),
+        getTrait, source: "Weapon Arts" }) : null;
+      if (lent) {
+        await actor.setFlag("dbu-ttrpg", "weaponArtsRound", artsRound);
+        declared = { ...declared, weapon: { ...lent, unarmed: true } };
+      }
+    }
+  }
+
   // Massive Tornado: "While you are Spinning, increase ... the AoE of the Sweeping Profile by 1 Magnitude."
   if ((String(declared?.profile ?? "") === "sweeping") && actor.getFlag?.("dbu-ttrpg", "spinning")?.massive) {
     const area = declared.area ?? PROFILES.sweeping?.area ?? null;

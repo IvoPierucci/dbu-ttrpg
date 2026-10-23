@@ -1,0 +1,21 @@
+id: weapon-arts
+name: Weapon Arts
+talentCategory: racial
+race: konatsian
+prerequisites: Konatsian, 2+ Weapon Talents
+description: >
+  The ancient arts of combat have been passed down to you, leaving you to carry on the legacy of your people.
+text: >
+  Weapon Arts: The ancient arts of combat have been passed down to you, leaving you to carry on the legacy of your people.
+  –Prerequisites: Konatsian, 2+ Weapon Talents
+  (1)-[Passive]: Increase the Wound Rolls of your Armed Attacks by 1(T).
+  (2)-[Triggered, 1/Round]: If you use a Signature Technique of the Energy or Magic Foundation while wielding a Physical Weapon (except a Shield), you may apply the effects of that Weapon’s Weapon Category to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) An Armed Attack's Wound Roll (chat.mjs).
+wound.armed += 1(T);
+# (2) An Energy or Magic Signature Technique, a Physical Weapon - not a Shield - wielded: asked as it is declared, once a Round - its
+# Weapon Category's effects borrowed, as Spirit Sword's are; the attack still an Unarmed one (use-maneuver.mjs).
+allow weaponArts.category;
