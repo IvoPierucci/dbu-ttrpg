@@ -1,0 +1,20 @@
+id: metallic-movement-third-effect
+name: Metallic Movement
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: metallic-movement
+fromEffect: 3
+source: Core Rule
+description: >
+  Metallic Movement's third effect, as a Maneuver: from a Metallic Square to any other on the Battlefield.
+text: >
+  (3)-[1/Round]: As an Instant Maneuver, if you are on a Square with the Metallic Environmental Quality, you may move to any other Square with the Metallic Environmental Quality on the Battlefield.
+
+---
+
+# Refused off a Square with the Metallic Environmental Quality (use-maneuver.mjs); the move itself is the table's - the token
+# put on the other Metallic Square.

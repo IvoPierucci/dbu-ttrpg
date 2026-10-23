@@ -176,6 +176,9 @@ export function techniqueStrikeParts(attacker, attack) {
   // Elemental (Light): "If this Attacking Maneuver has the Elemental (Dark) Profile applied to it,
   // increase the Strike Roll by 1(T)."
   if (darkAndLight(attack)) parts.push({ label: "Elemental (Light) with (Dark)", written: "+1(T)", value: tier });
+  // A Signature Technique's Strike Roll, from the character's own effects - 3D Scan Mode (4).
+  const own = Number(attacker?.system?.effects?.slots?.["strike.signature"]?.add) || 0;
+  if (own) parts.push({ label: "Signature Technique", value: own });
   return parts;
 }
 

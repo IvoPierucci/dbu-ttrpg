@@ -1,0 +1,29 @@
+id: 3d-scan-mode
+name: 3D Scan Mode
+talentCategory: racial
+race: android
+prerequisites: Android Race, Lock On Racial Trait
+grantsGear: scouter
+grantsGearDC: grandmaster
+grantsGearIntegrated: yes
+description: >
+  Your integrated cybernetics track potential threats in all directions.
+text: >
+  3D Scan Mode: Your integrated cybernetics track potential threats in all directions.
+  –Prerequisites: Android Race, Lock On Racial Trait
+  (1)-[Passive]: Increase your Clairvoyance Skill Checks by 2.
+  (2)-[Passive]: You cannot suffer from the Long Range Penalty.
+  (3)-[Passive]: Gain an Integrated Scouter of the Grandmaster Craft DC.
+  (4)-[Passive]: Increase the Strike Rolls of your Signature Techniques by 1(T).
+
+---
+
+[passive]
+# (1)
+skill.clairvoyance += 2;
+# (2) (maneuvers.mjs longRangePenalty).
+allow longRange.ignore;
+# (3) Its header's `grantsGear`: a Scouter at the Grandmaster Craft DC, Integrated - Active where there is room - made as this is
+# gained, gone with it (talents.mjs grantTalentGear).
+# (4) A Signature Technique's Strike Roll (technique-attack.mjs techniqueStrikeParts).
+strike.signature += 1(T);

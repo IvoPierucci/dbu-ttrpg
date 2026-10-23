@@ -1270,7 +1270,8 @@ export function registerRacialHooks() {
     }
   });
   Hooks.on("deleteItem", async (item, options, userId) => {
-    if ((item.type !== RACIAL_TYPE) || !item.parent || (userId !== game.user.id)) return;
+    // A Talent's too - 3D Scan Mode's Scouter.
+    if (((item.type !== RACIAL_TYPE) && (item.type !== "talent")) || !item.parent || (userId !== game.user.id)) return;
     const given = Array.from(item.parent.items).filter(each => each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
       .map(each => each.id);
     if (given.length) await item.parent.deleteEmbeddedDocuments("Item", given);

@@ -4158,6 +4158,72 @@ function usedIs(entry, maneuver) {
  * Maneuver limited to once per Round was in practice once per Encounter.
  */
 /**
+ * Masterful Integration (1): "When making an Attacking Maneuver, you may destroy an Integrated Item to apply an Energy Charge to that
+ * Attacking Maneuver." Asked as it is declared, once a Round: which - a Weapon broken, Apparel broken, an Accessory gone - and then
+ * (2), (3) on what was destroyed.
+ */
+export async function askMasterfulCharge(actor, declared) {
+  if (!declared || (actor?.system?.effects?.slots?.["masterful.charge"] !== true)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "masterfulRound") === round) return declared;
+  const { isIntegrated, integratedKind } = await import("./integrated.mjs");
+  const items = Array.from(actor.items ?? []).filter(item => isIntegrated(item) && !item.system?.crafted?.destroyed);
+  if (!items.length) return declared;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const picked = await askPlayerChoice(actor, `${actor.name}: Masterful Integration - an Energy Charge`,
+    [...items.map(item => ({ value: item.id, label: `Destroy ${item.name}` })), { value: "none", label: "No" }]);
+  const item = items.find(each => each.id === picked);
+  if (!item) return declared;
+  await actor.setFlag("dbu-ttrpg", "masterfulRound", round);
+  await destroyIntegrated(actor, item);
+  if (["weapon", "apparel"].includes(integratedKind(item))) await masterfulMove(actor, item);
+  return { ...declared, integrationCharge: true };
+}
+
+/** An Integrated Item destroyed: a Weapon broken, Apparel broken (Break Value 0), each off; an Accessory, having no broken, gone. */
+async function destroyIntegrated(actor, item) {
+  const { brokenChanges } = await import("./gear.mjs");
+  const kind = item.system?.crafted?.kind;
+  if (kind === "apparel") return item.update({ ...brokenChanges(item, getTrait), "system.equipped": false, "system.layer": "" });
+  if (kind === "weapon") return item.update({ "system.crafted.destroyed": true, "system.equipped": false });
+  return item.delete();
+}
+
+/**
+ * Masterful Integration (2), (3): "When you destroy an Integrated Apparel (Weapon) through your own effects, you may apply one of its
+ * Apparel (Weapon) Qualities to another applicable Apparel (Weapon) you have Integrated." Asked, once an Encounter each: which
+ * Quality, onto which - over its Slots warned, as any Quality is.
+ */
+export async function masterfulMove(actor, destroyed) {
+  const kind = destroyed?.system?.crafted?.kind;
+  if (!["apparel", "weapon"].includes(kind) || (actor?.system?.effects?.slots?.[`masterful.${kind}`] !== true)) return;
+  const encounter = game.combat?.id ?? "none";
+  const flag = `masterful${kind[0].toUpperCase()}${kind.slice(1)}Encounter`;
+  if (actor.getFlag?.("dbu-ttrpg", flag) === encounter) return;
+  const { isIntegrated } = await import("./integrated.mjs");
+  const qualities = (destroyed.system.crafted.qualities ?? []).filter(entry => entry?.id);
+  const others = Array.from(actor.items ?? []).filter(item => (item.id !== destroyed.id) && isIntegrated(item)
+    && (item.system?.crafted?.kind === kind) && !item.system.crafted.destroyed);
+  if (!qualities.length || !others.length) return;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const at = await askPlayerChoice(actor, `${actor.name}: Masterful Integration - ${destroyed.name}'s Quality`,
+    [...qualities.map((entry, index) => ({ value: String(index), label: entry.name || getTrait(entry.id)?.name || entry.id })),
+      { value: "none", label: "None" }]);
+  const quality = qualities[Number(at)];
+  if (!quality || (at === "none")) return;
+  const ontoId = (others.length === 1) ? others[0].id : await askPlayerChoice(actor, `${actor.name}: Masterful Integration - onto which`,
+    others.map(item => ({ value: item.id, label: item.name })));
+  const onto = others.find(item => item.id === ontoId);
+  if (!onto) return;
+  await actor.setFlag("dbu-ttrpg", flag, encounter);
+  const { composeEffects } = await import("./gear.mjs");
+  const crafted = { ...onto.system.crafted, qualities: [...(onto.system.crafted.qualities ?? []), { ...quality }] };
+  crafted.effects = composeEffects(crafted, onto.system.crafted.effects ?? "", { getTrait });
+  await onto.update({ "system.crafted.qualities": crafted.qualities, "system.crafted.effects": crafted.effects });
+  ui.notifications.info(`${onto.name}: ${quality.name || getTrait(quality.id)?.name || quality.id} (Masterful Integration).`);
+}
+
+/**
  * Ferocious Fighter (4): "[1/Encounter] While in the Feral State, you may use the Signature Technique Maneuver, ignoring the 1st
  * effect of the Wild level of the Feral State." A Signature Technique refused only for that: asked, once an Encounter - its mark
  * held for that Maneuver (states/feral.dbu), taken off as it is concluded (chat.mjs reservedEnds).

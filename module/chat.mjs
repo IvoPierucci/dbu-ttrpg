@@ -14838,6 +14838,8 @@ async function furiousFlexAsk(attacker) {
   if (!yes) return null;
   await requestActorUpdate(attacker, { [`flags.${SCOPE}.furiousFlexEncounter`]: game.combat?.id ?? "none",
     items: [{ _id: top.id, ...brokenChanges(top, getTrait), "system.equipped": false, "system.layer": "" }] });
+  // Masterful Integration (2): an Integrated piece destroyed by your own effect.
+  if (top.system?.integrated) await (await import("./maneuvers.mjs")).masterfulMove(attacker, top);
   return { value: 2 * bonus, name: top.name };
 }
 
@@ -22403,6 +22405,7 @@ export async function postAttack(actor, target, maneuver,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    concentratedEnds = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false, twinCharge = false,
+                                   integrationCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
@@ -22434,6 +22437,8 @@ export async function postAttack(actor, target, maneuver,
   if (shardCharge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Twin Weapon Specialist (3): an Energy Charge.
   if (twinCharge && !reflecting) charges = (Number(charges) || 0) + 1;
+  // Masterful Integration (1): an Integrated Item destroyed for it.
+  if (integrationCharge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Power of the Hera (4): "apply an equal amount of Energy Charges to that Attacking Maneuver" - the Greed spent.
   if (greedCharges && !reflecting) charges = (Number(charges) || 0) + (Number(greedCharges) || 0);
   // Fight against Power (3): an Energy Charge for every 2 stacks of Tension.

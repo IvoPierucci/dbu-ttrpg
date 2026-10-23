@@ -4805,6 +4805,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // Metallic Movement (3): "if you are on a Square with the Metallic Environmental Quality".
+  if ((maneuver.id === "metallic-movement-third-effect")
+    && !(actor.system.battlefield?.squareQualities ?? []).includes("metallic")) {
+    ui.notifications.warn(`${actor.name} is not on a Square with the Metallic Environmental Quality.`);
+    return false;
+  }
+
   // The Disarm Maneuver: an Opponent wielding a Weapon, within your Melee Range - its Clash.
   if (maneuver.id === "disarm") {
     const { wieldedWeapons } = await import("./gear.mjs");
@@ -5234,6 +5241,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askDualWound(actor, declared);
     // Twin Weapon Specialist (2), (3): 2(T) on the Wound, an Energy Charge.
     declared = await (await import("./maneuvers.mjs")).askTwinWeapon(actor, declared, maneuver);
+    // Masterful Integration (1): an Integrated Item destroyed for an Energy Charge - asked, once a Round.
+    declared = await (await import("./maneuvers.mjs")).askMasterfulCharge(actor, declared);
     // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, targetActor);
     // Profile Focus (2): its Profile's attack - both rolls a Critical Result, asked once an Encounter.

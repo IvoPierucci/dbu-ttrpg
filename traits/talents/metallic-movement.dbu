@@ -1,0 +1,25 @@
+id: metallic-movement
+name: Metallic Movement
+talentCategory: racial
+race: android
+prerequisites: Android Race, Machine Mutant Factor
+description: >
+  Able to pass through metal as if it were part of you, you move around the battlefield in chaotic, unpredictable ways.
+text: >
+  Metallic Movement: Able to pass through metal as if it were part of you, you move around the battlefield in chaotic, unpredictable ways.
+  –Prerequisites: Android Race, Machine Mutant Factor
+  (1)-[Passive]: While occupying a Square with the Metallic Environmental Quality or while adjacent to a Feature with the Metallic Feature Quality, increase your Defense Value and Soak Values by 1(T).
+  (2)-[Passive]: You may move through Features with the Metallic Feature Quality as if they were not present.
+  (3)-[1/Round]: As an Instant Maneuver, if you are on a Square with the Metallic Environmental Quality, you may move to any other Square with the Metallic Environmental Quality on the Battlefield.
+
+---
+
+[passive]
+# (1) A Square with the Metallic Environmental Quality - ticked, or given by an effect. Beside a Metallic Feature: the table's,
+# as Body of Glass's beside a Glass one.
+if (onSquare("metallic")) {
+    defenseValue += 1(T);
+    soakValue += 1(T);
+}
+# (2) Moving is the table's: through a Metallic Feature as if it were not there.
+# (3) Its own Maneuver, on the Maneuvers tab (maneuvers/metallic-movement-third-effect.dbu).

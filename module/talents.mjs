@@ -85,11 +85,45 @@ export async function syncProgressionTalents(actor) {
   // Their Triggered effects start Automatic, as a Racial Trait's do - each in turn, the list being one flag.
   const made = (await actor.createEmbeddedDocuments("Item", created)) ?? [];
   for (const item of made) await automateAll(actor, item);
+  // What one gives - 3D Scan Mode's Integrated Scouter - made with it, gone with it (racial.mjs, its deleteItem hook).
+  for (const item of made) await grantTalentGear(actor, item, getTrait(sourceOf(item)));
   // And what adds Options to another - Dynamic Hype's - asked once that other is there too.
   for (const item of made) {
     const file = getTrait(sourceOf(item));
     if (file?.grantsOptions) await addGrantedOptions(actor, file);
   }
+}
+
+/**
+ * A Talent's `grantsGear`: the Basic Items it gives as it is gained - at `grantsGearDC`, where the Item's Craft DC is a choice, and
+ * Integrated with `grantsGearIntegrated` (Active where there is room) - each marked as given by it.
+ */
+async function grantTalentGear(actor, item, file) {
+  const ids = String(file?.grantsGear ?? "").split(",").map(id => id.trim()).filter(Boolean);
+  if (!ids.length) return;
+  const { gearItemFrom, atCraftDC } = await import("./gear.mjs");
+  const { activeIntegrated, integratedKind, INTEGRATED_ACTIVE } = await import("./integrated.mjs");
+  const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
+  const made = [];
+  for (const id of ids) {
+    const definition = getTrait(id);
+    if (!definition) continue;
+    const data = gearItemFrom(definition, actor);
+    const dc = String(file.grantsGearDC ?? "").trim();
+    if (dc && (data.system.craftDCChoices ?? []).includes(dc)) {
+      const at = atCraftDC(data.system, dc, DBUCharacterData.DIFFICULTIES);
+      data.system.craftDC = at.craftDC;
+      data.system.scan = at.scan;
+    }
+    if (["yes", "true"].includes(String(file.grantsGearIntegrated ?? "").trim().toLowerCase())) {
+      data.system.integrated = true;
+      const kind = integratedKind({ type: "gear", system: data.system });
+      data.system.equipped = Boolean(kind) && (activeIntegrated(actor.items.contents, kind).length < (INTEGRATED_ACTIVE[kind] ?? 0));
+    }
+    data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), grantedBy: item.id } };
+    made.push(data);
+  }
+  if (made.length) await actor.createEmbeddedDocuments("Item", made);
 }
 
 /**

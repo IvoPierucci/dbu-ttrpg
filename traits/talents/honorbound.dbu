@@ -1,0 +1,21 @@
+id: honorbound
+name: Honorbound
+talentCategory: racial
+race: android
+prerequisites: Android Race, Tamagami Factor
+description: >
+  You have sworn to uphold your duty to defend your Dragon Ball, regardless of the cost.
+text: >
+  Honorbound: You have sworn to uphold your duty to defend your Dragon Ball, regardless of the cost.
+  –Prerequisites: Android Race, Tamagami Factor
+  (1)-[Passive]: Increase your Surgency by 1(T).
+  (2)-[Passive]: While Defeated, the first Desperate Effect you use has its Karma Point Cost reduced by 1 (this can reduce it to 0).
+  (3)-[Triggered]: If you are Defeated by an Opponent’s Attacking Maneuver, instead of triggering the 9th effect of Protector of the Dragon Ball, you may make a Skill Clash (using any Skill of your choice) against that Opponent. If you win, you do not trigger the 9th effect of Protector of the Dragon Ball.
+
+---
+
+[passive]
+# (1)
+surgency += 1(T);
+# Not built: (2) - the Desperate Effects and their Karma Point Costs are not in this system yet; (3) - the Tamagami Factor and
+# Protector of the Dragon Ball are not (their texts are waited on).

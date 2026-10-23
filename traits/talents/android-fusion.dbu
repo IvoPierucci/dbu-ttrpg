@@ -1,0 +1,18 @@
+id: android-fusion
+name: Android Fusion
+talentCategory: racial
+race: android
+prerequisites: Android Race
+description: >
+  Integrating the technological components of other Androids, you obtain their abilities for yourself.
+text: >
+  Android Fusion: Integrating the technological components of other Androids, you obtain their abilities for yourself.
+  –Prerequisites: Android Race
+  (1)-[Passive]: You gain access to the Unify Maneuver.
+  (2)-[Passive]: Increase your Racial Life Modifier by 1 for each stack of the Unified Awakening you possess.
+  (3)-[Passive]: When using the Unify Maneuver, you may target up to 2 Androids that are up to 8 Squares away from you if they also possess this option effect, instead of only targeting 1 Android and requiring them to be on an adjacent Square.
+
+---
+
+# Not built: the Unify Maneuver is not in this system yet (its text is waited on, as Namekian Techniques' (2) and Personified
+# Dragon Ball's (3) wait), nor is the Unified Awakening (1)-(3) read. Held, so it can be taken from Progression.

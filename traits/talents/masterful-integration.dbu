@@ -1,0 +1,24 @@
+id: masterful-integration
+name: Masterful Integration
+talentCategory: racial
+race: android
+prerequisites: Android Race, Machine Mutant Factor
+description: >
+  You are able to make the most of the items you’ve Integrated.
+text: >
+  Masterful Integration: You are able to make the most of the items you’ve Integrated.
+  –Prerequisites: Android Race, Machine Mutant Factor
+  (1)-[Triggered, 1/Round]: When making an Attacking Maneuver, you may destroy an Integrated Item to apply an Energy Charge to that Attacking Maneuver.
+  (2)-[Triggered, 1/Encounter]: When you destroy an Integrated Apparel through your own effects, you may apply one of its Apparel Qualities to another applicable Apparel you have Integrated.
+  (3)-[Triggered, 1/Encounter]: When you destroy an Integrated Weapon through your own effects, you may apply one of its Weapon Qualities to another applicable Weapon you have Integrated.
+
+---
+
+[passive]
+# (1) Asked as an Attacking Maneuver is declared, once a Round: which Integrated Item is destroyed - a Weapon broken, Apparel
+# broken, an Accessory gone - for an Energy Charge on it (maneuvers.mjs askMasterfulCharge).
+allow masterful.charge;
+# (2), (3) An Integrated Apparel or Weapon destroyed by your own effect - (1), Furious Flex (2): asked, once an Encounter each,
+# which of its Qualities onto which other Integrated piece of its kind (maneuvers.mjs masterfulMove).
+allow masterful.apparel;
+allow masterful.weapon;
