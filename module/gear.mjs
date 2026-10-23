@@ -1492,7 +1492,18 @@ export function regenerating(items, getTrait) {
 export function wieldedWeapons(items) {
   return (items ?? []).filter(item => (item.type === "gear")
     && (item.system?.crafted?.kind === "weapon") && item.system?.equipped
-    && !item.system?.crafted?.destroyed && !isStored(items, item));
+    && !item.system?.crafted?.destroyed && !isStored(items, item) && !grantorSetAside(items, item));
+}
+
+/**
+ * A Weapon given by a Bestial Trait the Bestial Limit set aside - Claws' (the user's): not in hand while it is, as its giver's
+ * effects are not.
+ */
+function grantorSetAside(items, item) {
+  const list = Array.from(items ?? []);
+  const grantor = list.find(other => other.id === item.flags?.["dbu-ttrpg"]?.grantedBy);
+  const by = grantor?.flags?.["dbu-ttrpg"]?.bestialOff;
+  return Boolean(by) && list.some(other => other.id === by);
 }
 
 /**
