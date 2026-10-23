@@ -1,0 +1,30 @@
+id: will-of-nine-lives
+name: Will of Nine Lives
+talentCategory: racial
+race: neko-majin
+prerequisites: Neko Majin Race
+description: >
+  Like a wily tomcat on the run, you are incredibly difficult to put down for good.
+text: >
+  Will of Nine Lives: Like a wily tomcat on the run, you are incredibly difficult to put down for good.
+  –Prerequisites: Neko Majin Race
+  (1)-[Passive]: While you have an Integrated Majin-Dama, increase the Dice Score of your Steadfast Checks by 1.
+  (2)-[Triggered]: If you use a Healing Surge during your turn, you may stop benefiting from the effects of any Integrated Majin-Dama until the start of your next turn. If you do, increase the amount of Life Points regained by your Surgency.
+  (3)-[Triggered/Threshold, 1/Encounter]: If you have an Integrated Majin-Dama, use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+if (hasIntegratedDama) {
+    steadfast.dice += 1;
+}
+# (2) A Healing Surge on your turn: asked - your Active Integrated Majin-Dama made Inactive till the start of your next turn (Active again
+# then), your Surgency once more on it (chat.mjs takeSurge; combat.mjs beginTurn).
+allow nineLives.surge;
+
+# (3) Knocked through a Health Threshold with an Integrated Majin-Dama: on its card, never Automatic, once an Encounter - a Healing Surge
+# out of sequence.
+[triggered/threshold, 1/encounter, outOfSequence, effect 3]
+requires hasIntegratedDama;
+lionsHeart();

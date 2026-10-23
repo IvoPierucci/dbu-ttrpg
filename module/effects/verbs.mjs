@@ -403,6 +403,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  felineRallyKi: {
+    args: [0, 0],
+    doc: "Feline Rally (2): each Ally on the scene 3(bT) Ki Points (chat.mjs felineRallyKi)."
+  },
+  catBurglarCopy: {
+    args: [0, 0],
+    doc: "Cat Burglar (4): one of the Snatched Opponent's Signature Techniques, Copied as Quick Learner's (chat.mjs catBurglarCopy)."
+  },
   progenitor: {
     args: [0, 0],
     doc: "Namekian Progenitor (2): the Dead Special State, out of the Combat Encounter (chat.mjs progenitor)."

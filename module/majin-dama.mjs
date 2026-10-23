@@ -169,6 +169,8 @@ export function snatchableDama(target) {
   const defeated = Boolean(target?.system?.defeated);
   const sleeping = (Number(target?.system?.conditions?.sleeping) || 0) > 0;
   if (!defeated && !sleeping) return [];
+  // Cat Burglar (2): "Your Majin-Dama cannot be stolen unless you are Defeated."
+  if (!defeated && (target?.system?.effects?.slots?.["catBurglar.dama"] === true)) return [];
   return integratedDama(target.items).map(item => ({ item, defeated, sleeping }));
 }
 

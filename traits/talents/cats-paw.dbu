@@ -1,0 +1,25 @@
+id: cats-paw
+name: Cat’s Paw
+talentCategory: racial
+race: neko-majin
+prerequisites: Neko Majin Race
+description: >
+  Like a mischievous cat, you take your enemies’ energy and use it against them.
+text: >
+  Cat’s Paw: Like a mischievous cat, you take your enemies’ energy and use it against them.
+  –Prerequisites: Neko Majin Race
+  (1)-[Triggered, 1/Round]: If an Opponent within your Melee Range uses an Attacking Maneuver, make a Clash (Cognitive/Morale vs Any Saving Throw of their choice) against them. If you win, increase the Ki Point Cost of that Attacking Maneuver by 1/2 of its Profile’s Ki Point Cost (before any modifications). Then regain Ki Points equal to the increase in Ki Point Cost.
+  (2)-[Triggered, 1/Round]: If an Opponent within your Melee Range uses the Energy Charge Maneuver, make a Clash (Cognitive/Morale vs Any Saving Throw of their choice) against them. If you win, cancel their use of the Energy Charge Maneuver (they regain the Ki Point Cost, but not the Action Cost).
+  (3)-[Triggered, 1/Encounter]: If you win the Clash for the 1st or 2nd effects of Cat’s Paw, you may use the Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, this Attacking Maneuver must be a Copied Technique.
+
+---
+
+[passive]
+# (1) An Opponent in your Melee Range attacking: a button on its card till it is settled, once a Round - the Clash (Cognitive or
+# Morale against any of theirs); won, half its Profile's listed Ki more from them, as much back to you (chat.mjs catsPawButtons).
+allow catsPaw.attack;
+# (2) An Opponent in your Melee Range using the Energy Charge Maneuver: offered on its card, once a Round - the Clash; won, that
+# Energy Charge undone, its Ki given back (use-maneuver.mjs; chat.mjs settleCatsPaw).
+allow catsPaw.charge;
+# (3) Either Clash won: on its card, once an Encounter - a Copied Technique out of sequence.
+allow catsPaw.technique;

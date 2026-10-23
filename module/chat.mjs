@@ -934,6 +934,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.whack && clash.result && !clash.whack.applied) {
     await settleWhack(message, clash);
   }
+  if (clash.catsPaw && clash.result && !clash.catsPaw.applied) await settleCatsPaw(message, clash);
   if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
     await settleCutthroatClash(message, clash);
   }
@@ -9526,7 +9527,14 @@ const CLASH_ROLLS = ({
     // The defender's question alone: the challenger's Skill is named outright by the rule,
     // and there is nothing for them to choose between.
     choose: async (clash, actor) => {
-      const offered = clash.defenderSkills ?? [];
+      // Cat Burglar (3): "If you have to use another Skill for a Clash initiated by an Opponent, you may use your Thievery Skill
+      // instead" - once a Round.
+      const challenger = fromUuidSync(clash.challengerUuid ?? "");
+      const burglar = (actor.uuid === clash.defenderUuid) && (actor.system?.effects?.slots?.["catBurglar.thievery"] === true)
+        && (actor.getFlag?.(SCOPE, "catBurglarRound") !== roundKey()) && challenger
+        && !alliesOnScene(actor).some(ally => ally.uuid === challenger.uuid);
+      const named = (clash.defenderSkills ?? []).length ? clash.defenderSkills : [clash.skill];
+      const offered = (burglar && !named.includes("thievery")) ? [...named, "thievery"] : (clash.defenderSkills ?? []);
       if ((actor.uuid !== clash.defenderUuid) || (offered.length < 2)) return {};
 
       const chosen = await pick(
@@ -9534,10 +9542,11 @@ const CLASH_ROLLS = ({
         "Answer the Clash with which Skill?",
         offered.map(key => ({
           action: key,
-          label: `${skillLabel(actor, key)} ${actor.system.skills[key]?.roll ?? 0}`
+          label: `${skillLabel(actor, key)} ${actor.system.skills[key]?.roll ?? 0}${(burglar && (key === "thievery") && !named.includes("thievery")) ? " (Cat Burglar)" : ""}`
         }))
       );
       if (!chosen) return null;
+      if (burglar && (chosen === "thievery") && !named.includes("thievery")) await requestActorUpdate(actor, { [`flags.${SCOPE}.catBurglarRound`]: roundKey() });
       return { defenderSkill: chosen };
     }
   },
@@ -20726,6 +20735,143 @@ export async function glassSoldiers(actor) {
 }
 
 /**
+ * Cat Burglar (4): "If you win the Clash for the Snatch Special Maneuver against an Opponent, you may select a Signature Technique
+ * they know. It becomes a Copied Technique as if obtained through the 1st effect of Quick Learner." Which, asked - or none.
+ */
+export async function catBurglarCopy(actor, opponentUuid) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const opponent = fromUuidSync(opponentUuid ?? "");
+  const { isBuilt } = await import("./technique.mjs");
+  const techniques = Array.from(opponent?.items ?? []).filter(item => (item.type === "maneuver") && isBuilt(item));
+  if (!techniques.length) return UNSPENT;
+  const id = await askPlayerChoice(actor, `${actor.name}: Cat Burglar - copy one of ${opponent.name}'s Signature Techniques`,
+    [...techniques.map(item => ({ value: item.id, label: item.name })), { value: "none", label: "None" }]);
+  if (!techniques.some(item => item.id === id)) return UNSPENT;
+  return copyTechnique(actor, { actorUuid: opponent.uuid, itemId: id });
+}
+
+/** Feline Rally (2): "all of your Allies regain 3(bT) Ki Points" - each on the scene. */
+export async function felineRallyKi(actor) {
+  const back = 3 * Math.max(1, Number(actor?.system?.baseTierOfPower) || 1);
+  const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated);
+  for (const ally of allies) {
+    const { ki } = ally.system;
+    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
+  }
+  if (allies.length) ui.notifications.info(`Feline Rally: ${allies.map(ally => ally.name).join(", ")} - ${back} Ki Points each.`);
+}
+
+/** Feline Rally (3): "If you use a Surge, all of your Allies may regain Ki Points equal to 1/2 of your Surgency" - asked, once an Encounter. */
+async function felineRallySurge(actor) {
+  if ((actor?.system?.effects?.slots?.["feline.surge"] !== true) || (actor.getFlag?.(SCOPE, "felineSurgeEncounter") === (game.combat?.id ?? "none"))) return;
+  const back = Math.floor((Number(actor.system.surgency) || 0) / 2);
+  const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated);
+  if (!back || !allies.length) return;
+  if ((await askPlayerChoice(actor, `${actor.name}: Feline Rally`,
+    [{ value: "yes", label: `Each Ally ${back} Ki Points (once an Encounter)` }, { value: "no", label: "Not now" }])) !== "yes") return;
+  await actor.setFlag(SCOPE, "felineSurgeEncounter", game.combat?.id ?? "none");
+  for (const ally of allies) {
+    const { ki } = ally.system;
+    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
+  }
+}
+
+/**
+ * Cat's Paw (1): "If an Opponent within your Melee Range uses an Attacking Maneuver, make a Clash (Cognitive/Morale vs Any Saving
+ * Throw of their choice) against them." A button on its card, till it is settled, for whoever plays one holding it - once a Round.
+ */
+function catsPawButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker || !attack.profile) return;
+  const holders = (canvas?.tokens?.placeables ?? []).map(token => token.actor).filter((each, index, all) => each?.isOwner
+    && (all.indexOf(each) === index) && (each.uuid !== attacker.uuid) && !each.system?.defeated
+    && (each.system?.effects?.slots?.["catsPaw.attack"] === true) && (each.getFlag?.(SCOPE, "catsPawAttackRound") !== roundKey())
+    && !alliesOnScene(each).some(ally => ally.uuid === attacker.uuid) && !whyNotWithinMelee(each, attacker, ""));
+  for (const holder of holders) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Cat's Paw - ${holder.name}`;
+    button.dataset.tooltip = "Once a Round: a Clash (Cognitive or Morale against any of theirs) - won, half its Profile's Ki more from them, back to you.";
+    button.addEventListener("click", async () => {
+      if (holder.getFlag?.(SCOPE, "catsPawAttackRound") === roundKey()) return;
+      await holder.setFlag(SCOPE, "catsPawAttackRound", roundKey());
+      await postSaveClash(holder, attacker, { maneuverName: "Cat's Paw", saves: ["cognitive", "morale"],
+        defenderSaves: ["impulsive", "corporeal", "cognitive", "morale"],
+        reason: `Win and ${attack.maneuverName} costs ${attacker.name} more Ki - yours.`,
+        catsPaw: { applied: false, kind: "attack", profile: attack.profile } });
+    });
+    container.append(button);
+  }
+}
+
+/** Cat's Paw (2): "If an Opponent within your Melee Range uses the Energy Charge Maneuver" - offered on its card to whoever holds it. */
+export async function offerCatsPawCharge(card, user, cost) {
+  if (!card || !user) return;
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const holder = token.actor;
+    if (!holder || (holder.uuid === user.uuid) || holder.system?.defeated || (holder.system?.effects?.slots?.["catsPaw.charge"] !== true)) continue;
+    if ((holder.getFlag?.(SCOPE, "catsPawChargeRound") === roundKey()) || alliesOnScene(holder).some(ally => ally.uuid === user.uuid)) continue;
+    if (whyNotWithinMelee(holder, user, "")) continue;
+    requestEdit(card, { type: "offer", offer: { actorUuid: holder.uuid, actorName: holder.name, maneuverId: "",
+      maneuverName: "Cat's Paw - a Clash", reason: `${user.name}'s Energy Charge - undone if you win`,
+      catsPaw: { userUuid: user.uuid, cost: Number(cost) || 0 } } });
+  }
+}
+
+/** Cat's Paw (2), taken from the Energy Charge's card: the Clash. */
+async function takeCatsPaw(message, actor, catsPaw) {
+  if (actor.getFlag?.(SCOPE, "catsPawChargeRound") === roundKey()) return ui.notifications.warn(`${actor.name}: Cat's Paw - already used this Round.`);
+  const user = fromUuidSync(catsPaw?.userUuid ?? "");
+  if (!user) return;
+  await actor.setFlag(SCOPE, "catsPawChargeRound", roundKey());
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return postSaveClash(actor, user, { maneuverName: "Cat's Paw", saves: ["cognitive", "morale"],
+    defenderSaves: ["impulsive", "corporeal", "cognitive", "morale"], reason: `Win and ${user.name}'s Energy Charge is undone.`,
+    catsPaw: { applied: false, kind: "charge", cost: Number(catsPaw.cost) || 0 } });
+}
+
+/**
+ * Cat's Paw's Clash settled. (1) won: "increase the Ki Point Cost of that Attacking Maneuver by 1/2 of its Profile's Ki Point Cost
+ * (before any modifications). Then regain Ki Points equal to the increase" - taken from them, given to you. (2) won: "cancel their use
+ * of the Energy Charge Maneuver (they regain the Ki Point Cost, but not the Action Cost)". (3), either won: a Copied Technique out of
+ * sequence on this card, once an Encounter.
+ */
+async function settleCatsPaw(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, catsPaw: { ...clash.catsPaw, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Cat's Paw: nothing taken.");
+  const holder = fromUuidSync(clash.challengerUuid);
+  const other = fromUuidSync(clash.defenderUuid);
+  if (!holder || !other) return;
+  if (clash.catsPaw.kind === "attack") {
+    const { profileListedKiCost } = await import("./maneuvers.mjs");
+    const more = Math.floor(profileListedKiCost(clash.catsPaw.profile, other) / 2);
+    const taken = Math.min(more, Number(other.system.ki?.value) || 0);
+    await requestActorUpdate(other, { "system.ki.value": (Number(other.system.ki?.value) || 0) - taken });
+    const { ki } = holder.system;
+    await requestActorUpdate(holder, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + more) });
+    await settledNote(message, `Cat's Paw: ${other.name}'s attack costs ${more} Ki more; ${holder.name} regains ${more}.`);
+  }
+  else {
+    const charges = Number(other.system.charging?.charges) || 0;
+    if (charges > 1) await requestActorUpdate(other, { "system.charging.charges": charges - 1 });
+    else if (charges === 1) await (await import("./use-maneuver.mjs")).cancelCharge(other);
+    const cost = Number(clash.catsPaw.cost) || 0;
+    if (cost) {
+      const { ki } = other.system;
+      await requestActorUpdate(other, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + cost) });
+    }
+    await settledNote(message, `Cat's Paw: ${other.name}'s Energy Charge is undone${cost ? ` - ${cost} Ki back, not the Action` : ""}.`);
+  }
+  // (3): a Copied Technique, out of sequence, once an Encounter.
+  if ((holder.system?.effects?.slots?.["catsPaw.technique"] === true) && (holder.getFlag?.(SCOPE, "catsPawTechniqueEncounter") !== (game.combat?.id ?? "none"))) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: holder.uuid, actorName: holder.name, maneuverId: "signature-technique",
+      maneuverName: "Signature Technique (a Copied one)", reason: "Cat's Paw - once an Encounter", technique: { via: "", copied: true },
+      grants: { catsPawTechnique: true } } });
+  }
+}
+
+/**
  * Namekian Progenitor (2): "Die and leave the Combat Encounter. After the Combat Encounter ends, create a new Character of the
  * Namekian Race to be your Character going forward" - the Dead Special State, out of the Encounter; the new Character the table's.
  */
@@ -22106,6 +22252,11 @@ async function takeTechniqueOffer(message, actor, offer) {
     ui.notifications.warn("Feline Build has been used this Combat Round.");
     return;
   }
+  // Cat's Paw (3)'s, once an Encounter.
+  if (offer.grants?.catsPawTechnique && (actor.getFlag?.(SCOPE, "catsPawTechniqueEncounter") === (game.combat?.id ?? "none"))) {
+    ui.notifications.warn(`${actor.name}: Cat's Paw - already used this Combat Encounter.`);
+    return;
+  }
   // Perfect Mimicry (2)'s, once an Encounter.
   if (offer.grants?.perfectMimicry && (actor.getFlag?.(SCOPE, "perfectMimicryEncounter") === (game.combat?.id ?? "none"))) {
     ui.notifications.warn(`${actor.name}: Perfect Mimicry - already used this Combat Encounter.`);
@@ -22143,6 +22294,7 @@ async function takeTechniqueOffer(message, actor, offer) {
   if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   if (used && offer.grants?.feline) await requestActorUpdate(actor, { [`flags.${SCOPE}.felineRound`]: roundKey() });
   if (used && offer.grants?.perfectMimicry) await actor.setFlag(SCOPE, "perfectMimicryEncounter", game.combat?.id ?? "none");
+  if (used && offer.grants?.catsPawTechnique) await actor.setFlag(SCOPE, "catsPawTechniqueEncounter", game.combat?.id ?? "none");
   return used;
 }
 
@@ -22268,6 +22420,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.varietyGrab) return takeVarietyGrab(message, actor, offer.varietyGrab);
   if (offer.watchful) return takeWatchful(message, actor, offer.watchful);
   if (offer.mysticalGaze) return takeMysticalGaze(message, actor, offer);
+  if (offer.catsPaw) return takeCatsPaw(message, actor, offer.catsPaw);
   if (offer.healingSurge) return takeHealingSurge(message, actor);
   // Perfect Mimicry (2) with a copied Unique Ability: it, out of sequence, once an Encounter.
   if (offer.perfectMimicryItem) {
@@ -31448,6 +31601,20 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     const answered = await fireMoment(actor, "healing-surge", {}, { quiet: true });
     if (answered?.slots?.surgency) surgency = applySlot(answered.slots, "surgency", surgency);
 
+    // Will of Nine Lives (2): on your turn - an Active Integrated Majin-Dama put aside till the start of your next, your Surgency once more.
+    if ((actor.system.effects?.slots?.["nineLives.surge"] === true) && (game.combat?.combatant?.actor?.uuid === actor.uuid)) {
+      const { integratedDama } = await import("./majin-dama.mjs");
+      const active = integratedDama(actor.items).filter(item => item.system?.equipped);
+      const more = Number(actor.system.surgency) || 0;
+      if (active.length && ((await askPlayerChoice(actor, `${actor.name}: Will of Nine Lives`,
+        [{ value: "yes", label: `Majin-Dama put aside till your next turn - Surgency (${more}) more Life` },
+          { value: "no", label: "No" }])) === "yes")) {
+        await actor.updateEmbeddedDocuments("Item", active.map(item => ({ _id: item.id, "system.equipped": false })));
+        await actor.setFlag(SCOPE, "nineLivesDama", active.map(item => item.id));
+        surgency += more;
+      }
+    }
+
     // A Healing Surge of its own size where an effect names one - Divine Breathing's "5d10(bT)", still "a Healing Surge
     // for effects" with Surgency, so what adds to one adds to it.
     const dice = (dicePerBaseTier > 0)
@@ -31502,6 +31669,8 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
       flavor: `${source} - Healing Surge${(multiplier > 1) ? ` x${multiplier}` : ""} - ${restored} Life Points restored`
     });
     if (crossedUp) await answerFor(actor, "surge-threshold");
+    // Feline Rally (3).
+    await felineRallySurge(actor);
     return true;
   }
 
@@ -31530,6 +31699,8 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   });
   // What answers a Ki Surge - Never Surrender's, through the Surge Maneuver.
   await answerFor(actor, "ki-surge", { surgeManeuver: viaManeuver === "surge" });
+  // Feline Rally (3).
+  await felineRallySurge(actor);
   return true;
 }
 
@@ -32193,6 +32364,8 @@ function renderAttack(message, html) {
   if (!result?.wound) partyButtons(message, attack, container);
   // Telepathic Teamwork (2): an Ally's attack - 1(T) on its Strike, its Wound too at one Studied - before the Strike is rolled.
   if (!result) telepathicTeamworkButtons(message, attack, container);
+  // Cat's Paw (1): an Opponent in your Melee Range attacking - the Clash, before it is settled.
+  if (!result?.wound) catsPawButtons(message, attack, container);
   // Balanced Defender (2): targeted - Ki for the Defense Value and Soak Value, before it is settled.
   if (!result) balancedButtons(message, attack, container);
   // Spiritual Warrior (3): your Bonded Ally's attack - the Basic Attack at the same Opponent.

@@ -1,0 +1,29 @@
+id: cat-burglar
+name: Cat Burglar
+talentCategory: racial
+race: neko-majin
+prerequisites: Neko Majin Race, 2+ Skill Ranks in Thievery
+description: >
+  With feline grace and incredible reflexes, your nimble-fingered antics go more easily unnoticed.
+text: >
+  Cat Burglar: With feline grace and incredible reflexes, your nimble-fingered antics go more easily unnoticed.
+  –Prerequisites: Neko Majin Race, 2+ Skill Ranks in Thievery
+  (1)-[Passive]: Increase the Skill Bonus of your Thievery by 1.
+  (2)-[Passive]: Your Majin-Dama cannot be stolen unless you are Defeated.
+  (3)-[Triggered, 1/Round]: If you have to use another Skill for a Clash initiated by an Opponent, you may use your Thievery Skill instead.
+  (4)-[Triggered, 1/Encounter]: If you win the Clash for the Snatch Special Maneuver against an Opponent, you may select a Signature Technique they know. It becomes a Copied Technique as if obtained through the 1st effect of Quick Learner.
+
+---
+
+[passive]
+# (1)
+skill.thievery += 1;
+# (2) Not Snatched while you are Sleeping - Defeated only (majin-dama.mjs snatchableDama).
+allow catBurglar.dama;
+# (3) A Skill Clash an Opponent opened: Thievery among what you may answer it with, once a Round (chat.mjs).
+allow catBurglar.thievery;
+
+# (4) The Snatch's Clash won (snatch-won): which of their Signature Techniques, asked - Copied, as Quick Learner (1)'s, once an Encounter
+# (chat.mjs catBurglarCopy). Automatic by default, its Triggered/Automatic button.
+[triggered/snatch-won, 1/encounter, effect 4]
+catBurglarCopy();

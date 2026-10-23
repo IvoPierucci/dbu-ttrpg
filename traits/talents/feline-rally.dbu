@@ -1,0 +1,27 @@
+id: feline-rally
+name: Feline Rally
+talentCategory: racial
+race: neko-majin
+prerequisites: Neko Majin Race
+description: >
+  You broadcast your energy to your allies, giving them a portion of your power.
+text: >
+  Feline Rally: You broadcast your energy to your allies, giving them a portion of your power.
+  –Prerequisites: Neko Majin Race
+  (1)-[Passive]: Increase the Surgency of all your Allies by 1(T).
+  (2)-[Triggered/Start of Turn]: While you have an Integrated Majin-Dama, all of your Allies regain 3(bT) Ki Points.
+  (3)-[Triggered, 1/Encounter]: If you use a Surge, all of your Allies may regain Ki Points equal to 1/2 of your Surgency.
+
+---
+
+[passive]
+# (1) Read by each Ally on the scene: 1(T), yours - the best of those holding it (actor-character.mjs).
+allow feline.surgency;
+# (3) A Surge of yours: asked, once an Encounter - half your Surgency in Ki to each Ally (chat.mjs takeSurge).
+allow feline.surge;
+
+# (2) Your turn begins with an Integrated Majin-Dama: each Ally on the scene 3(bT) Ki (chat.mjs felineRallyKi). Automatic by default, its
+# Triggered/Automatic button.
+[triggered/start-of-turn, effect 2]
+requires hasIntegratedDama;
+felineRallyKi();

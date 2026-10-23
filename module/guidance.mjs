@@ -83,3 +83,8 @@ export function alliesWithin(actor, slot, gap) {
     .map(token => [token.actor.uuid, token.actor])).values()]
     .filter(holder => !holder.system?.defeated && (holder.system?.effects?.slots?.[slot] === true) && withinGuidance(holder, actor, gap));
 }
+
+/** The Allies of `actor` on the scene, not Defeated, holding `slot` - wherever they stand (Feline Rally's "all of your Allies"). */
+export function alliesHolding(actor, slot) {
+  return alliesWithin(actor, slot, Infinity);
+}

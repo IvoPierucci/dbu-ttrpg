@@ -1,6 +1,6 @@
 const { fields } = foundry.data;
 
-import { bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
+import { alliesHolding, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
@@ -2471,10 +2471,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Attendant's Focus (2): "All Allies within your Guidance Range have their Surgency increased by 2(T)" - read off whoever holds
     // it, their 2(T), the best of those reaching this one.
     const attending = this.parent ? guidingAllies(this.parent, "attendant.surgency", { range: true }) : [];
-    const attendant = attending.length ? 2 * Math.max(1, bestTier(attending)) : 0;
+    // Feline Rally (1): "Increase the Surgency of all your Allies by 1(T)" - anywhere on the scene.
+    const rallying = this.parent ? alliesHolding(this.parent, "feline.surgency") : [];
+    const attendant = (attending.length ? 2 * Math.max(1, bestTier(attending)) : 0) + (rallying.length ? Math.max(1, bestTier(rallying)) : 0);
     this.surgency = withEffects(this, "surgency", (atts[surgencyFrom[0]]?.mod ?? 0) + surgencyBelow.value + attendant, {
       parts: [{ label: surgencyFrom[1], value: atts[surgencyFrom[0]]?.mod ?? 0 }, ...surgencyBelow.parts,
-        ...(attendant ? [{ label: "Attendant's Focus", value: attendant }] : [])]
+        ...(attendant ? [{ label: attending.length ? (rallying.length ? "Attendant's Focus, Feline Rally" : "Attendant's Focus") : "Feline Rally", value: attendant }] : [])]
     });
 
     // Awareness: Insight Modifier, added to Strike Rolls.

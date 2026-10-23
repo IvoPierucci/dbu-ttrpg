@@ -4844,6 +4844,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await (await import("./chat.mjs")).terrifyingTechniqueOffer(card, actor);
     // Practiced Charger (2): every Action this turn on it - the Energy Charge Maneuver out of sequence, on this card.
     (await import("./chat.mjs")).offerPracticedCharger(card, actor);
+    // Cat's Paw (2): an Opponent in their Melee Range - the Clash offered on this card, once a Round.
+    await (await import("./chat.mjs")).offerCatsPawCharge(card, actor, maneuverKiCost(maneuver, null, actor));
     return true;
   }
 

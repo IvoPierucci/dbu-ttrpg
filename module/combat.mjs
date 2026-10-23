@@ -383,6 +383,13 @@ async function beginTurn(actor) {
   await (await import("./chat.mjs")).spectatorTurnStart(actor);
   // "It's Up to You, Now." (a Desperation Effect): a Defeated Ally's - Entrusted as the turn begins.
   if (!actor.system.defeated) await (await import("./desperation.mjs")).itsUpToYou(actor);
+  // Will of Nine Lives (2): the Majin-Dama put aside "until the start of your next turn" - Active again.
+  const putAside = actor.getFlag?.("dbu-ttrpg", "nineLivesDama");
+  if (putAside) {
+    await actor.unsetFlag("dbu-ttrpg", "nineLivesDama");
+    const back = putAside.map(id => actor.items.get(id)).filter(Boolean).map(item => ({ _id: item.id, "system.equipped": true }));
+    if (back.length) await actor.updateEmbeddedDocuments("Item", back);
+  }
   // Swaggering Wager (2): what (1) chose ended with the edge above - its Swagger, before (1) is asked again.
   await (await import("./chat.mjs")).swaggerEnds(actor);
   // Galaxy at the Brink (3): Greed of the Hera's 7th ignored and a Ki Surge - asked before the Moment it would answer.

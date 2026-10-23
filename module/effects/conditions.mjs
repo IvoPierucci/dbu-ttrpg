@@ -429,6 +429,9 @@ const PREDICATES = {
     && (item.system?.crafted?.kind === "apparel") && item.system?.equipped && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true)),
   // A Combat Encounter running.
   inCombat: () => Boolean(globalThis.game?.combat?.started),
+  // "While you have an Integrated Majin-Dama".
+  hasIntegratedDama: scope => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
+    && (item.system?.gearId === "majin-dama") && (item.system?.integrated === true)),
   // A Combat Condition put on an Opponent this Combat Encounter - kept on whoever put it as it is (chat.mjs conditionGained).
   inflictedThisEncounter: scope => Boolean(globalThis.game?.combat?.started)
     && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "inflictedEncounter") === globalThis.game.combat.id),
