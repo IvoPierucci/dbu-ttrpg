@@ -14463,6 +14463,17 @@ async function takeBagOfTricks(message, actor) {
 }
 
 /**
+ * Steady Momentum (2): "gain 1 Action. Any Actions gained by this effect remain until the end of your turn or the end of the Combat
+ * Round (whichever happens last)" - this Round's, kept with it (actor-character.mjs).
+ */
+export async function steadyAction(actor) {
+  if (!actor || !game.combat?.started) return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  const held = actor.getFlag?.(SCOPE, "steadyActions");
+  const count = (held?.round === roundKey()) ? (Number(held.n) || 0) : 0;
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.steadyActions`]: { round: roundKey(), n: count + 1 } });
+}
+
+/**
  * Undying Determination (2): "Set your Life Points to 1 higher than their minimum value. Then, until the end of your next turn,
  * your Life Points cannot be reduced below that value and you may ignore all Health Threshold penalties." Its mark on your clock
  * till the end of your next turn; the Life Points held by it (dbu-ttrpg.mjs).

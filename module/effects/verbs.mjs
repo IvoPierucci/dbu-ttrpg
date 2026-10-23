@@ -170,6 +170,10 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  steadyAction: {
+    args: [0, 0],
+    doc: "Steady Momentum (2): an Action more this Combat Round (chat.mjs steadyAction)."
+  },
   undyingDetermination: {
     args: [0, 0],
     doc: "Undying Determination (2): Life Points 1 above their least, held there, no Threshold penalties till the end of your "

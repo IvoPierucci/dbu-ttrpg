@@ -1,0 +1,23 @@
+id: steady-momentum
+name: Steady Momentum
+talentCategory: threshold
+prerequisites: 3+ Threshold Talents
+description: >
+  You thrive on the give and take of battle- so much so that taking damage actually fuels your drive to win.
+text: >
+  Steady Momentum: You thrive on the give and take of battle- so much so that taking damage actually fuels your drive to win.
+  –Prerequisites: 3+ Threshold Talents
+  (1)-[Passive]: Increase your Wound Rolls and Soak Value by 1(bT) while your Life Points are below the Bruised Health Threshold and you are not suffering from any Health Threshold Penalties.
+  (2)-[Triggered/Threshold]: If you succeed at the Steadfast Check for this Health Threshold, gain 1 Action. Any Actions gained by this effect remain until the end of your turn or the end of the Combat Round (whichever happens last).
+
+---
+
+[passive]
+# (1) Below Bruised - Bruised, Injured or Critical - and no Health Threshold penalty, read once the Thresholds are settled
+# (actor-character.mjs steadyMomentum).
+allow steadyMomentum.bonus;
+
+# (2) A Steadfast Check for a Health Threshold passed (the `steadfast-passed` Moment): an Action more, this Combat Round's
+# (chat.mjs steadyAction). Automatic by default, its Triggered/Automatic button.
+[triggered/steadfast-passed, effect 2]
+steadyAction();

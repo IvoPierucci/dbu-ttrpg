@@ -179,6 +179,14 @@ function recordWorkings(data, key, { slot: slotKey = key, base, parts, raw, valu
   };
 }
 
+/** Steady Momentum (2): the Actions it gave this Combat Round - kept on the character's flag with the Round they are of. */
+function steadyActionsNow(data) {
+  const held = data.parent?.flags?.["dbu-ttrpg"]?.steadyActions;
+  const combat = globalThis.game?.combat;
+  if (!held || !combat?.started) return 0;
+  return (held.round === `${combat.id}:${combat.round ?? 0}`) ? Math.max(0, Number(held.n) || 0) : 0;
+}
+
 /**
  * Data model for the "character" Actor type in the DBU TTRPG system.
  * Based on the Attributes rules from https://dbu-rpg.com/attributes/
@@ -2271,7 +2279,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // Celestial Potential's Counter Actions made Actions.
         + (Number(this.actionsSpent?.fromCounter) || 0)
         // Brawler (1): "Gain an additional Action each Combat Round while Pinned" - past Pinned's one.
-        + ((((Number(this.conditions?.pinned) || 0) > 0) && (this.effects.slots["brawler.pinnedAction"] === true)) ? 1 : 0)),
+        + ((((Number(this.conditions?.pinned) || 0) > 0) && (this.effects.slots["brawler.pinnedAction"] === true)) ? 1 : 0)
+        // Steady Momentum (2): this Combat Round's.
+        + steadyActionsNow(this)),
       // "You cannot gain more than 6 Counter Actions in a single Combat Round."
       counter: Math.min(DBUCharacterData.MAX_COUNTER_ACTIONS, Math.max(0, withEffects(this, "actions.counter",
         DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter))
@@ -2696,6 +2706,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.threshold.penalty = Math.max(0,
       withEffects(this, "threshold.penalty", this.threshold.penalty));
 
+    // Steady Momentum (1): "while your Life Points are below the Bruised Health Threshold and you are not suffering from any Health
+    // Threshold Penalties" - now both are known: the Soak Value raised here, its line on the hover; the Wound below.
+    this.steadyMomentum = ((this.effects?.slots?.["steadyMomentum.bonus"] === true)
+      && ["bruised", "injured", "critical"].includes(this.threshold.key) && !this.threshold.penalty) ? this.baseTierOfPower : 0;
+    if (this.steadyMomentum) {
+      this.soakValue += this.steadyMomentum;
+      const told = this.effects.workings?.soakValue;
+      if (told) {
+        told.parts = [...(told.parts ?? []), { label: "Steady Momentum", value: this.steadyMomentum }];
+        told.value = this.soakValue;
+      }
+    }
+
     // Stress Bonus. A Stress Test is 1d10 plus this, so it is not what the Test is
     // measured against - it is the Test, above the die. Each Steadfast failure takes 1
     // off it, Determination adds to it, and Vile Weather takes 1(WT).
@@ -2792,9 +2815,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         Object.entries(DBUCharacterData.FOUNDATIONS)
           .map(([key, foundation]) =>
             [key, ownFoundation(this, `wound.${key}`, withEffects(this, "wound", atts[foundation.attribute].mod
-              + perThreshold(this, "wound").value, {
+              + perThreshold(this, "wound").value + (this.steadyMomentum ?? 0), {
               as: `wound.${key}`,
-              parts: [...perThreshold(this, "wound").parts, {
+              parts: [...perThreshold(this, "wound").parts,
+                ...(this.steadyMomentum ? [{ label: "Steady Momentum", value: this.steadyMomentum }] : []), {
                 // The Damage Attribute this Foundation names, by name: a Wound Roll of
                 // 7 says nothing about which Attribute it came from, and that is the
                 // first thing anybody asks of it.
