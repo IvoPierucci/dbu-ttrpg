@@ -4513,7 +4513,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
                                                     outOfSequence = false, targetUuid = "",
                                                     presetThrown = null, volleyball = null, meteor = "",
                                                     portal = false, combo = false, spiritSword = null,
-                                                    extraTargets = [] } = {}) {
+                                                    extraTargets = [], armedAs = "", extraCharges = 0 } = {}) {
   if (!actor || !maneuver) return false;
   // A Maneuver of your own in sequence: a Counter Maneuver used before has run its course.
   if (!outOfSequence) await (await import("./chat.mjs")).endCounterBoost(actor);
@@ -5175,7 +5175,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         ...(lent ? { weapon: { ...lent, meleeRange: (Number(lent.meleeRange) || 0) + (Number(spiritSword.reach) || 0) } } : {}),
         ...(spiritSword.area ? { area: { shape: spiritSword.area } } : {}) };
     }
-    else if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted && !maneuver.buddyAttack) {
+    else if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted && !maneuver.buddyAttack && (armedAs !== "unarmed")) {
       const chosen = await askWeapon(actor, declared);
       if (chosen === null) return false;
       weaponItem = chosen?.item ?? null;
@@ -5191,6 +5191,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         declared = { ...declared, damageAttribute: { label: "Scholarship Modifier",
           value: actor.system.attributes?.scholarship?.mod ?? 0 } };
       }
+    }
+
+    // Variable Champion (2)'s: "that Attacking Maneuver must be Armed".
+    if ((armedAs === "armed") && (!declared?.weapon || declared.weapon.unarmed)) {
+      ui.notifications.warn(`${maneuver.name}: it must be an Armed Attack.`);
+      return false;
     }
 
     // Elemental Blade, and whose Square effect a two-Profile attack carries.
@@ -6419,7 +6425,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     : (atFeature && declared)
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
-    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges: charges + momentCharges,
+    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges: charges + momentCharges + (Number(extraCharges) || 0),
         ...(volleyball ? { volleyball } : {}),
         ...(portal ? { portal: true } : {}), ...(spiritSword ? { spiritSword } : {}),
         ...(extraTargets.length ? { extraTargets: [...(declared.extraTargets ?? []), ...extraTargets] } : {}) },
@@ -6994,7 +7000,8 @@ export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}
  */
 export async function useTechnique(actor, itemId, { atFeature = false, via = "", outOfSequence = false,
                                                   targetUuid = "", presetThrown = null, volleyball = null,
-                                                  meteor = "", spiritSword = null, extraTargets = [] } = {}) {
+                                                  meteor = "", spiritSword = null, extraTargets = [],
+                                                  armedAs = "", extraCharges = 0 } = {}) {
   const door = actor?.items?.find(item => (item.type === "maneuver") && item.system.signatureTechnique);
   if (!door) {
     ui.notifications.warn(`${actor?.name ?? "This character"} has no Signature Technique Maneuver. `
@@ -7002,7 +7009,7 @@ export async function useTechnique(actor, itemId, { atFeature = false, via = "",
     return false;
   }
   return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via, outOfSequence,
-    targetUuid, presetThrown, volleyball, meteor, spiritSword, extraTargets });
+    targetUuid, presetThrown, volleyball, meteor, spiritSword, extraTargets, armedAs, extraCharges });
 }
 
 /**

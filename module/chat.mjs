@@ -14569,16 +14569,21 @@ export async function variableFighter(actor, armed) {
 }
 
 /**
- * Variable Fighter: (1) an Unarmed Attack's Strike while a Weapon is wielded; (2) the Wound of the kind its mark names.
+ * Variable Fighter: (1) an Unarmed Attack's Strike while a Weapon is wielded; (2) the Wound of the kind its mark names. Variable
+ * Champion (1): an Armed Attack's Strike while only 1 Weapon is wielded.
  */
 function variableParts(attacker, attack, roll) {
   if (!attacker || !attack) return [];
   const armed = Boolean(attack.weapon && !attack.weapon.unarmed);
   const tier = Math.max(1, Number(attacker.system?.tierOfPower) || 1);
   if (roll === "strike") {
-    const add = Number(attacker.system?.effects?.slots?.["strike.unarmedWielding"]?.add) || 0;
-    return (!armed && add && wieldedWeapons(Array.from(attacker.items ?? [])).length)
-      ? [{ label: "Variable Fighter (Unarmed)", value: add }] : [];
+    const slots = attacker.system?.effects?.slots ?? {};
+    const wielded = wieldedWeapons(Array.from(attacker.items ?? [])).length;
+    const add = Number(slots["strike.unarmedWielding"]?.add) || 0;
+    // Variable Champion (1): "While you are only wielding 1 Weapon" - an Armed Attack's.
+    const single = Number(slots["strike.armedSingle"]?.add) || 0;
+    return [...((!armed && add && wielded) ? [{ label: "Variable Fighter (Unarmed)", value: add }] : []),
+      ...((armed && single && (wielded === 1)) ? [{ label: "Variable Champion (1 Weapon)", value: single }] : [])];
   }
   const key = armed ? "variable-armed-mark" : "variable-unarmed-mark";
   return ((Number(attacker.system?.conditions?.[key]) || 0) > 0)
@@ -18334,6 +18339,24 @@ function offerRebuke(message, actor, attacker) {
  * counted when one is taken.
  */
 /**
+ * Variable Champion (2): "If you hit the Opponent with an Armed Attack or an Unarmed Attack, use the Basic Attack Maneuver or
+ * Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, that Attacking Maneuver must be Armed (if you used an
+ * Unarmed Attack) or Unarmed (if you used an Armed Attack) and it gains an Energy Charge." Both on the attack's card, once an
+ * Encounter - either spends it (takeOutOfSequence).
+ */
+function offerVariableChampion(message, actor, armed) {
+  if (!message || actor.system?.defeated || (actor.system?.effects?.slots?.["variableChampion.strike"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "variableChampionEncounter") === (game.combat?.id ?? "none")) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.variableChampion && (offer.actorUuid === actor.uuid))) return;
+  const at = { actorUuid: actor.uuid, actorName: actor.name,
+    reason: `Variable Champion - it must be ${armed ? "Unarmed" : "Armed"}; an Energy Charge more`,
+    grants: { variableChampion: true, charges: 1, ...(armed ? { unarmed: true } : { armedOnly: true }) } };
+  requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "basic-attack", maneuverName: "Basic Attack" } });
+  requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "signature-technique", maneuverName: "Signature Technique",
+    technique: { via: "", any: true } } });
+}
+
+/**
  * Weapon Master (2): "If you deal Damage to an Opponent with an Armed Attack, you may use the Basic Attack Maneuver as an
  * Out-of-Sequence Maneuver. If you do, that Attacking Maneuver must be an Armed Attack." On the attack's card, once - its limits
  * counted when taken.
@@ -21218,7 +21241,10 @@ async function takeTechniqueOffer(message, actor, offer) {
   }
   const { useTechnique } = await import("./use-maneuver.mjs");
   const used = await useTechnique(actor, chosen.id, { via: offer.technique.via ?? "",
-    outOfSequence: true, targetUuid: offer.targetUuid ?? "" });
+    outOfSequence: true, targetUuid: offer.targetUuid ?? "",
+    // Variable Champion (2)'s: Armed or Unarmed, and an Energy Charge.
+    armedAs: offer.grants?.armedOnly ? "armed" : offer.grants?.unarmed ? "unarmed" : "",
+    extraCharges: Number(offer.grants?.charges) || 0 });
   if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   if (used && offer.grants?.feline) await requestActorUpdate(actor, { [`flags.${SCOPE}.felineRound`]: roundKey() });
   if (used && offer.grants?.perfectMimicry) await actor.setFlag(SCOPE, "perfectMimicryEncounter", game.combat?.id ?? "none");
@@ -21291,6 +21317,14 @@ async function takeOutOfSequence(message, actor, offer) {
     && (fromUuidSync(offer.grants.powerGifterFrom)?.getFlag?.(SCOPE, "powerGifterRound") === roundKey())) {
     ui.notifications.warn("Power Gifter - already used this Combat Round.");
     return null;
+  }
+  // Variable Champion (2)'s, once an Encounter - either of the two its card offered.
+  if (offer.grants?.variableChampion) {
+    if (actor.getFlag?.(SCOPE, "variableChampionEncounter") === (game.combat?.id ?? "none")) {
+      ui.notifications.warn(`${actor.name}: Variable Champion - already used this Combat Encounter.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "variableChampionEncounter", game.combat?.id ?? "none");
   }
   // Last Ditch Effort (2)'s, once an Encounter - either of the two its card offered.
   if (offer.grants?.lastDitch) {
@@ -25190,6 +25224,8 @@ async function answerHit(message, attack, attacker, struck) {
     glass: [attack.profile, ...extraProfilesOf(attack)].includes("glass"), struck: struck.map(entry => entry.uuid),
     // Parasitic Biology (3): the Revenge Points spent on it.
     revengeSpent: Number(attack.revengeSpentDone) || 0 });
+  // Variable Champion (2): the other kind of attack, out of sequence - on this card.
+  offerVariableChampion(message, attacker, armedHit);
   answer.pressure = answered?.slots?.["wound.pressure"] === true;
   answer.pressureMost = answered?.slots?.["wound.pressureMost"] === true;
   if (answered?.slots?.["wound.oblivious"] === true) {

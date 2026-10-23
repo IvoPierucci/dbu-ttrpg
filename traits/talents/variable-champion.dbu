@@ -1,0 +1,20 @@
+id: variable-champion
+name: Variable Champion
+talentCategory: weapon
+prerequisites: Variable Fighter, ToP3+
+description: >
+  Your fighting style has evolved, allowing you to seamlessly combine your Armed and Unarmed Attacks.
+text: >
+  Variable Champion: Your fighting style has evolved, allowing you to seamlessly combine your Armed and Unarmed Attacks.
+  –Prerequisites: Variable Fighter, ToP3+
+  (1)-[Passive]: While you are only wielding 1 Weapon, increase the Strike Rolls of your Armed Attacks by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you hit the Opponent with an Armed Attack or an Unarmed Attack, use the Basic Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, that Attacking Maneuver must be Armed (if you used an Unarmed Attack) or Unarmed (if you used an Armed Attack) and it gains an Energy Charge.
+
+---
+
+[passive]
+# (1) A single Weapon wielded: an Armed Attack's Strike (chat.mjs variableParts).
+strike.armedSingle += 1(T);
+# (2) An Opponent hit: the Basic Attack or a Signature Technique out of sequence, offered on its card - Armed after an Unarmed
+# Attack, Unarmed after an Armed one, an Energy Charge more; once an Encounter (chat.mjs offerVariableChampion).
+allow variableChampion.strike;
