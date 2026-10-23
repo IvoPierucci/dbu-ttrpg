@@ -3469,3 +3469,16 @@
 .dbu-respond-option.dbu-ua-search .gear-quality-list[hidden] {
   display: none;
 }
+
+/* The Life Points card's Defeated toggle: on while Defeated; clicked, back up. */
+.dbu-ttrpg .resource-card > label .dbu-defeated-toggle {
+  margin-left: 0.4em;
+  padding: 0 0.4em;
+  font-size: 0.8em;
+  line-height: 1.4;
+  border-radius: 3px;
+  background: var(--color-level-error, #b33);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}

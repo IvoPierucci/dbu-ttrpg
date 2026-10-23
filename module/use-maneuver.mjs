@@ -5263,8 +5263,6 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askTwinWeapon(actor, declared, maneuver);
     // Masterful Integration (1): an Integrated Item destroyed for an Energy Charge - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askMasterfulCharge(actor, declared);
-    // "Now's Your Chance!" (a Desperation Effect): a Defeated Ally's Ki on its Wound Roll.
-    declared = await (await import("./desperation.mjs")).nowsYourChance(actor, declared);
     // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, targetActor);
     // Profile Focus (2): its Profile's attack - both rolls a Critical Result, asked once an Encounter.

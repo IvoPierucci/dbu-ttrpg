@@ -45,7 +45,12 @@
 
     <div class="header-pools">
       <div class="resource-card resource-life">
-        <label>Life Points</label>
+        <label>Life Points
+          {{#if system.defeated}}
+          <button type="button" class="dbu-defeated-toggle" data-action="toggleDefeated"
+                  data-tooltip="Defeated - on as you fall, off with Will to Survive. Click: back up (Life to 1 above the least), Will to Survive neither spent nor needed.">Defeated</button>
+          {{/if}}
+        </label>
         <div class="resource-values">
           <input type="number" name="system.life.value" value="{{system.life.value}}" min="0"/>
           <span class="resource-sep">/</span>

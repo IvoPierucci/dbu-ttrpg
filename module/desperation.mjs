@@ -121,24 +121,23 @@ export async function bringOutYourPower(ally) {
   }
 }
 
-/** "Now's Your Chance!": an Ally's Attacking Maneuver declared - Ki up to half their Max Capacity, as much on its Wound Roll. */
-export async function nowsYourChance(ally, declared) {
-  if (!declared) return declared;
-  const { alliesOnScene } = await import("./chat.mjs");
-  for (const holder of desperationHolders(ally, "your-chance", alliesOnScene)) {
-    const most = Math.min(Number(holder.system?.ki?.value) || 0, Math.floor((Number(holder.system?.capacity?.max) || 0) / 2));
-    if (most <= 0) continue;
-    const { askPlayerAmount, requestActorUpdate } = await import("./chat.mjs");
-    const effect = desperationEffect("your-chance");
-    const ki = Math.min(most, await askPlayerAmount(holder,
-      `${holder.name}: ${effect.name} (${desperationCost(holder, effect)} Karma) - ${ally.name}'s attack`, most,
-      "Ki Points - as much on its Wound Roll (0: not used)"));
-    if (!(ki > 0) || !await payDesperation(holder, "your-chance")) continue;
-    await requestActorUpdate(holder, { "system.ki.value": (Number(holder.system.ki?.value) || 0) - ki,
-      "system.capacity.spent": (Number(holder.system.capacity?.spent) || 0) + ki });
-    return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: `Now's Your Chance! (${holder.name})`, value: ki }] };
-  }
-  return declared;
+/**
+ * "Now's Your Chance!": "When an Ally makes an Attacking Maneuver, you may spend Ki Points up to 1/2 of your Max Capacity to increase
+ * the Wound Roll of that Attacking Maneuver by an equal amount." A button on its card till its Wound Roll is made, for whoever
+ * plays a Defeated Ally of its maker (the user's) - how much, asked; the Wound's row for it.
+ */
+export async function nowsYourChance(message, attack, holder) {
+  const effect = desperationEffect("your-chance");
+  const most = Math.min(Number(holder.system?.ki?.value) || 0, Math.floor((Number(holder.system?.capacity?.max) || 0) / 2));
+  if (most <= 0) return ui.notifications.warn(`${holder.name} has no Ki Points to give it.`);
+  const { askPlayerAmount, requestActorUpdate, requestEdit } = await import("./chat.mjs");
+  const ki = Math.min(most, await askPlayerAmount(holder, `${holder.name}: ${effect.name} - ${attack.attackerName}'s attack`, most,
+    "Ki Points - as much on its Wound Roll"));
+  if (!(ki > 0) || !await payDesperation(holder, "your-chance")) return;
+  await requestActorUpdate(holder, { "system.ki.value": (Number(holder.system.ki?.value) || 0) - ki,
+    "system.capacity.spent": (Number(holder.system.capacity?.spent) || 0) + ki });
+  return requestEdit(message, { type: "attack", attack: { ...attack,
+    woundExtra: [...(attack.woundExtra ?? []), { label: `Now's Your Chance! (${holder.name})`, value: ki, by: holder.uuid }] } });
 }
 
 /** "It's Up to You, Now.": an Ally's turn begins - Entrusted till the start of their next. */

@@ -1058,7 +1058,9 @@ export function registerDefeatHooks() {
     // stands (not one still being answered): the first time, up; after it, the Life held where it was - and said.
     const min = Number(actor.system.life?.min) || 0;
     const next = Number(foundry.utils.getProperty(changes, "system.life.value"));
-    if (game.combat?.started && actor.system.defeated && actor.getFlag?.("dbu-ttrpg", "defeatSettled") && (next > min)) {
+    // Lifted by hand (the sheet's Defeated toggle): neither held nor counted.
+    if (game.combat?.started && actor.system.defeated && actor.getFlag?.("dbu-ttrpg", "defeatSettled") && (next > min)
+      && !options.dbuForceUp) {
       if ((Number(actor.system.defeatsEscaped) || 0) >= 1) {
         if ("system.life.value" in changes) changes["system.life.value"] = actor.system.life.value;
         else foundry.utils.setProperty(changes, "system.life.value", actor.system.life.value);

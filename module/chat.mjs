@@ -3558,7 +3558,7 @@ export async function endGrapple(grappler, grappled) {
  * for them. This asks the question that decides that, rather than canUserModify, which
  * answers it too generously and leaves the update to be refused by the server.
  */
-function requestEdit(message, request) {
+export function requestEdit(message, request) {
   const payload = { ...request, messageId: message.id };
 
   // Surfaced rather than left to an unhandled rejection: a failure here stops the
@@ -29398,6 +29398,23 @@ function unitedRows(attack) {
 }
 
 /** The United Attack buttons on an open attack: join, for this user's characters; refuse, for the one asked. */
+/** "Now's Your Chance!": one button for each Defeated Ally of the attacker the reader plays, with the Karma - not given yet here. */
+function yourChanceButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker) return;
+  const given = new Set((attack.woundExtra ?? []).map(part => part.by).filter(Boolean));
+  for (const holder of desperationHolders(attacker, "your-chance", alliesOnScene).filter(each => each.isOwner && !given.has(each.uuid))) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Now's Your Chance! - ${holder.name}`;
+    button.dataset.tooltip = `A Desperation Effect, ${desperationCost(holder, desperationEffect("your-chance"))} Karma, once a Round: `
+      + "Ki up to half your Max Capacity, as much on this Wound Roll.";
+    button.addEventListener("click", async () => (await import("./desperation.mjs")).nowsYourChance(message, attack, holder));
+    container.append(button);
+  }
+}
+
 function unitedButtons(message, attack, container) {
   const pending = unitedPending(attack);
   const asked = pending ? fromUuidSync(attack.unitedWith.uuid) : null;
@@ -31578,6 +31595,8 @@ function renderAttack(message, html) {
   if (!result) fleetButtons(message, attack, container);
   // Power of the Weak (3): targeted - Ki for the Strike and Dodge, before it is settled.
   if (!result) weakButtons(message, attack, container);
+  // "Now's Your Chance!" (a Desperation Effect): a Defeated Ally of its maker - Ki on its Wound, till it is rolled.
+  if (!result?.wound) yourChanceButtons(message, attack, container);
   // Balanced Defender (2): targeted - Ki for the Defense Value and Soak Value, before it is settled.
   if (!result) balancedButtons(message, attack, container);
   // Spiritual Warrior (3): your Bonded Ally's attack - the Basic Attack at the same Opponent.

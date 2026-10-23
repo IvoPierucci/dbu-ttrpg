@@ -513,6 +513,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useConditionAbility: DBUCharacterSheet._onUseConditionAbility,
       stepKarma: DBUCharacterSheet._onStepKarma,
       justTakeIt: DBUCharacterSheet._onJustTakeIt,
+      toggleDefeated: DBUCharacterSheet._onToggleDefeated,
       travel: DBUCharacterSheet._onTravel,
       useAdventuring: DBUCharacterSheet._onUseAdventuring,
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
@@ -5117,6 +5118,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Enter or leave a State. */
+  /**
+   * Defeated, lifted by hand (the user's): Life to 1 above the least - past Will to Survive's once an Encounter, and not spending
+   * it (combat.mjs registerDefeatHooks, `dbuForceUp`).
+   */
+  static async _onToggleDefeated() {
+    if (!this.actor.system.defeated) return;
+    const min = Number(this.actor.system.life?.min) || 0;
+    return this.actor.update({ "system.life.value": min + 1 }, { dbuForceUp: true });
+  }
+
   /** "Just Take It, But Finish Them Now!" - a Desperation Effect, from the Defeated character's sheet. */
   static async _onJustTakeIt() {
     return (await import("../desperation.mjs")).justTakeIt(this.actor);
