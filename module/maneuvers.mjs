@@ -1736,6 +1736,37 @@ export async function duelingStrikeRow(actor) {
   return { label: "Dueling Specialist", written: "+2(T)", value: 2 * tier };
 }
 
+/**
+ * Heavy Weapons Specialist (2): "When you make an Attacking Maneuver with a Big Size Weapon, reduce the Weapon's Life Points by
+ * 1/10 their Maximum to increase the Wound Roll by the reduction." Asked as it is declared, once a Round; an Unbreakable Weapon's
+ * Life Points nothing reduces, so not offered for it.
+ */
+export async function askHeavyWound(actor, declared) {
+  const weapon = declared?.weapon;
+  if (!weapon || weapon.unarmed || (weapon.weaponSize !== "big") || (actor?.system?.effects?.slots?.["heavyWeapons.wound"] !== true)) {
+    return declared;
+  }
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "heavyWoundRound") === round) return declared;
+  const item = actor.items?.get?.(weapon.itemId ?? "");
+  const { craftedReading, damageWeapon } = await import("./gear.mjs");
+  const reading = item ? craftedReading(item.system?.crafted, { getTrait, difficulties: {}, data: actor.system,
+    baseTier: actor.system?.baseTierOfPower ?? 1 }) : null;
+  const tenth = Math.floor((Number(reading?.lifeMax) || 0) / 10);
+  if (!reading || reading.unbreakable || !tenth || !(Number(reading.lifeLeft) > 0)) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Heavy Weapons Specialist" },
+    content: `<p data-tooltip="A tenth of its Max Life Points. Once a Round.">${Handlebars.escapeExpression(item.name)} loses ${tenth} Life Points, +${tenth} Wound?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "heavyWoundRound", round);
+  const said = await damageWeapon(actor, item, tenth, getTrait);
+  if (said) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">Heavy Weapons Specialist: ${Handlebars.escapeExpression(said)}</div>` });
+  return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: "Heavy Weapons Specialist", value: tenth }] };
+}
+
 /** Dueling Specialist (2) on an attack's Strike, as it is declared. */
 export async function askDuelingStrike(actor, declared) {
   if (!declared) return declared;

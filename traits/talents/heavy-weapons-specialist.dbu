@@ -1,0 +1,22 @@
+id: heavy-weapons-specialist
+name: Heavy Weapons Specialist
+talentCategory: weapon
+prerequisites: Weapon Specialist
+description: >
+  You are especially adept in wielding large Weapons to great effect.
+text: >
+  Heavy Weapons Specialist: You are especially adept in wielding large Weapons to great effect.
+  –Prerequisites: Weapon Specialist
+  (1)-[Passive]: While you are only wielding a single Weapon of the Big Size, increase your Strike Rolls by 1(T).
+  (2)-[Triggered, 1/Round]: When you make an Attacking Maneuver with a Big Size Weapon, reduce the Weapon’s Life Points by 1/10 their Maximum to increase the Wound Roll by the reduction.
+
+---
+
+[passive]
+# (1) One Weapon wielded, of the Big Size: every Strike Roll.
+if (singleWeaponOf("big")) {
+    strike += 1(T);
+}
+# (2) An attack declared with a Big Weapon: asked, once a Round - a tenth of its Max Life Points, rounded down, off it and onto the
+# Wound; not an Unbreakable one's, whose Life Points nothing may reduce (maneuvers.mjs askHeavyWound).
+allow heavyWeapons.wound;
