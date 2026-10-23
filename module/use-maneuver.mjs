@@ -208,6 +208,13 @@ function canAffordActions(actor, maneuver) {
  * the Attacking ones. Refused by name, because "nothing happened" with no reason given
  * is how a table concludes the system is broken.
  */
+/** The Bestial Trait that gave this Unique Ability (its `grantedBy`), or null. */
+function bestialGrantOf(actor, maneuver) {
+  const grantor = actor?.items?.get(actor.items.get(maneuver?.itemId ?? "")?.flags?.["dbu-ttrpg"]?.grantedBy ?? "");
+  if (grantor?.type !== "racial") return null;
+  return ((grantor.system?.other || getTrait(grantor.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.owner || "") === "bestial") ? grantor : null;
+}
+
 function permitted(actor, maneuver) {
   const slots = actor.system.effects?.slots;
 
@@ -299,10 +306,19 @@ function permitted(actor, maneuver) {
   //
   // A tag rather than a list of names: "any Maneuver tagged uniqueAbility" is how the
   // rulebook writes it, and it is what the tags on a Maneuver are for.
+  // Bestial Traits and the Feral State: "Any Unique Ability granted by a Bestial Trait can be used even in the Feral State." One
+  // whose Bestial Trait the Bestial Limit set aside is not applied with it.
+  const bestial = (maneuver.tags ?? []).includes("uniqueAbility") ? bestialGrantOf(actor, maneuver) : null;
+  const bestialAside = bestial?.flags?.["dbu-ttrpg"]?.bestialOff;
+  if (bestialAside && actor.items.get(bestialAside)) {
+    ui.notifications.warn(`${maneuver.name}: ${bestial.name} is not applied (Bestial Limit).`);
+    return false;
+  }
+  const feralBestial = Boolean(bestial) && ((Number(actor.system?.states?.feral) || 0) > 0);
   const refused = [
     [maneuver.attacking, "attackingManeuvers", "Attacking Maneuvers"],
     [(maneuver.tags ?? []).includes("signature") || Boolean(maneuver.godFinisher), "signatureTechniques", "Signature Techniques"],
-    [(maneuver.tags ?? []).includes("uniqueAbility"), "uniqueAbilities", "Unique Abilities"],
+    [(maneuver.tags ?? []).includes("uniqueAbility") && !feralBestial, "uniqueAbilities", "Unique Abilities"],
     [(maneuver.tags ?? []).includes("transformation"), "transformations", "Transformations"]
   ].find(([applies, flag]) => applies && !permits(slots, flag));
 

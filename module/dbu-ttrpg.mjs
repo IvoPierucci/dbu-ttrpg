@@ -196,6 +196,12 @@ async function taillessTalents(item, userId) {
   ui.notifications.info(`${actor.name} is Tailless: ${names.join(", ")} lost - choose another Talent on its Progression row.`);
 }
 Hooks.on("createItem", (item, options, userId) => taillessTalents(item, userId));
+// The Bestial Limit: a fifth Bestial Trait gained - which stops applying, asked of whoever added it (racial.mjs bestialLimit).
+Hooks.on("createItem", async (item, options, userId) => {
+  if ((userId !== game.user.id) || (item.type !== "racial") || !item.parent) return;
+  const { bestialLimit } = await import("./racial.mjs");
+  await bestialLimit(item.parent, item);
+});
 Hooks.on("updateItem", (item, changes, options, userId) => taillessTalents(item, userId));
 
 // Talents come from the Progression tab: the Talent Addition rows reached, or the Power Level moved - made to match, by

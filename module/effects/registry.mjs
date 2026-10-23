@@ -107,6 +107,9 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     // effect had to be given a header flag and a branch in the code instead, which is
     // why there are five of those.
     if ((item.type !== "talent") && (item.type !== "maneuver") && (item.type !== "racial")) continue;
+    // A Bestial Trait the Bestial Limit set aside, while the one it gave way to is held (racial.mjs bestialOff).
+    const offBy = (item.type === "racial") ? item.flags?.["dbu-ttrpg"]?.bestialOff : "";
+    if (offBy && (actor.items?.get?.(offBy) ?? Array.from(actor.items ?? []).find(other => other.id === offBy))) continue;
 
     // A Unique Ability's script is its own and each Advancement bought and Restriction applied.
     const script = (item.type === "maneuver") && (item.system?.tags ?? []).includes("uniqueAbility")

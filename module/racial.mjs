@@ -367,6 +367,46 @@ export const OTHER_GROUPS = Object.freeze({
   monstrous: "Monstrous"
 });
 
+/**
+ * Bestial Limit: "You cannot benefit from more than 4 Bestial Traits at any one time. If an effect would give you access to an
+ * additional Bestial Trait(s), you must choose a Bestial Trait(s) to stop applying the effects of while you possess that Bestial
+ * Trait(s)."
+ */
+export const BESTIAL_LIMIT = 4;
+
+/** A Bestial Trait's Item. */
+export function isBestial(item) {
+  if (item?.type !== RACIAL_TYPE) return false;
+  return (item.system?.other || getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.owner || "") === "bestial";
+}
+
+/**
+ * Set aside by the Bestial Limit - its flag names the Bestial Trait it gave way to, "while you possess" that one: off while that
+ * one is still held (registry.mjs, which skips it), applied again once it is gone.
+ */
+export function bestialOff(item, items) {
+  const by = item?.flags?.["dbu-ttrpg"]?.bestialOff;
+  return Boolean(by) && Array.from(items ?? []).some(other => other.id === by);
+}
+
+/**
+ * A Bestial Trait gained past the 4: which stops applying, asked of whoever made the change - any of them, the new one too; backed
+ * out of, the new one. Again while more than 4 apply.
+ */
+export async function bestialLimit(actor, added) {
+  if (!actor || !isBestial(added)) return;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  for (;;) {
+    const applying = Array.from(actor.items ?? []).filter(item => isBestial(item) && !bestialOff(item, actor.items));
+    if (applying.length <= BESTIAL_LIMIT) return;
+    const picked = await askPlayerChoice(actor, `${actor.name}: Bestial Limit - ${BESTIAL_LIMIT} at most; which stops applying?`,
+      applying.map(item => ({ value: item.id, label: (item.id === added.id) ? `${item.name} (just gained)` : item.name })));
+    const off = applying.find(item => item.id === picked) ?? applying.find(item => item.id === added.id);
+    if (!off) return;
+    await off.setFlag("dbu-ttrpg", "bestialOff", added.id);
+  }
+}
+
 /** An Other Trait's group, as named - or the folder's name where it is a new one. */
 export function otherGroupName(group) {
   const key = String(group ?? "");

@@ -4,7 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
-import { addRacialTrait, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
@@ -406,6 +406,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleSpecialty: DBUCharacterSheet._onToggleSpecialty,
       rollSave: DBUCharacterSheet._onSaveRoll,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
+      bestialApply: DBUCharacterSheet._onBestialApply,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
       addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
       addOtherTrait: DBUCharacterSheet._onAddOtherTrait,
@@ -4937,6 +4938,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         : racialTraitRace(item.system.race, item.system.subrace, item.system.factor),
       // A Factor Trait's: what its Racial Factor asks for, shown and never enforced.
       factorTip: factorSummary(item.system.factor),
+      // Set aside by the Bestial Limit - and what it gave way to.
+      bestialOff: bestialOff(item, this.actor.items),
+      bestialOffFor: this.actor.items.get(item.flags?.["dbu-ttrpg"]?.bestialOff ?? "")?.name ?? "",
       // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
       open: Boolean(this.#openSections[`trait-${item.id}`]),
       lines: racialTraitLines(item),
@@ -5075,6 +5079,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * already had named and not offered twice. Taken, its Item is made as a Racial Trait's is (racial.mjs addRacialTrait).
    * Nothing is enforced: what gives it - a Racial Trait, a Racial Factor, a Transformation - is the table's.
    */
+  /** A Bestial Trait the Bestial Limit set aside, applied again - another one asked to stop in its place, past the 4. */
+  static async _onBestialApply(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    await item.unsetFlag("dbu-ttrpg", "bestialOff");
+    await bestialLimit(this.actor, item);
+  }
+
   static async _onAddOtherTrait() {
     if (!this.isEditable) return;
     const had = new Set(this.actor.system.racialTraits ?? []);
