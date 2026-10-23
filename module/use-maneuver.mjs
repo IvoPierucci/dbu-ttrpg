@@ -4513,8 +4513,19 @@ export async function useManeuver(actor, maneuver, options = {}) {
   // Ferocious Fighter (4): a Signature Technique while Feral - asked; not used after all, given back.
   const { askFerocious, ferociousUndo } = await import("./maneuvers.mjs");
   const ferocious = await askFerocious(actor, maneuver);
+  // Genetic Catalogue (2), (3): a Genetic Donor's Unique Ability, or Signature Technique - each kind once a Round.
+  const { geneticOf } = await import("./genetic.mjs");
+  const genetic = geneticOf(actor?.items?.get(options.techniqueId || maneuver?.itemId || ""));
+  const geneticFlag = genetic ? ((genetic.kind === "technique") ? "geneticTechniqueRound" : "geneticUniqueRound") : "";
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (geneticFlag && game.combat?.started && (actor.getFlag?.("dbu-ttrpg", geneticFlag) === round)) {
+    ui.notifications.warn(`${actor.name}: Genetic Catalogue - a Donor's ${(genetic.kind === "technique") ? "Signature Technique" : "Unique Ability"} already used this Combat Round.`);
+    if (ferocious) await ferociousUndo(actor);
+    return false;
+  }
   const used = await useManeuverThrough(actor, maneuver, options);
   if (ferocious && !used) await ferociousUndo(actor);
+  if (used && geneticFlag && game.combat?.started) await actor.setFlag("dbu-ttrpg", geneticFlag, round);
   return used;
 }
 

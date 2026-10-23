@@ -1,0 +1,21 @@
+id: genetic-catalogue
+name: Genetic Catalogue
+talentCategory: racial
+race: bio-android
+prerequisites: Bio-Android Race, Genetic Splicing Factor
+description: >
+  Your genetic memory includes the techniques of your forebears.
+text: >
+  Genetic Catalogue: Your genetic memory includes the techniques of your forebears.
+  –Prerequisites: Bio-Android Race, Genetic Splicing Factor
+  (1)-[Ruling]: Upon gaining this Talent, and if you gain any Factor Traits for the Genetic Splicing Factor afterwards, with the help of your ARC, create a Character for each of your Factor Traits from Genetic Splicing. These Characters are known as your ‘Genetic Donors’ and represent the Characters whose DNA went into your creation. If you were using existing Characters for the sources of your DNA, then you may use those instead.
+  (2)-[1/Round]: You may use a Unique Ability possessed by your Genetic Donors if you meet the Prerequisites.
+  (3)-[Triggered, 1/Round]: If you use the Signature Technique Maneuver, you may use a Signature Technique possessed by one of your Genetic Donors.
+
+---
+
+# (1) The Donors: picked on this Talent's row (Donors) among the world's characters - the ARC's to have made - and picked again
+# as Factor Traits come. What they hold is copied onto you, named for whose it is: their Unique Abilities, their Signature
+# Techniques - given by this Talent, no TP of yours, gone with it (module/genetic.mjs).
+# (2) A Donor's Unique Ability, once a Round - its Prerequisites the table's. (3) A Donor's Signature Technique through the Signature
+# Technique Maneuver, once a Round (use-maneuver.mjs useManeuver).

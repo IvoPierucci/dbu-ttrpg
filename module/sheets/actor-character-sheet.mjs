@@ -514,6 +514,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stepKarma: DBUCharacterSheet._onStepKarma,
       justTakeIt: DBUCharacterSheet._onJustTakeIt,
       toggleDefeated: DBUCharacterSheet._onToggleDefeated,
+      geneticDonors: DBUCharacterSheet._onGeneticDonors,
       travel: DBUCharacterSheet._onTravel,
       useAdventuring: DBUCharacterSheet._onUseAdventuring,
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
@@ -1362,6 +1363,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Dynamic Hype's: the Option in use.
         ...[item.flags?.["dbu-ttrpg"]?.primaryOption, item.flags?.["dbu-ttrpg"]?.askedOption, item.flags?.["dbu-ttrpg"]?.secondOption].filter(Boolean)
           .map(id => `In use: ${(item.system.chosen ?? []).find(entry => (entry.key === "option") && (entry.value === id))?.label ?? id}`)],
+      // Genetic Catalogue (1): its Donors, picked here.
+      donors: (item.flags?.["dbu-ttrpg"]?.sourceId === "genetic-catalogue")
+        ? { names: (item.flags?.["dbu-ttrpg"]?.donors ?? []).map(id => game.actors?.get(id)?.name).filter(Boolean).join(", ") || "none yet" }
+        : null,
       // Triggered or Automatic, as a Racial Trait's (the user's) - Arming it beforehand is gone.
       triggered: this.#toggleButtons(item, triggered)
     }));
@@ -1720,7 +1725,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
 
     // Quick Learner's Copied Techniques are not the character's: none of their TP, and not counted among their own.
-    const built = items.filter(isBuiltTechnique).filter(item => !item.getFlag?.("dbu-ttrpg", "copied")).map(signatureOfTechnique);
+    // Neither a Copied one nor a Genetic Donor's (Genetic Catalogue) is paid for with your TP.
+    const built = items.filter(isBuiltTechnique).filter(item => !item.getFlag?.("dbu-ttrpg", "copied") && !item.getFlag?.("dbu-ttrpg", "genetic"))
+      .map(signatureOfTechnique);
     const counted = built.filter(sig => !sig.fromTransformation);
     const ultimates = counted.filter(sig => isUltimateLevel(sig.level)).length;
     const supers = counted.filter(sig => !isUltimateLevel(sig.level)).length;
@@ -5126,6 +5133,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!this.actor.system.defeated) return;
     const min = Number(this.actor.system.life?.min) || 0;
     return this.actor.update({ "system.life.value": min + 1 }, { dbuForceUp: true });
+  }
+
+  /** Genetic Catalogue (1): which characters are the Donors, and their abilities copied. */
+  static async _onGeneticDonors(event, target) {
+    const talent = this.actor.items.get(target.dataset.itemId);
+    if (!talent) return;
+    return (await import("../genetic.mjs")).chooseDonors(this.actor, talent);
   }
 
   /** "Just Take It, But Finish Them Now!" - a Desperation Effect, from the Defeated character's sheet. */

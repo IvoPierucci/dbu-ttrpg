@@ -188,6 +188,10 @@
           </button>
           {{/each}}
 
+          {{#if entry.donors}}
+          <button type="button" class="trait-arm" data-action="geneticDonors" data-item-id="{{entry.item.id}}"
+                  data-tooltip="Genetic Donors: {{entry.donors.names}}. Their Unique Abilities and Signature Techniques copied onto you.">Donors</button>
+          {{/if}}
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
                   data-tooltip="Edit this talent">&#9998;</button>
         </div>
