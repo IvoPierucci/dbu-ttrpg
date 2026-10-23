@@ -1528,10 +1528,11 @@ export function weaponsFor(items, foundation, getTrait = null) {
     .some(form => form.weaponType === foundation));
 }
 
-/** Whether the character is rid of the Weapon Penalty: "gain the Weapon Specialist Talent". */
+/** Whether the character is rid of the Weapon Penalty: "gain the Weapon Specialist Talent" - its (1), `weapon.noPenalty`. */
 export function weaponSpecialist(actor) {
   const named = entry => String(entry ?? "").trim().toLowerCase() === "weapon specialist";
-  return Array.from(actor?.items ?? []).some(item => (item.type === "talent") && named(item.name))
+  return (actor?.system?.effects?.slots?.["weapon.noPenalty"] === true)
+    || Array.from(actor?.items ?? []).some(item => (item.type === "talent") && named(item.name))
     || (actor?.system?.effects?.programs ?? []).some(entry => named(entry.sourceName));
 }
 

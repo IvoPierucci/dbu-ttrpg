@@ -1,0 +1,18 @@
+id: weapon-specialist
+name: Weapon Specialist
+talentCategory: weapon
+prerequisites: N/A
+description: >
+  You are especially skilled with a Weapon.
+text: >
+  Weapon Specialist: You are especially skilled with a Weapon.
+  –Prerequisites: N/A
+  (1)-[Passive]: Ignore the Weapon Penalty.
+  (2)-[Passive]: Increase your Dice Score for a Clash made through the Disarm Maneuver by 1(bT).
+
+---
+
+[passive]
+# (1) No Weapon Penalty on a Strike made with a Weapon - an attack's or a Parry's (gear.mjs weaponSpecialist).
+allow weapon.noPenalty;
+# (2) Waits on the Disarm Maneuver, not built yet.
