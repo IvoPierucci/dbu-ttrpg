@@ -97,6 +97,9 @@ const TABLE = [
     provides: [],
     doc: "Never fired: Energy Control (1)'s block is its Triggered/Automatic button, read by its window (chat.mjs "
        + "energyControlAsk) - with Technique Master (2), Automatic takes the 2(T) without asking." },
+  { key: "concentrated-flare", label: "The Power Flare option of the Defend Maneuver is rolled", provides: [],
+    doc: "Never fired: Concentrated Energy (3)'s block is its Triggered/Automatic button, read as the Power Flare is rolled "
+       + "(chat.mjs concentratedFlare)." },
   { key: "overkill-damage", label: "An Attacking Maneuver's Damage would exceed your remaining Life Points", provides: [],
     doc: "Asked of whoever plays them once an attack's Damage is worked out, past their Life Points (chat.mjs overkillAnswer) - "
        + "Undying Determination's halving." },

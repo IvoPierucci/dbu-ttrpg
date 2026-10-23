@@ -22088,6 +22088,7 @@ export async function postAttack(actor, target, maneuver,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], strikeExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
+                                   concentratedEnds = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false, twinCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
@@ -22417,6 +22418,8 @@ export async function postAttack(actor, target, maneuver,
             { portal }), reflecting ? null : overwhelm), reflecting ? 0 : (boughtMagnitude + blaster.magnitude)),
           // Critical Point (2): primed by the Energy Charge Maneuver this Round.
           ...((primed && !reflecting) ? { primed: true } : {}),
+          // Concentrated Energy (4): the attack the Energy Charge Maneuver declared - its stacks lost once it is done.
+          ...((concentratedEnds && !reflecting) ? { concentratedEnds: true } : {}),
           // Rapid Fist (2): its targets' Diminishing Defense doubled for it (dodgeBonus).
           ...((rapidFist && !reflecting) ? { rapidFist: true } : {}),
           // Angry Warrior (2): off its Strike's Natural Result.
@@ -24389,8 +24392,11 @@ async function resolveAttackWork(message, attack) {
   for (const entry of branches) {
     if ((entry.uuid !== attack.attackerUuid) && (entry.answer?.outcome === "botch")) offerSinisterAll(message, fromUuidSync(entry.uuid));
   }
-  // Nobody hit, nothing more to it: Overwhelming Assault's stacks go now.
-  if (!branches.some(entry => entry.hit)) await spendOverwhelm(attack);
+  // Nobody hit, nothing more to it: Overwhelming Assault's stacks go now; Concentrated Energy's, the charged attack's.
+  if (!branches.some(entry => entry.hit)) {
+    await endConcentrated(attack);
+    await spendOverwhelm(attack);
+  }
   // "If you dodge an Attacking Maneuver" - a Dodge Roll that beat it: Aerodynamic's.
   for (const entry of branches) {
     if (!entry.hit && (entry.defense === "dodge") && entry.answer && (entry.uuid !== attack.attackerUuid)) {
@@ -25040,6 +25046,44 @@ function absorbRow(attack) {
           absorbed.fifth ? " - a fifth of their maximum Ki" : ""}</em></span>
       <span class="dbu-clash-total">${Handlebars.escapeExpression(gain)}</span>
     </div>`;
+}
+
+/**
+ * Concentrated Energy (2)'s bonus: "Increase your Wound Rolls by 1(bT) for every 2 stacks of Concentrated Ki you possess."
+ */
+function concentratedBonus(actor) {
+  const stacks = Number(actor?.system?.resources?.concentratedki?.stacks) || 0;
+  return Math.floor(stacks / 2) * Math.max(1, Number(actor?.system?.baseTierOfPower) || 1);
+}
+
+/**
+ * Concentrated Energy (3): "If you would use the Power Flare option of the Defend Maneuver, double the bonus from the second
+ * effect of Concentrated Energy for the duration of that Maneuver" - (2)'s once more on its Wound Roll. Its button Automatic,
+ * added; Triggered, asked.
+ */
+async function concentratedFlare(actor) {
+  const bonus = concentratedBonus(actor);
+  if (!bonus) return [];
+  const blocks = triggersFor(actor, ["concentrated-flare"]);
+  if (!blocks.length) return [];
+  const automatic = blocks.some(entry => (actor.getFlag?.(SCOPE, "automatic") ?? []).includes(entry.blockId));
+  if (!automatic && ((await askPlayerChoice(actor, `${actor.name}: Concentrated Energy - Power Flare`,
+    [{ value: "yes", label: `Its Wound bonus doubled (+${bonus})` }, { value: "no", label: "No" }])) !== "yes")) return [];
+  return [{ label: "Concentrated Energy (Power Flare)", value: bonus }];
+}
+
+/**
+ * Concentrated Energy (4): "Lose all stacks of Concentrated Ki after concluding the Attacking Maneuver declared by the Energy
+ * Charge Maneuver" - its Wound Roll made, or nobody hit.
+ */
+async function endConcentrated(attack) {
+  if (!attack?.concentratedEnds) return;
+  const actor = fromUuidSync(attack.attackerUuid ?? "");
+  if (!actor || !((Number(actor.system?.resources?.concentratedki?.stacks) || 0) > 0)) return;
+  const { replaceObject } = await import("./conditions.mjs");
+  const held = { ...(actor.system.resources ?? {}) };
+  delete held.concentratedki;
+  await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
 }
 
 /**
@@ -26116,7 +26160,8 @@ async function rollAttackWoundWork(message, attack) {
     wound = { ...wound, total: (Number(wound.total) || 0) + value,
       lines: [...(wound.lines ?? []), partLine({ label: "Brutal Kata (Critical)", written: "+2(T)", value })] };
   }
-  // Done: Overwhelming Assault's stacks go now - after this Wound Roll counted them.
+  // Done: Overwhelming Assault's stacks go now - after this Wound Roll counted them; Concentrated Energy's, the charged attack's.
+  await endConcentrated(attack);
   await spendOverwhelm(attack);
   // Searing Anger (3): "After concluding that Attacking Maneuver, reduce your Overwhelm stacks to 1."
   if (searing && ((Number(attacker.system.resources?.overwhelm?.stacks) || 0) > 1)) {
@@ -26199,7 +26244,9 @@ async function rollAttackWoundWork(message, attack) {
       ? await rollSide(target, [
           { label: "Wound", value: target.system.combat.wound[flareFoundation] ?? 0 },
           { label: "Ki Wager", value: own.defenceWager ?? 0 },
-          ...respondingParts(target)
+          ...respondingParts(target),
+          // Concentrated Energy (3).
+          ...await concentratedFlare(target)
         ], {
           extraDice: target.system.dice.extra.formula,
           criticalDice: target.system.dice.critical.formula,

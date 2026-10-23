@@ -1,0 +1,39 @@
+id: concentrated-energy
+name: Concentrated Energy
+talentCategory: miscellaneous
+prerequisites: Force or Magic Score of 6+
+resource: concentratedki
+resourceMax: 10
+resourceLabel: Concentrated Ki
+description: >
+  You are able to focus your energy more precisely, wasting less of it when you attack.
+text: >
+  Concentrated Energy: You are able to focus your energy more precisely, wasting less of it when you attack.
+  –Prerequisites: Force or Magic Score of 6+
+  (1)-[Triggered, Resource]: If you use the Energy Charge Maneuver, gain a stack of Concentrated Ki (max. 10).
+  (2)-[Passive]: Increase your Wound Rolls by 1(bT) for every 2 stacks of Concentrated Ki you possess.
+  (3)-[Triggered]: If you would use the Power Flare option of the Defend Maneuver, double the bonus from the second effect of Concentrated Energy for the duration of that Maneuver.
+  (4)-[Automatic]: Lose all stacks of Concentrated Ki after concluding the Attacking Maneuver declared by the Energy Charge Maneuver, or if you use either the Cancel Energy Charge effect of the No Effort Maneuver or Energy Cancel Counter Maneuver.
+
+---
+
+# (1) The Energy Charge Maneuver used: a stack (max. 10). Automatic by default, its Triggered/Automatic button; set Triggered,
+# asked in the window as it is declared.
+[triggered/declare-maneuver, toggle, effect 1]
+requires using("energy-charge");
+concentratedki.stacks += 1;
+
+[passive]
+# (2) 1(bT) on every Wound Roll for each 2 stacks - Power Flare's among them.
+if (hasResource("concentratedki")) {
+    wound += (floor(concentratedki.stacks / 2) * baseTierOfPower);
+}
+
+# (3) Power Flare: (2)'s bonus once more on its Wound Roll (chat.mjs concentratedFlare). This block is the button's: its Moment
+# is never fired - Automatic, added without asking; Triggered, asked as the Power Flare is rolled.
+[triggered/concentrated-flare, effect 3]
+requires hasResource("concentratedki");
+allow concentrated.flare;
+
+# (4) All stacks lost once the attack the Energy Charge Maneuver declared is concluded - its Wound Roll made, or nobody hit -
+# or the charge cancelled, by the No Effort Maneuver or Energy Cancel (chat.mjs endConcentrated; use-maneuver.mjs cancelCharge).

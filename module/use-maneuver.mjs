@@ -6153,6 +6153,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     && (actor.getFlag?.("dbu-ttrpg", "criticalPointRound") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`)) {
     declared = { ...declared, primed: true };
   }
+  // Concentrated Energy (4): the attack the Energy Charge Maneuver declared.
+  const fromCharge = Boolean(maneuver.itemId && (maneuver.itemId === actor.system.charging?.maneuverId));
   const charges = ((maneuver.itemId && (maneuver.itemId === actor.system.charging?.maneuverId))
     ? await collectCharges(actor)
     : 0)
@@ -6427,6 +6429,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges: charges + momentCharges + (Number(extraCharges) || 0),
         ...(volleyball ? { volleyball } : {}),
+        ...(fromCharge ? { concentratedEnds: true } : {}),
         ...(portal ? { portal: true } : {}), ...(spiritSword ? { spiritSword } : {}),
         ...(extraTargets.length ? { extraTargets: [...(declared.extraTargets ?? []), ...extraTargets] } : {}) },
         // God Strike: "use the Basic Attack Maneuver as an Out-of-Sequence Maneuver".
@@ -6947,6 +6950,12 @@ export async function cancelCharge(actor) {
   const lost = actor.system.charging?.charges ?? 0;
 
   await clearCharging(actor);
+  // Concentrated Energy (4): "or if you use either the Cancel Energy Charge effect of the No Effort Maneuver or Energy Cancel
+  // Counter Maneuver" - every stack.
+  if ((Number(actor.system.resources?.concentratedki?.stacks) || 0) > 0) {
+    const { setResource } = await import("./chat.mjs");
+    await setResource(actor, "concentratedki", 0);
+  }
 
   ui.notifications.info(
     `${actor.name} lets go of ${held?.name ?? "the charge"}, losing `
