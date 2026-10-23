@@ -1,0 +1,19 @@
+id: silk-production-third-effect
+name: Silk Production
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: silk-production
+fromEffect: 3
+source: Core Rule
+description: >
+  Silk Production's third effect, as a Maneuver: within a Large Sphere of the closest Feature, to any other Square within it.
+text: >
+  (3)-[1/Round]: As an Instant Maneuver while you are within a Large Sphere AoE (centered on the closest Feature to you), you may move to any other Square within that AoE.
+
+---
+
+# Said on its card: the Feature, the Sphere and the Square are the table's.

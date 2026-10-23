@@ -938,6 +938,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.tuffleFusion && clash.result && !clash.tuffleFusion.applied) await settleTuffleFusion(message, clash);
   if (clash.alternateSight && clash.result && !clash.alternateSight.applied) await settleAlternateSight(message, clash);
   if (clash.clawsProne && clash.result && !clash.clawsProne.applied) await settleClaws(message, clash);
+  if (clash.venom && clash.result && !clash.venom.applied) await settleVenom(message, clash);
   if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
     await settleCutthroatClash(message, clash);
   }
@@ -3399,6 +3400,25 @@ async function settleGrapple(message, clash) {
     if (winner !== "challenger") return settledNote(message, `${grappled.name} is not slammed down.`);
     for (const actor of [grappler, grappled]) await requestActorUpdate(actor, { "system.battlefield.highEnvironment": 0 });
     return settledNote(message, `${grappler.name} slams ${grappled.name} down to the Battle Environment below.`);
+  }
+
+  // Grippy Grabbers (3): "If you win, you may either reduce their Life Points by your Might or use the Launch Maneuver as an
+  // Out-of-Sequence Maneuver" - which, asked; the Launch offered on this card.
+  if (clash.grapple.kind === "grippy") {
+    if (winner !== "challenger") return settledNote(message, `${grappled.name} slips the squeeze.`);
+    const might = Math.max(0, Number(grappler.system.might) || 0);
+    const how = await askPlayerChoice(grappler, `${grappler.name}: Grippy Grabbers - ${grappled.name}`,
+      [{ value: "life", label: `Their Life Points - ${might} (your Might)` }, { value: "launch", label: "The Launch Maneuver, out of sequence" },
+        { value: "none", label: "Neither" }]);
+    if (how === "life") {
+      await requestActorUpdate(grappled, { "system.life.value": Math.max(0, (Number(grappled.system.life?.value) || 0) - might) });
+      return settledNote(message, `Grippy Grabbers: ${grappled.name} loses ${might} Life Points.`);
+    }
+    if (how === "launch") {
+      requestEdit(message, { type: "offer", offer: { actorUuid: grappler.uuid, actorName: grappler.name, maneuverId: "launch",
+        maneuverName: "Launch", targetUuid: grappled.uuid, reason: "Grippy Grabbers" } });
+    }
+    return;
   }
 
   // Heel (2): "If you win, they gain the Suffocating Combat Condition until they escape the Grapple" - lost, nothing.
@@ -8743,7 +8763,7 @@ async function playBlockade(message, actor, maneuver) {
   // "A Clash (Impulsive)" - one Saving Throw named, so there is nothing to choose
   // between and neither side is asked anything. The `blockade` below is what settling it
   // leaves behind, and it reaches the card with the rest of what is passed.
-  return postSaveClash(actor, mover, {
+  const clashCard = await postSaveClash(actor, mover, {
     maneuverName: maneuver.name,
     clashLabel: "Blockade",
     reason: `${actor.name} steps into ${mover.name}'s path. Win and the Movement stops; `
@@ -8751,6 +8771,15 @@ async function playBlockade(message, actor, maneuver) {
     saves: ["impulsive"],
     blockade: { messageId: message.id, applied: false }
   });
+  // Impaling Horn (2): "If an Opponent attempts to use the Blockade Maneuver against you, make a Physical Attack through the Basic
+  // Attack Maneuver against them as an Out-of-Sequence Maneuver" - offered on this card, once a Round.
+  if (clashCard && (mover.system?.effects?.slots?.["impaling.blockade"] === true) && (mover.getFlag?.(SCOPE, "impalingBlockRound") !== roundKey())
+    && !alliesOnScene(mover).some(ally => ally.uuid === actor.uuid)) {
+    requestEdit(clashCard, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack (a Physical Attack)", targetUuid: actor.uuid, reason: "Impaling Horn - once a Round",
+      grants: { roundFlag: "impalingBlockRound" } } });
+  }
+  return clashCard;
 }
 
 /**
@@ -9386,7 +9415,7 @@ function clashParts(kind, actor, clash, uuid) {
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
     ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
-    ...rootedClashBonus(actor, clash, uuid)];
+    ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid)];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -19368,6 +19397,86 @@ async function assassinateCategory(attacker, struck) {
   return true;
 }
 
+/** Fangs' Venomous: "If you deal Damage to an Opponent with your Bite Attack Maneuver, make a Corporeal Clash against that Opponent." */
+async function venomousBite(biter, target) {
+  if (biter?.system?.effects?.slots?.["fangs.venomous"] !== true) return;
+  if (alliesOnScene(biter).some(ally => ally.uuid === target.uuid)) return;
+  const used = biter.getFlag?.(SCOPE, "venomous") ?? {};
+  const count = (used.combat === (game.combat?.id ?? "none")) ? (Number(used.count) || 0) : 0;
+  if (count >= 2) return;
+  if ((await askPlayerChoice(biter, `${biter.name}: Venomous - ${target.name}`,
+    [{ value: "yes", label: `A Clash (Corporeal) - won, Poisoned (${2 - count} left this Encounter)` }, { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(biter, { [`flags.${SCOPE}.venomous`]: { combat: game.combat?.id ?? "none", count: count + 1 } });
+  return postSaveClash(biter, target, { maneuverName: "Venomous", saves: ["corporeal"], reason: "Win and they are Poisoned.",
+    venom: { applied: false } });
+}
+
+async function settleVenom(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, venom: { ...clash.venom, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Venomous: no poison takes.");
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  await gainCondition(target, "poisoned", 1);
+  return settledNote(message, `Venomous: ${target.name} is Poisoned.`);
+}
+
+/**
+ * Grippy Grabbers (3): "If you are in a Grapple as the Grappler, you may target your Opponent as an Instant Maneuver. If you do, make a
+ * Grapple Check against them."
+ */
+export async function grippyGrab(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const held = fromUuidSync(actor?.system?.grapple?.partner ?? "");
+  if (!held || (actor.system.grapple.role !== "grappler")) {
+    ui.notifications.warn(`${actor.name} is not the Grappler in a Grapple.`);
+    return UNSPENT;
+  }
+  return postGrappleCheck(actor, held, { maneuverName: "Grippy Grabbers", kind: "grippy",
+    reason: `Win and ${held.name}'s Life Points drop by your Might - or the Launch, out of sequence.` });
+}
+
+/**
+ * Regenerating Beast (2): "If you haven't used a Healing Surge this Combat Round ... you may use a Healing Surge. If you do, you cannot
+ * use another Healing Surge for the duration of this Combat Round."
+ */
+export async function regenerateSurge(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (actor.getFlag?.(SCOPE, "healingSurgeRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name} has used a Healing Surge this Combat Round.`);
+    return UNSPENT;
+  }
+  const used = await takeSurge(actor, { source: "Regenerating Beast", kind: "healing" });
+  if (used) await requestActorUpdate(actor, { [`flags.${SCOPE}.regenerateLockRound`]: roundKey() });
+  return used;
+}
+
+/** Silk Production (2): "Strike Rolls or Might Clashes you make through the effects of the Binding Unique Ability" - 1(bT). */
+function silkBindingBonus(actor, clash, uuid) {
+  if ((uuid !== clash?.challengerUuid) || !clash.bind || (actor?.system?.effects?.slots?.["silk.binding"] !== true)) return [];
+  return [{ label: "Silk Production", written: "+1(bT)", value: Math.max(1, Number(actor.system.baseTierOfPower) || 1) }];
+}
+
+/**
+ * Impaling Horn (3): "If you hit an Opponent with a Physical Attack that has the Charging Assault Advantage, spend 4(bT) Ki Points to
+ * increase the Damage Category by 1." Asked as it hits, once a Round.
+ */
+async function impalingCategory(attacker, attack, struck) {
+  if ((attacker?.system?.effects?.slots?.["impaling.category"] !== true) || (attack.foundation !== "physical")
+    || !(attack.advantages ?? []).includes("charging-assault") || (attacker.getFlag?.(SCOPE, "impalingRound") === roundKey())) return false;
+  const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
+  if (!struck.some(({ uuid }) => (uuid !== attacker.uuid) && !allies.has(uuid))) return false;
+  const cost = 4 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  const { ki, capacity } = attacker.system;
+  if (((Number(ki?.value) || 0) < cost) || ((Number(capacity?.remaining) || 0) < cost)) return false;
+  const answer = await askPlayerChoice(attacker, `${attacker.name}: Impaling Horn - ${cost} Ki for the Damage Category 1 higher?`,
+    [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]);
+  if (answer !== "yes") return false;
+  await requestActorUpdate(attacker, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost,
+    [`flags.${SCOPE}.impalingRound`]: roundKey() });
+  return true;
+}
+
 /**
  * Burning Fury (2): "If you hit an Opponent with an Attacking Maneuver while in the Raging State, reduce your Life Points by
  * 4(bT) to inflict the Broken Combat Condition on that Opponent until the end of your turn." Which one, asked as the hit lands,
@@ -22875,6 +22984,11 @@ async function takeOutOfSequence(message, actor, offer) {
         { label: "Fierce Counter", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }] } };
     }
   }
+  // Once a Round by the flag it names - Impaling Horn (2)'s, Retractable Limbs (3)'s.
+  if (offer.grants?.roundFlag && (actor.getFlag?.(SCOPE, offer.grants.roundFlag) === roundKey())) {
+    ui.notifications.warn(`${offer.reason ?? "That effect"}: already used this Combat Round.`);
+    return null;
+  }
   // Violent Rebuke (3)'s, once a Round.
   if (offer.grants?.rebuke && (actor.getFlag?.(SCOPE, "rebukeRound") === roundKey())) {
     ui.notifications.warn("Violent Rebuke has been used this Combat Round.");
@@ -23367,6 +23481,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.mimicry) await requestActorUpdate(actor, { [`flags.${SCOPE}.mimicryRound`]: roundKey() });
   // Violent Rebuke (3)'s, once a Round.
   if (offer.grants?.rebuke) await requestActorUpdate(actor, { [`flags.${SCOPE}.rebukeRound`]: roundKey() });
+  if (offer.grants?.roundFlag) await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.grants.roundFlag}`]: roundKey() });
   // Questing Wisdom (3)'s, once a Round.
   if (offer.grants?.questing) await requestActorUpdate(actor, { [`flags.${SCOPE}.questingRound`]: roundKey() });
   // Power Gifter (2)'s, once a Round - counted on whoever Empowered.
@@ -23651,6 +23766,15 @@ export async function postAttack(actor, target, maneuver,
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Fangs' Savage: "Increase the Wound Roll of your Bite Attack Maneuver by 2(T)."
+  if ((maneuver.id === "bite-attack") && (actor.system.effects?.slots?.["fangs.savage"] === true) && !reflecting) {
+    woundExtra = [...woundExtra, { label: "Savage (Fangs)", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Impaling Horn (1): a Physical Attack with the Charging Assault Advantage - 2(T) on its Wound.
+  if ((foundation === "physical") && (advantages ?? []).includes("charging-assault") && !reflecting
+    && (actor.system.effects?.slots?.["impaling.wound"] === true)) {
+    woundExtra = [...woundExtra, { label: "Impaling Horn", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
   // Alternate Sight (4): won this Round at one of them - this attack's Strike 1(T), its Wound 2(T); spent.
   const sighted = reflecting ? null : actor.getFlag?.(SCOPE, "alternateSight");
@@ -26778,6 +26902,8 @@ async function answerHit(message, attack, attacker, struck) {
   await burningFuryBreak(attacker, struck);
   // Assassinate (2): one Oblivious of you hit - 5(bT) Ki for the Damage Category, asked.
   if (await assassinateCategory(attacker, struck)) answer.marks.assassinated = true;
+  // Impaling Horn (3): a Physical Attack with Charging Assault hit an Opponent - 4(bT) Ki for the Damage Category, asked.
+  if (await impalingCategory(attacker, attack, struck)) answer.marks.impaled = true;
   // Style and Greed (2): the Top Layer's Break Value 1 lower for a stack of Greed, asked.
   await styleGreed(attacker);
   // Furious Flex (2): the Top Layer destroyed, asked - twice its Apparel Bonus on this Wound Roll.
@@ -27730,7 +27856,7 @@ async function rollAttackWoundWork(message, attack) {
   // Dedicated Spotter (2): an Ally in the Spectator State - a Critical Result, a step up.
   const spotted = await spotterCategory(message, attacker, attack, wound);
   // And Assassinate (2)'s, bought as it hit.
-  const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0) + (spotted ? 1 : 0);
+  const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0) + (spotted ? 1 : 0) + (attack.impaled ? 1 : 0);
   const raisedFor = raised
     ? targets.map(entry => ({ ...entry, own: entry.own?.hit
       ? { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, raised) } : entry.own }))
@@ -27982,12 +28108,17 @@ async function rollAttackWoundWork(message, attack) {
     const halving = previous?.undyingHalved ? true : ((untouched > (Number(target.system.life?.value) || 0))
       ? await overkillAnswer(target, untouched) : null);
     if (halving && (halving !== true)) await spendTriggeredEffect(target, halving.blockId);
-    const damage = halving ? Math.floor(untouched / 2) : untouched;
+    const unresisted = halving ? Math.floor(untouched / 2) : untouched;
+    // Elemental Adaptation (2): "Halve all Damage you receive from Attacking Maneuvers of your Resisted Element."
+    const resistedBy = [attack.profile, ...extraProfilesOf(attack)].some(id => id
+      && (target.system.effects?.slots?.[`resisted.${id}`] === true));
+    const damage = resistedBy ? Math.floor(unresisted / 2) : unresisted;
 
     await maybeShakeAttacker(attacker, attack, defence, damage, target);
 
     settledTargets.push({ ...own, ...woundAgainst, counterWound, effectiveWound, soak, reduction, damage,
       ...(halving ? { undyingHalved: true } : {}),
+      ...(resistedBy ? { resistedHalved: true } : {}),
       ...(punchingDown ? { punchingDown } : {}),
       ...(extra.length ? { techniqueExtra: extra } : {}) });
   }
@@ -30789,6 +30920,17 @@ async function applyAttackDamage(message, target, attack) {
   if (((damage <= 0) || isAbsoluteMiss(own)) && armsUser && (armsUser.uuid !== target.uuid)) offerFelineTechnique(message, target);
   // Violent Rebuke (3): the Basic Attack back at whoever made it.
   if (armsUser && (armsUser.uuid !== target.uuid)) offerRebuke(message, target, armsUser);
+  // Retractable Limbs (3): an Opponent's Called Shot avoided, or for no Damage - the Basic Attack, out of sequence, once a Round.
+  if (((damage <= 0) || isAbsoluteMiss(own)) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)
+    && (target.system?.effects?.slots?.["retractable.counter"] === true) && (target.getFlag?.(SCOPE, "retractableRound") !== roundKey())
+    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)
+    && !(message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.grants?.roundFlag === "retractableRound") && (offer.actorUuid === target.uuid))) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", reason: "Retractable Limbs - once a Round", grants: { roundFlag: "retractableRound" } } });
+  }
+  // Fangs' Venomous: Damage dealt by the Bite Attack - a Clash (Corporeal), asked, twice an Encounter.
+  if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
+    && (attack.maneuverId === "bite-attack")) await venomousBite(armsUser, target);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerUnscathedExploit(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
   // Death: "If you are the target of an Attacking Maneuver while Defeated, treat the intent as if it was Death."
@@ -32031,6 +32173,12 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   let surgency = actor.system.surgency;
 
   if (kind === "healing") {
+    // Regenerating Beast (2): "you cannot use another Healing Surge for the duration of this Combat Round".
+    if (game.combat?.started && (actor.getFlag?.(SCOPE, "regenerateLockRound") === roundKey())) {
+      ui.notifications.warn(`${actor.name}: no other Healing Surge this Combat Round (Regenerating Beast).`);
+      return false;
+    }
+    if (game.combat?.started) await requestActorUpdate(actor, { [`flags.${SCOPE}.healingSurgeRound`]: roundKey() });
     // "If you would use a Healing Surge" - what answers it is the player's, asked in a window first: Blood of the
     // Warrior's Surgency doubled for it.
     await offerTriggers(actor, "healing-surge");

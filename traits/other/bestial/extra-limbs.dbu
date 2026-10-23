@@ -1,0 +1,13 @@
+id: extra-limbs
+name: Extra Limbs
+order: 9
+holdsState: multiple-arms
+description: >
+  You have more than four limbs, allowing you to perform multiple complex actions at the same time.
+text: >
+  Extra Limbs: You have more than four limbs, allowing you to perform multiple complex actions at the same time.
+  (1)-[Passive]: You are in the Multiple Arms Special State.
+
+---
+
+# (1) Its header's `holdsState`: in the Multiple Arms Special State for as long as it is held and applied (actor-character.mjs).

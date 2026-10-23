@@ -4420,6 +4420,11 @@ function parseLimit(text) {
   return match ? { amount: Number(match[1]), per: match[2].toLowerCase() } : null;
 }
 
+/** A Maneuver file's `foundation:` beside its `profile:` - that Profile held to that Foundation (`profileFoundation`). */
+function heldToFoundation({ profile: fixed, foundation }) {
+  return (foundation && fixed && (fixed !== "any")) ? { profileFoundation: { [fixed]: String(foundation) } } : {};
+}
+
 export async function loadManeuvers() {
   maneuvers.clear();
 
@@ -4429,6 +4434,8 @@ export async function loadManeuvers() {
   // Defend option is asked for without anyone holding the Maneuver.
   const definitions = traitsOfKind("maneuvers").map(trait => ({
     ...trait,
+    // A Foundation named beside its Profile - the Bite Attack's "Simple Profile and Physical Foundation": that Profile held to it.
+    ...heldToFoundation(trait),
     actionCost: trait.actionCost ?? 1,
     actionCostMax: trait.actionCostMax ?? 0,
     actionCostOpen: Boolean(trait.actionCostOpen),

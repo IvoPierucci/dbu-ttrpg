@@ -851,6 +851,15 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   const { isStudiedBy } = await import("./chat.mjs");
   const channeled = Boolean(target) && (actor.system.effects?.slots?.["refined.channeler"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "refined_channeler") !== round) && isStudiedBy(actor, target.uuid) && !declared.earthlingCharge;
+  // Grippy Grabbers (4): "If you use a Signature Technique of the Physical or Energy Foundation, you may apply an Energy Charge to that
+  // Attacking Maneuver" - once an Encounter.
+  const grippy = (actor.system.effects?.slots?.["grippy.charge"] === true) && ["physical", "energy"].includes(declared.foundation ?? "")
+    && (actor.getFlag?.("dbu-ttrpg", "grippyChargeEncounter") !== (game.combat?.id ?? "none"));
+  if (grippy) {
+    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="grippy"/>
+      <span class="dbu-respond-name">Grippy Grabbers: an Energy Charge</span>
+      <span class="dbu-respond-source">Once an Encounter</span></label>`);
+  }
   if (channeled) {
     fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="channeler"/>
       <span class="dbu-respond-name">Power Channeler: an Energy Charge</span>
@@ -981,6 +990,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
             lifeWager: Math.min(warriorMost, num("lifeWager")), lastResort: lastResort && box("lastResort"),
             questingLife: Math.min(questingMost, num("questingLife")),
             channeler: channeled && box("channeler"),
+            grippy: grippy && box("grippy"),
             eyeBoth: Boolean(eyeBoth) && box("eyeBoth"),
             earthling: earthlingPicked(form),
             quickThinking: form.querySelector('[name="quickThinking"]')?.value ?? "",
@@ -1155,6 +1165,12 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     if (taken) woundExtra.push({ label: "Questing Wisdom", value: taken });
   }
   delete answers.questingLife;
+  // Grippy Grabbers (4)'s, beside any other free Energy Charge.
+  if (answers.grippy) {
+    await actor.setFlag("dbu-ttrpg", "grippyChargeEncounter", game.combat?.id ?? "none");
+    answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Grippy Grabbers");
+  }
+  delete answers.grippy;
   // Power Channeler's: its Energy Charge, and its Opponent no longer Studied once the attack is done.
   if (answers.channeler) {
     await actor.setFlag("dbu-ttrpg", "refined_channeler", round);
@@ -5293,6 +5309,19 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await declareAttack(locked, foundationsOffered, actor,
       maneuver.throws ? { wagerCap: Math.ceil((actor.system.ki?.value ?? 0) / 4) } : {});
     if (!declared) return false;
+    // Land-Based Beast (3): a Physical Attacking Maneuver in the Standard Environment - first to a Square beside an Opponent within your
+    // Boosted Speed, asked, once a Round; the move and the Sky Environment's effects the table's.
+    if ((declared.foundation === "physical") && (actor.system.effects?.slots?.["landBeast.charge"] === true)
+      && ((actor.system.battlefield?.environment || "standard-environment") === "standard-environment")
+      && (actor.getFlag?.("dbu-ttrpg", "landBeastRound") !== `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`)) {
+      const { askPlayerChoice } = await import("./chat.mjs");
+      if ((await askPlayerChoice(actor, `${actor.name}: Land-Based Beast`, [{ value: "yes",
+        label: `Move beside your target first (within ${Number(actor.system.speed?.boosted) || 0} Squares) - Sky Environment ignored for it` },
+        { value: "no", label: "No" }])) === "yes") {
+        await actor.setFlag("dbu-ttrpg", "landBeastRound", `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
+        ui.notifications.info(`${actor.name}: Land-Based Beast - moves to a Square beside the target before the attack.`);
+      }
+    }
     // God Strike: "Apply the selected Profile to that Attacking Maneuver" - carried onto the attack.
     if (maneuver.appliedProfiles?.length) declared = { ...declared, appliedProfiles: [...maneuver.appliedProfiles] };
     // What is thrown travels with the attack, and what it brings of its own - the Grenade's

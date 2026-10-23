@@ -1,0 +1,19 @@
+id: return-to-heritage
+name: Return to Heritage
+order: 16
+description: >
+  You have the inherent ability to push away your conscious mind and act on instinct alone.
+text: >
+  Return to Heritage: You have the inherent ability to push away your conscious mind and act on instinct alone.
+  (1)-[Passive]: While in the Feral State, increase your Combat Rolls by 1(bT).
+  (2)-[Passive]: Reduce the Stress Test Requirement of the Feral Fist Enhancement Power by 2.
+  (3)-[Passive]: You have access to the Feral Fist Enhancement Power.
+
+---
+
+[passive]
+# (1)
+if (inState("feral")) {
+    combatRolls += 1(bT);
+}
+# Not built: (2), (3) - the Feral Fist Enhancement Power waits on Transformations.

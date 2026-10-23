@@ -488,6 +488,8 @@ const PREDICATE_NAMES = new Set([
   // Defense's).
   "ofFoundation", "focusedOn",
   "wearing", "inEnvironment",
+  // Elemental Adaptation's: a Profile some Battle Weather is connected to.
+  "weatherConnected",
   // Is the Maneuver being declared that one - Cosmic Efficiency's Combat Recovery.
   "using",
   // Resources' stacks between them, and a Health Threshold reached - Blood of the Warrior's.

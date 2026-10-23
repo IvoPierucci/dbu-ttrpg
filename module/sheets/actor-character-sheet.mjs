@@ -6571,8 +6571,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Opponent in the form of a Clash or against a set Difficulty Category." The Clash is
     // opened by whatever rule calls for one; this is the other half, and it is the only
     // roll in the system that is offered a Target Number.
+    // Silk Production (4): "If you would make a Craft (Apparel) or Medicine Skill Check, you may spend 2(bT) Ki Points to increase the
+    // Dice Score of that Skill Check by 2."
+    const silkCost = 2 * Math.max(1, Number(this.actor.system.baseTierOfPower) || 1);
+    const silk = ["craftApparel", "medicine"].includes(target.dataset.skill)
+      && (this.actor.system.effects?.slots?.["silk.craft"] === true) && ((Number(this.actor.system.ki?.value) || 0) >= silkCost);
     const ready = await prepareRoll(this.actor, [], `${name} Check`, "", {
       difficulties: true, senses: sensesAsked(this.actor, target.dataset.skill),
+      boxes: silk ? [{ name: "silk", label: `Silk Production: ${silkCost} Ki, +2`, tip: "Its Ki spent as you roll." }] : [],
       formula: { base: BASE_DIE, parts: [
         { label: name, value: skill.bonus, workings: workingsTable(this.actor.system, `skill.${target.dataset.skill}.bonus`) },
         { label: "Effects", value: total - skill.bonus,
@@ -6596,6 +6602,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       }
     }
 
+    const silkTaken = silk && (ready.boxes ?? []).includes("silk");
+    if (silkTaken) await this.actor.update({ "system.ki.value": Math.max(0, (Number(this.actor.system.ki?.value) || 0) - silkCost) });
+
     // A Skill's critical die is a flat 1d4: it does not grow with Tier of Power.
     // Two rows, because they are two things: the Skill Bonus the sheet shows, and
     // whatever applies only to rolling this Skill - which does not raise that Bonus and
@@ -6603,7 +6612,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.#rollCheck({
       parts: [
         { label: name, value: skill.bonus },
-        { label: "Effects", value: skill.roll - skill.bonus }
+        { label: "Effects", value: skill.roll - skill.bonus },
+        ...(silkTaken ? [{ label: "Silk Production", value: 2 }] : [])
       ],
       flavor: `${name} Check`,
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,

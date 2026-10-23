@@ -1,0 +1,22 @@
+id: fangs
+name: Fangs
+order: 10
+options: 1
+optionEffect: 2
+description: >
+  All animals must eat, but you draw your nourishment from other animals, and your teeth have evolved to prove it.
+text: >
+  Fangs: All animals must eat, but you draw your nourishment from other animals, and your teeth have evolved to prove it.
+  (1)-[Passive]: Gain access to the Bite Attack Maneuver (see — Special Maneuvers).
+  (2)-[Option]: Upon gaining this Bestial Trait for the first time, choose one of the following effects:
+  * Savage [Passive]: Increase the Wound Roll of your Bite Attack Maneuver by 2(T).
+  * Venomous [Triggered, 2/Encounter]: If you deal Damage to an Opponent with your Bite Attack Maneuver, make a Corporeal Clash against that Opponent. If you win, they suffer from the Poisoned Combat Condition.
+  (3)-[Adventurous]: If you choose the Venomous Option effect of Fangs, you may spend 2 hours while Adventuring to create a Poison Vial. You can only do this once during each Adventuring Session.
+
+---
+
+[passive]
+# (1) The Special Maneuver (maneuvers/bite-attack.dbu).
+allow maneuver.bite-attack;
+# (2) Its Option, chosen as it is gained (fangs/*.dbu). (3) The Poison Vial made while Adventuring - the Basic Item added on the Gear
+# tab, once a Session: the table's.

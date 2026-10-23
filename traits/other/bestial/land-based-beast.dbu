@@ -1,0 +1,23 @@
+id: land-based-beast
+name: Land-Based Beast
+order: 13
+description: >
+  Adapted for moving quickly on the ground, your powerful charge sends enemies scattering out of your way.
+text: >
+  Land-Based Beast: Adapted for moving quickly on the ground, your powerful charge sends enemies scattering out of your way.
+  (1)-[Passive]: While in the Standard Battle Environment, increase your Defense Value and Speed by 1(bT).
+  (2)-[Passive]: While in the Standard Battle Environment, reduce the Ki Point Cost to use your Boosted Speed through the Movement Maneuver by 1(bT).
+  (3)-[Triggered, 1/Round]: When making a Physical Attacking Maneuver, while in the Standard Environment, target an Opponent within your Boosted Speed. Before making the Attacking Maneuver, move to an unoccupied adjacent Square around that Opponent. When you use this effect, ignore the effects of the Sky Environment for this Attacking Maneuver.
+
+---
+
+[passive]
+# (1), (2)
+if (inEnvironment("standard")) {
+    defenseValue += 1(bT);
+    speed.normal += 1(bT);
+    movement.boostedKiCost -= 1(bT);
+}
+# (3) Asked as a Physical Attacking Maneuver is declared in the Standard Environment, once a Round: the move beside its target said on
+# its card - the Square the table's, and the Sky Environment's effects with it (use-maneuver.mjs).
+allow landBeast.charge;

@@ -1,0 +1,21 @@
+id: grippy-grabbers-third-effect
+name: Grippy Grabbers
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: grippy-grabbers
+fromEffect: 3
+source: Core Rule
+description: >
+  Grippy Grabbers' third effect, as a Maneuver: as the Grappler, a Grapple Check - won, their Life by your Might, or the Launch out of sequence.
+text: >
+  (3)-[Triggered, 1/Round]: If you are in a Grapple as the Grappler, you may target your Opponent as an Instant Maneuver. If you do, make a Grapple Check against them. If you win, you may either reduce their Life Points by your Might or use the Launch Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# The Grapple Check at the one you hold; won, which asked (chat.mjs grippyGrab, settleGrapple).
+[on used]
+grippyGrab();

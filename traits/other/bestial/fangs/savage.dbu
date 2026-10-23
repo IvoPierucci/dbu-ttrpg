@@ -1,0 +1,12 @@
+id: savage
+name: Savage
+order: 1
+optionOf: fangs
+description: >
+text: >
+
+---
+
+[passive]
+# The Bite Attack's Wound Roll 2(T) (chat.mjs postAttack).
+allow fangs.savage;

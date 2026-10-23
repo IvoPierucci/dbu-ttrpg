@@ -1883,6 +1883,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.determination = DBUCharacterData.attributeRule(
       atts.personality.score, DBUCharacterData.DETERMINATION_STRESS_BONUS);
 
+    // A State a Trait keeps you in while it is held - Extra Limbs' Multiple Arms Special State (`holdsState`): in it however it was
+    // left. A Bestial Trait the Bestial Limit set aside, not.
+    {
+      const items = Array.from(this.parent?.items ?? []);
+      const aside = item => Boolean(item.flags?.["dbu-ttrpg"]?.bestialOff) && items.some(other => other.id === item.flags["dbu-ttrpg"].bestialOff);
+      for (const item of items.filter(each => ["racial", "talent"].includes(each.type) && !aside(each))) {
+        const held = String(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.holdsState ?? "");
+        if (held) this.states = { ...(this.states ?? {}), [held]: Math.max(1, Number(this.states?.[held]) || 0) };
+      }
+    }
+
     // --- Effects ---
     // Everything effects contribute lands in a bag rebuilt from scratch on every pass,
     // never in the stored fields. Those stay as the GM's own manual overrides, and
@@ -1910,7 +1921,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Kept for what reads a Rank before the Skills are worked out: a worn piece's own Effects,
     // asked while the effects are being gathered - Training Support's Concealment.
     this.early = early;
-    const resisted = weatherResisted(Array.from(this.parent?.items ?? []), weather.id,
+    // Elemental Adaptation (3): "If your Resisted Element is a Connected Profile of a Battle Weather, ignore the effects of that Battle
+    // Weather" - felt at Tier 0.
+    const connected = weather.id ? String(getTrait(weather.id)?.profile ?? "") : "";
+    const adapted = Boolean(connected) && Array.from(this.parent?.items ?? []).some(item => (item.type === "racial")
+      && getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.resistedElement
+      && (item.system?.chosen ?? []).some(entry => String(entry.value ?? "").replace(/([A-Z])/g, "-$1").toLowerCase() === connected));
+    const resisted = adapted ? Infinity : weatherResisted(Array.from(this.parent?.items ?? []), weather.id,
       getTrait, early);
     if (this.battlefield?.weather) this.battlefield.weather.felt = Math.max(0, set - resisted);
     // Built after the bag exists: the report callback writes into it, and calling

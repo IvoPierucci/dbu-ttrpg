@@ -1,0 +1,30 @@
+id: bite-attack
+name: Bite Attack
+type: standard
+actionCost: 1
+kiCostPerTier: 2
+attacking: true
+requiresTarget: true
+special: true
+usageLimit: 1/round
+# "An Unarmed Attacking Maneuver of the Simple Profile and Physical Foundation. This Attacking Maneuver is Direct."
+profile: simple
+foundation: physical
+damageCategoryShift: 1
+tags: unarmed
+source: Core Rule
+description: >
+  Sink your fangs in: an Unarmed, Simple, Physical attack - Direct.
+text: >
+  Bite Attack [1/Round]: Sink your fangs into your opponent!
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: 2(T)
+  –Exploitable: N/A
+  –Effect: Target an Opponent with an Unarmed Attacking Maneuver of the Simple Profile and Physical Foundation. This Attacking Maneuver is Direct.
+
+---
+
+# Its Profile and Foundation fixed (maneuvers.mjs, `foundation` beside `profile`); Direct - the Simple Profile's Standard a step up.
+# Opened by an effect - Fangs'. Minions: there are none in this system yet.

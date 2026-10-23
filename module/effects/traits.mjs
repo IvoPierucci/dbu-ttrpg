@@ -14,7 +14,7 @@
  */
 
 import { PRIORITY, applySlot } from "./interpreter.mjs";
-import { useCombatConditionCheck, useResourceCeiling, useTraitLookup } from "./conditions.mjs";
+import { useCombatConditionCheck, useResourceCeiling, useTraitLookup, useWeatherProfiles } from "./conditions.mjs";
 
 const ROOT = "systems/dbu-ttrpg/traits";
 
@@ -110,6 +110,7 @@ useCombatConditionCheck(combatConditionKey);
 useResourceCeiling((name, actor) => resourceLimits(actor)[name] ?? 0);
 // And the files themselves, for what a predicate reads off them - the Light Level's (lightNormalOrHigher).
 useTraitLookup(id => getTrait(id));
+useWeatherProfiles(() => traitsOfKind("battlefields").filter(trait => trait.weather === true).map(trait => String(trait.profile ?? "")));
 
 /**
  * The Resources the library declares, and the most of each that may be held.

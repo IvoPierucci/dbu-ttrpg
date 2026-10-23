@@ -1,0 +1,22 @@
+id: retractable-limbs
+name: Retractable Limbs
+order: 15
+grantsUnique: physical-retreat
+description: >
+  You have the innate ability to retract vulnerable parts of your body, making you less prone to injury. (inspired by the Homebrew from Idios of the DBU Discord)
+text: >
+  Retractable Limbs: You have the innate ability to retract vulnerable parts of your body, making you less prone to injury. (inspired by the Homebrew from Idios of the DBU Discord)
+  (1)-[Passive]: Increase your Defense Value by 1(bT) while below the Injured Health Threshold.
+  (2)-[Passive]: Gain access to the Physical Retreat Unique Ability.
+  (3)-[Triggered, 1/Round]: If you successfully avoid or otherwise take 0 Damage from an Opponent’s Called Shot, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Injured or Critical.
+if (belowThreshold("injured")) {
+    defenseValue += 1(bT);
+}
+# (2) Its header's `grantsUnique`, free, gone with it.
+# (3) An Opponent's Called Shot missed or for no Damage: the Basic Attack offered on its card, out of sequence, once a Round (chat.mjs).
+allow retractable.counter;

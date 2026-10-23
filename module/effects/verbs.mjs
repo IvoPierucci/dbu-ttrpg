@@ -403,6 +403,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  grippyGrab: {
+    args: [0, 0],
+    doc: "Grippy Grabbers (3): a Grapple Check at the one you hold - won, their Life by your Might or the Launch (chat.mjs grippyGrab)."
+  },
+  regenerateSurge: {
+    args: [0, 0],
+    doc: "Regenerating Beast (2): a Healing Surge, none this Round before or after (chat.mjs regenerateSurge)."
+  },
   alternateSight: {
     args: [0, 0],
     doc: "Alternate Sight (4): a Perception Clash at the targeted Opponent - won, your next attack at them this Round (chat.mjs alternateSight)."

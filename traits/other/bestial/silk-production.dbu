@@ -1,0 +1,23 @@
+id: silk-production
+name: Silk Production
+order: 17
+grantsUnique: binding
+description: >
+  Through something in your body you are able to generate a strong form of silk that you can use to incapacitate your enemies. (inspired by the Hombrew from MemeKingDave of the DBU Discord)
+text: >
+  Silk Production: Through something in your body you are able to generate a strong form of silk that you can use to incapacitate your enemies. (inspired by the Hombrew from MemeKingDave of the DBU Discord)
+  (1)-[Passive]: Gain access to the Binding Unique Ability.
+  (2)-[Passive]: Increase the Dice Score of any Strike Rolls or Might Clashes you make through the effects of the Binding Unique Ability by 1(bT).
+  (3)-[1/Round]: As an Instant Maneuver while you are within a Large Sphere AoE (centered on the closest Feature to you), you may move to any other Square within that AoE.
+  (4)-[Triggered, Adventurous]: If you would make a Craft (Apparel) or Medicine Skill Check, you may spend 2(bT) Ki Points to increase the Dice Score of that Skill Check by 2.
+
+---
+
+[passive]
+# (1) Its header's `grantsUnique`, free, gone with it.
+# (2) Your side of Binding's Clashes - its Strike and its Might Clash (chat.mjs silkBindingBonus).
+allow silk.binding;
+# (3) Its own Maneuver, on the Maneuvers tab (maneuvers/silk-production-third-effect.dbu): the move said on its card - the Feature and the
+# Square the table's.
+# (4) A box in the Skill's roll window from the sheet: 2(bT) Ki, 2 on it (actor-character-sheet.mjs).
+allow silk.craft;

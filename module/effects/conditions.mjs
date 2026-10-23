@@ -23,6 +23,12 @@ export function useTraitLookup(fn) {
   traitLookup = fn;
 }
 
+/** Every Battle Weather's Connected Profile - set by traits.mjs at load, the same way (weatherConnected). */
+let weatherProfiles = () => [];
+export function useWeatherProfiles(fn) {
+  weatherProfiles = fn;
+}
+
 /** The most of a Resource a character may hold, nothing for no ceiling - set by traits.mjs at load, the same way. */
 let resourceCeilingOf = () => 0;
 export function useResourceCeiling(fn) {
@@ -450,6 +456,11 @@ const PREDICATES = {
   inCombat: () => Boolean(globalThis.game?.combat?.started),
   /** Arboreal (1): "if the Light Level ... is Normal or higher" - the Level this character is in, as they treat it. */
   lightNormalOrHigher: scope => lightLevelOf(scope.data, traitLookup) >= 0,
+
+  /** Elemental Adaptation (3), (4): is this Profile the Connected Profile of a Battle Weather. */
+  // A Profile's id is camelCase (elementalFire), a Weather file's `profile:` kebab-case (elemental-fire).
+  weatherConnected: (scope, profile) => weatherProfiles()
+    .includes(String(profile ?? "").trim().replace(/([A-Z])/g, "-$1").toLowerCase()),
 
   /** In Cover - the Battlefields tab's, or set by an effect (Burrowing Beast's Underground, a Feature carried). */
   inCover: scope => Boolean(scope.data?.battlefield?.cover?.active),

@@ -89,8 +89,9 @@ export function techniqueAttack(actor, maneuver, declared, { targets = [], shake
     .concat(declared.gigaFlare ? [{ label: "Giga Flare", amount: 2 * declared.gigaFlare }] : [])
     .concat(declared.superCombination ? [{ label: "Super Combination", amount: declared.superCombination }] : [])
     // Earthling-Raised's, or Quick to Master's - by the name it was taken under.
-    .concat(declared.earthlingCharge ? [{ label: (typeof declared.earthlingCharge === "string")
-      ? declared.earthlingCharge : "Earthling-Raised", amount: 1 }] : [])
+    // And Grippy Grabbers (4)'s beside it - a list of them, then.
+    .concat([].concat(declared.earthlingCharge || []).map(each => ({ label: (typeof each === "string")
+      ? each : "Earthling-Raised", amount: 1 })))
     // Spike!: "it gains 1 Energy Charge for each time the Opponent has been hit by an Attacking Maneuver from your
     // Allies during Volleyball Time!"
     .concat(declared.volleyball?.charges ? [{ label: "Volleyball Time!", amount: declared.volleyball.charges }] : []);

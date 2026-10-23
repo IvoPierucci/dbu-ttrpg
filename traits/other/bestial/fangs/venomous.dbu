@@ -1,0 +1,12 @@
+id: venomous
+name: Venomous
+order: 2
+optionOf: fangs
+description: >
+text: >
+
+---
+
+[passive]
+# Damage dealt by your Bite Attack: asked, twice an Encounter - a Clash (Corporeal); won, Poisoned (chat.mjs venomousBite).
+allow fangs.venomous;

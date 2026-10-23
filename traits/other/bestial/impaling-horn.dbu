@@ -1,0 +1,21 @@
+id: impaling-horn
+name: Impaling Horn
+order: 12
+description: >
+  In combat, you charge headfirst into battle, your horns thrust forward to damage your enemies and protect you from recoil.
+text: >
+  Impaling Horn: In combat, you charge headfirst into battle, your horns thrust forward to damage your enemies and protect you from recoil.
+  (1)-[Passive]: Increase your Wound Rolls for your Physical Attacks with the Charging Assault Advantage by 2(T).
+  (2)-[Triggered, 1/Round]: If an Opponent attempts to use the Blockade Maneuver against you, make a Physical Attack through the Basic Attack Maneuver against them as an Out-of-Sequence Maneuver.
+  (3)-[Triggered, 1/Round]: If you hit an Opponent with a Physical Attack that has the Charging Assault Advantage, spend 4(bT) Ki Points to increase the Damage Category by 1.
+
+---
+
+[passive]
+# (1) A row on its Wound Roll as it is declared (chat.mjs postAttack).
+allow impaling.wound;
+# (2) Blockaded: the Basic Attack at them offered on the Blockade's Clash card, out of sequence, once a Round - its Physical Attack the
+# player's to declare.
+allow impaling.blockade;
+# (3) Asked as it hits, once a Round: 4(bT) Ki, its Damage Category 1 higher (chat.mjs impalingCategory).
+allow impaling.category;

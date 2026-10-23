@@ -1,0 +1,22 @@
+id: regenerating-beast-second-effect
+name: Regenerating Beast
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+encounterLimit: 3
+fromTrait: regenerating-beast
+fromEffect: 2
+source: Core Rule
+description: >
+  Regenerating Beast's second effect, as a Maneuver: a Healing Surge, none this Round before or after.
+text: >
+  (2)-[1/Round, 3/Encounter]: If you haven’t used a Healing Surge this Combat Round, then as Standard Action with an Action Cost of 1 Action, you may use a Healing Surge. If you do, you cannot use another Healing Surge for the duration of this Combat Round.
+
+---
+
+# Refused with a Healing Surge used this Round; after it, none other this Round (chat.mjs regenerateSurge, takeSurge).
+[on used]
+regenerateSurge();

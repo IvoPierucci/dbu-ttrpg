@@ -1,0 +1,22 @@
+id: regenerating-beast
+name: Regenerating Beast
+order: 14
+description: >
+  Thanks to your unique regenerative powers, even losing a limb isn’t a mortal wound for you. (inspired by the Homebrew from Heilmern of the DBU Discord)
+text: >
+  Regenerating Beast: Thanks to your unique regenerative powers, even losing a limb isn’t a mortal wound for you. (inspired by the Homebrew from Heilmern of the DBU Discord)
+  (1)-[Passive]: Increase your Surgency by 1/4 (rounded up) of your Tenacity Modifier.
+  (2)-[1/Round, 3/Encounter]: If you haven’t used a Healing Surge this Combat Round, then as Standard Action with an Action Cost of 1 Action, you may use a Healing Surge. If you do, you cannot use another Healing Surge for the duration of this Combat Round.
+  (3)-[Triggered/Start of Combat Round]: Regain 2(bT) Life Points for every Health Threshold you are below.
+
+---
+
+[passive]
+# (1)
+surgency += ceil(tenacity.mod / 4);
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/regenerating-beast-second-effect.dbu).
+
+# (3) Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-round, effect 3]
+requires belowThreshold("bruised");
+life.value += threshold.depth * 2(bT);

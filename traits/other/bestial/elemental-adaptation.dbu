@@ -1,0 +1,25 @@
+id: elemental-adaptation
+name: Elemental Adaptation
+order: 8
+# (1) The Resisted Element, chosen as it is gained.
+choose: elementalProfile
+resistedElement: true
+description: >
+  You are particularly suited to an environment with an elemental extreme as one of its core features.
+text: >
+  Elemental Adaptation: You are particularly suited to an environment with an elemental extreme as one of its core features.
+  (1)-[Passive, Ruling]: Upon gaining this Bestial Trait, select a Profile with ‘Elemental’ in the name. This Profile is known as your ‘Resisted Element’.
+  (2)-[Passive]: Halve all Damage you receive from Attacking Maneuvers of your Resisted Element.
+  (3)-[Passive]: If your Resisted Element is a Connected Profile of a Battle Weather (see — Battle Weather), ignore the effects of that Battle Weather.
+  (4)-[Passive]: If your Resisted Element is not a Connected Profile of a Battle Weather, increase your Racial Life Modifier by 2.
+
+---
+
+[passive]
+# (2) The Damage of an attack of that Profile, halved (rounded down) as it is worked out for you (chat.mjs).
+allow resisted.$choice;
+# (3) Its header's `resistedElement`: the Battle Weather whose Connected Profile it is felt at Tier 0 - ignored (actor-character.mjs).
+# (4)
+if (!weatherConnected("$choice")) {
+    racialLifeModifier += 2;
+}
