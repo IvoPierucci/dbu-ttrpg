@@ -1,0 +1,21 @@
+id: brood-parent-first-effect
+name: Brood Parent
+type: standard
+actionCost: 1
+kiCostPerTier: 5
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: brood-parent
+fromEffect: 1
+source: Core Rule
+description: >
+  Brood Parent's first effect, as a Maneuver: 5(T) Ki, a Duplicate Minion a Size Category smaller than you.
+text: >
+  (1)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action and a Ki Point Cost of 5(T), create a Duplicate Minion. Your Duplicate Minion’s base Size Category is 1 Size Category smaller than yours.
+
+---
+
+# Its Ki paid as the Maneuver's; the Minion and its Size said (chat.mjs broodMinion) - the Minion itself the table's.
+[on used]
+broodMinion();

@@ -1,0 +1,19 @@
+id: drain-life
+name: Drain Life
+kind: signature
+side: advantages
+tpCost: 8
+requirement: Physical Attack, access to the Draining Attack Maneuver
+requires: foundation:physical, maneuver:draining-attack
+summary: The Draining Attack Maneuver may be applied to this Signature Technique.
+description: >
+  You possess the uncanny ability to steal the life energy of others to fuel your own.
+text: >
+  Drain Life: You possess the uncanny ability to steal the life energy of others to fuel your own.
+  –TP Cost: 8
+  –Requirement: Physical Attack, access to the Draining Attack Maneuver
+  –Effect: You may use the Draining Attack Maneuver in response to the Signature Technique Maneuver for this Signature Technique.
+
+---
+
+# Read where a Modifier's Base is checked (maneuvers.mjs whyNotModify): the Draining Attack let onto this Technique.

@@ -1,0 +1,18 @@
+id: extending-weapon
+name: Extending Weapon
+order: 1
+optionOf: extension-attack
+installsWeapons: 1
+installsWeaponGrade: 5
+installsWeaponType: physical
+installsWeaponQualities: extending
+installsWeaponName: Prehensile Weapon
+installsIndestructible: false
+description: >
+text: >
+
+---
+
+# (3) The Prehensile Weapon, made on the Gear tab as this is chosen - which Physical Category, asked; Grade 5, Extending (racial.mjs
+# madeByOption). The Hidden Quality is not in this system - the user's to say which it is.
+# (4) Not built: the Telekinetic and Extending Qualities put on a wielded Weapon as an Instant - the Weapon's sheet, the table's.

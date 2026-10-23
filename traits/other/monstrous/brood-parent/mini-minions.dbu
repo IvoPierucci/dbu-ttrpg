@@ -1,0 +1,10 @@
+id: mini-minions
+name: Mini Minions
+order: 3
+optionOf: brood-parent
+description: >
+text: >
+
+---
+
+# The further Size steps, and their Soak and Defense Value, said by the table as the Minion is made (Minions wait on the user's design).

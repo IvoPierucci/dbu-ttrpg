@@ -1,0 +1,26 @@
+id: extension-attack
+name: Extension Attack
+order: 6
+options: 1
+optionEffect: 3
+description: >
+  Whether by means of extended hair, limbs, bandages or even a prehensile tongue, you possess a means of attacking and binding up an opponent from a distance. (Partially inspired by the Homebrew of Comeau in the DBU Discord)
+text: >
+  Extension Attack: Whether by means of extended hair, limbs, bandages or even a prehensile tongue, you possess a means of attacking and binding up an opponent from a distance. (Partially inspired by the Homebrew of Comeau in the DBU Discord)
+  (1)-[Passive]: When making the Grapple Maneuver against an Opponent or maintaining it against an Opponent, you may increase your Melee Range by 3 Squares for the duration of that Maneuver.
+  (2)-[Passive]: While you are Grappling an Opponent who is 3 or more Squares away from you, you do not suffer the Guard Down Condition.
+  (3)-[Option]: Upon gaining this Trait, select and apply one of the following effects:
+  * Extending Weapon [Passive, Ruling]: Upon gaining this Monstrous Trait, create and Integrate a Physical Weapon with a Craftsmanship Grade of 5 and the Extending and Hidden Qualities. This becomes known as your ‘Prehensile Weapon’.
+  * Mystic Attack [Triggered]: When making any type of Physical Attacking Maneuver, you may increase your Melee Range by +3 Squares for the duration of that Maneuver. Upon hitting a Character, you may move that Character any number of Squares up to your current Melee Range (including the bonus from this effect) in any direction.
+  (4)-[Choice]: Depending on your choice for the Option effect of this Trait, apply the following effects:
+  * Extending Weapon [1/Round]: As an Instant Maneuver, you may apply the Telekinetic and Extending Qualities to a Weapon you are wielding that does not currently possess them (this does not count towards the maximum number of Qualities that Weapon can possess). While benefitting from those Qualities, ignore all other effects from this Trait. You may remove the Telekinetic and Extending Qualities given to a Weapon through this effect as an Instant Maneuver.
+  * Mystic Attack [Passive]: Ignore Cover for Opponents who are not Hidden from you and increase the Wound Rolls of your Physical Attacking Maneuvers against Opponents not on an adjacent Square to you by 2(T).
+
+---
+
+[passive]
+# (1) The Grapple Maneuver out of reach: Melee Range 3 more for it (use-maneuver.mjs).
+allow extension.grapple;
+# (2) Grappling from 3 Squares or more away: no Guard Down from it (chat.mjs beginGrapple).
+allow extension.noGuardDown;
+# (3), (4) Its Option, chosen as it is gained, and its Choice with it - one file each (extension-attack/*.dbu).

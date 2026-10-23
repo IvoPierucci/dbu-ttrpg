@@ -3324,7 +3324,11 @@ export function whyNotModify(modifier, base) {
 
   const matches = wanted.some(entry => (entry === base.id)
     || (entry === base.type)
-    || ((entry === "attacking") && base.attacking));
+    || ((entry === "attacking") && base.attacking))
+    // Drain Life: "You may use the Draining Attack Maneuver in response to the Signature Technique Maneuver for this Signature
+    // Technique."
+    || ((modifier.id === "draining-attack") && [...(base.signature?.features ?? []), ...(base.features ?? []), ...(base.advantages ?? [])]
+      .some(entry => (entry?.id ?? entry) === "drain-life"));
 
   if (!matches) {
     return `${modifier.name} applies to ${wanted.join(" or ")}, not to ${base.name}.`;

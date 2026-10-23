@@ -467,6 +467,9 @@ const PREDICATES = {
   /** In that Battle Weather - Weather Resilient's "within your selected Battle Weather". */
   inWeather: (scope, id) => Boolean(id) && (String(scope.data?.battlefield?.weather?.id ?? "") === String(id)),
 
+  /** The one Defeated by your attack (moment defeat-opponent) is a Minion - its Minion box (Bloodlust's). */
+  defeatedMinion: scope => Boolean(globalThis.fromUuidSync?.(scope.context?.defeatedUuid ?? "")?.system?.minion),
+
   /** In the Low Sky or High Sky Environment - Winged Beast's. */
   inSky: scope => [1, 2].includes(Number(scope.data?.battlefield?.highEnvironment) || 0),
 

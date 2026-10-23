@@ -1,0 +1,22 @@
+id: elemental-assault
+name: Elemental Assault
+order: 5
+# (1) The Favored Element, chosen as it is gained.
+choose: elementalProfile
+options: 1
+optionEffect: 2
+description: >
+  Your species is intrinsically tied to an element of the natural world, and as such, can produce that element at will. (Partially inspired by the homebrew of Dunkaccino in the DBU Discord).
+text: >
+  Elemental Assault: Your species is intrinsically tied to an element of the natural world, and as such, can produce that element at will. (Partially inspired by the homebrew of Dunkaccino in the DBU Discord).
+  (1)-[Passive]: Upon gaining this Trait, select a Profile with ‘Elemental’ in the name to become your Favored Element.
+  (2)-[Option]: Upon gaining this Trait, select one of the following effects:
+  * Counter Elemental [Passive, Ruling]: Increase the Wound Rolls of your Favored Element by 3(T), but select an additional Profile with ‘Elemental’ in the name, except the one chosen for the first effect of Elemental Assault. This Profile becomes your ‘Vulnerability’. If you are hit by an Attacking Maneuver of your Vulnerability, increase the Damage Category of that Attacking Maneuver by 1 Category for the sake of your Damage Calculation.
+  * Elemental Infusion [Triggered]: When you use a Physical Attack or Energy Attack, you may apply the Multi-Profile Super Profile to that Attacking Maneuver. If you do, you must select a Favored Element for the effects of Multi-Profile.
+
+---
+
+[passive]
+# (1)
+favored.$choice = true;
+# (2) Its Option, chosen as it is gained (elemental-assault/*.dbu).

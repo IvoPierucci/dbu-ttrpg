@@ -1,0 +1,17 @@
+id: dissipating-dodge
+name: Dissipating Dodge
+order: 4
+description: >
+  You have the uncanny ability to move around the battlefield as if you were teleporting.
+text: >
+  Dissipating Dodge: You have the uncanny ability to move around the battlefield as if you were teleporting.
+  (1)-[1/Round]: As an Instant Maneuver, you may spend 2(bT) Ki Points to select an unoccupied Square within 6 Squares of you and place yourself on that Square. If that Square is within the Melee Range of an Opponent, make an Impulsive Clash against them. If you win, they suffer from the Guard Down Combat Condition against your next Attacking Maneuver until the end of your turn.
+  (2)-[Triggered]: If you are targeted by an Attacking Maneuver, you may spend 4(bT) Ki Points to reduce your Size Category to Nano for the sake of calculating the bonus/penalty to Defense Value from your Size Category for the duration of that Attacking Maneuver. You cannot use this effect if you are suffering from the Guard Down or Impediment Combat Condition(s).
+
+---
+
+[passive]
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/dissipating-dodge-first-effect.dbu).
+# (2) Targeted, not Guard Down nor Impeded: a button on the attack's card till it is settled - 4(bT) Ki, the Defense Value as at Nano
+# for that attack (chat.mjs dissipatingButtons).
+allow dissipating.nano;

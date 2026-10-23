@@ -1,0 +1,15 @@
+id: mystic-attack
+name: Mystic Attack
+order: 2
+optionOf: extension-attack
+description: >
+text: >
+
+---
+
+[passive]
+# (3) A Physical Attacking Maneuver out of reach: Melee Range 3 more for it, asked (maneuvers.mjs stretchReach); the one hit moved, the
+# table's.
+meleeRange.stretch += 3;
+# (4) Cover ignored for Opponents not Hidden from you; Physical Wound 2(T) against one not adjacent (chat.mjs mysticCover, mysticReach).
+allow extension.mystic;

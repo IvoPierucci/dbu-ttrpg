@@ -513,6 +513,10 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "bloodlustFeed": return (await import("../chat.mjs")).bloodlustFeed(actor, Number(args[0]) || 1);
+    case "bloodlustStarve": return (await import("../chat.mjs")).bloodlustStarve(actor);
+    case "broodMinion": return (await import("../chat.mjs")).broodMinion(actor);
+    case "dissipate": return (await import("../chat.mjs")).dissipate(actor);
     case "quillBurst": return (await import("../chat.mjs")).quillBurst(actor);
     case "weatherSurge": return (await import("../chat.mjs")).weatherSurge(actor);
     case "grippyGrab": return (await import("../chat.mjs")).grippyGrab(actor);

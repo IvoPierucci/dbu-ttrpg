@@ -1,0 +1,12 @@
+id: many-minions
+name: Many Minions
+order: 4
+optionOf: brood-parent
+description: >
+text: >
+
+---
+
+[passive]
+# 1/Round to 3/Round: two uses more of its Maneuver.
+brood-parent-first-effect.uses += 2;

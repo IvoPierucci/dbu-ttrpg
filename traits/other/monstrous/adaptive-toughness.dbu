@@ -1,0 +1,18 @@
+id: adaptive-toughness
+name: Adaptive Toughness
+order: 1
+description: >
+  Your defenses grow as your body sustains damage.
+text: >
+  Adaptive Toughness: Your defenses grow as your body sustains damage.
+  (1)-[Passive]: Increase your Damage Reduction by 1(T) for every Health Threshold you are below.
+  (2)-[Triggered, 1/Round]: When you are targeted by an Attacking Maneuver, double the bonus to your Damage Reduction from the first effect of Adaptive Toughness for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+damageReduction += threshold.depth * 1(T);
+# (2) Targeted: a button on the attack's card till it is settled, once a Round - as much again for that attack (chat.mjs
+# adaptiveButtons, beside Party Tactics' Damage Reduction).
+allow adaptive.double;

@@ -1,0 +1,13 @@
+id: elemental-infusion
+name: Elemental Infusion
+order: 2
+optionOf: elemental-assault
+description: >
+text: >
+
+---
+
+# Not built: the Multi-Profile Super Profile is applied to Signature Techniques only in this system - on a Physical or Energy Attack
+# of another kind, the table's.
+[passive]
+allow elementalAssault.infusion;

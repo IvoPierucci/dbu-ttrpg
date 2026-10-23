@@ -940,6 +940,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.clawsProne && clash.result && !clash.clawsProne.applied) await settleClaws(message, clash);
   if (clash.venom && clash.result && !clash.venom.applied) await settleVenom(message, clash);
   if (clash.quills && clash.result && !clash.quills.applied) await settleQuills(message, clash);
+  if (clash.dissipate && clash.result && !clash.dissipate.applied) await settleDissipate(message, clash);
   if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
     await settleCutthroatClash(message, clash);
   }
@@ -3585,8 +3586,12 @@ async function beginGrapple(grappler, grappled) {
 
   // Gigantic Grip: "In a Grapple, if you are 3+ Size Categories larger than the Grappled, you do not gain the Guard Down
   // Combat Condition from that Grapple."
+  // Extension Attack (2): "While you are Grappling an Opponent who is 3 or more Squares away from you, you do not suffer the Guard Down
+  // Condition."
+  const { squaresAway } = await import("./maneuvers.mjs");
+  const extended = (grappler.system?.effects?.slots?.["extension.noGuardDown"] === true) && ((Number(squaresAway(grappler, grappled)) || 0) >= 3);
   for (const actor of [grappler, grappled]) {
-    if ((actor === grappler) && (gripDifference(grappler, grappled) >= 3)) continue;
+    if ((actor === grappler) && ((gripDifference(grappler, grappled) >= 3) || extended)) continue;
     await setCondition(actor, "guard-down", 1);
   }
   // "If you enter a Grapple as the Grappler" - Elongated Tail's.
@@ -19407,6 +19412,148 @@ async function assassinateCategory(attacker, struck) {
   return true;
 }
 
+/** Life and Ki Points regained, each to its Maximum - Feast's and the Draining Attack's, kept out of the Damage's own function. */
+async function regainPools(actor, life = 0, ki = 0) {
+  const { life: pool, ki: kiPool } = actor.system;
+  return requestActorUpdate(actor, { ...(life ? { "system.life.value": Math.min(Number(pool.max) || 0, (Number(pool.value) || 0) + life) } : {}),
+    ...(ki ? { "system.ki.value": Math.min(Number(kiPool.max) || 0, (Number(kiPool.value) || 0) + ki) } : {}) });
+}
+
+/** Bloodlust (1): stacks of Bloodlust (max. 3), and this Round marked as one it was triggered in - for (3). */
+export async function bloodlustFeed(actor, stacks = 1) {
+  if (!actor) return;
+  await setResource(actor, "bloodlust", (Number(actor.system.resources?.bloodlust?.stacks) || 0) + Math.max(1, stacks));
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.bloodlustRound`]: roundKey() });
+}
+
+/** Bloodlust (3): "You lose a stack of Bloodlust at the end of any Combat Round you did not successfully trigger the first effect". */
+export async function bloodlustStarve(actor) {
+  if (!actor || (actor.getFlag?.(SCOPE, "bloodlustRound") === roundKey())) return;
+  await setResource(actor, "bloodlust", Math.max(0, (Number(actor.system.resources?.bloodlust?.stacks) || 0) - 1));
+}
+
+/** Brood Parent (1): "create a Duplicate Minion. Your Duplicate Minion's base Size Category is 1 Size Category smaller than yours." */
+export async function broodMinion(actor) {
+  if (!actor) return;
+  const sizes = Object.keys(DBUCharacterData.SIZES);
+  const own = actor.system.size?.trueKey ?? actor.system.size?.key ?? "";
+  const smaller = sizes[Math.max(0, sizes.indexOf(own) - 1)];
+  const label = DBUCharacterData.SIZES[smaller]?.label ?? smaller ?? "one smaller";
+  const mini = Array.from(actor.items ?? []).some(item => (item.system?.chosen ?? []).some(entry => entry.value === "mini-minions"));
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="A Duplicate Minion of ${Handlebars.escapeExpression(actor.name)}, its base Size Category one smaller than theirs${mini
+      ? " - up to 2 more with Mini Minions, each 1(T) off its Soak Value and 1(T) on its Defense Value" : ""}.">
+    Brood Parent: a Duplicate Minion, ${Handlebars.escapeExpression(String(label))}.</div>` });
+}
+
+/**
+ * Dissipating Dodge (1): "If that Square is within the Melee Range of an Opponent, make an Impulsive Clash against them. If you win,
+ * they suffer from the Guard Down Combat Condition against your next Attacking Maneuver until the end of your turn." Placed by the
+ * table first; which Opponent, asked among those whose Melee Range you are in.
+ */
+export async function dissipate(actor) {
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const near = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
+    && !allies.has(token.actor.uuid) && !token.actor.system?.defeated && !whyNotWithinMelee(token.actor, actor, ""))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!near.length) return true;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Dissipating Dodge - an Impulsive Clash`,
+    [...near.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const who = near.find(each => each.uuid === picked);
+  if (!who) return true;
+  return postSaveClash(actor, who, { maneuverName: "Dissipating Dodge", saves: ["impulsive"],
+    reason: "Win and they are Guard Down against your next attack, till the end of your turn.", dissipate: { applied: false } });
+}
+
+async function settleDissipate(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, dissipate: { ...clash.dissipate, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Dissipating Dodge: they keep their guard.");
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  await markUntilNextTurn(actor, target, "guard-down", 1, "end", "Dissipating Dodge", false);
+  return settledNote(message, `Dissipating Dodge: ${target.name} is Guard Down till the end of ${actor.name}'s turn.`);
+}
+
+/**
+ * Adaptive Toughness (2): "When you are targeted by an Attacking Maneuver, double the bonus to your Damage Reduction from the first
+ * effect of Adaptive Toughness for the duration of that Attacking Maneuver." A button for each target holding it, once a Round - as
+ * much again, kept with Party Tactics' Damage Reduction on the attack.
+ */
+function adaptiveButtons(message, attack, container) {
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["adaptive.double"] !== true)) continue;
+    if ((target.getFlag?.(SCOPE, "adaptiveRound") === roundKey()) || (attack.partyReduction ?? []).some(entry => (entry.uuid === uuid) && entry.adaptive)) continue;
+    const value = (Number(target.system.threshold?.depth) || 0) * Math.max(1, Number(target.system.tierOfPower) || 1);
+    if (!value) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Adaptive Toughness - ${target.name}`;
+    button.dataset.tooltip = `Once a Round: Damage Reduction ${value} more for this attack.`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      if (target.getFlag?.(SCOPE, "adaptiveRound") === roundKey()) return;
+      await target.setFlag(SCOPE, "adaptiveRound", roundKey());
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, partyReduction: [...(fresh.partyReduction ?? []),
+        { uuid, value, by: uuid, adaptive: true }] } });
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Dissipating Dodge (2): "spend 4(bT) Ki Points to reduce your Size Category to Nano for the sake of calculating the bonus/penalty to
+ * Defense Value from your Size Category for the duration of that Attacking Maneuver" - not Guard Down nor Impeded. The difference,
+ * on their Defense Value for this attack.
+ */
+function dissipatingButtons(message, attack, container) {
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["dissipating.nano"] !== true)) continue;
+    if ((attack.balanced ?? []).some(entry => (entry.uuid === uuid) && (entry.source === "Dissipating Dodge"))) continue;
+    if (((Number(target.system.conditions?.["guard-down"]) || 0) > 0) || ((Number(target.system.conditions?.impediment) || 0) > 0)) continue;
+    const { SIZES } = DBUCharacterData;
+    const tier = Math.max(1, Number(target.system.tierOfPower) || 1);
+    const value = (SIZES.nano.defensePerTier - (SIZES[target.system.size?.key ?? "medium"]?.defensePerTier ?? 0)) * tier;
+    const cost = 4 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+    if ((value <= 0) || ((Number(target.system.ki?.value) || 0) < cost)) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Dissipating Dodge - ${target.name}`;
+    button.dataset.tooltip = `${cost} Ki Points: Defense Value as at Nano for this attack (+${value}).`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const { ki, capacity } = target.system;
+      if ((ki.value < cost) || (capacity.remaining < cost)) return ui.notifications.warn(`${target.name} cannot pay ${cost} Ki Points.`);
+      await requestActorUpdate(target, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost });
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, balanced: [...(fresh.balanced ?? []),
+        { uuid, value, source: "Dissipating Dodge", only: "Defense Value", written: "" }] } });
+    });
+    container.append(button);
+  }
+}
+
+/** Extension Attack's Mystic Attack (4): "Ignore Cover for Opponents who are not Hidden from you" - a Physical Attack of the holder's. */
+function mysticCover(attack, target) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if ((attacker?.system?.effects?.slots?.["extension.mystic"] !== true) || (attack.foundation !== "physical") || !target) return false;
+  return !(target.system?.hiddenFrom ?? []).some(entry => entry?.uuid === attacker.uuid);
+}
+
+/** Mystic Attack (4): "increase the Wound Rolls of your Physical Attacking Maneuvers against Opponents not on an adjacent Square to you by 2(T)". */
+function mysticReach(attacker, attack, target) {
+  if ((attacker?.system?.effects?.slots?.["extension.mystic"] !== true) || (attack?.foundation !== "physical") || !target) return 0;
+  const from = attacker.getActiveTokens?.(false, true)?.[0];
+  const to = target.getActiveTokens?.(false, true)?.[0];
+  const gap = (from && to) ? squaresBetween(from, to) : null;
+  return ((gap !== null) && (gap > 0)) ? 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) : 0;
+}
+
 /** The Natural Armor a Trait of this id gave - Sturdy Shell's Shell, Treacherous Spikes' Quillset - or null. */
 function grantedArmor(actor, sourceId) {
   const giver = Array.from(actor?.items ?? []).find(item => item.flags?.["dbu-ttrpg"]?.sourceId === sourceId);
@@ -20398,8 +20545,10 @@ function balancedButtons(message, attack, container) {
  * for one attack, kept the same way with its `source`: Combat Observation (1)'s, Dedicated Watcher (3)'s.
  */
 function balancedParts(actor, attack, label) {
-  return (attack?.balanced ?? []).filter(each => each.uuid === actor?.uuid)
-    .map(entry => ({ label: `${entry.source ?? "Balanced Defender"} (${label})`, written: "+1(T)", value: Number(entry.value) || 0 }));
+  // One for a single one of the two - Dissipating Dodge's Defense Value (`only`), its amount its own (`written`).
+  return (attack?.balanced ?? []).filter(each => (each.uuid === actor?.uuid) && (!each.only || (each.only === label)))
+    .map(entry => ({ label: `${entry.source ?? "Balanced Defender"} (${label})`,
+      ...((entry.written === "") ? {} : { written: entry.written ?? "+1(T)" }), value: Number(entry.value) || 0 }));
 }
 
 /**
@@ -23835,6 +23984,17 @@ export async function postAttack(actor, target, maneuver,
   if (maneuver.tailAttack && (actor.system.effects?.slots?.["tailBeast.strike"] === true) && !reflecting) {
     strikeExtra = [...strikeExtra, { label: "Tail", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
+  // Feast (3): "When you use the Bite Maneuver or apply the effects of the Draining Attack Maneuver to an Attacking Maneuver, you may
+  // reduce your Life Points by up to 3(bT) to increase the Wound Roll by twice the amount of Life Points lost."
+  if (((maneuver.id === "bite-attack") || (modifiers ?? []).some(entry => (entry.id === "draining-attack") || (entry.modifier?.id === "draining-attack")))
+    && (actor.system.effects?.slots?.["feast.lifeWound"] === true) && !reflecting) {
+    const most = Math.min(3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1), Math.max(0, (Number(actor.system.life?.value) || 0) - 1));
+    const lost = most ? (Number(await askPlayerAmount(actor, `${actor.name}: Feast`, most, "Life Points - twice as much on the Wound")) || 0) : 0;
+    if (lost > 0) {
+      const { taken } = await reduceLifePoints(actor, lost, { reason: "Feast", own: true });
+      if (taken) woundExtra = [...woundExtra, { label: "Feast", written: `+${2 * taken}`, value: 2 * taken }];
+    }
+  }
   // Fangs' Savage: "Increase the Wound Roll of your Bite Attack Maneuver by 2(T)."
   if ((maneuver.id === "bite-attack") && (actor.system.effects?.slots?.["fangs.savage"] === true) && !reflecting) {
     woundExtra = [...woundExtra, { label: "Savage (Fangs)", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
@@ -25630,7 +25790,11 @@ function profileSlotStrike(attacker, attack) {
 function favoredParts(attacker, attack, roll) {
   if (!favoredElement(attacker, attack?.profile)) return [];
   const per = (roll === "strike") ? 1 : 2;
-  return [{ label: "Favored Element", written: `+${per}(T)`, value: per * Math.max(1, attacker.system.tierOfPower ?? 1) }];
+  const tier = Math.max(1, attacker.system.tierOfPower ?? 1);
+  // Elemental Assault's Counter Elemental: "Increase the Wound Rolls of your Favored Element by 3(T)".
+  const counter = (roll !== "strike") && (attacker.system.effects?.slots?.["elementalAssault.counter"] === true);
+  return [{ label: "Favored Element", written: `+${per}(T)`, value: per * tier },
+    ...(counter ? [{ label: "Counter Elemental", written: "+3(T)", value: 3 * tier }] : [])];
 }
 
 /** Self-Explosion given to an attack - Revenge Bomber's: its Sphere centred on its user. */
@@ -27925,10 +28089,15 @@ async function rollAttackWoundWork(message, attack) {
   const spotted = await spotterCategory(message, attacker, attack, wound);
   // And Assassinate (2)'s, bought as it hit.
   const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0) + (spotted ? 1 : 0) + (attack.impaled ? 1 : 0);
-  const raisedFor = raised
-    ? targets.map(entry => ({ ...entry, own: entry.own?.hit
-      ? { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, raised) } : entry.own }))
-    : targets;
+  // Counter Elemental's Vulnerability: "If you are hit by an Attacking Maneuver of your Vulnerability, increase the Damage Category of
+  // that Attacking Maneuver by 1 Category for the sake of your Damage Calculation" - theirs alone.
+  const vulnerable = entry => [attack.profile, ...extraProfilesOf(attack)].some(id => id
+    && ((entry.actor ?? fromUuidSync(entry.uuid))?.system?.effects?.slots?.[`vulnerable.${id}`] === true)) ? 1 : 0;
+  const raisedFor = targets.map(entry => {
+    const steps = raised + vulnerable(entry);
+    return (steps && entry.own?.hit)
+      ? { ...entry, own: { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, steps) } } : entry;
+  });
   // Iron Guard (2): readied this Round - the first attack to hit them, its Damage Category a step down and Soak 2(T).
   const reached = [];
   for (const entry of raisedFor) reached.push(await ironGuarded(entry));
@@ -28022,6 +28191,8 @@ async function rollAttackWoundWork(message, attack) {
     // which is the same place a Guard halves it.
     const woundParts = [...analysisBonus(attacker, target), ...mindReadBonus(attacker, target),
       { label: "God Meteor", value: godMeteorPinned(attacker, target) },
+      // Extension Attack's Mystic Attack (4): a Physical Attacking Maneuver at one not on an adjacent Square - 2(T).
+      { label: "Mystic Attack", value: mysticReach(attacker, attack, target) },
       // Inherited Aggression's, Blood in the Water (1)'s - named by whatever gave it.
       { label: (attacker.system.effects?.slots?.["wound.perTargetThreshold"]?.parts ?? []).map(part => part.source).filter(Boolean)
           .join(", ") || "Inherited Aggression", value: aggressionAgainst(attacker, target) },
@@ -28141,8 +28312,8 @@ async function rollAttackWoundWork(message, attack) {
     // Asked anyway, a one-shot effect armed for this would be spent raising nothing.
     const beforeWound = (raw > 0)
       ? atMoment(target, "before-wound", { attack: 1, damageCategory: 1 },
-        // Burrowed Strike: the Cover's Damage reduction not counted either.
-        attack.burrowed ? { skip: ["battlefield:cover"] } : {})
+        // Burrowed Strike: the Cover's Damage reduction not counted either. Mystic Attack's, the same.
+        (attack.burrowed || mysticCover(attack, target)) ? { skip: ["battlefield:cover"] } : {})
       : null;
     if (beforeWound) spendChosen(target, beforeWound);
 
@@ -28309,7 +28480,7 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   }
   parts.push(...thresholdPenalty(actor));
   // Burrowed Strike: "ignoring Cover" - its 2(T) on the Dodge taken back off.
-  if (attack?.burrowed && actor.system.battlefield?.cover?.active) {
+  if ((attack?.burrowed || mysticCover(attack, actor)) && actor.system.battlefield?.cover?.active) {
     parts.push({ label: "Cover (Burrowed Strike)", written: "-2(T)", value: -2 * Math.max(1, actor.system.tierOfPower ?? 1) });
   }
   parts.push(...rapidMovementDodge(actor, attack));
@@ -30996,6 +31167,21 @@ async function applyAttackDamage(message, target, attack) {
     requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "basic-attack",
       maneuverName: "Basic Attack", reason: "Retractable Limbs - once a Round", grants: { roundFlag: "retractableRound" } } });
   }
+  // Feast (1): "If you deal Damage to an Opponent with an Attacking Maneuver made through the effects of the Bite Maneuver, regain Life
+  // Points equal to 1/2 of the Damage dealt." The Draining Attack: "regain Life Points equal to the Damage inflicted ... and regain Ki
+  // Points equal to 1/2 of the Damage inflicted".
+  if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) {
+    const feast = (attack.maneuverId === "bite-attack") && (armsUser.system?.effects?.slots?.["feast.heal"] === true)
+      && !alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid) ? Math.floor(damage / 2) : 0;
+    const drained = (attack.modifiers ?? []).some(entry => (entry.id === "draining-attack") || (entry.modifier?.id === "draining-attack"));
+    const life = feast + (drained ? damage : 0);
+    const ki = drained ? Math.floor(damage / 2) : 0;
+    if (life || ki) {
+      await regainPools(armsUser, life, ki);
+      ui.notifications.info(`${armsUser.name}: ${[feast ? `Feast ${feast}` : "", drained ? `Draining Attack ${damage}` : ""].filter(Boolean).join(", ")} Life`
+        + `${ki ? `, ${ki} Ki` : ""} back.`);
+    }
+  }
   // Fangs' Venomous: Damage dealt by the Bite Attack - a Clash (Corporeal), asked, twice an Encounter.
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
     && (attack.maneuverId === "bite-attack")) await venomousBite(armsUser, target);
@@ -33024,6 +33210,10 @@ function renderAttack(message, html) {
   if (!result?.wound) yourChanceButtons(message, attack, container);
   // Party Tactics (2), (3): a stack of Tension - an Energy Charge on an Ally's attack; an Ally's Damage Reduction against it.
   if (!result?.wound) partyButtons(message, attack, container);
+  // Adaptive Toughness (2): targeted - its Damage Reduction doubled for this attack, before its Wound.
+  if (!result?.wound) adaptiveButtons(message, attack, container);
+  // Dissipating Dodge (2): targeted - Ki for the Defense Value at Nano, before it is settled.
+  if (!result) dissipatingButtons(message, attack, container);
   // Telepathic Teamwork (2): an Ally's attack - 1(T) on its Strike, its Wound too at one Studied - before the Strike is rolled.
   if (!result) telepathicTeamworkButtons(message, attack, container);
   // Cat's Paw (1): an Opponent in your Melee Range attacking - the Clash, before it is settled.

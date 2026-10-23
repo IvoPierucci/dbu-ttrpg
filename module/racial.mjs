@@ -1120,10 +1120,18 @@ export function chosenOptions(item) {
  */
 async function madeByOption(actor, item, option) {
   if (option?.platingQuality) await platingQuality(actor, item, String(option.platingQuality), true);
+  // An Other Trait it gives - Extension Feature's "You possess the Extension Attack Monstrous Trait".
+  for (const group of listOf(option?.grantsOther)) await grantOtherTrait(actor, item, group, listOf(option.grantsOtherFrom));
   const count = Number(option?.installsWeapons) || 0;
   if (!count) return;
   const { craftedItemFrom, WEAPON_TYPES } = await import("./gear.mjs");
-  const categories = traitsOfKind("crafting", "weapon-categories").filter(each => each.weaponType && (each.id !== "shield"));
+  // Of one Weapon Type where the Option names one - Extending Weapon's "a Physical Weapon".
+  const ofType = String(option.installsWeaponType ?? "");
+  const categories = traitsOfKind("crafting", "weapon-categories").filter(each => each.weaponType && (each.id !== "shield")
+    && (!ofType || (each.weaponType === ofType)));
+  const grade = Number(option.installsWeaponGrade) || 2;
+  const qualityIds = listOf(option.installsWeaponQualities).length ? listOf(option.installsWeaponQualities) : ["artisan"];
+  const indestructible = String(option.installsIndestructible ?? "") !== "false";
   const escape = Handlebars.escapeExpression;
   const select = n => `<label class="dbu-respond-option"><span class="dbu-respond-name">Weapon ${n}</span>
     <select name="weapon${n}">${categories.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} (${
@@ -1132,7 +1140,7 @@ async function madeByOption(actor, item, option) {
   while (!picked) {
     const answer = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"], window: { title: `${option.name} - Installed Weapons` },
-      content: `<p class="dbu-respond-hint">Grade 2, Artisan - two different Weapon Types.</p>
+      content: `<p class="dbu-respond-hint">Grade ${grade}, ${qualityIds.map(id => getTrait(id)?.name ?? id).join(", ")}${(count > 1) ? " - two different Weapon Types" : ""}.</p>
         ${Array.from({ length: count }, (each, index) => select(index + 1)).join("")}`,
       buttons: [{ action: "make", label: "Make them", default: true, callback: (event, button, dialog) =>
         Array.from({ length: count }, (each, index) => dialog.element.querySelector(`[name="weapon${index + 1}"]`)?.value) },
@@ -1141,16 +1149,17 @@ async function madeByOption(actor, item, option) {
     });
     if (!Array.isArray(answer)) return;
     const types = answer.map(id => categories.find(each => each.id === id)?.weaponType);
-    if (new Set(types).size === types.length) picked = answer;
+    if ((count === 1) || (new Set(types).size === types.length)) picked = answer;
     else ui.notifications.warn(`${option.name}: two different Weapon Types.`);
   }
   const made = picked.map(id => {
     const category = categories.find(each => each.id === id);
     const data = craftedItemFrom("weapon", actor, getTrait);
-    data.name = `${category.name} (Integrated)`;
-    Object.assign(data.system.crafted, { category: category.id, weaponType: category.weaponType, grade: 2,
-      qualities: [{ id: "artisan", slots: 1, choice: "", on: false, name: "" }] });
-    data.flags = { "dbu-ttrpg": { grantedBy: item.id, grantedByOption: option.id, installedWeapon: true } };
+    data.name = option.installsWeaponName ? String(option.installsWeaponName) : `${category.name} (Integrated)`;
+    Object.assign(data.system.crafted, { category: category.id, weaponType: category.weaponType, grade,
+      qualities: qualityIds.map(id => ({ id, slots: 1, choice: "", on: false, name: "" })) });
+    // Weapon Ports' "cannot be destroyed through any means" - not Extending Weapon's Prehensile Weapon.
+    data.flags = { "dbu-ttrpg": { grantedBy: item.id, grantedByOption: option.id, ...(indestructible ? { installedWeapon: true } : {}) } };
     // "Integrated into your Character" - Active, as two may be (the user's: Active where it fits).
     data.system.integrated = true;
     return data;

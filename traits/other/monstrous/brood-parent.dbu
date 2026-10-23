@@ -1,0 +1,21 @@
+id: brood-parent
+name: Brood Parent
+order: 3
+options: 2
+optionEffect: 2
+description: >
+  You are able to split yourself or otherwise reproduce alone, allowing you to swarm the battlefield with your clones or offspring.
+text: >
+  Brood Parent: You are able to split yourself or otherwise reproduce alone, allowing you to swarm the battlefield with your clones or offspring.
+  (1)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action and a Ki Point Cost of 5(T), create a Duplicate Minion. Your Duplicate Minion’s base Size Category is 1 Size Category smaller than yours.
+  (2)-[Multi-Option/2]: Upon gaining this Monstrous Trait, select two of the following effects:
+  * Draining Minions [Passive]: Your Minions created through the first effect of Brood Parent gain access to the Power Drain Maneuver.
+  * Exploiting Minions [Triggered, 1/Round]: When one of your Minions created through the first effect of Brood Parent are Defeated, you may target a Square they occupied with an Attacking Maneuver of the Clearing Profile as an Out-of-Sequence Maneuver.
+  * Mini Minions [Passive]: When creating a Minion through the first effect of Brood Parent, you may choose to reduce their Size Category by up to 2 more Categories. If you do, for each reduction, reduce their Soak Value by an additional 1(T) and increase their Defense Value by 1(T).
+  * Many Minions [Passive]: The first effect of Brood Parent’s Keyword changes from 1/Round to 3/Round.
+  * Consumable Minions [1/Round]: As an Instant Maneuver, you may target any number of your Minions created through the first effect of Brood Parent and Defeat them. You regain Ki Points equal to 1/4 (rounded up) of their collected Ki Points. You cannot target a Minion with this effect if it was created during this Combat Round.
+
+---
+
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/brood-parent-first-effect.dbu): 5(T) Ki, the Duplicate Minion and its Size said
+# on its card - the Minion itself the table's (Minions wait on the user's design). (2) Its two Options, chosen as it is gained.

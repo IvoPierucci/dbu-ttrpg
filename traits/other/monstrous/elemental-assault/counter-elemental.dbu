@@ -1,0 +1,16 @@
+id: counter-elemental
+name: Counter Elemental
+order: 1
+optionOf: elemental-assault
+# The Vulnerability, chosen as it is chosen.
+choose: elementalProfile
+description: >
+text: >
+
+---
+
+[passive]
+# The Favored Element's Wound 3(T) (chat.mjs postAttack); the Vulnerability - chosen now, another than the Favored Element (the
+# player's to keep so) - a Damage Category higher for you (chat.mjs).
+allow elementalAssault.counter;
+allow vulnerable.$choice;

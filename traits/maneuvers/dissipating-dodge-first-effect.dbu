@@ -1,0 +1,22 @@
+id: dissipating-dodge-first-effect
+name: Dissipating Dodge
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: dissipating-dodge
+fromEffect: 1
+source: Core Rule
+description: >
+  Dissipating Dodge's first effect, as a Maneuver: 2(bT) Ki, to a Square within 6 - in an Opponent's Melee Range, an Impulsive Clash.
+text: >
+  (1)-[1/Round]: As an Instant Maneuver, you may spend 2(bT) Ki Points to select an unoccupied Square within 6 Squares of you and place yourself on that Square. If that Square is within the Melee Range of an Opponent, make an Impulsive Clash against them. If you win, they suffer from the Guard Down Combat Condition against your next Attacking Maneuver until the end of your turn.
+
+---
+
+# The Square the table's - placed, the Opponent whose Melee Range it is in, asked; the Clash; won, Guard Down till the end of your turn
+# (chat.mjs dissipate).
+[on used]
+dissipate();

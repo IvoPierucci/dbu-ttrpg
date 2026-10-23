@@ -3,6 +3,8 @@ name: Extension Feature
 order: 10
 optionOf: technological-being
 optionEffect: 3
+grantsOther: monstrous
+grantsOtherFrom: extension-attack
 description: >
   You possess the Extension Attack Monstrous Trait.
 text: >
@@ -10,4 +12,5 @@ text: >
 
 ---
 
-# Waits on the Extension Attack Monstrous Trait - its text not given yet (the user's): the table's till then.
+# The Extension Attack Monstrous Trait, given as this Option is chosen - in the Other Traits list, gone with it (its header's
+# `grantsOther`; racial.mjs madeByOption).

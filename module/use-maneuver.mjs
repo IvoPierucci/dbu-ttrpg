@@ -5981,6 +5981,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     let outOfGrasp = maneuver.grapple && targetActor
       && whyNotWithinMelee(actor, targetActor, "The Grapple Maneuver");
     // Rubbery Body's stretch, for the Grapple as for a Physical Attack.
+    // Extension Attack (1): "you may increase your Melee Range by 3 Squares for the duration of that Maneuver".
+    if (outOfGrasp && (actor.system.effects?.slots?.["extension.grapple"] === true)
+      && !whyNotWithinMelee(actor, targetActor, "The Grapple Maneuver", 3)) outOfGrasp = null;
     if (outOfGrasp) {
       const { stretchReach } = await import("./maneuvers.mjs");
       const stretching = await stretchReach(actor, outOfGrasp,

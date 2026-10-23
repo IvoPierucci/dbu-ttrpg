@@ -1,0 +1,26 @@
+id: draining-attack
+name: Draining Attack
+type: modifier
+actionCost: 1
+kiCostPerTier: 2
+special: true
+usageLimit: 1/round
+# "Base Maneuver: Basic Attack Maneuver (Unarmed Physical Attack, not an AoE, no Ki Wager)" - and a Signature Technique with the Drain
+# Life Advantage (maneuvers.mjs whyNotModify).
+baseManeuver: basic-attack
+baseForbids: area
+damageCategoryShift: 1
+source: Core Rule
+description: >
+  Absorb life through your attack: its Damage Category 1 higher, its Damage back as Life and half as Ki.
+text: >
+  Draining Attack Maneuver [1/Round]: You are able to absorb life energy through your attacks.
+  –Action Cost: 1 Action
+  –Base Maneuver: Basic Attack Maneuver (Unarmed Physical Attack, not an AoE, no Ki Wager).
+  –KP Cost: 2(T)
+  –Effect: At Attack Declaration, if you would use the Basic Attack Maneuver, you can use this Maneuver to increase the Damage Category of that Attacking Maneuver by 1, regain Life Points equal to the Damage inflicted to the target of this Attacking Maneuver, and regain Ki Points equal to 1/2 of the Damage inflicted to the target of this Attacking Maneuver.
+
+---
+
+# The Damage Category a step up (its header); the Damage dealt back as Life, half as Ki (chat.mjs applyAttackDamage). Unarmed, Physical
+# and no Ki Wager are the player's to keep as it is declared. Opened by an effect - Feast's.

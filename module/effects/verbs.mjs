@@ -403,6 +403,22 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  bloodlustFeed: {
+    args: [1, 1],
+    doc: "Bloodlust (1): that many stacks of Bloodlust, the Round marked as fed (chat.mjs bloodlustFeed)."
+  },
+  bloodlustStarve: {
+    args: [0, 0],
+    doc: "Bloodlust (3): the Round ends unfed - a stack lost (chat.mjs bloodlustStarve)."
+  },
+  broodMinion: {
+    args: [0, 0],
+    doc: "Brood Parent (1): a Duplicate Minion a Size Category smaller, said (chat.mjs broodMinion)."
+  },
+  dissipate: {
+    args: [0, 0],
+    doc: "Dissipating Dodge (1): placed - in an Opponent's Melee Range, an Impulsive Clash; won, Guard Down (chat.mjs dissipate)."
+  },
   quillBurst: {
     args: [0, 0],
     doc: "Treacherous Spikes (4): a Clash (Corporeal/Impulsive) at each targeted Opponent - won, 9(bT) off their Life, the Quillset's Break Value 1 (chat.mjs quillBurst)."

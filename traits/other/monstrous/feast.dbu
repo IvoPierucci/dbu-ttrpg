@@ -1,0 +1,21 @@
+id: feast
+name: Feast
+order: 7
+description: >
+  Absorbing the life essence of your enemies, you revitalize yourself.
+text: >
+  Feast: Absorbing the life essence of your enemies, you revitalize yourself.
+  (1)-[Triggered]: If you deal Damage to an Opponent with an Attacking Maneuver made through the effects of the Bite Maneuver, regain Life Points equal to 1/2 of the Damage dealt.
+  (2)-[Passive]: You gain access to the Draining Attack Modifier Maneuver, the Bite Attack Special Maneuver, and the Drain Life Advantage (seen below).
+  (3)-[Triggered]: When you use the Bite Maneuver or apply the effects of the Draining Attack Maneuver to an Attacking Maneuver, you may reduce your Life Points by up to 3(bT) to increase the Wound Roll by twice the amount of Life Points lost.
+
+---
+
+[passive]
+# (2) The two Maneuvers; the Advantage is the Signature Technique's to take (signature/advantages/drain-life.dbu).
+allow maneuver.bite-attack;
+allow maneuver.draining-attack;
+# (1) The Bite Attack's Damage dealt: half of it in Life Points (chat.mjs applyAttackDamage).
+allow feast.heal;
+# (3) The Bite Attack or the Draining Attack declared: Life Points up to 3(bT), asked - twice as much on its Wound (chat.mjs postAttack).
+allow feast.lifeWound;

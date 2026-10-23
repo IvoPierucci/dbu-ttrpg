@@ -1,0 +1,42 @@
+id: bloodlust
+name: Bloodlust
+order: 2
+# Bloodlust, its Resource - lost when the Combat Encounter ends, as every Resource is.
+resource: bloodlust
+resourceLabel: Bloodlust
+resourceMax: 3
+description: >
+  Your monstrous nature is predatory, driving you to rend flesh and sate an unending hunger.
+text: >
+  Bloodlust: Your monstrous nature is predatory, driving you to rend flesh and sate an unending hunger.
+  (1)-[Triggered, Resource]: When you knock an Opponent through a Health Threshold or Defeat a Minion, gain a stack of Bloodlust (max. 3). When you Defeat an Opponent (except a Minion), gain 3 stacks of Bloodlust.
+  (2)-[Passive]: Each stack of Bloodlust increases your Strike and Wound Rolls by 1(T).
+  (3)-[Automatic]: You lose a stack of Bloodlust at the end of any Combat Round you did not successfully trigger the first effect of Bloodlust.
+
+---
+
+[passive]
+# (2)
+if (hasResource("bloodlust")) {
+    strike += bloodlust.stacks * 1(T);
+    wound += bloodlust.stacks * 1(T);
+}
+
+# (1) An Opponent knocked through by your attack: a stack. Automatic by default, its Triggered/Automatic button.
+[triggered/knock-through, effect 1]
+requires knockedOpponent;
+bloodlustFeed(1);
+
+# (1) Defeated by your attack: 3 stacks - a Minion (its Minion box), 1.
+[triggered/defeat-opponent, effect 1]
+requires !defeatedMinion;
+bloodlustFeed(3);
+
+[triggered/defeat-opponent, effect 1]
+requires defeatedMinion;
+bloodlustFeed(1);
+
+# (3) The Round over with none gained in it: a stack lost (chat.mjs bloodlustStarve).
+[automatic/end-of-round]
+requires hasResource("bloodlust");
+bloodlustStarve();
