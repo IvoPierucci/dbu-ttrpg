@@ -1682,6 +1682,20 @@ async function applyModifiers(actor, applied, { maneuver = null, declared = null
     await actor.setFlag("dbu-ttrpg", "attentiveCalledEncounter", encounter);
     applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
   }
+  // Dedicated Spotter (3): "If an Ally uses an Attacking Maneuver while you are in the Spectator State, you may make that Attacking
+  // Maneuver a Called Shot" - asked of the Spectator, once an Encounter: the Called Shot without its Action.
+  if (called && (applied.find(entry => entry === called)?.actions > 0)) {
+    const { alliesOnScene, askPlayerChoice } = await import("./chat.mjs");
+    const spotter = alliesOnScene(actor).find(ally => ((Number(ally.system?.states?.spectator) || 0) > 0)
+      && (ally.system?.effects?.slots?.["spotter.calledShot"] === true)
+      && (ally.getFlag?.("dbu-ttrpg", "spotterCalledEncounter") !== encounter));
+    if (spotter && ((await askPlayerChoice(spotter, `${spotter.name}: Dedicated Spotter - ${actor.name}'s Called Shot`,
+      [{ value: "yes", label: "Make it a Called Shot - no Action of theirs (once an Encounter)" }, { value: "no", label: "No" }])) === "yes")) {
+      const { requestActorUpdate } = await import("./chat.mjs");
+      await requestActorUpdate(spotter, { "flags.dbu-ttrpg.spotterCalledEncounter": encounter });
+      applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
+    }
+  }
   // Light Weapons Specialist (2): "When you use the Basic Attack Maneuver to make an Armed Attack with a Small Size Weapon, spend
   // 4(bT) Ki Points to make that Attacking Maneuver a Called Shot without spending an Action" - asked, once a Round.
   let lightKi = 0;

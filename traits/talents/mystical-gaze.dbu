@@ -1,0 +1,23 @@
+id: mystical-gaze
+name: Mystical Gaze
+talentCategory: racial
+race: cerealian
+prerequisites: Cerealian Race
+description: >
+  Your unerring gaze allows you to use your potent magical abilities as easily as others of your kin exploit openings to attack.
+text: >
+  Mystical Gaze: Your unerring gaze allows you to use your potent magical abilities as easily as others of your kin exploit openings to attack.
+  –Prerequisites: Cerealian Race
+  (1)-[Passive]: Reduce the Ki Point Cost of your Unique Abilities by 1(T).
+  (2)-[Triggered]: If an Opponent triggers your Exploit Maneuver, instead of using the Exploit Maneuver, you may use a Unique Ability that is a Standard Maneuver as an Out-of-Sequence Maneuver. You must still pay the Action Cost for that Maneuver.
+  (3)-[Triggered, 1/Encounter]: If you use the 2nd effect of Mystical Gaze, you may spend your stacks of Critical Eye as if they were Actions for the use of that Unique Ability.
+
+---
+
+[passive]
+# (1) Never below nothing (maneuvers.mjs maneuverKiCost).
+unique.kiCost -= 1(T);
+# (2) Beside your Exploit on the card that opened it: one of your Standard Unique Abilities out of sequence, its Actions paid -
+# taking either closes the other (chat.mjs takeMysticalGaze). (3) Asked there, once an Encounter: Critical Eye for its Actions.
+allow mysticalGaze.exploit;
+allow mysticalGaze.criticalEye;

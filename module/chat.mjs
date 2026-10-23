@@ -7177,7 +7177,48 @@ function offerExploits(card, actor, maneuver) {
         }
       }
     });
+    // Mystical Gaze (2): "instead of using the Exploit Maneuver, you may use a Unique Ability that is a Standard Maneuver as an
+    // Out-of-Sequence Maneuver" - beside it; taking either closes the other.
+    if ((other.system?.effects?.slots?.["mysticalGaze.exploit"] === true) && !alliesOnScene(other).some(ally => ally.uuid === actor.uuid)) {
+      requestEdit(card, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId: "",
+        maneuverName: "Mystical Gaze - a Unique Ability", targetUuid: actor.uuid,
+        reason: `Instead of the Exploit: a Standard Unique Ability, its Actions paid`, mysticalGaze: true } });
+    }
   }
+}
+
+/**
+ * Mystical Gaze (2), taken: which Standard Unique Ability - "You must still pay the Action Cost for that Maneuver" - and (3), once
+ * an Encounter, stacks of Critical Eye spent as Actions for it. Checked before it is used, paid once it was.
+ */
+async function takeMysticalGaze(message, actor, offer) {
+  const { definitionOf, useManeuver } = await import("./use-maneuver.mjs");
+  const { isUniqueAbility } = await import("./unique.mjs");
+  const uniques = Array.from(actor.items ?? []).filter(item => isUniqueAbility(item)).map(item => definitionOf(item))
+    .filter(def => def?.type === "standard");
+  if (!uniques.length) return ui.notifications.warn(`${actor.name} has no Unique Ability that is a Standard Maneuver.`);
+  const id = (uniques.length === 1) ? uniques[0].itemId : await askPlayerChoice(actor, `${actor.name}: Mystical Gaze - which Unique Ability`,
+    uniques.map(def => ({ value: def.itemId, label: `${def.name} (${Number(def.actionCost) || 0} Action${(Number(def.actionCost) === 1) ? "" : "s"})` })));
+  const unique = uniques.find(def => def.itemId === id);
+  if (!unique) return;
+  const cost = Math.max(0, Number(unique.actionCost) || 0);
+  const eyesHeld = Number(actor.system.resources?.criticaleye?.stacks) || 0;
+  const eyesOpen = (actor.system.effects?.slots?.["mysticalGaze.criticalEye"] === true)
+    && (actor.getFlag?.(SCOPE, "mysticalEyeEncounter") !== (game.combat?.id ?? "none"));
+  const eyes = (eyesOpen && eyesHeld && cost) ? Math.min(cost, eyesHeld, await askPlayerAmount(actor,
+    `${actor.name}: Mystical Gaze - Critical Eye as Actions (once an Encounter)`, Math.min(cost, eyesHeld), "Stacks of Critical Eye")) : 0;
+  if ((cost - eyes) > actionsLeft(actor)) {
+    return ui.notifications.warn(`${actor.name} has not ${cost - eyes} Action${((cost - eyes) === 1) ? "" : "s"} left for ${unique.name}.`);
+  }
+  const used = await useManeuver(actor, unique, { outOfSequence: true, targetUuid: offer.targetUuid ?? "" });
+  if (!used) return;
+  if (cost - eyes) await spendActions(actor, cost - eyes);
+  if (eyes) {
+    await setResource(actor, "criticaleye", eyesHeld - eyes);
+    await actor.setFlag(SCOPE, "mysticalEyeEncounter", game.combat?.id ?? "none");
+  }
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return used;
 }
 
 /**
@@ -14618,6 +14659,34 @@ function refinedParts(actor, other) {
  * Rolls when using the Parry effect of the Defend Maneuver, made against that Opponent by 1(T)." The defender's Allies with it,
  * not Defeated, beside the attacker - an Opponent of theirs; the same Talent once, the highest Tier's.
  */
+/** Dedicated Spotter's Spectators: the Allies of `actor` in the Spectator State holding `slot`. */
+function spotters(actor, slot) {
+  return alliesOnScene(actor).filter(ally => ((Number(ally.system?.states?.spectator) || 0) > 0)
+    && (ally.system?.effects?.slots?.[slot] === true));
+}
+
+/** Dedicated Spotter (1): "While in the Spectator State, increase the Strike Rolls of your Allies by 1(T)" - the best Tier of them. */
+function spotterParts(attacker) {
+  const holders = attacker ? spotters(attacker, "spotter.strike") : [];
+  return holders.length ? [{ label: "Dedicated Spotter", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : [];
+}
+
+/**
+ * Dedicated Spotter (2): "If an Ally scores a Critical Result on a Strike or Wound Roll while you are in the Spectator State,
+ * increase the Damage Category of that Attacking Maneuver by 1 Category" - once a Round of the Spectator's, kept on the attack's
+ * card, so settled again it is as it was.
+ */
+async function spotterCategory(message, attacker, attack, wound) {
+  const critical = (attack.result?.strike?.outcome === "critical") || (wound?.outcome === "critical");
+  if (!critical || !attacker) return false;
+  const holders = spotters(attacker, "spotter.category");
+  if (holders.some(holder => holder.getFlag?.(SCOPE, "spotterCategory")?.message === message.id)) return true;
+  const holder = holders.find(each => each.getFlag?.(SCOPE, "spotterCategory")?.round !== roundKey());
+  if (!holder) return false;
+  await requestActorUpdate(holder, { [`flags.${SCOPE}.spotterCategory`]: { round: roundKey(), message: message.id } });
+  return true;
+}
+
 /** Angelic Guidance (1): "While you are adjacent to an Ally, increase that Ally's Dodge Rolls by 1(T)" - the best Tier of them. */
 function guidanceDodgeParts(actor) {
   const holders = guidingAllies(actor, "guidance.dodge");
@@ -21884,6 +21953,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.iaijutsuSheathe) return takeIaijutsuSheathe(message, actor, offer.iaijutsuSheathe);
   if (offer.varietyGrab) return takeVarietyGrab(message, actor, offer.varietyGrab);
   if (offer.watchful) return takeWatchful(message, actor, offer.watchful);
+  if (offer.mysticalGaze) return takeMysticalGaze(message, actor, offer);
   if (offer.healingSurge) return takeHealingSurge(message, actor);
   // Perfect Mimicry (2) with a copied Unique Ability: it, out of sequence, once an Encounter.
   if (offer.perfectMimicryItem) {
@@ -24514,6 +24584,8 @@ function strikeParts(attacker, attack) {
     ...unitedStrikeParts(attack),
     // Variable Fighter (1).
     ...variableParts(attacker, attack, "strike"),
+    // Dedicated Spotter (1): an Ally in the Spectator State calling it out.
+    ...spotterParts(attacker),
     ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
     ...profileSlotStrike(attacker, attack),
@@ -26747,8 +26819,10 @@ async function rollAttackWoundWork(message, attack) {
 
   // Feral at Unhinged: the Damage Category 1 higher for everyone it reached, where its user takes it.
   const unhinged = await askUnhinged(attacker, attack, wound);
+  // Dedicated Spotter (2): an Ally in the Spectator State - a Critical Result, a step up.
+  const spotted = await spotterCategory(message, attacker, attack, wound);
   // And Assassinate (2)'s, bought as it hit.
-  const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0);
+  const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0) + (spotted ? 1 : 0);
   const reached = raised
     ? targets.map(entry => ({ ...entry, own: entry.own?.hit
       ? { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, raised) } : entry.own }))

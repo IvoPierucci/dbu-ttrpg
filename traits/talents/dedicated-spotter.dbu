@@ -1,0 +1,25 @@
+id: dedicated-spotter
+name: Dedicated Spotter
+talentCategory: racial
+race: cerealian
+prerequisites: Cerealian Race
+description: >
+  You serve a vital role in your team, calling out enemy weak points and coordinating the team’s offensive.
+text: >
+  Dedicated Spotter: You serve a vital role in your team, calling out enemy weak points and coordinating the team’s offensive.
+  –Prerequisites: Cerealian Race
+  (1)-[Passive]: While in the Spectator State, increase the Strike Rolls of your Allies by 1(T).
+  (2)-[Triggered, 1/Round]: If an Ally scores a Critical Result on a Strike or Wound Roll while you are in the Spectator State, increase the Damage Category of that Attacking Maneuver by 1 Category.
+  (3)-[Triggered, 1/Encounter]: If an Ally uses an Attacking Maneuver while you are in the Spectator State, you may make that Attacking Maneuver a Called Shot.
+
+---
+
+[passive]
+# (1) Spectator: your Allies' Strike Rolls 1(T), yours - the best of those holding it (chat.mjs spotterParts).
+allow spotter.strike;
+# (2) Spectator: an Ally's Critical Strike or Wound - its Damage Category a step up, once a Round; settled again, as it was (chat.mjs
+# spotterCategory).
+allow spotter.category;
+# (3) Spectator: an Ally's Called Shot on their Attacking Maneuver - asked of you, once an Encounter, without its Action
+# (use-maneuver.mjs applyModifiers).
+allow spotter.calledShot;
