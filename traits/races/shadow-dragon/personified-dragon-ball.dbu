@@ -43,9 +43,13 @@ text: >
 ---
 
 # (1) Ball Form - Ball Form (a mark) taken by (4), or Defeated: its Size the set's (actor-character.mjs); no Attacking
-# Maneuvers or Unique Abilities, no Power Up, Energy Charge or Transformation. The Possess Maneuver and (3)'s Unify are not
-# in this system yet - their texts are waited on.
+# Maneuvers or Unique Abilities, no Power Up, Energy Charge or Transformation. The Possess Maneuver is not in this system yet -
+# its text is waited on.
 [passive]
+# (3) The Unify Maneuver - a Shadow Dragon of your set alone; Defeated in their Ball Form, not asked (use-maneuver.mjs
+# unifyRefusal).
+allow maneuver.unify;
+allow unify.sameSet;
 if (inBallForm) {
   forbid attackingManeuvers;
   forbid uniqueAbilities;

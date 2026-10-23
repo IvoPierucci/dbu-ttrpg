@@ -22,7 +22,8 @@ text: >
 [passive]
 # (3) On every Skill Improvement row, as Quick to Master's.
 techniquePoints.perSkillImprovement += 3;
-# (2) The Unify Maneuver is not in this system yet - its text is waited on.
+# (2)
+allow maneuver.unify;
 
 # (4) Ticked in the Power Up's window: which Opponent asked - Studied by you (Intelligent Fighter's), the Basic Attack and a
 # Signature Technique offered out of sequence at them; not, Studied till the end of this Round (chat.mjs namekianTechnique).

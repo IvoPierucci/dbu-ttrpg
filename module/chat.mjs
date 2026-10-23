@@ -243,6 +243,7 @@ function applyRequest(request) {
     case "createItem": return fromUuidSync(request.actorUuid)
       ?.createEmbeddedDocuments("Item", [request.data]);
     case "deleteItem": return fromUuidSync(request.actorUuid)?.items.get(request.itemId)?.delete();
+    case "removeFromEncounter": return removeFromEncounter(fromUuidSync(request.actorUuid));
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
     case "jumpStart": return applyJumpStart(request.combatId, request.combatantId);
     case "eternalSurge": return eternalSurge(request.actorUuid, request.focus);
@@ -14769,6 +14770,92 @@ export async function swaggerSpend(actor) {
   if (basic && await ownOutOfSequence(actor, "basic-attack")) {
     await setResource(actor, "swagger", Math.max(0, (Number(actor.system.resources?.swagger?.stacks) || 0) - basic.cost));
   }
+}
+
+/** Personified Dragon Ball's set - its name - or "". */
+function ballSetOf(actor) {
+  const item = Array.from(actor?.items ?? []).find(each => each.flags?.[SCOPE]?.dragonBall);
+  return String(item?.flags?.[SCOPE]?.dragonBall?.set ?? "").trim().toLowerCase();
+}
+
+/**
+ * Who the Unify Maneuver may be used on, or why not: "a willing member of your Race (except a Minion) on an adjacent Square" - one;
+ * with Android Fusion (3), "up to 2 Androids that are up to 8 Squares away from you if they also possess this option effect";
+ * Personified Dragon Ball (3), "only on a Shadow Dragon that is from the same set of Dragon Balls as you".
+ */
+export function unifyRefusal(actor, aimed) {
+  const slots = actor.system.effects?.slots ?? {};
+  if (!aimed.length) return "Target the one to Unify with first.";
+  const androids = (slots["unify.androids"] === true) && (String(actor.system.race ?? "") === "android");
+  const wide = androids && aimed.every(other => (String(other.system?.race ?? "") === "android")
+    && (other.system?.effects?.slots?.["unify.androids"] === true));
+  if (aimed.length > (wide ? 2 : 1)) return wide ? "Up to 2 Androids." : "Only one to Unify with - target one.";
+  for (const other of aimed) {
+    if (other.uuid === actor.uuid) return `${actor.name} cannot Unify with themselves.`;
+    if (String(other.system?.race ?? "") !== String(actor.system.race ?? "")) return `${other.name} is not of ${actor.name}'s Race.`;
+    if (other.system?.minion) return `${other.name} is a Minion.`;
+    if ((slots["unify.sameSet"] === true) && (ballSetOf(other) !== ballSetOf(actor))) {
+      return `${other.name} is not of ${actor.name}'s set of Dragon Balls.`;
+    }
+    const squares = squaresBetween(actor.getActiveTokens?.(false, true)?.[0], other.getActiveTokens?.(false, true)?.[0]);
+    if ((squares !== null) && (squares > (wide ? 7 : 0))) {
+      return wide ? `${other.name} is more than 8 Squares away.` : `${other.name} is not on an adjacent Square.`;
+    }
+  }
+  return "";
+}
+
+/** "A willing member of your Race" - asked of whoever plays each; a Defeated Shadow Dragon in their Ball Form, not asked. */
+export async function unifyWilling(actor, aimed) {
+  for (const other of aimed) {
+    // Defeated is Ball Form for them (Personified Dragon Ball (1)).
+    const ball = (actor.system.effects?.slots?.["unify.sameSet"] === true) && Boolean(other.system?.defeated);
+    if (ball) continue;
+    const yes = (await askPlayerChoice(other, `${other.name}: Unify with ${actor.name}?`,
+      [{ value: "yes", label: "Willing" }, { value: "no", label: "No" }])) === "yes";
+    if (!yes) {
+      ui.notifications.warn(`${other.name} is not willing.`);
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The Unify Maneuver done: "That targeted Character is removed from the Combat Encounter and becomes a part of you. You gain a
+ * stack of the Unified Lesser Awakening ... and recover Life and Ki Points equal to 2d10(bT) plus the target's Surgency (for this
+ * calculation, use your target's base Tier of Power)." Each, said on its card.
+ */
+export async function unify(actor, aimed, card = null) {
+  const { setCondition } = await import("./conditions.mjs");
+  const said = [];
+  for (const other of aimed) {
+    const roll = await new Roll("2d10").evaluate();
+    const amount = roll.total * Math.max(1, Number(other.system?.baseTierOfPower) || 1) + (Number(other.system?.surgency) || 0);
+    const life = actor.system.life ?? {};
+    const ki = actor.system.ki ?? {};
+    await actor.update({
+      "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + amount),
+      "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + amount),
+      [`flags.${SCOPE}.unifiedWith`]: [...(actor.getFlag?.(SCOPE, "unifiedWith") ?? []), { uuid: other.uuid, name: other.name }]
+    });
+    await setCondition(actor, "unified-awakening", (Number(actor.system.conditions?.["unified-awakening"]) || 0) + 1);
+    await removeFromEncounter(other);
+    said.push(`${other.name} becomes part of ${actor.name}: a stack of the Unified Lesser Awakening, `
+      + `${amount} Life and Ki Points back (2d10 ${roll.total} x ${Math.max(1, Number(other.system?.baseTierOfPower) || 1)} + Surgency).`);
+  }
+  if (card && said.length) await settledNote(card, said.join(" "));
+}
+
+/** Taken out of the Combat Encounter: their Combatant gone and their token hidden - by the GM. */
+async function removeFromEncounter(actor) {
+  if (!game.user.isGM) {
+    if (game.users.activeGM) game.socket.emit(CHANNEL, { type: "removeFromEncounter", actorUuid: actor.uuid });
+    return;
+  }
+  const gone = (game.combat?.combatants?.contents ?? []).filter(each => each.actor?.uuid === actor.uuid).map(each => each.id);
+  if (gone.length) await game.combat.deleteEmbeddedDocuments("Combatant", gone);
+  for (const token of actor.getActiveTokens?.(false, true) ?? []) await token.update({ hidden: true });
 }
 
 /** The Sake Bottles a character holds. */

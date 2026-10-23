@@ -1,0 +1,35 @@
+id: unify
+name: Unify
+type: standard
+actionCost: 3
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+exploitable: All adjacent Opponents
+source: Core Rule
+description: >
+  Combine with a willing member of your Race on an adjacent Square: they leave the Combat Encounter and become part of you - a
+  stack of the Unified Lesser Awakening, and Life and Ki Points back.
+text: >
+  Unify Maneuver [1/Round]: Combine with another willing ally to increase your power even further!
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 3 Actions
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: All adjacent Opponents.
+  –Effect: Target a willing member of your Race (except a Minion) on an adjacent Square to Unify with (they may even be Defeated, as long as they can give consent). That targeted Character is removed from the Combat Encounter and becomes a part of you. You gain a stack of the Unified Lesser Awakening as a Level 1 Temporary Awakening with the targeted Character as the Merged Character (if you haven’t reached your Awakening Limit for your Lesser Awakenings, you must permanently take this Awakening at the end of this Combat Encounter) and recover Life and Ki Points equal to 2d10(bT) plus the target’s Surgency (for this calculation, use your target’s base Tier of Power).
+
+---
+
+# A Special Maneuver: nobody's until an effect gives it (Namekian Techniques (2), Personified Dragon Ball (3), Android Fusion (1)).
+#
+# Asked before anything is paid (use-maneuver.mjs): the one targeted of your Race, not a Minion, on an adjacent Square - with
+# Android Fusion (3), up to 2 Androids holding it too, within 8 Squares - and willing, asked of whoever plays them (Personified
+# Dragon Ball (3): of the same set, and a Defeated one in Ball Form not asked). Then (chat.mjs unify): each taken out of the Combat
+# Encounter - Combatant gone, token hidden, by the GM - a stack of the Unified Lesser Awakening each (its mark, kept past the
+# Encounter, naming the Merged Character), and Life and Ki Points back: 2d10 times their base Tier, plus their Surgency.
+#
+# Not built: Awakenings are not in this system - the Unified Lesser Awakening's own effects, Temporary or taken for good at the
+# end of the Encounter against the Awakening Limit, are the table's; the stack is what is kept.

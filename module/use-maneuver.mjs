@@ -4805,6 +4805,25 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // The Unify Maneuver: who, and willing, asked before anything is paid; then they become part of you (chat.mjs unify).
+  if (maneuver.id === "unify") {
+    const { unifyRefusal, unifyWilling, unify } = await import("./chat.mjs");
+    const aimed = (actor.system.effects?.slots?.["unify.androids"] === true)
+      ? Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean) : [targetActor].filter(Boolean);
+    const refused = unifyRefusal(actor, aimed);
+    if (refused) {
+      ui.notifications.warn(refused);
+      return false;
+    }
+    if (!await unifyWilling(actor, aimed)) return false;
+    await payActions(actor, maneuver, actionsSpent);
+    await recordManeuverUse(actor, maneuver);
+    const card = await postManeuver(actor, maneuver);
+    await recordManeuverType(actor, maneuver.type, { messageId: card?.id, maneuverId: maneuver.id });
+    await unify(actor, aimed, card);
+    return true;
+  }
+
   // Metallic Movement (3): "if you are on a Square with the Metallic Environmental Quality".
   if ((maneuver.id === "metallic-movement-third-effect")
     && !(actor.system.battlefield?.squareQualities ?? []).includes("metallic")) {

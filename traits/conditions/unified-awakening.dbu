@@ -1,0 +1,22 @@
+id: unified-awakening
+name: Unified Lesser Awakening
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: the Unify Maneuver's stack, kept past the Combat Encounter - the Merged Characters named on the
+# character (flags unifiedWith). Awakenings are not in this system; what the Awakening does is the table's.
+combatCondition: no
+source: Core Rule
+description: >
+  Unify: a stack of the Unified Lesser Awakening for each Character Unified with.
+text: >
+  You gain a stack of the Unified Lesser Awakening as a Level 1 Temporary Awakening with the targeted Character as the Merged
+  Character (if you haven't reached your Awakening Limit for your Lesser Awakenings, you must permanently take this Awakening at
+  the end of this Combat Encounter).
+
+---
+
+[passive]
+# Android Fusion (2): "Increase your Racial Life Modifier by 1 for each stack of the Unified Awakening you possess."
+if (hasTalent("android-fusion")) {
+    racialLifeModifier += stacks;
+}

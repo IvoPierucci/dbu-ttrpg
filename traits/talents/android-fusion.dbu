@@ -14,5 +14,9 @@ text: >
 
 ---
 
-# Not built: the Unify Maneuver is not in this system yet (its text is waited on, as Namekian Techniques' (2) and Personified
-# Dragon Ball's (3) wait), nor is the Unified Awakening (1)-(3) read. Held, so it can be taken from Progression.
+[passive]
+# (1)
+allow maneuver.unify;
+# (2) Read in the Unified Lesser Awakening's own file: 1 a stack.
+# (3) Up to 2 Androids holding this too, within 8 Squares (use-maneuver.mjs unifyRefusal).
+allow unify.androids;
