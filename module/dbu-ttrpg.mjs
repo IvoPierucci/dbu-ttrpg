@@ -198,6 +198,16 @@ Hooks.on("preUpdateActor", (actor, changes, options) => {
   if (foundry.utils.hasProperty(changes, "system.resources") && !options.dbuEncounterStart) {
     options.dbuHoldingBefore = Number(actor.system?.resources?.holdingback?.stacks) || 0;
   }
+  // High Risk Battler (2): the Life Points before they are regained.
+  if (foundry.utils.hasProperty(changes, "system.life.value") && !options.dbuHighRisk
+    && (actor.system?.effects?.slots?.["highRisk.forgo"] === true)) {
+    options.dbuLifeBefore = Number(actor.system?.life?.value) || 0;
+  }
+});
+Hooks.on("updateActor", async (actor, changes, options, userId) => {
+  if ((userId !== game.user.id) || !("dbuLifeBefore" in options) || options.dbuEncounterStart) return;
+  const { highRiskForgo } = await import("./chat.mjs");
+  await highRiskForgo(actor, options.dbuLifeBefore);
 });
 Hooks.on("updateActor", async (actor, changes, options, userId) => {
   if ((userId !== game.user.id) || !(Number(options.dbuHoldingBefore) > 0) || !game.combat?.started) return;

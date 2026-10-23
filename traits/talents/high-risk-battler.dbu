@@ -1,0 +1,20 @@
+id: high-risk-battler
+name: High Risk Battler
+talentCategory: threshold
+prerequisites: Vigor
+description: >
+  Risking life and limb for greater power, you intentionally throw yourself in harm’s way.
+text: >
+  High Risk Battler: Risking life and limb for greater power, you intentionally throw yourself in harm’s way.
+  –Prerequisites: Vigor
+  (1)-[Passive]: For each Health Threshold you are below, increase your Wound Rolls by 1(bT).
+  (2)-[Triggered, 1/Round]: If you would regain Life Points while below the Injured Health Threshold, you may choose to forgo gaining any Life Points. If you do, regain Ki Points equal to 1/2 of the amount of Life Points you would have gained.
+
+---
+
+[passive]
+# (1) Times each Health Threshold you are below (actor-character.mjs perThreshold).
+wound.perThreshold += 1(bT);
+# (2) Life Points regained in a Combat Encounter while below Injured - Injured or Critical - asked of whoever plays you, once a
+# Round: none of them, and half of them, rounded down, as Ki Points instead (chat.mjs highRiskForgo).
+allow highRisk.forgo;

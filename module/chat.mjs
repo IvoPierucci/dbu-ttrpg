@@ -14437,6 +14437,30 @@ async function takeBagOfTricks(message, actor) {
   return used;
 }
 
+/**
+ * High Risk Battler (2): "If you would regain Life Points while below the Injured Health Threshold, you may choose to forgo
+ * gaining any Life Points. If you do, regain Ki Points equal to 1/2 of the amount of Life Points you would have gained." In a
+ * Combat Encounter, Injured or Critical before them: asked of whoever plays them, once a Round - forgone, the Life Points put back
+ * and half of them, rounded down, as Ki.
+ */
+export async function highRiskForgo(actor, before) {
+  if (!actor || !game.combat?.started || (actor.system?.effects?.slots?.["highRisk.forgo"] !== true)) return;
+  const max = Number(actor.system.life?.max) || 0;
+  const gained = (Number(actor.system.life?.value) || 0) - (Number(before) || 0);
+  if (gained <= 0) return;
+  if (!["injured", "critical"].includes(DBUCharacterData.thresholdKey(before, max))) return;
+  if (actor.getFlag?.(SCOPE, "highRiskRound") === roundKey()) return;
+  const ki = Math.floor(gained / 2);
+  const answer = await askPlayerChoice(actor, `${actor.name}: High Risk Battler - ${gained} Life Points`,
+    [{ value: "keep", label: `Keep the ${gained} Life Points` }, { value: "forgo", label: `Forgo them: ${ki} Ki Points` }]);
+  if (answer !== "forgo") return;
+  const kiMax = Number(actor.system.ki?.max) || 0;
+  // Written by the client that wrote the Life Points - an owner of them.
+  await actor.update({ "system.life.value": before,
+    "system.ki.value": Math.min(kiMax, (Number(actor.system.ki?.value) || 0) + ki),
+    [`flags.${SCOPE}.highRiskRound`]: roundKey() }, { dbuHighRisk: true });
+}
+
 /** Desperate Support (3)'s effects - the mark each leaves, and whether its number is the supporter's base Tier. */
 const DESPERATE_EFFECTS = Object.freeze([
   { key: "go-all-out", label: "Go all out!" },
