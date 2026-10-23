@@ -1,0 +1,22 @@
+id: furious-flex
+name: Furious Flex
+talentCategory: miscellaneous
+prerequisites: N/A
+description: >
+  You are able to push your body to the limits to increase your damage, at the cost of destroying your outfit over time.
+text: >
+  Furious Flex: You are able to push your body to the limits to increase your damage, at the cost of destroying your outfit over time.
+  –Prerequisites: N/A
+  (1)-[Passive]: If you are not wearing any pieces of Apparel and at least 1 of your pieces of Apparel have been destroyed this Combat Encounter, increase your Combat Rolls by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you hit an Opponent with an Attacking Maneuver, you may destroy your Top Layer of Apparel to increase the Wound Roll by 2x the Apparel Bonus of that piece of Apparel.
+
+---
+
+[passive]
+# (1) No Apparel worn (Natural Armor is none), and a piece of yours broken this Combat Encounter (dbu-ttrpg.mjs: kept as it breaks).
+if (wearingNoApparel && apparelDestroyedThisEncounter) {
+    combatRolls += 1(T);
+}
+# (2) An Opponent hit: asked as the hit lands, once an Encounter - the Top Layer destroyed, twice its Apparel Bonus on that Wound
+# Roll (chat.mjs furiousFlexAsk).
+allow furious.flex;

@@ -157,6 +157,20 @@ Hooks.on("updateItem", item => forget(item.uuid));
 }
 Hooks.on("deleteItem", item => forget(item.uuid));
 
+// Furious Flex (1): "at least 1 of your pieces of Apparel have been destroyed this Combat Encounter" - a piece broken in one,
+// kept on its wearer with the Encounter, by whoever broke it.
+Hooks.on("updateItem", async (item, changes, options, userId) => {
+  if ((userId !== game.user.id) || !game.combat?.started || (item.system?.crafted?.kind !== "apparel")) return;
+  if (!foundry.utils.hasProperty(changes, "system.crafted.breakLost") && !foundry.utils.hasProperty(changes, "system.crafted.destroyed")) return;
+  if (item.flags?.["dbu-ttrpg"]?.naturalArmor === true) return;
+  const actor = item.parent;
+  if (!actor || (actor.getFlag("dbu-ttrpg", "apparelBrokenEncounter") === game.combat.id)) return;
+  const { craftedReading } = await import("./gear.mjs");
+  const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
+  if (!item.system.crafted.destroyed && !((Number(reading?.breakValue) || 0) > 0 && (reading.breakLeft === 0))) return;
+  await actor.setFlag("dbu-ttrpg", "apparelBrokenEncounter", game.combat.id);
+});
+
 // Talents come from the Progression tab: the Talent Addition rows reached, or the Power Level moved - made to match, by
 // whoever made the change.
 Hooks.on("updateActor", async (actor, changes, options, userId) => {

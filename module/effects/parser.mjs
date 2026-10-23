@@ -564,6 +564,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "besidePartner",
   // Two Weapons wielded or more of one Weapon Category (Twin Weapon Specialist's).
   "twinWeapons",
+  // No Apparel worn; a piece of yours destroyed this Combat Encounter (Furious Flex's, Naturist's).
+  "wearingNoApparel", "apparelDestroyedThisEncounter",
   // Your Rival an Opponent, an Ally, your only Ally standing (Chosen Rival's).
   "rivalOpponent", "rivalAlly", "rivalOnlyAlly",
   // Your Rival in the Combat Encounter, on a Square adjacent to you (Eternal Rival's).

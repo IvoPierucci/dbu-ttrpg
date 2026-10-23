@@ -14682,6 +14682,28 @@ export async function sakeBottle(actor) {
 }
 
 /**
+ * Furious Flex (2): "If you hit an Opponent with an Attacking Maneuver, you may destroy your Top Layer of Apparel to increase the
+ * Wound Roll by 2x the Apparel Bonus of that piece of Apparel." Asked as the hit lands, once an Encounter; destroyed as any
+ * piece is - broken, and off; named on the Wound Roll's row. What it adds and the piece, or null.
+ */
+async function furiousFlexAsk(attacker) {
+  if ((attacker?.system?.effects?.slots?.["furious.flex"] !== true)
+    || (attacker.getFlag?.(SCOPE, "furiousFlexEncounter") === (game.combat?.id ?? "none"))) return null;
+  const { brokenChanges, topLayerPiece } = await import("./gear.mjs");
+  const top = topLayerPiece(Array.from(attacker.items ?? []));
+  if (!top) return null;
+  const bonus = Number(craftedReading(top.system.crafted, { getTrait, difficulties: {},
+    baseTier: attacker.system?.baseTierOfPower ?? 1 })?.bonus) || 0;
+  if (!bonus) return null;
+  const yes = (await askPlayerChoice(attacker, `${attacker.name}: Furious Flex`,
+    [{ value: "yes", label: `Destroy ${top.name} - Wound +${2 * bonus} (1/Encounter)` }, { value: "no", label: "No" }])) === "yes";
+  if (!yes) return null;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.furiousFlexEncounter`]: game.combat?.id ?? "none",
+    items: [{ _id: top.id, ...brokenChanges(top, getTrait), "system.equipped": false, "system.layer": "" }] });
+  return { value: 2 * bonus, name: top.name };
+}
+
+/**
  * Variable Fighter (2): "If you hit an Opponent with an Unarmed Attack or an Armed Attack, increase the Wound Rolls of the other by
  * 1(T) until the start of your next turn." Its mark, on your clock.
  */
@@ -25385,6 +25407,9 @@ async function answerHit(message, attack, attacker, struck) {
   await burningFuryBreak(attacker, struck);
   // Assassinate (2): one Oblivious of you hit - 5(bT) Ki for the Damage Category, asked.
   if (await assassinateCategory(attacker, struck)) answer.marks.assassinated = true;
+  // Furious Flex (2): the Top Layer destroyed, asked - twice its Apparel Bonus on this Wound Roll.
+  const flexed = await furiousFlexAsk(attacker);
+  if (flexed) Object.assign(answer.marks, { furiousWound: flexed.value, furiousName: flexed.name });
   // Variable Fighter (2): whether it was an Armed Attack.
   const armedHit = Boolean(attack.weapon && !attack.weapon.unarmed);
   await offerTriggers(attacker, "hit-opponent", { armed: armedHit });
@@ -25551,6 +25576,8 @@ function woundParts(attacker, attack) {
     ...multiTypeParts(attacker, attack),
     // Blaster Master (1): the Ki spent as it hit.
     ...((Number(attack.blasterWound) || 0) ? [{ label: attack.blasterName || "Blaster Master", value: Number(attack.blasterWound) }] : []),
+    // Furious Flex (2): the Top Layer destroyed as it hit.
+    ...((Number(attack.furiousWound) || 0) ? [{ label: `Furious Flex (${attack.furiousName || "Top Layer"} destroyed)`, value: Number(attack.furiousWound) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,
       value: doubled * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     // Punching Up: "increase the Wound Roll of that Attacking Maneuver by 1(T) for every Size Category they are larger".
