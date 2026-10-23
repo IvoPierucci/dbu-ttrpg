@@ -1,0 +1,21 @@
+id: god-like-physique
+name: God-like Physique
+talentCategory: miscellaneous
+prerequisites: Superhuman Physique, Tier of Power 5+
+description: >
+  So powerful is your natural form that it rivals divine artifacts in defensive capacity.
+text: >
+  God-like Physique: So powerful is your natural form that it rivals divine artifacts in defensive capacity.
+  –Prerequisites: Superhuman Physique, Tier of Power 5+
+  (1)-[Passive]: Increase your Maximum Life Points by 2 for each Power Level reached.
+  (2)-[Passive]: While you are not wearing any piece of Apparel, increase your Combat Rolls by 1(bT).
+
+---
+
+[passive]
+# (1) As Diehard's: 2 for each Power Level.
+life.perLevel += 2;
+# (2) No Apparel worn.
+if (wearingNoApparel) {
+    combatRolls += 1(bT);
+}

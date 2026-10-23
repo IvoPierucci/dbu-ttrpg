@@ -1,0 +1,26 @@
+id: naturist
+name: Naturist
+talentCategory: miscellaneous
+prerequisites: N/A
+description: >
+  You are most often fighting in as little clothing as possible, while preserving your modesty.
+text: >
+  Naturist: You are most often fighting in as little clothing as possible, while preserving your modesty.
+  –Prerequisites: N/A
+  (1)-[Passive]: While you are not wearing any pieces of Apparel, increase your Defense Value and Soak Value by 1(bT).
+  (2)-[Passive]: You cannot willingly equip any piece of Apparel during a Combat Encounter.
+
+---
+
+[passive]
+# (1) No Apparel worn (Natural Armor is none) - and Au Naturel (1) doubling it.
+if (wearingNoApparel) {
+    defenseValue += 1(bT);
+    soakValue += 1(bT);
+}
+if (wearingNoApparel && hasTalent("au-naturel")) {
+    defenseValue += 1(bT);
+    soakValue += 1(bT);
+}
+# (2) Refused on the Gear tab in a Combat Encounter, each Layer closed with the reason (gear.mjs equipPlan).
+allow apparel.noEquip;

@@ -1129,6 +1129,10 @@ export function equipPlan(items, item, layer, { inCombat = false, wearer = null,
   const crafted = item?.system?.crafted;
   if (!crafted?.kind || !APPAREL_LAYERS[layer]) return refuse("That is not a Layer.");
   if (item.system?.equipped) return refuse(`${item.name} is already worn.`);
+  // Naturist (2): "You cannot willingly equip any piece of Apparel during a Combat Encounter."
+  if (inCombat && (wearer?.system?.effects?.slots?.["apparel.noEquip"] === true) && !isNaturalArmor(item)) {
+    return refuse("Naturist: no Apparel put on during a Combat Encounter.");
+  }
   // Broken is as good as not there, by the table's ruling - until it is repaired.
   const left = craftedReading(crafted, { getTrait, difficulties: {} })?.breakLeft;
   if (left === 0) return refuse("Broken: repair it first.");

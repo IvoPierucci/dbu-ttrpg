@@ -1,0 +1,19 @@
+id: superhuman-physique
+name: Superhuman Physique
+talentCategory: miscellaneous
+prerequisites: Au Naturel, Tier of Power 4+
+description: >
+  Your musclebound form renders defensive gear superfluous.
+text: >
+  Superhuman Physique: Your musclebound form renders defensive gear superfluous.
+  –Prerequisites: Au Naturel, Tier of Power 4+
+  (1)-[Passive]: While you are not wearing any piece of Apparel, increase your Stress Bonus by 1 and your Damage Reduction by 2(bT).
+
+---
+
+[passive]
+# (1) No Apparel worn.
+if (wearingNoApparel) {
+    stressBonus += 1;
+    damageReduction += 2(bT);
+}

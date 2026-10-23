@@ -1,0 +1,20 @@
+id: au-naturel
+name: Au Naturel
+talentCategory: miscellaneous
+prerequisites: Naturist, Tier of Power 3+
+description: >
+  You prefer to let your natural form show, using your toughened skin for defense.
+text: >
+  Au Naturel: You prefer to let your natural form show, using your toughened skin for defense.
+  –Prerequisites: Naturist, Tier of Power 3+
+  (1)-[Passive]: Double the benefits from the first effect of Naturist.
+  (2)-[Passive]: While you are not wearing any pieces of Apparel, increase your Wound Rolls by 1(bT).
+
+---
+
+[passive]
+# (1) Read in Naturist's own file: its 1(bT) twice.
+# (2) No Apparel worn.
+if (wearingNoApparel) {
+    wound += 1(bT);
+}
