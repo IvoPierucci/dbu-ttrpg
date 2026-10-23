@@ -25,7 +25,10 @@ text: >
 # Wound Roll is made, where either Critical is known, once whichever it was (chat.mjs askUnhinged).
 
 [passive from 1]
-forbid signatureTechniques;
+# Ferocious Fighter (4): its mark held, the Signature Technique Maneuver not forbidden for that one.
+if (!hasCondition("ferocious-mark")) {
+    forbid signatureTechniques;
+}
 forbid uniqueAbilities;
 attack.kiCost -= L(T);
 strike.natural += L;

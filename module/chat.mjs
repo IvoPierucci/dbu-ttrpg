@@ -5650,7 +5650,9 @@ function strikeSides(attack, result) {
       uuid: entry.uuid,
       side: entry.own.answer,
       lost: beaten(entry.own.answer, result.strike, true),
-      answering: true
+      answering: true,
+      // Experienced Drunk (2): a Dodge Roll's.
+      defense: entry.own.defense ?? ""
     });
   }
 
@@ -5748,7 +5750,7 @@ function offerableTo(situation, message) {
       return reason ? { ...effect, blocked: reason, available: false } : effect;
     }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor),
     ...luckyRerollOptions(situation.actor),
-    ...taiChiRerollOptions(situation, message)];
+    ...taiChiRerollOptions(situation, message), ...nudgeOptions(situation)];
 }
 
 /** Earthling Resolve (2)'s reroll, by the key it is picked with in the window. */
@@ -5807,6 +5809,47 @@ async function takeFortitudeOnCheck(message, actor, check) {
   if (!fortitudeRerollOption(actor, check).some(effect => effect.available)) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.fortitudeEncounter`]: game.combat?.id ?? "none" });
   return rerolledCheck(message, actor, check, { verb: "reroll", forced: true, label: "Fortitude" });
+}
+
+/** A Natural Result moved 1 after the roll, by the key it is picked with - `natural-nudge:<talent>:<+1|-1>`. */
+const NUDGE = "natural-nudge";
+
+/**
+ * Experienced Drunk (2): "When making a Dodge Roll while in the Drunk State, you may increase or reduce the Natural Result by 1
+ * after seeing the result." Ferocious Fighter (2): the same of "a Wound Roll while in the Feral State". "This can allow you to
+ * score a Critical Result or a Botch Result." Each twice a Round.
+ */
+const NUDGERS = Object.freeze([
+  { id: "experienced-drunk", name: "Experienced Drunk", slot: "drunk.dodgeNudge", state: "drunk", roll: "Dodge Roll",
+    applies: situation => (situation.stage === "strike") && situation.answering && (situation.defense === "dodge") },
+  { id: "ferocious-fighter", name: "Ferocious Fighter", slot: "feral.woundNudge", state: "feral", roll: "Wound Roll",
+    applies: situation => situation.stage === "wound" }
+]);
+
+function nudgeOptions(situation) {
+  const actor = situation?.actor;
+  if (!actor || (situation.kind !== "attack") || !Number.isFinite(situation.side?.natural)) return [];
+  const slots = actor.system?.effects?.slots ?? {};
+  return NUDGERS.filter(nudger => (slots[nudger.slot] === true) && ((Number(actor.system?.states?.[nudger.state]) || 0) > 0)
+    && nudger.applies(situation)).flatMap(nudger => {
+    const used = actor.getFlag?.(SCOPE, "nudge")?.[nudger.id] ?? {};
+    const blocked = ((used.round === roundKey()) && ((Number(used.count) || 0) >= 2)) ? "Twice a Combat Round" : "";
+    return [1, -1].map(step => ({ key: `${NUDGE}:${nudger.id}:${step}`, trait: true, when: "after", name: nudger.name,
+      text: `Your ${nudger.roll}'s Natural Result ${step > 0 ? "1 higher" : "1 lower"} - a Critical or a Botch, if it comes to one.`,
+      costLabel: `Natural Result ${step > 0 ? "+1" : "-1"}`, available: !blocked, ...(blocked ? { blocked } : {}) }));
+  });
+}
+
+/** Taken: counted against its twice a Round, and the side worked out again from the moved Natural Result. */
+async function takeNudge(message, situation, key) {
+  const option = nudgeOptions(situation).find(effect => (effect.key === key) && effect.available);
+  if (!option) return;
+  const [, id, step] = String(key).split(":");
+  const used = situation.actor.getFlag?.(SCOPE, "nudge")?.[id] ?? {};
+  const count = (used.round === roundKey()) ? (Number(used.count) || 0) : 0;
+  await requestActorUpdate(situation.actor, { [`flags.${SCOPE}.nudge.${id}`]: { round: roundKey(), count: count + 1 } });
+  return resettleAttack(message, situation,
+    { spent: [], slots: {}, queue: [{ verb: "reroll", forced: true, shift: Number(step), label: option.name }] });
 }
 
 /** Lucky's reroll, by the key it is picked with in the window - `lucky:<uuid>`, whose Lucky it is. */
@@ -6155,6 +6198,7 @@ export async function takeAfterTheFact(message, situation, key) {
   if (key === RESOLVE_REROLL) return takeResolveReroll(message, situation);
   if (key === DAMA_REROLL) return takeDamaReroll(message, situation);
   if (String(key).startsWith(`${LUCKY_REROLL}:`)) return takeLuckyReroll(message, situation, key);
+  if (String(key).startsWith(`${NUDGE}:`)) return takeNudge(message, situation, key);
   if ((key === TAI_CHI_REROLL) || (key === TAI_CHI_MIGHT)) return takeTaiChiReroll(message, situation, key);
   const { actor } = situation;
   const effect = allKarmicEffects().find(e => e.key === key);
@@ -6444,18 +6488,19 @@ async function resettleWound(message, situation, attack, result, given = null) {
  *                       botchPenalty when the roll uses one of its own
  * @returns {Promise<{total: number, outcome: string, notes: string[]}>}
  */
-async function rerollBaseDie(actor, side, { forced = false, label = "Karmic Chance" } = {}) {
-  // The roll's own die where it has one - the Steadfast Check's.
-  const again = new Roll(side.rules?.die ?? DBUCharacterData.BASE_DIE);
-  await again.evaluate();
-
+async function rerollBaseDie(actor, side, { forced = false, label = "Karmic Chance", shift = 0 } = {}) {
   // The same rules the first roll was made under. What moved the first die's Natural
   // Result - a Skill's own, the Eyeglasses' - moves this one too: it is still a Natural
   // Result of the same Check. The roll's `beforeOutcome` carries the first one's move.
   const rules = side.rules ?? {};
+  const before = side.natural ?? 0;
+  // Experienced Drunk's, Ferocious Fighter's: no die rolled - the Natural Result it has, 1 up or down.
+  if (shift) return shiftNatural(actor, side, before + shift, label);
+  // The roll's own die where it has one - the Steadfast Check's.
+  const again = new Roll(side.rules?.die ?? DBUCharacterData.BASE_DIE);
+  await again.evaluate();
   const fresh = Math.max(0, again.total + (rules.naturalAdd ?? 0));
 
-  const before = side.natural ?? 0;
   // "You must accept this second roll, unless it is lower than the first. In which
   // case, you may take the first roll." Only asked when it is actually lower, so the
   // ordinary case costs nobody a click.
@@ -6531,6 +6576,40 @@ async function rerollBaseDie(actor, side, { forced = false, label = "Karmic Chan
 
   // Floored like every finished roll: a Botch takes what it takes, never past zero.
   return { total: Math.max(0, total), outcome, lines, natural, beforeOutcome };
+}
+
+/**
+ * A Natural Result moved after the roll (Experienced Drunk, Ferocious Fighter): "This can allow you to score a Critical Result or a
+ * Botch Result." Its outcome the same, the total moves with it and nothing else does; another outcome, the side is worked out
+ * again from what it came to before its outcome, as a fresh die is.
+ */
+async function shiftNatural(actor, side, moved, label) {
+  const rules = side.rules ?? {};
+  const before = side.natural ?? 0;
+  const natural = Math.max(0, moved);
+  const critical = !rules.plain && (natural >= (rules.criticalTarget ?? actor.system.criticalTarget ?? 10));
+  const botch = rules.plain ? false : rules.botchUnlessCritical ? !critical : (natural <= (rules.botchRange ?? actor.system.botchRange ?? 1));
+  const now = botch ? "botch" : critical ? "critical" : "";
+  const row = partLine({ label, written: `${before} → ${natural}`, value: natural - before });
+  const beforeOutcome = (side.beforeOutcome ?? side.total) - before + natural;
+  if (now === (side.outcome ?? "")) {
+    return { kept: true, total: Math.max(0, (Number(side.total) || 0) + natural - before), outcome: side.outcome ?? "", natural,
+      beforeOutcome, lines: [row] };
+  }
+  let total = beforeOutcome;
+  const lines = [row];
+  if (botch) {
+    const penalty = side.botchPenalty ?? actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY;
+    total -= penalty;
+    lines.push(fromOutcome(partLine({ label: "Botch", written: side.botchPenalty ? "-2" : "-2(bT)", value: -penalty, rank: "botch" })));
+  }
+  else if (critical) {
+    const extra = new Roll(side.criticalDice ?? actor.system.dice.critical.formula);
+    await extra.evaluate();
+    total += extra.total;
+    lines.push(fromOutcome(diceLine(extra, `${label} - Critical`)));
+  }
+  return { total: Math.max(0, total), outcome: now, lines, natural, beforeOutcome };
 }
 
 /**
@@ -14556,6 +14635,52 @@ async function takeBagOfTricks(message, actor) {
   return used;
 }
 
+/** The Sake Bottles a character holds. */
+function sakeBottles(actor) {
+  return Array.from(actor?.items ?? []).filter(item => item.system?.gearId === "sake-bottle");
+}
+
+/**
+ * Experienced Drunk (3): "You may use the Sake Bottle as an Out-of-Sequence Maneuver" - its Drink with no Action: 1 Alcohol, and
+ * Drunk till the start of your next turn, said on its card as the Gear tab's Drink says it. None with Alcohol in it, not spent.
+ */
+export async function sakeDrink(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const bottles = sakeBottles(actor).filter(item => (Number(item.system.charges) || 0) > 0);
+  if (!bottles.length) {
+    ui.notifications.warn(`${actor.name} has no Sake Bottle with Alcohol in it.`);
+    return UNSPENT;
+  }
+  const id = (bottles.length === 1) ? bottles[0].id : await askPlayerChoice(actor, `${actor.name}: Experienced Drunk - which Sake Bottle`,
+    bottles.map(item => ({ value: item.id, label: `${item.name} (${item.system.charges} Alcohol)` })));
+  const item = bottles.find(each => each.id === id);
+  if (!item) return UNSPENT;
+  const left = Math.max(0, (Number(item.system.charges) || 0) - 1);
+  await item.update({ "system.charges": left });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(`${actor.name} uses 1 ${item.system.chargesLabel || "Alcohol"} from ${item.name} `
+      + `(${left} left) out of sequence (Experienced Drunk), and ${item.system.chargeUseNote || "enters the Drunk Special State"}.`)}</p>` });
+}
+
+/**
+ * Experienced Drunk (4): "gain a Sake Bottle, or if you already possess one, you may instead completely refill that Sake Bottle."
+ * With one, asked which; refilled, back to its 4 Alcohol.
+ */
+export async function sakeBottle(actor) {
+  const definition = getTrait("sake-bottle");
+  if (!definition) return;
+  const held = sakeBottles(actor);
+  const full = Number(definition.chargesDice) || 4;
+  const picked = !held.length ? "new" : await askPlayerChoice(actor, `${actor.name}: Experienced Drunk`,
+    [...held.map(item => ({ value: item.id, label: `Refill ${item.name} (${Number(item.system.charges) || 0}/${full})` })),
+      { value: "new", label: "A new Sake Bottle" }]);
+  const refilled = held.find(item => item.id === picked);
+  if (refilled) return refilled.update({ "system.charges": full });
+  if (picked !== "new") return;
+  const { gearItemFrom } = await import("./gear.mjs");
+  return actor.createEmbeddedDocuments("Item", [gearItemFrom(definition, actor)]);
+}
+
 /**
  * Variable Fighter (2): "If you hit an Opponent with an Unarmed Attack or an Armed Attack, increase the Wound Rolls of the other by
  * 1(T) until the start of your next turn." Its mark, on your clock.
@@ -15107,6 +15232,9 @@ export async function reservedEnds(attack, actor = null) {
   for (const who of people.filter(Boolean)) {
     if ((Number(who.system?.conditions?.["reserved-mark"]) || 0) > 0) await setCondition(who, "reserved-mark", 0);
   }
+  // Ferocious Fighter (4): the Signature Technique concluded - Wild's (1) back.
+  const maker = actor ?? fromUuidSync(attack?.attackerUuid ?? "");
+  if ((Number(maker?.system?.conditions?.["ferocious-mark"]) || 0) > 0) await setCondition(maker, "ferocious-mark", 0);
 }
 
 /** All-Out Start (1): "Use the Transformation Maneuver immediately as an Out-of-Sequence Maneuver." */

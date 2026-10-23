@@ -4497,6 +4497,15 @@ async function revertTransfiguration(actor, target, maneuver) {
  * Range - and the choice is spent once a Maneuver is made.
  */
 export async function useManeuver(actor, maneuver, options = {}) {
+  // Ferocious Fighter (4): a Signature Technique while Feral - asked; not used after all, given back.
+  const { askFerocious, ferociousUndo } = await import("./maneuvers.mjs");
+  const ferocious = await askFerocious(actor, maneuver);
+  const used = await useManeuverThrough(actor, maneuver, options);
+  if (ferocious && !used) await ferociousUndo(actor);
+  return used;
+}
+
+async function useManeuverThrough(actor, maneuver, options = {}) {
   if (!actor?.getFlag?.("dbu-ttrpg", "throughPortal")) return useManeuverOnce(actor, maneuver, options);
   actor._throughPortal = true;
   try {

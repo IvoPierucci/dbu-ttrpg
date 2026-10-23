@@ -4157,6 +4157,34 @@ function usedIs(entry, maneuver) {
  * back. Without it every use looked alike, the Round could not tell them apart, and a
  * Maneuver limited to once per Round was in practice once per Encounter.
  */
+/**
+ * Ferocious Fighter (4): "[1/Encounter] While in the Feral State, you may use the Signature Technique Maneuver, ignoring the 1st
+ * effect of the Wild level of the Feral State." A Signature Technique refused only for that: asked, once an Encounter - its mark
+ * held for that Maneuver (states/feral.dbu), taken off as it is concluded (chat.mjs reservedEnds).
+ */
+export async function askFerocious(actor, maneuver) {
+  const slots = actor?.system?.effects?.slots ?? {};
+  if (!(maneuver?.tags ?? []).includes("signature") || (slots["ferocious.signature"] !== true)
+    || !((Number(actor.system?.states?.feral) || 0) > 0) || (slots.signatureTechniques !== false)) return false;
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.("dbu-ttrpg", "ferociousEncounter") === encounter) return false;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Ferocious Fighter` },
+    content: '<p data-tooltip="Once an Encounter: Wild\'s first effect ignored for this Maneuver">Use it, Feral?</p>', rejectClose: false });
+  if (!yes) return false;
+  await actor.setFlag("dbu-ttrpg", "ferociousEncounter", encounter);
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "ferocious-mark", 1);
+  return true;
+}
+
+/** Ferocious Fighter (4) asked, and the Signature Technique not used after all: its mark off, its once an Encounter back. */
+export async function ferociousUndo(actor) {
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "ferocious-mark", 0);
+  await actor.unsetFlag("dbu-ttrpg", "ferociousEncounter");
+}
+
 /** This Combat Round's, for what reads whether one was had in it. */
 function roundNow() {
   return `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;

@@ -1,0 +1,34 @@
+id: ferocious-fighter
+name: Ferocious Fighter
+talentCategory: miscellaneous
+prerequisites: Insight Score of 6+
+description: >
+  Your animal instincts take over, turning you into a wild animal on the battlefield.
+text: >
+  Ferocious Fighter: Your animal instincts take over, turning you into a wild animal on the battlefield.
+  –Prerequisites: Insight Score of 6+
+  (1)-[Passive]: While in the Feral State, increase the Dice Category of your Extra Dice gained from scoring a Critical Result by 1 Category. Double this bonus if your base Tier of Power is 4+.
+  (2)-[Triggered, 2/Round]: When making a Wound Roll while in the Feral State, you may increase or reduce the Natural Result by 1 after seeing the result. This can allow you to score a Critical Result or a Botch Result.
+  (3)-[Triggered/Start of Turn]: Enter the Feral State until the start of your next turn.
+  (4)-[1/Encounter]: While in the Feral State, you may use the Signature Technique Maneuver, ignoring the 1st effect of the Wild level of the Feral State.
+
+---
+
+[passive]
+# (1) Feral: the Critical Extra Dice a Category up - two, at a base Tier of Power of 4+.
+if (inState("feral")) {
+    dice.critical.category += 1;
+}
+if (inState("feral") && baseTierOfPower >= 4) {
+    dice.critical.category += 1;
+}
+# (2) A Wound Roll made Feral - an attack's, or a Power Flare's: its Natural Result 1 up or down, after the roll beside the
+# Karmic Effects - twice a Round; a Critical or a Botch worked out again from it (chat.mjs nudgeOptions).
+allow feral.woundNudge;
+# (4) A Signature Technique used Feral: asked, once an Encounter - Wild's (1) left out for that Maneuver (ferocious-mark;
+# maneuvers.mjs askFerocious).
+allow ferocious.signature;
+
+# (3) Feral (Wild) till the start of your next turn. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 3]
+enterState(feral, 1, start-of-next-turn);

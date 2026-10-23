@@ -170,6 +170,14 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  sakeDrink: {
+    args: [0, 0],
+    doc: "Experienced Drunk (3): a Sake Bottle's Drink out of sequence - 1 Alcohol, no Action (chat.mjs sakeDrink)."
+  },
+  sakeBottle: {
+    args: [0, 0],
+    doc: "Experienced Drunk (4): a Sake Bottle gained - or one held refilled, if the player says so (chat.mjs sakeBottle)."
+  },
   variableFighter: {
     args: [0, 0],
     doc: "Variable Fighter (2): the other kind of attack's Wound 1(T) till the start of your next turn (chat.mjs variableFighter)."

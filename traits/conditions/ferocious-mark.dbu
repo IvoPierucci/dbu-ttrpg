@@ -1,0 +1,17 @@
+id: ferocious-mark
+name: Ferocious
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Ferocious Fighter (4)'s, for the one Signature Technique - Wild's (1) left out while it is held
+# (states/feral.dbu), taken off as that Maneuver is concluded (chat.mjs reservedEnds).
+combatCondition: no
+source: Core Rule
+description: >
+  Ferocious Fighter: this Signature Technique is used ignoring the Wild level's first effect.
+text: >
+  Ferocious Fighter (4): While in the Feral State, you may use the Signature Technique Maneuver, ignoring the 1st effect of
+  the Wild level of the Feral State.
+
+---
+
+[passive]

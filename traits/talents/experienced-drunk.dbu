@@ -1,0 +1,37 @@
+id: experienced-drunk
+name: Experienced Drunk
+talentCategory: miscellaneous
+prerequisites: Insight Score of 6+
+description: >
+  Your body is used to the drunken stupor you spend most of your time in, allowing you to function almost normally even while inebriated.
+text: >
+  Experienced Drunk: Your body is used to the drunken stupor you spend most of your time in, allowing you to function almost normally even while inebriated.
+  –Prerequisites: Insight Score of 6+
+  (1)-[Passive]: While in the Drunk State, increase the Dice Category of your Extra Dice gained from scoring a Critical Result by 1 Category. Double this bonus if your base Tier of Power is 4+.
+  (2)-[Triggered, 2/Round]: When making a Dodge Roll while in the Drunk State, you may increase or reduce the Natural Result by 1 after seeing the result. This can allow you to score a Critical Result or a Botch Result.
+  (3)-[Triggered/Start of Turn]: You may use the Sake Bottle as an Out-of-Sequence Maneuver.
+  (4)-[Triggered/Start of Combat Encounter]: If you are not a Minion, gain a Sake Bottle, or if you already possess one, you may instead completely refill that Sake Bottle.
+
+---
+
+[passive]
+# (1) Drunk: the Critical Extra Dice a Category up - two, at a base Tier of Power of 4+.
+if (inState("drunk")) {
+    dice.critical.category += 1;
+}
+if (inState("drunk") && baseTierOfPower >= 4) {
+    dice.critical.category += 1;
+}
+# (2) A Dodge Roll made Drunk: its Natural Result 1 up or down, after the roll beside the Karmic Effects - twice a Round; a
+# Critical or a Botch worked out again from it (chat.mjs nudgeOptions).
+allow drunk.dodgeNudge;
+
+# (3) On your turn's card, ticked: the Sake Bottle's Drink out of sequence - no Action, 1 Alcohol (chat.mjs sakeDrink).
+[triggered/start-of-turn, chosen, effect 3]
+sakeDrink();
+
+# (4) The Combat Encounter beginning, chosen on its card: a Sake Bottle on the Gear tab - or, with one, refilled instead if you
+# say so (chat.mjs sakeBottle).
+[triggered/start-of-encounter, chosen, effect 4]
+requires !isMinion;
+sakeBottle();
