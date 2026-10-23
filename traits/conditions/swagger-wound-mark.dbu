@@ -1,0 +1,16 @@
+id: swagger-wound-mark
+name: Swagger: Wound
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Swaggering Wager's, till the start of your next turn (chat.mjs swaggerChoose, swaggerSpend).
+combatCondition: no
+source: Core Rule
+description: >
+  Swaggering Wager: your Wound Rolls 1(T) higher until the start of your next turn.
+text: >
+  Swaggering Wager: your Wound Rolls 1(T) higher until the start of your next turn.
+
+---
+
+[passive]
+wound += 1(T);

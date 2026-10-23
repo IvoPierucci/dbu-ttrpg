@@ -381,6 +381,8 @@ async function beginTurn(actor) {
   // turn in the same breath - so the answer has to be read after the Moment, not before.
   // Spectator (2): leaving it asked before the Moment - its (3) reads whether it was.
   await (await import("./chat.mjs")).spectatorTurnStart(actor);
+  // Swaggering Wager (2): what (1) chose ended with the edge above - its Swagger, before (1) is asked again.
+  await (await import("./chat.mjs")).swaggerEnds(actor);
   // Galaxy at the Brink (3): Greed of the Hera's 7th ignored and a Ki Surge - asked before the Moment it would answer.
   await (await import("./chat.mjs")).galaxyHoldsPower(actor);
   const { slots } = await fireMoment(actor, "start-of-turn");

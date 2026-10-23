@@ -14635,6 +14635,114 @@ async function takeBagOfTricks(message, actor) {
   return used;
 }
 
+/** Swaggering Wager (1)'s three, by the marks they leave; Lazy Fighting's is a stack of Slowed. */
+const SWAGGER_EFFECTS = Object.freeze([
+  { key: "limb", label: "Limb Restriction", condition: "limb-restriction-mark" },
+  { key: "lazy", label: "Lazy Fighting", condition: "slowed" },
+  { key: "zero", label: "Zero Effort", condition: "zero-effort-mark" }
+]);
+
+/**
+ * Swaggering Wager (1): "Select up to 3 of the effects below, they apply until the start of your next turn" - which, asked; each on
+ * your clock, and how many kept for (2) (swaggerEnds). None chosen, not spent.
+ */
+export async function swaggerChoose(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const subsets = [[0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2]];
+  const picked = await askPlayerChoice(actor, `${actor.name}: Swaggering Wager - until the start of your next turn`,
+    [...subsets.map(subset => ({ value: subset.join(""), label: subset.map(at => SWAGGER_EFFECTS[at].label).join(" + ") })),
+      { value: "none", label: "None" }]);
+  if (!picked || (picked === "none")) return UNSPENT;
+  const chosen = String(picked).split("").map(Number).map(at => SWAGGER_EFFECTS[at]).filter(Boolean);
+  const { setCondition } = await import("./conditions.mjs");
+  for (const effect of chosen) {
+    const held = Number(actor.system.conditions?.[effect.condition]) || 0;
+    if (!await setCondition(actor, effect.condition, (effect.key === "lazy") ? held + 1 : 1)) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key: effect.condition, edge: EDGES.START, next: true, source: "Swaggering Wager" });
+  }
+  return actor.setFlag(SCOPE, "swagger", { count: chosen.length, attacked: false });
+}
+
+/**
+ * Swaggering Wager (2): "When any number of effects chosen through the first effect of Swaggering Wager end, if you have used at
+ * least 1 Attacking Maneuver since the start of your previous turn, gain a number of Swagger Stacks equal to the number of effects
+ * that ended." At the start of your turn, as they do.
+ */
+export async function swaggerEnds(actor) {
+  const held = actor?.getFlag?.(SCOPE, "swagger");
+  if (!held) return;
+  await actor.unsetFlag(SCOPE, "swagger");
+  if (!held.attacked || !(Number(held.count) > 0) || !hasTalentItem(actor, "swaggering-wager")) return;
+  await setResource(actor, "swagger", (Number(actor.system.resources?.swagger?.stacks) || 0) + Number(held.count));
+}
+
+/** Whether a character holds a Talent, by its file's id. */
+function hasTalentItem(actor, id) {
+  return Array.from(actor?.items ?? []).some(item => (item.type === "talent") && (item.flags?.[SCOPE]?.sourceId === id));
+}
+
+/** Swaggering Wager (3)'s Combat Rolls, by the marks they leave. */
+const SWAGGER_ROLLS = Object.freeze([
+  { key: "strike", label: "Strike", condition: "swagger-strike-mark" },
+  { key: "dodge", label: "Dodge", condition: "swagger-dodge-mark" },
+  { key: "wound", label: "Wound", condition: "swagger-wound-mark" }
+]);
+
+/**
+ * Swaggering Wager (3): "spend a number of Swagger Stacks" - one of its effects a use, asked: 1-3, a Combat Roll each 1(T) till
+ * the start of your next turn ("This effect cannot stack" - one already raised is not offered); 2, a Counter Action; 3, the Basic
+ * Attack out of sequence; 4, an Action - not a Minion's.
+ */
+export async function swaggerSpend(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const stacks = Number(actor?.system?.resources?.swagger?.stacks) || 0;
+  if (!stacks) {
+    ui.notifications.warn(`${actor?.name ?? "They"} have no Swagger.`);
+    return UNSPENT;
+  }
+  const open = SWAGGER_ROLLS.filter(roll => !((Number(actor.system.conditions?.[roll.condition]) || 0) > 0));
+  const subsets = [];
+  for (let mask = 1; mask < (1 << open.length); mask++) {
+    const subset = open.filter((roll, at) => mask & (1 << at));
+    if (subset.length <= stacks) subsets.push(subset);
+  }
+  const options = [
+    ...subsets.map(subset => ({ value: `rolls:${subset.map(roll => roll.key).join(",")}`,
+      label: `${subset.map(roll => roll.label).join(", ")} +1(T) (${subset.length} Swagger)` })),
+    ...((stacks >= 2) ? [{ value: "counter", label: "1 Counter Action (2 Swagger)" }] : []),
+    ...((stacks >= 3) ? [{ value: "basic", label: "Basic Attack out of sequence (3 Swagger)" }] : []),
+    ...(((stacks >= 4) && !actor.system?.minion) ? [{ value: "action", label: "1 Action (4 Swagger)" }] : [])
+  ];
+  if (!options.length) return UNSPENT;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Swaggering Wager - ${stacks} Swagger`, options);
+  if (!picked) return UNSPENT;
+  const spend = n => setResource(actor, "swagger", stacks - n);
+  if (String(picked).startsWith("rolls:")) {
+    const rolls = String(picked).slice(6).split(",").map(key => SWAGGER_ROLLS.find(roll => roll.key === key)).filter(Boolean);
+    await spend(rolls.length);
+    const { setCondition } = await import("./conditions.mjs");
+    for (const roll of rolls) {
+      if (!await setCondition(actor, roll.condition, 1)) continue;
+      await lasting(actor, { kind: KINDS.CONDITION, key: roll.condition, edge: EDGES.START, next: true, source: "Swaggering Wager" });
+    }
+    return;
+  }
+  if (picked === "counter") {
+    await spend(2);
+    return actor.update({ "system.actionsSpent.converted": (Number(actor.system.actionsSpent?.converted) || 0) + 1 });
+  }
+  if (picked === "basic") {
+    const used = await ownOutOfSequence(actor, "basic-attack");
+    if (used) await setResource(actor, "swagger", Math.max(0, (Number(actor.system.resources?.swagger?.stacks) || 0) - 3));
+    return used;
+  }
+  if (picked === "action") {
+    await spend(4);
+    return steadyAction(actor);
+  }
+  return UNSPENT;
+}
+
 /** The Sake Bottles a character holds. */
 function sakeBottles(actor) {
   return Array.from(actor?.items ?? []).filter(item => item.system?.gearId === "sake-bottle");
@@ -22248,6 +22356,10 @@ export async function postAttack(actor, target, maneuver,
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
+  // Swaggering Wager (2): "if you have used at least 1 Attacking Maneuver since the start of your previous turn".
+  if (actor?.getFlag?.(SCOPE, "swagger")?.count && !actor.getFlag(SCOPE, "swagger").attacked) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.swagger.attacked`]: true });
+  }
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
   //

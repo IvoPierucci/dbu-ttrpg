@@ -430,6 +430,8 @@ async function runVerb(actor, call, context) {
     case "undyingDetermination": return (await import("../chat.mjs")).undyingDetermination(actor);
     case "steadyAction": return (await import("../chat.mjs")).steadyAction(actor);
     case "weaponFixer": return (await import("../chat.mjs")).weaponFixer(actor);
+    case "swaggerChoose": return (await import("../chat.mjs")).swaggerChoose(actor);
+    case "swaggerSpend": return (await import("../chat.mjs")).swaggerSpend(actor);
     case "sakeDrink": return (await import("../chat.mjs")).sakeDrink(actor);
     case "sakeBottle": return (await import("../chat.mjs")).sakeBottle(actor);
     case "variableFighter": return (await import("../chat.mjs")).variableFighter(actor, Boolean(context?.armed));

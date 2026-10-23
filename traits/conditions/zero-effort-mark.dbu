@@ -1,0 +1,17 @@
+id: zero-effort-mark
+name: Zero Effort
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Swaggering Wager's, till the start of your next turn (chat.mjs swaggerChoose, swaggerSpend).
+combatCondition: no
+source: Core Rule
+description: >
+  Swaggering Wager: no Ki Wager and no Signature Techniques until the start of your next turn.
+text: >
+  Swaggering Wager: no Ki Wager and no Signature Techniques until the start of your next turn.
+
+---
+
+[passive]
+forbid kiWagers;
+forbid signatureTechniques;

@@ -1,0 +1,16 @@
+id: swagger-strike-mark
+name: Swagger: Strike
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Swaggering Wager's, till the start of your next turn (chat.mjs swaggerChoose, swaggerSpend).
+combatCondition: no
+source: Core Rule
+description: >
+  Swaggering Wager: your Strike Rolls 1(T) higher until the start of your next turn.
+text: >
+  Swaggering Wager: your Strike Rolls 1(T) higher until the start of your next turn.
+
+---
+
+[passive]
+strike += 1(T);

@@ -1,0 +1,26 @@
+id: swaggering-wager-third-effect
+name: Swaggering Wager
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: swaggering-wager
+fromEffect: 3
+source: Core Rule
+description: >
+  Swaggering Wager's third effect, as a Maneuver: Swagger spent - Combat Rolls, a Counter Action, the Basic Attack, an Action.
+text: >
+  (3)-[1/Round]: As an Instant Maneuver, you can spend a number of Swagger Stacks to gain the effects listed below:
+  * 1-3 Swagger: For each Swagger spent, increase one Combat Roll of your choice by 1(T) until the start of your next turn. This effect cannot stack, but you can apply it multiple times to increase multiple Combat Rolls.
+  * 2 Swagger: Gain 1 Counter Action.
+  * 3 Swagger: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+  * 4 Swagger: If you are not a Minion, gain 1 Action.
+
+---
+
+# Which, asked - one a use (chat.mjs swaggerSpend): a Combat Roll a stack, each one not already raised; 2 for a Counter Action;
+# 3 for the Basic Attack out of sequence; 4 for an Action, not a Minion's.
+[on used]
+swaggerSpend();

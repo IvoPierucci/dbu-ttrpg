@@ -170,6 +170,14 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  swaggerChoose: {
+    args: [0, 0],
+    doc: "Swaggering Wager (1): up to 3 of its effects, asked, till the start of your next turn (chat.mjs swaggerChoose)."
+  },
+  swaggerSpend: {
+    args: [0, 0],
+    doc: "Swaggering Wager (3): Swagger spent on one of its effects, asked (chat.mjs swaggerSpend)."
+  },
   sakeDrink: {
     args: [0, 0],
     doc: "Experienced Drunk (3): a Sake Bottle's Drink out of sequence - 1 Alcohol, no Action (chat.mjs sakeDrink)."

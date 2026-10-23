@@ -1,0 +1,16 @@
+id: swagger-dodge-mark
+name: Swagger: Dodge
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Swaggering Wager's, till the start of your next turn (chat.mjs swaggerChoose, swaggerSpend).
+combatCondition: no
+source: Core Rule
+description: >
+  Swaggering Wager: your Dodge Rolls 1(T) higher until the start of your next turn.
+text: >
+  Swaggering Wager: your Dodge Rolls 1(T) higher until the start of your next turn.
+
+---
+
+[passive]
+dodge += 1(T);
