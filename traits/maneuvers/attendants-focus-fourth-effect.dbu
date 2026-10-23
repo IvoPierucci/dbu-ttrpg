@@ -1,0 +1,20 @@
+id: attendants-focus-fourth-effect
+name: Attendant's Focus
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: attendants-focus
+fromEffect: 4
+source: Core Rule
+description: >
+  Attendant's Focus's fourth effect, as a Maneuver: Counter Actions spent, as many Allies in your Guidance Range a Healing Surge.
+text: >
+  (4)-[1/Encounter]: As a Standard Maneuver with an Action Cost of 1 Action, you may spend any number of Counter Actions. Then, for each Action spent, you may target an Ally within your Guidance Range. Those targeted Allies may use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# How many Counter Actions, and which Allies in range - one each - asked before anything is paid (use-maneuver.mjs); on its card,
+# a Healing Surge out of sequence offered to each (chat.mjs takeHealingSurge).

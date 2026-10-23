@@ -1,0 +1,25 @@
+id: angelic-technique
+name: Angelic Technique
+talentCategory: racial
+race: angel
+prerequisites: Angel Race
+description: >
+  You have honed your combat techniques to angelic perfection.
+text: >
+  Angelic Technique: You have honed your combat techniques to angelic perfection.
+  –Prerequisites: Angel Race
+  (1)-[Passive]: Increase the amount of Technique Points you gain from Skill Improvements by 2. This effect applies retroactively.
+  (2)-[Triggered, 1/Round]: If you use the Basic Attack Maneuver while in the Healthy Health Threshold, you may apply an Advantage with a TP Cost of 10 or less to that Attacking Maneuver.
+  (3)-[Triggered, 1/Encounter]: If the current Combat Round is the 3rd or later Combat Round in this Combat Encounter and you use an Ultimate Signature Technique, instead of gaining Energy Charges for each Health Threshold you are below, gain Energy Charges for each Health Threshold you are above.
+
+---
+
+[passive]
+# (1) On every Skill Improvement row, as Namekian Techniques' - read off the rows, so retroactive.
+techniquePoints.perSkillImprovement += 2;
+# (2) The Basic Attack declared, Healthy: which Advantage of 10 TP or less, asked once a Round - carried on the attack as a
+# Technique's would be, its effects with it (maneuvers.mjs askAngelicAdvantage; chat.mjs postAttack, `borrowed`).
+allow angelic.advantage;
+# (3) An Ultimate from the 3rd Combat Round: a box in its declaration window, once an Encounter - its Thresholds' Energy Charges
+# for those you are above, not below (use-maneuver.mjs askTechniqueDeclaration; technique-attack.mjs).
+allow angelic.thresholdsAbove;

@@ -1,5 +1,6 @@
 const { fields } = foundry.data;
 
+import { bestTier, guidingAllies } from "../guidance.mjs";
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
@@ -2462,8 +2463,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         ? [["scholarship", "Scholarship Modifier"], ["personality", "Personality Modifier"]] : [])]
       .reduce((best, entry) => ((atts[entry[0]]?.mod ?? 0) > (atts[best[0]]?.mod ?? 0)) ? entry : best);
     const surgencyBelow = perThreshold(this, "surgency");
-    this.surgency = withEffects(this, "surgency", (atts[surgencyFrom[0]]?.mod ?? 0) + surgencyBelow.value, {
-      parts: [{ label: surgencyFrom[1], value: atts[surgencyFrom[0]]?.mod ?? 0 }, ...surgencyBelow.parts]
+    // Attendant's Focus (2): "All Allies within your Guidance Range have their Surgency increased by 2(T)" - read off whoever holds
+    // it, their 2(T), the best of those reaching this one.
+    const attending = this.parent ? guidingAllies(this.parent, "attendant.surgency", { range: true }) : [];
+    const attendant = attending.length ? 2 * Math.max(1, bestTier(attending)) : 0;
+    this.surgency = withEffects(this, "surgency", (atts[surgencyFrom[0]]?.mod ?? 0) + surgencyBelow.value + attendant, {
+      parts: [{ label: surgencyFrom[1], value: atts[surgencyFrom[0]]?.mod ?? 0 }, ...surgencyBelow.parts,
+        ...(attendant ? [{ label: "Attendant's Focus", value: attendant }] : [])]
     });
 
     // Awareness: Insight Modifier, added to Strike Rolls.

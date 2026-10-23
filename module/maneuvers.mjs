@@ -1,3 +1,4 @@
+import { guidanceRangeGap } from "./guidance.mjs";
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { getTrait, printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
 import { featureAsks, withGranted } from "./signature.mjs";
@@ -2104,7 +2105,11 @@ export function whyNotWithinMelee(actor, target, what, extra = 0) {
 
   // `extra` is what the thing being used adds to it - the Expert Taser's "increase your
   // Melee Range by 3 when using this Basic Item".
-  const reach = Math.max(0, (actor.system.meleeRange ?? 0) + (Number(extra) || 0));
+  // Attendant's Focus (3): "For any effects or Maneuvers that would target an Ally, your Melee Range is considered to be your
+  // Guidance Range" - one of their side.
+  const ally = (actor?.system?.effects?.slots?.["attendant.allyReach"] === true) && (from?.disposition !== undefined)
+    && (from.disposition === to?.disposition);
+  const reach = Math.max(0, (actor.system.meleeRange ?? 0) + (Number(extra) || 0), ally ? guidanceRangeGap(actor) : 0);
   if (squares <= reach) return null;
 
   const range = reach
@@ -4159,6 +4164,27 @@ function usedIs(entry, maneuver) {
  * back. Without it every use looked alike, the Round could not tell them apart, and a
  * Maneuver limited to once per Round was in practice once per Encounter.
  */
+/**
+ * Angelic Technique (2): "If you use the Basic Attack Maneuver while in the Healthy Health Threshold, you may apply an Advantage
+ * with a TP Cost of 10 or less to that Attacking Maneuver." Asked as it is declared, once a Round - carried on the attack as a
+ * Technique's would be (chat.mjs postAttack, `borrowed`).
+ */
+export async function askAngelicAdvantage(actor, maneuver, declared) {
+  if (!declared || (maneuver?.id !== "basic-attack") || (actor?.system?.effects?.slots?.["angelic.advantage"] !== true)) return declared;
+  if ((actor.system.threshold?.key ?? "healthy") !== "healthy") return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "angelicAdvantageRound") === round) return declared;
+  const choices = traitsOfKind("signature", "advantages").filter(each => (Number(each.tpCost) || 0) && (Number(each.tpCost) <= 10))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!choices.length) return declared;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const picked = await askPlayerChoice(actor, `${actor.name}: Angelic Technique - an Advantage (10 TP or less)`,
+    [{ value: "none", label: "None" }, ...choices.map(each => ({ value: each.id, label: `${each.name} (${each.tpCost} TP)` }))]);
+  if (!picked || (picked === "none")) return declared;
+  await actor.setFlag("dbu-ttrpg", "angelicAdvantageRound", round);
+  return { ...declared, angelicAdvantage: picked };
+}
+
 /**
  * Masterful Integration (1): "When making an Attacking Maneuver, you may destroy an Integrated Item to apply an Energy Charge to that
  * Attacking Maneuver." Asked as it is declared, once a Round: which - a Weapon broken, Apparel broken, an Accessory gone - and then

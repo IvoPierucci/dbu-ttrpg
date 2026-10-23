@@ -183,9 +183,13 @@ Hooks.on("updateActor", async (actor, changes, options, userId) => {
 // again as one of them is hurt or healed, or a token comes, goes or changes side.
 // Synchronized Combatants (2): beside your Partner - read again as a token moves, too, or a choice of it changes.
 const READ_OFF_OTHERS = new Set(["conduit-of-spirit", "synchronized-combatants", "chosen-rival"]);
+// Attendant's Focus (2): what it gives is read by everyone else - so with one on the scene, everyone is read again.
+const READ_BY_OTHERS = new Set(["attendants-focus"]);
 function conduitRefresh() {
-  for (const actor of new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor))) {
-    if (!actor || !Array.from(actor.items ?? []).some(item => READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId))) continue;
+  const actors = new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor));
+  const everyone = [...actors].some(actor => Array.from(actor?.items ?? []).some(item => READ_BY_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)));
+  for (const actor of actors) {
+    if (!actor || (!everyone && !Array.from(actor.items ?? []).some(item => READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)))) continue;
     actor.reset();
     if (actor.sheet?.rendered) actor.sheet.render();
   }

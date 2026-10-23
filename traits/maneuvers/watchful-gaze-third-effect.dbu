@@ -1,0 +1,19 @@
+id: watchful-gaze-third-effect
+name: Watchful Gaze
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: watchful-gaze
+fromEffect: 3
+source: Core Rule
+description: >
+  Watchful Gaze's third effect, as a Maneuver: to a Square beside an Ally in your Guidance Range.
+text: >
+  (3)-[1/Round]: As an Instant Maneuver during your turn or an Ally’s turn, you may move to any Square adjacent to an Ally within your Guidance Range.
+
+---
+
+# Refused out of your turn or an Ally's, or with no Ally in your Guidance Range (use-maneuver.mjs); the move is the table's.

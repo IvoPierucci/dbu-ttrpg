@@ -1,0 +1,24 @@
+id: angelic-guidance
+name: Angelic Guidance
+talentCategory: racial
+race: angel
+prerequisites: Angel Race
+description: >
+  With your seraphic grace and wisdom, you help others reach their greatest potential.
+text: >
+  Angelic Guidance: With your seraphic grace and wisdom, you help others reach their greatest potential.
+  –Prerequisites: Angel Race
+  (1)-[Passive]: While you are adjacent to an Ally, increase that Ally’s Dodge Rolls by 1(T).
+  (2)-[Triggered, 1/Round]: If an adjacent Ally makes a Combat Roll, you may spend a Counter Action to increase that Combat Roll by 2(T).
+  (3)-[Triggered, 1/Round]: If an adjacent Ally moves, you may use the Movement Maneuver as an Out-of-Sequence Maneuver after that movement ends.
+
+---
+
+[passive]
+# (1) An Ally beside you - in your Guidance Range, with Watchful Gaze: their Dodge Rolls 1(T), yours (guidance.mjs; chat.mjs).
+allow guidance.dodge;
+# (2) Their Combat Roll made: beside the Karmic Effects after it, a Counter Action of yours for 2(T) on it, once a Round
+# (chat.mjs guidanceOptions).
+allow guidance.counter;
+# (3) Their Movement: on its card, the Movement Maneuver out of sequence for you - after it ends, once a Round (chat.mjs).
+allow guidance.move;

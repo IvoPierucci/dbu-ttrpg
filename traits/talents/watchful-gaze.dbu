@@ -1,0 +1,25 @@
+id: watchful-gaze
+name: Watchful Gaze
+talentCategory: racial
+race: angel
+prerequisites: Angelic Guidance
+description: >
+  Your intense focus and unwavering attention allow you to instruct your comrades, even at a distance.
+text: >
+  Watchful Gaze: Your intense focus and unwavering attention allow you to instruct your comrades, even at a distance.
+  –Prerequisites: Angelic Guidance
+  (1)-[Ruling]: All Squares within a Sphere AoE (centered on you) are within your ‘Guidance Range’.
+  (2)-[Passive]: For the effects of Angelic Guidance, rather than adjacent, that Ally can be on any Square within your Guidance Range.
+  (3)-[1/Round]: As an Instant Maneuver during your turn or an Ally’s turn, you may move to any Square adjacent to an Ally within your Guidance Range.
+  (4)-[Triggered, 1/Round]: If an Ally within your Guidance Range successfully Dodges an Opponent’s Attacking Maneuver, you may spend 1 Counter Action. If you do, that Ally may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) A Sphere of no Magnitude named - Standard: 3 Squares from you (guidance.mjs).
+# (2)
+allow guidance.range;
+# (3) Its own Maneuver, on the Maneuvers tab (maneuvers/watchful-gaze-third-effect.dbu).
+# (4) An Ally in range Dodged an Opponent's attack: on its card, your Counter Action - then their Basic Attack out of sequence,
+# offered there; once a Round (chat.mjs offerWatchfulGaze).
+allow watchful.counter;

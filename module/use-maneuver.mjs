@@ -904,6 +904,16 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
         flexProfiles.map(([id, label]) => `<option value="${id}">${Handlebars.escapeExpression(label)}</option>`).join("")}</select>
       <span class="dbu-respond-source">once an Encounter - another Technique</span></label>`);
   }
+  // Angelic Technique (3): an Ultimate from the 3rd Combat Round - its Thresholds' Energy Charges for those you are above.
+  const { thresholdsAbove, thresholdsBelow } = await import("./technique-attack.mjs");
+  const angelicOpen = technique.ultimate && (actor.system.effects?.slots?.["angelic.thresholdsAbove"] === true)
+    && ((Number(game.combat?.round) || 0) >= 3) && (actor.getFlag?.("dbu-ttrpg", "angelicAboveEncounter") !== (game.combat?.id ?? "none"))
+    && (thresholdsAbove(actor) > 0);
+  if (angelicOpen) {
+    fields.push(`<label class="dbu-respond-option"${tip("angelic-technique", 3)}><input type="checkbox" name="angelicAbove"/>
+      <span class="dbu-respond-name">Angelic Technique: ${thresholdsAbove(actor)} Energy Charges for the Thresholds above</span>
+      <span class="dbu-respond-source">not ${thresholdsBelow(actor)} for those below - once an Encounter</span></label>`);
+  }
   // Technique Armory (2): on an Ultimate, up to 5 Armory Points for 2(T) each on its Wound.
   const armoryHeld = Number(actor.system.resources?.armory?.stacks) || 0;
   const armoryMost = ((actor.system.effects?.slots?.["armory.points"] === true) && technique.ultimate) ? Math.min(5, armoryHeld) : 0;
@@ -962,6 +972,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
             flexEfficiency: flexEfficiency && box("flexEfficiency"),
             flexProfile: form.querySelector('[name="flexProfile"]')?.value ?? "",
             armory: Math.min(armoryMost, num("armory")),
+            angelicAbove: angelicOpen && box("angelicAbove"),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
@@ -1136,6 +1147,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
   delete answers.channeler;
   // Technique Armory (2): the Armory Points spent, 2(T) each on the Wound.
+  if (answers.angelicAbove) await actor.setFlag("dbu-ttrpg", "angelicAboveEncounter", game.combat?.id ?? "none");
   const armorySpent = Math.min(armoryMost, Number(answers.armory) || 0);
   delete answers.armory;
   if (armorySpent > 0) {
@@ -4825,6 +4837,57 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // Watchful Gaze (3): "during your turn or an Ally's turn" - an Ally in your Guidance Range to be beside.
+  if (maneuver.id === "watchful-gaze-third-effect") {
+    const { alliesOnScene } = await import("./chat.mjs");
+    const { guidanceRangeGap, withinGuidance } = await import("./guidance.mjs");
+    const allies = alliesOnScene(actor);
+    const current = game.combat?.combatant?.actor ?? null;
+    const turn = !game.combat?.started || !current || (current.uuid === actor.uuid) || allies.some(ally => ally.uuid === current.uuid);
+    const near = allies.filter(ally => withinGuidance(actor, ally, guidanceRangeGap(actor)));
+    const refused = !turn ? "Only during your turn or an Ally's." : !near.length ? "No Ally within your Guidance Range." : "";
+    if (refused) {
+      ui.notifications.warn(`${maneuver.name}: ${refused}`);
+      return false;
+    }
+  }
+  // Attendant's Focus (4): how many Counter Actions, and which Allies in the Guidance Range - asked before anything is paid.
+  if (maneuver.id === "attendants-focus-fourth-effect") {
+    const { alliesOnScene, askPlayerAmount, askPlayerChoice } = await import("./chat.mjs");
+    const { guidanceRangeGap, withinGuidance } = await import("./guidance.mjs");
+    const near = alliesOnScene(actor).filter(ally => !ally.system?.defeated && withinGuidance(actor, ally, guidanceRangeGap(actor)));
+    const counters = Math.min(Number(actor.system.actions?.counterLeft) || 0, near.length);
+    if (!near.length || !counters) {
+      ui.notifications.warn(`${maneuver.name}: ${!near.length ? "no Ally within your Guidance Range" : "no Counter Action left"}.`);
+      return false;
+    }
+    const count = Math.min(counters, await askPlayerAmount(actor, `${maneuver.name} - Counter Actions`, counters,
+      "Counter Actions - an Ally each"));
+    if (!(count > 0)) return false;
+    const picked = [];
+    for (let n = 0; n < count; n++) {
+      const left = near.filter(ally => !picked.includes(ally));
+      const id = (left.length === 1) ? left[0].uuid : await askPlayerChoice(actor, `${maneuver.name} - Ally ${n + 1} of ${count}`,
+        left.map(ally => ({ value: ally.uuid, label: ally.name })));
+      const ally = left.find(each => each.uuid === id);
+      if (!ally) break;
+      picked.push(ally);
+    }
+    if (!picked.length) return false;
+    await payActions(actor, maneuver, actionsSpent);
+    await actor.update({ "system.actionsSpent.counter": (Number(actor.system.actionsSpent?.counter) || 0) + picked.length });
+    await recordManeuverUse(actor, maneuver);
+    const card = await postManeuver(actor, maneuver, { note: `${picked.length} Counter Action${(picked.length === 1) ? "" : "s"}: `
+      + `${picked.map(ally => ally.name).join(", ")} may use a Healing Surge out of sequence.` });
+    await recordManeuverType(actor, maneuver.type, { messageId: card?.id, maneuverId: maneuver.id });
+    const { requestEdit } = await import("./chat.mjs");
+    for (const ally of picked) {
+      requestEdit(card, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "",
+        maneuverName: "Healing Surge", reason: `Attendant's Focus - ${actor.name}`, healingSurge: true } });
+    }
+    return true;
+  }
+
   // Metallic Movement (3): "if you are on a Square with the Metallic Environmental Quality".
   if ((maneuver.id === "metallic-movement-third-effect")
     && !(actor.system.battlefield?.squareQualities ?? []).includes("metallic")) {
@@ -5263,6 +5326,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askTwinWeapon(actor, declared, maneuver);
     // Masterful Integration (1): an Integrated Item destroyed for an Energy Charge - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askMasterfulCharge(actor, declared);
+    // Angelic Technique (2): a Basic Attack, Healthy - an Advantage of 10 TP or less on it, asked once a Round.
+    declared = await (await import("./maneuvers.mjs")).askAngelicAdvantage(actor, maneuver, declared);
     // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, targetActor);
     // Profile Focus (2): its Profile's attack - both rolls a Critical Result, asked once an Encounter.

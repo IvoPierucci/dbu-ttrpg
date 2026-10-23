@@ -1,0 +1,25 @@
+id: attendants-focus
+name: Attendant’s Focus
+talentCategory: racial
+race: angel
+prerequisites: Watchful Gaze
+description: >
+  With a keen eye and a keener mind, your graceful reminders and direct instructions ensure your partners emerge victorious.
+text: >
+  Attendant’s Focus: With a keen eye and a keener mind, your graceful reminders and direct instructions ensure your partners emerge victorious.
+  –Prerequisites: Watchful Gaze
+  (1)-[Passive]: Increase the Magnitude of your Guidance Range to Huge.
+  (2)-[Passive]: All Allies within your Guidance Range have their Surgency increased by 2(T).
+  (3)-[Passive]: For any effects or Maneuvers that would target an Ally, your Melee Range is considered to be your Guidance Range.
+  (4)-[1/Encounter]: As a Standard Maneuver with an Action Cost of 1 Action, you may spend any number of Counter Actions. Then, for each Action spent, you may target an Ally within your Guidance Range. Those targeted Allies may use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) A Huge Sphere: 5 Squares from you (guidance.mjs).
+allow guidance.huge;
+# (2) Read by each Ally as their Surgency is worked out - your 2(T), the best of those reaching them (actor-character.mjs).
+allow attendant.surgency;
+# (3) An Ally aimed at: your Melee Range the Guidance Range (maneuvers.mjs whyNotWithinMelee).
+allow attendant.allyReach;
+# (4) Its own Maneuver, on the Maneuvers tab (maneuvers/attendants-focus-fourth-effect.dbu).

@@ -25,6 +25,11 @@ export function thresholdsBelow(actor) {
   return Math.max(0, ["healthy", "bruised", "injured", "critical"].indexOf(actor?.system?.threshold?.key ?? "healthy"));
 }
 
+/** The Health Thresholds you are above: Healthy 3, Bruised 2, Injured 1, Critical none. */
+export function thresholdsAbove(actor) {
+  return 3 - thresholdsBelow(actor);
+}
+
 /**
  * The Technique block an attack carries.
  *
@@ -77,7 +82,10 @@ export function techniqueAttack(actor, maneuver, declared, { targets = [], shake
     .concat(has("overwhelming-terror") && targets.length && (shaken.length === targets.length)
       ? [{ label: "Overwhelming Terror", amount: 1 }] : [])
     .concat(has("transformation-boost") && declared.transformed ? [{ label: "Transformation Boost", amount: 1 }] : [])
-    .concat(ultimate && thresholdsBelow(actor) ? [{ label: "Ultimate (Thresholds)", amount: thresholdsBelow(actor) }] : [])
+    // Angelic Technique (3): for those you are above instead, ticked as it was declared.
+    .concat(ultimate && declared.angelicAbove && thresholdsAbove(actor)
+      ? [{ label: "Ultimate (Thresholds above, Angelic Technique)", amount: thresholdsAbove(actor) }] : [])
+    .concat(ultimate && !declared.angelicAbove && thresholdsBelow(actor) ? [{ label: "Ultimate (Thresholds)", amount: thresholdsBelow(actor) }] : [])
     .concat(declared.gigaFlare ? [{ label: "Giga Flare", amount: 2 * declared.gigaFlare }] : [])
     .concat(declared.superCombination ? [{ label: "Super Combination", amount: declared.superCombination }] : [])
     // Earthling-Raised's, or Quick to Master's - by the name it was taken under.
@@ -177,7 +185,7 @@ export function techniqueStrikeParts(attacker, attack) {
   // increase the Strike Roll by 1(T)."
   if (darkAndLight(attack)) parts.push({ label: "Elemental (Light) with (Dark)", written: "+1(T)", value: tier });
   // A Signature Technique's Strike Roll, from the character's own effects - 3D Scan Mode (4).
-  const own = Number(attacker?.system?.effects?.slots?.["strike.signature"]?.add) || 0;
+  const own = tech.borrowed ? 0 : (Number(attacker?.system?.effects?.slots?.["strike.signature"]?.add) || 0);
   if (own) parts.push({ label: "Signature Technique", value: own });
   return parts;
 }

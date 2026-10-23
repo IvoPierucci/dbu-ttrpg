@@ -1,5 +1,6 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
+import { bestTier, guidanceRangeGap, guidingAllies, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
@@ -5770,7 +5771,8 @@ function offerableTo(situation, message) {
       return reason ? { ...effect, blocked: reason, available: false } : effect;
     }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor),
     ...luckyRerollOptions(situation.actor),
-    ...taiChiRerollOptions(situation, message), ...nudgeOptions(situation), ...cantLoseOptions(situation, message)];
+    ...taiChiRerollOptions(situation, message), ...nudgeOptions(situation), ...cantLoseOptions(situation, message),
+    ...guidanceOptions(situation)];
 }
 
 /** Earthling Resolve (2)'s reroll, by the key it is picked with in the window. */
@@ -5870,6 +5872,69 @@ async function takeNudge(message, situation, key) {
   await requestActorUpdate(situation.actor, { [`flags.${SCOPE}.nudge.${id}`]: { round: roundKey(), count: count + 1 } });
   return resettleAttack(message, situation,
     { spent: [], slots: {}, queue: [{ verb: "reroll", forced: true, shift: Number(step), label: option.name }] });
+}
+
+/**
+ * Watchful Gaze (4): "If an Ally within your Guidance Range successfully Dodges an Opponent's Attacking Maneuver, you may spend 1
+ * Counter Action. If you do, that Ally may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver." On the attack's card:
+ * the Angel's offer first - taken, their Counter Action paid and the Basic Attack offered to the one who Dodged, there.
+ */
+function offerWatchfulGaze(message, dodger, attacker) {
+  if (!dodger || !attacker || alliesOnScene(dodger).some(ally => ally.uuid === attacker.uuid)) return;
+  for (const holder of guidingAllies(dodger, "watchful.counter", { range: true })) {
+    if ((holder.getFlag?.(SCOPE, "watchfulRound") === roundKey()) || !((Number(holder.system?.actions?.counterLeft) || 0) > 0)) continue;
+    requestEdit(message, { type: "offer", offer: { actorUuid: holder.uuid, actorName: holder.name, maneuverId: "",
+      maneuverName: `Watchful Gaze - ${dodger.name}'s Basic Attack`, reason: "A Counter Action of yours (1/Round)",
+      watchful: { dodgerUuid: dodger.uuid } } });
+  }
+}
+
+/** Watchful Gaze (4), taken: the Counter Action, and the Basic Attack offered to the one who Dodged. */
+async function takeWatchful(message, actor, watchful) {
+  if (actor.getFlag?.(SCOPE, "watchfulRound") === roundKey()) return ui.notifications.warn(`${actor.name}: Watchful Gaze - already used this Round.`);
+  const dodger = fromUuidSync(watchful?.dodgerUuid ?? "");
+  if (!dodger) return;
+  if (!await spendActions(actor, 1, "counter")) return;
+  await actor.setFlag(SCOPE, "watchfulRound", roundKey());
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  requestEdit(message, { type: "offer", offer: { actorUuid: dodger.uuid, actorName: dodger.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", reason: `Watchful Gaze - ${actor.name}'s Counter Action` } });
+}
+
+/** A Healing Surge out of sequence - Attendant's Focus (4)'s, offered to an Ally. */
+async function takeHealingSurge(message, actor) {
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "surge"));
+  const surge = own ? definitionOf(own) : getManeuver("surge");
+  const used = surge ? await useManeuver(actor, { ...surge, surgeKind: "healing" }, { outOfSequence: true }) : null;
+  if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return used;
+}
+
+/** Angelic Guidance (2), by the key it is picked with - `angelic-guidance:<uuid>`, whose Counter Action it is. */
+const GUIDANCE = "angelic-guidance";
+
+/**
+ * Angelic Guidance (2): "If an adjacent Ally makes a Combat Roll, you may spend a Counter Action to increase that Combat Roll by
+ * 2(T)." Beside the Karmic Effects of an attack's roll - a Strike, a Dodge, a Parry, a Wound - for each Angel guiding them with a
+ * Counter Action left, once a Round.
+ */
+function guidanceOptions(situation) {
+  if ((situation?.kind !== "attack") || !situation.actor) return [];
+  return guidingAllies(situation.actor, "guidance.counter").filter(holder => holder.getFlag?.(SCOPE, "guidanceCounterRound") !== roundKey())
+    .filter(holder => (Number(holder.system?.actions?.counterLeft) || 0) > 0)
+    .map(holder => ({ key: `${GUIDANCE}:${holder.uuid}`, trait: true, when: "after", name: `Angelic Guidance (${holder.name})`,
+      text: "A Counter Action of theirs: this Combat Roll 2(T) higher.", costLabel: `${holder.name}'s Counter Action`, available: true }));
+}
+
+async function takeGuidance(message, situation, key) {
+  const holder = fromUuidSync(String(key).slice(GUIDANCE.length + 1));
+  if (!holder || !guidanceOptions(situation).some(effect => effect.key === key)) return;
+  await requestActorUpdate(holder, { "system.actionsSpent.counter": (Number(holder.system.actionsSpent?.counter) || 0) + 1,
+    [`flags.${SCOPE}.guidanceCounterRound`]: roundKey() });
+  const add = 2 * Math.max(1, Number(holder.system.tierOfPower) || 1);
+  return resettleAttack(message, situation, { spent: [], queue: [],
+    slots: { "roll.total": { add, label: `Angelic Guidance (${holder.name}) +2(T)` } } });
 }
 
 /** "You Can't Lose...!", by the key it is picked with - `cant-lose:<uuid>`, whose Karma it is. */
@@ -6256,6 +6321,7 @@ export async function takeAfterTheFact(message, situation, key) {
   if (String(key).startsWith(`${LUCKY_REROLL}:`)) return takeLuckyReroll(message, situation, key);
   if (String(key).startsWith(`${NUDGE}:`)) return takeNudge(message, situation, key);
   if (String(key).startsWith(`${CANT_LOSE}:`)) return takeCantLose(message, situation, key);
+  if (String(key).startsWith(`${GUIDANCE}:`)) return takeGuidance(message, situation, key);
   if ((key === TAI_CHI_REROLL) || (key === TAI_CHI_MIGHT)) return takeTaiChiReroll(message, situation, key);
   const { actor } = situation;
   const effect = allKarmicEffects().find(e => e.key === key);
@@ -7080,6 +7146,13 @@ function offerExploits(card, actor, maneuver) {
         || other.system?.defeated || (other.getFlag?.(SCOPE, "footworkRound") === roundKey()) || whyNotWithinMelee(other, actor, "")) continue;
       requestEdit(card, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId: "movement",
         maneuverName: "Movement (Footwork)", reason: `Footwork - ${actor.name} leaves your Melee Range`, grants: { footwork: true } } });
+    }
+    // Angelic Guidance (3): "If an adjacent Ally moves, you may use the Movement Maneuver as an Out-of-Sequence Maneuver after that
+    // movement ends." Beside them - in the Guidance Range with Watchful Gaze - as they set off; once a Round, counted when taken.
+    for (const holder of guidingAllies(actor, "guidance.move").filter(each => each.getFlag?.(SCOPE, "guidanceMoveRound") !== roundKey())) {
+      requestEdit(card, { type: "offer", offer: { actorUuid: holder.uuid, actorName: holder.name, maneuverId: "movement",
+        maneuverName: "Movement (Angelic Guidance)", reason: `Angelic Guidance - after ${actor.name}'s movement ends`,
+        grants: { guidanceMove: true } } });
     }
   }
 
@@ -14545,6 +14618,12 @@ function refinedParts(actor, other) {
  * Rolls when using the Parry effect of the Defend Maneuver, made against that Opponent by 1(T)." The defender's Allies with it,
  * not Defeated, beside the attacker - an Opponent of theirs; the same Talent once, the highest Tier's.
  */
+/** Angelic Guidance (1): "While you are adjacent to an Ally, increase that Ally's Dodge Rolls by 1(T)" - the best Tier of them. */
+function guidanceDodgeParts(actor) {
+  const holders = guidingAllies(actor, "guidance.dodge");
+  return holders.length ? [{ label: "Angelic Guidance", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : [];
+}
+
 function supportParts(actor, attacker) {
   if (!actor || !attacker || (attacker.uuid === actor.uuid)) return [];
   const at = attacker.getActiveTokens?.(false, true)?.[0];
@@ -21751,6 +21830,14 @@ async function takeOutOfSequence(message, actor, offer) {
     ui.notifications.warn("Power Gifter - already used this Combat Round.");
     return null;
   }
+  // Angelic Guidance (3)'s, once a Round.
+  if (offer.grants?.guidanceMove) {
+    if (actor.getFlag?.(SCOPE, "guidanceMoveRound") === roundKey()) {
+      ui.notifications.warn(`${actor.name}: Angelic Guidance - already used this Combat Round.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "guidanceMoveRound", roundKey());
+  }
   // Practiced Charger (2)'s, once a Round.
   if (offer.grants?.practiced) {
     if (actor.getFlag?.(SCOPE, "practicedRound") === roundKey()) {
@@ -21796,6 +21883,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.mentalWarfare) return insultOutOfSequence(actor, offer.targetUuid);
   if (offer.iaijutsuSheathe) return takeIaijutsuSheathe(message, actor, offer.iaijutsuSheathe);
   if (offer.varietyGrab) return takeVarietyGrab(message, actor, offer.varietyGrab);
+  if (offer.watchful) return takeWatchful(message, actor, offer.watchful);
+  if (offer.healingSurge) return takeHealingSurge(message, actor);
   // Perfect Mimicry (2) with a copied Unique Ability: it, out of sequence, once an Encounter.
   if (offer.perfectMimicryItem) {
     if (actor.getFlag?.(SCOPE, "perfectMimicryEncounter") === (game.combat?.id ?? "none")) {
@@ -22531,7 +22620,7 @@ export async function postAttack(actor, target, maneuver,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    concentratedEnds = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false, twinCharge = false,
-                                   integrationCharge = false,
+                                   integrationCharge = false, angelicAdvantage = "", angelicAbove = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
@@ -22620,9 +22709,17 @@ export async function postAttack(actor, target, maneuver,
           squaresCharged, transformed, gigaFlare, superCombination, powerbomb, areaFrom, volleyball,
           // Earthling-Raised's, asked at declaration - it was dropped here, so its Energy Charge never landed - and the choice
           // of an Advantage it added.
-          earthlingCharge, featureChoices },
+          earthlingCharge, featureChoices, angelicAbove },
         { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) })
-      : null);
+      // Angelic Technique (2): the Basic Attack's one Advantage, carried as a Technique's would be - borrowed, it is no Signature
+      // Technique for anything asking that.
+      : (angelicAdvantage
+        ? { ...techniqueAttack(actor, { name: maneuver.name, level: "", ultimate: false, advantages: [angelicAdvantage] },
+            { profile, foundation, advantages: [...new Set([...(advantages ?? []), angelicAdvantage])], weapon, thrown, charges,
+              squaresCharged },
+            { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) }),
+          borrowed: true }
+        : null));
 
   const absolute = Boolean(((maneuver.absolute || technique?.absolute) && maneuver.attacking)
     // Herculean Power (2): "All of your Ultimate Signature Techniques are Absolute Attacks."
@@ -24851,6 +24948,8 @@ async function resolveAttackWork(message, attack) {
   for (const entry of branches) {
     if (!entry.hit && (entry.defense === "dodge") && entry.answer && (entry.uuid !== attack.attackerUuid)) {
       await answerFor(fromUuidSync(entry.uuid), "dodged-attack");
+      // Watchful Gaze (4): an Angel's Counter Action, for their Basic Attack.
+      offerWatchfulGaze(message, fromUuidSync(entry.uuid), attacker);
     }
   }
   // Flow of Combat: an attack that missed you - no Damage from it - and the Exploit at who made it.
@@ -25847,7 +25946,7 @@ function woundParts(attacker, attack) {
   const expert = attack.viaExploit ? attacker.system.effects?.slots?.["wound.viaExploit"] : null;
   // Herculean Power (1): "If you would use a Signature Technique, apply the bonus from the first effect of Hefty Muscle twice" -
   // its 1(T), 2(T) at 3 Super Stacks, once more on a Physical or Energy one.
-  const herculean = attack.technique && (attacker.system.effects?.slots?.["herculean.signature"] === true)
+  const herculean = attack.technique && !attack.technique.borrowed && (attacker.system.effects?.slots?.["herculean.signature"] === true)
     && ["physical", "energy"].includes(attack.foundation)
     && Array.from(attacker.items ?? []).some(item => (item.type === "talent") && (item.flags?.[SCOPE]?.sourceId === "hefty-muscle"));
   const heftyTimes = ((Number(attacker.system.superStack?.stacks) || 0) >= 3) ? 2 : 1;
@@ -25968,10 +26067,10 @@ function twoWorldsWoundParts(attacker, attack) {
   const named = key => (slots[key]?.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects";
   const parts = [];
   const signature = Number(slots["wound.signature"]?.add) || 0;
-  if (signature && attack.technique) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
+  if (signature && attack.technique && !attack.technique.borrowed) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
   // Last Resort (1): "If your Capacity is 0 when you roll the Wound Roll for a Signature Technique" - read now.
   const spent = Number(slots["wound.signatureNoCapacity"]?.add) || 0;
-  if (spent && attack.technique && ((Number(attacker.system.capacity?.remaining) || 0) <= 0)) {
+  if (spent && attack.technique && !attack.technique.borrowed && ((Number(attacker.system.capacity?.remaining) || 0) <= 0)) {
     parts.push({ label: `${named("wound.signatureNoCapacity")} (Capacity 0)`, value: spent });
   }
   const fury = Number(slots["wound.perThresholdOrAlly"]?.add) || 0;
@@ -27058,6 +27157,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...hiddenRollParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
   parts.push(...telepathicDodge(actor, attack));
+  // Angelic Guidance (1): an Angel guiding them, beside them or in their Guidance Range - their 1(T).
+  parts.push(...guidanceDodgeParts(actor));
   // Refined Combat's Fleet-Footed.
   parts.push(...fleetDodge(actor, attack));
   // Power of the Weak (3).
