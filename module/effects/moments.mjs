@@ -97,6 +97,9 @@ const TABLE = [
     provides: [],
     doc: "Never fired: Energy Control (1)'s block is its Triggered/Automatic button, read by its window (chat.mjs "
        + "energyControlAsk) - with Technique Master (2), Automatic takes the 2(T) without asking." },
+  { key: "unflinching-weapon", label: "Hit by an Armed Attack with a Physical Weapon for no Damage", provides: [],
+    doc: "Never fired: Unflinching Resilience (2)'s block is its Triggered/Automatic button, read where the hit is settled "
+       + "(chat.mjs unflinchingWeapon)." },
   { key: "swagger-ended", label: "The effects chosen through Swaggering Wager end", provides: [],
     doc: "Never fired: Swaggering Wager (2)'s block is its Triggered/Automatic button, read as they end (chat.mjs swaggerEnds)." },
   { key: "concentrated-flare", label: "The Power Flare option of the Defend Maneuver is rolled", provides: [],

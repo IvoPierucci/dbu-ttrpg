@@ -1076,10 +1076,28 @@ async function clashWon(message) {
     terrify: Boolean(clash.terrify) && (uuid === clash.challengerUuid) });
 }
 
+/**
+ * Unflinching Resilience (2): "If you get hit by an Armed Attack with a Physical Weapon and take no Damage from that Attacking
+ * Maneuver, reduce its Life Points by your Soak Value." The Weapon it was made with; its button Automatic, done; Triggered, asked.
+ */
+async function unflinchingWeapon(message, attack, attacker, target) {
+  if ((target?.system?.effects?.slots?.["unflinching.weapon"] !== true) || !attacker || (attacker.uuid === target.uuid)) return;
+  const weapon = attack?.weapon;
+  if (!weapon || weapon.unarmed || (weapon.weaponType !== "physical") || !weapon.itemId) return;
+  const item = attacker.items?.get(weapon.itemId);
+  const soak = Math.max(0, Number(target.system.soakValue) || 0);
+  if (!item || !soak) return;
+  const automatic = triggersFor(target, ["unflinching-weapon"]).some(entry => (target.getFlag?.(SCOPE, "automatic") ?? []).includes(entry.blockId));
+  if (!automatic && ((await askPlayerChoice(target, `${target.name}: Unflinching Resilience`,
+    [{ value: "yes", label: `${item.name} loses ${soak} Life Points` }, { value: "no", label: "No" }])) !== "yes")) return;
+  const said = await damageWeapon(attacker, item, soak, getTrait);
+  if (said) await settledNote(message, `Unflinching Resilience: ${said}`);
+}
+
 /** Shaken put on someone else by `by` - Terrifying Pressure's "If you inflict the Shaken Combat Condition on an Opponent". */
-async function shakenBy(by, target) {
+async function shakenBy(by, target, context = {}) {
   if (!by || !target || (by.uuid === target.uuid)) return;
-  return answerFor(by, "inflict-shaken", {});
+  return answerFor(by, "inflict-shaken", context);
 }
 
 /**
@@ -6458,7 +6476,7 @@ async function resettleWound(message, situation, attack, result, given = null) {
 
     // A Karmic Effect that takes the Damage down to nothing rattles the attacker
     // exactly as a Direct Hit that did so on its own would.
-    if (attacker) await maybeShakeAttacker(attacker, attack, defence, damage);
+    if (attacker) await maybeShakeAttacker(attacker, attack, defence, damage, fromUuidSync(entry.uuid));
 
     settledTargets = settledTargets.map(line =>
       (line.uuid === entry.uuid) ? { ...own, counterWound, effectiveWound, damage } : line);
@@ -23399,7 +23417,7 @@ function profileCategoryShift(profileId, charges) {
  * Not automated: "until the end of their next turn". Combat Conditions have no notion
  * of a duration yet, so this applies Shaken and the table takes it off.
  */
-async function maybeShakeAttacker(attacker, attack, defence, damage) {
+async function maybeShakeAttacker(attacker, attack, defence, damage, defender = null) {
   const rule = defence.shakesOnNoDamage;
   if (!rule || (damage > 0)) return;
 
@@ -23415,6 +23433,8 @@ async function maybeShakeAttacker(attacker, attack, defence, damage) {
 
   const { setCondition } = await import("./conditions.mjs");
   await setCondition(attacker, "shaken", 1);
+  // Shaken inflicted by the one who used the Direct Hit - through it (Unflinching Resilience (3), Terrifying Pressure (3)).
+  if (defender) await shakenBy(defender, attacker, { directHit: true });
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: attacker }),
@@ -26745,7 +26765,7 @@ async function rollAttackWoundWork(message, attack) {
     if (halving && (halving !== true)) await spendTriggeredEffect(target, halving.blockId);
     const damage = halving ? Math.floor(untouched / 2) : untouched;
 
-    await maybeShakeAttacker(attacker, attack, defence, damage);
+    await maybeShakeAttacker(attacker, attack, defence, damage, target);
 
     settledTargets.push({ ...own, ...woundAgainst, counterWound, effectiveWound, soak, reduction, damage,
       ...(halving ? { undyingHalved: true } : {}),
@@ -29448,6 +29468,8 @@ async function applyAttackDamage(message, target, attack) {
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
   // "If you are hit by an Attacking Maneuver and take no Damage" - Bio-Suit's.
   if (own.hit && (damage <= 0) && !isAbsoluteMiss(own)) await answerFor(target, "hit-unharmed");
+  // Unflinching Resilience (2): by an Armed Attack with a Physical Weapon - that Weapon's Life Points, by their Soak Value.
+  if (own.hit && (damage <= 0) && !isAbsoluteMiss(own)) await unflinchingWeapon(message, attack, armsUser, target);
   // Rubbery Body: hit with a Physical Attack, the one hit moved.
   if (own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")) {
     offerRubberyMove(message, armsUser, target, { stretched: Boolean(attack.stretched) });

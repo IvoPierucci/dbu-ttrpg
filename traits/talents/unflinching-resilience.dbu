@@ -1,0 +1,31 @@
+id: unflinching-resilience
+name: Unflinching Resilience
+talentCategory: racial
+race: android
+prerequisites: Android Race, Damage Inhibitor Racial Trait
+description: >
+  When the smoke clears and the dust settles, you stand tall, boasting nary a scratch, even in the face of the strongest foes.
+text: >
+  Unflinching Resilience: When the smoke clears and the dust settles, you stand tall, boasting nary a scratch, even in the face of the strongest foes.
+  –Prerequisites: Android Race, Damage Inhibitor Racial Trait
+  (1)-[Passive]: Increase your Soak Value by 1(T).
+  (2)-[Triggered]: If you get hit by an Armed Attack with a Physical Weapon and take no Damage from that Attacking Maneuver, reduce its Life Points by your Soak Value.
+  (3)-[Triggered, 1/Encounter]: If you inflict the Shaken Combat Condition to an Opponent through the effects of the Direct Hit option of the Defend Maneuver, enter the Superior State until the end of your next turn.
+
+---
+
+[passive]
+# (1)
+soakValue += 1(T);
+
+# (2) Hit by an Armed Attack with a Physical Weapon for no Damage: that Weapon's Life Points down by your Soak Value, said on the
+# attack's card (chat.mjs unflinchingWeapon). This block is its Triggered/Automatic button: its Moment is never fired -
+# Automatic, done without asking; Triggered, asked.
+[triggered/unflinching-weapon, effect 2]
+allow unflinching.weapon;
+
+# (3) Shaken put on the attacker by your Direct Hit (the inflict-shaken Moment, from Direct Hit): Superior till the end of your
+# next turn - its first level, or a level up. Asked in a window, once an Encounter - as Terrifying Pressure's.
+[triggered/inflict-shaken, 1/encounter, chosen, effect 3]
+requires shakenByDirectHit;
+enterState(superior, 1, next-turn);

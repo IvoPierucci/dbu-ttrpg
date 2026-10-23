@@ -426,6 +426,8 @@ const PREDICATES = {
     && (item.system?.crafted?.kind === "apparel") && item.system?.equipped && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true)),
   // A Combat Encounter running.
   inCombat: () => Boolean(globalThis.game?.combat?.started),
+  // The inflict-shaken Moment's Shaken, put on through the Direct Hit option of the Defend Maneuver.
+  shakenByDirectHit: scope => Boolean(scope.context?.directHit),
   // "at least 1 of your pieces of Apparel have been destroyed this Combat Encounter" - kept on the character as one breaks.
   apparelDestroyedThisEncounter: scope => Boolean(globalThis.game?.combat?.started)
     && (scope.data?.parent?.flags?.["dbu-ttrpg"]?.apparelBrokenEncounter === globalThis.game.combat.id),

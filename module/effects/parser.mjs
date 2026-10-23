@@ -571,6 +571,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "wearingNoApparel", "apparelDestroyedThisEncounter",
   // A Combat Encounter running (Arrogance's mark, ended in one).
   "inCombat",
+  // The Shaken inflicted, through the Direct Hit option of the Defend Maneuver (Unflinching Resilience's).
+  "shakenByDirectHit",
   // Your Rival an Opponent, an Ally, your only Ally standing (Chosen Rival's).
   "rivalOpponent", "rivalAlly", "rivalOnlyAlly",
   // Your Rival in the Combat Encounter, on a Square adjacent to you (Eternal Rival's).
