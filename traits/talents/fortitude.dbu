@@ -1,0 +1,20 @@
+id: fortitude
+name: Fortitude
+talentCategory: threshold
+prerequisites: Diehard
+description: >
+  You are nearly unstoppable, continuing to fight well past when others would have dropped.
+text: >
+  Fortitude: You are nearly unstoppable, continuing to fight well past when others would have dropped.
+  –Prerequisites: Diehard
+  (1)-[Passive]: Increase your Maximum Life Points by 2 for each of your Power Levels.
+  (2)-[Triggered, 1/Encounter]: If you fail a Steadfast Check, you may reroll that Steadfast Check, but you must take the second result.
+
+---
+
+[passive]
+# (1) As Diehard's: 2 for each Power Level.
+life.perLevel += 2;
+# (2) A Steadfast Check failed: rerolled from its card, beside the Karmic Effects - the second result taken, and what failing or
+# passing it does done again; once an Encounter (chat.mjs fortitudeRerollOption).
+allow fortitude.reroll;

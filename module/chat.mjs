@@ -5442,7 +5442,7 @@ function renderCheckKarma(message, html) {
   const options = [...(check.karmaSpent ? [] : karmicOptionsFor(actor, message)
     .filter(answersAfterTheFact)
     .filter(effect => !(effect.script ?? "").includes("clash."))), ...resolveRerollOption(actor, check),
-    ...damaRerollOption(actor), ...luckyRerollOptions(actor)];
+    ...damaRerollOption(actor), ...luckyRerollOptions(actor), ...fortitudeRerollOption(actor, check)];
   if (!options.some(effect => effect.available)) return;
 
   const button = document.createElement("button");
@@ -5696,6 +5696,28 @@ async function takeResolveOnCheck(message, actor, check) {
   if (!resolveRerollOption(actor, check).some(effect => effect.available)) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.resolveRerollRound`]: roundKey() });
   return rerolledCheck(message, actor, check, RESOLVE_CALL);
+}
+
+/** Fortitude (2)'s reroll, by the key it is picked with in the window. */
+const FORTITUDE_REROLL = "fortitude";
+
+/**
+ * Fortitude (2): "If you fail a Steadfast Check, you may reroll that Steadfast Check, but you must take the second result." On a
+ * Steadfast Check's card, failed - not passed by an effect; once an Encounter, spent said rather than hidden.
+ */
+function fortitudeRerollOption(actor, check) {
+  if ((actor?.system?.effects?.slots?.["fortitude.reroll"] !== true) || !check?.steadfast || check.steadfast.passed) return [];
+  const spent = actor.getFlag?.(SCOPE, "fortitudeEncounter") === (game.combat?.id ?? "none");
+  return [{ key: FORTITUDE_REROLL, trait: true, when: "after", name: "Fortitude",
+    text: "A Steadfast Check failed: reroll it. You must take the second result.", costLabel: "Reroll the Steadfast Check",
+    available: !spent, ...(spent ? { blocked: "Once a Combat Encounter" } : {}) }];
+}
+
+/** Fortitude (2) taken: its Encounter spent, the Check rolled again and judged again. */
+async function takeFortitudeOnCheck(message, actor, check) {
+  if (!fortitudeRerollOption(actor, check).some(effect => effect.available)) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.fortitudeEncounter`]: game.combat?.id ?? "none" });
+  return rerolledCheck(message, actor, check, { verb: "reroll", forced: true, label: "Fortitude" });
 }
 
 /** Lucky's reroll, by the key it is picked with in the window - `lucky:<uuid>`, whose Lucky it is. */
@@ -6072,6 +6094,7 @@ async function takeOnCheck(message, actor, check, key) {
   if (key === RESOLVE_REROLL) return takeResolveOnCheck(message, actor, check);
   if (key === DAMA_REROLL) return takeDamaOnCheck(message, actor, check);
   if (String(key).startsWith(`${LUCKY_REROLL}:`)) return takeLuckyOnCheck(message, actor, check, key);
+  if (key === FORTITUDE_REROLL) return takeFortitudeOnCheck(message, actor, check);
   const effect = allKarmicEffects().find(e => e.key === key);
   if (!effect) return;
 
