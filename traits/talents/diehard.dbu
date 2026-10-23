@@ -1,0 +1,19 @@
+id: diehard
+name: Diehard
+talentCategory: threshold
+prerequisites: N/A
+description: >
+  Your ability to shrug off injury is remarkable.
+text: >
+  Diehard: Your ability to shrug off injury is remarkable.
+  –Prerequisites: N/A
+  (1)-[Passive]: Increase your Maximum Life Points by 2 for each of your Power Levels.
+  (2)-[Passive]: Increase the Dice Score of your Steadfast Checks by 1.
+
+---
+
+[passive]
+# (1) As Survival Training's: 2 for each Power Level.
+life.perLevel += 2;
+# (2)
+steadfast.dice += 1;
