@@ -424,6 +424,8 @@ const PREDICATES = {
   // Armor does not count as equipped Apparel for any of your effects").
   wearingNoApparel: scope => !Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
     && (item.system?.crafted?.kind === "apparel") && item.system?.equipped && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true)),
+  // A Combat Encounter running.
+  inCombat: () => Boolean(globalThis.game?.combat?.started),
   // "at least 1 of your pieces of Apparel have been destroyed this Combat Encounter" - kept on the character as one breaks.
   apparelDestroyedThisEncounter: scope => Boolean(globalThis.game?.combat?.started)
     && (scope.data?.parent?.flags?.["dbu-ttrpg"]?.apparelBrokenEncounter === globalThis.game.combat.id),

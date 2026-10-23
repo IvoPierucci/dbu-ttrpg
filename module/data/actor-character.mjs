@@ -2477,11 +2477,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // ceiling on raising them uses the BASE Tier, so a Breakthrough does not widen
     // how far an effect may push them.
     const extraCategory = tierExtraDiceCategory(this.tierOfPower);
-    const greaterCategory = greaterDiceCategory(this.tierOfPower);
 
     // Critical Extra Dice: a d4 at Tier 1, one Category higher per Tier above that.
     // An effect can push them further, but no further than the shared ceiling.
     const increaseLimit = maxCategoryIncrease(this.baseTierOfPower);
+    // The Greater Dice, raised by an effect - Arrogance (1)'s - under the same ceiling.
+    const greaterCategory = greaterDiceCategory(this.tierOfPower)
+      + Math.min(Math.max(0, Number(this.effects?.slots?.["dice.greater.category"]?.add) || 0), increaseLimit);
     // What effects raise them by - the stored modifier and `dice.critical.category` - and a Strike Roll's alone (Artful
     // Strike's), all under the one ceiling.
     const criticalRaise = this.diceModifiers.criticalCategory + (Number(this.effects?.slots?.["dice.critical.category"]?.add) || 0);

@@ -1,0 +1,22 @@
+id: arrogance-mark
+name: Arrogance
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Arrogance (3)'s, till the end of your next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Arrogance: your Combat Rolls 1(T) higher until the end of your next turn - then 1(T) lower for the rest of the Combat Encounter.
+text: >
+  Arrogance (3): If you use the Arrogant Declaration Maneuver, you may increase your Combat Rolls by 1(T) until the end of your
+  next turn. If you do, reduce your Combat Rolls by 1(T) for the remainder of the Combat Encounter after ending this effect.
+
+---
+
+[passive]
+combatRolls += 1(T);
+
+# Ended in a Combat Encounter: Humbled (Arrogance's Resource), lost as the Encounter ends.
+[on removed]
+requires inCombat;
+humbled.stacks += 1;

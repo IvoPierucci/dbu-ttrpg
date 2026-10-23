@@ -1,0 +1,37 @@
+id: arrogance
+name: Arrogance
+talentCategory: miscellaneous
+prerequisites: N/A
+# (3)'s price, carried as a Resource: lost as the Combat Encounter ends, exactly the span the rule names.
+resource: humbled
+resourceMax: 1
+resourceLabel: Humbled
+description: >
+  You are so consumed by your own hype that you believe no one is greater than you.
+text: >
+  Arrogance: You are so consumed by your own hype that you believe no one is greater than you.
+  –Prerequisites: N/A
+  (1)-[Passive]: Increase the Dice Category of your Greater Dice by 1 Category.
+  (2)-[Passive]: While in the Superior State, increase the Wound Rolls of your Signature Techniques by 1(T).
+  (3)-[Triggered, 1/Encounter]: If you use the Arrogant Declaration Maneuver, you may increase your Combat Rolls by 1(T) until the end of your next turn. If you do, reduce your Combat Rolls by 1(T) for the remainder of the Combat Encounter after ending this effect.
+
+---
+
+[passive]
+# (1) The Greater Dice a Category up, under the ceiling every raise of dice is held to (actor-character.mjs).
+dice.greater.category += 1;
+# (2) Superior: a Signature Technique's Wound Roll.
+if (inState("superior")) {
+    wound.signature += 1(T);
+}
+# (3)'s price: Humbled, till the Combat Encounter ends.
+if (hasResource("humbled")) {
+    combatRolls -= 1(T);
+}
+
+# (3) The Arrogant Declaration Maneuver used: asked in the window as it is declared, once an Encounter - 1(T) on your Combat
+# Rolls till the end of your next turn (arrogance-mark); as that ends, Humbled (the mark's own file).
+[triggered/declare-maneuver, 1/encounter, effect 3]
+requires using("arrogant-declaration");
+gain(arrogance-mark);
+expires(arrogance-mark, next-turn);

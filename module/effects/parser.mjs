@@ -566,6 +566,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "twinWeapons",
   // No Apparel worn; a piece of yours destroyed this Combat Encounter (Furious Flex's, Naturist's).
   "wearingNoApparel", "apparelDestroyedThisEncounter",
+  // A Combat Encounter running (Arrogance's mark, ended in one).
+  "inCombat",
   // Your Rival an Opponent, an Ally, your only Ally standing (Chosen Rival's).
   "rivalOpponent", "rivalAlly", "rivalOnlyAlly",
   // Your Rival in the Combat Encounter, on a Square adjacent to you (Eternal Rival's).
