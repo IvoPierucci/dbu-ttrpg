@@ -573,6 +573,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "inCombat",
   // The Tail Attack Maneuver used in the Combat Round that just ended (Reserved Tail's).
   "tailAttackLastRound",
+  // A Combat Condition put on an Opponent this Combat Encounter (Honorable Demon's).
+  "inflictedThisEncounter",
   // The Shaken inflicted, through the Direct Hit option of the Defend Maneuver (Unflinching Resilience's).
   "shakenByDirectHit",
   // Your Rival an Opponent, an Ally, your only Ally standing (Chosen Rival's).

@@ -1,0 +1,18 @@
+id: versatile-demon
+name: Versatile Demon
+talentCategory: racial
+race: demon
+prerequisites: Demon Race, Demon Person Subrace
+grantsOptions: denizen-of-the-demon-realm
+grantsOptionsCount: 1
+description: >
+  Your width and breadth of experience makes it hard to define you in any one category.
+text: >
+  Versatile Demon: Your width and breadth of experience makes it hard to define you in any one category.
+  –Prerequisites: Demon Race, Demon Person Subrace
+  (1)-[Passive]: Upon gaining this Talent, select and gain access to an additional option for the 3rd effect of Denizen of the Demon Realm.
+
+---
+
+# (1) Asked as it is gained: another of Denizen of the Demon Realm's Options, written into its Item (racial.mjs addGrantedOptions);
+# lost, it goes with it.

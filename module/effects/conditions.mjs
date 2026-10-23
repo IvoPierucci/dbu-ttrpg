@@ -429,6 +429,9 @@ const PREDICATES = {
     && (item.system?.crafted?.kind === "apparel") && item.system?.equipped && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true)),
   // A Combat Encounter running.
   inCombat: () => Boolean(globalThis.game?.combat?.started),
+  // A Combat Condition put on an Opponent this Combat Encounter - kept on whoever put it as it is (chat.mjs conditionGained).
+  inflictedThisEncounter: scope => Boolean(globalThis.game?.combat?.started)
+    && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "inflictedEncounter") === globalThis.game.combat.id),
   // The Tail Attack used in the Round that ended - the end of a Round answered as the next begins, so read as the one before it.
   tailAttackLastRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "tailAttackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${(Number(globalThis.game?.combat?.round) || 0) - 1}`,

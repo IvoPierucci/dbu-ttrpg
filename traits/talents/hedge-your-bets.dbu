@@ -1,0 +1,23 @@
+id: hedge-your-bets
+name: Hedge Your Bets
+talentCategory: racial
+race: demon
+prerequisites: Demon Race
+resource: riskaversion
+resourceMax: 2
+resourceLabel: Risk Aversion
+description: >
+  You don’t like to let the odds define you- by stacking the deck, you always know which card is about to be played.
+text: >
+  Hedge Your Bets: You don’t like to let the odds define you- by stacking the deck, you always know which card is about to be played.
+  –Prerequisites: Demon Race
+  (1)-[Triggered, Resource]: If you succeed at a Pressure Check, you may choose to fail instead. If you do, gain a stack of ‘Risk Aversion’ (max. 2).
+  (2)-[Triggered]: If you gain a stack of Risk Aversion, regain 2(bT) Life and Ki Points.
+  (3)-[Triggered]: If you fail a Pressure Check, you may spend a stack of Risk Aversion to increase the Dice Score of that Pressure Check by 2. This may cause your Pressure Check to succeed.
+
+---
+
+[passive]
+# (1) A Pressure Check made: asked - a success failed instead, a stack of Risk Aversion; (2) with it, 2(bT) Life and Ki Points back;
+# (3) a fail: a stack spent for 2 on it, asked (chat.mjs pressureCheck).
+allow hedge.bets;

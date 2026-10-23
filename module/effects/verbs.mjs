@@ -170,6 +170,10 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  surgeOutOfSequence: {
+    args: [0, 0],
+    doc: "A Surge of the character's choice, the Surge Maneuver out of sequence (Honorable Demon (4); chat.mjs surgeOutOfSequence)."
+  },
   swaggerChoose: {
     args: [0, 0],
     doc: "Swaggering Wager (1): up to 3 of its effects, asked, till the start of your next turn (chat.mjs swaggerChoose)."

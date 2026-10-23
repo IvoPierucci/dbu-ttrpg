@@ -599,6 +599,35 @@ export function conditionGained(actor, key) {
   // Whose it is, kept on the one suffering it - Denizen of the Demon Realm's "a Combat Condition that you inflicted".
   requestActorUpdate(actor, { [`flags.${SCOPE}.afflictedBy.${key}`]: by.uuid });
   sniperOffers(context.message, by, actor, getTrait(key)?.name ?? key);
+  // Honorable Demon: a Combat Condition put on an Opponent - kept on whoever did it, for the Encounter (1), (4); (3) offered.
+  const opponent = !alliesOnScene(by).some(ally => ally.uuid === actor.uuid);
+  const combat = (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false);
+  if (opponent && combat && game.combat?.started) {
+    if (!context.demonicCombat) honorableInstead(by, actor, key);
+    else requestActorUpdate(by, { [`flags.${SCOPE}.inflictedEncounter`]: game.combat.id });
+  }
+}
+
+/**
+ * Honorable Demon (3): "If you would inflict a Combat Condition on an Opponent (except through the 3rd effect of Demonic Combat),
+ * you may instead use the Power Up Maneuver as an Out-of-Sequence Maneuver." Asked as it lands, once a Round: taken, the stack is
+ * taken back and the Power Up used; not, it stands - inflicted, for (1) and (4).
+ */
+async function honorableInstead(by, target, key) {
+  const open = (by.system?.effects?.slots?.["honorable.powerUp"] === true) && (by.getFlag?.(SCOPE, "honorableRound") !== roundKey());
+  const instead = open && ((await askPlayerChoice(by, `${by.name}: Honorable Demon - ${getTrait(key)?.name ?? key} on ${target.name}`,
+    [{ value: "power", label: "Instead: the Power Up out of sequence (1/Round)" }, { value: "keep", label: "Inflict it" }])) === "power");
+  if (!instead) return requestActorUpdate(by, { [`flags.${SCOPE}.inflictedEncounter`]: game.combat?.id ?? "none" });
+  await requestActorUpdate(by, { [`flags.${SCOPE}.honorableRound`]: roundKey() });
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, key, Math.max(0, (Number(target.system?.conditions?.[key]) || 0) - 1));
+  return ownOutOfSequence(by, "power-up");
+}
+
+/** Honorable Demon (4): "use a Surge of your choice as an Out-of-Sequence Maneuver" - the Surge Maneuver, its kind asked by it. */
+export async function surgeOutOfSequence(actor) {
+  const used = await ownOutOfSequence(actor, "surge");
+  return used ? used : (await import("./effects/moments-runtime.mjs")).UNSPENT;
 }
 
 /**
@@ -4091,9 +4120,25 @@ async function settleThrownProne(message, clash) {
     await settledNote(message, `${target.name} stays on their feet.`);
     return;
   }
+  // Honorable Demon (2): Demonic Combat (3)'s Clash won - Superior till the start of your next turn instead, asked, once a Round.
+  if (clash.thrownProne.demonicCombat && await honorableSuperior(message, thrower)) return;
   const { setCondition } = await import("./conditions.mjs");
+  // Demonic Combat (3)'s: not one Honorable Demon (3) may take back.
+  if (clash.thrownProne.demonicCombat && afflicting) afflicting = { ...afflicting, demonicCombat: true };
   if (await setCondition(target, "prone", 1) === false) return;
   await settledNote(message, `${target.name} is knocked Prone.`);
+}
+
+/** Honorable Demon (2): asked - Superior till the start of your next turn instead of their Prone. Whether it was taken. */
+async function honorableSuperior(message, thrower) {
+  if ((thrower.system?.effects?.slots?.["honorable.superior"] !== true) || (thrower.getFlag?.(SCOPE, "honorableSuperiorRound") === roundKey())) return false;
+  const yes = (await askPlayerChoice(thrower, `${thrower.name}: Honorable Demon`,
+    [{ value: "superior", label: "Superior till the start of your next turn, not their Prone" }, { value: "prone", label: "Knock them Prone" }])) === "superior";
+  if (!yes) return false;
+  await requestActorUpdate(thrower, { [`flags.${SCOPE}.honorableSuperiorRound`]: roundKey() });
+  await (await import("./effects/moments-runtime.mjs")).enterState(thrower, "superior", 1, "start-of-next-turn", "Honorable Demon");
+  await settledNote(message, `${thrower.name} enters the Superior State instead (Honorable Demon).`);
+  return true;
 }
 
 /**
@@ -19779,7 +19824,11 @@ export async function pressureCheck(actor) {
   if (twice) await requestActorUpdate(actor, { [`flags.${SCOPE}.pressureTwice`]: { round: roundKey(), encounter, count: thisEncounter + 1 } });
   const roll = await new Roll([twice ? "2d10kh" : "1d10", more ? `${more}` : "", gamble ? "-2" : ""].filter(Boolean).join(" + ")
     .replace("+ -", "- ")).evaluate();
-  const success = roll.total >= 4;
+  let success = roll.total >= 4;
+  // Hedge Your Bets (1), (2): a success failed instead - a stack of Risk Aversion, 2(bT) Life and Ki back. (3): a fail - a stack
+  // spent for 2 on it. Each asked.
+  const hedge = (actor.system.effects?.slots?.["hedge.bets"] === true) ? await hedgeYourBets(actor, roll.total, success) : null;
+  if (hedge) success = hedge.success;
   const key = success ? "demonicpower" : "demonicfatigue";
   const gained = (success && gamble) ? 2 : ((!success && twice) ? 2 : 1);
   const held = { ...(actor.system.resources ?? {}) };
@@ -19788,7 +19837,7 @@ export async function pressureCheck(actor) {
   await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
   await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
     flavor: `Pressure Check - ${success ? `a success: ${gained} stack${(gained === 1) ? "" : "s"} of Demonic Power`
-      : `a fail: ${gained} stack${(gained === 1) ? "" : "s"} of Demonic Fatigue`}` });
+      : `a fail: ${gained} stack${(gained === 1) ? "" : "s"} of Demonic Fatigue`}${hedge?.said ? ` (Hedge Your Bets: ${hedge.said})` : ""}` });
   // Demonic Power gained - Demons of the Makyo Star's Ki.
   if (success) {
     const { stacksGained } = await import("./effects/moments-runtime.mjs");
@@ -19797,6 +19846,35 @@ export async function pressureCheck(actor) {
   // Fallen Idol (4): succeeded, with one of those on them - a Clash to hand one on.
   if (success) await offerConditionHandOff(actor);
   return { success };
+}
+
+/**
+ * Hedge Your Bets: (1) "If you succeed at a Pressure Check, you may choose to fail instead. If you do, gain a stack of 'Risk
+ * Aversion' (max. 2)." (2) "If you gain a stack of Risk Aversion, regain 2(bT) Life and Ki Points." (3) "If you fail a Pressure
+ * Check, you may spend a stack of Risk Aversion to increase the Dice Score of that Pressure Check by 2. This may cause your
+ * Pressure Check to succeed." Asked; what the Check comes to, and what was done - or null where nothing was.
+ */
+async function hedgeYourBets(actor, total, success) {
+  const held = Number(actor.system.resources?.riskaversion?.stacks) || 0;
+  if (success && (held < 2)) {
+    const fail = (await askPlayerChoice(actor, `${actor.name}: Hedge Your Bets - a success`,
+      [{ value: "fail", label: "Fail instead - a stack of Risk Aversion, 2(bT) Life and Ki back" }, { value: "keep", label: "Keep the success" }])) === "fail";
+    if (!fail) return null;
+    await setResource(actor, "riskaversion", held + 1);
+    const back = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+    const { life, ki } = actor.system;
+    await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + back),
+      "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
+    return { success: false, said: `failed instead - a stack of Risk Aversion, ${back} Life and Ki Points back` };
+  }
+  if (!success && held) {
+    const spend = (await askPlayerChoice(actor, `${actor.name}: Hedge Your Bets - a fail (${total})`,
+      [{ value: "spend", label: `A stack of Risk Aversion: ${total + 2}` }, { value: "keep", label: "Keep the fail" }])) === "spend";
+    if (!spend) return null;
+    await setResource(actor, "riskaversion", held - 1);
+    return { success: (total + 2) >= 4, said: `a stack of Risk Aversion spent, ${total + 2}` };
+  }
+  return null;
 }
 
 /**
@@ -20870,7 +20948,7 @@ export async function knockedProneClash(actor, knockedUuid) {
   const knocked = fromUuidSync(knockedUuid ?? "");
   if (!actor || !knocked || (knocked.uuid === actor.uuid)) return;
   return postMightClash(actor, knocked, { maneuverName: "Demonic Combat",
-    reason: `Win and ${knocked.name} is knocked Prone.`, thrownProne: { applied: false } });
+    reason: `Win and ${knocked.name} is knocked Prone.`, thrownProne: { applied: false, demonicCombat: true } });
 }
 
 /**
