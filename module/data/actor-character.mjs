@@ -2581,7 +2581,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // something. The bonus is what a roll adds to its total; the target is what it has to
     // meet.
     this.steadfast = {
-      die: DBUCharacterData.STEADFAST_DIE,
+      // Steadfast Warrior (2): "roll your Base Die twice and take the highest result".
+      die: (this.effects?.slots?.["steadfast.baseDieTwice"] === true) ? "2d10kh" : DBUCharacterData.STEADFAST_DIE,
       // Compact Muscle (2): with exactly 1 Super Stack, 1 more.
       bonus: slot(this, "steadfast.dice") + ((this.superStack?.stacks === 1) ? slot(this, "superStack.compactSteadfast") : 0),
       // What moves the die itself - Legacy's 2.

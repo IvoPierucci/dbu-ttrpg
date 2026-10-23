@@ -1,0 +1,19 @@
+id: steadfast-warrior
+name: Steadfast Warrior
+talentCategory: threshold
+prerequisites: Fortitude, ToP3+
+description: >
+  You are an absolute unit, an unstoppable force that keeps barreling towards your enemies regardless of the damage they deal to you.
+text: >
+  Steadfast Warrior: You are an absolute unit, an unstoppable force that keeps barreling towards your enemies regardless of the damage they deal to you.
+  –Prerequisites: Fortitude, ToP3+
+  (1)-[Passive]: Increase your Maximum Life Points by 2 for each of your Power Levels.
+  (2)-[Passive]: When rolling a Steadfast Check, roll your Base Die twice and take the highest result.
+
+---
+
+[passive]
+# (1) As Diehard's and Fortitude's: 2 for each Power Level.
+life.perLevel += 2;
+# (2) Every Steadfast Check's die 2d10, the highest kept - rerolled the same way (actor-character.mjs steadfast).
+allow steadfast.baseDieTwice;

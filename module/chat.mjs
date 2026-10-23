@@ -5922,7 +5922,9 @@ export function steadfastCheckFlag(actor, roll, naturalAdd, steadfast) {
   if (!Number.isFinite(die?.total)) return null;
   const add = Number(naturalAdd) || 0;
   return { actorUuid: actor.uuid, natural: die.total + add, beforeOutcome: roll.total, total: roll.total, outcome: "",
-    flavor: steadfast.base, rules: { die: `${die.number}d${die.faces}`, naturalAdd: add, plain: true }, steadfast };
+    // Its own modifiers with it - Steadfast Warrior's 2d10, the highest kept - so a reroll rolls the same way.
+    flavor: steadfast.base, rules: { die: `${die.number}d${die.faces}${(die.modifiers ?? []).join("")}`, naturalAdd: add, plain: true },
+    steadfast };
 }
 
 /**
