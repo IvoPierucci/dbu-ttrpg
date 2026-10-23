@@ -14751,6 +14751,20 @@ function spotters(actor, slot) {
     && (ally.system?.effects?.slots?.[slot] === true));
 }
 
+/**
+ * Telepathic Teamwork (1): "If you are in the Melee Range of a Character you are telepathically communicating with ... increase both
+ * of your Wound Rolls by 1(T). This effect cannot stack." Theirs or yours, whoever holds it - once.
+ */
+function telepathicWoundParts(attacker) {
+  if (!attacker) return [];
+  const own = attacker.system?.effects?.slots?.["telepathic.teamworkWound"] === true;
+  const holder = telepathyLinks(attacker).map(uuid => fromUuidSync(uuid)).filter(Boolean).find(other => !whyNotWithinMelee(attacker, other, "")
+    && (own || (other.system?.effects?.slots?.["telepathic.teamworkWound"] === true)));
+  if (!holder) return [];
+  const tier = own ? attacker.system.tierOfPower : holder.system.tierOfPower;
+  return [{ label: "Telepathic Teamwork", written: "+1(T)", value: Math.max(1, Number(tier) || 1) }];
+}
+
 /** Way of the Champion (1): "Increase the Wound Rolls ... of your Allies by 1(T) while you are in the Spectator State." */
 function championWoundParts(attacker) {
   const holders = attacker ? spotters(attacker, "champion.allies") : [];
@@ -20712,6 +20726,19 @@ export async function glassSoldiers(actor) {
 }
 
 /**
+ * Namekian Progenitor (2): "Die and leave the Combat Encounter. After the Combat Encounter ends, create a new Character of the
+ * Namekian Race to be your Character going forward" - the Dead Special State, out of the Encounter; the new Character the table's.
+ */
+export async function progenitor(actor) {
+  if (!actor) return;
+  await (await import("./effects/moments-runtime.mjs")).enterState(actor, "dead", 1, null, "Namekian Progenitor");
+  await removeFromEncounter(actor);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="After the Combat Encounter: a new Namekian Character, of the same Power Level, no Gear Kit - the Reincarnated Factor with ${Handlebars.escapeExpression(actor.name)} as the Past Life, the Inherited Life Awakening if it fits.">
+    Namekian Progenitor: ${Handlebars.escapeExpression(actor.name)} dies and leaves the Combat Encounter.</div>` });
+}
+
+/**
  * Mini Majin: "create a Duplicate Minion. If you do, that Duplicate Minion's base Size Category is a Size Category smaller than
  * yours" - (1) for 8(bT) Ki, (2) free. Paid and said; the Minion itself is the table's (Minions wait on the user's design).
  */
@@ -26324,6 +26351,8 @@ function woundParts(attacker, attack) {
     ...variableParts(attacker, attack, "wound"),
     // Way of the Champion (1): an Ally in the Spectator State.
     ...championWoundParts(attacker),
+    // Telepathic Teamwork (1): linked by Telepathy, in each other's Melee Range.
+    ...telepathicWoundParts(attacker),
     // Party Tactics (1): an Ally beside you.
     ...partyParts(attacker),
     ...(critWound ? [{ label: "Critical Specialist", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
@@ -29876,6 +29905,43 @@ function unitedRows(attack) {
 
 /** The United Attack buttons on an open attack: join, for this user's characters; refuse, for the one asked. */
 /**
+ * Telepathic Teamwork (2): "If an Ally makes an Attacking Maneuver, you may increase the Strike Roll of that Attacking Maneuver by
+ * 1(T). If a target of that Attacking Maneuver is Studied, increase the Wound Roll of that Attacking Maneuver by 1(T) as well." A
+ * button for whoever plays one holding it, twice a Round, once on this card.
+ */
+function telepathicTeamworkButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker) return;
+  const holders = alliesOnScene(attacker).filter(holder => holder.isOwner && !holder.system?.defeated
+    && (holder.system?.effects?.slots?.["telepathic.teamworkStrike"] === true)
+    && !(attack.strikeExtra ?? []).some(part => part.by === holder.uuid));
+  for (const holder of holders) {
+    const used = holder.getFlag?.(SCOPE, "telepathicTeamwork") ?? {};
+    if ((used.round === roundKey()) && ((Number(used.count) || 0) >= 2)) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Telepathic Teamwork - ${holder.name}`;
+    button.dataset.tooltip = "Twice a Round: its Strike 1(T) - its Wound too, a target Studied.";
+    button.addEventListener("click", async () => {
+      const now = holder.getFlag?.(SCOPE, "telepathicTeamwork") ?? {};
+      const count = (now.round === roundKey()) ? (Number(now.count) || 0) : 0;
+      if (count >= 2) return ui.notifications.warn(`${holder.name}: Telepathic Teamwork - twice this Round already.`);
+      await holder.setFlag(SCOPE, "telepathicTeamwork", { round: roundKey(), count: count + 1 });
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      const tier = Math.max(1, Number(holder.system.tierOfPower) || 1);
+      const studiers = [attacker, ...alliesOnScene(attacker)];
+      const studied = attackTargets(fresh).some(target => studiers.some(other => isStudiedBy(other, target.uuid)));
+      requestEdit(message, { type: "attack", attack: { ...fresh,
+        strikeExtra: [...(fresh.strikeExtra ?? []), { label: `Telepathic Teamwork (${holder.name})`, written: "+1(T)", value: tier, by: holder.uuid }],
+        ...(studied ? { woundExtra: [...(fresh.woundExtra ?? []), { label: `Telepathic Teamwork (${holder.name}, Studied)`, written: "+1(T)",
+          value: tier, by: holder.uuid }] } : {}) } });
+    });
+    container.append(button);
+  }
+}
+
+/**
  * Party Tactics (2): "If an Ally uses an Attacking Maneuver, you may spend a stack of Tension to apply an Energy Charge to that
  * Attacking Maneuver." (3): "If an Ally is targeted by an Attacking Maneuver, you may spend a stack of Tension to increase that
  * Ally's Damage Reduction by 3(T) for the duration of that Attacking Maneuver." Buttons for whoever plays one holding them, till
@@ -32125,6 +32191,8 @@ function renderAttack(message, html) {
   if (!result?.wound) yourChanceButtons(message, attack, container);
   // Party Tactics (2), (3): a stack of Tension - an Energy Charge on an Ally's attack; an Ally's Damage Reduction against it.
   if (!result?.wound) partyButtons(message, attack, container);
+  // Telepathic Teamwork (2): an Ally's attack - 1(T) on its Strike, its Wound too at one Studied - before the Strike is rolled.
+  if (!result) telepathicTeamworkButtons(message, attack, container);
   // Balanced Defender (2): targeted - Ki for the Defense Value and Soak Value, before it is settled.
   if (!result) balancedButtons(message, attack, container);
   // Spiritual Warrior (3): your Bonded Ally's attack - the Basic Attack at the same Opponent.

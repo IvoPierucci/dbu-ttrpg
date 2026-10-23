@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  progenitor: {
+    args: [0, 0],
+    doc: "Namekian Progenitor (2): the Dead Special State, out of the Combat Encounter (chat.mjs progenitor)."
+  },
   miniMajin: {
     args: [1, 1],
     doc: "Mini Majin: a Duplicate Minion a Size Category smaller - the number its Ki per base Tier (0 free) - paid and said (chat.mjs miniMajin)."

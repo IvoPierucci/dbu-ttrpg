@@ -1,0 +1,23 @@
+id: namekian-finger
+name: Namekian Finger
+talentCategory: racial
+race: namekian
+prerequisites: Namekian
+description: >
+  Your elastic biology ensures that ensnaring foes in your grasp is a simple feat.
+text: >
+  Namekian Finger: Your elastic biology ensures that ensnaring foes in your grasp is a simple feat.
+  –Prerequisites: Namekian
+  (1)-[Passive]: Increase the Wound Rolls of your Physical Attacks by 1(T).
+  (2)-[Passive]: Increase your Grapple Checks by 1(T).
+  (3)-[Passive]: Increase the number of Squares your Melee Range is increased through the 4th effect of Namekian Biology to 5 Squares.
+
+---
+
+[passive]
+# (1)
+wound.physical += 1(T);
+# (2)
+grapple.all += 1(T);
+# (3) Namekian Biology (4)'s 3 Squares, 5 (maneuvers.mjs stretchReach).
+meleeRange.stretch += 2;

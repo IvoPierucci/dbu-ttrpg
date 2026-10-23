@@ -1,0 +1,23 @@
+id: namekian-progenitor
+name: Namekian Progenitor
+talentCategory: racial
+race: namekian
+prerequisites: Namekian
+description: >
+  In the moment of your death, you are prepared to reincarnate yourself through biological means.
+text: >
+  Namekian Progenitor: In the moment of your death, you are prepared to reincarnate yourself through biological means.
+  –Prerequisites: Namekian
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Triggered/Defeated]: Die and leave the Combat Encounter. After the Combat Encounter ends, create a new Character of the Namekian Race to be your Character going forward (they do not gain a Gear Kit at Character Creation). This Character is of the same Power Level as you, and can inherit any number of your Transformations after Character Creation (if they meet the Prerequisites). This new Character also gains the Reincarnated Factor with you as the Past Life and may also gain the Inherited Life Awakening if that would not exceed their Awakening Limit.
+
+---
+
+[passive]
+# (1)
+racialLifeModifier += 2;
+
+# (2) Offered on the Defeated card: the Dead Special State, out of the Combat Encounter - the new Character, its Reincarnated Factor and
+# the Inherited Life Awakening, made after it ends, the table's (chat.mjs progenitor).
+[triggered/defeated, effect 2]
+progenitor();
