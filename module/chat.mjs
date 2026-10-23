@@ -20457,6 +20457,24 @@ function signedPart(part) {
  * whoever plays them with the Damage it would take away. Null where nothing does.
  */
 /**
+ * Pain Resistant (2): "If an Opponent knocks you through a Health Threshold, that Opponent does not gain Bonus Momentum, and they
+ * cannot trigger any of their effects that trigger when you are knocked through a Health Threshold." Asked of whoever plays them,
+ * once a Round and twice an Encounter; whether it was taken.
+ */
+async function painDenies(target, knocker) {
+  if (target?.system?.effects?.slots?.["painResistant.deny"] !== true) return false;
+  const used = target.getFlag?.(SCOPE, "painResistant") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  if ((used.round === roundKey()) || (count >= 2)) return false;
+  const answer = await askPlayerChoice(target, `${target.name}: knocked through by ${knocker.name}`,
+    [{ value: "deny", label: `Pain Resistant: no Bonus Momentum, nothing of ${knocker.name}'s answers it` }, { value: "no", label: "No" }]);
+  if (answer !== "deny") return false;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.painResistant`]: { encounter, round: roundKey(), count: count + 1 } });
+  return true;
+}
+
+/**
  * Undying Determination (1): "if you receive Damage from an Attacking Maneuver that exceeds your remaining Life Points, halve
  * that Damage" - the effects answering it (`overkill-damage`), asked of whoever plays them; the one picked, or null.
  */
@@ -28628,6 +28646,11 @@ async function applyAttackDamage(message, target, attack) {
     > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
       target.system.life.max));
 
+  // Pain Resistant (2): an Opponent knocking them through - no Bonus Momentum for them, nothing of theirs answering it.
+  const painDenied = knockedThrough && armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)
+    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid) && await painDenies(target, armsUser);
+  const knockedFor = knockedThrough && !painDenied;
+
   // One write, off one reading of the character. Two updates each doing their own
   // read-and-add is how a number that was raised twice ends up raised once: whichever
   // read second may not have seen the first yet.
@@ -28652,12 +28675,14 @@ async function applyAttackDamage(message, target, attack) {
       // And its Wound Roll - Critical Wound's.
       ...((attack.result?.wound?.outcome === "critical") ? { dbuKnockedWoundCritical: true } : {}),
       // Its Profiles - Draconic Physique's Elemental Dragon reads its Favored Element among them.
-      dbuKnockedProfiles: [attack.profile, ...extraProfilesOf(attack)].filter(Boolean) } : {})
+      dbuKnockedProfiles: [attack.profile, ...extraProfilesOf(attack)].filter(Boolean),
+      // Pain Resistant (2): none of theirs answers it.
+      ...(painDenied ? { dbuKnockerDenied: true } : {}) } : {})
   });
   if (arms) await offerArmsHit(armsUser, target);
   // Power of the Hera (3): knocked through a Health Threshold, or Defeated, by it - the Power Up, out of sequence.
   if (armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)
-    && (knockedThrough || (!wasDefeated && target.system.defeated))) offerHeraPowerUp(message, armsUser);
+    && (knockedFor || (!wasDefeated && target.system.defeated))) offerHeraPowerUp(message, armsUser);
   // Flow of Combat: Damage taken - "since the end of your last turn" - and none taken, the Exploit at who made it.
   if ((damage > 0) && !isAbsoluteMiss(own) && !target.getFlag?.(SCOPE, "damagedSinceTurn")) {
     await requestActorUpdate(target, { [`flags.${SCOPE}.damagedSinceTurn`]: true });
@@ -28725,22 +28750,22 @@ async function applyAttackDamage(message, target, attack) {
   // Tornado Attack: hit, and dealt 0 Damage - the Basic Attack back, offered.
   if (own.hit && !isAbsoluteMiss(own) && (damage <= 0)) offerTornadoStrike(message, attack, target, "no Damage");
   if (attack.spiritSword && armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) {
-    await spiritSwordLanded(message, attack, armsUser, target, knockedThrough);
+    await spiritSwordLanded(message, attack, armsUser, target, knockedFor);
   }
   // Punisher Guard's Basic Attack, landed: through a Health Threshold or Defeated, the Exploit it answers is cancelled.
   if (attack.punish && (attack.punish.exploiterUuid === target.uuid)) {
-    await punishRelease(attack.punish.cardId, (knockedThrough || (floor <= 0)) && (damage > 0) && !isAbsoluteMiss(own));
+    await punishRelease(attack.punish.cardId, (knockedFor || (floor <= 0)) && (damage > 0) && !isAbsoluteMiss(own));
   }
   // Divine Counter's Basic Attack, landed: through a Health Threshold or Defeated, the attack it answers is cancelled.
   if (attack.divineCounter && (attack.divineCounter.attackerUuid === target.uuid)) {
     await divineCounterRelease(attack.divineCounter.cardId,
-      (knockedThrough || (floor <= 0)) && (damage > 0) && !isAbsoluteMiss(own));
+      (knockedFor || (floor <= 0)) && (damage > 0) && !isAbsoluteMiss(own));
   }
   if (armsUser && (damage > 0) && !isAbsoluteMiss(own)) {
     if (armsUser.uuid === target.uuid) {
       if (knockedThrough) await reducedMomentum(target);
     }
-    else if (knockedThrough) await bonusMomentum(armsUser, `${target.name} through a Health Threshold`);
+    else if (knockedFor) await bonusMomentum(armsUser, `${target.name} through a Health Threshold`);
     else if (target.system.minion && (floor <= 0)) await bonusMomentum(armsUser, `${target.name}, a Minion, Defeated`);
   }
   // Aggressive Taunt counts the attacks that dealt Damage to an Opponent on their maker's turn.

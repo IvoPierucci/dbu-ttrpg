@@ -1,0 +1,24 @@
+id: pain-resistant
+name: Pain Resistant
+talentCategory: threshold
+prerequisites: 2+ Threshold Talents
+description: >
+  You are well-accustomed to pain, and you show no visible signs of your discomfort.
+text: >
+  Pain Resistant: You are well-accustomed to pain, and you show no visible signs of your discomfort.
+  –Prerequisites: 2+ Threshold Talents
+  (1)-[Triggered, 1/Round]: If you receive Damage from an Opponent’s Attacking Maneuver, increase your Soak Value and Damage Reduction by 1(bT) until the end of the Combat Round.
+  (2)-[Triggered, 1/Round, 2/Encounter]: If an Opponent knocks you through a Health Threshold, that Opponent does not gain Bonus Momentum, and they cannot trigger any of their effects that trigger when you are knocked through a Health Threshold.
+
+---
+
+# (1) Damage from an Opponent's Attacking Maneuver (the `opponent-damage` Moment): Pain Resistant (a mark) - Soak Value and
+# Damage Reduction 1(bT) - till the Round ends. Automatic by default, its Triggered/Automatic button.
+[triggered/opponent-damage, 1/round, effect 1]
+gain("pain-resistant-mark");
+expires("pain-resistant-mark", round);
+
+[passive]
+# (2) An Opponent's attack about to knock you through: asked of whoever plays you, once a Round and twice an Encounter - no
+# Bonus Momentum for them, and nothing of theirs answering it (chat.mjs painDenies; combat.mjs announceThreshold).
+allow painResistant.deny;

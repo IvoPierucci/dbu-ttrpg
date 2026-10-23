@@ -1,0 +1,17 @@
+id: pain-resistant-mark
+name: Pain Resistant
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Pain Resistant (1)'s, till the end of the Combat Round.
+combatCondition: no
+source: Core Rule
+description: >
+  Pain Resistant: Soak Value and Damage Reduction 1(bT) higher until the end of the Combat Round.
+text: >
+  Pain Resistant (1): Increase your Soak Value and Damage Reduction by 1(bT) until the end of the Combat Round.
+
+---
+
+[passive]
+soakValue += 1(bT);
+damageReduction += 1(bT);
