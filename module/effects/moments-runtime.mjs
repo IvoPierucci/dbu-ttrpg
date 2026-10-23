@@ -426,6 +426,7 @@ async function runVerb(actor, call, context) {
     case "eternalRival": return (await import("../chat.mjs")).eternalRival(actor);
     case "desperateRally": return (await import("../chat.mjs")).desperateRally(actor);
     case "bagOfTricks": return (await import("../chat.mjs")).bagOfTricks(actor);
+    case "battleEdge": return (await import("../chat.mjs")).battleEdge(actor);
     case "enhancedMark": return (await import("../chat.mjs")).enhancedMark(actor);
     case "yoinkGrenade": return (await import("../chat.mjs")).yoinkGrenade(actor, context);
     case "yoinkGuard": return (await import("../chat.mjs")).yoinkGuard(actor, context);

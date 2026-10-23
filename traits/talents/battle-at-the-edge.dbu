@@ -1,0 +1,26 @@
+id: battle-at-the-edge
+name: Battle at the Edge
+talentCategory: threshold
+prerequisites: High Risk Battler
+description: >
+  Living dangerously is your motto; you are at your fiercest when you are close to death.
+text: >
+  Battle at the Edge: Living dangerously is your motto; you are at your fiercest when you are close to death.
+  –Prerequisites: High Risk Battler
+  (1)-[Passive]: While you are below the Critical Health Threshold, increase your Combat Rolls and Soak Value by 1(bT).
+  (2)-[Triggered/Defeated]: Roll a 1d10. If you score a result of 7 or higher, set your Life Points to 1 lower than the Critical Health Threshold.
+
+---
+
+[passive]
+# (1) Below Critical - in it.
+if (belowThreshold("critical")) {
+    combatRolls += 1(bT);
+    soakValue += 1(bT);
+}
+
+# (2) Ticked on the Defeated card - a Triggered/Defeated effect, the Keyword's one of the Encounter: a 1d10, and on 7 or more
+# your Life Points 1 under the Critical Health Threshold - a tenth of your Max, rounded down - at 1 at least (chat.mjs
+# battleEdge).
+[triggered/defeated, effect 2]
+battleEdge();

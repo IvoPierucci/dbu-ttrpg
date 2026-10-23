@@ -14438,6 +14438,20 @@ async function takeBagOfTricks(message, actor) {
 }
 
 /**
+ * Battle at the Edge (2): "Roll a 1d10. If you score a result of 7 or higher, set your Life Points to 1 lower than the Critical
+ * Health Threshold." The Critical Health Threshold a tenth of the Max Life Points, rounded down; 1 under it, at 1 at least.
+ */
+export async function battleEdge(actor) {
+  if (!actor) return;
+  const roll = await new Roll("1d10").evaluate();
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: "Battle at the Edge - 7 or more" });
+  if (roll.total < 7) return;
+  const max = Number(actor.system.life?.max) || 0;
+  const critical = Math.floor(max * DBUCharacterData.THRESHOLDS.injured.above);
+  return requestActorUpdate(actor, { "system.life.value": Math.max(1, critical - 1) });
+}
+
+/**
  * High Risk Battler (2): "If you would regain Life Points while below the Injured Health Threshold, you may choose to forgo
  * gaining any Life Points. If you do, regain Ki Points equal to 1/2 of the amount of Life Points you would have gained." In a
  * Combat Encounter, Injured or Critical before them: asked of whoever plays them, once a Round - forgone, the Life Points put back
