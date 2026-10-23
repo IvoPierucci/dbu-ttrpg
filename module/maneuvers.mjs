@@ -4165,6 +4165,29 @@ function usedIs(entry, maneuver) {
  * Maneuver limited to once per Round was in practice once per Encounter.
  */
 /**
+ * Reserved Tail (4): "If you use the Tail Attack Maneuver, you may spend all of your stacks of Reserved Force to increase the
+ * Strike Roll by 1(T) and increase the Wound Roll by x(T), where x is equal to the number of Reserved Force stacks spent on this
+ * Attacking Maneuver." Asked as it is declared, once a Round.
+ */
+export async function askReservedTail(actor, maneuver, declared) {
+  if (!declared || (maneuver?.id !== "tail-attack") || (actor?.system?.effects?.slots?.["reservedTail.spend"] !== true)) return declared;
+  const stacks = Number(actor.system.resources?.reservedforce?.stacks) || 0;
+  if (!stacks || (actor.getFlag?.("dbu-ttrpg", "reservedTailRound") === roundNow())) return declared;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Reserved Tail` },
+    content: `<p data-tooltip="Once a Round: every stack spent">${stacks} Reserved Force: Strike +1(T), Wound +${stacks}(T)?</p>`,
+    rejectClose: false });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "reservedTailRound", roundNow());
+  const { setResource } = await import("./chat.mjs");
+  await setResource(actor, "reservedforce", 0);
+  return { ...declared,
+    strikeExtra: [...(declared.strikeExtra ?? []), { label: "Reserved Tail", written: "+1(T)", value: tier }],
+    woundExtra: [...(declared.woundExtra ?? []), { label: `Reserved Tail (${stacks})`, written: `+${stacks}(T)`, value: stacks * tier }] };
+}
+
+/**
  * Angelic Technique (2): "If you use the Basic Attack Maneuver while in the Healthy Health Threshold, you may apply an Advantage
  * with a TP Cost of 10 or less to that Attacking Maneuver." Asked as it is declared, once a Round - carried on the attack as a
  * Technique's would be (chat.mjs postAttack, `borrowed`).
@@ -4320,7 +4343,10 @@ async function primeCriticalPoint(actor) {
 export async function recordManeuverUse(actor, maneuver) {
   if (!maneuver.usageLimit && !maneuver.kiCostGrowsPerBaseTier) return;
   const entry = maneuver.usageLimit ? [`${maneuver.usageLimit.per}:${maneuver.id}`] : [];
-  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, ...entry,
+  await actor.update({
+    // Reserved Tail (1): the Round of a Tail Attack, for the end of that Round.
+    ...((maneuver.id === "tail-attack") ? { "flags.dbu-ttrpg.tailAttackRound": roundNow() } : {}),
+    "system.usedManeuvers": [...actor.system.usedManeuvers, ...entry,
     ...(maneuver.encounterLimit ? [`encounter:${maneuver.id}.encounter`] : []),
     // Each use this Encounter, for a cost that grows with them (baseKiCost).
     ...(maneuver.kiCostGrowsPerBaseTier ? [`encounter:${maneuver.id}.grown`] : [])] });

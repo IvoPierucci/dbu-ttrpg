@@ -1,0 +1,39 @@
+id: reserved-tail
+name: Reserved Tail
+talentCategory: racial
+race: arcosian
+prerequisites: Arcosian Race
+resource: reservedforce
+resourceMax: 4
+resourceLabel: Reserved Force
+description: >
+  You often hold back your full might, building up battle momentum in order to unleash a brutal assault.
+text: >
+  Reserved Tail: You often hold back your full might, building up battle momentum in order to unleash a brutal assault.
+  –Prerequisites: Arcosian Race
+  (1)-[Triggered, Resource]: At the end of a Combat Round, if you are not in the Spectator State and did not use the Tail Attack Maneuver, gain a stack of Reserved Force (max. 4).
+  (2)-[Passive]: While you have 1+ stack of Reserved Force, reduce the Ki Point Cost of your Attacking Maneuvers by 1(T).
+  (3)-[Passive]: For every stack of Reserved Force you possess, increase your Soak Value and Surgency by 1(T) (max. 2(T)).
+  (4)-[Triggered, 1/Round]: If you use the Tail Attack Maneuver, you may spend all of your stacks of Reserved Force to increase the Strike Roll by 1(T) and increase the Wound Roll by x(T), where x is equal to the number of Reserved Force stacks spent on this Attacking Maneuver.
+
+---
+
+# (1) The Combat Round ended - read on the next one's card, of the Round that ended: no Tail Attack in it (maneuvers.mjs
+# recordManeuverUse keeps its Round), not Spectator. Automatic by default, its Triggered/Automatic button.
+[triggered/end-of-round, effect 1]
+requires !inState("spectator") && !tailAttackLastRound;
+reservedforce.stacks += 1;
+
+[passive]
+# (2)
+if (hasResource("reservedforce")) {
+    attack.kiCost -= 1(T);
+}
+# (3) 1(T) a stack, 2(T) at the most.
+if (hasResource("reservedforce")) {
+    soakValue += (min(reservedforce.stacks, 2) * tierOfPower);
+    surgency += (min(reservedforce.stacks, 2) * tierOfPower);
+}
+# (4) The Tail Attack declared: asked, once a Round - every stack spent, 1(T) on its Strike and a (T) a stack on its Wound
+# (maneuvers.mjs askReservedTail).
+allow reservedTail.spend;

@@ -5326,6 +5326,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askTwinWeapon(actor, declared, maneuver);
     // Masterful Integration (1): an Integrated Item destroyed for an Energy Charge - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askMasterfulCharge(actor, declared);
+    // Reserved Tail (4): the Tail Attack - every Reserved Force spent, asked once a Round.
+    declared = await (await import("./maneuvers.mjs")).askReservedTail(actor, maneuver, declared);
     // Angelic Technique (2): a Basic Attack, Healthy - an Advantage of 10 TP or less on it, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askAngelicAdvantage(actor, maneuver, declared);
     // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
