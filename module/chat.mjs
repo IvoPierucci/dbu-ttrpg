@@ -14463,6 +14463,30 @@ async function takeBagOfTricks(message, actor) {
 }
 
 /**
+ * Undying Determination (2): "Set your Life Points to 1 higher than their minimum value. Then, until the end of your next turn,
+ * your Life Points cannot be reduced below that value and you may ignore all Health Threshold penalties." Its mark on your clock
+ * till the end of your next turn; the Life Points held by it (dbu-ttrpg.mjs).
+ */
+export async function undyingDetermination(actor) {
+  if (!actor) return;
+  const floor = (Number(actor.system.life?.min) || 0) + 1;
+  await actor.update({ "system.life.value": floor, [`flags.${SCOPE}.undyingFloor`]: floor });
+  const { setCondition } = await import("./conditions.mjs");
+  if (!await setCondition(actor, "undying-determination-mark", 1)) return;
+  return lasting(actor, { kind: KINDS.CONDITION, key: "undying-determination-mark", edge: EDGES.END, next: true,
+    source: "Undying Determination" });
+}
+
+/** Undying Determination (3): "your Life Points are reduced to their lowest possible value and you are Defeated." */
+export async function undyingEnds(actor) {
+  if (!actor) return;
+  await actor.update({ [`flags.${SCOPE}.-=undyingFloor`]: null });
+  // Its mark gone with the Encounter, not with the turn: nothing of it is left to end.
+  if (!game.combat?.started) return;
+  return actor.update({ "system.life.value": Number(actor.system.life?.min) || 0 });
+}
+
+/**
  * Battle at the Edge (2): "Roll a 1d10. If you score a result of 7 or higher, set your Life Points to 1 lower than the Critical
  * Health Threshold." The Critical Health Threshold a tenth of the Max Life Points, rounded down; 1 under it, at 1 at least.
  */
@@ -20432,6 +20456,19 @@ function signedPart(part) {
  * What takes away Damage of less than half the Soak Value (Hyper Resilience): Automatic, the first; Triggered, asked of
  * whoever plays them with the Damage it would take away. Null where nothing does.
  */
+/**
+ * Undying Determination (1): "if you receive Damage from an Attacking Maneuver that exceeds your remaining Life Points, halve
+ * that Damage" - the effects answering it (`overkill-damage`), asked of whoever plays them; the one picked, or null.
+ */
+async function overkillAnswer(target, damage) {
+  const offered = unarmedTriggers(target, "overkill-damage");
+  if (!offered.length) return null;
+  const picked = await askPlayerChoice(target, `${target.name}: ${damage} Damage - more than your Life Points`, [
+    ...offered.map(entry => ({ value: entry.blockId, label: `Halve it (${Math.floor(damage / 2)}) - ${entry.sourceName}` })),
+    { value: "take", label: "Take it" }]);
+  return offered.find(entry => entry.blockId === picked) ?? null;
+}
+
 async function lightDamageAnswer(target, damage) {
   const automatic = reactiveFor(target).find(entry => entry.available && entry.armed
     && (String(entry.program.blocks?.[0]?.moment ?? "") === "light-damage"));
@@ -25930,11 +25967,18 @@ async function rollAttackWoundWork(message, attack) {
     const resilient = ((rolledDamage > 0) && (rolledDamage < (Number(target.system.soakValue) || 0) / 2))
       ? await lightDamageAnswer(target, rolledDamage) : null;
     if (resilient) await spendTriggeredEffect(target, resilient.blockId);
-    const damage = resilient ? 0 : rolledDamage;
+    const untouched = resilient ? 0 : rolledDamage;
+    // Undying Determination (1): past their Life Points, halved - asked once; settled again, as it was answered.
+    const previous = (attack.result?.targets ?? []).find(entry => entry.uuid === target.uuid);
+    const halving = previous?.undyingHalved ? true : ((untouched > (Number(target.system.life?.value) || 0))
+      ? await overkillAnswer(target, untouched) : null);
+    if (halving && (halving !== true)) await spendTriggeredEffect(target, halving.blockId);
+    const damage = halving ? Math.floor(untouched / 2) : untouched;
 
     await maybeShakeAttacker(attacker, attack, defence, damage);
 
     settledTargets.push({ ...own, ...woundAgainst, counterWound, effectiveWound, soak, reduction, damage,
+      ...(halving ? { undyingHalved: true } : {}),
       ...(punchingDown ? { punchingDown } : {}),
       ...(extra.length ? { techniqueExtra: extra } : {}) });
   }

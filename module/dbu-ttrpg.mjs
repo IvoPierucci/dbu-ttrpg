@@ -198,6 +198,12 @@ Hooks.on("preUpdateActor", (actor, changes, options) => {
   if (foundry.utils.hasProperty(changes, "system.resources") && !options.dbuEncounterStart) {
     options.dbuHoldingBefore = Number(actor.system?.resources?.holdingback?.stacks) || 0;
   }
+  // Undying Determination (2): "your Life Points cannot be reduced below that value" - held there while its mark lasts.
+  const floor = Number(actor.getFlag?.("dbu-ttrpg", "undyingFloor"));
+  if (Number.isFinite(floor) && foundry.utils.hasProperty(changes, "system.life.value")
+    && (Number(foundry.utils.getProperty(changes, "system.life.value")) < floor)) {
+    foundry.utils.setProperty(changes, "system.life.value", floor);
+  }
   // High Risk Battler (2): the Life Points before they are regained.
   if (foundry.utils.hasProperty(changes, "system.life.value") && !options.dbuHighRisk
     && (actor.system?.effects?.slots?.["highRisk.forgo"] === true)) {

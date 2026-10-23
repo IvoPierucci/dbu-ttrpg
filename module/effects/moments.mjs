@@ -97,6 +97,9 @@ const TABLE = [
     provides: [],
     doc: "Never fired: Energy Control (1)'s block is its Triggered/Automatic button, read by its window (chat.mjs "
        + "energyControlAsk) - with Technique Master (2), Automatic takes the 2(T) without asking." },
+  { key: "overkill-damage", label: "An Attacking Maneuver's Damage would exceed your remaining Life Points", provides: [],
+    doc: "Asked of whoever plays them once an attack's Damage is worked out, past their Life Points (chat.mjs overkillAnswer) - "
+       + "Undying Determination's halving." },
   { key: "insult-won", label: "You win the Morale Clash for the Insult Maneuver", provides: [],
     doc: "Fired as the Insult's Clash is won and its Conditions on (chat.mjs settleInsult), its target named as `opponentUuid` - "
        + "Taunt's. What is the player's is asked in a window first." },

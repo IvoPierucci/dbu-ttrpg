@@ -1,0 +1,27 @@
+id: undying-determination
+name: Undying Determination
+talentCategory: threshold
+prerequisites: Tier of Power 4+, 3+ Threshold Talents
+description: >
+  Refusing to go down without a fight, you exhibit a final burst of power when you reach the end of your rope.
+text: >
+  Undying Determination: Refusing to go down without a fight, you exhibit a final burst of power when you reach the end of your rope.
+  –Prerequisites: Tier of Power 4+, 3+ Threshold Talents
+  (1)-[Triggered, 1/Encounter]: While below the Injured Health Threshold, if you receive Damage from an Attacking Maneuver that exceeds your remaining Life Points, halve that Damage.
+  (2)-[Triggered/Defeated]: Set your Life Points to 1 higher than their minimum value. Then, until the end of your next turn, your Life Points cannot be reduced below that value and you may ignore all Health Threshold penalties.
+  (3)-[Automatic]: If you trigger the second effect of Undying Determination, at the end of your next turn, your Life Points are reduced to their lowest possible value and you are Defeated.
+
+---
+
+# (1) Below Injured - Injured or Critical - an attack's Damage past your Life Points, once it is worked out (the `overkill-damage`
+# Moment): asked of whoever plays you, halved, rounded down (chat.mjs overkillAnswer).
+[triggered/overkill-damage, 1/encounter, chosen, effect 1]
+requires belowThreshold("injured");
+allow damage.halvedOverkill;
+
+# (2) Ticked on the Defeated card - a Triggered/Defeated effect, the Keyword's one of the Encounter: your Life Points 1 above their
+# least, held there - nothing takes them lower - and no Health Threshold penalties, till the end of your next turn (Undying
+# Determination, a mark; chat.mjs undyingDetermination).
+# (3) That turn ended: your Life Points to their least, and Defeated (the mark's own end).
+[triggered/defeated, effect 2]
+undyingDetermination();

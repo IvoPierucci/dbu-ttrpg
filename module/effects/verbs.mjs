@@ -170,6 +170,15 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  undyingDetermination: {
+    args: [0, 0],
+    doc: "Undying Determination (2): Life Points 1 above their least, held there, no Threshold penalties till the end of your "
+       + "next turn (chat.mjs undyingDetermination)."
+  },
+  undyingEnds: {
+    args: [0, 0],
+    doc: "Undying Determination (3): Life Points to their least, and Defeated (chat.mjs undyingEnds)."
+  },
   battleEdge: {
     args: [0, 0],
     doc: "Battle at the Edge (2): a 1d10; 7 or more, Life Points 1 under the Critical Health Threshold (chat.mjs battleEdge)."

@@ -1,0 +1,24 @@
+id: undying-determination-mark
+name: Undying Determination
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Undying Determination (2)'s, on your clock till the end of your next turn - your Life Points held 1
+# above their least meanwhile (dbu-ttrpg.mjs) - and (3) as it ends.
+combatCondition: no
+source: Core Rule
+description: >
+  Undying Determination: Life Points held 1 above their least, no Health Threshold penalties; at the end of your next turn,
+  your Life Points to their least and Defeated.
+text: >
+  Undying Determination (2): until the end of your next turn, your Life Points cannot be reduced below that value and you may
+  ignore all Health Threshold penalties. (3): at the end of your next turn, your Life Points are reduced to their lowest
+  possible value and you are Defeated.
+
+---
+
+[passive]
+threshold.penalty = 0;
+
+# (3)
+[on removed]
+undyingEnds();
