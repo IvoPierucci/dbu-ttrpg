@@ -170,6 +170,10 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  variableFighter: {
+    args: [0, 0],
+    doc: "Variable Fighter (2): the other kind of attack's Wound 1(T) till the start of your next turn (chat.mjs variableFighter)."
+  },
   weaponFixer: {
     args: [0, 0],
     doc: "Weapon Fixer (1), (2): Ki for twice as many of a Weapon's Life Points, a destroyed one whole till the Encounter ends "

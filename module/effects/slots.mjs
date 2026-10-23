@@ -223,6 +223,8 @@ const TABLE = [
   { key: "wound.flanking", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Wound against an Opponent with an Ally of yours on a Square adjacent (Flexible Flanker's; chat.mjs "
        + "flankerParts)." },
+  { key: "strike.unarmedWielding", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to an Unarmed Attack's Strike while a Weapon is wielded (Variable Fighter's; chat.mjs variableParts)." },
   { key: "charges.armedCategory", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Dice Categories an Armed Attack's Energy Charges are raised by (Weapon Master's; chat.mjs postAttack)." },
   { key: "weapon.qualitySlots", phase: PHASES.CORE, kind: N, ops: NUMERIC,

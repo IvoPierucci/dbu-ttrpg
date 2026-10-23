@@ -14557,6 +14557,35 @@ async function takeBagOfTricks(message, actor) {
 }
 
 /**
+ * Variable Fighter (2): "If you hit an Opponent with an Unarmed Attack or an Armed Attack, increase the Wound Rolls of the other by
+ * 1(T) until the start of your next turn." Its mark, on your clock.
+ */
+export async function variableFighter(actor, armed) {
+  if (!actor) return;
+  const key = armed ? "variable-unarmed-mark" : "variable-armed-mark";
+  const { setCondition } = await import("./conditions.mjs");
+  if (!await setCondition(actor, key, 1)) return;
+  return lasting(actor, { kind: KINDS.CONDITION, key, edge: EDGES.START, next: true, source: "Variable Fighter" });
+}
+
+/**
+ * Variable Fighter: (1) an Unarmed Attack's Strike while a Weapon is wielded; (2) the Wound of the kind its mark names.
+ */
+function variableParts(attacker, attack, roll) {
+  if (!attacker || !attack) return [];
+  const armed = Boolean(attack.weapon && !attack.weapon.unarmed);
+  const tier = Math.max(1, Number(attacker.system?.tierOfPower) || 1);
+  if (roll === "strike") {
+    const add = Number(attacker.system?.effects?.slots?.["strike.unarmedWielding"]?.add) || 0;
+    return (!armed && add && wieldedWeapons(Array.from(attacker.items ?? [])).length)
+      ? [{ label: "Variable Fighter (Unarmed)", value: add }] : [];
+  }
+  const key = armed ? "variable-armed-mark" : "variable-unarmed-mark";
+  return ((Number(attacker.system?.conditions?.[key]) || 0) > 0)
+    ? [{ label: `Variable Fighter (${armed ? "Armed" : "Unarmed"})`, written: "+1(T)", value: tier }] : [];
+}
+
+/**
  * Weapon Fixer (1): "spend any number of Ki Points to have that Weapon regain Life Points equal to 2x the amount of Ki Points
  * spent. If that Weapon was destroyed, it stops being destroyed until the end of the Combat Encounter." (2): "If you use the first
  * effect of Weapon Fixer to fix a destroyed Weapon, increase your Wound Rolls with that Weapon by 2(T) for the remainder of the
@@ -23899,6 +23928,8 @@ function strikeParts(attacker, attack) {
     strikeOf(attacker, attack?.foundation),
     // Teamwork (2): a joiner's 1(T).
     ...unitedStrikeParts(attack),
+    // Variable Fighter (1).
+    ...variableParts(attacker, attack, "strike"),
     ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
     ...profileSlotStrike(attacker, attack),
@@ -25148,9 +25179,12 @@ async function answerHit(message, attack, attacker, struck) {
   await burningFuryBreak(attacker, struck);
   // Assassinate (2): one Oblivious of you hit - 5(bT) Ki for the Damage Category, asked.
   if (await assassinateCategory(attacker, struck)) answer.marks.assassinated = true;
-  await offerTriggers(attacker, "hit-opponent");
+  // Variable Fighter (2): whether it was an Armed Attack.
+  const armedHit = Boolean(attack.weapon && !attack.weapon.unarmed);
+  await offerTriggers(attacker, "hit-opponent", { armed: armedHit });
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
+    armed: armedHit,
     area: Boolean(attackArea(attack)), oblivious: struck.some(({ own }) => own.oblivious),
     // Glass Shards (1): of the Glass Profile, and whom it hit.
     glass: [attack.profile, ...extraProfilesOf(attack)].includes("glass"), struck: struck.map(entry => entry.uuid),
@@ -25291,6 +25325,8 @@ function woundParts(attacker, attack) {
   // Critical Specialist (2): taken on its Critical Strike.
   const critWound = Boolean(attack.result?.critSpecialist?.wound) && (attack.result?.strike?.outcome === "critical");
   return [
+    // Variable Fighter (2).
+    ...variableParts(attacker, attack, "wound"),
     ...(critWound ? [{ label: "Critical Specialist", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(kata ? [{ label: "Precision Kata (Critical)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(herculean ? [{ label: "Herculean Power (Hefty Muscle again)", written: `+${heftyTimes}(T)`,

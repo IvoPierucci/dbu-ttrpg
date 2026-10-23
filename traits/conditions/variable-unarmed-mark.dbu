@@ -1,0 +1,16 @@
+id: variable-unarmed-mark
+name: Variable: Unarmed
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Variable Fighter (2)'s, till the start of your next turn - read as the Wound is (chat.mjs variableParts).
+combatCondition: no
+source: Core Rule
+description: >
+  Variable Fighter: the Wound Rolls of your Unarmed Attacks 1(T) higher until the start of your next turn.
+text: >
+  Variable Fighter (2): If you hit an Opponent with an Unarmed Attack or an Armed Attack, increase the Wound Rolls of the other by
+  1(T) until the start of your next turn.
+
+---
+
+[passive]

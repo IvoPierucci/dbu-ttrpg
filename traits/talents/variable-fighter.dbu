@@ -1,0 +1,23 @@
+id: variable-fighter
+name: Variable Fighter
+talentCategory: weapon
+prerequisites: Weapon Specialist
+description: >
+  You are skilled in the use of both Weapons and your fists or ki, and employ a style which utilizes both.
+text: >
+  Variable Fighter: You are skilled in the use of both Weapons and your fists or ki, and employ a style which utilizes both.
+  –Prerequisites: Weapon Specialist
+  (1)-[Passive]: While you are wielding a Weapon, increase the Strike Rolls of your Unarmed Attacks by 1(T).
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with an Unarmed Attack or an Armed Attack, increase the Wound Rolls of the other by 1(T) until the start of your next turn.
+
+---
+
+[passive]
+# (1) A Weapon wielded: an Unarmed Attack's Strike (chat.mjs variableParts).
+strike.unarmedWielding += 1(T);
+
+# (2) An Opponent hit (the `hit-opponent` Moment): by an Unarmed Attack, your Armed Attacks' Wound 1(T); by an Armed one, your
+# Unarmed Attacks' - till the start of your next turn (a mark each; chat.mjs variableFighter, variableParts). Automatic by
+# default, its Triggered/Automatic button.
+[triggered/hit-opponent, 1/round, effect 2]
+variableFighter();
