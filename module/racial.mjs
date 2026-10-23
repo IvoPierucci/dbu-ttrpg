@@ -509,6 +509,10 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
       .filter(other => (kind === "character") || !other.system?.minion)
       .sort((a, b) => a.name.localeCompare(b.name)).map(other => [other.id, other.name]);
   }
+  // A Battle Weather - Weather Resilient's.
+  if (kind === "weather") {
+    return traitsOfKind("battlefields").filter(trait => trait.weather === true).map(trait => [trait.id, trait.name]);
+  }
   if (kind === "elementalProfile") {
     const { PROFILES } = await import("./maneuvers.mjs");
     return Object.entries(PROFILES).filter(([, profile]) => /elemental/i.test(profile.label ?? ""))
@@ -810,6 +814,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   if (trait.grantsWeapon) await grantWeapon(actor, item, trait);
   // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
+  // And a Quality on it in no Slot - Sturdy Shell's Dense Armor, Treacherous Spikes' Spiked.
+  if (trait.naturalArmor && trait.naturalArmorQuality) await platingQuality(actor, item, String(trait.naturalArmorQuality), true);
   for (const option of chosenOptions(item)) await madeByOption(actor, item, option);
   if (trait.defaultCostume) await askDefaultCostume(actor);
   // An Other Trait it gives, chosen now - Bestial Evolution's "Select and gain a Bestial Trait of your choice".

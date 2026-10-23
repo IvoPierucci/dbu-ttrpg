@@ -6395,6 +6395,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (maneuver.soars && (soarTo !== false)) {
     await actor.update({ "system.battlefield.highEnvironment": soarTo });
   }
+  // Winged Beast (4): "If you use the Soar Maneuver, you may use any Standard Maneuver with an Action Cost of 1 Action immediately
+  // afterwards as an Out-of-Sequence Maneuver" - its button on the sheet, till one is used or the Round ends; once a Round.
+  if (maneuver.soars && (actor.system.effects?.slots?.["winged.afterSoar"] === true)) {
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (actor.getFlag?.("dbu-ttrpg", "wingedRound") !== round) await actor.setFlag("dbu-ttrpg", "wingedSoared", round);
+  }
 
   // Declared, now that it is certain to happen. An effect answering this reads the
   // Maneuver and who it is aimed at.

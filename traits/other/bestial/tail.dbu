@@ -1,0 +1,17 @@
+id: tail
+name: Tail
+order: 19
+description: >
+  Born with a long, maneuverable tail, you can use this tail as an extra hand, or in some cases, as a weapon.
+text: >
+  Tail: Born with a long, maneuverable tail, you can use this tail as an extra hand, or in some cases, as a weapon.
+  (1)-[Passive]: Gain access to the Tail Attack Maneuver (see — Special Maneuvers).
+  (2)-[Passive]: Increase the Strike Roll of your Tail Attack Maneuver by 1(T).
+
+---
+
+[passive]
+# (1)
+allow maneuver.tail-attack;
+# (2) A row on its Strike as it is declared (chat.mjs postAttack).
+allow tailBeast.strike;

@@ -513,6 +513,8 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "quillBurst": return (await import("../chat.mjs")).quillBurst(actor);
+    case "weatherSurge": return (await import("../chat.mjs")).weatherSurge(actor);
     case "grippyGrab": return (await import("../chat.mjs")).grippyGrab(actor);
     case "regenerateSurge": return (await import("../chat.mjs")).regenerateSurge(actor);
     case "alternateSight": return (await import("../chat.mjs")).alternateSight(actor, context?.targets?.[0] ?? null);

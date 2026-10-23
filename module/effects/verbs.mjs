@@ -403,6 +403,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  quillBurst: {
+    args: [0, 0],
+    doc: "Treacherous Spikes (4): a Clash (Corporeal/Impulsive) at each targeted Opponent - won, 9(bT) off their Life, the Quillset's Break Value 1 (chat.mjs quillBurst)."
+  },
+  weatherSurge: {
+    args: [0, 0],
+    doc: "Weather Resilient (3): in the chosen Battle Weather, a Surge (chat.mjs weatherSurge)."
+  },
   grippyGrab: {
     args: [0, 0],
     doc: "Grippy Grabbers (3): a Grapple Check at the one you hold - won, their Life by your Might or the Launch (chat.mjs grippyGrab)."

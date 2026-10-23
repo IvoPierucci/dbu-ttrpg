@@ -1,0 +1,24 @@
+id: underwater-beast
+name: Underwater Beast
+order: 21
+description: >
+  Adapted specifically for life under the surface of the water, you are a great swimmer.
+text: >
+  Underwater Beast: Adapted specifically for life under the surface of the water, you are a great swimmer.
+  (1)-[Passive]: You cannot gain the Suffocating Combat Condition from the Underwater Battle Environment.
+  (2)-[Passive]: While in the Underwater Battle Environment, increase your Defense Value and Speed by 1(bT), and ignore the penalties to your Speed from the Underwater Battle Environment.
+  (3)-[Passive]: While in the Underwater Battle Environment, reduce the Ki Point Cost to use your Boosted Speed through the Movement Maneuver by 1(bT).
+  (4)-[1/Round]: If you are in the Underwater Battle Environment, you can use the Movement Maneuver as an Instant Maneuver.
+
+---
+
+[passive]
+# (1) Its Unbreathable Environment ignored there; (2) the Speed it halves left whole (its own script, holdsTrait); (3).
+if (inEnvironment("underwater")) {
+    forbid unbreathableEnvironments;
+    defenseValue += 1(bT);
+    speed.normal += 1(bT);
+    movement.boostedKiCost -= 1(bT);
+}
+# (4) The Movement Maneuver's Instant button there, once a Round (actor-character-sheet.mjs).
+allow movement.underwaterInstant;

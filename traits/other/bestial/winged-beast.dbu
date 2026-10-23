@@ -1,0 +1,26 @@
+id: winged-beast
+name: Winged Beast
+order: 23
+description: >
+  Possessing powerful wings that enable you to soar through the skies, you rise above your enemies and strike from the skies.
+text: >
+  Winged Beast: Possessing powerful wings that enable you to soar through the skies, you rise above your enemies and strike from the skies.
+  (1)-[Passive]: Gain access to the Soar Special Maneuver (see — Special Maneuvers).
+  (2)-[Passive]: While in the Low Sky or High Sky Battle Environment, increase your Defense Value and Speed by 1(bT).
+  (3)-[Passive]: While in the Low Sky or High Sky Battle Environment, reduce the Ki Point Cost to use your Boosted Speed through the Movement Maneuver by 1(bT).
+  (4)-[Triggered, 1/Round]: If you use the Soar Maneuver, you may use any Standard Maneuver with an Action Cost of 1 Action immediately afterwards as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+allow maneuver.soar;
+# (2), (3)
+if (inSky) {
+    defenseValue += 1(bT);
+    speed.normal += 1(bT);
+    movement.boostedKiCost -= 1(bT);
+}
+# (4) The Soar used: an Out-of-Sequence button on each Standard Maneuver of 1 Action, till one is used or the Round ends, once a Round
+# (use-maneuver.mjs, actor-character-sheet.mjs).
+allow winged.afterSoar;

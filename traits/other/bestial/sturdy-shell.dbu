@@ -1,0 +1,26 @@
+id: sturdy-shell
+name: Sturdy Shell
+order: 18
+naturalArmor: Shell
+naturalArmorQuality: dense-armor
+description: >
+  Your body is protected by a heavy duty shell. Once your defenses are broken, however, you become much more agile. (by Idios of the DBU Discord)
+text: >
+  Sturdy Shell: Your body is protected by a heavy duty shell. Once your defenses are broken, however, you become much more agile. (by Idios of the DBU Discord)
+  (1)-[Passive, Ruling]: Upon gaining this Bestial Trait, gain a ‘Shell’. Your Shell is Natural Armor (see — Natural Armor).
+  (2)-[Passive]: Your Shell gains the Dense Armor Apparel Quality. This Quality does not occupy any Quality Slots.
+  (3)-[Passive]: While your Shell is unbroken, halve any Collision Damage you would suffer.
+  (4)-[Triggered/Threshold]: You may reduce your Shell’s Break Value by 1 to increase your Dice Score for this Health Threshold’s Steadfast Check by 1.
+  (5)-[Triggered, 1/Encounter]: If your Shell is broken, increase your Combat rolls by ½ of its Apparel Bonus (rounded up) until the end of your next turn.
+
+---
+
+[passive]
+# (1), (2) Its header's `naturalArmor` and `naturalArmorQuality`: the Shell made on the Gear tab, Dense Armor on it in no Slot.
+# (3) While it is Active and not broken (chat.mjs collisionHalved).
+allow shell.collision;
+# (4) A box in the Steadfast Check's window while it has Break Value: 1 of it for 1 (chat.mjs rollSteadfastCheck).
+allow shell.steadfast;
+# (5) Broken in a Combat Encounter: asked, once an Encounter - half its Apparel Bonus (rounded up) on your Combat Rolls till the
+# end of your next turn (dbu-ttrpg.mjs, the hook that sees it break; Shell Burst, its mark).
+allow shell.burst;

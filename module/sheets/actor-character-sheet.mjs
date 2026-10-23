@@ -416,6 +416,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       signatureInstant: DBUCharacterSheet._onSignatureInstant,
       glassInstant: DBUCharacterSheet._onGlassInstant,
       burrowInstant: DBUCharacterSheet._onBurrowInstant,
+      wingedOutOfSequence: DBUCharacterSheet._onWingedOutOfSequence,
       spiritInstant: DBUCharacterSheet._onSpiritInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
       flipInstant: DBUCharacterSheet._onFlipInstant,
@@ -1635,8 +1636,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
             glassInstant: Boolean(maneuver.movement) && (this.actor.system.effects?.slots?.["movement.glassInstant"] === true),
             // Burrowing Beast (5): "While you are in Cover, you may use the Movement Maneuver as an Instant Maneuver" - once a Round.
-            burrowInstant: Boolean(maneuver.movement) && (this.actor.system.effects?.slots?.["movement.burrowInstant"] === true)
-              && Boolean(this.actor.system.battlefield?.cover?.active),
+            burrowInstant: Boolean(maneuver.movement) && (((this.actor.system.effects?.slots?.["movement.burrowInstant"] === true)
+              && Boolean(this.actor.system.battlefield?.cover?.active))
+              // Underwater Beast (4): "If you are in the Underwater Battle Environment, you can use the Movement Maneuver as an Instant".
+              || ((this.actor.system.effects?.slots?.["movement.underwaterInstant"] === true)
+                && (this.actor.system.battlefield?.environment === "underwater-environment")
+                && !((Number(this.actor.system.battlefield?.highEnvironment) || 0) > 0))),
+            // Winged Beast (4): the Soar just used - a Standard Maneuver of 1 Action, out of sequence.
+            wingedOutOfSequence: (this.actor.system.effects?.slots?.["winged.afterSoar"] === true) && (maneuver.type === "standard")
+              && (Number(maneuver.actionCost) === 1) && !maneuver.actionCostOpen && !(maneuver.actionCostMax > 1)
+              && (this.actor.getFlag("dbu-ttrpg", "wingedSoared") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`),
             // Demonic Creativity: "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an
             // Action Cost of 1 as an Out-of-Sequence Maneuver."
             creativeOutOfSequence: (this.actor.system.effects?.slots?.["demonicPower.outOfSequence"] === true)
@@ -6087,18 +6096,35 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.actor.setFlag("dbu-ttrpg", "spiritInstantEncounter", encounter);
   }
 
-  /** Burrowing Beast (5): the Movement Maneuver as an Instant, in Cover - once a Round. */
+  /**
+   * Burrowing Beast (5): the Movement Maneuver as an Instant, in Cover - once a Round. Underwater Beast (4): the same in the Underwater
+   * Battle Environment - once a Round of its own.
+   */
   static async _onBurrowInstant(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
-    if (!item || (this.actor.system.effects?.slots?.["movement.burrowInstant"] !== true)) return;
-    if (!this.actor.system.battlefield?.cover?.active) return ui.notifications.warn(`${this.actor.name} is not in Cover.`);
+    if (!item) return;
+    const slots = this.actor.system.effects?.slots ?? {};
+    const burrow = (slots["movement.burrowInstant"] === true) && Boolean(this.actor.system.battlefield?.cover?.active);
+    const swim = (slots["movement.underwaterInstant"] === true) && (this.actor.system.battlefield?.environment === "underwater-environment")
+      && !((Number(this.actor.system.battlefield?.highEnvironment) || 0) > 0);
     const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-    if (this.actor.getFlag("dbu-ttrpg", "burrowMoveRound") === round) {
-      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
-    }
+    const flag = [burrow ? "burrowMoveRound" : "", swim ? "swimMoveRound" : ""].filter(Boolean)
+      .find(each => this.actor.getFlag("dbu-ttrpg", each) !== round);
+    if (!burrow && !swim) return ui.notifications.warn(`${this.actor.name} is neither in Cover nor Underwater.`);
+    if (!flag) return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
-    return this.actor.setFlag("dbu-ttrpg", "burrowMoveRound", round);
+    return this.actor.setFlag("dbu-ttrpg", flag, round);
+  }
+
+  /** Winged Beast (4): a Standard Maneuver of 1 Action right after the Soar, out of sequence - once a Round. */
+  static async _onWingedOutOfSequence(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (!item || (this.actor.getFlag("dbu-ttrpg", "wingedSoared") !== round)) return;
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, definitionOf(item), { outOfSequence: true })) return;
+    return this.actor.update({ "flags.dbu-ttrpg.wingedRound": round, "flags.dbu-ttrpg.-=wingedSoared": null });
   }
 
   static async _onGlassInstant(event, target) {

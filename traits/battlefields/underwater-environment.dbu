@@ -51,4 +51,7 @@ text: >
 # 1(bT) and nothing else. What it costs is not the landing.
 
 [passive]
-speed.normal *= 0.5;
+# Underwater Beast (2): "ignore the penalties to your Speed from the Underwater Battle Environment".
+if (!holdsTrait("underwater-beast")) {
+    speed.normal *= 0.5;
+}

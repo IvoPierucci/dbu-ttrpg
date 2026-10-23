@@ -1924,9 +1924,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Elemental Adaptation (3): "If your Resisted Element is a Connected Profile of a Battle Weather, ignore the effects of that Battle
     // Weather" - felt at Tier 0.
     const connected = weather.id ? String(getTrait(weather.id)?.profile ?? "") : "";
-    const adapted = Boolean(connected) && Array.from(this.parent?.items ?? []).some(item => (item.type === "racial")
+    const adapted = (Boolean(connected) && Array.from(this.parent?.items ?? []).some(item => (item.type === "racial")
       && getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.resistedElement
-      && (item.system?.chosen ?? []).some(entry => String(entry.value ?? "").replace(/([A-Z])/g, "-$1").toLowerCase() === connected));
+      && (item.system?.chosen ?? []).some(entry => String(entry.value ?? "").replace(/([A-Z])/g, "-$1").toLowerCase() === connected)))
+      // Weather Resilient (1): "You are immune to the effects of any Weather Effects from that selected Battle Weather."
+      || (Boolean(weather.id) && Array.from(this.parent?.items ?? []).some(item => (item.type === "racial")
+        && getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.resistsChosenWeather
+        && (item.system?.chosen ?? []).some(entry => entry.value === weather.id)));
     const resisted = adapted ? Infinity : weatherResisted(Array.from(this.parent?.items ?? []), weather.id,
       getTrait, early);
     if (this.battlefield?.weather) this.battlefield.weather.felt = Math.max(0, set - resisted);

@@ -939,6 +939,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.alternateSight && clash.result && !clash.alternateSight.applied) await settleAlternateSight(message, clash);
   if (clash.clawsProne && clash.result && !clash.clawsProne.applied) await settleClaws(message, clash);
   if (clash.venom && clash.result && !clash.venom.applied) await settleVenom(message, clash);
+  if (clash.quills && clash.result && !clash.quills.applied) await settleQuills(message, clash);
   if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
     await settleCutthroatClash(message, clash);
   }
@@ -4113,6 +4114,15 @@ async function sayApparelBreak(target, amount = 1) {
 }
 
 /**
+ * Whether Collision Damage is halved for them: Rubbery Body's "Halve any Collision Damage you receive" - or Sturdy Shell (3)'s
+ * "While your Shell is unbroken", its Natural Armor Active and not broken.
+ */
+function collisionHalved(target) {
+  const slots = target?.system?.effects?.slots ?? {};
+  return (slots["collision.halved"] === true) || ((slots["shell.collision"] === true) && Boolean(target.system.naturalArmor?.active));
+}
+
+/**
  * What the Throw Maneuver's thrown thing does to the one it hit: Collision Damage - "reduce
  * your Life Points by the Hardness Value of the Feature you Collided with", at the base Tier
  * of the one hit, as any Collision is - or the Hardness Value its own Effects set outright.
@@ -4134,8 +4144,8 @@ async function landThrown(attack, thrower, target) {
     ? Number(thrown.value)
     : hardnessValue(thrown.rank, target.system.baseTierOfPower ?? 1);
   const escape = Handlebars.escapeExpression;
-  // Rubbery Body: "Halve any Collision Damage you receive."
-  const rubbery = target.system.effects?.slots?.["collision.halved"] === true;
+  // Rubbery Body: "Halve any Collision Damage you receive." Sturdy Shell (3) too.
+  const rubbery = collisionHalved(target);
   await reduceLifePoints(target, rubbery ? Math.floor(value / 2) : value,
     { reason: `${thrown.name} (Collision Damage${rubbery ? ", halved" : ""})` });
   // Bouncy Physique: Collision Damage received - the Movement, out of sequence, on this note.
@@ -19397,6 +19407,60 @@ async function assassinateCategory(attacker, struck) {
   return true;
 }
 
+/** The Natural Armor a Trait of this id gave - Sturdy Shell's Shell, Treacherous Spikes' Quillset - or null. */
+function grantedArmor(actor, sourceId) {
+  const giver = Array.from(actor?.items ?? []).find(item => item.flags?.["dbu-ttrpg"]?.sourceId === sourceId);
+  return giver ? (Array.from(actor.items).find(item => (item.flags?.["dbu-ttrpg"]?.grantedBy === giver.id)
+    && (item.flags?.["dbu-ttrpg"]?.naturalArmor === true)) ?? null) : null;
+}
+
+/**
+ * Treacherous Spikes (4): "either select an Opponent who is not at Long Range, or select all Opponents within a Large Cone AoE
+ * (starting from you). Make a Clash (Corporeal/Impulsive) against the selected Opponent(s)." The Opponents targeted - which, and
+ * the Cone, the table's.
+ */
+export async function quillBurst(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const aimed = [...new Map(Array.from(game.user?.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid) && !allies.has(other.uuid)).map(other => [other.uuid, other])).values()];
+  if (!aimed.length) {
+    ui.notifications.warn("Treacherous Spikes: target an Opponent not at Long Range, or every Opponent in a Large Cone.");
+    return UNSPENT;
+  }
+  for (const other of aimed) {
+    await postSaveClash(actor, other, { maneuverName: "Treacherous Spikes", saves: ["corporeal", "impulsive"],
+      reason: `Win and ${other.name} loses ${9 * Math.max(1, Number(actor.system.baseTierOfPower) || 1)} Life Points.`,
+      quills: { applied: false } });
+  }
+  return true;
+}
+
+/** Treacherous Spikes (4) won: "reduce their Life Points by 9(bT) and then reduce the Break Value for your Quillset by 1." */
+async function settleQuills(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, quills: { ...clash.quills, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Treacherous Spikes: no quill lands.");
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  const lost = 9 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  await requestActorUpdate(target, { "system.life.value": (Number(target.system.life?.value) || 0) - lost });
+  const quillset = grantedArmor(actor, "treacherous-spikes");
+  if (quillset) await quillset.update({ "system.crafted.breakLost": (Number(quillset.system.crafted?.breakLost) || 0) + 1 });
+  return settledNote(message, `Treacherous Spikes: ${target.name} loses ${lost} Life Points${quillset ? `; ${quillset.name} 1 Break Value` : ""}.`);
+}
+
+/** Weather Resilient (3): "If you are in your chosen Battle Weather, you may use a Surge as an Instant Maneuver." */
+export async function weatherSurge(actor) {
+  const item = Array.from(actor?.items ?? []).find(each => each.flags?.["dbu-ttrpg"]?.sourceId === "weather-resilient");
+  const chosen = (item?.system?.chosen ?? []).map(entry => entry.value).filter(Boolean);
+  if (!chosen.includes(String(actor.system.battlefield?.weather?.id ?? ""))) {
+    ui.notifications.warn(`${actor.name} is not in the chosen Battle Weather.`);
+    return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  }
+  return takeSurge(actor, { source: "Weather Resilient" });
+}
+
 /** Fangs' Venomous: "If you deal Damage to an Opponent with your Bite Attack Maneuver, make a Corporeal Clash against that Opponent." */
 async function venomousBite(biter, target) {
   if (biter?.system?.effects?.slots?.["fangs.venomous"] !== true) return;
@@ -23766,6 +23830,10 @@ export async function postAttack(actor, target, maneuver,
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Tail (Bestial) (2): "Increase the Strike Roll of your Tail Attack Maneuver by 1(T)."
+  if (maneuver.tailAttack && (actor.system.effects?.slots?.["tailBeast.strike"] === true) && !reflecting) {
+    strikeExtra = [...strikeExtra, { label: "Tail", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
   // Fangs' Savage: "Increase the Wound Roll of your Bite Attack Maneuver by 2(T)."
   if ((maneuver.id === "bite-attack") && (actor.system.effects?.slots?.["fangs.savage"] === true) && !reflecting) {
@@ -29749,7 +29817,7 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // Damage they suffer by 1/2 of your Might multiplied by the rank of the High Environment".
   const total = amount + Math.max(0, Number(extra) || 0);
   // Rubbery Body: "Halve any Collision Damage you receive" - all of it, what was added on top too.
-  const ownHalving = target.system.effects?.slots?.["collision.halved"] === true;
+  const ownHalving = collisionHalved(target);
   const received = ownHalving ? Math.floor(total / 2) : total;
   const changed = [
     doubled ? `doubled by ${doubledBy}` : "",
@@ -31811,6 +31879,11 @@ export async function rollSteadfastCheck(actor) {
   // Flexible Muscle (2): "While you only possess 1 Super Stack ... you may choose to automatically succeed" - once an Encounter.
   const flexible = (actor.system.effects?.slots?.["flexibleMuscle.autoPass"] === true) && (actor.system.superStack?.stacks === 1)
     && (actor.getFlag?.(SCOPE, "flexibleMuscleEncounter") !== (game.combat?.id ?? "none"));
+  // Sturdy Shell (4): "You may reduce your Shell's Break Value by 1 to increase your Dice Score for this Health Threshold's Steadfast
+  // Check by 1" - while it has Break Value.
+  const shell = (actor.system.effects?.slots?.["shell.steadfast"] === true) ? grantedArmor(actor, "sturdy-shell") : null;
+  const shellLeft = shell ? (Number((await import("./gear.mjs")).craftedReading(shell.system.crafted, { getTrait, difficulties: {},
+    baseTier: actor.system.baseTierOfPower })?.breakLeft) || 0) : 0;
   const ready = await prepareRoll(actor, [], `Steadfast Check - ${THRESHOLDS[rolled].label}`, `Needing ${target}`,
     { offerWilling: false,
       // Heart of Glass (4): failed without rolling, for a Ki Surge out of sequence and Surging after.
@@ -31819,7 +31892,8 @@ export async function rollSteadfastCheck(actor) {
         ...((actor.system.effects?.slots?.["steadfast.heartOfGlass"] === true) ? [{ name: "heartOfGlass",
         label: "Heart of Glass: fail it", tip: "No roll: a Ki Surge as an Out-of-Sequence Maneuver, then Surging until the end of your turn if you like." }] : []),
         // Karmic Reflection (4): a Negative Energy for 1 on the Dice Score - up to 2; passed, 2(T) of Ki each.
-        ...karmicBoxes],
+        ...karmicBoxes,
+        ...((shellLeft > 0) ? [{ name: "shell", label: `Sturdy Shell: 1 of ${shell.name}'s Break Value, +1`, tip: "Its Break Value goes down by 1." }] : [])],
       pick: lifeSteps.length ? { label: "Earthling Resolve",
         tip: "Spend Life Points: 1 to the Dice Score for every 2(bT). Once an Encounter.",
         options: [{ value: "0", label: "None" },
@@ -31858,6 +31932,9 @@ export async function rollSteadfastCheck(actor) {
   // Wrath of the Dragon (4): 2 off it for each spent on them - used up by this Check.
   const wrath = Number(actor.getFlag?.(SCOPE, "wrathSteadfast")) || 0;
   if (wrath) await actor.unsetFlag(SCOPE, "wrathSteadfast");
+  // Sturdy Shell (4): its Break Value 1 lower for 1 on it.
+  const shellSpent = (shellLeft > 0) && (ready?.boxes ?? []).includes("shell");
+  if (shellSpent) await shell.update({ "system.crafted.breakLost": (Number(shell.system.crafted?.breakLost) || 0) + 1 });
   // Blood in the Water (2): the same, its own.
   const blood = Number(actor.getFlag?.(SCOPE, "bloodSteadfast")) || 0;
   if (blood) await actor.unsetFlag(SCOPE, "bloodSteadfast");
@@ -31878,7 +31955,7 @@ export async function rollSteadfastCheck(actor) {
   const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : "",
     thresholdDice ? String(thresholdDice) : "", lifeSpent ? `${lifeSpent}[Earthling Resolve]` : "",
     karmicSpent ? `${karmicSpent}[Karmic Reflection]` : "", wrath ? `-${wrath}[Wrath of the Dragon]` : "",
-    blood ? `-${blood}[Blood in the Water]` : ""].filter(Boolean);
+    blood ? `-${blood}[Blood in the Water]` : "", shellSpent ? "1[Sturdy Shell]" : ""].filter(Boolean);
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   // Failed, what may pass it instead is asked first - before anything that failing does.

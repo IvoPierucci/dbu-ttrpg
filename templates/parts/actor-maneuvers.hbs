@@ -87,7 +87,12 @@
             {{#if maneuver.burrowInstant}}
             <button type="button" class="maneuver-control" data-action="burrowInstant"
                     data-item-id="{{maneuver.itemId}}"
-                    data-tooltip="Burrowing Beast: as an Instant Maneuver, in Cover (1/Round)">Instant</button>
+                    data-tooltip="As an Instant Maneuver - Burrowing Beast in Cover, Underwater Beast Underwater (1/Round each)">Instant</button>
+            {{/if}}
+            {{#if maneuver.wingedOutOfSequence}}
+            <button type="button" class="maneuver-control" data-action="wingedOutOfSequence"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Winged Beast: out of sequence, right after the Soar (1/Round)">Out of Sequence</button>
             {{/if}}
             {{#if maneuver.glassInstant}}
             <button type="button" class="maneuver-control" data-action="glassInstant"

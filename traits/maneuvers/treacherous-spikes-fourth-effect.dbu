@@ -1,0 +1,21 @@
+id: treacherous-spikes-fourth-effect
+name: Treacherous Spikes
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: treacherous-spikes
+fromEffect: 4
+source: Core Rule
+description: >
+  Treacherous Spikes' fourth effect, as a Maneuver: a Clash (Corporeal/Impulsive) at each targeted Opponent - won, 9(bT) off their Life, 1 off the Quillset's Break Value.
+text: >
+  (4)-[1/Round]: As a Standard Action with an Action Cost of 1 Action, either select an Opponent who is not at Long Range, or select all Opponents within a Large Cone AoE (starting from you). Make a Clash (Corporeal/Impulsive) against the selected Opponent(s). If you win, reduce their Life Points by 9(bT) and then reduce the Break Value for your Quillset by 1.
+
+---
+
+# The Opponents you have targeted - one not at Long Range, or all in a Large Cone, the table's; a Clash at each (chat.mjs quillBurst).
+[on used]
+quillBurst();

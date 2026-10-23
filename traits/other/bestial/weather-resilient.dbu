@@ -1,0 +1,23 @@
+id: weather-resilient
+name: Weather Resilient
+order: 22
+# (1) The Battle Weather, chosen as it is gained.
+choose: weather
+resistsChosenWeather: true
+description: >
+  You are perfectly adapted to a specific type of weather.
+text: >
+  Weather Resilient: You are perfectly adapted to a specific type of weather.
+  (1)-[Passive]: Select a Battle Weather. You are immune to the effects of any Weather Effects from that selected Battle Weather.
+  (2)-[Passive]: While you are within your selected Battle Weather, increase your Combat Rolls by 1(T).
+  (3)-[1/Encounter]: If you are in your chosen Battle Weather, you may use a Surge as an Instant Maneuver.
+
+---
+
+[passive]
+# (1) Its header's `resistsChosenWeather`: that Battle Weather felt at Tier 0 - ignored (actor-character.mjs).
+# (2)
+if (inWeather("$choice")) {
+    combatRolls += 1(T);
+}
+# (3) Its own Maneuver, on the Maneuvers tab (maneuvers/weather-resilient-third-effect.dbu).

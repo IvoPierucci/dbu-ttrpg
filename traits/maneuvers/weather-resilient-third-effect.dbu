@@ -1,0 +1,21 @@
+id: weather-resilient-third-effect
+name: Weather Resilient
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: weather-resilient
+fromEffect: 3
+source: Core Rule
+description: >
+  Weather Resilient's third effect, as a Maneuver: in your chosen Battle Weather, a Surge as an Instant.
+text: >
+  (3)-[1/Encounter]: If you are in your chosen Battle Weather, you may use a Surge as an Instant Maneuver.
+
+---
+
+# Refused out of that Weather; which Surge, asked (chat.mjs weatherSurge).
+[on used]
+weatherSurge();

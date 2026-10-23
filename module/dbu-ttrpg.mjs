@@ -162,7 +162,7 @@ Hooks.on("deleteItem", item => forget(item.uuid));
 Hooks.on("updateItem", async (item, changes, options, userId) => {
   if ((userId !== game.user.id) || !game.combat?.started || (item.system?.crafted?.kind !== "apparel")) return;
   if (!foundry.utils.hasProperty(changes, "system.crafted.breakLost") && !foundry.utils.hasProperty(changes, "system.crafted.destroyed")) return;
-  if (item.flags?.["dbu-ttrpg"]?.naturalArmor === true) return;
+  if (item.flags?.["dbu-ttrpg"]?.naturalArmor === true) return shellBroken(item);
   const actor = item.parent;
   if (!actor) return;
   const { craftedReading } = await import("./gear.mjs");
@@ -203,6 +203,29 @@ Hooks.on("createItem", async (item, options, userId) => {
   await bestialLimit(item.parent, item);
 });
 Hooks.on("updateItem", (item, changes, options, userId) => taillessTalents(item, userId));
+
+// Sturdy Shell (5): "If your Shell is broken, increase your Combat rolls by 1/2 of its Apparel Bonus (rounded up) until the end of
+// your next turn" - asked, once an Encounter; Shell Burst, its mark, its stacks that half.
+async function shellBroken(item) {
+  const actor = item.parent;
+  if (!actor || (actor.system.effects?.slots?.["shell.burst"] !== true)) return;
+  const giver = actor.items.get(item.flags?.["dbu-ttrpg"]?.grantedBy ?? "");
+  if (giver?.flags?.["dbu-ttrpg"]?.sourceId !== "sturdy-shell") return;
+  const { craftedReading } = await import("./gear.mjs");
+  const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier: actor.system.baseTierOfPower });
+  if (!item.system.crafted.destroyed && !((Number(reading?.breakValue) || 0) > 0 && (reading.breakLeft === 0))) return;
+  if (actor.getFlag("dbu-ttrpg", "shellBurstEncounter") === game.combat.id) return;
+  const half = Math.ceil((Number(reading?.bonus) || 0) / 2);
+  if (!half) return;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  if ((await askPlayerChoice(actor, `${actor.name}: Sturdy Shell - ${item.name} broken`,
+    [{ value: "yes", label: `Combat Rolls +${half} till the end of your next turn (once an Encounter)` }, { value: "no", label: "No" }])) !== "yes") return;
+  await actor.setFlag("dbu-ttrpg", "shellBurstEncounter", game.combat.id);
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "shell-burst", half);
+  const { expiresAt } = await import("./effects/moments-runtime.mjs");
+  await expiresAt(actor, "shell-burst", "next-turn", half);
+}
 
 // Talents come from the Progression tab: the Talent Addition rows reached, or the Power Level moved - made to match, by
 // whoever made the change.

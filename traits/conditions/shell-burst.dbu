@@ -1,0 +1,15 @@
+id: shell-burst
+name: Shell Burst
+kind: conditions
+# Not a Combat Condition: Sturdy Shell (5)'s - its stacks the Combat Rolls given, till the end of the next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Sturdy Shell: the Shell broken - Combat Rolls raised by half its Apparel Bonus (rounded up) until the end of your next turn.
+text: >
+  Sturdy Shell (5): If your Shell is broken, increase your Combat rolls by 1/2 of its Apparel Bonus (rounded up) until the end of your next turn.
+
+---
+
+[passive]
+combatRolls += stacks;

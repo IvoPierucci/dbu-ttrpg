@@ -1,0 +1,28 @@
+id: treacherous-spikes
+name: Treacherous Spikes
+order: 20
+naturalArmor: Quillset
+naturalArmorQuality: spiked
+platingBonusPerTier: 1
+platingBonusPerTierWhile: power
+description: >
+  With the spines or quills emerging from your body, you defend passively against any attacks from predators or other foes.
+text: >
+  Treacherous Spikes: With the spines or quills emerging from your body, you defend passively against any attacks from predators or other foes.
+  (1)-[Passive, Ruling]: Upon gaining this Bestial Trait, gain a ‘Quillset’. Your Quillset is Natural Armor (see — Natural Armor).
+  (2)-[Passive]: Your Quillset gains the Spiked Apparel Quality. This Quality does not occupy any Quality Slots.
+  (3)-[Passive]: While you possess a stack of Power, increase the Apparel Bonus for your Quillset by 1(T).
+  (4)-[1/Round]: As a Standard Action with an Action Cost of 1 Action, either select an Opponent who is not at Long Range, or select all Opponents within a Large Cone AoE (starting from you). Make a Clash (Corporeal/Impulsive) against the selected Opponent(s). If you win, reduce their Life Points by 9(bT) and then reduce the Break Value for your Quillset by 1.
+  (5)-[Triggered, 1/Round]: If you use a Healing Surge, your Quillset regains 1 Break Value. If the piece of Apparel was broken, it stops being broken (Break Value goes from 0 to 1).
+
+---
+
+# (1), (2) Its header's `naturalArmor` and `naturalArmorQuality`: the Quillset made on the Gear tab, Spiked on it in no Slot.
+# (3) Its header's `platingBonusPerTier`, while a stack of Power is held (`platingBonusPerTierWhile`).
+# (4) Its own Maneuver, on the Maneuvers tab (maneuvers/treacherous-spikes-fourth-effect.dbu).
+
+# (5) A Healing Surge about to be used, with Break Value to get back: 1 of it, broken no more (natural-armor.mjs repairNaturalArmor).
+# Automatic by default, its Triggered/Automatic button.
+[triggered/healing-surge, 1/round, effect 5]
+requires platingMendable;
+plating.mend = true;

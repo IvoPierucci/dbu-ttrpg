@@ -457,6 +457,19 @@ const PREDICATES = {
   /** Arboreal (1): "if the Light Level ... is Normal or higher" - the Level this character is in, as they treat it. */
   lightNormalOrHigher: scope => lightLevelOf(scope.data, traitLookup) >= 0,
 
+  /** A Racial or Other Trait held by its id - and applied: one the Bestial Limit set aside, not (Underwater Beast's). */
+  holdsTrait: (scope, id) => {
+    const items = Array.from(scope.data?.parent?.items ?? []);
+    return items.some(item => (item.type === "racial") && (item.flags?.["dbu-ttrpg"]?.sourceId === String(id))
+      && !(item.flags?.["dbu-ttrpg"]?.bestialOff && items.some(other => other.id === item.flags["dbu-ttrpg"].bestialOff)));
+  },
+
+  /** In that Battle Weather - Weather Resilient's "within your selected Battle Weather". */
+  inWeather: (scope, id) => Boolean(id) && (String(scope.data?.battlefield?.weather?.id ?? "") === String(id)),
+
+  /** In the Low Sky or High Sky Environment - Winged Beast's. */
+  inSky: scope => [1, 2].includes(Number(scope.data?.battlefield?.highEnvironment) || 0),
+
   /** Elemental Adaptation (3), (4): is this Profile the Connected Profile of a Battle Weather. */
   // A Profile's id is camelCase (elementalFire), a Weather file's `profile:` kebab-case (elemental-fire).
   weatherConnected: (scope, profile) => weatherProfiles()
