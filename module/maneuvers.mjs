@@ -1767,6 +1767,39 @@ export async function askHeavyWound(actor, declared) {
   return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: "Heavy Weapons Specialist", value: tenth }] };
 }
 
+/** Dual Wielding Specialist (2): 2+ Weapons wielded, its once a Round - one of its two - not spent yet. */
+async function dualOpen(actor) {
+  if (actor?.system?.effects?.slots?.["dualWielding.either"] !== true) return false;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "dualWieldingRound") === round) return false;
+  const { wieldedWeapons } = await import("./gear.mjs");
+  return wieldedWeapons(Array.from(actor.items ?? [])).length >= 2;
+}
+
+/** Dual Wielding Specialist (2), its first: a Parry without its Counter Action - asked; taken, the Round's spent. */
+export async function askDualParry(actor) {
+  if (!await dualOpen(actor)) return false;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Dual Wielding Specialist` },
+    content: "<p data-tooltip=\"Once a Round - this, or half your Might on an Armed Attack's Wound\">This Parry without a Counter Action?</p>",
+    rejectClose: false });
+  if (!yes) return false;
+  await actor.setFlag("dbu-ttrpg", "dualWieldingRound", `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
+  return true;
+}
+
+/** Dual Wielding Specialist (2), its second: "When making an Armed Attack, increase the Wound Roll by 1/2 of your Might." */
+export async function askDualWound(actor, declared) {
+  if (!declared?.weapon || declared.weapon.unarmed || !await dualOpen(actor)) return declared;
+  const half = Math.floor((Number(actor.system.might) || 0) / 2);
+  if (half <= 0) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Dual Wielding Specialist` },
+    content: `<p data-tooltip="Once a Round - this, or a Parry without a Counter Action">+${half} Wound (half your Might) on this Armed Attack?</p>`,
+    rejectClose: false });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "dualWieldingRound", `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
+  return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: "Dual Wielding Specialist (1/2 Might)", value: half }] };
+}
+
 /** Dueling Specialist (2) on an attack's Strike, as it is declared. */
 export async function askDuelingStrike(actor, declared) {
   if (!declared) return declared;

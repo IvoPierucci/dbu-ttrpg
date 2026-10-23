@@ -1,0 +1,24 @@
+id: dual-wielding-specialist
+name: Dual Wielding Specialist
+talentCategory: weapon
+prerequisites: Weapon Specialist
+description: >
+  Adapted to wielding two Weapons simultaneously, you can press the advantage more easily while using one Weapon to defend.
+text: >
+  Dual Wielding Specialist: Adapted to wielding two Weapons simultaneously, you can press the advantage more easily while using one Weapon to defend.
+  –Prerequisites: Weapon Specialist
+  (1)-[Passive]: While you are wielding 2+ Weapons, increase your Strike Rolls by 1(T).
+  (2)-[1/Round]: While you are wielding 2+ Weapons, you can either:
+  * Use the Parry effect of the Defend Maneuver without spending a Counter Action.
+  * When making an Armed Attack, increase the Wound Roll by 1/2 of your Might.
+
+---
+
+[passive]
+# (1)
+if (weaponsWieldedAtLeast(2)) {
+    strike += 1(T);
+}
+# (2) Once a Round, one or the other, asked where it applies: a Parry chosen - without its Counter Action (chat.mjs
+# chooseDefence); an Armed Attack declared - half your Might, rounded down, on its Wound (maneuvers.mjs askDualWound).
+allow dualWielding.either;

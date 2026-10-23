@@ -30261,7 +30261,10 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
     && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Perfect Counter` },
       content: "<p data-tooltip=\"Once a Round\">This Parry without a Counter Action?</p>", rejectClose: false });
   if (perfect) await target.setFlag(SCOPE, "perfectParryRound", roundKey());
-  if (!free && !perfect && !await spendActions(target, 1, "counter")) return;
+  // Dual Wielding Specialist (2): "Use the Parry effect of the Defend Maneuver without spending a Counter Action" - 2+ Weapons
+  // wielded, asked, once a Round (one or the other of its two).
+  const dual = !free && !perfect && (chosen.defence === "parry") && await (await import("./maneuvers.mjs")).askDualParry(target);
+  if (!free && !perfect && !dual && !await spendActions(target, 1, "counter")) return;
   if (free) spendWriting(target, answered, "defend.free");
   // Jolt Counter (2): asked as Cross Counter is chosen, against an attack it answers - once an Encounter.
   const jolt = ((chosen.defence === "crossCounter") && joltOpen(target, attack)

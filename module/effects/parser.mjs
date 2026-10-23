@@ -508,7 +508,9 @@ const PREDICATE_NAMES = new Set([
   // That Talent held, by its id - Tai Chi Expert's, on Tai Chi Practitioner.
   "hasTalent",
   // One Weapon wielded, of that Size (Light Weapons Specialist's).
-  "singleWeaponOf"
+  "singleWeaponOf",
+  // That many Weapons wielded or more (Dual Wielding Specialist's).
+  "weaponsWieldedAtLeast"
 ]);
 
 /** The ones written without brackets, because they take nothing. */
