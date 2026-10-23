@@ -15540,15 +15540,27 @@ export async function spectatorCheer(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated);
   if (!allies.length) return UNSPENT;
-  const picked = (allies.length === 1) ? allies[0].uuid : await askPlayerChoice(actor, `${actor.name}: Spectator - an Ally`,
-    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
-  const ally = allies.find(each => each.uuid === picked);
-  if (!ally) return UNSPENT;
+  // Dedicated Watcher (1): "For the 1st effect of the Spectator State, you may target an additional Ally" - asked a second time.
+  const count = (actor.system?.effects?.slots?.["watcher.extraAlly"] === true) ? 2 : 1;
+  const chosen = [];
+  for (let index = 0; index < count; index++) {
+    const left = allies.filter(each => !chosen.includes(each));
+    if (!left.length) break;
+    const picked = ((left.length === 1) && !index) ? left[0].uuid : await askPlayerChoice(actor,
+      `${actor.name}: Spectator - ${index ? "an additional Ally (Dedicated Watcher)" : "an Ally"}`,
+      [...left.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+    const ally = left.find(each => each.uuid === picked);
+    if (!ally) break;
+    chosen.push(ally);
+  }
+  if (!chosen.length) return UNSPENT;
   const { setCondition } = await import("./conditions.mjs");
-  if (!await setCondition(ally, "cheered", Math.max(1, Number(actor.system.baseTierOfPower) || 1))) return;
-  await lasting(actor, { kind: KINDS.CONDITION, key: "cheered", edge: EDGES.START, on: ally.uuid, source: "Spectator" });
+  for (const ally of chosen) {
+    if (!await setCondition(ally, "cheered", Math.max(1, Number(actor.system.baseTierOfPower) || 1))) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key: "cheered", edge: EDGES.START, on: ally.uuid, source: "Spectator" });
+  }
   const cheered = Array.from(actor.getFlag?.(SCOPE, "cheered") ?? []);
-  return requestActorUpdate(actor, { [`flags.${SCOPE}.cheered`]: [...new Set([...cheered, ally.uuid])] });
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.cheered`]: [...new Set([...cheered, ...chosen.map(ally => ally.uuid)])] });
 }
 
 /** Spectator left: Cheered off whoever it was given to - "or until you leave the Spectator State". */
@@ -20158,7 +20170,7 @@ function weakButtons(message, attack, container) {
  * kept on the attack (`balanced`) - on the Defense Value under their Dodge, and on their Soak Value.
  */
 function balancedButtons(message, attack, container) {
-  const done = (attack.balanced ?? []).map(entry => entry.uuid);
+  const done = (attack.balanced ?? []).filter(entry => !entry.source).map(entry => entry.uuid);
   for (const { uuid } of attackTargets(attack)) {
     const target = fromUuidSync(uuid);
     if (!target?.isOwner || done.includes(uuid) || (uuid === attack.attackerUuid)
@@ -20176,7 +20188,7 @@ function balancedButtons(message, attack, container) {
     button.addEventListener("click", async () => {
       button.disabled = true;
       const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
-      if ((fresh.balanced ?? []).some(entry => entry.uuid === uuid) || (target.getFlag?.(SCOPE, "balancedRound") === roundKey())) return;
+      if ((fresh.balanced ?? []).some(entry => (entry.uuid === uuid) && !entry.source) || (target.getFlag?.(SCOPE, "balancedRound") === roundKey())) return;
       const { ki, capacity } = target.system;
       if ((ki.value < cost) || (capacity.remaining < cost)) return ui.notifications.warn(`${target.name} cannot pay ${cost} Ki Points.`);
       await requestActorUpdate(target, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost,
@@ -20187,10 +20199,79 @@ function balancedButtons(message, attack, container) {
   }
 }
 
-/** Balanced Defender (2)'s, on this one's Defense Value - the Dodge it is the base of - or their Soak Value. */
+/**
+ * Balanced Defender (2)'s, on this one's Defense Value - the Dodge it is the base of - or their Soak Value. And what else raises both
+ * for one attack, kept the same way with its `source`: Combat Observation (1)'s, Dedicated Watcher (3)'s.
+ */
 function balancedParts(actor, attack, label) {
-  const entry = (attack?.balanced ?? []).find(each => each.uuid === actor?.uuid);
-  return entry ? [{ label: `Balanced Defender (${label})`, written: "+1(T)", value: Number(entry.value) || 0 }] : [];
+  return (attack?.balanced ?? []).filter(each => each.uuid === actor?.uuid)
+    .map(entry => ({ label: `${entry.source ?? "Balanced Defender"} (${label})`, written: "+1(T)", value: Number(entry.value) || 0 }));
+}
+
+/**
+ * Combat Observation (1): "If you are targeted by an Attacking Maneuver, you may spend a Counter Action to increase your Defense
+ * Value and Soak Value by 1(T) for the duration of that Attacking Maneuver." (2): "When making an Attacking Maneuver, you may spend a
+ * Counter Action to increase your Strike and Wound Rolls by 1(T)". Dedicated Watcher (2), (3): the same for an Ally's attack, or an
+ * Ally targeted, while you are in the Spectator State. Buttons for whoever plays one holding them, till the Strike is rolled - each
+ * once on this attack; the 1(T) theirs who spent it.
+ */
+function observationButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker) return;
+  const button = (label, tooltip, holder, apply) => {
+    const made = document.createElement("button");
+    made.type = "button";
+    made.className = "dbu-clash-button";
+    made.textContent = `${label} - ${holder.name}`;
+    made.dataset.tooltip = tooltip;
+    made.addEventListener("click", async () => {
+      made.disabled = true;
+      const { spendActions } = await import("./combat.mjs");
+      if (!await spendActions(holder, 1, "counter")) return;
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, ...apply(fresh, Math.max(1, Number(holder.system.tierOfPower) || 1)) } });
+    });
+    container.append(made);
+  };
+  const rolls = (holder, source) => (fresh, value) => ({
+    strikeExtra: [...(fresh.strikeExtra ?? []), { label: `${source} (${holder.name})`, written: "+1(T)", value, by: holder.uuid, source }],
+    woundExtra: [...(fresh.woundExtra ?? []), { label: `${source} (${holder.name})`, written: "+1(T)", value, by: holder.uuid, source }] });
+  const gave = (holder, source) => (attack.strikeExtra ?? []).some(part => (part.by === holder.uuid) && (part.source === source));
+  const guarded = (uuid, source) => (attack.balanced ?? []).some(entry => (entry.uuid === uuid) && (entry.source === source));
+  const slot = (holder, key) => holder.system?.effects?.slots?.[key] === true;
+  const spectating = holder => (Number(holder.system?.states?.spectator) || 0) > 0;
+
+  // Combat Observation (2): your own attack.
+  if (attacker.isOwner && slot(attacker, "observation.attack") && !gave(attacker, "Combat Observation")) {
+    button("Combat Observation", "A Counter Action: Strike and Wound +1(T) for this attack.", attacker, rolls(attacker, "Combat Observation"));
+  }
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target || (uuid === attacker.uuid)) continue;
+    // Combat Observation (1): you, targeted.
+    if (target.isOwner && slot(target, "observation.defend") && !guarded(uuid, "Combat Observation")) {
+      button("Combat Observation", "A Counter Action: Defense Value and Soak Value +1(T) for this attack.", target,
+        (fresh, value) => ({ balanced: [...(fresh.balanced ?? []), { uuid, value, source: "Combat Observation" }] }));
+    }
+  }
+  // Dedicated Watcher (2), (3): Spectating - an Ally's attack, an Ally targeted.
+  const watchers = (canvas?.tokens?.placeables ?? []).map(token => token.actor).filter((each, index, all) => each?.isOwner
+    && (all.indexOf(each) === index) && !each.system?.defeated && spectating(each));
+  for (const holder of watchers) {
+    const allies = alliesOnScene(holder);
+    if (slot(holder, "watcher.attack") && (holder.uuid !== attacker.uuid) && allies.some(ally => ally.uuid === attacker.uuid)
+      && !gave(holder, "Dedicated Watcher")) {
+      button(`Dedicated Watcher: ${attacker.name}'s Strike and Wound`, "A Counter Action: +1(T) on both for this attack.", holder,
+        rolls(holder, "Dedicated Watcher"));
+    }
+    if (!slot(holder, "watcher.defend")) continue;
+    for (const { uuid } of attackTargets(attack).filter(entry => (entry.uuid !== holder.uuid) && allies.some(ally => ally.uuid === entry.uuid))) {
+      if (guarded(uuid, `Dedicated Watcher - ${holder.name}`)) continue;
+      const target = fromUuidSync(uuid);
+      button(`Dedicated Watcher: ${target?.name ?? "an Ally"}'s Defense Value and Soak Value`, "A Counter Action: +1(T) on both for this attack.",
+        holder, (fresh, value) => ({ balanced: [...(fresh.balanced ?? []), { uuid, value, source: `Dedicated Watcher - ${holder.name}` }] }));
+    }
+  }
 }
 
 /** Power of the Weak (3)'s, on this one's Dodge or Parry. */
@@ -32515,6 +32596,9 @@ function renderAttack(message, html) {
   if (!result?.wound) catsPawButtons(message, attack, container);
   // Balanced Defender (2): targeted - Ki for the Defense Value and Soak Value, before it is settled.
   if (!result) balancedButtons(message, attack, container);
+  // Combat Observation, Dedicated Watcher: a Counter Action for 1(T) - your attack's Strike and Wound or your Defense and Soak; an
+  // Ally's while Spectating.
+  if (!result) observationButtons(message, attack, container);
   // Spiritual Warrior (3): your Bonded Ally's attack - the Basic Attack at the same Opponent.
   spiritualStrikeButtons(message, attack, container);
   // The Duel Clashes: a wager from each who is in it, then the roll.

@@ -1,0 +1,23 @@
+id: dedicated-watcher
+name: Dedicated Watcher
+talentCategory: racial
+race: shinjin
+prerequisites: Shinjin
+description: >
+  As a non-combatant yourself, you find the greatest success in helping others reach their fullest potential.
+text: >
+  Dedicated Watcher: As a non-combatant yourself, you find the greatest success in helping others reach their fullest potential.
+  –Prerequisites: Shinjin
+  (1)-[Passive]: For the 1st effect of the Spectator State, you may target an additional Ally.
+  (2)-[Triggered]: While you are in the Spectator State, if an Ally makes an Attacking Maneuver, you may spend a Counter Action to increase their Strike and Wound Rolls by 1(T) for the duration of that Attacking Maneuver.
+  (3)-[Triggered]: While you are in the Spectator State, if an Ally is targeted by an Attacking Maneuver, you may spend a Counter Action to increase their Defense Value and Soak Value by 1(T) for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) The Spectator State's Cheer asked twice - a second Ally, or none (chat.mjs spectatorCheer).
+allow watcher.extraAlly;
+# (2), (3) In the Spectator State: buttons on an Ally's attack's card, or one aimed at an Ally - a Counter Action each, 1(T) of
+# yours, once an attack each (chat.mjs observationButtons).
+allow watcher.attack;
+allow watcher.defend;

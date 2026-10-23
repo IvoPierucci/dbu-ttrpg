@@ -1,0 +1,21 @@
+id: combat-observation
+name: Combat Observation
+talentCategory: racial
+race: shinjin
+prerequisites: Shinjin
+description: >
+  By carefully studying your opponents, you are able to accurately predict how they will fight, and adjust your own tactics accordingly.
+text: >
+  Combat Observation: By carefully studying your opponents, you are able to accurately predict how they will fight, and adjust your own tactics accordingly.
+  –Prerequisites: Shinjin
+  (1)-[Triggered]: If you are targeted by an Attacking Maneuver, you may spend a Counter Action to increase your Defense Value and Soak Value by 1(T) for the duration of that Attacking Maneuver.
+  (2)-[Triggered]: When making an Attacking Maneuver, you may spend a Counter Action to increase your Strike and Wound Rolls by 1(T) for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Targeted: a button on the attack's card till it is settled - a Counter Action, Defense Value and Soak Value 1(T) for it, once
+# an attack (chat.mjs observationButtons).
+allow observation.defend;
+# (2) Your attack: a button on its card till its Strike is rolled - a Counter Action, Strike and Wound 1(T) for it, once an attack.
+allow observation.attack;
