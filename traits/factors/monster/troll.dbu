@@ -1,0 +1,32 @@
+id: troll
+name: Troll
+order: 9
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (2)
+grantsOther: bestial, monstrous
+grantsOtherFrom: bestial-build, bloodlust
+grantsOtherOptions: bestial-build=thick-hide
+description: >
+  Driven by instinct and protected by thick, armor-like skin, you are dense of both body and mind.
+text: >
+  Troll (Body): Driven by instinct and protected by thick, armor-like skin, you are dense of both body and mind.
+  (1)-[Passive]: Your base Size Category is Enormous.
+  (2)-[Passive]: You gain access to the Bestial Build (you must select Thick Hide for its Option effect) Bestial Trait and the Bloodlust Monstrous Trait.
+  (3)-[Passive]: You may apply Punching Down if a target is only 1 Size Category smaller than you.
+  (4)-[Triggered/Power, 1/Encounter]: Enter the Feral State until the end of your next turn. If you were already in the Feral State, you may enter the Surging State until the start of your next turn instead.
+
+---
+
+# (2) Its headers: Bestial Build with Thick Hide - not asked - and Bloodlust, in the Other Traits list.
+[passive]
+# (1)
+allow size.base.enormous;
+# (3) Read where Punching Down is (chat.mjs rollAttackWoundWork).
+allow troll.punchDown;
+
+# (4) Feral till the end of your next turn - Feral already, Surging till the start of it, asked (chat.mjs trollPower). It starts
+# Triggered: the Feral State forbids Unique Abilities.
+[triggered/power, 1/encounter, startsTriggered, effect 4]
+trollPower();

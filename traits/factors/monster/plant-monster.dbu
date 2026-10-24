@@ -1,0 +1,46 @@
+id: plant-monster
+name: Plant Monster
+order: 8
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1), (2)
+grantsOther: bestial, monstrous
+grantsOtherFrom: arboreal, elemental-assault
+grantsOtherChoices: elemental-assault=elementalPlantlife
+grantsOtherOptions: elemental-assault=counter-elemental
+description: >
+  As some kind of monstrous, sapient plant creature, you are able to uproot yourself and ambulate across the battlefield, and many foes fear becoming your next source of fertilizer. [Based on the Homebrew by Potato (blasteroid in Discord)]
+text: >
+  Plant Monster (Body): As some kind of monstrous, sapient plant creature, you are able to uproot yourself and ambulate across the battlefield, and many foes fear becoming your next source of fertilizer. [Based on the Homebrew by Potato (blasteroid in Discord)]
+  (1)-[Passive]: You gain access to the Arboreal Bestial Trait.
+  (2)-[Passive]: You gain access to the Elemental Assault Monstrous Trait. You must select the Elemental (Plantlife) Profile for the 1st effect of Elemental Assault and the Counter Elemental for the 2nd effect of Elemental Assault.
+  (3)-[Passive]: While you are Rooted, increase your Surgency by 2(bT).
+  (4)-[Passive]: While you are not Rooted, increase your Defense Value and Speeds by 1(T) and 2(bT) respectively.
+  (5)-[Triggered]: When making any type of Physical Attacking Maneuver or Grapple Maneuver, you may increase your Melee Range by 3 Squares for the duration of that Maneuver.
+  (6)-[Triggered]: If you use an Attacking Maneuver, you may spend a stack of Sunlight to apply the Multi-Profile Super Profile to that attacking Maneuver. If you do, you must select the Elemental (Plantlife) Profile for the effects of Multi-Profile.
+  (7)-[Triggered, 1/Encounter]: If you gain a stack of Sunlight, gain a stack of Sunlight.
+
+---
+
+# (1), (2) Its headers: Arboreal, and Elemental Assault made with Plantlife and Counter Elemental - not asked - in the Other Traits list.
+[passive]
+# (3), (4)
+if (hasCondition("rooted")) {
+    surgency += 2(bT);
+}
+if (!hasCondition("rooted")) {
+    defenseValue += 1(T);
+    speed.all += 2(bT);
+}
+# (5) Rubbery Body's stretch, the same: a Physical Attack or a Grapple aimed past your Melee Range and within 3 more - asked; Automatic,
+# the toggle below, taken without asking (maneuvers.mjs stretchReach).
+meleeRange.stretch += 3;
+# (6) Not built: the Multi-Profile Super Profile on an attack that is no Signature Technique - the table's, as Elemental Infusion's.
+
+# (5)'s Triggered/Automatic toggle: nothing of its own to do - the stretch above reads whether it is set Automatic.
+[triggered/stretch, effect 5]
+
+# (7) A stack of Sunlight gained: another, once an Encounter. Automatic by default, its Triggered/Automatic button.
+[triggered/sunlight-gained, 1/encounter, effect 7]
+sunlight.stacks += 1;

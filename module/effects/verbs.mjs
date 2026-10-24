@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  trollPower: {
+    args: [0, 0],
+    doc: "Troll (4): Feral till the end of your next turn - Feral already, Surging till the start of it, asked (chat.mjs trollPower)."
+  },
   bioBerserk: {
     args: [0, 0],
     doc: "Bio-Berserker (3): a 1d10 - at a 1, Compelled at a random Opponent in your Field of Aggression (chat.mjs bioBerserk)."

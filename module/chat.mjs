@@ -20315,6 +20315,23 @@ export function tremendousOffer(card, actor) {
     maneuverName: "Transformation", reason: "Tremendous Lord (once an Encounter)", grants: { encounterFlag: "tremendousEncounter" } } });
 }
 
+/** Vampire (6): "If you deal Damage with an Attacking Maneuver, you may use the Bite Special Maneuver as an Out-of-Sequence Maneuver." */
+function vampireBite(message, attacker, target) {
+  if ((attacker?.system?.effects?.slots?.["vampire.bite"] !== true) || (attacker.getFlag?.(SCOPE, "vampireBiteRound") === roundKey())) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.grants?.roundFlag === "vampireBiteRound") && (offer.actorUuid === attacker.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: attacker.uuid, actorName: attacker.name, maneuverId: "bite-attack",
+    maneuverName: "Bite Attack", targetUuid: target.uuid, reason: "Vampire - Damage dealt", grants: { roundFlag: "vampireBiteRound" } } });
+}
+
+/** Troll (4): "Enter the Feral State until the end of your next turn. If you were already in the Feral State, you may enter the Surging State ...". */
+export async function trollPower(actor) {
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  if (!((Number(actor.system?.states?.feral) || 0) > 0)) return enterState(actor, "feral", 1, "next-turn", "Troll");
+  if ((await askPlayerChoice(actor, `${actor.name}: Troll - Feral already`,
+    [{ value: "yes", label: "Surging till the start of your next turn" }, { value: "no", label: "No" }])) !== "yes") return;
+  return enterState(actor, "surging", 1, "start-of-next-turn", "Troll");
+}
+
 /** Ghost (4): Physical or Energy - "Reduce the Damage Category ... to Standard"; Magic - "increase ... by 1 Category". For its own Damage. */
 function ghostCategory(entry, attack) {
   const target = entry.actor ?? fromUuidSync(entry.uuid);
@@ -29830,7 +29847,9 @@ async function rollAttackWoundWork(message, attack) {
     // Giant Gene (3): "While your Size Category is Enormous, treat your Size Category as if it was Gigantic for calculating Punching Down."
     const gap = sizeDifference(attacker, target)
       + (((attacker.system?.effects?.slots?.["giantGene.size"] === true) && (attacker.system.size?.key === "enormous")) ? 1 : 0);
-    const punchingRoll = ((dealt > 0) && (gap >= 2) && !own.noPunchingDown) ? await punchingDownRoll(attacker) : 0;
+    // Troll (3): "You may apply Punching Down if a target is only 1 Size Category smaller than you."
+    const punchingRoll = ((dealt > 0) && (gap >= ((attacker.system?.effects?.slots?.["troll.punchDown"] === true) ? 1 : 2)) && !own.noPunchingDown)
+      ? await punchingDownRoll(attacker) : 0;
     // Giant Gene (4): "increase the Wound Roll of that Attacking Maneuver by 2(bT)" - on the Damage Punching Down adds to.
     if (punchingRoll && (giantAnswer === null)) giantAnswer = await giantGeneWound(attacker);
     const punchingDown = punchingRoll + ((punchingRoll && giantAnswer) ? 2 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1) : 0);
@@ -32717,6 +32736,8 @@ async function applyAttackDamage(message, target, attack) {
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)) {
     await cerealianBroken(armsUser, target);
   }
+  // Vampire (6): Damage dealt - the Bite Attack offered.
+  if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) vampireBite(message, armsUser, target);
   // Genie (4): "If you receive no Damage from an Opponent's Attacking Maneuver that targeted you due to any means" - the Surge offered.
   if ((damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) genieOffer(message, target, armsUser);
   // Heart of Evil (3): an Opponent knocked through - the Might Clash, asked.
@@ -34087,7 +34108,8 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     }
     const { value, max } = actor.system.life;
     const restored = Math.min(max, value + (roll.total * multiplier)) - value;
-    await actor.update({ "system.life.value": value + restored });
+    // Through a Surge - what Vampire (5) leaves alone.
+    await actor.update({ "system.life.value": value + restored }, { dbuSurge: true });
     // Above a Health Threshold you were under: what answers it - Lightning Surge (3)'s.
     const keys = Object.keys(DBUCharacterData.THRESHOLDS);
     const crossedUp = Boolean(restored) && (keys.indexOf(DBUCharacterData.thresholdKey(value + restored, max))

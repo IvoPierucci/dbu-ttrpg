@@ -29,6 +29,8 @@
  *   grantsWeapon: chosen            the Weapon Category its `choose: weaponCategory` names (Integrated Weapon's); with
  *   grantsWeaponQualities: <ids>    Qualities on it in no Slot
  *   grantsTalentIfManeuver: a=b     the Talent b, where the Maneuver a is open to them already (Ghost's Frequent Flyer)
+ *   grantsOtherOptions: a=b         the Other Trait a granted with its Option b, not asked (Troll's Thick Hide); and
+ *   grantsOtherChoices: a=b         with its `choose:` answered b (Plant Monster's Elemental (Plantlife))
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
  *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
@@ -693,10 +695,12 @@ async function favoredFeatureChoice(source, actor, techniqueId, advantageId) {
 }
 
 /** A part's script with its `choose:` answered - `$choice` replaced - and the choice recorded. */
-async function answered(source, chosen, actor = null) {
+async function answered(source, chosen, actor = null, preset = "") {
   let script = String(source.script ?? "").trim();
   if (!source.choose) return script;
-  const choice = await askChoice(source, source.choose, { actor });
+  // Named by what gives it - Plant Monster's Elemental (Plantlife) - not asked, where it is among those offered.
+  const named = preset ? (await choicesFor(source.choose, source, { actor })).find(([value]) => value === preset) : null;
+  const choice = named ? { value: named[0], label: named[1] } : await askChoice(source, source.choose, { actor });
   if (!choice) return null;
   chosen.push({ key: source.id, value: choice.value, label: `${source.name}: ${choice.label}` });
   // A second choice after it - `choose2:`, `$choice2` - asked with the first known (Functional Purpose's).
@@ -723,9 +727,9 @@ async function answered(source, chosen, actor = null) {
  *
  * @returns {Promise<?{data: object, grants: {unique: {id: string, restrictions: string[]}[], talents: string[]}}>}
  */
-export async function racialItemFrom(trait, actor = null) {
+export async function racialItemFrom(trait, actor = null, { presetOption = "", presetChoice = "" } = {}) {
   const chosen = [];
-  const own = await answered(trait, chosen, actor);
+  const own = await answered(trait, chosen, actor, presetChoice);
   if (own === null) return null;
   const scripts = [own];
   const texts = [];
@@ -739,7 +743,9 @@ export async function racialItemFrom(trait, actor = null) {
   // Each Option effect in turn - Technological Being's (2) one, then (3) two.
   for (const group of optionGroupsOf(trait)) {
     const options = group.options;
-    const picked = await askOptions(trait, options, group.count, group.effect);
+    // Named by what gives it - Troll's "you must select Thick Hide for its Option effect" - not asked.
+    const picked = (presetOption && (group.count === 1) && options.some(entry => entry.id === presetOption))
+      ? [presetOption] : await askOptions(trait, options, group.count, group.effect);
     if (!picked) return null;
     for (const id of picked) {
       const option = options.find(entry => entry.id === id);
@@ -792,8 +798,8 @@ export async function racialItemFrom(trait, actor = null) {
  * Requirements, marked as given by it so it goes with it; each Talent, kept if it is ever lost. One already held is not
  * given twice; a Talent or Unique Ability not written yet is named.
  */
-export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
-  const made = await racialItemFrom(trait, actor);
+export async function addRacialTrait(actor, trait, { grantedBy = "", presetOption = "", presetChoice = "" } = {}) {
+  const made = await racialItemFrom(trait, actor, { presetOption, presetChoice });
   if (!made) return null;
   // Personified Dragon Ball: "select a set of Dragon Balls (including a Size Category from Nano to Small) and a number of
   // stars from among them".
@@ -848,7 +854,7 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   const from = listOf(trait.grantsOtherFrom);
   for (const group of listOf(trait.grantsOther)) {
     for (let n = 0; n < Math.max(1, Number(trait.grantsOtherCount) || 1); n++) {
-      const given = await grantOtherTrait(actor, item, group, from);
+      const given = await grantOtherTrait(actor, item, group, from, otherPresetsOf(trait));
       // Were-Beast (1): "These are known as your 'Were-Traits'" - applying only in a Round chosen for them (aside.mjs).
       if (given && trait.wereTraits) await given.setFlag("dbu-ttrpg", "wereTrait", true);
     }
@@ -992,7 +998,7 @@ async function askDragonBall(trait) {
  * Evolution Trait": the ones not had, offered; the one chosen made, given by it, so it is taken off with it. None written
  * yet, or none chosen, it is said - and one can be added by hand from the Other Traits list.
  */
-async function grantOtherTrait(actor, item, group, from = []) {
+async function grantOtherTrait(actor, item, group, from = [], presets = {}) {
   const had = new Set(actor.system?.racialTraits ?? []);
   const offered = traitsOfKind("other", group).filter(trait => !had.has(trait.id) && (!from.length || from.includes(trait.id)))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -1014,7 +1020,14 @@ async function grantOtherTrait(actor, item, group, from = []) {
     rejectClose: false
   });
   const trait = offered.find(entry => entry.id === picked);
-  return trait ? addRacialTrait(actor, trait, { grantedBy: item.id }) : null;
+  return trait ? addRacialTrait(actor, trait, { grantedBy: item.id, presetOption: presets.options?.[trait.id] ?? "",
+    presetChoice: presets.choices?.[trait.id] ?? "" }) : null;
+}
+
+/** `grantsOtherOptions: a=b` and `grantsOtherChoices: a=b` - the Option and the choice each granted Other Trait is given with. */
+function otherPresetsOf(trait) {
+  const pairs = value => Object.fromEntries(listOf(value).map(entry => entry.split("=").map(each => each.trim())).filter(([a, b]) => a && b));
+  return { options: pairs(trait.grantsOtherOptions), choices: pairs(trait.grantsOtherChoices) };
 }
 
 /**

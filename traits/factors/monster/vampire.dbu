@@ -1,0 +1,38 @@
+id: vampire
+name: Vampire
+order: 10
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (2)
+grantsTalentIfManeuver: soar=frequent-flyer
+# (3)
+grantsUnique: shapeshift
+uniqueRestrictions: specific-form
+# (4)
+grantsOther: monstrous, bestial
+grantsOtherFrom: feast, fangs
+grantsOtherOptions: fangs=savage
+description: >
+  Sustaining your unlife by draining the vitality of other beings, you are able to turn into a bat.
+text: >
+  Vampire (Body): Sustaining your unlife by draining the vitality of other beings, you are able to turn into a bat.
+  (1)-[Passive]: You are Unnatural.
+  (2)-[Passive]: You gain access to the Soar Maneuver. If you already have access to the Soar Maneuver, gain access to the Frequent Flyer Talent.
+  (3)-[Passive]: You gain access to the Shapeshift Unique Ability, but it possesses the Specific Form Restriction (Small Size Category and Winged Beast Bestial Trait).
+  (4)-[Passive]: You gain access to the Feast Monstrous Trait and the Fangs Bestial Trait (you must select the Savage effect for its Option effect).
+  (5)-[Triggered, 1/Round]: If you would regain Life Points, except through a Surge, increase the amount of Life Points regained by your Surgency.
+  (6)-[Triggered, 1/Round]: If you deal Damage with an Attacking Maneuver, you may use the Bite Special Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (2) Frequent Flyer, where the Soar was had already as this is gained; (3) Shapeshift with Specific Form - the Small Size Category and
+# Winged Beast, its Form the player's to keep to; (4) Feast, and Fangs with Savage - not asked. All its headers.
+[passive]
+# (1), (2)
+allow unnatural;
+allow maneuver.soar;
+# (5) Life Points regained but through a Surge: your Surgency more, once a Round, as they are written (combat.mjs).
+allow vampire.feed;
+# (6) Damage dealt by your attack: the Bite Attack offered on its card at them, once a Round (chat.mjs vampireBite).
+allow vampire.bite;

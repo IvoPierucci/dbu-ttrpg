@@ -1,0 +1,30 @@
+id: mummy
+name: Mummy
+order: 7
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (3) "the Extending Attack Monstrous Trait" - Extension Attack.
+grantsOther: monstrous
+grantsOtherFrom: extension-attack
+description: >
+  Wrapped in bandages and returned from death, you are a walking corpse ready to take your revenge on the living for disturbing your eternal slumber.
+text: >
+  Mummy (Body): Wrapped in bandages and returned from death, you are a walking corpse ready to take your revenge on the living for disturbing your eternal slumber.
+  (1)-[Passive]: You are Unnatural.
+  (2)-[Passive]: Increase your Damage Reduction and Surgency by 2(bT).
+  (3)-[Passive]: You gain access to the Extending Attack Monstrous Trait.
+  (4)-[Triggered/Defeated]: Make a Steadfast Check. If you succeed, enter the Undying State until the end of your next turn.
+
+---
+
+# (3) Its header: the Extension Attack Monstrous Trait - in the Other Traits list, gained with it.
+[passive]
+# (1), (2)
+allow unnatural;
+damageReduction += 2(bT);
+surgency += 2(bT);
+
+# (4) Chosen on the Defeated card: the Steadfast Check, passed - Undying till the end of your next turn (Saiyan Heritage's, unaltered).
+[triggered/defeated, effect 4]
+steadfastEnter(0, undying, next-turn);
