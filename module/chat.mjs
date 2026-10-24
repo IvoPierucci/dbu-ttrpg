@@ -19557,13 +19557,13 @@ export async function lightDigest(actor) {
 
 /**
  * Light Consumption (4): "At the end of the Combat Round, reduce your Life Points by your number of Light Stacks. If your number of
- * Light Stacks exceeds 2(bT), then reduce your Life Points by 1/5 of your Maximum Life Points" - that, instead.
+ * Light Stacks exceeds 2(bT), then reduce your Life Points by 1/5 of your Maximum Life Points" - that as well (the user's).
  */
 export async function lightBurn(actor) {
   const stacks = Number(actor?.system?.resources?.lightstacks?.stacks) || 0;
   if (!stacks) return;
   const many = stacks > (2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1));
-  const lost = many ? Math.floor((Number(actor.system.life?.max) || 0) / 5) : stacks;
+  const lost = stacks + (many ? Math.floor((Number(actor.system.life?.max) || 0) / 5) : 0);
   return reduceLifePoints(actor, lost, { reason: "Light Consumption", own: true });
 }
 
