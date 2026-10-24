@@ -629,6 +629,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "defeatedFocus", "surgingSpared",
   // Hit by an Opponent's attack, not an Ally's (Superior's).
   "byOpponent",
+  // Knocked through - you, or an Ally Defeated - by an Opponent's Attacking Maneuver (Tuffle-Raised's).
+  "knockedByOpponent",
   // At Defeat's Life Points (Undying's).
   "atDefeat",
   // The one Defeated was the one you Studied (Intelligent Fighter's).

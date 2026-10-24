@@ -1,0 +1,33 @@
+id: wild-child
+name: Wild Child
+order: 19
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+# (3) Two Pseudo-Bestial Traits, chosen as it is gained.
+grantsOther: pseudo-bestial
+grantsOtherCount: 2
+description: >
+  Fending for yourself in the wilds with only the most savage of beasts to guide you, you have attuned yourself to nature.
+text: >
+  Wild Child (Mind): Fending for yourself in the wilds with only the most savage of beasts to guide you, you have attuned yourself to nature.
+  (1)-[Prerequisite]: You cannot take this Factor Trait if you possess the Beast-Man Factor. If you gain the Beast-Man Factor, you lose this Factor Trait and regain the Secondary Trait you exchanged for it.
+  (2)-[Passive]: You may use Signature Techniques while in the Feral State.
+  (3)-[Passive, Ruling]: Upon gaining this Factor Trait, select 2 ‘Pseudo-Bestial Traits’.
+  (4)-[Triggered/Power, 2/Round, Adventurous]: Gain access to 1 of your selected Pseudo-Bestial Traits until the start of your next turn.
+  (5)-[Triggered/Power, 1/Encounter]: Enter the Feral State until the end of your next turn. If you are already in the Feral State, gain access to all of your selected Pseudo-Bestial Traits until the start of your next turn.
+
+---
+
+# (1) Said, never enforced: the Beast-Man Factor is the table's to keep away.
+# (2) The Feral State's own script, holdsTrait. (3) Its header's `grantsOther`: the two chosen as it is gained, in the Other Traits list -
+# applying only while you have access to them (aside.mjs).
+
+# (4) Which one, asked - till the start of your next turn (chat.mjs wildChildAccess).
+[triggered/power, 2/round, effect 4]
+wildChildAccess();
+
+# (5) Feral till the end of your next turn - Feral already, all of them till the start of it (chat.mjs wildChildFeral). It starts
+# Triggered: the Feral State forbids Unique Abilities.
+[triggered/power, 1/encounter, startsTriggered, effect 5]
+wildChildFeral();

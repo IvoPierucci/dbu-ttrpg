@@ -403,6 +403,18 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  tuffleLegacy: {
+    args: [0, 0],
+    doc: "Tuffle-Raised (3): an Ally - 2x(bT) Life and Ki Points, Combat Rolls x(bT) till the end of their next turn (chat.mjs tuffleLegacy)."
+  },
+  wildChildAccess: {
+    args: [0, 0],
+    doc: "Wild Child (4): one of your Pseudo-Bestial Traits, till the start of your next turn (chat.mjs wildChildAccess)."
+  },
+  wildChildFeral: {
+    args: [0, 0],
+    doc: "Wild Child (5): Feral till the end of your next turn - Feral already, every Pseudo-Bestial Trait (chat.mjs wildChildFeral)."
+  },
   neoTuffleFocus: {
     args: [0, 0],
     doc: "Neo-Tuffle-Raised (1), (2): an Opponent chosen this Round - and, Injured, Surging with them its Focus (chat.mjs neoTuffleFocus)."

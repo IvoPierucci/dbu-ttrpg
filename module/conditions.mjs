@@ -12,6 +12,7 @@
  * worse than one that never fires at all.
  */
 
+import { traitAside } from "./aside.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 
@@ -137,6 +138,10 @@ export function traitActive(actor, id) {
       return (Number(actor.system?.conditions?.[id]) || 0) > 0;
     case "races":
     case "factors":
+    case "other":
+      // Held, but not applying right now - a Pseudo-Bestial Trait without access, a Were-Trait out of its Round (aside.mjs).
+      if (Array.from(actor.items ?? []).some(item => (item.type === "racial") && (item.flags?.["dbu-ttrpg"]?.sourceId === id)
+        && traitAside(item, actor.items, actor))) return false;
       // An Option chosen on one counts as had - Infinite Energy's Maneuver (Energy Core's).
       return (actor.system?.racialTraits ?? []).includes(id) || (trait.optionOf
         && Array.from(actor.items ?? []).some(item => (item.type === "racial")

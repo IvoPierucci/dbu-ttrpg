@@ -1,0 +1,17 @@
+id: mimicry-of-penetrating-fangs
+name: Mimicry of Penetrating Fangs
+order: 6
+description: >
+  Though your own bite is less than fearsome, you can emulate the bite of a fearsome predator thanks to your tools and/or ingenuity.
+text: >
+  Mimicry of Penetrating Fangs: Though your own bite is less than fearsome, you can emulate the bite of a fearsome predator thanks to your tools and/or ingenuity.
+  (1)-[Passive]: Increase your Strike Rolls by 1(T).
+  (2)-[Triggered, 1/Round]: If you target an Opponent with an Attacking Maneuver, that Attacking Maneuver ignores 1/4 (rounded up) of your Opponent’s Soak Value if it hits.
+
+---
+
+[passive]
+# (1)
+strike += 1(T);
+# (2) Asked as an attack at an Opponent is declared, once a Round: a quarter of their Soak Value ignored, rounded up (chat.mjs).
+allow pseudoFangs.pierce;

@@ -385,6 +385,8 @@ async function beginTurn(actor) {
   if (!actor.system.defeated) await (await import("./desperation.mjs")).itsUpToYou(actor);
   // Burrowing Beast (6): "[Automatic/Start of Turn]: You stop being Underground" - the Cover as it was.
   await (await import("./chat.mjs")).leaveUnderground(actor);
+  // Wild Child (4), (5): the Pseudo-Bestial Traits' access "until the start of your next turn" - this one.
+  if (actor.getFlag?.("dbu-ttrpg", "pseudoAccess")) await actor.unsetFlag("dbu-ttrpg", "pseudoAccess");
   // Kindhearted Saiyan (2): "until the start of your next turn" - this one.
   await (await import("./chat.mjs")).kindheartedEnds(actor);
   // Will of Nine Lives (2): the Majin-Dama put aside "until the start of your next turn" - Active again.
@@ -782,6 +784,8 @@ export function registerCombatHooks() {
         "system.armedTalents": [],
         "system.usedManeuvers": [],
         "system.resources": replaceObject(keptResources(actor.system.resources)),
+        // Wild Child's access to its Pseudo-Bestial Traits, with it.
+        "flags.dbu-ttrpg.-=pseudoAccess": null,
         "system.defeatsEscaped": 0,
         "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
         // The next Encounter is a different one, and begins for them again.
@@ -1120,8 +1124,10 @@ export function registerDefeatHooks() {
             && !token.actor.system?.defeated)
           .map(token => [token.actor.uuid, token.actor]));
         for (const ally of allies.values()) {
-          await offerTriggers(ally, "ally-defeated", { defeatedUuid: actor.uuid });
-          await fireMoment(ally, "ally-defeated", { defeatedUuid: actor.uuid });
+          // And whose Attacking Maneuver did it - Tuffle-Raised (2)'s.
+          const by = { defeatedUuid: actor.uuid, knockerUuid: options.dbuKnockedBy ?? "" };
+          await offerTriggers(ally, "ally-defeated", by);
+          await fireMoment(ally, "ally-defeated", by);
         }
       }
     }
@@ -1256,7 +1262,7 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
   // The Moment says it "fires after the Maneuver that pushed you through finishes",
   // and this is that: Life Points are written when the Damage is applied, which is the
   // last step of the Maneuver and a deliberate one.
-  await fireMoment(actor, "threshold", { threshold: now });
+  await fireMoment(actor, "threshold", { threshold: now, knockerUuid: knockedBy });
   // And for whoever knocked them through - an Opponent's Attacking Maneuver's Damage: Inherited Aggression's Battle Born.
   const knocker = knockedBy ? fromUuidSync(knockedBy) : null;
   if (knocker && (knocker.uuid !== actor.uuid)) {
@@ -1293,7 +1299,9 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
     subjectName: actor.name,
     subjects: witnesses(actor),
     detail: `${THRESHOLDS[before].label} to ${THRESHOLDS[now].label}`,
-    threshold: now
+    threshold: now,
+    // Who did it - what is ticked on the card answers it (Tuffle-Raised's "by an Opponent's Attacking Maneuver").
+    knockedBy
   });
 }
 

@@ -22,7 +22,7 @@
           <span class="trait-prereq"{{#if entry.factorTip}} data-tooltip="{{entry.factorTip}}"{{/if}}>{{entry.race}}{{#if entry.kind}} &middot; {{entry.kind}}{{/if}}</span>
           {{#if entry.wereMark}}
           {{! Were-Beast: a Were-Trait applies only in a Round it was chosen for; the Normal Trait not in one. }}
-          <span class="trait-arm{{#unless entry.wereAside}} active{{/unless}}" data-tooltip="Were-Beast: chosen at the start of each Combat Round">{{entry.wereMark}}{{#if entry.wereAside}} - not this Round{{/if}}</span>
+          <span class="trait-arm{{#unless entry.wereAside}} active{{/unless}}" data-tooltip="{{entry.wereTip}}">{{entry.wereMark}}{{#if entry.wereAside}} - {{entry.wereOff}}{{/if}}</span>
           {{/if}}
           {{#each entry.triggered as |trigger|}}
           {{! Triggered: offered where its moment is, to take or leave. Automatic: it answers that moment by itself, every time. }}
@@ -97,7 +97,7 @@
           <span class="trait-prereq"{{#if entry.factorTip}} data-tooltip="{{entry.factorTip}}"{{/if}}>{{entry.race}}{{#if entry.kind}} &middot; {{entry.kind}}{{/if}}</span>
           {{#if entry.wereMark}}
           {{! Were-Beast: a Were-Trait applies only in a Round it was chosen for; the Normal Trait not in one. }}
-          <span class="trait-arm{{#unless entry.wereAside}} active{{/unless}}" data-tooltip="Were-Beast: chosen at the start of each Combat Round">{{entry.wereMark}}{{#if entry.wereAside}} - not this Round{{/if}}</span>
+          <span class="trait-arm{{#unless entry.wereAside}} active{{/unless}}" data-tooltip="{{entry.wereTip}}">{{entry.wereMark}}{{#if entry.wereAside}} - {{entry.wereOff}}{{/if}}</span>
           {{/if}}
           {{#if entry.bestialOff}}
           {{! The Bestial Limit: 4 at most apply - this one set aside while the one it gave way to is held. }}

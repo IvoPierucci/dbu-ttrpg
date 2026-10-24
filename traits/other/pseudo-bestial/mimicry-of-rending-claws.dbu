@@ -1,0 +1,20 @@
+id: mimicry-of-rending-claws
+name: Mimicry of Rending Claws
+order: 7
+description: >
+  Without the sharp claws of the predators around you, you have learned to make do with what you have to recreate the effects of such natural weapons.
+text: >
+  Mimicry of Rending Claws: Without the sharp claws of the predators around you, you have learned to make do with what you have to recreate the effects of such natural weapons.
+  (1)-[Passive]: Increase your Wound Rolls by 2(T).
+  (2)-[Passive]: For your Attacking Maneuvers, apply the Diminishing Defense that Attacking Maneuver would inflict on Attack Declaration instead of after concluding the Attacking Maneuver.
+  (3)-[Triggered, 1/Round]: If you deal Damage with an Attacking Maneuver during a turn in which you moved your Boosted Speed, make a Clash (Impulsive) against that Opponent. If you win, they are knocked Prone.
+
+---
+
+[passive]
+# (1)
+wound += 2(T);
+# (2) As a Slashing Weapon's: the Diminishing Defense it will earn already on their Dodge (chat.mjs).
+allow pseudoClaws.diminishing;
+# (3) Damage dealt in a turn you moved your Boosted Speed: the Clash, asked, once a Round (chat.mjs pseudoAfterHit).
+allow pseudoClaws.prone;

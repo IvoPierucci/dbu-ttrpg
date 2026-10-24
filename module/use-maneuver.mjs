@@ -5508,8 +5508,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       return false;
     }
     const unbounded = declared?.weapon?.wholeBattlefield || declared?.weapon?.telekinetic;
+    // Mimicry of the Whipping Tail (2): "treat your Melee Range as if it was 2 Squares further for the duration of this Attacking Maneuver".
+    const whipReach = (maneuver.fromTrait === "mimicry-of-the-whipping-tail") ? 2 : 0;
     let outOfReach = targetActor && !maneuver.throws && !unbounded
-      && whyNotInReach(actor, targetActor, declared ?? {}, declared?.weapon?.meleeRange ?? 0);
+      && whyNotInReach(actor, targetActor, declared ?? {}, (declared?.weapon?.meleeRange ?? 0) + whipReach);
     // Elongated Tail's reach, on a Tail Attack, asked where it is what reaches.
     if (outOfReach && maneuver.tailAttack) {
       const { tailReach } = await import("./maneuvers.mjs");
@@ -6362,6 +6364,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Terrifying Speed (1): the Movement Maneuver used this Combat Round.
   if (crossing && game.combat?.started) {
     await actor.setFlag("dbu-ttrpg", "movedRound", `${game.combat.id}:${game.combat.round ?? 0}`);
+    // Mimicry of Rending Claws (3): "during a turn in which you moved your Boosted Speed" - this turn.
+    if (crossing.speed === "boosted") await actor.setFlag("dbu-ttrpg", "boostedTurn", `${game.combat.id}:${game.combat.round}:${game.combat.turn}`);
   }
 
   // And the Profile it was made with, if this is the Maneuver that limit is about. Only
@@ -6630,6 +6634,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         // Search's: won, no longer Oblivious of them.
         ...(((maneuver.id === "search") || ((maneuver.id === "sense") && targetActor
           && (targetActor.system?.hiddenFrom ?? []).some(entry => entry?.uuid === actor.uuid))) ? { search: { applied: false } } : {}),
+        // Mimicry of Bestial Senses (4): won, Strike 2(T) at them till your turn ends - once a Round.
+        ...((["search", "sense"].includes(maneuver.id) && (actor.system.effects?.slots?.["pseudoSenses.strike"] === true))
+          ? { pseudoSenses: { applied: false } } : {}),
         // Winning leaves a Condition, and whether it leaves a second one depends on what
         // the target was carrying when it settles - so nothing about that is decided here
         // either. The flag is on the card because the Clash's own roll needs it: the

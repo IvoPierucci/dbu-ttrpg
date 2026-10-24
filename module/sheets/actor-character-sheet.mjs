@@ -1644,7 +1644,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               // Underwater Beast (4): "If you are in the Underwater Battle Environment, you can use the Movement Maneuver as an Instant".
               || ((this.actor.system.effects?.slots?.["movement.underwaterInstant"] === true)
                 && (this.actor.system.battlefield?.environment === "underwater-environment")
-                && !((Number(this.actor.system.battlefield?.highEnvironment) || 0) > 0))),
+                && !((Number(this.actor.system.battlefield?.highEnvironment) || 0) > 0))
+              // Mimicry of Bestial Movement (3): "You may use the Movement Maneuver as an Instant Maneuver" - once a Round.
+              || (this.actor.system.effects?.slots?.["movement.pseudoInstant"] === true)),
             // Winged Beast (4): the Soar just used - a Standard Maneuver of 1 Action, out of sequence.
             wingedOutOfSequence: (this.actor.system.effects?.slots?.["winged.afterSoar"] === true) && (maneuver.type === "standard")
               && (Number(maneuver.actionCost) === 1) && !maneuver.actionCostOpen && !(maneuver.actionCostMax > 1)
@@ -4957,8 +4959,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // Set aside by the Bestial Limit - and what it gave way to.
       bestialOff: bestialOff(item, this.actor.items),
       // Were-Beast's: a Were-Trait or the Normal Trait, and whether it applies this Round.
-      wereMark: item.flags?.["dbu-ttrpg"]?.wereTrait ? "Were-Trait" : item.flags?.["dbu-ttrpg"]?.normalTrait ? "Normal Trait" : "",
-      wereAside: ["were", "normal"].includes(traitAside(item, this.actor.items, this.actor)),
+      wereMark: item.flags?.["dbu-ttrpg"]?.wereTrait ? "Were-Trait" : item.flags?.["dbu-ttrpg"]?.normalTrait ? "Normal Trait"
+        // Wild Child's: a Pseudo-Bestial Trait, and whether you have access to it now.
+        : (item.system?.other === "pseudo-bestial") ? "Pseudo-Bestial" : "",
+      wereAside: ["were", "normal", "pseudo"].includes(traitAside(item, this.actor.items, this.actor)),
+      wereTip: (item.system?.other === "pseudo-bestial") ? "Wild Child: access through the Power Up, till the start of your next turn"
+        : "Were-Beast: chosen at the start of each Combat Round",
+      wereOff: (item.system?.other === "pseudo-bestial") ? "no access" : "not this Round",
       bestialOffFor: this.actor.items.get(item.flags?.["dbu-ttrpg"]?.bestialOff ?? "")?.name ?? "",
       // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
       open: Boolean(this.#openSections[`trait-${item.id}`]),
@@ -6121,13 +6128,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const burrow = (slots["movement.burrowInstant"] === true) && Boolean(this.actor.system.battlefield?.cover?.active);
     const swim = (slots["movement.underwaterInstant"] === true) && (this.actor.system.battlefield?.environment === "underwater-environment")
       && !((Number(this.actor.system.battlefield?.highEnvironment) || 0) > 0);
+    // Mimicry of Bestial Movement (3): anywhere, once a Round of its own - the one whose movement may end beside an Opponent.
+    const pseudo = slots["movement.pseudoInstant"] === true;
     const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-    const flag = [burrow ? "burrowMoveRound" : "", swim ? "swimMoveRound" : ""].filter(Boolean)
+    const flag = [burrow ? "burrowMoveRound" : "", swim ? "swimMoveRound" : "", pseudo ? "pseudoMoveRound" : ""].filter(Boolean)
       .find(each => this.actor.getFlag("dbu-ttrpg", each) !== round);
-    if (!burrow && !swim) return ui.notifications.warn(`${this.actor.name} is neither in Cover nor Underwater.`);
+    if (!burrow && !swim && !pseudo) return ui.notifications.warn(`${this.actor.name} is neither in Cover nor Underwater.`);
     if (!flag) return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
-    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant", ...((flag === "pseudoMoveRound") ? { pseudoInstant: true } : {}) })) return;
     return this.actor.setFlag("dbu-ttrpg", flag, round);
   }
 

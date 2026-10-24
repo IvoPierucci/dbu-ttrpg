@@ -1,0 +1,24 @@
+id: mimicry-of-bestial-senses
+name: Mimicry of Bestial Senses
+order: 4
+description: >
+  You have learned to recognize the signs of danger that only savage beasts seem to notice.
+text: >
+  Mimicry of Bestial Senses: You have learned to recognize the signs of danger that only savage beasts seem to notice.
+  (1)-[Passive]: Increase the Dice Score of your Perception and Clairvoyance Skill Checks by 2.
+  (2)-[Passive]: Gain access to the Search Maneuver and Sense Maneuver.
+  (3)-[Passive]: Ignore the effects of the Blinded Combat Condition.
+  (4)-[Triggered, 1/Round]: If you use the Search Maneuver or Sense Maneuver, and succeed at their Skill Clash, increase your Strike Rolls against the targeted Opponent by 2(T) until the end of your turn.
+
+---
+
+[passive]
+# (1)
+skill.perception += 2;
+skill.clairvoyance += 2;
+# (2)
+allow maneuver.search;
+allow maneuver.sense;
+# (3) The Blinded Combat Condition's own script, holdsTrait.
+# (4) Its Clash won: Strike 2(T) at them till your turn ends, once a Round (chat.mjs settlePseudoSenses).
+allow pseudoSenses.strike;

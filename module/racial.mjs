@@ -366,7 +366,8 @@ export const OTHER_GROUPS = Object.freeze({
   evolution: "Evolution · Arcosian",
   vocation: "Vocation",
   bestial: "Bestial",
-  monstrous: "Monstrous"
+  monstrous: "Monstrous",
+  "pseudo-bestial": "Pseudo-Bestial · Wild Child"
 });
 
 /**

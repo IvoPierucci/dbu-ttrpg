@@ -1,0 +1,13 @@
+id: mimicry-of-flailing-limbs
+name: Mimicry of Flailing Limbs
+order: 5
+holdsState: multiple-arms
+description: >
+  By moving your body in specific patterns, you’re able to mimic having multiple limbs with which to strike.
+text: >
+  Mimicry of Flailing Limbs: By moving your body in specific patterns, you’re able to mimic having multiple limbs with which to strike.
+  (1)-[Passive]: While you possess this Trait, you are in the Multiple-Arms Special State.
+
+---
+
+# (1) Its header's `holdsState`: in the Multiple Arms Special State while it applies (actor-character.mjs).

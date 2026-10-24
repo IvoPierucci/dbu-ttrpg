@@ -1,0 +1,17 @@
+id: mimicry-of-bestial-hunger
+name: Mimicry of Bestial Hunger
+order: 1
+description: >
+  Preying on the weak, you grow bolder as your enemies grow closer to death.
+text: >
+  Mimicry of Bestial Hunger: Preying on the weak, you grow bolder as your enemies grow closer to death.
+  (1)-[Passive]: Increase your Wound Rolls against Opponent(s) by 1(bT) for each Health Threshold they are below.
+  (2)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with one of your Attacking Maneuvers, you may use the Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, you must target the Opponent that you knocked through a Health Threshold to trigger this effect.
+
+---
+
+[passive]
+# (1)
+wound.perTargetThreshold += 1(bT);
+# (2) The Signature Technique offered on the attack's card at the one knocked through (chat.mjs pseudoAfterHit).
+allow pseudoHunger.signature;

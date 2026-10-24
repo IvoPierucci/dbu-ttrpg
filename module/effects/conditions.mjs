@@ -660,6 +660,20 @@ const PREDICATES = {
     return (mine === undefined) || (theirs === undefined) || (theirs !== mine);
   },
 
+  /**
+   * Tuffle-Raised (1), (2): knocked through a Health Threshold - or an Ally Defeated - by an Opponent's Attacking Maneuver: its maker
+   * (`knockerUuid`, the threshold and ally-defeated Moments') not on your side of the scene.
+   */
+  knockedByOpponent: scope => {
+    const uuid = scope.context?.knockerUuid ?? "";
+    const self = scope.data?.parent;
+    if (!uuid || !self || (uuid === self.uuid)) return false;
+    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    const mine = side(self);
+    const theirs = side(globalThis.fromUuidSync?.(uuid));
+    return (mine === undefined) || (theirs === undefined) || (theirs !== mine);
+  },
+
   /** At the Life Points they would be Defeated at, or below - Undying (2)'s "when you would have been Defeated". */
   atDefeat: scope => (Number(scope.data?.life?.value) || 0) <= (Number(scope.data?.life?.min) || 0),
 

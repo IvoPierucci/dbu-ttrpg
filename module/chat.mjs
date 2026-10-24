@@ -806,6 +806,10 @@ async function settleClashEffects(messageId, clash) {
     await settleSense(message, clash);
   }
 
+  if (clash.pseudoSenses && clash.result && !clash.pseudoSenses.applied) {
+    await settlePseudoSenses(message, clash);
+  }
+
   if (clash.terrify && clash.result && !clash.terrify.applied) {
     await settleTerrify(message, clash);
   }
@@ -7118,6 +7122,11 @@ export async function postManeuver(actor, maneuver,
     offerMove(card, actor, { key: `claws:${actor.uuid}`, flag: "clawsMoveRound", name: "Claws",
       reason: "an Opponent whose Melee Range you entered - hit by your first Physical Attack this Round, a Clash for Prone", claws: true });
   }
+  // Mimicry of Bestial Movement (3): its Instant Movement ended beside an Opponent - your next attack this Round, Strike 2(T) at them.
+  if (maneuver?.movement && card && maneuver.pseudoInstant) {
+    offerMove(card, actor, { key: `pseudoBeside:${actor.uuid}`, flag: "pseudoBesideRound", name: "Mimicry of Bestial Movement",
+      reason: "an Opponent on a Square adjacent to you - your next attack this Round, Strike 2(T) at them", pseudoBeside: true });
+  }
   // Ranger (3): the movement ended beside a Character - a stack of Tension for an Ally or an Opponent there.
   if (maneuver?.movement && card && (actor.system?.effects?.slots?.["ranger.afterMove"] === true) && (vocationTension(actor) > 0)) {
     offerMove(card, actor, { key: `ranger:${actor.uuid}`, flag: "rangerRound", name: "Ranger",
@@ -9188,8 +9197,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // Focused Strike (1): a Strike Roll's. Injuring Wound (1): a Wound Roll's.
     + ((slot === "strike") ? (Number(actor.system.effects?.slots?.["criticalTarget.strike"]?.add) || 0) : 0)
     + ((slot === "wound") ? (Number(actor.system.effects?.slots?.["criticalTarget.wound"]?.add) || 0) : 0)) : 0;
-  const aimedAt = criticalTarget ?? (Number(actor.system.criticalTarget) || 10);
-  const aimed = combatShift
+  // Mimicry of the Whipping Tail (1): "Set the Critical Target for your Strike and Wound Rolls to 7" - never a higher one for it.
+  const whip = combatRoll && ["strike", "wound"].includes(slot) && (actor.system.effects?.slots?.["pseudoTail.criticalSeven"] === true);
+  const aimedAt = whip ? Math.min(7, criticalTarget ?? (Number(actor.system.criticalTarget) || 10))
+    : (criticalTarget ?? (Number(actor.system.criticalTarget) || 10));
+  const aimed = (combatShift || whip)
     ? Math.max(Math.min(aimedAt, DBUCharacterData.CRITICAL_TARGET_MIN), aimedAt + combatShift) : criticalTarget;
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
@@ -17999,13 +18011,13 @@ async function copyTechnique(actor, copyFrom) {
  * A move an effect hands over - not an Out-of-Sequence Maneuver, so it takes no one's, and nothing here moves anybody:
  * where to is the map's. Once a Round by the mover's `flag`, counted when taken; `key` tells one from another on a card.
  */
-function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null, ranger = false, fleet = false,
-                                      highSpeed = false }) {
+function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null, ...marks }) {
   if (mover.getFlag?.(SCOPE, flag) === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move?.key === key)) return;
+  // And whatever it is marked as - Ranger's, Fleet of Foot's, High Speed Ace's, Claws', Burrowing Beast's - what taking it does.
+  const marked = Object.fromEntries(Object.entries(marks).filter(([, value]) => value === true));
   requestEdit(message, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "",
-    maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}), ...(copyFrom ? { copyFrom } : {}),
-      ...(ranger ? { ranger: true } : {}), ...(fleet ? { fleet: true } : {}), ...(highSpeed ? { highSpeed: true } : {}) } } });
+    maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}), ...(copyFrom ? { copyFrom } : {}), ...marked } } });
 }
 
 /**
@@ -18063,6 +18075,8 @@ async function takeMoveOffer(message, actor, offer) {
   if (offer.move.fleet && !await fleetTarget(message, actor)) return;
   // Claws (2)'s, the same.
   if (offer.move.claws && !await clawsTarget(message, actor)) return;
+  // Mimicry of Bestial Movement (3)'s, the same.
+  if (offer.move.pseudoBeside && !await pseudoBesideTarget(actor)) return;
   // Burrowing Beast (1)'s: Underground.
   if (offer.move.underground) await goUnderground(actor);
   // High Speed Ace (2)'s: its mark, till the Round ends.
@@ -21987,12 +22001,126 @@ function clawsButtons(message, attack, container) {
 
 async function settleClaws(message, clash) {
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, clawsProne: { ...clash.clawsProne, applied: true } });
-  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Claws: they keep their feet.");
+  // Claws', or Mimicry of Rending Claws' (3).
+  const source = clash.clawsProne.source ?? "Claws";
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${source}: they keep their feet.`);
   const target = fromUuidSync(clash.defenderUuid);
   if (!target) return;
   const { setCondition } = await import("./conditions.mjs");
   await setCondition(target, "prone", Math.max(1, Number(target.system?.conditions?.prone) || 0));
-  return settledNote(message, `Claws: ${target.name} is knocked Prone.`);
+  return settledNote(message, `${source}: ${target.name} is knocked Prone.`);
+}
+
+/** Mimicry of Bestial Movement (3): which Opponent on a Square adjacent to you - held for your next attack this Round. */
+async function pseudoBesideTarget(actor) {
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const near = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid) && !token.actor.system?.defeated
+      && besideAny(actor, [token.actor]))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!near.length) {
+    ui.notifications.info(`${actor.name}: no Opponent on a Square adjacent to you.`);
+    return false;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Mimicry of Bestial Movement`,
+    [...near.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const who = near.find(each => each.uuid === picked);
+  if (!who) return false;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.pseudoBeside`]: { uuid: who.uuid, name: who.name, round: roundKey() } });
+  return true;
+}
+
+/** Mimicry of Bestial Senses (4): a Search or Sense Clash won - "increase your Strike Rolls against the targeted Opponent by 2(T) until the end of your turn". */
+async function settlePseudoSenses(message, clash) {
+  const fresh = message.getFlag(SCOPE, CLASH_FLAG) ?? clash;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...fresh, pseudoSenses: { ...clash.pseudoSenses, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const actor = fromUuidSync(clash.challengerUuid);
+  if (!actor?.isOwner || !turnKey() || (actor.getFlag?.(SCOPE, "pseudoSensesRound") === roundKey())) return;
+  await actor.update({ [`flags.${SCOPE}.pseudoSensesRound`]: roundKey(), [`flags.${SCOPE}.pseudoSensed`]: { uuid: clash.defenderUuid, turn: turnKey() } });
+  return settledNote(message, `Mimicry of Bestial Senses: ${actor.name}'s Strike Rolls 2(T) higher at ${clash.defenderName} till the turn ends.`);
+}
+
+/**
+ * Hit by an attack: Mimicry of Bestial Hunger (2) - an Opponent knocked through, the Signature Technique at them; Mimicry of Bestial
+ * Resilience (2) - less Damage than your Soak Value, the Basic Attack; Mimicry of Rending Claws (3) - Damage in a turn you moved your
+ * Boosted Speed, the Clash (Impulsive), asked. Each once a Round.
+ */
+async function pseudoAfterHit(message, attacker, target, damage, knocked) {
+  if (alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return;
+  const offers = message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
+  const offered = (who, flag) => offers.some(offer => (offer.grants?.roundFlag === flag) && (offer.actorUuid === who.uuid));
+  if (knocked && (attacker.system?.effects?.slots?.["pseudoHunger.signature"] === true)
+    && (attacker.getFlag?.(SCOPE, "pseudoHungerRound") !== roundKey()) && !offered(attacker, "pseudoHungerRound")) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: attacker.uuid, actorName: attacker.name, maneuverId: "signature-technique",
+      maneuverName: "Signature Technique", targetUuid: target.uuid, technique: { via: "", any: true },
+      reason: `Mimicry of Bestial Hunger - ${target.name} knocked through`, grants: { roundFlag: "pseudoHungerRound" } } });
+  }
+  if ((target.system?.effects?.slots?.["pseudoResilience.basic"] === true) && (damage < (Number(target.system.soakValue) || 0))
+    && (target.getFlag?.(SCOPE, "pseudoResilienceRound") !== roundKey()) && !offered(target, "pseudoResilienceRound")) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Mimicry of Bestial Resilience - less Damage than your Soak Value",
+      grants: { roundFlag: "pseudoResilienceRound" } } });
+  }
+  if ((damage > 0) && (attacker.system?.effects?.slots?.["pseudoClaws.prone"] === true) && turnKey()
+    && (attacker.getFlag?.(SCOPE, "boostedTurn") === turnKey()) && (attacker.getFlag?.(SCOPE, "pseudoClawsRound") !== roundKey())
+    && ((await askPlayerChoice(attacker, `${attacker.name}: Mimicry of Rending Claws - ${target.name}`,
+      [{ value: "yes", label: "A Clash (Impulsive) - won, they are knocked Prone" }, { value: "no", label: "No" }])) === "yes")) {
+    await requestActorUpdate(attacker, { [`flags.${SCOPE}.pseudoClawsRound`]: roundKey() });
+    await postSaveClash(attacker, target, { maneuverName: "Mimicry of Rending Claws", saves: ["impulsive"], reason: "Win and they are knocked Prone.",
+      clawsProne: { applied: false, source: "Mimicry of Rending Claws" } });
+  }
+}
+
+/** Wild Child's Pseudo-Bestial Traits held. */
+function pseudoBestialHeld(actor) {
+  return Array.from(actor?.items ?? []).filter(item => (item.type === "racial") && (item.system?.other === "pseudo-bestial"));
+}
+
+/** Wild Child (4): "Gain access to 1 of your selected Pseudo-Bestial Traits until the start of your next turn" - which, asked. */
+export async function wildChildAccess(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const access = actor.getFlag?.(SCOPE, "pseudoAccess") ?? {};
+  const closed = pseudoBestialHeld(actor).filter(item => !access.all && !(access.ids ?? []).includes(item.id));
+  if (!closed.length) {
+    ui.notifications.info(`${actor.name}: Wild Child - every Pseudo-Bestial Trait is open already.`);
+    return UNSPENT;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Wild Child - till the start of your next turn`,
+    [...closed.map(item => ({ value: item.id, label: item.name })), { value: "none", label: "None" }]);
+  if (!closed.some(item => item.id === picked)) return UNSPENT;
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.pseudoAccess`]: { ...access, ids: [...(access.ids ?? []), picked] } });
+}
+
+/** Wild Child (5): "Enter the Feral State until the end of your next turn. If you are already in the Feral State, gain access to all ...". */
+export async function wildChildFeral(actor) {
+  if ((Number(actor.system?.states?.feral) || 0) > 0) {
+    return requestActorUpdate(actor, { [`flags.${SCOPE}.pseudoAccess`]: { all: true, ids: [] } });
+  }
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  return enterState(actor, "feral", 1, "next-turn", "Wild Child");
+}
+
+/**
+ * Tuffle-Raised (3): "Target an Ally, they regain 2x(bT) Life and Ki Points and their Combat Rolls are increased by x(bT) until the end
+ * of their next turn" - x its first effect's count, the Base Tier yours.
+ */
+export async function tuffleLegacy(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const times = Number(actor?.system?.resources?.grudge?.stacks) || 0;
+  const allies = alliesOnScene(actor).filter(ally => (ally.uuid !== actor.uuid) && !ally.system?.defeated);
+  if (!times || !allies.length) {
+    if (times) ui.notifications.info(`${actor.name}: Tuffle-Raised - no Ally standing.`);
+    return UNSPENT;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Tuffle-Raised - an Ally`,
+    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const ally = allies.find(each => each.uuid === picked);
+  if (!ally) return UNSPENT;
+  const each = times * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  await regainPools(ally, 2 * each, 2 * each);
+  await markUntilNextTurn(ally, ally, "tuffle-raised-mark", each, "end", "Tuffle-Raised");
+  ui.notifications.info(`${actor.name}: Tuffle-Raised - ${ally.name}, ${2 * each} Life and Ki, Combat Rolls ${each} higher.`);
 }
 
 /**
@@ -24760,6 +24888,29 @@ export async function postAttack(actor, target, maneuver,
     woundExtra = [...woundExtra, { label: "Alternate Sight", written: "+2(T)", value: 2 * tier }];
     await requestActorUpdate(actor, { [`flags.${SCOPE}.alternateSight`]: null });
   }
+  const mimicTier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  // Mimicry of Bestial Movement (3): the Instant Movement ended beside them this Round - your next attack, Strike 2(T) at them; spent.
+  const beside = reflecting ? null : actor.getFlag?.(SCOPE, "pseudoBeside");
+  if (beside && (beside.round === roundKey())) {
+    if (everyone.some(who => who?.uuid === beside.uuid)) {
+      strikeExtra = [...strikeExtra, { label: "Mimicry of Bestial Movement", written: "+2(T)", value: 2 * mimicTier }];
+    }
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.pseudoBeside`]: null });
+  }
+  // Mimicry of Bestial Senses (4): their Search or Sense Clash won this turn - Strike 2(T) at them till it ends.
+  const sensed = reflecting ? null : actor.getFlag?.(SCOPE, "pseudoSensed");
+  if (sensed?.turn && (sensed.turn === turnKey()) && everyone.some(who => who?.uuid === sensed.uuid)) {
+    strikeExtra = [...strikeExtra, { label: "Mimicry of Bestial Senses", written: "+2(T)", value: 2 * mimicTier }];
+  }
+  // Mimicry of Penetrating Fangs (2): at an Opponent - "ignores 1/4 (rounded up) of your Opponent's Soak Value if it hits", asked, once a Round.
+  const pierceQuarter = !reflecting && (actor.system.effects?.slots?.["pseudoFangs.pierce"] === true)
+    && (actor.getFlag?.(SCOPE, "pseudoFangsRound") !== roundKey())
+    && everyone.some(who => who && (who.uuid !== actor.uuid) && !alliesOnScene(actor).some(ally => ally.uuid === who.uuid))
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Mimicry of Penetrating Fangs` },
+      content: "<p data-tooltip=\"Once a Round\">A quarter of their Soak Value ignored, rounded up, if it hits?</p>", rejectClose: false });
+  if (pierceQuarter) await actor.setFlag(SCOPE, "pseudoFangsRound", roundKey());
+  // Mimicry of Rending Claws (2): its Diminishing Defense on Attack Declaration.
+  const diminishingEarly = !reflecting && (actor.system.effects?.slots?.["pseudoClaws.diminishing"] === true);
   // Claws (2): your first Physical Attack at the one whose Melee Range you moved into this Round - carried by it; spent either way.
   const clawed = reflecting ? null : actor.getFlag?.(SCOPE, "clawsTarget");
   const clawsAt = (clawed && (clawed.round === roundKey()) && (foundation === "physical") && everyone.some(who => who?.uuid === clawed.uuid))
@@ -24905,6 +25056,9 @@ export async function postAttack(actor, target, maneuver,
           // Neo-Tuffle-Raised (3)'s Greater Dice; Oni-Raised (3)'s price, paid as it is done.
           ...(neoGreater ? { neoGreater: true } : {}),
           ...(oniDrained ? { oniDrained: true } : {}),
+          // Mimicry of Penetrating Fangs (2)'s quarter; Mimicry of Rending Claws (2)'s Diminishing Defense on declaration.
+          ...(pierceQuarter ? { pierceQuarter: true } : {}),
+          ...(diminishingEarly ? { diminishingEarly: true } : {}),
           // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
@@ -28940,7 +29094,8 @@ async function rollAttackWoundWork(message, attack) {
       + balancedParts(target, attack, "Soak").reduce((sum, part) => sum + part.value, 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
-    const pierceSoak = Math.ceil(Math.max(0, base) * (Number(attack.weapon?.soakIgnored) || 0));
+    // Mimicry of Penetrating Fangs (2): another quarter, the same way.
+    const pierceSoak = Math.ceil(Math.max(0, base) * ((Number(attack.weapon?.soakIgnored) || 0) + (attack.pierceQuarter ? 0.25 : 0)));
     const soak = Math.max(0, defence.soak(counted) - ignored - pierceSoak);
 
     // One Wound Roll serves everyone the attack reached, and this bonus is against one of
@@ -29240,8 +29395,9 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   }
   // Slashing: "Apply any Diminishing Defense from Attacking Maneuvers made with this Weapon at
   // Attack Declaration" - what this Dodge will earn, already weighing on it.
-  if (attack?.weapon?.diminishingAtDeclaration && !instinct) {
-    parts.push({ label: `Dim. Defense (${attack.weapon.categoryName})`,
+  // Mimicry of Rending Claws (2): "apply the Diminishing Defense that Attacking Maneuver would inflict on Attack Declaration" - once.
+  if ((attack?.weapon?.diminishingAtDeclaration || attack?.diminishingEarly) && !instinct) {
+    parts.push({ label: `Dim. Defense (${attack.weapon?.diminishingAtDeclaration ? attack.weapon.categoryName : "Mimicry of Rending Claws"})`,
       value: -actor.system.diminishing.defense.perAttack });
   }
   parts.push(...thresholdPenalty(actor));
@@ -31973,6 +32129,8 @@ async function applyAttackDamage(message, target, attack) {
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)) {
     await cerealianBroken(armsUser, target);
   }
+  // Mimicry of Bestial Hunger (2), Resilience (2), Rending Claws (3).
+  if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) await pseudoAfterHit(message, armsUser, target, damage, knockedFor);
   // Oni-Raised (2): an Opponent hit, Injured or worse - the Might Clash, asked.
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) await oniBreak(armsUser, target);
   // Saiyan-Raised (4): Damage from an Opponent's attack - the Basic Attack out of sequence, Superior for it, once an Encounter.
@@ -32720,7 +32878,7 @@ async function answerMoment(message, card, actor) {
   const keyword = chosen.filter(entry => !lethal.includes(entry));
   // What was ticked alone: what is Automatic answered the Moment when it happened, and is not answered twice.
   if (keyword.length) {
-    await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : (defeated ? { damage: 0 } : {}),
+    await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold, knockerUuid: card.knockedBy ?? "" } : (defeated ? { damage: 0 } : {}),
       { blocks: keyword.map(entry => entry.blockId) });
   }
   if (lethal.length) await fireMoment(actor, "lethal-damage", { damage: 0 }, { blocks: lethal.map(entry => entry.blockId) });

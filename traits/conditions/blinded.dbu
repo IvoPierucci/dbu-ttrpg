@@ -14,7 +14,10 @@ text: >
 # Skill Bonus. Written out rather than referenced, because a Light Level is a
 # property of a Square and this Condition ignores what the Square says.
 
+# Mimicry of Bestial Senses (3): "Ignore the effects of the Blinded Combat Condition."
 [passive]
-awareness *= 0.5;
-defenseValue *= 0.5;
-skill.perception.bonus *= 0.5;
+if (!holdsTrait("mimicry-of-bestial-senses")) {
+    awareness *= 0.5;
+    defenseValue *= 0.5;
+    skill.perception.bonus *= 0.5;
+}

@@ -1,0 +1,17 @@
+id: mimicry-of-the-whipping-tail-second-effect
+name: Mimicry of the Whipping Tail
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: true
+requiresTarget: true
+usageLimit: 1/round
+profile: simple
+foundation: physical
+fromTrait: mimicry-of-the-whipping-tail
+fromEffect: 2
+source: Core Rule
+description: >
+  Mimicry of the Whipping Tail's second effect, as a Maneuver: an Instant attack of the Simple Profile and Physical Foundation, your Melee Range 2 Squares further for it.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver, you may make an Attacking Maneuver of the Simple Profile and the Physical Foundation. If you do, you may treat your Melee Range as if it was 2 Squares further for the duration of this Attacking Maneuver.

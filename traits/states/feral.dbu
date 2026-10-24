@@ -25,8 +25,8 @@ text: >
 # Wound Roll is made, where either Critical is known, once whichever it was (chat.mjs askUnhinged).
 
 [passive from 1]
-# Ferocious Fighter (4): its mark held, the Signature Technique Maneuver not forbidden for that one.
-if (!hasCondition("ferocious-mark")) {
+# Ferocious Fighter (4): its mark held, the Signature Technique Maneuver not forbidden for that one. Wild Child (2): never.
+if (!hasCondition("ferocious-mark") && !holdsTrait("wild-child")) {
     forbid signatureTechniques;
 }
 forbid uniqueAbilities;

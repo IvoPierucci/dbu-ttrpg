@@ -1,0 +1,22 @@
+id: mimicry-of-bestial-movement
+name: Mimicry of Bestial Movement
+order: 2
+description: >
+  With a wild ferocity bordering on animalistic, you move less like a man and more like a beast.
+text: >
+  Mimicry of Bestial Movement: With a wild ferocity bordering on animalistic, you move less like a man and more like a beast.
+  (1)-[Passive]: Increase your Defense Value, Impulsive Save and Speed by 1(bT).
+  (2)-[Passive]: Reduce the Ki Point Cost to use your Boosted Speed through the Movement Maneuver by 1(T).
+  (3)-[1/Round]: You may use the Movement Maneuver as an Instant Maneuver. If you do and end your movement on a Square adjacent to an Opponent, your next Attacking Maneuver made during this Combat Round has its Strike Roll increased by 2(T) against that Opponent.
+
+---
+
+[passive]
+# (1), (2)
+defenseValue += 1(bT);
+save.impulsive += 1(bT);
+speed.normal += 1(bT);
+movement.boostedKiCost -= 1(T);
+# (3) The Movement Maneuver's Instant button, once a Round (actor-character-sheet.mjs); the Opponent beside you, said on its card - your
+# next attack this Round, Strike 2(T) at them (chat.mjs pseudoBesideTarget).
+allow movement.pseudoInstant;
