@@ -1,0 +1,33 @@
+id: traces-of-majin
+name: Traces of Majin
+order: 1
+category: body
+# "[Majin Regeneration]": it replaces that Primary Racial Trait - which, the table's.
+importance: primary
+# (5) One of its Options, chosen as it is gained (traces-of-majin/*.dbu).
+options: 1
+description: >
+  Though you have less magical goo in your composition than most Majins, you're still hardy and nearly indestructible.
+text: >
+  Traces of Majin (Body) [Majin Regeneration]: Though you have less magical goo in your composition than most Majins, you’re still hardy and nearly indestructible.
+  (1)-[Passive]: Increase your Racial Life Modifier by 4.
+  (2)-[Passive]: For each Health Threshold you are below, increase your Soak Value by 1(T).
+  (3)-[Passive]: For each stack of Power you possess, increase your Wound Rolls by 1(T).
+  (4)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver of the Direct or Lethal Damage Category, you may spend up to 8(bT) Ki Points. For every 4(bT) Ki Points spent, you may lower the Damage Category by 1.
+  (5)-[Option]: Upon gaining access to this Factor Trait, select one of the following effects:
+  * Low Dilution [Triggered, 1/Round]: If you take Damage from an Attacking Maneuver, regain Life Points equal to your Surgency.
+  * Highly Diluted [Passive]: You cannot use the 7th effect of Rubbery Body, but while you have 2+ stacks of Power, increase the Wound Rolls of your Signature Techniques by 2(T).
+
+---
+
+[passive]
+# (1), (2)
+racialLifeModifier += 4;
+soakValue.perThreshold += 1(T);
+# (3)
+if (hasResource("power")) {
+    wound += power.stacks * 1(T);
+}
+# (4) Hit by a Direct or Lethal attack: buttons on its card before its Wound Roll, once a Round - 4(bT) Ki a Damage Category down,
+# 8(bT) two (chat.mjs dilutedButtons).
+allow diluted.category;

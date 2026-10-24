@@ -1,0 +1,19 @@
+id: highly-diluted
+name: Highly Diluted
+order: 2
+optionOf: traces-of-majin
+description: >
+  Highly Diluted [Passive]: You cannot use the 7th effect of Rubbery Body, but while you have 2+ stacks of Power, increase the Wound Rolls of your Signature Techniques by 2(T).
+text: >
+  Highly Diluted [Passive]: You cannot use the 7th effect of Rubbery Body, but while you have 2+ stacks of Power, increase the Wound Rolls of your Signature Techniques by 2(T).
+
+---
+
+[passive]
+# Rubbery Body (7)'s stretch of 3 taken back off, where it is held.
+if (holdsTrait("rubbery-body")) {
+    meleeRange.stretch -= 3;
+}
+if (stacksAtLeast(2, "power")) {
+    wound.signature += 2(T);
+}

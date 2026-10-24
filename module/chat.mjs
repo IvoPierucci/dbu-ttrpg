@@ -20830,6 +20830,34 @@ export async function goldenFruitPower(actor) {
   return enterState(actor, godKi ? "superior" : "god-ki", 1, "next-turn", "Golden Fruit");
 }
 
+/**
+ * Traces of Majin (4): "If you are hit by an Attacking Maneuver of the Direct or Lethal Damage Category, you may spend up to 8(bT) Ki
+ * Points. For every 4(bT) Ki Points spent, you may lower the Damage Category by 1." Its buttons before the Wound, once a Round.
+ */
+function dilutedButtons(message, attack, container) {
+  if (!attack.result || attack.result.wound) return;
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["diluted.category"] !== true)) continue;
+    const own = targetResult(attack, uuid);
+    if (!own?.hit || !["direct", "lethal"].includes(own.damageCategory) || (target.getFlag?.(SCOPE, "dilutedRound") === roundKey())) continue;
+    if ((attack.diluted ?? []).some(each => each.uuid === uuid)) continue;
+    const step = 4 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+    const most = (own.damageCategory === "lethal") ? 2 : 1;
+    for (let steps = 1; steps <= most; steps++) {
+      if ((Number(target.system.ki?.value) || 0) < steps * step) continue;
+      cardButton(container, `Traces of Majin - ${steps * step} Ki`, `Once a Round: ${target.name}'s Damage Category ${steps} down for this attack.`, async () => {
+        if (target.getFlag?.(SCOPE, "dilutedRound") === roundKey()) return;
+        const { spendManeuverCost } = await import("./maneuvers.mjs");
+        if (!await spendManeuverCost(target, { name: "Traces of Majin" }, steps * step)) return;
+        await target.setFlag(SCOPE, "dilutedRound", roundKey());
+        const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+        requestEdit(message, { type: "attack", attack: { ...fresh, diluted: [...(fresh.diluted ?? []), { uuid, steps }] } });
+      });
+    }
+  }
+}
+
 /** Synthetic Muscle (2), (3): the Greater Dice on a Physical or Energy attack's Wound - and again, where (3) was paid for. */
 function syntheticDice(attacker, attack) {
   if ((attacker?.system?.effects?.slots?.["synthetic.greaterDice"] !== true) || !["physical", "energy"].includes(attack?.foundation)) return [];
@@ -29950,9 +29978,11 @@ async function rollAttackWoundWork(message, attack) {
   // that Attacking Maneuver by 1 Category for the sake of your Damage Calculation" - theirs alone.
   const vulnerable = entry => [attack.profile, ...extraProfilesOf(attack)].some(id => id
     && ((entry.actor ?? fromUuidSync(entry.uuid))?.system?.effects?.slots?.[`vulnerable.${id}`] === true)) ? 1 : 0;
-  // Armor Plating (3): "reduce the Damage Category of that Attacking Maneuver by 1 Category" - its button taken.
+  // Armor Plating (3): "reduce the Damage Category of that Attacking Maneuver by 1 Category" - its button taken. Traces of Majin (4): as
+  // many steps as were paid for.
   const raisedFor = targets.map(entry => {
-    const steps = raised + vulnerable(entry) - ((attack.armorPlated ?? []).includes(entry.uuid) ? 1 : 0);
+    const steps = raised + vulnerable(entry) - ((attack.armorPlated ?? []).includes(entry.uuid) ? 1 : 0)
+      - (attack.diluted ?? []).filter(each => each.uuid === entry.uuid).reduce((sum, each) => sum + (Number(each.steps) || 0), 0);
     return ghostCategory((steps && entry.own?.hit)
       ? { ...entry, own: { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, steps) } } : entry, attack);
   });
@@ -35219,6 +35249,7 @@ function renderAttack(message, html) {
   if (!result?.wound) giantButtons(message, attack, container);
   if (!result?.wound) tremendousLordButtons(message, attack, container);
   if (!result?.wound) platedButtons(message, attack, container);
+  if (!result?.wound) dilutedButtons(message, attack, container);
   if (!result?.wound) syntheticButtons(message, attack, container);
   if (!result) speedsterButtons(message, attack, container);
   // Dissipating Dodge (2): targeted - Ki for the Defense Value at Nano, before it is settled.

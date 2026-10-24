@@ -1,0 +1,14 @@
+id: low-dilution
+name: Low Dilution
+order: 1
+optionOf: traces-of-majin
+description: >
+  Low Dilution [Triggered, 1/Round]: If you take Damage from an Attacking Maneuver, regain Life Points equal to your Surgency.
+text: >
+  Low Dilution [Triggered, 1/Round]: If you take Damage from an Attacking Maneuver, regain Life Points equal to your Surgency.
+
+---
+
+# Damage from an Opponent's attack, once a Round. Automatic by default, its Triggered/Automatic button.
+[triggered/opponent-damage, 1/round, effect 5]
+life.value += surgency;

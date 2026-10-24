@@ -1,0 +1,8 @@
+id: diluted-majin
+name: Diluted Majin
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Majin
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Instead of being purely formed of the chewing gum-like goop Majins seem to be infinitely constructed from, you possess a somewhat altered structure reminiscent of the more 'classical' Majins.
