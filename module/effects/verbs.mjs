@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  tamagamiIntegrate: {
+    args: [0, 0],
+    doc: "Protector of the Dragon Ball (1): a Dragon Ball you hold Integrated - one at most (chat.mjs tamagamiIntegrate)."
+  },
   cyberCopy: {
     args: [0, 0],
     doc: "Mimicry Program (1): a Cyber Copy of the one just Grappled - 3 at most, one replaced past it (chat.mjs cyberCopy)."

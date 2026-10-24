@@ -869,6 +869,10 @@ async function settleClashEffects(messageId, clash) {
     await settleSense(message, clash);
   }
 
+  if (clash.honorbound && clash.result && !clash.honorbound.applied) {
+    await settleHonorbound(message, clash);
+  }
+
   if (clash.pseudoSenses && clash.result && !clash.pseudoSenses.applied) {
     await settlePseudoSenses(message, clash);
   }
@@ -20352,6 +20356,115 @@ function ghostCategory(entry, attack) {
   return (next === category) ? entry : { ...entry, own: { ...entry.own, damageCategory: next } };
 }
 
+/** A character's Dragon Balls: all of them, or the Integrated one. */
+function dragonBallsOf(actor, integrated = null) {
+  return Array.from(actor?.items ?? []).filter(item => (item.type === "gear") && (item.system?.gearId === "dragon-ball")
+    && ((integrated === null) || (Boolean(item.system?.integrated) === integrated)));
+}
+
+/** Protector of the Dragon Ball (1), (3): "integrate a Dragon Ball" - "You can only integrate a single Dragon Ball." */
+export async function tamagamiIntegrate(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (dragonBallsOf(actor, true).length) {
+    ui.notifications.warn(`${actor.name}: a Dragon Ball is Integrated already - only a single one.`);
+    return UNSPENT;
+  }
+  if (actor.getFlag?.(SCOPE, "dragonBallGiven") === (game.combat?.id ?? "none")) {
+    ui.notifications.warn(`${actor.name}: no other Dragon Ball Integrated this Combat Encounter - one was given.`);
+    return UNSPENT;
+  }
+  const balls = dragonBallsOf(actor, false);
+  if (!balls.length) {
+    ui.notifications.warn(`${actor.name}: no Dragon Ball to Integrate.`);
+    return UNSPENT;
+  }
+  const picked = (balls.length === 1) ? balls[0].id : await askPlayerChoice(actor, `${actor.name}: Integrate which Dragon Ball`,
+    balls.map(item => ({ value: item.id, label: item.name })));
+  const ball = balls.find(item => item.id === picked);
+  if (!ball) return UNSPENT;
+  await ball.update({ "system.integrated": true });
+  ui.notifications.info(`${actor.name}: ${ball.name} Integrated.`);
+}
+
+/** Protector of the Dragon Ball (2): its Integrated Dragon Ball no longer - offered on the card to one beside them, asked whom. */
+export async function tamagamiOffer(card, actor) {
+  const ball = dragonBallsOf(actor, true)[0];
+  if (!ball) return ui.notifications.warn(`${actor.name}: no Integrated Dragon Ball to offer.`);
+  const near = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
+    && besideAny(actor, [token.actor])).map(token => [token.actor.uuid, token.actor])).values()];
+  if (!near.length) return ui.notifications.warn(`${actor.name}: nobody on a Square adjacent to offer it to.`);
+  const picked = await askPlayerChoice(actor, `${actor.name}: offer ${ball.name} to`,
+    [...near.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "Nobody" }]);
+  const who = near.find(each => each.uuid === picked);
+  if (!who) return;
+  await ball.update({ "system.integrated": false });
+  requestEdit(card, { type: "offer", offer: { actorUuid: who.uuid, actorName: who.name, maneuverId: "", maneuverName: "Accept",
+    reason: `${actor.name} offers ${ball.name} - Superior till the end of your next turn`,
+    dragonBallGift: { fromUuid: actor.uuid, itemId: ball.id, name: ball.name } } });
+}
+
+/** Protector of the Dragon Ball (2), accepted: the Dragon Ball theirs, Superior till the end of their next turn; none Integrated again. */
+async function takeDragonBall(message, actor, offer) {
+  const gift = offer.dragonBallGift ?? {};
+  const giver = fromUuidSync(gift.fromUuid ?? "");
+  const ball = giver?.items?.get(gift.itemId ?? "");
+  if (!giver || !ball) {
+    ui.notifications.warn("That Dragon Ball is no longer there to take.");
+    return null;
+  }
+  const data = ball.toObject();
+  delete data._id;
+  data.system.integrated = false;
+  data.system.equipped = false;
+  await actor.createEmbeddedDocuments("Item", [data]);
+  requestDeleteItem(giver, ball.id);
+  await requestActorUpdate(giver, { [`flags.${SCOPE}.dragonBallGiven`]: game.combat?.id ?? "none" });
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  await enterState(actor, "superior", 1, "next-turn", "Protector of the Dragon Ball");
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return true;
+}
+
+/**
+ * Protector of the Dragon Ball (9): Defeated with a Dragon Ball Integrated - it leaves them, "placed on a Square adjacent to you". Honorbound
+ * (3): by an Opponent's attack - "you may make a Skill Clash (using any Skill of your choice) against that Opponent. If you win, you do not
+ * trigger the 9th effect" - asked first.
+ */
+export async function tamagamiDefeat(actor, knockerUuid = "") {
+  if (actor?.system?.effects?.slots?.["tamagami.drop"] !== true) return;
+  const ball = dragonBallsOf(actor, true)[0];
+  if (!ball) return;
+  const knocker = knockerUuid ? fromUuidSync(knockerUuid) : null;
+  if (knocker && (actor.system.effects?.slots?.["honorbound.clash"] === true) && !alliesOnScene(actor).some(ally => ally.uuid === knocker.uuid)) {
+    const { default: Data } = await import("./data/actor-character.mjs");
+    const skill = await askPlayerChoice(actor, `${actor.name}: Honorbound - a Skill Clash at ${knocker.name}, or let it fall`,
+      [...Object.entries(Data.SKILLS).map(([key, entry]) => ({ value: key, label: entry.label })), { value: "none", label: "Let it fall" }]);
+    if (skill && (skill !== "none")) {
+      return postSkillClash(actor, knocker, { name: "Honorbound", type: "outOfSequence",
+        clash: { skill, defenderSkills: [skill] } }, { honorbound: { applied: false, itemId: ball.id } });
+    }
+  }
+  return dropDragonBall(actor, ball);
+}
+
+/** The Dragon Ball no longer theirs - "placed on a Square adjacent to you": which Square, and who picks it up, the map's. */
+async function dropDragonBall(actor, ball) {
+  const name = ball.name;
+  await ball.delete();
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${name} falls from ${actor.name} onto a Square adjacent to them.`)}</div>` });
+}
+
+/** Honorbound (3)'s Clash settled: won, the Dragon Ball kept; lost, it falls. */
+async function settleHonorbound(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...(message.getFlag(SCOPE, CLASH_FLAG) ?? clash), honorbound: { ...clash.honorbound, applied: true } });
+  const actor = fromUuidSync(clash.challengerUuid);
+  const ball = actor?.items?.get(clash.honorbound.itemId ?? "");
+  if (!actor || !ball) return;
+  if (whoWonClash(clash.result) === "challenger") return settledNote(message, `Honorbound: ${actor.name} keeps ${ball.name}.`);
+  return dropDragonBall(actor, ball);
+}
+
 /**
  * Mimicry Program (1): "If you enter a Grapple as the Grappler, gain a 'Cyber Copy' of that Character. You can only possess up to 3 Cyber
  * Copies" - "make note of any Form or Enhancements that Character was in at the time". Kept on the character (`cyberCopies`).
@@ -24634,6 +24747,7 @@ async function takeOutOfSequence(message, actor, offer) {
   }
   if (offer.bagOfTricks) return takeBagOfTricks(message, actor);
   if (offer.genieSurge) return takeGenieSurge(message, actor);
+  if (offer.dragonBallGift) return takeDragonBall(message, actor, offer);
   if (offer.frequentFlyer) return takeFrequentFlyer(message, actor);
   if (offer.ownOutOfSequence) return ownOutOfSequence(actor, offer.ownOutOfSequence);
   // Wild Counter's, once a Round.

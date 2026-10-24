@@ -1,0 +1,44 @@
+id: protector-of-the-dragon-ball
+name: Protector of the Dragon Ball
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (8) Where the Racial Attribute Score Increase's +2 to Force goes - kept, or to Magic; then a Talent of those four Categories, chosen.
+choose: list
+choices: Force, Magic
+grantsTalentChoiceFrom: weapon, magic-attack, physical-attack, energy-attack
+description: >
+  By storing your selected Dragon Ball within your body, only those you deem worthy or who defeat you in combat can take it from you.
+text: >
+  Protector of the Dragon Ball (Body): By storing your selected Dragon Ball within your body, only those you deem worthy or who defeat you in combat can take it from you.
+  (1)-[1/Encounter]: As a Standard Maneuver with an Action Cost of 2 Actions, you may integrate a Dragon Ball (see — Special Items).
+  (2)-[1/Encounter]: As a Standard Maneuver with an Action Cost of 3 Actions, you may stop integrating a Dragon Ball and offer it to another character on a Square adjacent to you. If that character accepts that Dragon Ball, they enter the Superior State until the end of their next turn, but you cannot integrate another Dragon Ball for the remainder of this Combat Encounter.
+  (3)-[Passive]: You can only integrate a single Dragon Ball.
+  (4)-[Passive]: While you’re Adventuring, you may integrate a Dragon Ball as a Free Maneuver.
+  (5)-[Passive]: While you have an Integrated Dragon Ball, increase your Wound Rolls and Soak Value by 1(T).
+  (6)-[Passive]: While you have an Integrated Dragon Ball, increase the amount of Ki Points you regain from all sources by 1/2.
+  (7)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (8)-[Passive]: Upon gaining this Factor Trait, you may replace the bonus to your Force Attribute Score from your Racial Attribute Score Increase with a bonus to your Magic Attribute Score. Then, regardless of if you applied that effect, you may gain a Talent from the Weapon, Magic, Physical, or Energy Talent Categories.
+  (9)-[Automatic/Defeat]: If you possess an Integrated Dragon Ball, it stops being Integrated and is placed on a Square adjacent to you.
+
+---
+
+# (1), (2) Its own Maneuvers, on the Maneuvers tab (maneuvers/protector-*.dbu): a Dragon Ball Integrated for 2 Actions - one at most (3);
+# for 3, offered to one beside you - taken, theirs and Superior till the end of their next turn, none Integrated again this Encounter.
+# (4) Adventuring, its Maneuver needs no Actions: there are none counted outside a Combat Encounter.
+[passive]
+# (5)
+if (hasIntegratedDragonBall) {
+    wound += 1(T);
+    soakValue += 1(T);
+}
+# (6) Ki Points regained, half again - read as they are written (combat.mjs).
+allow tamagami.kiHalf;
+# (7)
+allow surgency.magic;
+# (8) The Racial +2 to Force moved to Magic where that was chosen; the Talent, its header's.
+force.score += -2 * $magic;
+magic.score += 2 * $magic;
+# (9) Defeated with one Integrated: it leaves you - a Square beside you, the map's (chat.mjs tamagamiDefeat); Honorbound (3) asked first.
+allow tamagami.drop;

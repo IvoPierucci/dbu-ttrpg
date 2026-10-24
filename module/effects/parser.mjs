@@ -633,6 +633,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "knockedByOpponent",
   // The one you knocked through, one you Studied (Demonic Skills').
   "knockedStudied",
+  // A Dragon Ball Integrated (Protector of the Dragon Ball's).
+  "hasIntegratedDragonBall",
   // At Defeat's Life Points (Undying's).
   "atDefeat",
   // The one Defeated was the one you Studied (Intelligent Fighter's).

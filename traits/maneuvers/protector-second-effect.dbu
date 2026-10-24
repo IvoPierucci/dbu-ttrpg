@@ -1,0 +1,20 @@
+id: protector-second-effect
+name: Protector of the Dragon Ball: Offer
+type: standard
+actionCost: 3
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: protector-of-the-dragon-ball
+fromEffect: 2
+source: Core Rule
+description: >
+  Protector of the Dragon Ball's second effect, as a Maneuver: your Integrated Dragon Ball no longer, offered to one beside you on its card.
+text: >
+  (2)-[1/Encounter]: As a Standard Maneuver with an Action Cost of 3 Actions, you may stop integrating a Dragon Ball and offer it to another character on a Square adjacent to you. If that character accepts that Dragon Ball, they enter the Superior State until the end of their next turn, but you cannot integrate another Dragon Ball for the remainder of this Combat Encounter.
+
+---
+
+# Whom, asked; offered on its card (use-maneuver.mjs, chat.mjs tamagamiOffer).
+[on used]

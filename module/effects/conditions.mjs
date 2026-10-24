@@ -488,6 +488,9 @@ const PREDICATES = {
   // "While you have an Integrated Majin-Dama".
   hasIntegratedDama: scope => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
     && (item.system?.gearId === "majin-dama") && (item.system?.integrated === true)),
+  // Protector of the Dragon Ball (5): a Dragon Ball Integrated.
+  hasIntegratedDragonBall: scope => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
+    && (item.system?.gearId === "dragon-ball") && (item.system?.integrated === true)),
   // A Combat Condition put on an Opponent this Combat Encounter - kept on whoever put it as it is (chat.mjs conditionGained).
   inflictedThisEncounter: scope => Boolean(globalThis.game?.combat?.started)
     && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "inflictedEncounter") === globalThis.game.combat.id),

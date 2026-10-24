@@ -1,0 +1,21 @@
+id: protector-first-effect
+name: Protector of the Dragon Ball: Integrate
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: protector-of-the-dragon-ball
+fromEffect: 1
+source: Core Rule
+description: >
+  Protector of the Dragon Ball's first effect, as a Maneuver: a Dragon Ball you hold Integrated - one at most.
+text: >
+  (1)-[1/Encounter]: As a Standard Maneuver with an Action Cost of 2 Actions, you may integrate a Dragon Ball (see — Special Items).
+
+---
+
+# Which, asked (chat.mjs tamagamiIntegrate).
+[on used]
+tamagamiIntegrate();

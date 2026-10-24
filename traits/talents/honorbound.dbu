@@ -19,4 +19,6 @@ text: >
 surgency += 1(T);
 # (2) The first Desperation Effect of each Defeat, 1 Karma less (desperation.mjs desperationCost).
 allow honorbound.desperation;
-# Not built: (3) - the Tamagami Factor and Protector of the Dragon Ball are not in this system (their texts are waited on).
+# (3) Defeated by an Opponent's attack with a Dragon Ball Integrated: asked first - a Skill Clash of the Skill you name at them; won,
+# Protector of the Dragon Ball (9) does not happen (chat.mjs tamagamiDefeat, settleHonorbound).
+allow honorbound.clash;

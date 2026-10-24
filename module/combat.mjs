@@ -1077,6 +1077,19 @@ export function registerRacialLifeHooks() {
 }
 
 export function registerDefeatHooks() {
+  // Protector of the Dragon Ball (6): "While you have an Integrated Dragon Ball, increase the amount of Ki Points you regain from all sources
+  // by 1/2" - half of what is regained more, rounded down, in the same write.
+  Hooks.on("preUpdateActor", (actor, changes, options) => {
+    if ((actor.type !== "character") || options.dbuKiRaw || (actor.system.effects?.slots?.["tamagami.kiHalf"] !== true)) return;
+    const written = foundry.utils.getProperty(changes, "system.ki.value");
+    if (written === undefined) return;
+    const before = Number(actor.system.ki?.value) || 0;
+    const held = Array.from(actor.items ?? []).some(item => (item.type === "gear") && (item.system?.gearId === "dragon-ball") && item.system?.integrated);
+    if (!held || !(Number(written) > before)) return;
+    foundry.utils.setProperty(changes, "system.ki.value",
+      Math.min(Number(actor.system.ki?.max) || 0, Number(written) + Math.floor((Number(written) - before) / 2)));
+  });
+
   Hooks.on("preUpdateActor", (actor, changes, options) => {
     if (actor.type !== "character") return;
     if (foundry.utils.getProperty(changes, "system.life.value") === undefined) return;
@@ -1143,6 +1156,10 @@ export function registerDefeatHooks() {
     const was = options.dbuWasDefeated;
     const now = actor.system.defeated;
     if (was === now) return;
+
+    // Protector of the Dragon Ball (9): "If you possess an Integrated Dragon Ball, it stops being Integrated and is placed on a Square
+    // adjacent to you" - Honorbound (3) asked first, where an Opponent's attack did it.
+    if (now) await (await import("./chat.mjs")).tamagamiDefeat(actor, options.dbuKnockedBy ?? "");
 
     // Tuffle Superiority (4): "You immediately leave the Surging State that you entered through this effect if your Inferior is
     // Defeated."

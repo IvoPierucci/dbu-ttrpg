@@ -1,0 +1,8 @@
+id: tamagami
+name: Tamagami
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Android
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  You exist solely to guard a Dragon Ball from those who wish to take it. Whether due to the creator wishing to prevent those with wicked intent from using them, or someone else's selfishness, you staunchly guard it until someone worthy appears.

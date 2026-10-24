@@ -31,6 +31,7 @@
  *   grantsTalentIfManeuver: a=b     the Talent b, where the Maneuver a is open to them already (Ghost's Frequent Flyer)
  *   grantsOtherOptions: a=b         the Other Trait a granted with its Option b, not asked (Troll's Thick Hide); and
  *   grantsOtherChoices: a=b         with its `choose:` answered b (Plant Monster's Elemental (Plantlife))
+ *   grantsTalentChoiceFrom: <ids>   a Talent of those Talent Categories, chosen as it is added - or none (Protector of the Dragon Ball's)
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
  *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
@@ -816,6 +817,26 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
     made.data.system.script = String(made.data.system.script ?? "").replaceAll("$pastSkill", past.skill)
       .replaceAll("$pastAttribute", past.attribute);
     if (past.talent) made.grants.talents = [...(made.grants.talents ?? []), past.talent];
+  }
+  // Protector of the Dragon Ball (8): "you may gain a Talent from the Weapon, Magic, Physical, or Energy Talent Categories" - which, asked.
+  const fromCategories = listOf(trait.grantsTalentChoiceFrom);
+  if (fromCategories.length) {
+    const { talentCategoryOf } = await import("./talent-categories.mjs");
+    const had = new Set(Array.from(actor.items ?? []).filter(each => each.type === "talent").map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
+    const offered = traitsOfKind("talents").filter(talent => fromCategories.includes(talentCategoryOf(talent)?.id) && !had.has(talent.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (offered.length) {
+      const escape = Handlebars.escapeExpression;
+      const picked = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `${trait.name} - a Talent` },
+        content: `<label class="dbu-respond-option" data-tooltip="Its Prerequisites the table's"><span class="dbu-respond-name">Talent</span>
+          <select name="talent">${offered.map(talent => `<option value="${escape(talent.id)}">${escape(talent.name)} (${escape(talentCategoryOf(talent)?.label ?? "")})</option>`).join("")}</select></label>`,
+        buttons: [{ action: "take", label: "Gain", default: true, callback: (event, button, dialog) => dialog.element.querySelector('[name="talent"]')?.value ?? "" },
+          { action: "none", label: "None" }],
+        rejectClose: false
+      });
+      if (offered.some(talent => talent.id === picked)) made.grants.talents = [...(made.grants.talents ?? []), picked];
+    }
   }
   // Ghost (2): "If you already have access to the Soar Maneuver, gain access to the Frequent Flyer Talent" - read before it is gained.
   const [ifManeuver, insteadTalent] = String(trait.grantsTalentIfManeuver ?? "").split("=").map(each => each.trim());
