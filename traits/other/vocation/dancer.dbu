@@ -30,5 +30,5 @@ allow maneuver.dance;
 # (4) On the Round's card, with a stack of Tension (Battle Tension's), never Automatic (it hands over an Out-of-Sequence
 # Maneuver): the Hype out of sequence, the stack spent once it is (chat.mjs dancerHype).
 [triggered/start-of-round, outOfSequence, effect 4]
-requires hasResource("tension");
+requires hasResource("tension") || hasResource("inheritedtension");
 dancerHype();

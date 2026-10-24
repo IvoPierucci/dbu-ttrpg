@@ -1529,7 +1529,24 @@ export async function askShardCharge(actor, declared, target) {
  * Profile is declared, once a Round; Surging now, left as the attack is concluded (`glassSurge`, chat.mjs glassSurgeEnds).
  */
 export async function askGlassSurge(actor, declared) {
-  if (!declared || (actor?.system?.effects?.slots?.["surging.glassAttack"] !== true)) return declared;
+  if (!declared) return declared;
+  // Glass Tribe-Raised (3): "If you use an Attacking Maneuver, you can enter the Surging State for the duration of that Attacking Maneuver.
+  // If you trigger this effect while you are not suffering from any Health Threshold Penalties, do not apply the 2nd effect of the Surging
+  // State upon leaving" - any Attacking Maneuver, once a Round of its own.
+  if ((actor?.system?.effects?.slots?.["glassTribeRaised.surge"] === true) && !((Number(actor.system.states?.surging) || 0) > 0)) {
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if ((actor.getFlag?.("dbu-ttrpg", "glassRaisedRound") !== round) && await foundry.applications.api.DialogV2.confirm({
+      classes: ["dbu-dialog"], window: { title: "Glass Tribe-Raised" },
+      content: `<p data-tooltip="Once a Round.">Enter the Surging State for this Attacking Maneuver?</p>`, rejectClose: false })) {
+      await actor.setFlag("dbu-ttrpg", "glassRaisedRound", round);
+      const unpenalized = (Number(actor.system.threshold?.penalty) || 0) === 0;
+      const { enterState } = await import("./effects/moments-runtime.mjs");
+      await enterState(actor, "surging", 1, null, "Glass Tribe-Raised");
+      if (unpenalized) await (await import("./chat.mjs")).surgingSpare(actor);
+      return { ...declared, glassSurge: true };
+    }
+  }
+  if (actor?.system?.effects?.slots?.["surging.glassAttack"] !== true) return declared;
   if (![declared.profile, declared.secondProfile, ...(declared.appliedProfiles ?? [])].includes("glass")) return declared;
   if (!(actor.system.battlefield?.squareQualities ?? []).includes("glass")) return declared;
   if ((Number(actor.system.states?.surging) || 0) > 0) return declared;
@@ -1555,7 +1572,8 @@ export async function askGlassSurge(actor, declared) {
  */
 export async function askWarriorTension(actor, declared) {
   if (!declared?.weapon || declared.weapon.unarmed || (actor?.system?.effects?.slots?.["warrior.tension"] !== true)) return declared;
-  if (!((Number(actor.system.resources?.tension?.stacks) || 0) > 0)) return declared;
+  // Tension, or Konatsian-Raised's Inherited Tension (chat.mjs vocationTension).
+  if (!(((Number(actor.system.resources?.tension?.stacks) || 0) + (Number(actor.system.resources?.inheritedtension?.stacks) || 0)) > 0)) return declared;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.("dbu-ttrpg", "warriorTensionRound") === round) return declared;
   const yes = await foundry.applications.api.DialogV2.confirm({

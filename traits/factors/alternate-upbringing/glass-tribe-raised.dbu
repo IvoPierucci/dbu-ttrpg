@@ -1,0 +1,28 @@
+id: glass-tribe-raised
+name: Glass Tribe-Raised
+order: 6
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Carrying the legacy of the stoic, stalwart Glass Tribe, you have acclimatized to their mindset.
+text: >
+  Glass Tribe-Raised (Mind): Carrying the legacy of the stoic, stalwart Glass Tribe, you have acclimatized to their mindset.
+  (1)-[Passive]: Ignore any Health Threshold Penalties while in the Surging State.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T) while in the Healthy Health Threshold.
+  (3)-[Triggered, 1/Round]: If you use an Attacking Maneuver, you can enter the Surging State for the duration of that Attacking Maneuver. If you trigger this effect while you are not suffering from any Health Threshold Penalties, do not apply the 2nd effect of the Surging State upon leaving the Surging State entered through this effect.
+
+---
+
+[passive]
+# (1)
+if (inState("surging")) {
+    threshold.penalty = 0;
+}
+# (2)
+if (!belowThreshold("bruised")) {
+    damageReduction += 1(T);
+}
+# (3) Asked as an Attacking Maneuver's Profile is declared, once a Round - Surging for it, left as it is concluded; with no Health
+# Threshold Penalties, its 2nd effect spared (maneuvers.mjs askGlassSurge, Heart of Glass (3)'s).
+allow glassTribeRaised.surge;

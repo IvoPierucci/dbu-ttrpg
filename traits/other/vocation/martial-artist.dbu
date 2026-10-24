@@ -28,6 +28,6 @@ allow martial.area;
 # (3) Ticked in Respond as you Defend, with a stack of Tension (Battle Tension's): no Counter Action for it, the stack spent,
 # and its Guard 2(T) before any other modification (chat.mjs).
 [triggered/defending, 1/round, effect 3]
-requires hasResource("tension");
+requires hasResource("tension") || hasResource("inheritedtension");
 defend.free = true;
 defend.byTension = true;

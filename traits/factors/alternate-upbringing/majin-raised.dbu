@@ -1,0 +1,29 @@
+id: majin-raised
+name: Majin-Raised
+order: 9
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+# (1) A Skill of Personality, chosen as it is gained.
+choose: skill
+chooseAttribute: personality
+description: >
+  Influenced by the chaotic and unpredictable Majins, your high-energy, off-kilter smile sets off mental alarms for all who encounter you.
+text: >
+  Majin-Raised (Mind): Influenced by the chaotic and unpredictable Majins, your high-energy, off-kilter smile sets off mental alarms for all who encounter you.
+  (1)-[Passive]: Upon gaining this Factor Trait, select a Skill that uses Personality as its Attribute. You gain a Skill Rank in the Skill selected for this effect.
+  (2)-[Passive]: Increase your Surgency by 2(T).
+  (3)-[Passive]: Reduce the TP Cost of all Magical Unique Abilities by 2.
+  (4)-[Triggered, 1/Round]: If you fail to hit an Opponent with an Attacking Maneuver, make a Clash (Bluff vs Perception/Intuition) against that Opponent. If you win, you may use the Basic Attack Maneuver against that Opponent as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Chosen as it is gained.
+skill.$choice.ranks += 1;
+# (2)
+surgency += 2(T);
+# (3)
+unique.magical.tpCost -= 2;
+# (4) An Opponent missed: asked, once a Round - the Clash; won, the Basic Attack at them on its card (chat.mjs majinRaisedMiss).
+allow majinRaised.bluff;

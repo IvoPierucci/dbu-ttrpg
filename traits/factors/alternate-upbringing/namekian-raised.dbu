@@ -1,0 +1,32 @@
+id: namekian-raised
+name: Namekian-Raised
+order: 10
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+# (1) A Skill of Insight, chosen as it is gained.
+choose: skill
+chooseAttribute: insight
+description: >
+  Living in a peaceful environment raising Ajisa trees with the Namekians, you practiced patience, analysis, and keeping a cool head under pressure.
+text: >
+  Namekian-Raised (Mind): Living in a peaceful environment raising Ajisa trees with the Namekians, you practiced patience, analysis, and keeping a cool head under pressure.
+  (1)-[Passive]: Upon gaining this Factor Trait, select a Skill that uses Insight as its Attribute. You gain a Skill Rank in the Skill selected for this effect.
+  (2)-[Passive]: Increase your Racial Life Modifier by 2.
+  (3)-[Passive]: Reduce the TP Cost of all Magical Unique Abilities by 2.
+  (4)-[Triggered/Start of Combat Round]: Select an Opponent. Increase your Combat Rolls against the selected Opponent by 1(T) until the end of the Combat Round.
+
+---
+
+[passive]
+# (1) Chosen as it is gained.
+skill.$choice.ranks += 1;
+# (2)
+racialLifeModifier += 2;
+# (3)
+unique.magical.tpCost -= 2;
+
+# (4) Which Opponent, asked as the Round begins - your Strike and Wound at them, your Dodge against them, 1(T) this Round (chat.mjs
+# namekianFocus). Automatic by default, its Triggered/Automatic button - asked either way.
+[triggered/start-of-round, effect 4]
+namekianFocus();

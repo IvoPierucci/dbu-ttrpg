@@ -1,0 +1,33 @@
+id: konatsian-raised
+name: Konatsian-Raised
+order: 8
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+grantsOther: vocation
+resource: inheritedtension
+resourceLabel: Inherited Tension
+resourceMax: 3
+description: >
+  Reared under the watchful eye of the wise Konatsian race, you have specialized in a single combat role.
+text: >
+  Konatsian-Raised (Mind): Reared under the watchful eye of the wise Konatsian race, you have specialized in a single combat role.
+  (1)-[Passive]: Upon gaining this Factor, select a Vocation (see — Konatsians) to gain access to.
+  (2)-[Triggered, Resource]: If an Ally (except a Minion) is Defeated, gain a stack of Inherited Tension (max. 3). Inherited Tension can be spent as if it was Tension for the effects of a Vocation.
+  (3)-[Triggered/Start of Turn]: If you are below the Injured Health Threshold, gain a stack of Inherited Tension.
+
+---
+
+# (1) Its header's `grantsOther`: a Vocation, chosen as it is gained.
+# (2) Inherited Tension, its Resource (3 at most) - spent as Tension by a Vocation's effects, after Tension itself (chat.mjs
+# vocationTension, spendVocationTension).
+
+# (2) An Ally Defeated, not one marked a Minion. Automatic by default, its Triggered/Automatic button.
+[triggered/ally-defeated, effect 2]
+requires !defeatedMinion;
+inheritedtension.stacks += 1;
+
+# (3) Injured or Critical as your turn begins.
+[triggered/start-of-turn, effect 3]
+requires belowThreshold("injured");
+inheritedtension.stacks += 1;

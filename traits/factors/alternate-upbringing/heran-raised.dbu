@@ -1,0 +1,24 @@
+id: heran-raised
+name: Heran-Raised
+order: 7
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Brought up by the cutthroat conquerors from Planet Hera, you have incorporated their reckless teamwork tactics into your repertoire.
+text: >
+  Heran-Raised (Mind): Brought up by the cutthroat conquerors from Planet Hera, you have incorporated their reckless teamwork tactics into your repertoire.
+  (1)-[Passive]: Increase the Strike and Wound Rolls of your Attacking Maneuvers that target an Opponent who has at least one of your Allies on a Square adjacent to them by 1(T).
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver while there is an Ally adjacent to that Opponent, that Ally may use the Movement Maneuver as an Out-of-Sequence Maneuver. If they do, that movement does not trigger the Exploit Maneuver from the hit Opponent.
+  (3)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, you may target one adjacent Ally. That Ally may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but they must target that Opponent with the Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Rows on its Strike and Wound as it is declared, an Opponent it targets with an Ally beside them (chat.mjs postAttack).
+allow heranRaised.flank;
+# (2) An Opponent hit with an Ally beside them: the Movement offered on its card to each such Ally - no Exploit from its Movement -
+# once a Round of yours (chat.mjs applyAttackDamage).
+allow heranRaised.move;
+# (3) An Opponent knocked through by it: the Basic Attack at them offered on its card to each Ally beside you, once a Round of yours.
+allow heranRaised.knock;

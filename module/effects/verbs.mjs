@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  namekianFocus: {
+    args: [0, 0],
+    doc: "Namekian-Raised (4): an Opponent chosen - your Combat Rolls at and against them 1(T) this Round (chat.mjs namekianFocus)."
+  },
   angelRaisedStart: {
     args: [0, 0],
     doc: "Angel-Raised (4): a Counter Action for the Movement or the Power Up Maneuver out of sequence (chat.mjs angelRaisedStart)."

@@ -942,6 +942,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.quills && clash.result && !clash.quills.applied) await settleQuills(message, clash);
   if (clash.dissipate && clash.result && !clash.dissipate.applied) await settleDissipate(message, clash);
   if (clash.impede && clash.result && !clash.impede.applied) await settleImpede(message, clash);
+  if (clash.majinRaised && clash.result && !clash.majinRaised.applied) await settleMajinRaised(message, clash);
   if (clash.lightConsume && clash.result && !clash.lightConsume.applied) await settleLightConsume(message, clash);
   if (clash.lightCounter && clash.result && !clash.lightCounter.applied) await settleLightCounter(message, clash);
   if (clash.ravaging && clash.result && !clash.ravaging.applied) await settleRavaging(message, clash);
@@ -7118,8 +7119,7 @@ export async function postManeuver(actor, maneuver,
       reason: "an Opponent whose Melee Range you entered - hit by your first Physical Attack this Round, a Clash for Prone", claws: true });
   }
   // Ranger (3): the movement ended beside a Character - a stack of Tension for an Ally or an Opponent there.
-  if (maneuver?.movement && card && (actor.system?.effects?.slots?.["ranger.afterMove"] === true)
-    && ((Number(actor.system.resources?.tension?.stacks) || 0) > 0)) {
+  if (maneuver?.movement && card && (actor.system?.effects?.slots?.["ranger.afterMove"] === true) && (vocationTension(actor) > 0)) {
     offerMove(card, actor, { key: `ranger:${actor.uuid}`, flag: "rangerRound", name: "Ranger",
       reason: "a stack of Tension - an Ally beside you cleansed, or the Basic Attack at an Opponent beside you", ranger: true });
   }
@@ -9461,7 +9461,7 @@ function beatdownClashBonus(actor, clash, uuid) {
 function thiefClashOpen(actor, clash) {
   const category = clash?.category ?? "skill";
   if (!["skill", "save"].includes(category) || (actor?.system?.effects?.slots?.["thief.clashTension"] !== true)) return 0;
-  if (!((Number(actor.system.resources?.tension?.stacks) || 0) > 0) || (actor.getFlag?.(SCOPE, "thiefClashRound") === roundKey())) return 0;
+  if (!(vocationTension(actor) > 0) || (actor.getFlag?.(SCOPE, "thiefClashRound") === roundKey())) return 0;
   const other = (actor.uuid === clash.challengerUuid) ? clash.defenderUuid : clash.challengerUuid;
   if (!other || (other === actor.uuid) || alliesOnScene(actor).some(ally => ally.uuid === other)) return 0;
   return (category === "save") ? `1(T)` : "1";
@@ -10676,7 +10676,7 @@ async function clashStage(message, actor) {
   if (scholarSpent) await requestActorUpdate(actor, { [`flags.${SCOPE}.scholarRound`]: roundKey() });
   const thiefTaken = Boolean(thief) && (ready.boxes ?? []).includes("thief");
   if (thiefTaken) {
-    await setResource(actor, "tension", Math.max(0, (Number(actor.system.resources?.tension?.stacks) || 0) - 1));
+    await spendVocationTension(actor, 1);
     await requestActorUpdate(actor, { [`flags.${SCOPE}.thiefClashRound`]: roundKey() });
   }
 
@@ -14263,7 +14263,7 @@ async function glassSurgeEnds(attack) {
  */
 export async function whack(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
-  const held = Number(actor?.system?.resources?.tension?.stacks) || 0;
+  const held = vocationTension(actor);
   if (!held) {
     ui.notifications.warn(`${actor.name}: Whack needs a stack of Tension.`);
     return UNSPENT;
@@ -14285,7 +14285,7 @@ export async function whack(actor) {
     [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
   const target = opponents.find(each => each.uuid === picked);
   if (!target) return UNSPENT;
-  await setResource(actor, "tension", held - 1);
+  await spendVocationTension(actor, 1);
   await actor.setFlag(SCOPE, "whacked", { combatId, uuids: [...already, target.uuid] });
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }), content: "",
@@ -14534,11 +14534,11 @@ export async function gadaboutTurn(actor) {
   const roll = await new Roll("1d10").evaluate();
   let said = "";
   if (roll.total === 1) {
-    const held = Number(actor.system.resources?.tension?.stacks) || 0;
+    const held = vocationTension(actor);
     const pay = (held >= 3) && ((await askPlayerChoice(actor, `${actor.name}: Gadabout - a 1`,
       [{ value: "pay", label: "Spend 3 Tension" }, { value: "skip", label: "Skip the turn" }])) === "pay");
     if (pay) {
-      await setResource(actor, "tension", held - 3);
+      await spendVocationTension(actor, 3);
       said = "a 1 - 3 Tension spent";
     }
     else {
@@ -14612,12 +14612,11 @@ async function settleDanceModifier(message, clash) {
  */
 export async function dancerHype(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
-  const held = Number(actor.system.resources?.tension?.stacks) || 0;
-  if (!held) return UNSPENT;
+  if (!vocationTension(actor)) return UNSPENT;
   const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "hype"));
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
   if (!await useManeuver(actor, own ? definitionOf(own) : getManeuver("hype"), { outOfSequence: true })) return UNSPENT;
-  return setResource(actor, "tension", held - 1);
+  return spendVocationTension(actor, 1);
 }
 
 /** Attacking Maneuvers this one used in the Round just ended - read before or after its count is reset. */
@@ -16327,8 +16326,7 @@ async function boomEnds(attack) {
   if (!(Number(attack?.boom?.tension) > 0)) return;
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   if (!attacker?.isOwner) return;
-  const held = Number(attacker.system.resources?.tension?.stacks) || 0;
-  await setResource(attacker, "tension", Math.max(0, held - Number(attack.boom.tension)));
+  await spendVocationTension(attacker, Number(attack.boom.tension));
 }
 
 /**
@@ -16339,7 +16337,7 @@ async function boomEnds(attack) {
  * the table's.
  */
 export async function boom(actor) {
-  const held = Number(actor.system.resources?.tension?.stacks) || 0;
+  const held = vocationTension(actor);
   const tension = held ? await askPlayerAmount(actor, `${actor.name}: Boom`, Math.min(2, held),
     "Stacks of Tension (a Magnitude, an Energy Charge and a Broken each)") : 0;
   const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
@@ -16365,8 +16363,7 @@ async function warriorTensionEnds(attack) {
   if (!attack?.warriorTension) return;
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   if (!attacker?.isOwner) return;
-  const held = Number(attacker.system.resources?.tension?.stacks) || 0;
-  if (held > 0) await setResource(attacker, "tension", held - 1);
+  if (vocationTension(attacker) > 0) await spendVocationTension(attacker, 1);
 }
 
 /** Entrusted (4): "then leave the Entrusted Special State after concluding that Attacking Maneuver." */
@@ -18152,7 +18149,7 @@ function fleetParts(attacker, target) {
  * spent; false where none was picked.
  */
 async function rangerBeside(message, actor) {
-  const held = Number(actor.system.resources?.tension?.stacks) || 0;
+  const held = vocationTension(actor);
   if (!held) {
     ui.notifications.warn(`${actor.name}: Ranger needs a stack of Tension.`);
     return false;
@@ -18172,7 +18169,7 @@ async function rangerBeside(message, actor) {
       { value: "none", label: "None" }]);
   const who = beside.find(each => each.uuid === picked);
   if (!who) return false;
-  await setResource(actor, "tension", held - 1);
+  await spendVocationTension(actor, 1);
   if (allies.has(who.uuid)) {
     const { setCondition } = await import("./conditions.mjs");
     for (const [key, stacks] of Object.entries(who.system?.conditions ?? {})) {
@@ -19471,6 +19468,100 @@ export async function terrifyingVisage(actor) {
   if (!["power-up", "transformation"].includes(how)) return UNSPENT;
   const used = await ownOutOfSequence(actor, how);
   return used ? used : UNSPENT;
+}
+
+/** Whether one of `attacker`'s Allies stands beside an Opponent among these - Heran-Raised (1)'s. */
+function heranFlanked(attacker, aimed) {
+  const allies = alliesOnScene(attacker);
+  return aimed.filter(Boolean).some(other => (other.uuid !== attacker.uuid) && !allies.some(ally => ally.uuid === other.uuid)
+    && besideAny(other, allies.filter(ally => !ally.system?.defeated)));
+}
+
+/** Whether any of `others` has a token on a Square adjacent to `actor`'s. */
+function besideAny(actor, others) {
+  const at = actor?.getActiveTokens?.(false, true)?.[0];
+  return Boolean(at) && others.some(other => (other.getActiveTokens?.(false, true) ?? []).some(token => squaresBetween(token, at) === 0));
+}
+
+/**
+ * Heran-Raised (2): "If you hit an Opponent with an Attacking Maneuver while there is an Ally adjacent to that Opponent, that Ally may
+ * use the Movement Maneuver as an Out-of-Sequence Maneuver. If they do, that movement does not trigger the Exploit Maneuver from the hit
+ * Opponent." (3): "If you knock an Opponent through a Health Threshold ... you may target one adjacent Ally. That Ally may use the Basic
+ * Attack Maneuver as an Out-of-Sequence Maneuver, but they must target that Opponent." Each offered on the card to each such Ally - once
+ * a Round of yours, counted as one is taken.
+ */
+function heranOffers(message, attacker, target, knocked) {
+  const slots = attacker.system?.effects?.slots ?? {};
+  const allies = alliesOnScene(attacker).filter(ally => !ally.system?.defeated);
+  if (allies.some(ally => ally.uuid === target.uuid)) return;
+  const offers = message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
+  const offered = flag => offers.some(offer => offer.grants?.giverFlag?.flag === flag);
+  if ((slots["heranRaised.move"] === true) && (attacker.getFlag?.(SCOPE, "heranMoveRound") !== roundKey()) && !offered("heranMoveRound")) {
+    for (const ally of allies.filter(each => besideAny(target, [each]))) {
+      requestEdit(message, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "movement", maneuverName: "Movement",
+        reason: `Heran-Raised - ${attacker.name}; no Exploit from it`, noExploit: true,
+        grants: { giverFlag: { uuid: attacker.uuid, flag: "heranMoveRound" } } } });
+    }
+  }
+  if (knocked && (slots["heranRaised.knock"] === true) && (attacker.getFlag?.(SCOPE, "heranKnockRound") !== roundKey()) && !offered("heranKnockRound")) {
+    for (const ally of allies.filter(each => besideAny(attacker, [each]))) {
+      requestEdit(message, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+        targetUuid: target.uuid, reason: `Heran-Raised - ${attacker.name}`, grants: { giverFlag: { uuid: attacker.uuid, flag: "heranKnockRound" } } } });
+    }
+  }
+}
+
+/** Majin-Raised (4): an Opponent missed - "make a Clash (Bluff vs Perception/Intuition) against that Opponent", asked, once a Round. */
+async function majinRaisedMiss(attacker, target) {
+  if ((attacker.system?.effects?.slots?.["majinRaised.bluff"] !== true) || (attacker.getFlag?.(SCOPE, "majinRaisedRound") === roundKey())) return;
+  if (alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return;
+  if ((await askPlayerChoice(attacker, `${attacker.name}: Majin-Raised - ${target.name} missed`,
+    [{ value: "yes", label: "A Clash (Bluff vs Perception/Intuition) - won, the Basic Attack at them" }, { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.majinRaisedRound`]: roundKey() });
+  return postSkillClash(attacker, target, { name: "Majin-Raised", type: "outOfSequence",
+    clash: { skill: "bluff", defenderSkills: ["perception", "intuition"] } }, { majinRaised: { applied: false } });
+}
+
+async function settleMajinRaised(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, majinRaised: { ...clash.majinRaised, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Majin-Raised: they keep their wits.");
+  requestEdit(message, { type: "offer", offer: { actorUuid: clash.challengerUuid, actorName: clash.challengerName, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: clash.defenderUuid, reason: "Majin-Raised - the Clash won" } });
+}
+
+/** Namekian-Raised (4): "Select an Opponent. Increase your Combat Rolls against the selected Opponent by 1(T) until the end of the Combat Round." */
+export async function namekianFocus(actor) {
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
+    && !allies.has(token.actor.uuid) && !token.actor.system?.defeated).map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Namekian-Raised - an Opponent this Round`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const who = opponents.find(each => each.uuid === picked);
+  if (who) await requestActorUpdate(actor, { [`flags.${SCOPE}.namekianFocus`]: { uuid: who.uuid, name: who.name, round: roundKey() } });
+}
+
+/** Namekian-Raised (4)'s, at or against the one chosen this Round. */
+function namekianFocusParts(actor, otherUuid) {
+  const focus = actor?.getFlag?.(SCOPE, "namekianFocus");
+  if (!focus || !otherUuid || (focus.uuid !== otherUuid) || (focus.round !== roundKey())) return [];
+  return [{ label: `Namekian-Raised (${focus.name})`, written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
+/** Tension a Vocation's effects may spend: Tension, and Konatsian-Raised's Inherited Tension "as if it was Tension". */
+export function vocationTension(actor) {
+  return (Number(actor?.system?.resources?.tension?.stacks) || 0) + (Number(actor?.system?.resources?.inheritedtension?.stacks) || 0);
+}
+
+/** That much spent by a Vocation's effect: Tension first, then Inherited Tension. */
+export async function spendVocationTension(actor, amount = 1) {
+  const own = Number(actor?.system?.resources?.tension?.stacks) || 0;
+  const fromOwn = Math.min(own, Math.max(0, amount));
+  if (fromOwn) await setResource(actor, "tension", own - fromOwn);
+  const rest = Math.max(0, amount - fromOwn);
+  if (!rest) return;
+  const inherited = Number(actor.system.resources?.inheritedtension?.stacks) || 0;
+  await setResource(actor, "inheritedtension", Math.max(0, inherited - rest));
 }
 
 /** Cerealian-Raised (2): a Called Shot's Damage on an Opponent - a stack of Broken on them till the start of your next turn, once a Round. */
@@ -22847,6 +22938,11 @@ export async function askInferior(actor) {
 
 /** Tuffle Superiority (2), (3): Strike and Wound 1(T) against your Inferior this Round - the Wound 1(T) more without Energy of Revenge. */
 function inferiorParts(attacker, target, roll) {
+  // And Namekian-Raised (4)'s - one Opponent chosen this Round, 1(T) at them.
+  return [...superiorityParts(attacker, target, roll), ...namekianFocusParts(attacker, target?.uuid)];
+}
+
+function superiorityParts(attacker, target, roll) {
   const inferior = attacker?.getFlag?.(SCOPE, "inferior");
   if (!inferior || !target || (inferior.uuid !== target.uuid) || (inferior.round !== roundKey())
     || (attacker.system?.effects?.slots?.["superiority.inferior"] !== true)) return [];
@@ -22859,6 +22955,11 @@ function inferiorParts(attacker, target, roll) {
 
 /** Tuffle Superiority (2): your Dodge against your Inferior's attack, 1(T). */
 function inferiorDodge(actor, attack) {
+  // And Namekian-Raised (4)'s - against the one chosen this Round.
+  return [...superiorityDodge(actor, attack), ...namekianFocusParts(actor, attack?.attackerUuid)];
+}
+
+function superiorityDodge(actor, attack) {
   const inferior = actor?.getFlag?.(SCOPE, "inferior");
   if (!inferior || !attack?.attackerUuid || (inferior.uuid !== attack.attackerUuid) || (inferior.round !== roundKey())
     || (actor.system?.effects?.slots?.["superiority.inferior"] !== true)) return [];
@@ -23742,6 +23843,11 @@ async function takeOutOfSequence(message, actor, offer) {
     }
     await actor.setFlag(SCOPE, "personalSpaceRound", roundKey());
   }
+  // Once a Round of whoever handed it out, by the flag it names - Heran-Raised (2), (3).
+  if (offer.grants?.giverFlag && (fromUuidSync(offer.grants.giverFlag.uuid ?? "")?.getFlag?.(SCOPE, offer.grants.giverFlag.flag) === roundKey())) {
+    ui.notifications.warn(`${offer.reason ?? "That effect"}: already used this Combat Round.`);
+    return null;
+  }
   // Brigand Combat (2): once a Round for whoever handed it out - another Ally's taken already, this one is gone.
   if (offer.grants?.brigandFrom && (fromUuidSync(offer.grants.brigandFrom)?.getFlag?.(SCOPE, "brigandRound") === roundKey())) {
     ui.notifications.warn("Brigand Combat has been used this Combat Round.");
@@ -24158,6 +24264,10 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.physique) await requestActorUpdate(actor, { [`flags.${SCOPE}.physiqueUsed`]: game.combat?.id ?? "none" });
   // Bouncy Physique's Movement after a collision, once a Round.
   if (offer.grants?.bouncy) await requestActorUpdate(actor, { [`flags.${SCOPE}.bouncyCollided`]: roundKey() });
+  if (offer.grants?.giverFlag) {
+    const giver = fromUuidSync(offer.grants.giverFlag.uuid ?? "");
+    if (giver) await requestActorUpdate(giver, { [`flags.${SCOPE}.${offer.grants.giverFlag.flag}`]: roundKey() });
+  }
   // Brigand Combat (2)'s, once a Round - counted on whoever has it.
   if (offer.grants?.brigandFrom) {
     const brigand = fromUuidSync(offer.grants.brigandFrom);
@@ -24452,6 +24562,12 @@ export async function postAttack(actor, target, maneuver,
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Heran-Raised (1): an Opponent it targets with one of your Allies beside them - Strike and Wound 1(T).
+  if ((actor.system.effects?.slots?.["heranRaised.flank"] === true) && !reflecting && heranFlanked(actor, everyone)) {
+    const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+    strikeExtra = [...strikeExtra, { label: "Heran-Raised", written: "+1(T)", value: tier }];
+    woundExtra = [...woundExtra, { label: "Heran-Raised", written: "+1(T)", value: tier }];
   }
   // Cerealian-Raised (1): "Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 1(T)."
   if ((viaExploit || isCalledShot({ modifiers })) && (actor.system.effects?.slots?.["cerealianRaised.wound"] === true) && !reflecting) {
@@ -31714,6 +31830,11 @@ async function applyAttackDamage(message, target, attack) {
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)) {
     await cerealianBroken(armsUser, target);
   }
+  // Heran-Raised (2), (3): an Opponent hit with an Ally beside them - that Ally's Movement; knocked through - an Ally beside you, the
+  // Basic Attack at them.
+  if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) heranOffers(message, armsUser, target, knockedFor);
+  // Majin-Raised (4): "If you fail to hit an Opponent with an Attacking Maneuver" - the Clash, asked.
+  if ((!own.hit || isAbsoluteMiss(own)) && armsUser && (armsUser.uuid !== target.uuid)) await majinRaisedMiss(armsUser, target);
   // Fangs' Venomous: Damage dealt by the Bite Attack - a Clash (Corporeal), asked, twice an Encounter.
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
     && (attack.maneuverId === "bite-attack")) await venomousBite(armsUser, target);
@@ -33297,8 +33418,7 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
     await target.setFlag(SCOPE, "fullCounterEncounter", game.combat?.id ?? "none");
   }
   if (byTension) {
-    const held = Number(target.system.resources?.tension?.stacks) || 0;
-    await setResource(target, "tension", Math.max(0, held - 1));
+    await spendVocationTension(target, 1);
   }
 
   // Zen Counter (2): "If you are targeted by an Attacking Maneuver while in the Mindful State, increase your Combat Rolls by
