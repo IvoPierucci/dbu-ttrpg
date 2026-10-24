@@ -1,0 +1,11 @@
+id: cybernetic-enhancement
+name: Cybernetic Enhancement
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Traits are the files
+# in the folder of its name, `order:` as its page lists them: Armor Plating 1, Cloaking System 2, Emergency Energy Supplies 3,
+# Integrated Weapon 4, Life Support 5, Mental Supercomputer 6, Metallic Exoskeleton 7, Nanomachine Repair 8, Onboard Computer 9,
+# Robotic Limb 10, Rocket Sleeves 11, Signature Amplifier 12, Synthetic Muscle 13 - all Body.
+requirement: Any
+maximumFactor: 3
+prerequisites: N/A
+description: >
+  We can rebuild you. We have the technology. We can make you stronger, faster, better than you were before. All you have to do... is nearly die. It happens more often than you realize- someone loses a limb, or nearly dies, and thanks to the advances of medical science, they are restored to full health, and they're somehow... improved for it.
