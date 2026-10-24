@@ -1,0 +1,12 @@
+id: monster
+name: Monster
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Traits are the files
+# in the folder of its name, `order:` as its page lists them: Custom Monstrosity 1, Devil 2, Fairy 3, Genie 4, Ghost 5, Goblin 6,
+# Mummy 7, Plant Monster 8, Troll 9, Vampire 10 - all Body.
+requirement: >
+  Earthling or Demon
+maximumFactor: 1
+prerequisites: >
+  You are not Unnatural before applying the effects of any of Monster's Factor Traits.
+description: >
+  Whether due to circumstances or lineage, you are a monstrously misunderstood creature. Your preternatural nature creates an uncanny image in the minds of others.
