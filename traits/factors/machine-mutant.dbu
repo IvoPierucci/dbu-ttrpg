@@ -1,0 +1,8 @@
+id: machine-mutant
+name: Machine Mutant
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Android
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  A shifting mass of liquid metal, living and breathing almost like organic tissue, you are unique among your kind. Not quite inorganic, but still artificial in nature, you walk the line between the natural and unnatural. You are a machine, but you've redefined the word 'life'... A true Machine Mutant.

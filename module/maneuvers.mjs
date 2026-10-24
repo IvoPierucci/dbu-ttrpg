@@ -4281,7 +4281,7 @@ export async function askMasterfulCharge(actor, declared) {
 }
 
 /** An Integrated Item destroyed: a Weapon broken, Apparel broken (Break Value 0), each off; an Accessory, having no broken, gone. */
-async function destroyIntegrated(actor, item) {
+export async function destroyIntegrated(actor, item) {
   const { brokenChanges } = await import("./gear.mjs");
   const kind = item.system?.crafted?.kind;
   if (kind === "apparel") return item.update({ ...brokenChanges(item, getTrait), "system.equipped": false, "system.layer": "" });

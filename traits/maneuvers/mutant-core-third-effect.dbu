@@ -1,0 +1,21 @@
+id: mutant-core-third-effect
+name: Mutant Core: Integrate
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: mutant-core
+fromEffect: 3
+source: Core Rule
+description: >
+  Mutant Core's third effect, as a Maneuver: an Item Integrated, a tenth of your Maximum Ki back - and the Exploit to every Opponent in a Sphere around you.
+text: >
+  (3)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action, Integrate any Item you possess or currently have Equipped. Regain Ki Points equal to 1/10th of your Maximum Ki Points upon Integrating any Item through this effect. This effect triggers the Exploit Maneuver from all Opponents within a Sphere AoE (centered on you).
+
+---
+
+# Which Item, asked (chat.mjs mutantIntegrate); the Exploit offered on its card (use-maneuver.mjs, chat.mjs mutantCoreExploits).
+[on used]
+mutantIntegrate();

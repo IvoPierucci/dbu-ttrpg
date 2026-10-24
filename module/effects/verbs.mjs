@@ -403,6 +403,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  mutantIntegrate: {
+    args: [0, 0],
+    doc: "Mutant Core (3): an Item Integrated, a tenth of the Maximum Ki Points back (chat.mjs mutantIntegrate)."
+  },
+  mutantConsume: {
+    args: [0, 0],
+    doc: "Mutant Core (4): an Integrated Item destroyed for the Power Up or a Surge, out of sequence - 3 an Encounter (chat.mjs mutantConsume)."
+  },
   trollPower: {
     args: [0, 0],
     doc: "Troll (4): Feral till the end of your next turn - Feral already, Surging till the start of it, asked (chat.mjs trollPower)."

@@ -1,0 +1,21 @@
+id: mutant-core-fourth-effect
+name: Mutant Core: Consume
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: mutant-core
+fromEffect: 4
+source: Core Rule
+description: >
+  Mutant Core's fourth effect, as a Maneuver: an Integrated Item destroyed for the Power Up or a Surge, out of sequence - three times an Encounter.
+text: >
+  (4)-[1/Round, 3/Encounter]: As an Instant Maneuver, you may destroy one of your Integrated Items to either use the Power Up Maneuver or use a Surge of your choice as an Out-of-Sequence Maneuver.
+
+---
+
+# Which Item, and the Power Up or a Surge, asked; destroyed once it is used (chat.mjs mutantConsume).
+[on used]
+mutantConsume();

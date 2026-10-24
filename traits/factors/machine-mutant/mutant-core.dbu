@@ -1,0 +1,25 @@
+id: mutant-core
+name: Mutant Core
+order: 1
+category: body
+# "[Energy Core]": it replaces that Primary Racial Trait - which, the table's.
+importance: primary
+description: >
+  The core of your being is made of living metal, allowing you to absorb other kinds of technology into yourself.
+text: >
+  Mutant Core (Body) [Energy Core]: The core of your being is made of living metal, allowing you to absorb other kinds of technology into yourself.
+  (1)-[Passive]: While you are in the Healthy Health Threshold, reduce the Damage Category of any Attacking Maneuver that targets you by 1 Category for the sake of your Damage calculation.
+  (2)-[Passive]: Apply your Racial Saving Throw Bonus to the Corporeal Saving Throw in addition to the Cognitive Saving Throw.
+  (3)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action, Integrate any Item you possess or currently have Equipped. Regain Ki Points equal to 1/10th of your Maximum Ki Points upon Integrating any Item through this effect. This effect triggers the Exploit Maneuver from all Opponents within a Sphere AoE (centered on you).
+  (4)-[1/Round, 3/Encounter]: As an Instant Maneuver, you may destroy one of your Integrated Items to either use the Power Up Maneuver or use a Surge of your choice as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Read where each target's Damage Category is settled (chat.mjs ghostCategory).
+allow mutantCore.healthy;
+# (2)
+allow save.racial.corporeal;
+# (3), (4) Its own Maneuvers, on the Maneuvers tab (maneuvers/mutant-core-*.dbu): an Item Integrated for 1 Action - a tenth of your
+# Maximum Ki back, the Exploit offered to every Opponent in a Standard Sphere; an Integrated Item destroyed as an Instant for the Power
+# Up or a Surge, out of sequence - Masterful Integration (2), (3) answering it.

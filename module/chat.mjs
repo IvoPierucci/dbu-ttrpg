@@ -20332,15 +20332,96 @@ export async function trollPower(actor) {
   return enterState(actor, "surging", 1, "start-of-next-turn", "Troll");
 }
 
-/** Ghost (4): Physical or Energy - "Reduce the Damage Category ... to Standard"; Magic - "increase ... by 1 Category". For its own Damage. */
+/**
+ * What a target's own effects do to an attack's Damage Category, for their Damage alone. Mutant Core (1): Healthy - "reduce the Damage
+ * Category of any Attacking Maneuver that targets you by 1 Category". Ghost (4): Physical or Energy - "Reduce the Damage Category ... to
+ * Standard"; Magic - "increase ... by 1 Category".
+ */
 function ghostCategory(entry, attack) {
   const target = entry.actor ?? fromUuidSync(entry.uuid);
-  if (!entry.own?.hit || (target?.system?.effects?.slots?.["ghost.categories"] !== true)) return entry;
+  if (!entry.own?.hit || !target) return entry;
+  const slots = target.system?.effects?.slots ?? {};
   const category = entry.own.damageCategory;
-  const next = (attack.foundation === "magic") ? resolveDamageCategory(category, 1)
-    : (["physical", "energy"].includes(attack.foundation) && ((DAMAGE_CATEGORIES[category]?.value ?? 1) > DAMAGE_CATEGORIES.standard.value))
-      ? "standard" : category;
+  let next = category;
+  if ((slots["mutantCore.healthy"] === true) && ((target.system.threshold?.key ?? "healthy") === "healthy")) next = resolveDamageCategory(next, -1);
+  if (slots["ghost.categories"] === true) {
+    next = (attack.foundation === "magic") ? resolveDamageCategory(next, 1)
+      : (["physical", "energy"].includes(attack.foundation) && ((DAMAGE_CATEGORIES[next]?.value ?? 1) > DAMAGE_CATEGORIES.standard.value))
+        ? "standard" : next;
+  }
   return (next === category) ? entry : { ...entry, own: { ...entry.own, damageCategory: next } };
+}
+
+/** Mutant Core (3): "Integrate any Item you possess or currently have Equipped. Regain Ki Points equal to 1/10th of your Maximum Ki Points". */
+export async function mutantIntegrate(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { activeIntegrated, integratedKind, INTEGRATED_ACTIVE, isIntegrated } = await import("./integrated.mjs");
+  const items = Array.from(actor.items ?? []).filter(item => integratedKind(item) && !isIntegrated(item) && !item.system?.crafted?.destroyed);
+  if (!items.length) {
+    ui.notifications.warn(`${actor.name}: Mutant Core - no Item to Integrate.`);
+    return UNSPENT;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Mutant Core - Integrate which`,
+    [...items.map(item => ({ value: item.id, label: item.name })), { value: "none", label: "None" }]);
+  const item = items.find(each => each.id === picked);
+  if (!item) return UNSPENT;
+  const kind = integratedKind(item);
+  const room = activeIntegrated(actor.items.contents, kind).length < (INTEGRATED_ACTIVE[kind] ?? 0);
+  await item.update({ "system.integrated": true, "system.equipped": room });
+  const back = Math.floor((Number(actor.system.ki?.max) || 0) / 10);
+  if (back) await regainPools(actor, 0, back);
+  ui.notifications.info(`${actor.name}: ${item.name} Integrated${room ? ", Active" : ""} - ${back} Ki Points back.`);
+}
+
+/** Mutant Core (3): the Exploit, offered on its card to every Opponent with 2 Squares or fewer between them and you (a Standard Sphere). */
+export function mutantCoreExploits(card, actor, maneuver) {
+  const from = actor.getActiveTokens?.(false, true)?.[0];
+  if (!card || !from) return;
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const other = token.actor;
+    if (!other || seen.has(other.uuid) || (other.uuid === actor.uuid) || allies.has(other.uuid) || other.system?.defeated) continue;
+    seen.add(other.uuid);
+    if ((squaresBetween(token.document ?? token, from) ?? 99) > SPHERE_RADIUS.standard - 1) continue;
+    if (!other.items?.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    requestEdit(card, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId: "exploit", maneuverName: "Exploit",
+      targetUuid: actor.uuid, reason: `Mutant Core - ${actor.name} Integrates`,
+      provokedBy: { maneuverId: maneuver.id ?? "", maneuverName: maneuver.name ?? "", messageId: card.id } } });
+  }
+}
+
+/**
+ * Mutant Core (4): "destroy one of your Integrated Items to either use the Power Up Maneuver or use a Surge of your choice as an
+ * Out-of-Sequence Maneuver" - three times an Encounter; the Item destroyed once it is used, Masterful Integration (2), (3) after.
+ */
+export async function mutantConsume(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const encounter = game.combat?.id ?? "none";
+  const used = actor.getFlag?.(SCOPE, "mutantConsumed");
+  const count = (used?.encounter === encounter) ? (Number(used.n) || 0) : 0;
+  if (count >= 3) {
+    ui.notifications.warn(`${actor.name}: Mutant Core - three times this Combat Encounter already.`);
+    return UNSPENT;
+  }
+  const { isIntegrated, integratedKind } = await import("./integrated.mjs");
+  const items = Array.from(actor.items ?? []).filter(item => isIntegrated(item) && !item.system?.crafted?.destroyed);
+  if (!items.length) {
+    ui.notifications.warn(`${actor.name}: Mutant Core - no Integrated Item.`);
+    return UNSPENT;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Mutant Core - destroy which`,
+    [...items.map(item => ({ value: item.id, label: item.name })), { value: "none", label: "None" }]);
+  const item = items.find(each => each.id === picked);
+  if (!item) return UNSPENT;
+  const into = await askPlayerChoice(actor, `${actor.name}: Mutant Core - ${item.name}`,
+    [{ value: "power-up", label: "The Power Up" }, { value: "surge", label: "A Surge" }, { value: "none", label: "None" }]);
+  if (!["power-up", "surge"].includes(into)) return UNSPENT;
+  if (!await ownOutOfSequence(actor, into)) return UNSPENT;
+  await actor.setFlag(SCOPE, "mutantConsumed", { encounter, n: count + 1 });
+  const { destroyIntegrated, masterfulMove } = await import("./maneuvers.mjs");
+  await destroyIntegrated(actor, item);
+  if (["weapon", "apparel"].includes(integratedKind(item))) await masterfulMove(actor, item);
 }
 
 /**
