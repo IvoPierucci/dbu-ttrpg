@@ -403,6 +403,18 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  angelRaisedStart: {
+    args: [0, 0],
+    doc: "Angel-Raised (4): a Counter Action for the Movement or the Power Up Maneuver out of sequence (chat.mjs angelRaisedStart)."
+  },
+  arcosianHit: {
+    args: [0, 0],
+    doc: "Arcosian-Raised (1): Wound 1(T) till the end of your turn, counted this Round (chat.mjs arcosianHit)."
+  },
+  demonRaisedSphere: {
+    args: [0, 0],
+    doc: "Demon-Raised (3): 3(bT) Ki, a Might Clash at each Opponent in a Sphere around you - won, Impediment (chat.mjs demonRaisedSphere)."
+  },
   wereChoice: {
     args: [0, 0],
     doc: "Were-Beast (4): the Normal Trait or the Were-Traits for this Combat Round, asked (chat.mjs wereChoice)."

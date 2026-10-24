@@ -1,0 +1,26 @@
+id: demon-raised
+name: Demon-Raised
+order: 4
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Growing up with the sly cunning and trickery of Demons, you turn your experience with these tactics against your foes.
+text: >
+  Demon-Raised (Mind): Growing up with the sly cunning and trickery of Demons, you turn your experience with these tactics against your foes.
+  (1)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers against Opponents suffering from a Combat Condition by 1(T).
+  (2)-[Passive]: Increase the Dice Score of your Might Clashes against Opponents suffering from a Combat Condition by 1(T).
+  (3)-[Triggered/Power, 1/Round]: Spend 3(bT) Ki Points to make a Might Clash against all Opponents within a Sphere AoE (centered on you). If you win, those Opponents gain the Impediment Combat Condition until the end of your turn.
+
+---
+
+[passive]
+# (1)
+wound.vsConditioned += 1(T);
+# (2)
+clash.mightVsConditioned += 1(T);
+
+# (3) The Power Up Maneuver: 3(bT) Ki, a Might Clash at each Opponent within a Standard Sphere around you - won, Impediment till the end
+# of your turn (chat.mjs demonRaisedSphere). Automatic by default, its Triggered/Automatic button.
+[triggered/power, 1/round, effect 3]
+demonRaisedSphere();

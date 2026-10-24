@@ -1,0 +1,23 @@
+id: cerealian-raised
+name: Cerealian-Raised
+order: 3
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Patiently taught by the Cerealian race, you understand the importance of waiting for your perfect moment to strike.
+text: >
+  Cerealian-Raised (Mind): Patiently taught by the Cerealian race, you understand the importance of waiting for your perfect moment to strike.
+  (1)-[Passive]: Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 1(T).
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with a Called Shot and deal Damage, they gain a stack of the Broken Combat Condition until the start of your next turn.
+  (3)-[Triggered, 1/Round]: If an Opponent would trigger your Exploit Maneuver, you may spend 3(bT) Ki Points to use the Exploit Maneuver without spending a Counter Action.
+
+---
+
+[passive]
+# (1) A Called Shot's, or an attack through the Exploit Maneuver's (chat.mjs postAttack).
+allow cerealianRaised.wound;
+# (2) A Called Shot's Damage on an Opponent: Broken till the start of your next turn, once a Round (chat.mjs applyAttackDamage).
+allow cerealianRaised.broken;
+# (3) The Exploit taken: asked, once a Round - 3(bT) Ki instead of its Counter Action (chat.mjs takeOutOfSequence).
+allow cerealianRaised.exploit;

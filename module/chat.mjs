@@ -941,6 +941,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.venom && clash.result && !clash.venom.applied) await settleVenom(message, clash);
   if (clash.quills && clash.result && !clash.quills.applied) await settleQuills(message, clash);
   if (clash.dissipate && clash.result && !clash.dissipate.applied) await settleDissipate(message, clash);
+  if (clash.impede && clash.result && !clash.impede.applied) await settleImpede(message, clash);
   if (clash.lightConsume && clash.result && !clash.lightConsume.applied) await settleLightConsume(message, clash);
   if (clash.lightCounter && clash.result && !clash.lightCounter.applied) await settleLightCounter(message, clash);
   if (clash.ravaging && clash.result && !clash.ravaging.applied) await settleRavaging(message, clash);
@@ -9440,7 +9441,7 @@ function clashParts(kind, actor, clash, uuid) {
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
     ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
-    ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid)];
+    ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid)];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -19472,6 +19473,76 @@ export async function terrifyingVisage(actor) {
   return used ? used : UNSPENT;
 }
 
+/** Cerealian-Raised (2): a Called Shot's Damage on an Opponent - a stack of Broken on them till the start of your next turn, once a Round. */
+async function cerealianBroken(attacker, target) {
+  if ((attacker.system?.effects?.slots?.["cerealianRaised.broken"] !== true) || (attacker.getFlag?.(SCOPE, "cerealianBrokenRound") === roundKey())) return;
+  if (alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.cerealianBrokenRound`]: roundKey() });
+  await markUntilNextTurn(attacker, target, "broken", 1, "start", "Cerealian-Raised");
+}
+
+/** Angel-Raised (4): "You may spend a Counter Action to use the Movement Maneuver or Power Up Maneuver as an Out-of-Sequence Maneuver." */
+export async function angelRaisedStart(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const id = await askPlayerChoice(actor, `${actor.name}: Angel-Raised - a Counter Action for`,
+    [{ value: "movement", label: "The Movement Maneuver" }, { value: "power-up", label: "The Power Up Maneuver" }, { value: "none", label: "Neither" }]);
+  if (!["movement", "power-up"].includes(id)) return UNSPENT;
+  const { spendActions } = await import("./combat.mjs");
+  if (!await spendActions(actor, 1, "counter")) return UNSPENT;
+  const used = await ownOutOfSequence(actor, id);
+  return used ? used : UNSPENT;
+}
+
+/** Angel-Raised (2): "While you possess no Counter Actions, increase the Dice Score for any Clash initiated by an Opponent that uses your Saving Throws by 1(T)." */
+function angelRaisedClashBonus(actor, clash, uuid) {
+  if ((uuid !== clash?.defenderUuid) || (clash.category !== "save") || (actor?.system?.effects?.slots?.["angelRaised.clash"] !== true)) return [];
+  if ((Number(actor.system.actions?.counterLeft) || 0) > 0) return [];
+  if (alliesOnScene(actor).some(ally => ally.uuid === clash.challengerUuid)) return [];
+  return [{ label: "Angel-Raised", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
+/** Arcosian-Raised (1): a stack of its mark till the end of the turn, and this Round's count of them. */
+export async function arcosianHit(actor) {
+  const { gainCondition, expiresAt } = await import("./effects/moments-runtime.mjs");
+  await gainCondition(actor, "arcosian-raised-mark", 1);
+  await expiresAt(actor, "arcosian-raised-mark", "turn");
+  const counted = actor.getFlag?.(SCOPE, "arcosianHits") ?? {};
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.arcosianHits`]: { round: roundKey(),
+    n: ((counted.round === roundKey()) ? (Number(counted.n) || 0) : 0) + 1 } });
+}
+
+/**
+ * Demon-Raised (3): "Spend 3(bT) Ki Points to make a Might Clash against all Opponents within a Sphere AoE (centered on you). If you win,
+ * those Opponents gain the Impediment Combat Condition until the end of your turn." A Standard Sphere: 2 Squares between.
+ */
+export async function demonRaisedSphere(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const from = actor?.getActiveTokens?.(false, true)?.[0];
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const near = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
+    && !allies.has(token.actor.uuid) && !token.actor.system?.defeated && from && ((squaresBetween(from, token) ?? 99) <= SPHERE_RADIUS.standard - 1))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!near.length) return UNSPENT;
+  const cost = 3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const { spendManeuverCost } = await import("./maneuvers.mjs");
+  if (!await spendManeuverCost(actor, { name: "Demon-Raised" }, cost)) return UNSPENT;
+  for (const other of near) {
+    await postMightClash(actor, other, { maneuverName: "Demon-Raised", reason: "Win and they are Impeded till the end of your turn.",
+      impede: { applied: false } });
+  }
+  return true;
+}
+
+async function settleImpede(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, impede: { ...clash.impede, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Demon-Raised: no Impediment.");
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  await markUntilNextTurn(actor, target, "impediment", 1, "end", "Demon-Raised", false);
+  return settledNote(message, `Demon-Raised: ${target.name} is Impeded till the end of ${actor.name}'s turn.`);
+}
+
 /**
  * Were-Beast (4): "You may choose to either; regain access to your Normal Trait until the end of the Combat Round, OR gain access to your
  * Were-Traits until the end of this Combat Round." Asked as it begins - the Trigger's presence the table's.
@@ -23779,6 +23850,19 @@ async function takeOutOfSequence(message, actor, offer) {
         offer = { ...offer, counterPaid: true };
       }
     }
+    // Cerealian-Raised (3): "If an Opponent would trigger your Exploit Maneuver, you may spend 3(bT) Ki Points to use the Exploit Maneuver
+    // without spending a Counter Action" - asked, once a Round.
+    const cerealianCost = 3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+    if (!offer.counterPaid && (actor.system?.effects?.slots?.["cerealianRaised.exploit"] === true)
+      && (actor.getFlag?.(SCOPE, "cerealianExploitRound") !== roundKey()) && ((Number(actor.system.ki?.value) || 0) >= cerealianCost)) {
+      const pay = await askPlayerChoice(actor, `${actor.name}: Cerealian-Raised`,
+        [{ value: "counter", label: "A Counter Action" }, { value: "ki", label: `${cerealianCost} Ki Points (1/Round)` }]);
+      if (!pay) return;
+      if ((pay === "ki") && await spendManeuverCost(actor, { name: "Cerealian-Raised" }, cerealianCost)) {
+        await actor.setFlag(SCOPE, "cerealianExploitRound", roundKey());
+        offer = { ...offer, counterPaid: true };
+      }
+    }
     // Pinpoint Combat (3): "Your Ally may allow you to spend their Counter Action instead of your own" - paid already.
     if (!offer.counterPaid && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
     // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
@@ -24369,6 +24453,19 @@ export async function postAttack(actor, target, maneuver,
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
+  // Cerealian-Raised (1): "Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 1(T)."
+  if ((viaExploit || isCalledShot({ modifiers })) && (actor.system.effects?.slots?.["cerealianRaised.wound"] === true) && !reflecting) {
+    woundExtra = [...woundExtra, { label: "Cerealian-Raised", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Arcosian-Raised (2): "If you would use the Signature Technique Maneuver after triggering the first effect of Arcosian-Raised twice
+  // during this Combat Round, you may increase the Damage Category of that Attacking Maneuver by 1 Category" - asked, once a Round.
+  const arcosianHits = actor.getFlag?.(SCOPE, "arcosianHits");
+  const arcosianShift = !reflecting && maneuver.signature && !maneuver.signatureTechnique
+    && (actor.system.effects?.slots?.["arcosianRaised.category"] === true) && (arcosianHits?.round === roundKey())
+    && ((Number(arcosianHits.n) || 0) >= 2) && (actor.getFlag?.(SCOPE, "arcosianCategoryRound") !== roundKey())
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Arcosian-Raised` },
+      content: "<p data-tooltip=\"Once a Round\">This Signature Technique a Damage Category higher?</p>", rejectClose: false });
+  if (arcosianShift) await actor.setFlag(SCOPE, "arcosianCategoryRound", roundKey());
   // Super Elastic Body (2): "If you would use the Reflect Maneuver, increase your Strike Rolls by 1(T) for the duration of that Maneuver."
   if (reflecting && (actor.system.effects?.slots?.["elastic.reflect"] === true)) {
     strikeExtra = [...strikeExtra, { label: "Super Elastic Body", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
@@ -24652,6 +24749,8 @@ export async function postAttack(actor, target, maneuver,
             + ((overwhelm?.category && !reflecting) ? 1 : 0)
             // Punishing Blow's "its Damage Category increased by 1 category".
             + ((experienced?.kind === "punish") ? 1 : 0)
+            // Arcosian-Raised (2)'s.
+            + (arcosianShift ? 1 : 0)
             // Warrior (4)'s "increase the Damage Category of that Attacking Maneuver by 1 Category".
             + ((warriorTension && !reflecting) ? 1 : 0)
             // Blaster Master (3)'s.
@@ -31610,6 +31709,11 @@ async function applyAttackDamage(message, target, attack) {
         + `${ki ? `, ${ki} Ki` : ""} back.`);
     }
   }
+  // Cerealian-Raised (2): "If you hit an Opponent with a Called Shot and deal Damage, they gain a stack of the Broken Combat Condition until
+  // the start of your next turn" - once a Round.
+  if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)) {
+    await cerealianBroken(armsUser, target);
+  }
   // Fangs' Venomous: Damage dealt by the Bite Attack - a Clash (Corporeal), asked, twice an Encounter.
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
     && (attack.maneuverId === "bite-attack")) await venomousBite(armsUser, target);
@@ -33161,7 +33265,20 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
   // Dual Wielding Specialist (2): "Use the Parry effect of the Defend Maneuver without spending a Counter Action" - 2+ Weapons
   // wielded, asked, once a Round (one or the other of its two).
   const dual = !free && !perfect && (chosen.defence === "parry") && await (await import("./maneuvers.mjs")).askDualParry(target);
-  if (!free && !perfect && !dual && !await spendActions(target, 1, "counter")) return;
+  // Angel-Raised (3): "If you are targeted by an Opponent's Attacking Maneuver while you possess no Counter Actions, you may spend 3(bT)
+  // Ki Points to use the Defend Maneuver without spending a Counter Action" - asked, once a Round.
+  const angelCost = 3 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+  const angel = !free && !perfect && !dual && (target.system?.effects?.slots?.["angelRaised.defend"] === true)
+    && ((Number(target.system.actions?.counterLeft) || 0) <= 0) && (target.getFlag?.(SCOPE, "angelDefendRound") !== roundKey())
+    && !alliesOnScene(target).some(ally => ally.uuid === attack.attackerUuid)
+    && ((Number(target.system.ki?.value) || 0) >= angelCost)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Angel-Raised` },
+      content: `<p data-tooltip="Once a Round">${angelCost} Ki Points instead of a Counter Action?</p>`, rejectClose: false });
+  if (angel) {
+    if (!await spendManeuverCost(target, { name: "Angel-Raised" }, angelCost)) return;
+    await target.setFlag(SCOPE, "angelDefendRound", roundKey());
+  }
+  if (!free && !perfect && !dual && !angel && !await spendActions(target, 1, "counter")) return;
   if (free) spendWriting(target, answered, "defend.free");
   // Jolt Counter (2): asked as Cross Counter is chosen, against an attack it answers - once an Encounter.
   const jolt = ((chosen.defence === "crossCounter") && joltOpen(target, attack)

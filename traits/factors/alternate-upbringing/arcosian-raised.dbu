@@ -1,0 +1,23 @@
+id: arcosian-raised
+name: Arcosian-Raised
+order: 2
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Under the tutelage of the brutal Arcosian race, you have learned to overwhelm enemies by targeting their weak points.
+text: >
+  Arcosian-Raised (Mind): Under the tutelage of the brutal Arcosian race, you have learned to overwhelm enemies by targeting their weak points.
+  (1)-[Triggered, 3/Round]: If you hit an Opponent with an Attacking Maneuver, increase your Wound Rolls by 1(T) until the end of your turn.
+  (2)-[Triggered, 1/Round]: If you would use the Signature Technique Maneuver after triggering the first effect of Arcosian-Raised twice during this Combat Round, you may increase the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (2) A Signature Technique declared after (1) twice this Round: asked, once a Round - a Damage Category up (chat.mjs postAttack).
+allow arcosianRaised.category;
+
+# (1) An Opponent hit (hit-opponent): a stack of its mark - Wound 1(T) each - till the end of your turn, counted for (2) (chat.mjs
+# arcosianHit). Automatic by default, its Triggered/Automatic button.
+[triggered/hit-opponent, 3/round, effect 1]
+arcosianHit();

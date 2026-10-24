@@ -1,0 +1,16 @@
+id: arcosian-raised-mark
+name: Arcosian-Raised
+kind: conditions
+maxStacks: 3
+# Not a Combat Condition: Arcosian-Raised (1)'s - a stack each hit, till the end of the turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Arcosian-Raised: Wound Rolls 1(T) higher for each stack, until the end of your turn.
+text: >
+  Arcosian-Raised (1): If you hit an Opponent with an Attacking Maneuver, increase your Wound Rolls by 1(T) until the end of your turn.
+
+---
+
+[passive]
+wound += stacks * 1(T);
