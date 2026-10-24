@@ -603,6 +603,8 @@
     "factors/machine-mutant/mutant-core.dbu",
     "maneuvers/mutant-core-third-effect.dbu",
     "maneuvers/mutant-core-fourth-effect.dbu",
+    "factors/og-soldier.dbu",
+    "factors/og-soldier/mimicry-program.dbu",
     "factors/reincarnated.dbu",
     "factors/reincarnated/lingering-power.dbu",
     "conditions/lingering-power-mark.dbu",

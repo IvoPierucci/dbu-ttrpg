@@ -1,0 +1,8 @@
+id: og-soldier
+name: OG Soldier
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Android
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Your versatility and adaptability are unmatched, allowing you to adopt the techniques of your enemies.

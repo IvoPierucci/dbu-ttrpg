@@ -4183,6 +4183,9 @@ export function maneuverKiCost(maneuver, declared, actor) {
  */
 export function maneuverUsesLeft(actor, maneuver) {
   if (!maneuver.usageLimit) return Infinity;
+  // Mimicry Program (3): "You may use the Copy Being Unique Ability any number of times per Combat Encounter".
+  if ((actor?.system?.effects?.slots?.["mimicry.copyAny"] === true)
+    && (actor.items?.get?.(maneuver.itemId ?? "")?.system?.unique?.libraryId === "copy-being")) return Infinity;
 
   const spent = (actor.system.usedManeuvers ?? []).filter(entry => usedIs(entry, maneuver)).length;
   // And what an effect adds to it - Energizing Training's Surge "an additional time".

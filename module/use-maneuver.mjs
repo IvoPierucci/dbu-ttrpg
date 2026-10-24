@@ -6833,6 +6833,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Speedster (5): Rapid Movement - the Basic Attack, out of sequence, on its card.
   if (card && crossing?.rapid) (await import("./chat.mjs")).speedsterRapidOffer(card, actor);
   // Team Pose: the Hype used - (2) the Hype offered on its card to Allies with Show Stopping Performance; (1) each Ally's Ki.
+  // Mimicry Program (2): Copy Being used - "you must select a Cyber Copy you possess for its effects".
+  if ((actor.system.effects?.slots?.["mimicry.copyAny"] === true)
+    && (actor.items?.get?.(maneuver.itemId ?? "")?.system?.unique?.libraryId === "copy-being")) (await import("./chat.mjs")).cyberCopyUsed(actor);
   // Mutant Core (3): "This effect triggers the Exploit Maneuver from all Opponents within a Sphere AoE (centered on you)."
   if (card && (maneuver.id === "mutant-core-third-effect")) (await import("./chat.mjs")).mutantCoreExploits(card, actor, maneuver);
   // Tremendous Lord (4): Namekian Biology (3)'s Healing Surge - the Transformation, out of sequence, on its card.

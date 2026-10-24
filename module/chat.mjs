@@ -3667,8 +3667,8 @@ async function beginGrapple(grappler, grappled) {
     if ((actor === grappler) && ((gripDifference(grappler, grappled) >= 3) || extended)) continue;
     await setCondition(actor, "guard-down", 1);
   }
-  // "If you enter a Grapple as the Grappler" - Elongated Tail's.
-  await answerFor(grappler, "grappling");
+  // "If you enter a Grapple as the Grappler" - Elongated Tail's; whom - Mimicry Program's Cyber Copy.
+  await answerFor(grappler, "grappling", { grappledUuid: grappled.uuid });
 }
 
 /**
@@ -20350,6 +20350,47 @@ function ghostCategory(entry, attack) {
         ? "standard" : next;
   }
   return (next === category) ? entry : { ...entry, own: { ...entry.own, damageCategory: next } };
+}
+
+/**
+ * Mimicry Program (1): "If you enter a Grapple as the Grappler, gain a 'Cyber Copy' of that Character. You can only possess up to 3 Cyber
+ * Copies" - "make note of any Form or Enhancements that Character was in at the time". Kept on the character (`cyberCopies`).
+ */
+export async function cyberCopy(actor, context = {}) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const who = fromUuidSync(context?.grappledUuid ?? "");
+  if (!who) return UNSPENT;
+  const copies = Array.from(actor.getFlag?.(SCOPE, "cyberCopies") ?? []).filter(entry => entry?.uuid !== who.uuid);
+  const escape = Handlebars.escapeExpression;
+  const full = copies.length >= 3;
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Mimicry Program: a Cyber Copy of ${who.name}` },
+    content: `<label class="dbu-respond-option" data-tooltip="Treated as in them for Copy Being"><span class="dbu-respond-name">Form or Enhancements</span>
+        <input type="text" name="forms" placeholder="None"/></label>
+      ${full ? `<label class="dbu-respond-option"><span class="dbu-respond-name">Replacing</span>
+        <select name="replace">${copies.map((entry, index) => `<option value="${index}">${escape(entry.name)}</option>`).join("")}</select></label>` : ""}`,
+    buttons: [{ action: "keep", label: "Copy", default: true, callback: (event, button, dialog) => ({
+        forms: String(dialog.element.querySelector('[name="forms"]')?.value ?? "").trim(),
+        replace: Number(dialog.element.querySelector('[name="replace"]')?.value) }) },
+      { action: "cancel", label: "Not now" }],
+    rejectClose: false
+  });
+  if (!answer || (typeof answer !== "object")) return UNSPENT;
+  const kept = full ? copies.filter((entry, index) => index !== answer.replace) : copies;
+  await actor.setFlag(SCOPE, "cyberCopies", [...kept, { uuid: who.uuid, name: who.name, forms: answer.forms }]);
+  ui.notifications.info(`${actor.name}: a Cyber Copy of ${who.name}${answer.forms ? ` (${answer.forms})` : ""}.`);
+}
+
+/** Mimicry Program (2): Copy Being used - which Cyber Copy, asked; said, and kept as the one copied (`cyberCopying`). */
+export async function cyberCopyUsed(actor) {
+  const copies = Array.from(actor.getFlag?.(SCOPE, "cyberCopies") ?? []);
+  if (!copies.length) return ui.notifications.warn(`${actor.name}: Mimicry Program - no Cyber Copy to become.`);
+  const picked = await askPlayerChoice(actor, `${actor.name}: Copy Being - which Cyber Copy`,
+    copies.map((entry, index) => ({ value: String(index), label: entry.forms ? `${entry.name} (${entry.forms})` : entry.name })));
+  const copy = copies[Number(picked)];
+  if (!copy) return;
+  await actor.setFlag(SCOPE, "cyberCopying", copy);
+  ui.notifications.info(`${actor.name}: a Copy of ${copy.name}${copy.forms ? `, in ${copy.forms}` : ""} - their sheet, not their Apparel, Weapons or Accessories.`);
 }
 
 /** Mutant Core (3): "Integrate any Item you possess or currently have Equipped. Regain Ki Points equal to 1/10th of your Maximum Ki Points". */
