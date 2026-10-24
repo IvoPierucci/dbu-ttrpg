@@ -1,0 +1,41 @@
+id: dragon-of-light
+name: Dragon of Light
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Pure of mind and soul, you are composed of positive energy, rather than the negative energy of your counterparts.
+text: >
+  Dragon of Light (Body): Pure of mind and soul, you are composed of positive energy, rather than the negative energy of your counterparts.
+  (1)-[Automatic, Resource]: If you would gain a stack(s) of Negative Energy, gain an equal number of Positive Energy stacks instead. Positive Energy is also considered to be Negative Energy for all of your effects.
+  (2)-[Passive]: Instead of reducing your Life Points, you may spend Ki Points for the 1st effect of Negative Ki. Any Ki Points lost this way are considered to be lost Life Points for all of your effects.
+  (3)-[Triggered]: If an Ally who is not at Long Range makes a Combat Roll, after you see the Dice Score of that Combat Roll, you may spend a stack of Positive Energy to increase the Natural Result of that Combat Roll by 1.
+  (4)-[Triggered]: Each time you gain Positive Energy, regain 1(bT) Life Points for every Positive Energy stack gained.
+  (5)-[Triggered, 1/Round]: If you or an Ally scores a Critical Result on a Combat Roll, gain 1 Positive Energy.
+  (6)-[Triggered, 1/Encounter]: If an Ally within a Large Sphere AoE (centered on you) would be Defeated, you may spend all of your Positive Energy. If you do, that Ally regains 2(bT) Life Points for every Positive Energy spent.
+
+---
+
+# (1) Your Negative Energy is Positive Energy: held as the one Resource, named Positive Energy on your sheet - every effect of yours that
+# reads Negative Energy reads it, as the text says.
+[passive]
+# (2) Negative Ki (1)'s question, Ki offered beside the Life (chat.mjs negativeEnergy). "Considered to be lost Life Points" - the
+# table's, where an effect of yours asks.
+allow light.kiInstead;
+# (3) An Ally's Combat Roll in an attack, not at Long Range from you: offered after it beside the Karmic Effects - a stack for a
+# Natural Result 1 higher (chat.mjs lightOptions).
+allow light.allyNatural;
+# (6) An Ally within a Large Sphere about to be Defeated by an attack: asked, once an Encounter - all of it spent, 2(bT) Life Points
+# each for them (chat.mjs lightRescue).
+allow light.rescue;
+
+# (4) Gained, how many (moment negative-energy-gained). Its Triggered/Automatic button.
+[triggered/negative-energy-gained, effect 4]
+life.value += gained * 1(bT);
+
+# (5) Yours, or an Ally's (moment ally-critical-scored) - once a Round between them. Automatic by default, its Triggered/Automatic button.
+[triggered/critical-scored, 1/round, effect 5]
+negativeenergy.stacks += 1;
+[triggered/ally-critical-scored, 1/round, effect 5]
+negativeenergy.stacks += 1;

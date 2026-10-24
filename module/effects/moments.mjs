@@ -117,6 +117,9 @@ const TABLE = [
   { key: "analysis", label: "You use the Analysis Maneuver", provides: [],
     doc: "Fired once its target is Analyzed (use-maneuver.mjs), the target named as `opponentUuid` - Analytic Fighter's Options. "
        + "What is the player's is asked in a window first." },
+  { key: "ally-critical-scored", label: "An Ally scores a Critical Result on a Combat Roll", provides: [],
+    doc: "Fired on each of the roller's Allies holding an effect for it, as critical-scored is on the roller (chat.mjs rollSide) - "
+       + "Dragon of Light (5). What is the player's is asked in a window first." },
   { key: "ally-hype", label: "An Ally uses the Hype Maneuver", provides: [],
     doc: "Fired on each of the user's Allies once the Hype's card is made (chat.mjs allyHyped) - Team Pose's Ki. What is the "
        + "player's is asked in a window first." },

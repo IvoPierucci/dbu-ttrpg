@@ -1,0 +1,8 @@
+id: inverted-shadow
+name: Inverted Shadow
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Shadow Dragon
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Whether you were created by a selfish wish, or you were purified by some means after your creation, one thing is certain- as surely as light casts shadows, you are cast by darkness, a beacon of hope amidst the inky black void of your draconic kin.

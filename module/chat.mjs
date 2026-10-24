@@ -5967,7 +5967,7 @@ function offerableTo(situation, message) {
       const reason = whyNot(effect, situation);
       return reason ? { ...effect, blocked: reason, available: false } : effect;
     }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor),
-    ...luckyRerollOptions(situation.actor),
+    ...luckyRerollOptions(situation.actor), ...lightOptions(situation),
     ...taiChiRerollOptions(situation, message), ...nudgeOptions(situation), ...cantLoseOptions(situation, message),
     ...guidanceOptions(situation)];
 }
@@ -6057,6 +6057,38 @@ function nudgeOptions(situation) {
       text: `Your ${nudger.roll}'s Natural Result ${step > 0 ? "1 higher" : "1 lower"} - a Critical or a Botch, if it comes to one.`,
       costLabel: `Natural Result ${step > 0 ? "+1" : "-1"}`, available: !blocked, ...(blocked ? { blocked } : {}) }));
   });
+}
+
+/** Dragon of Light (3)'s option, by the key it is picked with in the window - the holder's uuid after it. */
+const LIGHT = "dragon-of-light";
+
+/**
+ * Dragon of Light (3): "If an Ally who is not at Long Range makes a Combat Roll, after you see the Dice Score of that Combat Roll, you
+ * may spend a stack of Positive Energy to increase the Natural Result of that Combat Roll by 1." An attack's roll, offered beside the
+ * Karmic Effects - each Ally holding it, a stack held, the roller not at Long Range from them.
+ */
+function lightOptions(situation) {
+  const actor = situation?.actor;
+  if (!actor || (situation.kind !== "attack") || !Number.isFinite(situation.side?.natural)) return [];
+  return alliesOnScene(actor).filter(holder => !holder.system?.defeated && (holder.uuid !== actor.uuid)
+    && (holder.system?.effects?.slots?.["light.allyNatural"] === true) && !atLongRange(holder, actor))
+    .map(holder => {
+      const held = Number(holder.system.resources?.negativeenergy?.stacks) || 0;
+      return { key: `${LIGHT}:${holder.uuid}`, trait: true, when: "after", name: `Dragon of Light (${holder.name})`,
+        text: "A stack of Positive Energy: the Natural Result 1 higher - a Critical, if it comes to one.", costLabel: "Natural Result +1",
+        available: held > 0, ...(held > 0 ? {} : { blocked: "No Positive Energy" }) };
+    });
+}
+
+/** Taken: the holder's stack spent, and the side worked out again from the moved Natural Result. */
+async function takeLight(message, situation, key) {
+  const option = lightOptions(situation).find(effect => (effect.key === key) && effect.available);
+  if (!option) return;
+  const holder = fromUuidSync(key.slice(LIGHT.length + 1));
+  const held = Number(holder?.system?.resources?.negativeenergy?.stacks) || 0;
+  if (!holder || !held) return;
+  await requestActorUpdate(holder, { "system.resources.negativeenergy.stacks": held - 1 });
+  return resettleAttack(message, situation, { spent: [], slots: {}, queue: [{ verb: "reroll", forced: true, shift: 1, label: option.name }] });
 }
 
 /** Taken: counted against its twice a Round, and the side worked out again from the moved Natural Result. */
@@ -6517,6 +6549,7 @@ export async function takeAfterTheFact(message, situation, key) {
   if (key === DAMA_REROLL) return takeDamaReroll(message, situation);
   if (String(key).startsWith(`${LUCKY_REROLL}:`)) return takeLuckyReroll(message, situation, key);
   if (String(key).startsWith(`${NUDGE}:`)) return takeNudge(message, situation, key);
+  if (String(key).startsWith(`${LIGHT}:`)) return takeLight(message, situation, key);
   if (String(key).startsWith(`${CANT_LOSE}:`)) return takeCantLose(message, situation, key);
   if (String(key).startsWith(`${GUIDANCE}:`)) return takeGuidance(message, situation, key);
   if ((key === TAI_CHI_REROLL) || (key === TAI_CHI_MIGHT)) return takeTaiChiReroll(message, situation, key);
@@ -9448,6 +9481,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if (combatRoll && collect && (outcome === "critical")) {
     // An attack's Strike or Wound: its Foundation, for what answers only one's - Archetype Focus (2).
     await answerFor(actor, "critical-scored", attackingManeuver && foundation ? { foundation } : {});
+    // "If you or an Ally scores a Critical Result" - Dragon of Light (5)'s.
+    for (const ally of alliesOnScene(actor).filter(each => !each.system?.defeated && triggersFor(each, ["ally-critical-scored"]).length)) {
+      await answerFor(ally, "ally-critical-scored", {});
+    }
   }
 
   // The finished total is a system value like any other: a Botch takes what it takes,
@@ -15094,6 +15131,35 @@ async function studiedShield(target, attacker, damage) {
 }
 
 /**
+ * Dragon of Light (6): "If an Ally within a Large Sphere AoE (centered on you) would be Defeated, you may spend all of your Positive
+ * Energy. If you do, that Ally regains 2(bT) Life Points for every Positive Energy spent." Asked of each who holds it, once an
+ * Encounter; given before the Damage - what it leaves of the Damage, back.
+ */
+async function lightRescue(target, damage) {
+  const floor = target.system.effects?.slots?.["life.allowNegative"] ? -Infinity : (Number(target.system.life?.min) || 0);
+  const life = Number(target.system.life?.value) || 0;
+  if (life - damage > floor) return damage;
+  const encounter = game.combat?.id ?? "none";
+  for (const holder of alliesWithin(target, "light.rescue", SPHERE_RADIUS.large - 1)) {
+    if (holder.getFlag?.(SCOPE, "lightRescueEncounter") === encounter) continue;
+    const held = Number(holder.system.resources?.negativeenergy?.stacks) || 0;
+    if (!held) continue;
+    const regain = 2 * held * Math.max(1, Number(holder.system.baseTierOfPower) || 1);
+    const answer = await askPlayerChoice(holder, `${holder.name}: Dragon of Light - ${target.name} would be Defeated`,
+      [{ value: "yes", label: `All ${held} Positive Energy: ${regain} Life Points for them (once an Encounter)` }, { value: "no", label: "No" }]);
+    if (answer !== "yes") continue;
+    await requestActorUpdate(holder, { [`flags.${SCOPE}.lightRescueEncounter`]: encounter, "system.resources.negativeenergy.stacks": 0 });
+    const healed = Math.min(Math.max(0, (Number(target.system.life?.max) || 0) - life), regain);
+    if (healed > damage) {
+      await requestActorUpdate(target, { "system.life.value": life + healed - damage });
+      return 0;
+    }
+    return damage - healed;
+  }
+  return damage;
+}
+
+/**
  * Spectator (2): "[Triggered/Start of Turn]: Exit the Spectator State." Asked as the turn begins, before its Moment - so (3),
  * "If you did not use the second effect", reads the answer: left, it is no longer theirs.
  */
@@ -19240,13 +19306,20 @@ export async function negativeEnergy(actor) {
   const step = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
   const life = Number(actor.system.life?.value) || 0;
   const most = Math.min(4, Math.floor(life / step));
-  if (most <= 0) return;
+  // Dragon of Light (2): "Instead of reducing your Life Points, you may spend Ki Points" - and (1), Positive Energy.
+  const light = actor.system.effects?.slots?.["light.kiInstead"] === true;
+  const energy = light ? "Positive Energy" : "Negative Energy";
+  const kiMost = light ? Math.min(4, Math.floor((Number(actor.system.ki?.value) || 0) / step)) : 0;
+  if ((most <= 0) && (kiMost <= 0)) return;
+  const steps = count => Array.from({ length: count }, (each, index) => index + 1);
   const picked = await askPlayerChoice(actor, `${actor.name}: Negative Ki`, [{ value: "0", label: "None" },
-    ...Array.from({ length: most }, (each, index) => index + 1)
-      .map(n => ({ value: String(n), label: `${n * step} Life Points: ${n} Negative Energy` }))]);
-  const n = Number(picked) || 0;
+    ...steps(Math.max(0, most)).map(n => ({ value: String(n), label: `${n * step} Life Points: ${n} ${energy}` })),
+    ...steps(kiMost).map(n => ({ value: `ki:${n}`, label: `${n * step} Ki Points: ${n} ${energy}` }))]);
+  const byKi = String(picked ?? "").startsWith("ki:");
+  const n = Number(String(picked ?? "").replace("ki:", "")) || 0;
   if (n <= 0) return;
-  await reduceLifePoints(actor, n * step, { reason: "Negative Ki", own: true, momentum: false });
+  if (byKi) await actor.update({ "system.ki.value": (Number(actor.system.ki?.value) || 0) - (n * step) });
+  else await reduceLifePoints(actor, n * step, { reason: "Negative Ki", own: true, momentum: false });
   const held = Number(actor.system.resources?.negativeenergy?.stacks) || 0;
   await setResource(actor, "negativeenergy", held + n);
   const { stacksGained } = await import("./effects/moments-runtime.mjs");
@@ -33133,9 +33206,11 @@ async function applyAttackDamage(message, target, attack) {
   const atApparel = own.hit && !isAbsoluteMiss(own)
     && (attack.modifiers ?? []).some(modifier => modifier.atApparel);
   const settledDamage = atApparel ? Math.floor(own.damage / 2) : own.damage;
-  // Intelligent Fighter (4): a Studied Ally about to be Defeated - their Surgency off it, asked.
-  const damage = (own.hit && !isAbsoluteMiss(own) && (settledDamage > 0))
+  // Intelligent Fighter (4): a Studied Ally about to be Defeated - their Surgency off it, asked. Dragon of Light (6): the same, its
+  // Life Points given first.
+  const shielded = (own.hit && !isAbsoluteMiss(own) && (settledDamage > 0))
     ? await studiedShield(target, fromUuidSync(attack.attackerUuid ?? ""), settledDamage) : settledDamage;
+  const damage = (own.hit && !isAbsoluteMiss(own) && (shielded > 0)) ? await lightRescue(target, shielded) : shielded;
 
   // Sweeping: "if you deal Damage with this Attacking Maneuver, double the amount of
   // Diminishing Defense stacks a target would receive from it." Settled here because

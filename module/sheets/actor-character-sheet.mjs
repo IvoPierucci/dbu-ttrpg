@@ -158,7 +158,10 @@ function resourceRows(system, owned = null) {
     .map(key => {
       const resource = held[key] ?? {};
       const definition = known[key] ?? {};
-      const name = definition.label || (key.charAt(0).toUpperCase() + key.slice(1));
+      // Dragon of Light (1): its Negative Energy is Positive Energy.
+      const name = ((key === "negativeenergy") && Array.from(system.parent?.items ?? []).some(item => (item.type === "racial")
+        && (item.flags?.["dbu-ttrpg"]?.sourceId === "dragon-of-light"))) ? "Positive Energy"
+        : (definition.label || (key.charAt(0).toUpperCase() + key.slice(1)));
       return {
         key,
         name,
