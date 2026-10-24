@@ -33366,7 +33366,19 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
     { ...((byTension && (chosen.defence === "guard")) ? { base: 2 * Math.max(1, Number(target.system.tierOfPower) || 1) } : {}),
       noSurcharge })
     + chosen.kiWager;
-  if (defend && !await spendManeuverCost(target, defend, cost)) return;
+  // Angel-Raised (3): "If you are targeted by an Opponent's Attacking Maneuver while you possess no Counter Actions, you may spend 3(bT)
+  // Ki Points to use the Defend Maneuver without spending a Counter Action" - asked before anything is paid, once a Round; its Ki
+  // paid with the Defend's.
+  const angelCost = 3 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+  const angel = !free && (target.system?.effects?.slots?.["angelRaised.defend"] === true)
+    && ((Number(target.system.actions?.counterLeft) || 0) <= 0) && (target.getFlag?.(SCOPE, "angelDefendRound") !== roundKey())
+    && !alliesOnScene(target).some(ally => ally.uuid === attack?.attackerUuid)
+    && ((Number(target.system.ki?.value) || 0) >= (cost + angelCost))
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Angel-Raised` },
+      content: `<p data-tooltip="Once a Round. You have no Counter Action left.">${angelCost} Ki Points instead of a Counter Action?</p>`,
+      rejectClose: false });
+  if (defend && !await spendManeuverCost(target, defend, cost + (angel ? angelCost : 0))) return;
+  if (angel) await target.setFlag(SCOPE, "angelDefendRound", roundKey());
   // Only what made it free is spent here: what else was ticked - Powerful Physique's Soak - is for the Defend itself.
 
   // A Parry made with a Weapon in hand counts as made with it, by the table's ruling: its Size and
@@ -33378,28 +33390,19 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
   const parryWith = dueling ? [...parryWeapon, dueling] : parryWeapon;
 
   // Perfect Counter (2): "use the Parry option of the Defend Maneuver without spending a Counter Action" - asked, once a Round.
-  const perfect = !free && (chosen.defence === "parry") && (target.system?.effects?.slots?.["counter.perfectParry"] === true)
+  const perfect = !free && !angel && (chosen.defence === "parry") && (target.system?.effects?.slots?.["counter.perfectParry"] === true)
     && (target.getFlag?.(SCOPE, "perfectParryRound") !== roundKey())
     && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Perfect Counter` },
       content: "<p data-tooltip=\"Once a Round\">This Parry without a Counter Action?</p>", rejectClose: false });
   if (perfect) await target.setFlag(SCOPE, "perfectParryRound", roundKey());
   // Dual Wielding Specialist (2): "Use the Parry effect of the Defend Maneuver without spending a Counter Action" - 2+ Weapons
   // wielded, asked, once a Round (one or the other of its two).
-  const dual = !free && !perfect && (chosen.defence === "parry") && await (await import("./maneuvers.mjs")).askDualParry(target);
-  // Angel-Raised (3): "If you are targeted by an Opponent's Attacking Maneuver while you possess no Counter Actions, you may spend 3(bT)
-  // Ki Points to use the Defend Maneuver without spending a Counter Action" - asked, once a Round.
-  const angelCost = 3 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
-  const angel = !free && !perfect && !dual && (target.system?.effects?.slots?.["angelRaised.defend"] === true)
-    && ((Number(target.system.actions?.counterLeft) || 0) <= 0) && (target.getFlag?.(SCOPE, "angelDefendRound") !== roundKey())
-    && !alliesOnScene(target).some(ally => ally.uuid === attack.attackerUuid)
-    && ((Number(target.system.ki?.value) || 0) >= angelCost)
-    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Angel-Raised` },
-      content: `<p data-tooltip="Once a Round">${angelCost} Ki Points instead of a Counter Action?</p>`, rejectClose: false });
-  if (angel) {
-    if (!await spendManeuverCost(target, { name: "Angel-Raised" }, angelCost)) return;
-    await target.setFlag(SCOPE, "angelDefendRound", roundKey());
+  const dual = !free && !perfect && !angel && (chosen.defence === "parry") && await (await import("./maneuvers.mjs")).askDualParry(target);
+  if (!free && !perfect && !dual && !angel && !await spendActions(target, 1, "counter")) {
+    // No Counter Action to pay with after all: its Ki back - Angel-Raised's too.
+    await refundManeuverCost(target, { name: "Defend", kiCost: cost + (angel ? angelCost : 0) });
+    return;
   }
-  if (!free && !perfect && !dual && !angel && !await spendActions(target, 1, "counter")) return;
   if (free) spendWriting(target, answered, "defend.free");
   // Jolt Counter (2): asked as Cross Counter is chosen, against an attack it answers - once an Encounter.
   const jolt = ((chosen.defence === "crossCounter") && joltOpen(target, attack)
