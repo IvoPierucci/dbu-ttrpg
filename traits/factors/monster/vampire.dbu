@@ -32,7 +32,7 @@ text: >
 # (1), (2)
 allow unnatural;
 allow maneuver.soar;
-# (5) Life Points regained but through a Surge: your Surgency more, once a Round, as they are written (combat.mjs).
+# (5) Life Points regained but through a Surge: asked once they are written, once a Round - your Surgency more (combat.mjs).
 allow vampire.feed;
 # (6) Damage dealt by your attack: the Bite Attack offered on its card at them, once a Round (chat.mjs vampireBite).
 allow vampire.bite;

@@ -1096,22 +1096,31 @@ export function registerDefeatHooks() {
       }
       else foundry.utils.setProperty(changes, "system.defeatsEscaped", (Number(actor.system.defeatsEscaped) || 0) + 1);
     }
-    // Vampire (5): "If you would regain Life Points, except through a Surge, increase the amount of Life Points regained by your
-    // Surgency" - once a Round, in the same write.
-    const vampireRound = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-    const written = Number(foundry.utils.getProperty(changes, "system.life.value"));
-    if (game.combat?.started && !options.dbuSurge && (actor.system.effects?.slots?.["vampire.feed"] === true)
-      && (written > (Number(actor.system.life?.value) || 0)) && (actor.getFlag?.("dbu-ttrpg", "vampireRound") !== vampireRound)) {
-      const more = Number(actor.system.surgency) || 0;
-      if (more > 0) {
-        foundry.utils.setProperty(changes, "system.life.value", Math.min(Number(actor.system.life?.max) || 0, written + more));
-        foundry.utils.setProperty(changes, "flags.dbu-ttrpg.vampireRound", vampireRound);
-      }
-    }
+    // Vampire (5): what the Life Points were - whether they were regained is read once they are written (below).
+    options.dbuLifeBefore = Number(actor.system.life?.value) || 0;
     // Where they stood before the Life changed. A Health Threshold is derived from Life,
     // so crossing one leaves no record of its own - the only way to know it happened is
     // to have looked just before.
     options.dbuThreshold = actor.system.threshold.key;
+  });
+
+  // Vampire (5): "If you would regain Life Points, except through a Surge, increase the amount of Life Points regained by your
+  // Surgency" - asked of whoever plays them, by the client that wrote it, once a Round; taken, as much more.
+  Hooks.on("updateActor", async (actor, changes, options, userId) => {
+    if ((actor.type !== "character") || (userId !== game.user.id) || options.dbuSurge || options.dbuVampire) return;
+    if ((options.dbuLifeBefore === undefined) || !game.combat?.started) return;
+    if (actor.system.effects?.slots?.["vampire.feed"] !== true) return;
+    const now = Number(actor.system.life?.value) || 0;
+    const more = Number(actor.system.surgency) || 0;
+    const round = `${game.combat.id}:${game.combat.round ?? 0}`;
+    if ((now <= options.dbuLifeBefore) || (more <= 0) || (actor.getFlag?.("dbu-ttrpg", "vampireRound") === round)) return;
+    const max = Number(actor.system.life?.max) || 0;
+    if (now >= max) return;
+    const { askPlayerChoice } = await import("./chat.mjs");
+    if ((await askPlayerChoice(actor, `${actor.name}: Vampire - ${now - options.dbuLifeBefore} Life Points regained`,
+      [{ value: "yes", label: `${more} more - your Surgency (once a Round)` }, { value: "no", label: "Not now" }])) !== "yes") return;
+    await actor.update({ "system.life.value": Math.min(max, (Number(actor.system.life?.value) || 0) + more),
+      "flags.dbu-ttrpg.vampireRound": round }, { dbuVampire: true });
   });
 
   Hooks.on("updateActor", async (actor, changes, options) => {
