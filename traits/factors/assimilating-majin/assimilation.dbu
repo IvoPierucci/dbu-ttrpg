@@ -1,0 +1,23 @@
+id: assimilation
+name: Assimilation
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Possessing the ability to absorb the bodies and powers of others, you can grow stronger by consuming beings with the scattered pieces of your body.
+text: >
+  Assimilation (Body): Possessing the ability to absorb the bodies and powers of others, you can grow stronger by consuming beings with the scattered pieces of your body.
+  (1)-[Passive]: Increase your Corporeal Save by 1(T).
+  (2)-[Passive]: You gain access to the Absorb Maneuver.
+  (3)-[Passive]: If you have the Primordial Majin Factor, your Goops gain access to (and can use) the Absorb Maneuver (see — Special Maneuvers) ignoring the (Non-Minion) tag. Your Goop uses your Combat Rolls and Saving Throws for this Maneuver, and if they succeed, they are instantly Defeated and you are treated as if you succeeded at using the Absorb Maneuver on your target instead.
+  (4)-[Triggered]: Upon gaining a stack of the Absorption Awakening, you may replace your Top Layer of Apparel with the Top Layer of Apparel equipped by the Absorbed Character for that stack of Absorption. If you do, that piece of Apparel may gain any Special Apparel Qualities possessed by the piece of Apparel it replaced.
+
+---
+
+[passive]
+# (1)
+save.corporeal += 1(T);
+# Not built: (2) the Absorb Maneuver, (3) Primordial Majin's Goops, (4) the Absorption Awakening - none of them in this system yet. Its
+# access is said here; the rest is the table's till they are.
+allow maneuver.absorb;

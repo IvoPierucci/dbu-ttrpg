@@ -1,0 +1,8 @@
+id: assimilating-majin
+name: Assimilating Majin
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Majin
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  With the unique ability to control your detached goop, you are able to absorb your enemies from a distance, turning your separated pieces of goo into dangerous weapons.
