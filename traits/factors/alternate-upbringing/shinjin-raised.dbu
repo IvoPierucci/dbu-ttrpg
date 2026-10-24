@@ -1,0 +1,32 @@
+id: shinjin-raised
+name: Shinjin-Raised
+order: 17
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Under the shelter of the poised and pragmatic Shinjin race, you have grown adept at waiting out your opponents and turning their own power against them.
+text: >
+  Shinjin-Raised (Mind): Under the shelter of the poised and pragmatic Shinjin race, you have grown adept at waiting out your opponents and turning their own power against them.
+  (1)-[Passive]: You can sense God Ki.
+  (2)-[Triggered]: Increase your Combat Rolls and Soak Value by 1(T) for the duration of any of your Counter Maneuvers.
+  (3)-[Triggered]: At the end of the Combat Round, regain 2(bT) Life and Ki Points for each Counter Action you possess.
+  (4)-[Triggered/Start of Combat Round]: You may spend 1 Action to gain 2 Counter Actions.
+
+---
+
+[passive]
+# (1)
+allow sense.godKi;
+# (2) A Counter Maneuver used: its mark - Combat Rolls and Soak 1(T) - till the attack it answered is done, or the turn ends (maneuvers.mjs
+# recordManeuverType, chat.mjs attackDurationEnds).
+allow shinjinRaised.counter;
+
+# (3) The Round ending: 2(bT) Life and Ki Points for each Counter Action left (chat.mjs shinjinRest).
+[triggered/end-of-round, effect 3]
+shinjinRest();
+
+# (4) Asked as the Round begins - it starts Triggered.
+[triggered/start-of-round, startsTriggered, effect 4]
+actions.remaining -= 1;
+actions.counterGained += 2;

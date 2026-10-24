@@ -3488,6 +3488,14 @@ const MANEUVER_KINDS = new Set(["standard", "instant", "counter", "outOfSequence
  * @param {string} [options.messageId]  the card this Maneuver was played on or from
  */
 export async function recordManeuverType(actor, type, { messageId = "", maneuverId = "", profile = "" } = {}) {
+  // Shinjin-Raised (2): "Increase your Combat Rolls and Soak Value by 1(T) for the duration of any of your Counter Maneuvers" - its mark,
+  // off as the attack it answered is done (chat.mjs attackDurationEnds), or as the turn ends.
+  if ((type === "counter") && (actor?.system?.effects?.slots?.["shinjinRaised.counter"] === true)) {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "shinjin-counter-mark", 1);
+    const { expiresAt } = await import("./effects/moments-runtime.mjs");
+    await expiresAt(actor, "shinjin-counter-mark", "turn");
+  }
   // Fails closed, like every other judgement in this system: an unrecognised kind
   // leaves the hold exactly as it was rather than lifting it. The four kinds are the
   // four kinds, and anything else reaching here is a mistake that must not be a way

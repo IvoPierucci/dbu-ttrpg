@@ -1,0 +1,30 @@
+id: shadow-dragon-raised
+name: Shadow Dragon-Raised
+order: 16
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Surrounded from an early age by the reality-warping tricks of the Shadow Dragons, you have taken some of that power for yourself and made it your own.
+text: >
+  Shadow Dragon-Raised (Mind): Surrounded from an early age by the reality-warping tricks of the Shadow Dragons, you have taken some of that power for yourself and made it your own.
+  (1)-[Triggered]: If you or an Opponent (who is not at Long Range) scores a Botch Result on a Combat Roll, regain 2(bT) Ki Points.
+  (2)-[Triggered, 1/Round]: If an Opponent within your Melee Range scores a Botch Result, this triggers your Exploit Maneuver.
+  (3)-[Triggered/Power, 1/Round]: Spend 3(bT) Ki Points to make a Might Clash against all Opponents within a Sphere AoE (centered on you). If you win, those Opponents gain the Impaired Combat Condition until the start of your next turn.
+
+---
+
+[passive]
+# (2) An Opponent in your Melee Range botching an attack's roll: the Exploit offered on its card at them, once a Round (chat.mjs
+# offerSinisterAll).
+allow shadowRaised.exploit;
+
+# (1) A Botch - yours, or an Opponent's not at Long Range (moment botch-seen). Automatic by default, its Triggered/Automatic button.
+[triggered/botch-seen, effect 1]
+requires botchNear;
+ki.value += 2(bT);
+
+# (3) The Power Up Maneuver, once a Round: 3(bT) Ki, a Might Clash at each Opponent in a Standard Sphere around you - won, Impaired till
+# the start of your next turn (chat.mjs demonRaisedSphere). Automatic by default, its Triggered/Automatic button.
+[triggered/power, 1/round, effect 3]
+shadowRaisedSphere();

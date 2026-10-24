@@ -403,6 +403,18 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  neoTuffleFocus: {
+    args: [0, 0],
+    doc: "Neo-Tuffle-Raised (1), (2): an Opponent chosen this Round - and, Injured, Surging with them its Focus (chat.mjs neoTuffleFocus)."
+  },
+  shadowRaisedSphere: {
+    args: [0, 0],
+    doc: "Shadow Dragon-Raised (3): 3(bT) Ki, a Might Clash at each Opponent in a Sphere - won, Impaired (chat.mjs demonRaisedSphere)."
+  },
+  shinjinRest: {
+    args: [0, 0],
+    doc: "Shinjin-Raised (3): 2(bT) Life and Ki Points for each Counter Action left (chat.mjs shinjinRest)."
+  },
   namekianFocus: {
     args: [0, 0],
     doc: "Namekian-Raised (4): an Opponent chosen - your Combat Rolls at and against them 1(T) this Round (chat.mjs namekianFocus)."

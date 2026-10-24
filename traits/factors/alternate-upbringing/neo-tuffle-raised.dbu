@@ -1,0 +1,26 @@
+id: neo-tuffle-raised
+name: Neo-Tuffle-Raised
+order: 12
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Mentored by the spiteful, vengeful Neo-Tuffles, you channel their seething hatred against your enemies.
+text: >
+  Neo-Tuffle-Raised (Mind): Mentored by the spiteful, vengeful Neo-Tuffles, you channel their seething hatred against your enemies.
+  (1)-[Triggered/Start of Combat Round]: Select an Opponent. Increase your Combat Rolls against the selected Opponent by 1(T) until the end of the Combat Round.
+  (2)-[Triggered, 1/Encounter]: Upon applying the first effect of Neo-Tuffle-Raised, if you are below the Injured Health Threshold, you may enter the Surging State until the end of the Combat Round. If you do, for the effects of the Surging State, you must select the same Opponent as the Opponent selected for the first effect of this Trait.
+  (3)-[Triggered, 1/Round]: If you use the Signature Technique Maneuver, you may apply Greater Dice to the Wound Roll of that Signature Technique.
+
+---
+
+[passive]
+# (2) Asked with (1), Injured or worse, once an Encounter: Surging till the Round ends, that Opponent its Focus (chat.mjs neoTuffleFocus).
+allow neoTuffleRaised.surging;
+# (3) A Signature Technique declared: asked, once a Round - the Greater Dice on its Wound (chat.mjs neoGreaterDice).
+allow neoTuffleRaised.greater;
+
+# (1) Which Opponent, asked as the Round begins - your Combat Rolls at and against them 1(T) this Round (chat.mjs neoTuffleFocus).
+# Automatic by default, its Triggered/Automatic button - asked either way.
+[triggered/start-of-round, effect 1]
+neoTuffleFocus();

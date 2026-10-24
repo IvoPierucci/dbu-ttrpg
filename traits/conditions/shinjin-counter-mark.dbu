@@ -1,0 +1,17 @@
+id: shinjin-counter-mark
+name: Shinjin-Raised
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Shinjin-Raised (2)'s - for the duration of a Counter Maneuver.
+combatCondition: no
+source: Core Rule
+description: >
+  Shinjin-Raised: Combat Rolls and Soak Value 1(T) higher for the duration of your Counter Maneuver.
+text: >
+  Shinjin-Raised (2): Increase your Combat Rolls and Soak Value by 1(T) for the duration of any of your Counter Maneuvers.
+
+---
+
+[passive]
+combatRolls += 1(T);
+soakValue += 1(T);

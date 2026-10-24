@@ -1,0 +1,15 @@
+id: other-raised
+name: Other-Raised
+order: 14
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Cared for by one of the myriad alien species in the universe, you have steeped in their culture, traditions, and mindset to become the person you are now.
+text: >
+  Other-Raised (Mind): Cared for by one of the myriad alien species in the universe, you have steeped in their culture, traditions, and mindset to become the person you are now.
+  (1)-[Passive]: Select a Race created through Custom Species. Gain access to a Custom Species Racial Trait of the Mind-Category possessed by that Race (you do not gain any Twinned effects). You cannot trade this Racial Trait out for a Factor Trait.
+
+---
+
+# Not built: Custom Species is not in this system - the Racial Trait it gives is the table's, added by hand.

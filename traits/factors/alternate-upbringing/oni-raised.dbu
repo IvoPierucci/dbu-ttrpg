@@ -1,0 +1,27 @@
+id: oni-raised
+name: Oni-Raised
+order: 13
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Educated under the careful scrutiny of the enigmatic Oni, you are a productive member of Otherworld society.
+text: >
+  Oni-Raised (Mind): Educated under the careful scrutiny of the enigmatic Oni, you are a productive member of Otherworld society.
+  (1)-[Passive]: While your Life Points are below the Injured Health Threshold, increase your Wound Rolls by 2(T) and your Might by 1(T).
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver while below the Injured Health Threshold, make a Might Clash against that Opponent. If you win, the Opponent gains a stack of the Broken Combat Condition until the end of your turn.
+  (3)-[Triggered, 1/Encounter]: If you target an Opponent with an Attacking Maneuver while below the Injured Health Threshold, you may apply 2 Energy Charges to that Attacking Maneuver. These Energy Charges do not count towards your maximum. If you do, after completing the Attacking Maneuver, set your Life Points to their lowest possible value.
+
+---
+
+[passive]
+# (1) Injured or Critical.
+if (belowThreshold("injured")) {
+    wound += 2(T);
+    might += 1(T);
+}
+# (2) An Opponent hit, Injured or worse: asked, once a Round - a Might Clash; won, Broken till the end of your turn (chat.mjs oniBreak).
+allow oniRaised.break;
+# (3) An attack at an Opponent declared, Injured or worse: asked, once an Encounter - 2 Energy Charges past the most; done, your Life
+# Points their least (chat.mjs postAttack, attackDurationEnds).
+allow oniRaised.charges;

@@ -513,6 +513,9 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "neoTuffleFocus": return (await import("../chat.mjs")).neoTuffleFocus(actor);
+    case "shadowRaisedSphere": return (await import("../chat.mjs")).demonRaisedSphere(actor, "shadow");
+    case "shinjinRest": return (await import("../chat.mjs")).shinjinRest(actor);
     case "namekianFocus": return (await import("../chat.mjs")).namekianFocus(actor);
     case "angelRaisedStart": return (await import("../chat.mjs")).angelRaisedStart(actor);
     case "arcosianHit": return (await import("../chat.mjs")).arcosianHit(actor);

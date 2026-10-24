@@ -14071,6 +14071,7 @@ export async function frozenTurnAfterManeuver(actor, card) {
 async function frozenTurnAfterAttack(attack, message = null) {
   // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
   await glassSurgeEnds(attack);
+  await attackDurationEnds(attack);
   await combatWisdomEnds(attack);
   await fleetSpent(attack);
   await multiTypeSwitch(attack);
@@ -17980,6 +17981,17 @@ async function copyTechnique(actor, copyFrom) {
     copied: { from: fromUuidSync(copyFrom.actorUuid)?.name ?? "", fromUuid: copyFrom.actorUuid, combat: game.combat?.id ?? "" },
     fromQuickLearner: true } };
   const [made] = (await actor.createEmbeddedDocuments("Item", [data])) ?? [];
+  // Neko Majin-Raised (4): "If you gain access to a Copied Technique, regain Ki Points equal to the Ki Point Cost of that Copied Technique"
+  // - once a Round.
+  if (made && (actor.system?.effects?.slots?.["nekoRaised.copiedKi"] === true) && (actor.getFlag?.(SCOPE, "nekoKiRound") !== roundKey())) {
+    const { definitionOf } = await import("./use-maneuver.mjs");
+    const ki = Math.max(0, Number(maneuverKiCost(definitionOf(made), null, actor)) || 0);
+    if (ki) {
+      await actor.setFlag(SCOPE, "nekoKiRound", roundKey());
+      await regainPools(actor, 0, ki);
+      ui.notifications.info(`${actor.name}: Neko Majin-Raised - ${ki} Ki Points back.`);
+    }
+  }
   return made ?? true;
 }
 
@@ -18874,7 +18886,7 @@ async function botchSeen(botcher) {
     const other = token.actor;
     if (!other || seen.has(other.uuid) || other.system?.defeated) continue;
     seen.add(other.uuid);
-    if (!Array.from(other.items ?? []).some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "karmic-reflection")) continue;
+    if (!Array.from(other.items ?? []).some(item => ["karmic-reflection", "shadow-dragon-raised"].includes(item.flags?.["dbu-ttrpg"]?.sourceId))) continue;
     await answerFor(other, "botch-seen", { botcherUuid: botcher.uuid });
   }
 }
@@ -19007,7 +19019,21 @@ function offerSinisterAll(message, botcher) {
     if (!dragon || seen.has(dragon.uuid)) continue;
     seen.add(dragon.uuid);
     offerSinister(message, dragon, botcher);
+    offerShadowRaised(message, dragon, botcher);
   }
+}
+
+/** Shadow Dragon-Raised (2): "If an Opponent within your Melee Range scores a Botch Result, this triggers your Exploit Maneuver" - once a Round. */
+function offerShadowRaised(message, holder, opponent) {
+  if (!holder || !opponent || (holder.uuid === opponent.uuid) || holder.system?.defeated) return;
+  if ((holder.system?.effects?.slots?.["shadowRaised.exploit"] !== true) || (holder.getFlag?.(SCOPE, "shadowRaisedRound") === roundKey())) return;
+  if (alliesOnScene(holder).some(ally => ally.uuid === opponent.uuid) || whyNotWithinMelee(holder, opponent, "")) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.maneuverId === "exploit") && (offer.actorUuid === holder.uuid))) return;
+  if (!holder.items?.some(item => (item.type === "maneuver") && item.system.exploit)) return;
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  requestEdit(message, { type: "offer", offer: { actorUuid: holder.uuid, actorName: holder.name, maneuverId: "exploit",
+    maneuverName: "Exploit", targetUuid: opponent.uuid, reason: "Shadow Dragon-Raised - a Botch", grants: { roundFlag: "shadowRaisedRound" },
+    provokedBy: { maneuverId: attack?.maneuverId ?? "", maneuverName: attack?.maneuverName ?? "", messageId: message.id } } });
 }
 
 /** Sinister Dragon: an Impaired Opponent's attack at them that did them no Damage. */
@@ -19530,15 +19556,78 @@ async function settleMajinRaised(message, clash) {
 }
 
 /** Namekian-Raised (4): "Select an Opponent. Increase your Combat Rolls against the selected Opponent by 1(T) until the end of the Combat Round." */
-export async function namekianFocus(actor) {
+export async function namekianFocus(actor, source = "Namekian-Raised") {
   const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
   const opponents = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
     && !allies.has(token.actor.uuid) && !token.actor.system?.defeated).map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) return;
-  const picked = await askPlayerChoice(actor, `${actor.name}: Namekian-Raised - an Opponent this Round`,
+  const picked = await askPlayerChoice(actor, `${actor.name}: ${source} - an Opponent this Round`,
     [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
   const who = opponents.find(each => each.uuid === picked);
-  if (who) await requestActorUpdate(actor, { [`flags.${SCOPE}.namekianFocus`]: { uuid: who.uuid, name: who.name, round: roundKey() } });
+  if (who) await requestActorUpdate(actor, { [`flags.${SCOPE}.namekianFocus`]: { uuid: who.uuid, name: who.name, round: roundKey(), source } });
+  return who ?? null;
+}
+
+/**
+ * Neo-Tuffle-Raised (1): the Opponent, as Namekian-Raised's (4). (2): "Upon applying the first effect ... if you are below the Injured
+ * Health Threshold, you may enter the Surging State until the end of the Combat Round. If you do ... you must select the same Opponent"
+ * - asked, once an Encounter.
+ */
+export async function neoTuffleFocus(actor) {
+  const who = await namekianFocus(actor, "Neo-Tuffle-Raised");
+  if (!who || (actor.system?.effects?.slots?.["neoTuffleRaised.surging"] !== true)) return;
+  if (!["injured", "critical"].includes(actor.system.threshold?.key) || ((Number(actor.system.states?.surging) || 0) > 0)) return;
+  if (actor.getFlag?.(SCOPE, "neoSurgingEncounter") === (game.combat?.id ?? "none")) return;
+  if ((await askPlayerChoice(actor, `${actor.name}: Neo-Tuffle-Raised`,
+    [{ value: "yes", label: `Surging till the Round ends - ${who.name} your Focus (once an Encounter)` }, { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.neoSurgingEncounter`]: game.combat?.id ?? "none", [`flags.${SCOPE}.surgingFocusPreset`]: who.uuid });
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  await enterState(actor, "surging", 1, "round", "Neo-Tuffle-Raised");
+}
+
+/** Shinjin-Raised (3): "At the end of the Combat Round, regain 2(bT) Life and Ki Points for each Counter Action you possess." */
+export async function shinjinRest(actor) {
+  const left = Number(actor?.system?.actions?.counterLeft) || 0;
+  if (!left) return;
+  const each = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  await regainPools(actor, left * each, left * each);
+}
+
+/** What lasted "for the duration of that Attacking Maneuver" ending with it - Shinjin-Raised's, Oni-Raised's price, Saiyan-Raised's Superior. */
+async function attackDurationEnds(attack) {
+  const { setCondition } = await import("./conditions.mjs");
+  for (const { uuid } of attackTargets(attack ?? {})) {
+    const target = fromUuidSync(uuid);
+    if (target?.isOwner && ((Number(target.system?.conditions?.["shinjin-counter-mark"]) || 0) > 0)) await setCondition(target, "shinjin-counter-mark", 0);
+  }
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker?.isOwner) return;
+  // Oni-Raised (3): "after completing the Attacking Maneuver, set your Life Points to their lowest possible value".
+  if (attack.oniDrained) await attacker.update({ "system.life.value": Number(attacker.system.life?.min) || 0 });
+  // Saiyan-Raised (4): Superior "for the duration of this Attacking Maneuver".
+  if (attacker.getFlag?.(SCOPE, "saiyanSuperiorAttack")) {
+    await attacker.unsetFlag(SCOPE, "saiyanSuperiorAttack");
+    const { leaveState } = await import("./effects/moments-runtime.mjs");
+    await leaveState(attacker, "superior");
+  }
+}
+
+/** Neo-Tuffle-Raised (3): the Greater Dice on the Signature Technique's Wound Roll, taken as it was declared. */
+function neoGreaterDice(attacker, attack) {
+  if (!attack?.neoGreater) return [];
+  const formula = attacker.system.dice?.greater?.formula ?? "";
+  return formula ? [{ label: "Neo-Tuffle-Raised", formula }] : [];
+}
+
+/** Oni-Raised (2): an Opponent hit, Injured or worse - "make a Might Clash against that Opponent", asked, once a Round. */
+async function oniBreak(attacker, target) {
+  if ((attacker.system?.effects?.slots?.["oniRaised.break"] !== true) || !["injured", "critical"].includes(attacker.system.threshold?.key)) return;
+  if ((attacker.getFlag?.(SCOPE, "oniBreakRound") === roundKey()) || alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return;
+  if ((await askPlayerChoice(attacker, `${attacker.name}: Oni-Raised - ${target.name}`,
+    [{ value: "yes", label: "A Might Clash - won, Broken till the end of your turn" }, { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.oniBreakRound`]: roundKey() });
+  return postMightClash(attacker, target, { maneuverName: "Oni-Raised", reason: "Win and they are Broken till the end of your turn.",
+    impede: { applied: false, condition: "broken", edge: "end", next: false, source: "Oni-Raised" } });
 }
 
 /** Namekian-Raised (4)'s, at or against the one chosen this Round. */
@@ -19606,7 +19695,10 @@ export async function arcosianHit(actor) {
  * Demon-Raised (3): "Spend 3(bT) Ki Points to make a Might Clash against all Opponents within a Sphere AoE (centered on you). If you win,
  * those Opponents gain the Impediment Combat Condition until the end of your turn." A Standard Sphere: 2 Squares between.
  */
-export async function demonRaisedSphere(actor) {
+export async function demonRaisedSphere(actor, kind = "demon") {
+  // Shadow Dragon-Raised (3): the same Sphere and Clash - "Impaired Combat Condition until the start of your next turn".
+  const shadow = kind === "shadow";
+  const source = shadow ? "Shadow Dragon-Raised" : "Demon-Raised";
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const from = actor?.getActiveTokens?.(false, true)?.[0];
   const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
@@ -19616,22 +19708,27 @@ export async function demonRaisedSphere(actor) {
   if (!near.length) return UNSPENT;
   const cost = 3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
   const { spendManeuverCost } = await import("./maneuvers.mjs");
-  if (!await spendManeuverCost(actor, { name: "Demon-Raised" }, cost)) return UNSPENT;
+  if (!await spendManeuverCost(actor, { name: source }, cost)) return UNSPENT;
   for (const other of near) {
-    await postMightClash(actor, other, { maneuverName: "Demon-Raised", reason: "Win and they are Impeded till the end of your turn.",
-      impede: { applied: false } });
+    await postMightClash(actor, other, { maneuverName: source,
+      reason: shadow ? "Win and they are Impaired till the start of your next turn." : "Win and they are Impeded till the end of your turn.",
+      impede: shadow ? { applied: false, condition: "impaired", edge: "start", next: true, source } : { applied: false } });
   }
   return true;
 }
 
 async function settleImpede(message, clash) {
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, impede: { ...clash.impede, applied: true } });
-  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Demon-Raised: no Impediment.");
+  // What it puts on them, and till when - Demon-Raised's Impediment unless the Clash names another (Shadow Dragon-, Oni-Raised).
+  const { condition = "impediment", edge = "end", next = false, source = "Demon-Raised" } = clash.impede;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${source}: nothing put on them.`);
   const actor = fromUuidSync(clash.challengerUuid);
   const target = fromUuidSync(clash.defenderUuid);
   if (!actor || !target) return;
-  await markUntilNextTurn(actor, target, "impediment", 1, "end", "Demon-Raised", false);
-  return settledNote(message, `Demon-Raised: ${target.name} is Impeded till the end of ${actor.name}'s turn.`);
+  await markUntilNextTurn(actor, target, condition, 1, edge, source, next);
+  const { allConditions } = await import("./conditions.mjs");
+  const named = allConditions().find(each => each.key === condition)?.label ?? condition;
+  return settledNote(message, `${source}: ${target.name} - ${named} till the ${edge === "end" ? "end" : "start"} of ${actor.name}'s ${next ? "next " : ""}turn.`);
 }
 
 /**
@@ -23758,6 +23855,19 @@ async function takeOutOfSequence(message, actor, offer) {
         { label: "Fierce Counter", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }] } };
     }
   }
+  // Saiyan-Raised (4)'s, once an Encounter: Superior as it is made - left as the attack is done (attackDurationEnds).
+  if (offer.grants?.saiyanSuperior) {
+    if (actor.getFlag?.(SCOPE, "saiyanStrikeEncounter") === (game.combat?.id ?? "none")) {
+      ui.notifications.warn("Saiyan-Raised: already used this Combat Encounter.");
+      return null;
+    }
+    await actor.setFlag(SCOPE, "saiyanStrikeEncounter", game.combat?.id ?? "none");
+    if (!((Number(actor.system.states?.superior) || 0) > 0)) {
+      const { enterState } = await import("./effects/moments-runtime.mjs");
+      await enterState(actor, "superior", 1, null, "Saiyan-Raised");
+      await actor.setFlag(SCOPE, "saiyanSuperiorAttack", true);
+    }
+  }
   // Once a Round by the flag it names - Impaling Horn (2)'s, Retractable Limbs (3)'s.
   if (offer.grants?.roundFlag && (actor.getFlag?.(SCOPE, offer.grants.roundFlag) === roundKey())) {
     ui.notifications.warn(`${offer.reason ?? "That effect"}: already used this Combat Round.`);
@@ -24563,6 +24673,34 @@ export async function postAttack(actor, target, maneuver,
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
+  // Neko Majin-Raised (3): "If you use a Copied Technique, increase the Wound Roll of that Attacking Maneuver by 2(T)" - asked, once a Round.
+  if (!reflecting && maneuver.copiedEffects && (actor.system.effects?.slots?.["nekoRaised.copiedWound"] === true)
+    && (actor.getFlag?.(SCOPE, "nekoWoundRound") !== roundKey())
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Neko Majin-Raised` },
+      content: "<p data-tooltip=\"Once a Round\">This Copied Technique's Wound Roll 2(T) higher?</p>", rejectClose: false })) {
+    await actor.setFlag(SCOPE, "nekoWoundRound", roundKey());
+    woundExtra = [...woundExtra, { label: "Neko Majin-Raised", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Neo-Tuffle-Raised (3): "you may apply Greater Dice to the Wound Roll of that Signature Technique" - asked, once a Round.
+  const neoGreater = !reflecting && maneuver.signature && !maneuver.signatureTechnique
+    && (actor.system.effects?.slots?.["neoTuffleRaised.greater"] === true) && (actor.getFlag?.(SCOPE, "neoGreaterRound") !== roundKey())
+    && Boolean(actor.system.dice?.greater?.formula)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Neo-Tuffle-Raised` },
+      content: "<p data-tooltip=\"Once a Round\">Your Greater Dice on this Signature Technique's Wound Roll?</p>", rejectClose: false });
+  if (neoGreater) await actor.setFlag(SCOPE, "neoGreaterRound", roundKey());
+  // Oni-Raised (3): an Opponent targeted, Injured or worse - "you may apply 2 Energy Charges to that Attacking Maneuver. These Energy
+  // Charges do not count towards your maximum. If you do, after completing the Attacking Maneuver, set your Life Points to their lowest
+  // possible value" - asked, once an Encounter.
+  const oniDrained = !reflecting && (actor.system.effects?.slots?.["oniRaised.charges"] === true)
+    && ["injured", "critical"].includes(actor.system.threshold?.key)
+    && (actor.getFlag?.(SCOPE, "oniChargesEncounter") !== (game.combat?.id ?? "none"))
+    && everyone.some(who => who && (who.uuid !== actor.uuid) && !alliesOnScene(actor).some(ally => ally.uuid === who.uuid))
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Oni-Raised` },
+      content: "<p data-tooltip=\"Once an Encounter. Past your most; done, your Life Points their least.\">2 Energy Charges on it?</p>", rejectClose: false });
+  if (oniDrained) {
+    await actor.setFlag(SCOPE, "oniChargesEncounter", game.combat?.id ?? "none");
+    uncappedCharges = (Number(uncappedCharges) || 0) + 2;
+  }
   // Heran-Raised (1): an Opponent it targets with one of your Allies beside them - Strike and Wound 1(T).
   if ((actor.system.effects?.slots?.["heranRaised.flank"] === true) && !reflecting && heranFlanked(actor, everyone)) {
     const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
@@ -24764,6 +24902,9 @@ export async function postAttack(actor, target, maneuver,
           ...(strikeExtra.length ? { strikeExtra } : {}),
           // Claws (2): whom it carries the Clash at, as it hits them.
           ...(clawsAt ? { claws: clawsAt } : {}),
+          // Neo-Tuffle-Raised (3)'s Greater Dice; Oni-Raised (3)'s price, paid as it is done.
+          ...(neoGreater ? { neoGreater: true } : {}),
+          ...(oniDrained ? { oniDrained: true } : {}),
           // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
@@ -28046,6 +28187,8 @@ function aggressionAgainst(attacker, target) {
  */
 function woundDice(attacker, attack) {
   return [
+    // Neo-Tuffle-Raised (3)'s Greater Dice.
+    ...neoGreaterDice(attacker, attack),
     { label: "Extra dice", formula: attacker.system.dice.extra.formula },
     { label: "Energy charges", formula: energyChargeDice(attacker, attack) },
     ...phantomEdgeDice(attacker, attack),
@@ -31829,6 +31972,16 @@ async function applyAttackDamage(message, target, attack) {
   // the start of your next turn" - once a Round.
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)) {
     await cerealianBroken(armsUser, target);
+  }
+  // Oni-Raised (2): an Opponent hit, Injured or worse - the Might Clash, asked.
+  if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) await oniBreak(armsUser, target);
+  // Saiyan-Raised (4): Damage from an Opponent's attack - the Basic Attack out of sequence, Superior for it, once an Encounter.
+  if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
+    && (target.system?.effects?.slots?.["saiyanRaised.strike"] === true) && (target.getFlag?.(SCOPE, "saiyanStrikeEncounter") !== (game.combat?.id ?? "none"))
+    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)
+    && !(message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.saiyanSuperior && (offer.actorUuid === target.uuid))) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", reason: "Saiyan-Raised - Superior for it, once an Encounter", grants: { saiyanSuperior: true } } });
   }
   // Heran-Raised (2), (3): an Opponent hit with an Ally beside them - that Ally's Movement; knocked through - an Ally beside you, the
   // Basic Attack at them.

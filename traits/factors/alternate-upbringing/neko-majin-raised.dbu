@@ -1,0 +1,26 @@
+id: neko-majin-raised
+name: Neko Majin-Raised
+order: 11
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+grantsTalent: quick-learner
+description: >
+  Imbued with the whimsical mysticism and mischievous mimicry of the Neko Majin race, you snatch the techniques of everyone around you.
+text: >
+  Neko Majin-Raised (Mind): Imbued with the whimsical mysticism and mischievous mimicry of the Neko Majin race, you snatch the techniques of everyone around you.
+  (1)-[Passive]: At Character Creation, gain the Quick Learner Talent.
+  (2)-[Passive]: You may ignore the effects of any Disadvantage with ‘Restricted’ in its name on any Signature Technique or Aura you have gained through the effects of Quick Learner (either as Copied Techniques or those you have gained through the second effect of Quick Learner).
+  (3)-[Triggered, 1/Round]: If you use a Copied Technique, increase the Wound Roll of that Attacking Maneuver by 2(T).
+  (4)-[Triggered, 1/Round]: If you gain access to a Copied Technique, regain Ki Points equal to the Ki Point Cost of that Copied Technique.
+
+---
+
+[passive]
+# (1) Its header's `grantsTalent`, kept if this is lost.
+# (2) The Restricted Disadvantages of a Technique from Quick Learner (technique-use.mjs).
+allow quickLearner.ignoreRestricted;
+# (3) A Copied Technique declared: asked, once a Round - its Wound 2(T) (chat.mjs postAttack).
+allow nekoRaised.copiedWound;
+# (4) A Copied Technique gained: its Ki Point Cost in Ki Points, once a Round (chat.mjs copyTechnique).
+allow nekoRaised.copiedKi;
