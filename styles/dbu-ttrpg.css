@@ -1810,6 +1810,16 @@
   min-width: 70px;
 }
 
+/* A Talent Addition row's search, over its list. */
+.dbu-ttrpg .progression-table .talent-cell .dbu-talent-search {
+  display: block;
+  width: 100%;
+  min-width: 70px;
+  height: 20px;
+  margin-bottom: 2px;
+  font-size: 0.85em;
+}
+
 /* One Power Level spans several rows; rule off where a new one begins. */
 .dbu-ttrpg .progression-table tr.level-start td {
   border-top: 2px solid var(--dbu-border-strong);

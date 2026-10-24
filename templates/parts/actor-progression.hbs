@@ -158,6 +158,9 @@
 
         <td class="talent-cell">
           {{#if row.isTalentAddition}}
+            {{! Not submitted: it only narrows the list below as letters are typed - Enter takes the one match left. }}
+            <input type="search" class="dbu-talent-search" data-talent-search placeholder="Search..."
+                   data-tooltip="Type to narrow the Talents (name or Category); Enter takes the first one left"/>
             <select name="system.progression.{{row.index}}.talent">
               <option value=""></option>
               {{#each row.talentGroups as |group|}}

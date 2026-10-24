@@ -2588,6 +2588,36 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       });
     }
 
+    // A Talent Addition row's search: each letter typed narrows its list - by the Talent's name or its Category's - and Enter
+    // takes the first one left. Never submitted itself, so typing re-renders nothing.
+    for (const search of this.element.querySelectorAll("[data-talent-search]")) {
+      const select = search.parentElement?.querySelector("select");
+      if (!select) continue;
+      const left = () => Array.from(select.querySelectorAll("option")).filter(option => option.value && !option.hidden);
+      search.addEventListener("input", () => {
+        const typed = String(search.value ?? "").trim().toLowerCase();
+        for (const group of select.querySelectorAll("optgroup")) {
+          const inGroup = String(group.label ?? "").toLowerCase().includes(typed);
+          let any = false;
+          for (const option of group.querySelectorAll("option")) {
+            option.hidden = Boolean(typed) && !inGroup && !String(option.textContent ?? "").toLowerCase().includes(typed);
+            any ||= !option.hidden;
+          }
+          group.hidden = !any;
+        }
+      });
+      search.addEventListener("change", event => event.stopPropagation());
+      search.addEventListener("keydown", event => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        event.stopPropagation();
+        const first = left()[0];
+        if (!first || (select.value === first.value)) return;
+        select.value = first.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    }
+
     // An "Attribute Addition" row may spread at most 2 points across its seven
     // attribute cells, and no cell may leave the 0-2 range. The `min`/`max`
     // attributes only constrain the spinner arrows - typed and pasted values are
