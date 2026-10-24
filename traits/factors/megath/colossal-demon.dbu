@@ -1,0 +1,27 @@
+id: colossal-demon
+name: Colossal Demon
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Your body is so massive that it defies logic and reason.
+text: >
+  Colossal Demon (Body): Your body is so massive that it defies logic and reason.
+  (1)-[Passive]: Your Racial Life Modifier is increased by 4.
+  (2)-[Passive]: Increase your base Size Category from Gigantic to Colossal.
+  (3)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, for the duration of that Attacking Maneuver, increase your Soak Value by 1(T) for each Size Category you are larger than the attacking Character.
+  (4)-[Triggered, 1/Round]: When making an Attacking Maneuver, apply the Extra Dice from Punching Down (see — Size) an additional time.
+
+---
+
+[passive]
+# (1)
+racialLifeModifier += 4;
+# (2) Colossal - over Gigantic Demon's Gigantic, the larger base named winning (actor-character.mjs).
+allow size.base.colossal;
+# (3) Hit by a smaller Character: a button on the attack's card before its Wound Roll, once a Round - 1(T) a Size Category (chat.mjs
+# tremendousLordButtons).
+allow colossal.soak;
+# (4) Punching Down on your attack: asked as it is rolled, once a Round - its 1d6(T) again (chat.mjs colossalPunch).
+allow colossal.punch;

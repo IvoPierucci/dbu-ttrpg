@@ -2051,7 +2051,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // larger than Colossal, and a shift past either leaves you standing at it.
     const sizeKeys = Object.keys(DBUCharacterData.SIZES);
     // Or one an effect makes their base - Alternate Scale Structure's Tiny or Enormous.
-    const chosenSize = Object.keys(DBUCharacterData.SIZES).find(key => this.effects?.slots?.[`size.base.${key}`] === true)
+    // Two named - Gigantic Demon's Gigantic, Colossal Demon's Colossal "from Gigantic" - the larger.
+    const chosenSize = Object.keys(DBUCharacterData.SIZES).filter(key => this.effects?.slots?.[`size.base.${key}`] === true).pop()
       ?? this.size;
     const builtAt = sizeKeys.indexOf(chosenSize);
     // Or a Size named outright by something worn - the Micro Band's "reduce your Size

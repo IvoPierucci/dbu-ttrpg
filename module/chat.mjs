@@ -20294,20 +20294,25 @@ function tremendousLordButtons(message, attack, container) {
   if (!attack.result || attack.result.wound) return;
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   if (!attacker) return;
+  // Tremendous Lord (3)'s 1(bT) a Size Category, Colossal Demon (3)'s 1(T) - each once a Round of its own.
+  const kinds = [{ slot: "tremendous.soak", flag: "tremendousRound", name: "Tremendous Lord", base: true },
+    { slot: "colossal.soak", flag: "colossalRound", name: "Colossal Demon", base: false }];
   for (const { uuid } of attackTargets(attack)) {
     const target = fromUuidSync(uuid);
-    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["tremendous.soak"] !== true)) continue;
-    if (!targetResult(attack, uuid)?.hit || (target.getFlag?.(SCOPE, "tremendousRound") === roundKey())) continue;
-    if ((attack.tremendousSoak ?? []).some(entry => entry.uuid === uuid)) continue;
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || !targetResult(attack, uuid)?.hit) continue;
     const larger = (Number(target.system.size?.steps) || 0) - (Number(attacker.system?.size?.steps) || 0);
     if (larger <= 0) continue;
-    const value = larger * Math.max(1, Number(target.system.baseTierOfPower) || 1);
-    cardButton(container, `Tremendous Lord - ${target.name}`, `Once a Round: Soak Value ${value} higher for this attack.`, async () => {
-      if (target.getFlag?.(SCOPE, "tremendousRound") === roundKey()) return;
-      await target.setFlag(SCOPE, "tremendousRound", roundKey());
-      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
-      requestEdit(message, { type: "attack", attack: { ...fresh, tremendousSoak: [...(fresh.tremendousSoak ?? []), { uuid, value }] } });
-    });
+    for (const kind of kinds) {
+      if ((target.system?.effects?.slots?.[kind.slot] !== true) || (target.getFlag?.(SCOPE, kind.flag) === roundKey())) continue;
+      if ((attack.tremendousSoak ?? []).some(entry => (entry.uuid === uuid) && ((entry.by ?? "tremendous.soak") === kind.slot))) continue;
+      const value = larger * Math.max(1, Number(kind.base ? target.system.baseTierOfPower : target.system.tierOfPower) || 1);
+      cardButton(container, `${kind.name} - ${target.name}`, `Once a Round: Soak Value ${value} higher for this attack.`, async () => {
+        if (target.getFlag?.(SCOPE, kind.flag) === roundKey()) return;
+        await target.setFlag(SCOPE, kind.flag, roundKey());
+        const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+        requestEdit(message, { type: "attack", attack: { ...fresh, tremendousSoak: [...(fresh.tremendousSoak ?? []), { uuid, value, by: kind.slot }] } });
+      });
+    }
   }
 }
 
@@ -20892,6 +20897,15 @@ function speedsterDodge(actor, attack) {
     parts.push({ label: "Speedster (Exploit)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) });
   }
   return parts;
+}
+
+/** Colossal Demon (4): Punching Down on your attack - its Extra Dice again, asked, once a Round. */
+async function colossalPunch(attacker) {
+  if ((attacker.system?.effects?.slots?.["colossal.punch"] !== true) || (attacker.getFlag?.(SCOPE, "colossalPunchRound") === roundKey())) return false;
+  if ((await askPlayerChoice(attacker, `${attacker.name}: Colossal Demon - Punching Down`,
+    [{ value: "yes", label: "Its Extra Dice again (once a Round)" }, { value: "no", label: "No" }])) !== "yes") return false;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.colossalPunchRound`]: roundKey() });
+  return true;
 }
 
 /** Giant Gene (4): Punching Down on your attack - its 2(bT), asked, once a Round. */
@@ -29685,6 +29699,8 @@ async function rollAttackWoundWork(message, attack) {
   if (attack.result?.wound) return;
   // Giant Gene (4): asked once for the attack, as its first Punching Down is rolled.
   let giantAnswer = null;
+  // Colossal Demon (4): asked once for the attack, the same way.
+  let colossalAnswer = null;
   // Whoever owes the Wound Roll, which is the one who made the Strike on every attack
   // but a reflected one. Everything below reads off them - their Wound, their Extra
   // Dice, their effects - because the roll is theirs.
@@ -30088,7 +30104,11 @@ async function rollAttackWoundWork(message, attack) {
       ? await punchingDownRoll(attacker) : 0;
     // Giant Gene (4): "increase the Wound Roll of that Attacking Maneuver by 2(bT)" - on the Damage Punching Down adds to.
     if (punchingRoll && (giantAnswer === null)) giantAnswer = await giantGeneWound(attacker);
-    const punchingDown = punchingRoll + ((punchingRoll && giantAnswer) ? 2 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1) : 0);
+    // Colossal Demon (4): "apply the Extra Dice from Punching Down ... an additional time".
+    if (punchingRoll && (colossalAnswer === null)) colossalAnswer = await colossalPunch(attacker);
+    const punchingAgain = (punchingRoll && colossalAnswer) ? await punchingDownRoll(attacker) : 0;
+    const punchingDown = punchingRoll + punchingAgain
+      + ((punchingRoll && giantAnswer) ? 2 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1) : 0);
     // Hyper Resilience: "If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no
     // Damage" - Automatic, or asked of whoever plays them once the Damage is known (the user's); spent only where it took
     // it away.

@@ -1,0 +1,9 @@
+id: megath
+name: Megath
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Demon
+maximumFactor: 1
+prerequisites: >
+  Demon Person Subrace, Gigantic Demon effect chosen for the Option effect of Denizen of the Demon Realm
+description: >
+  While some Demons are already massive in size, these Demons are true behemoths, dwarfing even skyscrapers.
