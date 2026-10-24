@@ -23,14 +23,13 @@ if (stacksAtLeast(2, "power")) {
 }
 # (3) Waits on Minions - the Command Maneuver - not built yet: the table's.
 
-# (2) The Analysis or the Hype: its mark till your turn ends. Automatic by default, its Triggered/Automatic button.
+# (2) The Analysis or the Hype: its mark till your turn ends - once a Round between the two, the one limit of its printed effect
+# (`effect 2` on both). Automatic by default, one Triggered/Automatic button.
 [triggered/analysis, 1/round, effect 2]
-requires !hasCondition("supercomputer-mark");
 gain(supercomputer-mark);
 expires(supercomputer-mark, turn);
 
 [triggered/hype, 1/round, effect 2]
-requires !hasCondition("supercomputer-mark");
 gain(supercomputer-mark);
 expires(supercomputer-mark, turn);
 
