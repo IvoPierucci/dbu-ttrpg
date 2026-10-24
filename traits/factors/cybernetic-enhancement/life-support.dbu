@@ -1,0 +1,22 @@
+id: life-support
+name: Life Support
+order: 5
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Your body is kept alive by machinery, rendering you far more durable than before.
+text: >
+  Life Support (Body): Your body is kept alive by machinery, rendering you far more durable than before.
+  (1)-[Passive]: You are Unnatural.
+  (2)-[Passive]: Increase your Racial Life Modifier by 4.
+  (3)-[Passive]: Increase your Soak Value and Surgency by 1(T) and 2(T) respectively.
+
+---
+
+[passive]
+# (1), (2), (3)
+allow unnatural;
+racialLifeModifier += 4;
+soakValue += 1(T);
+surgency += 2(T);

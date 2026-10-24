@@ -1,0 +1,22 @@
+id: cloaking-system-third-effect
+name: Cloaking System
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 10
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: cloaking-system
+fromEffect: 3
+source: Core Rule
+description: >
+  Cloaking System's third effect, as a Maneuver: 1 Action and 10(bT) Ki Points, the Invisible State.
+text: >
+  (3)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 and a Ki Point Cost of 10(bT), enter the Invisible State.
+
+---
+
+# The Invisible State, its mark beside it for (5).
+[on used]
+enterState(invisible, 1);
+gain(cloaked);

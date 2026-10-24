@@ -1,0 +1,25 @@
+id: integrated-weapon
+name: Integrated Weapon
+order: 4
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1) "create a Weapon" - of the Weapon Category chosen.
+choose: weaponCategory
+grantsWeapon: chosen
+grantsWeaponGrade: 4
+grantsWeaponQualities: regenerating
+description: >
+  A powerful weapon has been included in your cybernetic augmentations.
+text: >
+  Integrated Weapon (Body): A powerful weapon has been included in your cybernetic augmentations.
+  (1)-[Passive]: When you gain this Factor Trait, create a Weapon of Craftsmanship Grade 4 and Integrate it. This Weapon additionally has the Regenerating Quality. This Quality does not occupy any Quality Slots.
+  (2)-[Passive]: Increase the Wound Rolls of any Attacking Maneuvers made with an Integrated Weapon by 2(T).
+
+---
+
+# (1) Its headers: the Weapon Category chosen as it is gained, its Weapon made on the Gear tab - Grade 4, Integrated, Active where
+# there is room, the Regenerating Quality in no Slot - and gone with it (racial.mjs grantWeapon). Its other Qualities the player's.
+[passive]
+# (2) Any Integrated Weapon's (chat.mjs integratedWeaponWound).
+allow integratedWeapon.wound;

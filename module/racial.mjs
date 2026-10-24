@@ -26,6 +26,8 @@
  *                                   as it is added, kept on the Item (`dragonBall` flag)
  *   pastLife: true                  Lingering Power's Past Life, asked as it is added - its Skill, Attribute, Talent and base Tier
  *                                   (`$pastSkill`, `$pastAttribute` in its script; the Talent given; the Tier on its flag)
+ *   grantsWeapon: chosen            the Weapon Category its `choose: weaponCategory` names (Integrated Weapon's); with
+ *   grantsWeaponQualities: <ids>    Qualities on it in no Slot
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
  *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
@@ -849,14 +851,19 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
 
 /** A Trait's `grantsWeapon`: that Category's Weapon at `grantsWeaponGrade`, named `grantsWeaponName` - Integrated, Active if room. */
 async function grantWeapon(actor, item, trait) {
-  const category = getTrait(String(trait.grantsWeapon));
+  // `grantsWeapon: chosen` - the Weapon Category its `choose: weaponCategory` was answered with (Integrated Weapon's).
+  const categoryId = (String(trait.grantsWeapon) === "chosen")
+    ? ((item.system?.chosen ?? []).find(entry => entry.key === trait.id)?.value ?? "") : String(trait.grantsWeapon);
+  const category = getTrait(categoryId);
   if (!category) return;
   const { craftedItemFrom, composeEffects } = await import("./gear.mjs");
   const data = craftedItemFrom("weapon", actor, getTrait);
   if (!data) return;
   data.name = String(trait.grantsWeaponName ?? category.name);
   Object.assign(data.system.crafted, { category: category.id, weaponType: category.weaponType,
-    grade: Number(trait.grantsWeaponGrade) || 1, qualities: [] });
+    grade: Number(trait.grantsWeaponGrade) || 1,
+    // And the Qualities it has "in addition", in no Slot - Integrated Weapon's Regenerating.
+    qualities: listOf(trait.grantsWeaponQualities).map(id => ({ id, slots: 0, choice: "", on: false, name: "", free: true, granted: true })) });
   data.system.crafted.effects = composeEffects(data.system.crafted, "", { getTrait });
   const { activeIntegrated, INTEGRATED_ACTIVE } = await import("./integrated.mjs");
   data.system.integrated = true;

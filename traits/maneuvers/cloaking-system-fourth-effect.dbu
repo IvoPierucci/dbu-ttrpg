@@ -1,0 +1,21 @@
+id: cloaking-system-fourth-effect
+name: Cloaking System: Exit
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: cloaking-system
+fromEffect: 4
+source: Core Rule
+description: >
+  Cloaking System's fourth effect, as a Maneuver: the Invisible State left, as an Instant.
+text: >
+  (4)-[1/Round]: As an Instant Maneuver during your turn, or in response to the end of your turn, leave the Invisible State.
+
+---
+
+[on used]
+leaveState(invisible);
+remove(cloaked);

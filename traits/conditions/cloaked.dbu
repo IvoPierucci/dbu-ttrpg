@@ -1,0 +1,15 @@
+id: cloaked
+name: Cloaked
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Cloaking System's mark - the Invisible State is its third effect's, for its fifth.
+combatCondition: no
+source: Core Rule
+description: >
+  Cloaking System: Invisible through it - 8(bT) Ki Points and Capacity as each of your turns begins.
+text: >
+  Cloaking System (5): If you are in the Invisible State due to the 3rd effect of Cloaking System, reduce your Ki Points and Capacity by 8(bT).
+
+---
+
+[passive]

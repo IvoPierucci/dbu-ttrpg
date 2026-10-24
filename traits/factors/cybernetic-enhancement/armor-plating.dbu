@@ -1,0 +1,23 @@
+id: armor-plating
+name: Armor Plating
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Your skin has been reinforced against damage, allowing you to withstand stronger hits.
+text: >
+  Armor Plating (Body): Your skin has been reinforced against damage, allowing you to withstand stronger hits.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: Increase your Damage Reduction by 1(bT).
+  (3)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, reduce the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (1), (2)
+racialLifeModifier += 2;
+damageReduction += 1(bT);
+# (3) Hit: a button on the attack's card before its Wound Roll, once a Round - its Damage Category a step down for you (chat.mjs
+# platedButtons).
+allow armorPlating.category;

@@ -20245,6 +20245,42 @@ export async function goldenFruitPower(actor) {
   return enterState(actor, godKi ? "superior" : "god-ki", 1, "next-turn", "Golden Fruit");
 }
 
+/** Armor Plating (3): "If you are hit by an Attacking Maneuver, reduce the Damage Category of that Attacking Maneuver by 1 Category" - once a Round. */
+function platedButtons(message, attack, container) {
+  if (!attack.result || attack.result.wound) return;
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["armorPlating.category"] !== true)) continue;
+    if (!targetResult(attack, uuid)?.hit || (target.getFlag?.(SCOPE, "armorPlatingRound") === roundKey())) continue;
+    if ((attack.armorPlated ?? []).includes(uuid)) continue;
+    cardButton(container, `Armor Plating - ${target.name}`, "Once a Round: this attack's Damage Category a step down for you.", async () => {
+      if (target.getFlag?.(SCOPE, "armorPlatingRound") === roundKey()) return;
+      await target.setFlag(SCOPE, "armorPlatingRound", roundKey());
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, armorPlated: [...(fresh.armorPlated ?? []), uuid] } });
+    });
+  }
+}
+
+/** Integrated Weapon (2): "Increase the Wound Rolls of any Attacking Maneuvers made with an Integrated Weapon by 2(T)." */
+function integratedWeaponWound(attacker, attack) {
+  if ((attacker?.system?.effects?.slots?.["integratedWeapon.wound"] !== true) || !attack?.weapon?.itemId) return [];
+  if (!attacker.items?.get(attack.weapon.itemId)?.system?.integrated) return [];
+  return [{ label: "Integrated Weapon", written: "+2(T)", value: 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) }];
+}
+
+/** Emergency Energy Supplies (3): "If you use a Surge, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver" - once an Encounter. */
+async function emergencyPowerUp(actor) {
+  if ((actor?.system?.effects?.slots?.["emergency.powerUp"] !== true) || (actor.getFlag?.(SCOPE, "emergencyEncounter") === (game.combat?.id ?? "none"))) return;
+  if ((await askPlayerChoice(actor, `${actor.name}: Emergency Energy Supplies`,
+    [{ value: "yes", label: "The Power Up, out of sequence (once an Encounter)" }, { value: "no", label: "Not now" }])) !== "yes") return;
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "power-up"));
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  if (await useManeuver(actor, own ? definitionOf(own) : getManeuver("power-up"), { outOfSequence: true })) {
+    await actor.setFlag(SCOPE, "emergencyEncounter", game.combat?.id ?? "none");
+  }
+}
+
 /** Giant Gene (5): "If you are hit by a Called Shot, increase your Damage Reduction by 2(bT) for the duration of that Attacking Maneuver." */
 function giantButtons(message, attack, container) {
   if (!attack.result || attack.result.wound || !isCalledShot(attack)) return;
@@ -28460,6 +28496,8 @@ function woundParts(attacker, attack) {
     ...(attack.woundAttribute ? [{ label: attack.woundAttribute.label,
       value: Number(attacker.system.attributes?.[attack.woundAttribute.attribute]?.mod) || 0 }] : []),
     ...(attack.weapon?.wound ?? []),
+    // Integrated Weapon (2).
+    ...integratedWeaponWound(attacker, attack),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     // Power of the Weak (5): the Ki of whoever is Bonded to them.
     ...(attack.bondWound ?? []).map(entry => ({ label: `Power of the Weak (${entry.name})`, value: Number(entry.value) || 0 })),
@@ -29206,8 +29244,9 @@ async function rollAttackWoundWork(message, attack) {
   // that Attacking Maneuver by 1 Category for the sake of your Damage Calculation" - theirs alone.
   const vulnerable = entry => [attack.profile, ...extraProfilesOf(attack)].some(id => id
     && ((entry.actor ?? fromUuidSync(entry.uuid))?.system?.effects?.slots?.[`vulnerable.${id}`] === true)) ? 1 : 0;
+  // Armor Plating (3): "reduce the Damage Category of that Attacking Maneuver by 1 Category" - its button taken.
   const raisedFor = targets.map(entry => {
-    const steps = raised + vulnerable(entry);
+    const steps = raised + vulnerable(entry) - ((attack.armorPlated ?? []).includes(entry.uuid) ? 1 : 0);
     return (steps && entry.own?.hit)
       ? { ...entry, own: { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, steps) } } : entry;
   });
@@ -33709,6 +33748,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     if (crossedUp) await answerFor(actor, "surge-threshold");
     // Feline Rally (3).
     await felineRallySurge(actor);
+    await emergencyPowerUp(actor);
     return true;
   }
 
@@ -33739,6 +33779,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   await answerFor(actor, "ki-surge", { surgeManeuver: viaManeuver === "surge" });
   // Feline Rally (3).
   await felineRallySurge(actor);
+  await emergencyPowerUp(actor);
   return true;
 }
 
@@ -34421,6 +34462,7 @@ function renderAttack(message, html) {
   if (!result?.wound) bruteButtons(message, attack, container);
   if (!result?.wound) giantButtons(message, attack, container);
   if (!result?.wound) tremendousLordButtons(message, attack, container);
+  if (!result?.wound) platedButtons(message, attack, container);
   if (!result) speedsterButtons(message, attack, container);
   // Dissipating Dodge (2): targeted - Ki for the Defense Value at Nano, before it is settled.
   if (!result) dissipatingButtons(message, attack, container);

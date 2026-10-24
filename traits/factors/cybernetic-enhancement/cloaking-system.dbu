@@ -1,0 +1,35 @@
+id: cloaking-system
+name: Cloaking System
+order: 2
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  You have the ability to slip past your enemies’ notice.
+text: >
+  Cloaking System (Body): You have the ability to slip past your enemies’ notice.
+  (1)-[Passive]: Increase the Natural Result of your Stealth Skill Checks by 1.
+  (2)-[Passive]: Increase your Wound Rolls by 2(T) against your Oblivious Character(s).
+  (3)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 and a Ki Point Cost of 10(bT), enter the Invisible State.
+  (4)-[1/Round]: As an Instant Maneuver during your turn, or in response to the end of your turn, leave the Invisible State.
+  (5)-[Automatic/Start of Turn]: If you are in the Invisible State due to the 3rd effect of Cloaking System, reduce your Ki Points and Capacity by 8(bT).
+
+---
+
+[passive]
+# (1), (2)
+skill.stealth.natural += 1;
+wound.vsOblivious += 2(T);
+# (3), (4) Its own Maneuvers, on the Maneuvers tab (maneuvers/cloaking-system-*.dbu): in, 1 Action and 10(bT) Ki; out, as an Instant,
+# once a Round - its mark (Cloaked) saying the Invisible State is Cloaking System's. When in the turn (4) is used, the table's.
+
+# (5) Your turn begins Invisible by Cloaking System: 8(bT) Ki Points and as much Capacity.
+[automatic/start-of-turn, effect 5]
+requires inState("invisible") && hasCondition("cloaked");
+ki.value -= 8(bT);
+capacity.spent += 8(bT);
+
+# The Invisible State gone some other way: its mark with it.
+[automatic/start-of-turn]
+requires hasCondition("cloaked") && !inState("invisible");
+remove(cloaked);
