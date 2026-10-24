@@ -638,7 +638,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // At Defeat's Life Points (Undying's).
   "atDefeat",
   // The one Defeated was the one you Studied (Intelligent Fighter's).
-  "defeatedStudied"]);
+  "defeatedStudied",
+  // In your Normal State - no Transformation (Disguised Shadow's).
+  "normalState"]);
 
 /**
  * Dice the character already has, named rather than written out.

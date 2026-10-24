@@ -670,10 +670,10 @@ function qualityPrograms(actor, report) {
  * early return for an empty id - an empty one is a character whose data predates this, and
  * the Standard Environment is what they are in.
  */
-/** Draconic Physique had, with Personified Dragon Ball's Hazy Dragon chosen. */
+/** Draconic Physique had - or Disguised Shadow, its (5) the same - with Personified Dragon Ball's Hazy Dragon chosen. */
 function hazyInBog(actor) {
   const items = Array.from(actor?.items ?? []).filter(item => item.type === "racial");
-  return items.some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "draconic-physique")
+  return items.some(item => ["draconic-physique", "disguised-shadow"].includes(item.flags?.["dbu-ttrpg"]?.sourceId))
     && items.some(item => (item.system?.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === "hazy-dragon")));
 }
 

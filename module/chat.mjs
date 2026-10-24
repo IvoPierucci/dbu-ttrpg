@@ -9522,7 +9522,7 @@ function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
-    ...combatCatClash(actor, clash, uuid),
+    ...combatCatClash(actor, clash, uuid), ...disguisedClash(actor, clash, uuid),
     ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
     ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid),
@@ -9624,6 +9624,18 @@ function defendingClashBonus(actor, clash, uuid) {
   if (!challenger || (challenger === actor.uuid) || alliesOnScene(actor).some(ally => ally.uuid === challenger)) return [];
   const named = (actor.system.effects.slots["clash.defendingMightOrSave"]?.parts ?? []).map(part => part.source).find(Boolean);
   return [{ label: named || "Effects", value }];
+}
+
+/**
+ * Disguised Shadow (4): "Increase the Dice Score of your Saving Throw and Might Clashes against Opponents suffering from the Impaired
+ * Combat Condition by 1(T)."
+ */
+function disguisedClash(actor, clash, uuid) {
+  if (!["might", "save"].includes(clash?.category ?? "") || (actor?.system?.effects?.slots?.["disguised.vsImpaired"] !== true)) return [];
+  const other = fromUuidSync(((uuid === clash.challengerUuid) ? clash.defenderUuid : clash.challengerUuid) ?? "");
+  if (!other || (other.uuid === actor.uuid) || !((Number(other.system?.conditions?.impaired) || 0) > 0)) return [];
+  if (alliesOnScene(actor).some(ally => ally.uuid === other.uuid)) return [];
+  return [{ label: "Disguised Shadow (Impaired)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
 }
 
 /** Combat Cat (2): "Increase your Dice Score for any Might Clash initiated by an Opponent by 1(T)." */

@@ -1,0 +1,8 @@
+id: disguised-dragon
+name: Disguised Dragon
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Shadow Dragon
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Hiding in plain sight amongst the other races, you manage to keep attention off of yourself by taking on a less draconic appearance. Despite your wonderful disguise, however, you are still a dragon underneath it all, and woe be upon any who incurs your wrath.

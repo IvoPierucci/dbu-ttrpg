@@ -737,6 +737,8 @@ const PREDICATES = {
   grappler: scope => Boolean(scope.data?.grapple?.partner) && (scope.data?.grapple?.role === "grappler"),
 
   /** Is this an even-numbered Combat Round - Born for Battle's. */
+  // "While in your Normal State" - no Form, no Enhancement: always, while Transformations are not in this system (Disguised Shadow's).
+  normalState: () => true,
   evenRound: () => {
     const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;
     return (round > 0) && ((round % 2) === 0);

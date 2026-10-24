@@ -4961,11 +4961,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // Were-Beast's: a Were-Trait or the Normal Trait, and whether it applies this Round.
       wereMark: item.flags?.["dbu-ttrpg"]?.wereTrait ? "Were-Trait" : item.flags?.["dbu-ttrpg"]?.normalTrait ? "Normal Trait"
         // Wild Child's: a Pseudo-Bestial Trait, and whether you have access to it now.
-        : (item.system?.other === "pseudo-bestial") ? "Pseudo-Bestial" : "",
-      wereAside: ["were", "normal", "pseudo"].includes(traitAside(item, this.actor.items, this.actor)),
+        : (item.system?.other === "pseudo-bestial") ? "Pseudo-Bestial"
+        // Disguised Shadow (2): Personified Dragon Ball's Bestial Trait, set aside in the Normal State.
+        : (traitAside(item, this.actor.items, this.actor) === "disguised") ? "Disguised Shadow" : "",
+      wereAside: ["were", "normal", "pseudo", "disguised"].includes(traitAside(item, this.actor.items, this.actor)),
       wereTip: (item.system?.other === "pseudo-bestial") ? "Wild Child: access through the Power Up, till the start of your next turn"
+        : (traitAside(item, this.actor.items, this.actor) === "disguised") ? "Disguised Shadow (2): no access while in your Normal State"
         : "Were-Beast: chosen at the start of each Combat Round",
-      wereOff: (item.system?.other === "pseudo-bestial") ? "no access" : "not this Round",
+      wereOff: (item.system?.other === "pseudo-bestial") ? "no access"
+        : (traitAside(item, this.actor.items, this.actor) === "disguised") ? "Normal State" : "not this Round",
       bestialOffFor: this.actor.items.get(item.flags?.["dbu-ttrpg"]?.bestialOff ?? "")?.name ?? "",
       // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
       open: Boolean(this.#openSections[`trait-${item.id}`]),

@@ -38,6 +38,10 @@ negativeClash();
 # (4) Gained, how many (moment negative-energy-gained). Its Triggered/Automatic button.
 [triggered/negative-energy-gained, effect 4]
 ki.value += gained * 1(T);
+# Disguised Shadow (3): "While in your Normal State, double the amount of Ki Points you regain through the 4th effect of Negative Ki."
+if (holdsTrait("disguised-shadow") && normalState) {
+    ki.value += gained * 1(T);
+}
 
 # (5)
 [automatic/end-of-round]
