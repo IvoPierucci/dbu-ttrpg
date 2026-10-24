@@ -403,6 +403,12 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  mutationRally: {
+    args: [1, 1],
+    names: [0],
+    doc: "Captain (3), Tactician (3): an Ally not at Long Range - Combat Rolls a quarter of the named Modifier (personality, scholarship), "
+       + "rounded up, till the start of your next turn (chat.mjs mutationRally)."
+  },
   tuffleLegacy: {
     args: [0, 0],
     doc: "Tuffle-Raised (3): an Ally - 2x(bT) Life and Ki Points, Combat Rolls x(bT) till the end of their next turn (chat.mjs tuffleLegacy)."

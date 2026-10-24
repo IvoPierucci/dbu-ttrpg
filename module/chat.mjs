@@ -11774,8 +11774,12 @@ async function punchingDownRoll(attacker) {
  */
 function punchingUp(attacker, target, area, modifiers) {
   if (area || !(modifiers ?? []).some(entry => (entry.id ?? entry.modifier?.id) === "called-shot")) return 0;
-  // "Except Punching Up": a Ki Avatar's Gigantic does not count for it - the Size beneath it does.
-  const trueSteps = actor => Number(actor?.system?.size?.trueSteps ?? actor?.system?.size?.steps) || 0;
+  // "Except Punching Up": a Ki Avatar's Gigantic does not count for it - the Size beneath it does. Giant Gene (2): Enormous or larger,
+  // Large for it.
+  const trueSteps = actor => {
+    const steps = Number(actor?.system?.size?.trueSteps ?? actor?.system?.size?.steps) || 0;
+    return ((actor?.system?.effects?.slots?.["giantGene.size"] === true) && (steps >= 2)) ? 1 : steps;
+  };
   const larger = target ? (trueSteps(target) - trueSteps(attacker)) : 0;
   return (larger >= 2) ? larger : 0;
 }
@@ -20169,6 +20173,129 @@ function adaptiveButtons(message, attack, container) {
 }
 
 /**
+ * Brute (4): "If you are hit by an Attacking Maneuver that you did not use a Counter Maneuver in response to, increase your Soak Value by
+ * 1/2 (rounded up) for the duration of that Attacking Maneuver" - a button before its Wound, once a Round.
+ */
+function bruteButtons(message, attack, container) {
+  if (!attack.result || attack.result.wound) return;
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["brute.soak"] !== true)) continue;
+    if (!targetResult(attack, uuid)?.hit || (attack.bruteSoak ?? []).some(entry => entry.uuid === uuid)) continue;
+    // Dodged, or nothing - no Counter Maneuver.
+    const answered = (attack.defences ?? []).find(entry => entry.uuid === uuid)?.defence;
+    if ((answered && (answered !== "dodge")) || (target.getFlag?.(SCOPE, "bruteRound") === roundKey())) continue;
+    const value = Math.ceil((Number(target.system.soakValue) || 0) / 2);
+    if (!value) continue;
+    cardButton(container, `Brute - ${target.name}`, `Once a Round: Soak Value ${value} higher for this attack.`, async () => {
+      if (target.getFlag?.(SCOPE, "bruteRound") === roundKey()) return;
+      await target.setFlag(SCOPE, "bruteRound", roundKey());
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, bruteSoak: [...(fresh.bruteSoak ?? []), { uuid, value }] } });
+    });
+  }
+}
+
+/** Giant Gene (5): "If you are hit by a Called Shot, increase your Damage Reduction by 2(bT) for the duration of that Attacking Maneuver." */
+function giantButtons(message, attack, container) {
+  if (!attack.result || attack.result.wound || !isCalledShot(attack)) return;
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["giantGene.calledShot"] !== true)) continue;
+    if (!targetResult(attack, uuid)?.hit || (target.getFlag?.(SCOPE, "giantCalledRound") === roundKey())) continue;
+    if ((attack.partyReduction ?? []).some(entry => (entry.uuid === uuid) && entry.giant)) continue;
+    const value = 2 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+    cardButton(container, `Giant Gene - ${target.name}`, `Once a Round: Damage Reduction ${value} higher for this Called Shot.`, async () => {
+      if (target.getFlag?.(SCOPE, "giantCalledRound") === roundKey()) return;
+      await target.setFlag(SCOPE, "giantCalledRound", roundKey());
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, partyReduction: [...(fresh.partyReduction ?? []),
+        { uuid, value, by: uuid, giant: true }] } });
+    });
+  }
+}
+
+/** Speedster (6): "If you are targeted by an Attacking Maneuver, double your Agility Modifier for the duration of that Attacking Maneuver." */
+function speedsterButtons(message, attack, container) {
+  if (attack.result) return;
+  const encounter = game.combat?.id ?? "none";
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["speedster.double"] !== true)) continue;
+    if ((target.getFlag?.(SCOPE, "speedsterDoubleEncounter") === encounter) || (attack.speedsterDouble ?? []).some(entry => entry.uuid === uuid)) continue;
+    const value = Number(target.system.attributes?.agility?.mod) || 0;
+    if (value <= 0) continue;
+    cardButton(container, `Speedster - ${target.name}`, `Once an Encounter: your Agility Modifier doubled for this attack - Defense Value ${value} higher.`, async () => {
+      if (target.getFlag?.(SCOPE, "speedsterDoubleEncounter") === encounter) return;
+      await target.setFlag(SCOPE, "speedsterDoubleEncounter", encounter);
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, speedsterDouble: [...(fresh.speedsterDouble ?? []), { uuid, value }] } });
+    });
+  }
+}
+
+/** Speedster on this Dodge: (6)'s Agility Modifier again; (1) "for the duration of your Opponents' Exploit Maneuvers", 1(T). */
+function speedsterDodge(actor, attack) {
+  const parts = [];
+  const doubled = (attack?.speedsterDouble ?? []).find(entry => entry.uuid === actor?.uuid);
+  if (doubled) parts.push({ label: "Speedster (Agility Modifier)", value: Number(doubled.value) || 0 });
+  if (attack?.viaExploit && (actor?.system?.effects?.slots?.["speedster.exploitDefense"] === true)
+    && !alliesOnScene(actor).some(ally => ally.uuid === attack.attackerUuid)) {
+    parts.push({ label: "Speedster (Exploit)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) });
+  }
+  return parts;
+}
+
+/** Giant Gene (4): Punching Down on your attack - its 2(bT), asked, once a Round. */
+async function giantGeneWound(attacker) {
+  if ((attacker.system?.effects?.slots?.["giantGene.wound"] !== true) || (attacker.getFlag?.(SCOPE, "giantWoundRound") === roundKey())) return false;
+  const value = 2 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  if ((await askPlayerChoice(attacker, `${attacker.name}: Giant Gene - Punching Down`,
+    [{ value: "yes", label: `Wound Roll ${value} higher (once a Round)` }, { value: "no", label: "No" }])) !== "yes") return false;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.giantWoundRound`]: roundKey() });
+  return true;
+}
+
+/** Speedster (3): "At the start of any Character's turn, you may use the Movement Maneuver as an Out-of-Sequence Maneuver" - on its card. */
+export function speedsterTurnOffers(card) {
+  if (!card || !game.combat?.started) return;
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const other = token.actor;
+    if (!other || seen.has(other.uuid) || other.system?.defeated) continue;
+    seen.add(other.uuid);
+    if ((other.system?.effects?.slots?.["speedster.turnMove"] !== true) || (other.getFlag?.(SCOPE, "speedsterTurnRound") === roundKey())) continue;
+    requestEdit(card, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId: "movement", maneuverName: "Movement",
+      reason: "Speedster - a turn begins (once a Round)", grants: { roundFlag: "speedsterTurnRound" } } });
+  }
+}
+
+/** Speedster (5): Rapid Movement taken - "you may make a Basic Attack Maneuver as an Out-of-Sequence Maneuver immediately afterwards". */
+export function speedsterRapidOffer(card, actor) {
+  if (!card || (actor?.system?.effects?.slots?.["speedster.rapidAttack"] !== true) || (actor.getFlag?.(SCOPE, "speedsterRapidRound") === roundKey())) return;
+  requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    reason: "Speedster - Rapid Movement (once a Round)", grants: { roundFlag: "speedsterRapidRound" } } });
+}
+
+/**
+ * Captain (3), Tactician (3): "target an Ally who is not at Long Range. Increase their Combat Rolls by 1/4 (rounded up) of your
+ * Personality (Scholarship) Modifier until the start of your next turn."
+ */
+export async function mutationRally(actor, attribute) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const key = String(attribute ?? "").toLowerCase();
+  const source = (key === "scholarship") ? "Tactician" : "Captain";
+  const amount = Math.ceil((Number(actor.system.attributes?.[key]?.mod) || 0) / 4);
+  const allies = alliesOnScene(actor).filter(ally => (ally.uuid !== actor.uuid) && !ally.system?.defeated && !atLongRange(actor, ally));
+  if ((amount <= 0) || !allies.length) return UNSPENT;
+  const picked = await askPlayerChoice(actor, `${actor.name}: ${source} - an Ally, Combat Rolls ${amount} higher`,
+    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const ally = allies.find(each => each.uuid === picked);
+  if (!ally) return UNSPENT;
+  await markUntilNextTurn(actor, ally, "rally-mark", amount, "start", source);
+}
+
+/**
  * Dissipating Dodge (2): "spend 4(bT) Ki Points to reduce your Size Category to Nano for the sake of calculating the bonus/penalty to
  * Defense Value from your Size Category for the duration of that Attacking Maneuver" - not Guard Down nor Impeded. The difference,
  * on their Defense Value for this attack.
@@ -25251,6 +25378,8 @@ export async function postAttack(actor, target, maneuver,
           // Dice Categories the Technique's features add to each Charge: Maximum Charge, Super Beam.
           chargeCategories: reflecting ? (reflecting.chargeCategories ?? 0)
             : ((technique?.chargeCategories ?? 0) + blaster.dice + gambitDice(actor)
+              // Technician (1): "Increase the Dice Category of your Energy Charges by 1."
+              + ((actor.system.effects?.slots?.["technician.chargeDie"] === true) ? 1 : 0)
               // Weapon Master (1): an Armed Attack's.
               + ((weapon && !weapon.unarmed) ? (Number(actor.system.effects?.slots?.["charges.armedCategory"]?.add) || 0) : 0)),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
@@ -28879,6 +29008,8 @@ async function rollAttackWoundWork(message, attack) {
   // Wound already rolled is not rolled again.
   attack = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
   if (attack.result?.wound) return;
+  // Giant Gene (4): asked once for the attack, as its first Punching Down is rolled.
+  let giantAnswer = null;
   // Whoever owes the Wound Roll, which is the one who made the Strike on every attack
   // but a reflected one. Everything below reads off them - their Wound, their Extra
   // Dice, their effects - because the roll is theirs.
@@ -29107,7 +29238,9 @@ async function rollAttackWoundWork(message, attack) {
       // Spiritual Warrior (2): Power of the Weak (3)'s Ki on the Soak Value as well.
       + (attack.weak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.soak) || 0), 0)
       // Balanced Defender (2).
-      + balancedParts(target, attack, "Soak").reduce((sum, part) => sum + part.value, 0);
+      + balancedParts(target, attack, "Soak").reduce((sum, part) => sum + part.value, 0)
+      // Brute (4): half again, for this attack.
+      + (attack.bruteSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
     // Mimicry of Penetrating Fangs (2): another quarter, the same way.
@@ -29264,7 +29397,13 @@ async function rollAttackWoundWork(message, attack) {
     const dealt = Math.max(0, taken + extra.reduce((sum, part) => sum + part.value, 0) - (Number(own.barrier?.total) || 0));
     // Punching Down: "If you hit a Character with an Attacking Maneuver that is 2+ Size Categories smaller than you,
     // increase the amount of Damage they receive by 1d6(T)" - Damage there already is (the user's ruling).
-    const punchingDown = ((dealt > 0) && (sizeDifference(attacker, target) >= 2) && !own.noPunchingDown) ? await punchingDownRoll(attacker) : 0;
+    // Giant Gene (3): "While your Size Category is Enormous, treat your Size Category as if it was Gigantic for calculating Punching Down."
+    const gap = sizeDifference(attacker, target)
+      + (((attacker.system?.effects?.slots?.["giantGene.size"] === true) && (attacker.system.size?.key === "enormous")) ? 1 : 0);
+    const punchingRoll = ((dealt > 0) && (gap >= 2) && !own.noPunchingDown) ? await punchingDownRoll(attacker) : 0;
+    // Giant Gene (4): "increase the Wound Roll of that Attacking Maneuver by 2(bT)" - on the Damage Punching Down adds to.
+    if (punchingRoll && (giantAnswer === null)) giantAnswer = await giantGeneWound(attacker);
+    const punchingDown = punchingRoll + ((punchingRoll && giantAnswer) ? 2 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1) : 0);
     // Hyper Resilience: "If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no
     // Damage" - Automatic, or asked of whoever plays them once the Damage is known (the user's); spent only where it took
     // it away.
@@ -29460,6 +29599,7 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...partyParts(actor));
   // Refined Combat's Fleet-Footed.
   parts.push(...fleetDodge(actor, attack));
+  parts.push(...speedsterDodge(actor, attack));
   // Power of the Weak (3).
   parts.push(...weakParts(actor, attack));
   // Balanced Defender (2).
@@ -34210,6 +34350,10 @@ function renderAttack(message, html) {
   if (!result?.wound) partyButtons(message, attack, container);
   // Adaptive Toughness (2): targeted - its Damage Reduction doubled for this attack, before its Wound.
   if (!result?.wound) adaptiveButtons(message, attack, container);
+  // Brute (4), Giant Gene (5): hit - the Soak Value, the Damage Reduction, before its Wound. Speedster (6): targeted, before it is settled.
+  if (!result?.wound) bruteButtons(message, attack, container);
+  if (!result?.wound) giantButtons(message, attack, container);
+  if (!result) speedsterButtons(message, attack, container);
   // Dissipating Dodge (2): targeted - Ki for the Defense Value at Nano, before it is settled.
   if (!result) dissipatingButtons(message, attack, container);
   // Light Consumption (2), Spectral Monster (3): targeted - a Counter Action, before it is settled.

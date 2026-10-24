@@ -1,0 +1,32 @@
+id: technician
+name: Technician
+order: 7
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  You are highly skilled at the technical aspects of combat, and innately adept at teamwork.
+text: >
+  Technician (Mind): You are highly skilled at the technical aspects of combat, and innately adept at teamwork.
+  (1)-[Passive]: Increase the Dice Category of your Energy Charges by 1.
+  (2)-[Passive]: Increase your Force and Magic Modifiers by 1(T).
+  (3)-[Passive]: Reduce the Ki Point Cost of your Signature Techniques by 1(T).
+  (4)-[Triggered, 1/Round]: When using a Signature Technique, it gains an Energy Charge.
+  (5)-[Triggered, 1/Encounter]: When you use the Signature Technique Maneuver, you may ignore the effects of all Disadvantages applied to that Signature Technique. If you do, you must trigger the 4th effect of Technician for that Signature Technique.
+  (6)-[Triggered, 1/Encounter]: If you use the United Attack Maneuver in response to an Ally’s Attacking Maneuver, you may use that Ally’s Signature Technique for that use of the United Attack Maneuver. If you do, ignore all Disadvantages for that Signature Technique.
+
+---
+
+[passive]
+# (1) Read where an attack's Energy Charge dice are (chat.mjs).
+allow technician.chargeDie;
+# (2), (3)
+force.mod += 1(T);
+magic.mod += 1(T);
+signature.kiCost -= 1(T);
+# (4) A Signature Technique declared: asked, once a Round - an Energy Charge on it, beside any other free one (use-maneuver.mjs).
+allow technician.charge;
+# (5) Asked first, once an Encounter, while (4) is open: its Disadvantages' effects off this attack, and (4) with it. What a Disadvantage
+# forbids before it is declared - Restricted, Required Counter, Climax Attack, Mandatory Charge - is the table's to waive.
+allow technician.free;
+# (6) Not built: the United Attack does not lend an Ally's Signature Technique - the table's.

@@ -513,6 +513,7 @@ async function runVerb(actor, call, context) {
       return glassSoldiers(actor);
     }
 
+    case "mutationRally": return (await import("../chat.mjs")).mutationRally(actor, args[0]);
     case "tuffleLegacy": return (await import("../chat.mjs")).tuffleLegacy(actor);
     case "wildChildAccess": return (await import("../chat.mjs")).wildChildAccess(actor);
     case "wildChildFeral": return (await import("../chat.mjs")).wildChildFeral(actor);

@@ -1199,6 +1199,26 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Zooner-Raised");
     answers.zoonerExposed = (Number(declared.zoonerExposed) || 0) + 1;
   }
+  // Technician (5): once an Encounter, while (4) is open this Round - "ignore the effects of all Disadvantages applied to that Signature
+  // Technique ... you must trigger the 4th effect"; (4): "it gains an Energy Charge", asked, once a Round.
+  const technicianCharge = (actor.system.effects?.slots?.["technician.charge"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "technicianChargeRound") !== round);
+  const technicianEncounter = game.combat?.id ?? "none";
+  const technicianFree = technicianCharge && (actor.system.effects?.slots?.["technician.free"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "technicianFreeEncounter") !== technicianEncounter)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Technician` },
+      content: "<p data-tooltip=\"Once an Encounter. Its 4th effect's Energy Charge with it.\">Every Disadvantage on it ignored?</p>", rejectClose: false });
+  if (technicianFree) {
+    await actor.setFlag("dbu-ttrpg", "technicianFreeEncounter", technicianEncounter);
+    const { featureDef } = await import("./technique.mjs");
+    answers.advantages = (answers.advantages ?? declared.advantages ?? technique.advantages ?? [])
+      .filter(id => featureDef(id)?.owner !== "disadvantages");
+  }
+  if (technicianFree || (technicianCharge && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Technician` }, content: "<p data-tooltip=\"Once a Round\">An Energy Charge on it?</p>", rejectClose: false }))) {
+    await actor.setFlag("dbu-ttrpg", "technicianChargeRound", round);
+    answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Technician");
+  }
   // Power Channeler's: its Energy Charge, and its Opponent no longer Studied once the attack is done.
   if (answers.channeler) {
     await actor.setFlag("dbu-ttrpg", "refined_channeler", round);
@@ -2511,7 +2531,16 @@ export async function askMovement(actor) {
       <span class="dbu-profile-category">up to ${movementSquares(actor, key)} Squares</span>
       <span class="dbu-profile-cost">${cost} KP</span>
     </label>`;
-  }).join("");
+  }).join("")
+    // Speedster (4): the Boosted Speed at no more than the Normal Speed's price, once a Round.
+    + (((actor.system.effects?.slots?.["speedster.freeBoost"] === true)
+      && (actor.getFlag?.("dbu-ttrpg", "speedsterBoostRound") !== `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`))
+      ? `<label class="dbu-profile-option" data-tooltip="Speedster: once a Round">
+      <input type="radio" name="speed" value="speedster"/>
+      <span class="dbu-profile-name">Boosted Speed (Speedster)</span>
+      <span class="dbu-profile-category">up to ${movementSquares(actor, "boosted")} Squares</span>
+      <span class="dbu-profile-cost">${movementKiCost(actor, { speed: "boosted", free: true })} KP</span>
+    </label>` : "");
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
@@ -2529,10 +2558,11 @@ export async function askMovement(actor) {
       {
         action: "confirm",
         label: "Move",
-        callback: (event, button, dialog) => ({
-          speed: dialog.element.querySelector('input[name="speed"]:checked')?.value ?? "normal",
-          rapid: Boolean(dialog.element.querySelector('input[name="rapid"]')?.checked)
-        })
+        callback: (event, button, dialog) => {
+          const picked = dialog.element.querySelector('input[name="speed"]:checked')?.value ?? "normal";
+          return { speed: (picked === "speedster") ? "boosted" : picked, free: picked === "speedster",
+            rapid: Boolean(dialog.element.querySelector('input[name="rapid"]')?.checked) };
+        }
       },
       { action: "cancel", label: "Cancel" }
     ],
@@ -6389,6 +6419,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Terrifying Speed (1): the Movement Maneuver used this Combat Round.
   if (crossing && game.combat?.started) {
     await actor.setFlag("dbu-ttrpg", "movedRound", `${game.combat.id}:${game.combat.round ?? 0}`);
+    // Speedster (4)'s, spent.
+    if (crossing.free) await actor.setFlag("dbu-ttrpg", "speedsterBoostRound", `${game.combat.id}:${game.combat.round ?? 0}`);
     // Mimicry of Rending Claws (3): "during a turn in which you moved your Boosted Speed" - this turn.
     if (crossing.speed === "boosted") await actor.setFlag("dbu-ttrpg", "boostedTurn", `${game.combat.id}:${game.combat.round}:${game.combat.turn}`);
   }
@@ -6770,6 +6802,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   }
   // Terrifying Speed (2): Rapid Movement taken - the Terrify out of sequence on its card.
   if (card && crossing?.rapid) (await import("./chat.mjs")).terrifyingSpeedOffer(card, actor);
+  // Speedster (5): Rapid Movement - the Basic Attack, out of sequence, on its card.
+  if (card && crossing?.rapid) (await import("./chat.mjs")).speedsterRapidOffer(card, actor);
   // Team Pose: the Hype used - (2) the Hype offered on its card to Allies with Show Stopping Performance; (1) each Ally's Ki.
   if (card && ((maneuver.through?.id ?? maneuver.id) === "hype")) {
     (await import("./chat.mjs")).teamPoseOffers(card, actor);

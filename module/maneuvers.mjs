@@ -2275,13 +2275,14 @@ export const RAPID_MOVEMENT_PER_TIER = 2;
  * Base Tier - a Transformation makes crossing the field dearer, which is what the
  * notation says.
  */
-export function movementKiCost(actor, { speed = "normal", rapid = false } = {}) {
+export function movementKiCost(actor, { speed = "normal", rapid = false, free = false } = {}) {
   const tier = Math.max(1, actor?.system?.tierOfPower ?? 1);
-  const chosen = MOVEMENT_SPEEDS[speed] ?? MOVEMENT_SPEEDS.normal;
+  // Speedster (4): the Boosted Speed with no Ki Point Cost increase - the Normal Speed's.
+  const chosen = free ? MOVEMENT_SPEEDS.normal : (MOVEMENT_SPEEDS[speed] ?? MOVEMENT_SPEEDS.normal);
 
   const listed = chosen.kiCostPerTier ? chosen.kiCostPerTier * tier : (chosen.kiCost ?? 0);
   // The Boosted Speed's own - Aerodynamic's 2(T) off it.
-  const base = (speed === "boosted")
+  const base = ((speed === "boosted") && !free)
     ? Math.max(0, applySlot(actor?.system?.effects?.slots, "movement.boostedKiCost", listed)) : listed;
   const extra = rapid ? RAPID_MOVEMENT_PER_TIER * tier : 0;
 

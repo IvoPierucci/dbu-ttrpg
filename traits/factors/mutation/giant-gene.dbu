@@ -1,0 +1,27 @@
+id: giant-gene
+name: Giant Gene
+order: 3
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  The blood of giants runs through your veins, spurring your growth to tremendous heights.
+text: >
+  Giant Gene (Body): The blood of giants runs through your veins, spurring your growth to tremendous heights.
+  (1)-[Passive]: Your base Size Category is Enormous.
+  (2)-[Passive]: For calculating the bonus/penalty to your Defense Value from your Size Category, and for the effects of Punching Up, you are considered to be of the Large Size Category if your Size Category is Enormous or larger.
+  (3)-[Passive]: While your Size Category is Enormous, treat your Size Category as if it was Gigantic for calculating Punching Down.
+  (4)-[Triggered, 1/Round]: If you use an Attacking Maneuver that has Punching Down applied to it, increase the Wound Roll of that Attacking Maneuver by 2(bT).
+  (5)-[Triggered, 1/Round]: If you are hit by a Called Shot, increase your Damage Reduction by 2(bT) for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+allow size.base.enormous;
+# (2), (3) Read where the Size's Defense Value is (actor-character.mjs), and where Punching Up and Punching Down are (chat.mjs).
+allow giantGene.size;
+# (4) Punching Down on it: asked as it is rolled, once a Round - 2(bT) more (chat.mjs giantGeneWound).
+allow giantGene.wound;
+# (5) Hit by a Called Shot: a button on the attack's card before its Wound Roll, once a Round (chat.mjs giantButtons).
+allow giantGene.calledShot;

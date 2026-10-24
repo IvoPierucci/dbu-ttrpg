@@ -2085,6 +2085,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const sizeKey = (avatarAt > sizeKeys.indexOf(trueKey)) ? sizeKeys[avatarAt] : trueKey;
 
     const size = DBUCharacterData.SIZES[sizeKey] ?? DBUCharacterData.SIZES[DBUCharacterData.DEFAULT_SIZE];
+    // Giant Gene (2): "For calculating the bonus/penalty to your Defense Value from your Size Category ... you are considered to be of the
+    // Large Size Category if your Size Category is Enormous or larger."
+    const defenseAt = ((this.effects?.slots?.["giantGene.size"] === true) && (sizeKeys.indexOf(sizeKey) >= sizeKeys.indexOf("enormous")))
+      ? sizeKeys.indexOf("large") : sizeKeys.indexOf(sizeKey);
 
     this.size = {
       key: sizeKey,
@@ -2103,7 +2107,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       trueSteps: sizeKeys.indexOf(trueKey) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
       // At a Size Category an effect moves for the Defense Value alone - Aerodynamic's 1 lower.
       defenseModifier: (DBUCharacterData.SIZES[sizeKeys[Math.max(0, Math.min(sizeKeys.length - 1,
-        sizeKeys.indexOf(sizeKey) + (Number(this.effects?.slots?.["size.defenseSteps"]?.add) || 0)))]] ?? size).defensePerTier
+        defenseAt + (Number(this.effects?.slots?.["size.defenseSteps"]?.add) || 0)))]] ?? size).defensePerTier
         * this.tierOfPower,
       soakModifier: size.soakPerTier * this.tierOfPower,
       speedModifier: size.speed

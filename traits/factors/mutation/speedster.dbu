@@ -1,0 +1,33 @@
+id: speedster
+name: Speedster
+order: 5
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Your speed is unparalleled among your kind.
+text: >
+  Speedster (Body): Your speed is unparalleled among your kind.
+  (1)-[Passive]: Increase your Defense Value by 1(T) for the duration of your Opponents’ Exploit Maneuvers.
+  (2)-[Passive]: Increase your Agility Modifier by 1(T).
+  (3)-[Triggered, 1/Round]: At the start of any Character’s turn, you may use the Movement Maneuver as an Out-of-Sequence Maneuver.
+  (4)-[Triggered, 1/Round]: If you would move your Boosted Speed through the Movement Maneuver, do not increase the Ki Point Cost of the Movement Maneuver.
+  (5)-[Triggered, 1/Round]: If you would use the Rapid Movement effect of the Movement Maneuver, you may make a Basic Attack Maneuver as an Out-of-Sequence Maneuver immediately afterwards.
+  (6)-[Triggered, 1/Encounter]: If you are targeted by an Attacking Maneuver, double your Agility Modifier for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) On your Dodge against an Opponent's attack through the Exploit (chat.mjs speedsterDodge).
+allow speedster.exploitDefense;
+# (2)
+agility.mod += 1(T);
+# (3) The Movement offered on each turn's card, once a Round (chat.mjs speedsterTurnOffers).
+allow speedster.turnMove;
+# (4) The Boosted Speed at the Normal Speed's price, its own choice in the Movement's window, once a Round (use-maneuver.mjs askMovement).
+allow speedster.freeBoost;
+# (5) Rapid Movement: the Basic Attack offered on the Movement's card, once a Round (chat.mjs speedsterRapidOffer).
+allow speedster.rapidAttack;
+# (6) Targeted: a button on the attack's card before it is settled, once an Encounter - your Agility Modifier again on your Defense Value
+# for it (chat.mjs speedsterButtons).
+allow speedster.double;

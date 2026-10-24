@@ -1,0 +1,16 @@
+id: rally-mark
+name: Rallied
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: Captain (3)'s and Tactician (3)'s - a quarter of the giver's Modifier, rounded up, as stacks.
+combatCondition: no
+source: Core Rule
+description: >
+  Captain, Tactician: Combat Rolls higher by a point a stack, till the start of the giver's next turn.
+text: >
+  Captain (3), Tactician (3): Increase their Combat Rolls by 1/4 (rounded up) of your Personality (Scholarship) Modifier until the start of your next turn.
+
+---
+
+[passive per stack]
+combatRolls += 1;

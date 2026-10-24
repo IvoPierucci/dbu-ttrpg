@@ -412,6 +412,8 @@ async function beginTurn(actor) {
     || (actor.getFlag?.("dbu-ttrpg", "gadaboutSkip") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
 
   const turnCard = await announceTurn(actor, { skipped, ran });
+  // Speedster (3): the Movement, out of sequence, offered on it.
+  (await import("./chat.mjs")).speedsterTurnOffers(turnCard);
 
   // A Unique Ability applied until it is not paid for - the Atmospheric Bubble: "At the start of each of your turns,
   // pay the Ki Point Cost for this Unique Ability or stop applying its effects." A skipped turn is still yours.

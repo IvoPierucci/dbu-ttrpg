@@ -1,0 +1,25 @@
+id: brute
+name: Brute
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  You may not be the smartest tool in the crayon box, but you can take hits as well as you dish them out.
+text: >
+  Brute (Body): You may not be the smartest tool in the crayon box, but you can take hits as well as you dish them out.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: Increase your Soak by 1(bT).
+  (3)-[Passive]: Increase your Tenacity Modifier by 1(T).
+  (4)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver that you did not use a Counter Maneuver in response to, increase your Soak Value by 1/2 (rounded up) for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1), (2), (3)
+racialLifeModifier += 2;
+soakValue += 1(bT);
+tenacity.mod += 1(T);
+# (4) Hit, no Counter Maneuver in answer: a button on the attack's card before its Wound Roll, once a Round - the Soak Value half again for
+# it, rounded up (chat.mjs bruteButtons).
+allow brute.soak;

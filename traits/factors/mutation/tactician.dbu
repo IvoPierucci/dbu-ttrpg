@@ -1,0 +1,29 @@
+id: tactician
+name: Tactician
+order: 6
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Your analytical mind is beyond compare.
+text: >
+  Tactician (Mind): Your analytical mind is beyond compare.
+  (1)-[Passive]: Increase the Dice Score of all of your Skills that use your Scholarship Attribute by 1.
+  (2)-[Passive]: Increase your Scholarship Modifier by 1(T).
+  (3)-[Triggered, 1/Round]: When you use the Analysis Maneuver, target an Ally who is not at Long Range. Increase their Combat Rolls by 1/4 (rounded up) of your Scholarship Modifier until the start of your next turn.
+  (4)-[Triggered, 1/Encounter]: When you use the Analysis Maneuver, enter the Superior State until the end of your next turn.
+
+---
+
+[passive]
+# (1), (2)
+skills.scholarship += 1;
+scholarship.mod += 1(T);
+
+# (3) Captain's (3), by the Scholarship Modifier (chat.mjs mutationRally). Automatic by default, its Triggered/Automatic button.
+[triggered/analysis, 1/round, effect 3]
+mutationRally(scholarship);
+
+# (4) Automatic by default, its Triggered/Automatic button.
+[triggered/analysis, 1/encounter, effect 4]
+enterState(superior, 1, next-turn);

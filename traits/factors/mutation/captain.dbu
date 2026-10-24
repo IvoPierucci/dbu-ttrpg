@@ -1,0 +1,30 @@
+id: captain
+name: Captain
+order: 2
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  You are a leader among men, capable of inspiring greatness in others.
+text: >
+  Captain (Mind): You are a leader among men, capable of inspiring greatness in others.
+  (1)-[Passive]: Increase the Dice Score of all of your Skills that use your Personality Attribute by 1.
+  (2)-[Passive]: Increase your Personality Modifier by 1(T).
+  (3)-[Triggered, 1/Round]: When you use the Hype Maneuver, target an Ally who is not at Long Range. Increase their Combat Rolls by 1/4 (rounded up) of your Personality Modifier until the start of your next turn.
+  (4)-[Triggered, 1/Encounter]: When you use the Hype Maneuver, enter the Superior State until the end of your next turn.
+
+---
+
+[passive]
+# (1), (2)
+skills.personality += 1;
+personality.mod += 1(T);
+
+# (3) Which Ally, asked - not at Long Range; their Combat Rolls a quarter of your Personality Modifier higher, rounded up, till the start of
+# your next turn (chat.mjs mutationRally). Automatic by default, its Triggered/Automatic button.
+[triggered/hype, 1/round, effect 3]
+mutationRally(personality);
+
+# (4) Automatic by default, its Triggered/Automatic button.
+[triggered/hype, 1/encounter, effect 4]
+enterState(superior, 1, next-turn);
