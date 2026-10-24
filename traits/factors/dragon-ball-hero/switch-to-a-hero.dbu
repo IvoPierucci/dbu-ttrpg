@@ -1,0 +1,29 @@
+id: switch-to-a-hero
+name: Switch to a Hero
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1) The Avatar: a Character of this world, made for it by the player and the ARC, chosen as it is gained.
+choose: character
+description: >
+  You have the ability to change into your Avatar form, temporarily changing your race.
+text: >
+  Switch to a Hero (Body): You have the ability to change into your Avatar form, temporarily changing your race.
+  (1)-[Addendum]: Please refer to the ‘Avatar’ box below.
+  (2)-[1/Encounter]: As a Standard Action with an Action Cost of 1, switch to your Avatar until the end of the Combat Encounter. Your Avatar takes your place on the Battlefield and the Initiative Order. You have control of your Avatar as if it was your Character, and your Avatar gains any Combat Conditions you were suffering from for their remaining duration.
+  (3)-[Triggered, 1/Encounter]: If you use the 2nd effect of Switch to a Hero when you are in a Transformation, you may use the Transformation Maneuver as an Out-of-Sequence Maneuver after switching to your Avatar.
+
+  Avatar: Upon gaining this Factor, create an additional Character of the same Power Level as you – this Character is not a real entity, but a Character you can become through the 2nd effect of Switch to a Hero. This Character's Race must be either: Android, Arcosian, Bio-Android, Demon, Majin, Namekian, Saiyan, or Shinjin. This Character is known as your 'Avatar'. Whenever you gain a Power Level, so does your Avatar. Your Avatar gains Transformations completely independently from you, decided by the ARC as with any other Character, but upon Character Creation, your Avatar will gain the Class Avatar Greater Awakening.
+
+  Your Avatar shares the current value of their Life Points, Ki Points, and Capacity with you (and vice-versa).
+
+  If you would regain this Factor after losing it, you maintain the same Avatar you possessed before but it gains Power Levels until it matches your current Power Level.
+
+---
+
+# (1) The Avatar's Race, its Power Level kept with yours, its Transformations and its Class Avatar Greater Awakening - the table's. Its Life
+# Points, Ki Points and Capacity are yours: each written to the other as either changes (combat.mjs).
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/switch-to-a-hero-second-effect.dbu): the Avatar on your Square and in your place
+# in the Initiative Order, your Combat Conditions on it - till the Combat Encounter ends (chat.mjs heroSwitch, heroSwitchGM).
+# (3) The Transformation offered to the Avatar on its card - whether you were in one, yours to say (chat.mjs heroTransformOffer).

@@ -750,6 +750,7 @@ async function runVerb(actor, call, context) {
       await actor.update({ "system.resources": replaceObject(held) });
       return stacksGained(actor, gained);
     }
+    case "heroSwitch": return (await import("../chat.mjs")).heroSwitch(actor);
     case "tamagamiIntegrate": return (await import("../chat.mjs")).tamagamiIntegrate(actor);
     case "cyberCopy": return (await import("../chat.mjs")).cyberCopy(actor, context);
     case "mutantIntegrate": return (await import("../chat.mjs")).mutantIntegrate(actor);

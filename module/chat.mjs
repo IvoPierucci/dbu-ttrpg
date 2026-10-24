@@ -239,6 +239,7 @@ function applyRequest(request) {
     case "positionChange": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, POSITION_FLAG, request.position);
     case "swapTokens": return swapTokens(request.aUuid, request.bUuid);
+    case "heroSwitch": return heroSwitchGM(request.heroUuid, request.avatarUuid);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
@@ -20359,6 +20360,81 @@ function ghostCategory(entry, attack) {
         ? "standard" : next;
   }
   return (next === category) ? entry : { ...entry, own: { ...entry.own, damageCategory: next } };
+}
+
+/** Switch to a Hero: the Avatar chosen for it - an Actor of this world - or null. */
+export function heroAvatarOf(actor) {
+  const item = Array.from(actor?.items ?? []).find(each => each.flags?.[SCOPE]?.sourceId === "switch-to-a-hero");
+  const id = (item?.system?.chosen ?? []).find(entry => entry.key === "switch-to-a-hero")?.value ?? "";
+  return id ? (game.actors?.get(id) ?? null) : null;
+}
+
+/**
+ * Switch to a Hero (2): "switch to your Avatar until the end of the Combat Encounter. Your Avatar takes your place on the Battlefield and
+ * the Initiative Order ... your Avatar gains any Combat Conditions you were suffering from" - their stacks; the pools are shared already.
+ * The tokens and the Combatant moved by the GM.
+ */
+export async function heroSwitch(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const avatar = heroAvatarOf(actor);
+  if (!avatar) {
+    ui.notifications.warn(`${actor.name}: no Avatar chosen for Switch to a Hero.`);
+    return UNSPENT;
+  }
+  if (!game.combat?.started || !actor.getActiveTokens?.(false, true)?.[0]) {
+    ui.notifications.warn(`${actor.name}: Switch to a Hero is for a Combat Encounter, on the scene.`);
+    return UNSPENT;
+  }
+  const { replaceObject } = await import("./conditions.mjs");
+  await requestActorUpdate(avatar, { "system.conditions": replaceObject({ ...(actor.system.conditions ?? {}) }),
+    "system.life.value": Number(actor.system.life?.value) || 0, "system.ki.value": Number(actor.system.ki?.value) || 0,
+    "system.capacity.spent": Number(actor.system.capacity?.spent) || 0 });
+  await actor.setFlag(SCOPE, "heroSwitched", { avatarUuid: avatar.uuid, combat: game.combat.id });
+  if (game.user.isGM) await heroSwitchGM(actor.uuid, avatar.uuid);
+  else if (game.users.activeGM) game.socket.emit(CHANNEL, { type: "heroSwitch", heroUuid: actor.uuid, avatarUuid: avatar.uuid });
+  else ui.notifications.warn("A GM must be connected to put the Avatar on the scene.");
+}
+
+/** Switch to a Hero (2), by the GM: the Avatar's token on the hero's Square, the hero's hidden, the Combatant the Avatar's. */
+async function heroSwitchGM(heroUuid, avatarUuid) {
+  const hero = fromUuidSync(heroUuid);
+  const avatar = fromUuidSync(avatarUuid);
+  const token = hero?.getActiveTokens?.(false, true)?.[0];
+  if (!hero || !avatar || !token) return;
+  try {
+    const data = (await avatar.getTokenDocument({ x: token.x, y: token.y, disposition: token.disposition })).toObject();
+    const [made] = await token.parent.createEmbeddedDocuments("Token", [data]);
+    await token.update({ hidden: true });
+    const combatant = game.combat?.combatants?.find(each => each.tokenId === token.id);
+    if (combatant && made) await combatant.update({ tokenId: made.id, actorId: avatar.id });
+  } catch (error) {
+    console.error(error);
+    ui.notifications.error(`Switch to a Hero: put ${avatar.name} in ${hero.name}'s place by hand.`);
+  }
+}
+
+/** Switch to a Hero, the Combat Encounter over: the Avatar's token gone, the hero's shown again. By the GM. */
+export async function heroSwitchEnds() {
+  for (const hero of Array.from(game.actors ?? []).filter(each => each.getFlag?.(SCOPE, "heroSwitched"))) {
+    const { avatarUuid } = hero.getFlag(SCOPE, "heroSwitched");
+    await hero.unsetFlag(SCOPE, "heroSwitched");
+    const avatar = fromUuidSync(avatarUuid ?? "");
+    for (const scene of Array.from(game.scenes ?? [])) {
+      const theirs = scene.tokens.filter(each => each.actorId === avatar?.id).map(each => each.id);
+      if (theirs.length) await scene.deleteEmbeddedDocuments("Token", theirs);
+      const mine = scene.tokens.filter(each => (each.actorId === hero.id) && each.hidden).map(each => ({ _id: each.id, hidden: false }));
+      if (mine.length) await scene.updateEmbeddedDocuments("Token", mine);
+    }
+  }
+}
+
+/** Switch to a Hero (3): "If you use the 2nd effect ... when you are in a Transformation" - the Transformation offered to the Avatar. */
+export function heroTransformOffer(card, actor) {
+  const avatar = heroAvatarOf(actor);
+  if (!card || !avatar || (actor.getFlag?.(SCOPE, "heroTransformEncounter") === (game.combat?.id ?? "none"))) return;
+  requestEdit(card, { type: "offer", offer: { actorUuid: avatar.uuid, actorName: avatar.name, maneuverId: "transformation",
+    maneuverName: "Transformation", reason: `Switch to a Hero - if ${actor.name} was in a Transformation (once an Encounter)`,
+    grants: { encounterFlag: "heroTransformEncounter" } } });
 }
 
 /** A character's Dragon Balls: all of them, or the Integrated one. */

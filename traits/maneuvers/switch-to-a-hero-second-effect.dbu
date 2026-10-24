@@ -1,0 +1,20 @@
+id: switch-to-a-hero-second-effect
+name: Switch to a Hero
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: switch-to-a-hero
+fromEffect: 2
+source: Core Rule
+description: >
+  Switch to a Hero's second effect, as a Maneuver: your Avatar in your place till the Combat Encounter ends.
+text: >
+  (2)-[1/Encounter]: As a Standard Action with an Action Cost of 1, switch to your Avatar until the end of the Combat Encounter. Your Avatar takes your place on the Battlefield and the Initiative Order. You have control of your Avatar as if it was your Character, and your Avatar gains any Combat Conditions you were suffering from for their remaining duration.
+
+---
+
+[on used]
+heroSwitch();

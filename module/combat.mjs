@@ -756,6 +756,8 @@ export function registerCombatHooks() {
 
   Hooks.on("deleteCombat", async combat => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    // Switch to a Hero (2): "until the end of the Combat Encounter".
+    await (await import("./chat.mjs")).heroSwitchEnds();
 
     // Read before the Combat is gone, and said after the clearing below: what is being
     // announced is that it is over, and it is not over until that has happened.
@@ -1134,6 +1136,22 @@ export function registerDefeatHooks() {
       [{ value: "yes", label: `${more} more - your Surgency (once a Round)` }, { value: "no", label: "Not now" }])) !== "yes") return;
     await actor.update({ "system.life.value": Math.min(max, (Number(actor.system.life?.value) || 0) + more),
       "flags.dbu-ttrpg.vampireRound": round }, { dbuVampire: true });
+  });
+
+  // Switch to a Hero's Avatar: "Your Avatar shares the current value of their Life Points, Ki Points, and Capacity with you (and
+  // vice-versa)" - each written to the other, by the GM.
+  Hooks.on("updateActor", async (actor, changes, options) => {
+    if ((actor.type !== "character") || options.dbuMirror || !game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    const paths = ["system.life.value", "system.ki.value", "system.capacity.spent"].filter(path => foundry.utils.getProperty(changes, path) !== undefined);
+    if (!paths.length) return;
+    const { heroAvatarOf } = await import("./chat.mjs");
+    const partner = heroAvatarOf(actor) ?? Array.from(game.actors ?? []).find(each => heroAvatarOf(each)?.id === actor.id);
+    if (!partner || (partner.id === actor.id)) return;
+    const most = { "system.life.value": partner.system.life?.max, "system.ki.value": partner.system.ki?.max };
+    await partner.update(Object.fromEntries(paths.map(path => [path,
+      Math.min(Number(most[path] ?? Infinity), Number(foundry.utils.getProperty(actor, path)) || 0)])),
+      // A copy, not a gain: nothing that answers Life or Ki regained answers it (Vampire, Protector of the Dragon Ball).
+      { dbuMirror: true, dbuKiRaw: true, dbuSurge: true, dbuVampire: true });
   });
 
   Hooks.on("updateActor", async (actor, changes, options) => {

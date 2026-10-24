@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  heroSwitch: {
+    args: [0, 0],
+    doc: "Switch to a Hero (2): the Avatar in your place on the Battlefield and in the Initiative Order till the Encounter ends (chat.mjs heroSwitch)."
+  },
   tamagamiIntegrate: {
     args: [0, 0],
     doc: "Protector of the Dragon Ball (1): a Dragon Ball you hold Integrated - one at most (chat.mjs tamagamiIntegrate)."

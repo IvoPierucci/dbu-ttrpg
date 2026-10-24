@@ -1,0 +1,10 @@
+id: dragon-ball-hero
+name: Dragon Ball Hero
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's). The Hero Switch Special Accessory
+# is not in this system: gaining it through one, the table's.
+requirement: Earthling
+maximumFactor: 1
+prerequisites: >
+  This Factor can only be gained through the effects of the Hero Switch Special Accessory.
+description: >
+  Changing your race is as simple as flipping a switch, thanks to the Hero Switch. You've acquired one yourself, and created your own Avatar, allowing you to take on a form powerful enough to stand up against the threats in this world. You may have been a nobody before, but thanks to the Hero Switch, you've become a Dragon Ball Hero.
