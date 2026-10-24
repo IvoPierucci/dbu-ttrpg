@@ -1,0 +1,8 @@
+id: feline-warrior
+name: Feline Warrior
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Neko Majin
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Unlike your magic-focused kin, you use your keenly honed feline senses and lightning reflexes to aid you in direct combat.

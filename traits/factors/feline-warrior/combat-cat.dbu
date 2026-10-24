@@ -1,0 +1,37 @@
+id: combat-cat
+name: Combat Cat
+order: 1
+category: mind
+# "[Whimsical Magic]": it replaces that Secondary Racial Trait - which, the table's.
+importance: secondary
+description: >
+  You redirect your inherent magic towards your combat capabilities.
+text: >
+  Combat Cat (Mind) [Whimsical Magic]: You redirect your inherent magic towards your combat capabilities.
+  (1)-[Passive]: Reduce the Ki Point Cost of your Attacking Maneuvers by 1(T). Double this reduction if you are below the Injured Health Threshold.
+  (2)-[Passive]: Increase your Dice Score for any Might Clash initiated by an Opponent by 1(T).
+  (3)-[Passive]: While you have an Integrated Majin-Dama, increase your Wound Rolls and Soak Value by 1(T).
+  (4)-[Passive]: While in the Superior State, apply your Greater Dice an additional time to the Wound Roll of your Signature Techniques.
+  (5)-[Triggered, 1/Round]: If you use the Signature Technique Maneuver, you may spend 1 Action to enter the Superior State for the duration of that Attacking Maneuver. If you were already in the Superior State, you may instead apply an Energy Charge to that Attacking Maneuver.
+  (6)-[Triggered, 1/Encounter]: If you trigger the 5th effect of Combat Cat while below the Injured Health Threshold, you do not have to spend an Action to utilize its effects.
+
+---
+
+[passive]
+# (1)
+attack.kiCost -= 1(T);
+if (belowThreshold("injured")) {
+    attack.kiCost -= 1(T);
+}
+# (2) The side that did not open it, against one not an Ally (chat.mjs combatCatClash).
+allow combatCat.might;
+# (3) "While you have an Integrated Majin-Dama" - Inactive too, as Feline Build (3)'s.
+if (majinDama.integrated > 0) {
+    wound += 1(T);
+    soakValue += 1(T);
+}
+# (4) On a Signature Technique's Wound in the Superior State (chat.mjs combatCatDice).
+allow combatCat.greater;
+# (5), (6) Asked as a Signature Technique is declared, once a Round: 1 Action - or none, Injured or worse, once an Encounter - for the
+# Superior State through that attack, left as it is done; in it already, an Energy Charge instead (use-maneuver.mjs).
+allow combatCat.signature;

@@ -9521,6 +9521,7 @@ function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
+    ...combatCatClash(actor, clash, uuid),
     ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
     ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid),
@@ -9622,6 +9623,14 @@ function defendingClashBonus(actor, clash, uuid) {
   if (!challenger || (challenger === actor.uuid) || alliesOnScene(actor).some(ally => ally.uuid === challenger)) return [];
   const named = (actor.system.effects.slots["clash.defendingMightOrSave"]?.parts ?? []).map(part => part.source).find(Boolean);
   return [{ label: named || "Effects", value }];
+}
+
+/** Combat Cat (2): "Increase your Dice Score for any Might Clash initiated by an Opponent by 1(T)." */
+function combatCatClash(actor, clash, uuid) {
+  if ((clash?.category !== "might") || (uuid !== clash.defenderUuid) || (actor?.system?.effects?.slots?.["combatCat.might"] !== true)) return [];
+  const challenger = clash.challengerUuid ?? "";
+  if (!challenger || (challenger === actor.uuid) || alliesOnScene(actor).some(ally => ally.uuid === challenger)) return [];
+  return [{ label: "Combat Cat", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
 }
 
 /**
@@ -19715,9 +19724,10 @@ async function attackDurationEnds(attack) {
   if ((Number(attack.zoonerExposed) || 0) > 0) {
     await markUntilNextTurn(attacker, attacker, "zooner-raised-mark", Number(attack.zoonerExposed), "start", "Zooner-Raised");
   }
-  // Saiyan-Raised (4): Superior "for the duration of this Attacking Maneuver".
-  if (attacker.getFlag?.(SCOPE, "saiyanSuperiorAttack")) {
-    await attacker.unsetFlag(SCOPE, "saiyanSuperiorAttack");
+  // Saiyan-Raised (4): Superior "for the duration of this Attacking Maneuver" - Combat Cat (5)'s as well.
+  for (const flag of ["saiyanSuperiorAttack", "combatCatSuperiorAttack"]) {
+    if (!attacker.getFlag?.(SCOPE, flag)) continue;
+    await attacker.unsetFlag(SCOPE, flag);
     const { leaveState } = await import("./effects/moments-runtime.mjs");
     await leaveState(attacker, "superior");
   }
@@ -20871,6 +20881,14 @@ function syntheticDice(attacker, attack) {
   const formula = attacker.system.dice?.greater?.formula ?? "";
   if (!formula) return [];
   return [{ label: "Synthetic Muscle", formula }, ...(attack.syntheticAgain ? [{ label: "Synthetic Muscle (again)", formula }] : [])];
+}
+
+/** Combat Cat (4): "While in the Superior State, apply your Greater Dice an additional time to the Wound Roll of your Signature Techniques." */
+function combatCatDice(attacker, attack) {
+  if ((attacker?.system?.effects?.slots?.["combatCat.greater"] !== true) || !attack?.technique) return [];
+  if (!((Number(attacker.system.states?.superior) || 0) > 0)) return [];
+  const formula = attacker.system.dice?.greater?.formula ?? "";
+  return formula ? [{ label: "Combat Cat", formula }] : [];
 }
 
 /** Synthetic Muscle (3): "If you hit an Opponent ... you may spend 2(bT) Ki Points to apply your Greater Dice ... an additional time" - once a Round. */
@@ -29328,6 +29346,7 @@ function woundDice(attacker, attack) {
     ...neoGreaterDice(attacker, attack),
     // Synthetic Muscle (2)'s, and (3)'s again.
     ...syntheticDice(attacker, attack),
+    ...combatCatDice(attacker, attack),
     { label: "Extra dice", formula: attacker.system.dice.extra.formula },
     { label: "Energy charges", formula: energyChargeDice(attacker, attack) },
     ...phantomEdgeDice(attacker, attack),

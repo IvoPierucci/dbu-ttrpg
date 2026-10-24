@@ -1231,6 +1231,34 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     await actor.setFlag("dbu-ttrpg", "amplifierRound", round);
     answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Signature Amplifier");
   }
+  // Combat Cat (5): "If you use the Signature Technique Maneuver, you may spend 1 Action to enter the Superior State for the duration of
+  // that Attacking Maneuver. If you were already in the Superior State, you may instead apply an Energy Charge" - once a Round; (6) Injured
+  // or worse, no Action, once an Encounter.
+  if ((actor.system.effects?.slots?.["combatCat.signature"] === true) && (actor.getFlag?.("dbu-ttrpg", "combatCatRound") !== round)) {
+    const superior = (Number(actor.system.states?.superior) || 0) > 0;
+    const encounter = game.combat?.id ?? "none";
+    const free = ["injured", "critical"].includes(actor.system.threshold?.key ?? "")
+      && (actor.getFlag?.("dbu-ttrpg", "combatCatFreeEncounter") !== encounter);
+    const room = !game.combat?.started
+      || ((left - (technique.actionCost ?? 1) - (Number(answers.gigaFlare) || 0) - (Number(answers.superCombination) || 0)) >= 1);
+    const buttons = [...(room ? [{ action: "action", label: "1 Action" }] : []),
+      ...(free ? [{ action: "free", label: "No Action (once an Encounter)" }] : [])];
+    const picked = buttons.length ? await foundry.applications.api.DialogV2.wait({ classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - Combat Cat` },
+      content: `<p${tip("combat-cat", 5)}>${superior ? "An Energy Charge on it?" : "The Superior State for this attack?"}</p>`,
+      buttons: [...buttons, { action: "no", label: "No" }], rejectClose: false }) : null;
+    if (["action", "free"].includes(picked)) {
+      await actor.setFlag("dbu-ttrpg", "combatCatRound", round);
+      if (picked === "free") await actor.setFlag("dbu-ttrpg", "combatCatFreeEncounter", encounter);
+      else answers.combatCatAction = 1;
+      if (superior) answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Combat Cat");
+      else {
+        const { enterState } = await import("./effects/moments-runtime.mjs");
+        await enterState(actor, "superior", 1, null, "Combat Cat");
+        await actor.setFlag("dbu-ttrpg", "combatCatSuperiorAttack", true);
+      }
+    }
+  }
   // Power Channeler's: its Energy Charge, and its Opponent no longer Studied once the attack is done.
   if (answers.channeler) {
     await actor.setFlag("dbu-ttrpg", "refined_channeler", round);
@@ -1250,7 +1278,9 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
   // Beside what was put on it before - Powerful Technique's rows - not over them.
   if (woundExtra.length) answers.woundExtra = [...(answers.woundExtra ?? declared.woundExtra ?? []), ...woundExtra];
-  const extraActions = (answers.gigaFlare ?? 0) + (answers.superCombination ?? 0);
+  // Combat Cat (5)'s Action, paid with the Maneuver's.
+  const extraActions = (answers.gigaFlare ?? 0) + (answers.superCombination ?? 0) + (answers.combatCatAction ?? 0);
+  delete answers.combatCatAction;
   if (extraActions) {
     answers.extraActions = extraActions;
     // Giga Flare's own price: "2(T) per Action spent through its effects".
