@@ -1,0 +1,9 @@
+id: android-majin
+name: Android Majin
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Majin
+maximumFactor: 1
+prerequisites: >
+  Assimilation Factor Trait
+description: >
+  Artificially created and endowed with the ability to absorb more than just your targets' abilities, you possess the uncanny ability to replicate the powers of even those who you no longer have absorbed.

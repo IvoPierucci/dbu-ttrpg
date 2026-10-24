@@ -1,0 +1,25 @@
+id: dna-absorption
+name: DNA Absorption
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  You have the unique ability to absorb more of your targets than just their abilities, taking a very piece of them even after they've escaped you.
+text: >
+  DNA Absorption (Body): You have the unique ability to absorb more of your targets than just their abilities, taking a very piece of them even after they’ve escaped you.
+  (1)-[Triggered, Ruling]: Upon gaining a stack of Absorption, gain a ‘DNA Copy’ of that stack’s Absorbed Character. You can only possess up to 3 DNA Copies. If you would gain any more DNA Copies, you would have to replace one of the DNA Copies you possess.
+  (2)-[Triggered/Power, 1/Round, 3/Encounter]: Choose a DNA Copy, then gain a stack of Absorption as a Level 2 Temporary Awakening with that DNA Copy as the Absorbed Character. If you already have a stack of Absorption from this effect, then when triggering this effect you may replace that stack of Absorption with one using a different DNA Copy.
+  (3)-[Addendum]: Please refer to the ‘DNA Copy’ text box below.
+
+  DNA Copy: A DNA Copy is a perfect copy of a Character, though that copy doesn't exist as a Character, but rather as something that can be used as an Absorbed Character for Absorption through the effects of DNA Absorption. A DNA Copy is a perfect copy of the Character, possessing everything that Character has; their Power Level, Race, any Subraces or Factors, Talents, Transformations, Apparel, Weapons, Signature Techniques, Unique Abilities, etc at the time it was recorded.
+
+  DNA Copies have a few rules that apply to the Absorption Awakening:
+  * If the only stack of Absorption as a Temporary Awakening you possess is one that uses a DNA Copy as the Absorbed Character, you may ignore the 5th effect of Assimilated Power.
+  * If you lose a stack of Absorption using a DNA Copy as the Absorbed Character, then no Absorbed Character is freed or produced due to the 7th effect of Assimilated Power as the DNA Copy doesn't exist as a Character.
+  * You cannot gain a stack of Absorption with a DNA Copy as a non-Temporary Awakening, even if you trigger the 8th effect of Assimilated Power.
+
+---
+
+# Not built: (1) and (2) are the Absorption Awakening's - a stack gained, its Absorbed Character, a Temporary Awakening's Level, Assimilated
+# Power - and neither it nor the Absorb Maneuver is in this system yet. The DNA Copies and their stacks are the table's till they are.
