@@ -1,0 +1,37 @@
+id: three-eyes
+name: Three-Eyes
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  You have a literal third eye in your forehead, which coincides with your mystical third eye, granting you great mystical power.
+text: >
+  Three-Eyes (Body): You have a literal third eye in your forehead, which coincides with your mystical third eye, granting you great mystical power.
+  (1)-[Passive]: For each Health Threshold you are below, increase the Wound Rolls for your Signature Techniques by 1(T).
+  (2)-[Passive]: You can choose to ignore the Ability Score Prerequisites of a Unique Ability or Advancement by increasing the Technique Point Cost by 4. Upon gaining a Power Level, if you would now meet the Prerequisites for a Unique Ability you gained through this effect, regain the additional 4 TP spent.
+  (3)-[Triggered]: The first time you would gain a stack of Diminishing Defense from each Opponent during each Combat Round, you do not gain that stack of Diminishing Defense.
+  (4)-[Triggered]: The first time you would gain a stack of Diminishing Offense during each Combat Round, you do not gain that stack of Diminishing Offense.
+  (5)-[Triggered/Power]: Regain 4(bT) Ki Points.
+  (6)-[Triggered/Start of Turn, 1/Encounter]: If you are below the Injured Health Threshold, you may reduce your Life Points to 1 below the Critical Health Threshold (ignoring Reduced Momentum). If you do, you automatically succeed the Steadfast Check for that Health Threshold and you may use a Ki Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# (2) The table's, as Psychic (1)'s: a Unique Ability's Prerequisites are read by the table - the 4 TP go on its TP Cost Change.
+[passive]
+# (1)
+wound.signature += threshold.depth * 1(T);
+# (3) The first Diminishing Defense from each Opponent each Combat Round, not gained (chat.mjs, where it is gained).
+allow threeEyes.defense;
+# (4) The first stack of Diminishing Offense each Combat Round, not gained: an attack more before it begins.
+attacks.free += 1;
+
+# (5) Automatic by default, its Triggered/Automatic button.
+[triggered/power, effect 5]
+ki.value += 4(bT);
+
+# (6) Ticked on your turn's card, Injured or worse, once an Encounter - out of sequence, never Automatic: your Life Points 1 below the
+# Critical line, its Check passed, no Reduced Momentum; then the Surge Maneuver, a Ki Surge (chat.mjs threeEyesDrop).
+[triggered/start-of-turn, 1/encounter, outOfSequence, effect 6]
+requires belowThreshold("injured");
+threeEyesDrop();

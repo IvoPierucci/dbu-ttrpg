@@ -1,0 +1,8 @@
+id: triclops
+name: Triclops
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Earthling
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Thought by some to be the descendants of aliens, and by others to have innate talent which awakened an inner power in the human mind, these Earthlings have a third eye in the middle of their forehead, granting them vast and varied mystical powers.

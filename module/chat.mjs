@@ -20362,6 +20362,30 @@ function ghostCategory(entry, attack) {
   return (next === category) ? entry : { ...entry, own: { ...entry.own, damageCategory: next } };
 }
 
+/**
+ * Three-Eyes (6): "reduce your Life Points to 1 below the Critical Health Threshold (ignoring Reduced Momentum). If you do, you
+ * automatically succeed the Steadfast Check for that Health Threshold and you may use a Ki Surge as an Out-of-Sequence Maneuver."
+ */
+export async function threeEyesDrop(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const max = Number(actor.system.life?.max) || 0;
+  // The Critical line: at a tenth of the Maximum Life Points or under it - 1 below that.
+  const line = Math.floor(max * DBUCharacterData.THRESHOLDS.injured.above);
+  const to = line - 1;
+  const now = Number(actor.system.life?.value) || 0;
+  if (now <= to) {
+    ui.notifications.info(`${actor.name}: Three-Eyes - already 1 below the Critical line or lower.`);
+    return UNSPENT;
+  }
+  // Written as it is - no Reduced Momentum (reducedMomentum is not asked), the Critical Check passed in the same write.
+  await actor.update({ "system.life.value": to, "system.thresholdChecks.critical": "pass" });
+  ui.notifications.info(`${actor.name}: Three-Eyes - ${to} Life Points, the Critical Steadfast Check passed.`);
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "surge"));
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const surge = own ? definitionOf(own) : getManeuver("surge");
+  if (surge) await useManeuver(actor, { ...surge, surgeKind: "ki" }, { outOfSequence: true });
+}
+
 /** Switch to a Hero: the Avatar chosen for it - an Actor of this world - or null. */
 export function heroAvatarOf(actor) {
   const item = Array.from(actor?.items ?? []).find(each => each.flags?.[SCOPE]?.sourceId === "switch-to-a-hero");
@@ -27983,6 +28007,14 @@ async function resolveAttackWork(message, attack) {
       agileFree = (target.system?.effects?.slots?.["diminishing.firstFree"] === true)
         && (target.getFlag?.(SCOPE, "agileRound") !== roundKey());
       if (agileFree) await requestActorUpdate(target, { [`flags.${SCOPE}.agileRound`]: roundKey() });
+      // Three-Eyes (3): "The first time you would gain a stack of Diminishing Defense from each Opponent during each Combat Round" - none.
+      const seenThisRound = (target.getFlag?.(SCOPE, "threeEyesDefense")?.round === roundKey())
+        ? (target.getFlag(SCOPE, "threeEyesDefense").from ?? []) : [];
+      if (!agileFree && (target.system?.effects?.slots?.["threeEyes.defense"] === true) && attack.attackerUuid
+        && !seenThisRound.includes(attack.attackerUuid) && !alliesOnScene(target).some(ally => ally.uuid === attack.attackerUuid)) {
+        agileFree = true;
+        await requestActorUpdate(target, { [`flags.${SCOPE}.threeEyesDefense`]: { round: roundKey(), from: [...seenThisRound, attack.attackerUuid] } });
+      }
       else await requestActorUpdate(target, {
         "system.diminishingDefense":
           target.system.diminishingDefense + (target.system.diminishing.defense.perAttack
