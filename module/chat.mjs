@@ -1146,6 +1146,8 @@ async function settleClashEffects(messageId, clash) {
   if (clash.disarm && clash.result && !clash.disarm.applied) {
     await settleDisarm(message, clash);
   }
+  if (clash.absorbing && clash.result && !clash.absorbing.applied) await settleAbsorbing(message, clash);
+  if (clash.absorbHold && clash.result && !clash.absorbHold.applied) await settleAbsorbHold(message, clash);
 
   if (clash.handcuff && clash.result && !clash.handcuff.applied) {
     await settleHandcuff(message, clash);
@@ -1506,6 +1508,94 @@ export async function postDrainClash(actor, target, maneuver, actions, store) {
       }
     }
   });
+}
+
+/** The Absorb Maneuver's first Clash: "Make a Clash (Strike vs Strike/Dodge) against them." */
+export async function postAbsorbClash(actor, target, maneuver) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        [RESPONDABLE_FLAG]: false,
+        [CLASH_FLAG]: {
+          category: "strike",
+          clashLabel: "Clash (Strike vs Strike/Dodge)",
+          maneuverName: maneuver.name,
+          reason: `Win and a Clash (Corporeal) at ${target.name} follows; lose and ${target.name} may Exploit.`,
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          defenderRoll: "",
+          absorbing: { applied: false },
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/** The Absorb Maneuver's first Clash settled: lost, "this triggers the Exploit Maneuver from the target"; won, "a second Clash (Corporeal)". */
+async function settleAbsorbing(message, clash) {
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, absorbing: { ...clash.absorbing, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") {
+    offerExploitTo(message, target, actor, `${clash.maneuverName} - the Clash was lost`, "absorb");
+    return settledNote(message, `${target.name} slips free.`);
+  }
+  await settledNote(message, `${actor.name} engulfs ${target.name} - a Clash (Corporeal).`);
+  return postSaveClash(actor, target, { maneuverName: "Absorb", saves: ["corporeal"],
+    reason: `Win and ${target.name} is Absorbed; lose and ${target.name} is Shaken till the end of their next turn.`,
+    absorbHold: { applied: false } });
+}
+
+/**
+ * The Absorb Maneuver's second Clash settled: lost, "that Character suffers from the Shaken Combat Condition until the end of their
+ * next turn"; won, "that Character is removed from the Combat Encounter and you gain a stack of the Absorption Awakening".
+ */
+async function settleAbsorbHold(message, clash) {
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, absorbHold: { ...clash.absorbHold, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") {
+    const { gainCondition } = await import("./effects/moments-runtime.mjs");
+    if (await gainCondition(target, "shaken", 1) !== false) {
+      await shakenBy(actor, target);
+      // Their next turn, on their own clock.
+      await lasting(target, { kind: KINDS.CONDITION, key: "shaken", edge: EDGES.END, next: true, on: target.uuid, source: "Absorb" });
+    }
+    return settledNote(message, `${target.name} breaks free - Shaken till the end of their next turn.`);
+  }
+  await absorbCharacter(actor, target);
+  return settledNote(message, `${target.name} is Absorbed into ${actor.name}: removed from the Combat Encounter, a stack of the `
+    + "Absorption Awakening (a Level 2 Temporary Awakening - its effects, the table's).");
+}
+
+/**
+ * Absorbed: out of the Combat Encounter, a stack of the Absorption Awakening naming them - and what answers gaining one. Natural Dragon
+ * (Personified Dragon Ball's): "Upon gaining a stack of the Absorption Awakening, immediately leave your Ball Form and return to normal".
+ * Natural Dragon (Draconic Physique's, Disguised Shadow's): "you may increase your Size Category to Gigantic while you possess that stack
+ * of Absorption" - asked.
+ */
+export async function absorbCharacter(actor, target) {
+  const { setCondition } = await import("./conditions.mjs");
+  await actor.update({ [`flags.${SCOPE}.absorbedWith`]: [...(actor.getFlag?.(SCOPE, "absorbedWith") ?? []),
+    { uuid: target.uuid, name: target.name }] });
+  await setCondition(actor, "absorption-awakening", (Number(actor.system.conditions?.["absorption-awakening"]) || 0) + 1);
+  await removeFromEncounter(target);
+  const racial = Array.from(actor.items ?? []).filter(item => item.type === "racial");
+  if (!racial.some(item => (item.system?.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === "natural-dragon")))) return;
+  if ((Number(actor.system.conditions?.["ball-form"]) || 0) > 0) await setCondition(actor, "ball-form", 0);
+  if (racial.some(item => ["draconic-physique", "disguised-shadow"].includes(item.flags?.[SCOPE]?.sourceId))) {
+    const answer = await askPlayerChoice(actor, `${actor.name}: Natural Dragon`,
+      [{ value: "yes", label: "Gigantic while you possess that stack" }, { value: "no", label: "Stay as you are" }]);
+    await actor.setFlag(SCOPE, "absorbedGigantic", answer === "yes");
+  }
 }
 
 /** The Disarm Maneuver's Clash: "Make a Clash (Strike vs Strike/Dodge)." */

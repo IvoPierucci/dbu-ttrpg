@@ -50,7 +50,15 @@ if (optionChosen("ominous-dragon")) {
   allow maneuver.terrify;
   allow draconic.terrifyImpair;
 }
-# Natural Dragon: not built - the Absorption Awakening is not in this system yet.
+# Natural Dragon: a stack of the Absorption Awakening held - and Gigantic, where it was chosen as one was gained (chat.mjs
+# absorbCharacter).
+if (optionChosen("natural-dragon") && hasCondition("absorption-awakening")) {
+  soakValue += 1(T);
+  wound += 1(T);
+}
+if (optionChosen("natural-dragon") && absorbedGigantic) {
+  allow size.base.gigantic;
+}
 
 # Elemental Dragon: knocked through by an attack of your Favored Element's Profile (moment knock-through's `profiles`).
 # Its Triggered/Automatic button.

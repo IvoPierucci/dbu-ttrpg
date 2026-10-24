@@ -5061,6 +5061,24 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return false;
   }
 
+  // The Absorb Maneuver: "Minions: Non-Minion" - and a Character targeted within your Melee Range; its Clash.
+  if (maneuver.id === "absorb") {
+    const refused = actor.system?.minion ? `${actor.name} is a Minion: the Absorb Maneuver is not theirs.`
+      : !targetActor ? "Target a Character first."
+      : (targetActor.uuid === actor.uuid) ? "Target another Character."
+      : whyNotWithinMelee(actor, targetActor, maneuver.name);
+    if (refused) {
+      ui.notifications.warn(refused);
+      return false;
+    }
+    await payActions(actor, maneuver, actionsSpent);
+    await recordManeuverUse(actor, maneuver);
+    await recordManeuverType(actor, maneuver.type);
+    const { postAbsorbClash } = await import("./chat.mjs");
+    await postAbsorbClash(actor, targetActor, maneuver);
+    return true;
+  }
+
   // The Disarm Maneuver: an Opponent wielding a Weapon, within your Melee Range - its Clash.
   if (maneuver.id === "disarm") {
     const { wieldedWeapons } = await import("./gear.mjs");

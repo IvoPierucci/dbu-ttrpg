@@ -640,7 +640,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // The one Defeated was the one you Studied (Intelligent Fighter's).
   "defeatedStudied",
   // In your Normal State - no Transformation (Disguised Shadow's).
-  "normalState"]);
+  "normalState",
+  // Gigantic, chosen as a stack of the Absorption Awakening was gained, one still held (Natural Dragon's).
+  "absorbedGigantic"]);
 
 /**
  * Dice the character already has, named rather than written out.

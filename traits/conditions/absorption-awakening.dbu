@@ -1,0 +1,16 @@
+id: absorption-awakening
+name: Absorption Awakening
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: the Absorb Maneuver's stack - the Absorbed Characters named on the character (flags absorbedWith).
+# Awakenings are not in this system; what the Awakening does is the table's.
+combatCondition: no
+source: Core Rule
+description: >
+  Absorb: a stack of the Absorption Awakening for each Character Absorbed.
+text: >
+  You gain a stack of the Absorption Awakening as a Level 2 Temporary Awakening with that Character as the Absorbed Character.
+
+---
+
+# What reads it: Natural Dragon (Personified Dragon Ball's Option, Draconic Physique's and Disguised Shadow's Choice) - their scripts.

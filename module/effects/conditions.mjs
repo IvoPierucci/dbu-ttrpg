@@ -739,6 +739,10 @@ const PREDICATES = {
   /** Is this an even-numbered Combat Round - Born for Battle's. */
   // "While in your Normal State" - no Form, no Enhancement: always, while Transformations are not in this system (Disguised Shadow's).
   normalState: () => true,
+  // Natural Dragon: "you may increase your Size Category to Gigantic while you possess that stack of Absorption" - chosen as it was
+  // gained (chat.mjs absorbCharacter), a stack still held.
+  absorbedGigantic: scope => (scope.data?.parent?.flags?.["dbu-ttrpg"]?.absorbedGigantic === true)
+    && ((Number(scope.data?.conditions?.["absorption-awakening"]) || 0) > 0),
   evenRound: () => {
     const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;
     return (round > 0) && ((round % 2) === 0);

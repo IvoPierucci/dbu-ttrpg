@@ -10,4 +10,11 @@ text: >
 
 ---
 
-# Not built: the Absorb Maneuver and the Absorption Awakening are not in this system yet - this waits on them.
+# "Upon gaining a stack of the Absorption Awakening, immediately leave your Ball Form" - as it is gained (chat.mjs absorbCharacter).
+[passive]
+if (inBallForm) {
+    allow maneuver.absorb;
+}
+if (hasCondition("absorption-awakening")) {
+    combatRolls += 1(T);
+}

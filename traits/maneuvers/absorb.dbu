@@ -1,0 +1,41 @@
+id: absorb
+name: Absorb
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 2/round
+# Folded, because `coerce` splits a header value on commas and this line has one in it.
+exploitable: >
+  If you fail the initial Clash, this triggers the Exploit Maneuver from the target.
+exploitOnLoss: true
+source: Core Rule
+description: >
+  A Clash (Strike vs Strike/Dodge) at a Character in your Melee Range, then one (Corporeal): won, they are removed from the Combat
+  Encounter and you gain a stack of the Absorption Awakening; lost, they are Shaken.
+text: >
+  Absorb Maneuver [2/Round]: You consume, wrap around, or otherwise engulf a target and make them part of yourself.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –Minions: Non-Minion
+  –KP Cost: N/A
+  –Exploitable: If you fail the initial Clash, this triggers the Exploit Maneuver from the target.
+  –Effect: Target a Character within your Melee Range. Make a Clash (Strike vs Strike/Dodge) against them. If you win, make a
+  second Clash (Corporeal) against that Character. If you lose this Clash, that Character suffers from the Shaken Combat Condition
+  until the end of their next turn. If you win, that Character is removed from the Combat Encounter and you gain a stack of the
+  Absorption Awakening as a Level 2 Temporary Awakening with that Character as the Absorbed Character.
+
+---
+
+# A Special Maneuver: nobody's until an effect gives it (Assimilation (2), Natural Dragon in the Ball Form).
+#
+# Asked before anything is paid (use-maneuver.mjs): not a Minion yourself ("Minions: Non-Minion" - the Biography's box), a Character
+# targeted within your Melee Range. Then (chat.mjs postAbsorbClash, settleAbsorb): the Clash, Strike against their Strike or Dodge -
+# lost, their Exploit offered on its card (`exploitOnLoss`); won, the Clash (Corporeal). That one lost: Shaken till the end of their
+# next turn. Won: out of the Combat Encounter - Combatant gone, token hidden, by the GM - and a stack of the Absorption Awakening, its
+# mark, naming the Absorbed Character (flags absorbedWith).
+#
+# Not built: Awakenings are not in this system - the Absorption Awakening's own effects, and what "Temporary" makes of it, are the
+# table's; the stack is what is kept.
