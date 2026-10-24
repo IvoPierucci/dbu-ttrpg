@@ -1,0 +1,39 @@
+id: from-goop
+name: From Goop
+order: 1
+category: body
+# "[Majin Regeneration]": it replaces that Primary Racial Trait - which, the table's.
+importance: primary
+# (2) A Talent of the Minion Category, asked as it is gained - none offered while that Category has none built (Minions wait).
+grantsTalentChoiceFrom: minion
+description: >
+  Made entirely out of a magical, chewing gum-esque substance, you can heal and split yourself into multiple pieces with ease.
+text: >
+  From Goop (Body) [Majin Regeneration]: Made entirely out of a magical, chewing gum-esque substance, you can heal and split yourself into multiple pieces with ease.
+  (1)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (2)-[Passive]: Upon gaining access to this Factor Trait, select and gain access to a Talent from the Minion Talent Category while you possess this Factor Trait.
+  (3)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action and a Ki Point Cost of 4(bT), use a Healing Surge.
+  (4)-[Triggered/Threshold]: Use a Healing Surge as an Out-of-Sequence Maneuver. Increase the amount of Life Points you regain through this effect by 2(bT) for every Health Threshold you are below upon triggering the effect.
+  (5)-[Triggered, 3/Round, Ruling]: When you use a Healing Surge, you may halve the amount of Life Points you regain from that Healing Surge to create a ‘Goop’ in an unoccupied Square within a Large Sphere AoE (centered on you), as an Out of Sequence Maneuver. A Goop is a Duplicate Minion, but does not possess the Apparel, Accessories, or Weapons of their creator. A Goop cannot use any Maneuvers except the Movement Maneuver, but they may always take their Act Phase, even if you do not use the Command Maneuver.
+  (6)-[1/Round]: As a Standard Maneuver with a Variable Action Cost (1~3 Actions), for each Action spent, Defeat one of your Goops (they cannot trigger a [Triggered/Defeated] effect in response to this effect). If you do, regain Life Points equal to 1/2 of the total amount of Life Points they had remaining. You cannot target a Goop you created this Turn with this effect.
+  (7)-[Triggered/Defeated]: You may Defeat any number of your Goops, and regain Life Points equal to 1/2 of the total amount of Life Points amongst all of the Goops Defeated by this effect. Then, use a Healing Surge as an Out-of-Sequence Maneuver.
+  (8)-[Automatic]: All of your Goops die at the end of the Combat Encounter. Regain Life Points equal to 1/2 of the total Life Points amongst those Goops before they died.
+
+---
+
+# (6), (7)'s Goops and (8): the table's - a Goop is a Minion, and Minions wait (the user's).
+[passive]
+# (1) The higher of the two, as Majin Regeneration's.
+allow surgency.magic;
+# (5) Every Healing Surge: asked whether to halve it for a Goop, three times a Round (chat.mjs goopSplit) - the Goop itself, the table's.
+allow fromGoop.goop;
+
+# (3) A Maneuver of its own - maneuvers/from-goop-third-effect.dbu, in the list while this is had.
+
+# (4) Knocked through a Health Threshold: chosen on the Threshold's card - 2(bT) Life Points more for each Threshold below.
+[triggered/threshold, outOfSequence, effect 4]
+surge(healing, 1, 0, 2);
+
+# (7) Reduced to your minimum Life Points: chosen on the Defeated card - the Goops Defeated first, the table's; then the Surge.
+[triggered/defeated, outOfSequence, effect 7]
+surge(healing);

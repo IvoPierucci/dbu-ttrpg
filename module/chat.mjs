@@ -34417,8 +34417,26 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
  * effects will reach the same two Surges by other routes, so this is kept apart from
  * whatever triggered it.
  */
+/** From Goop (5): what the Surge's card says of the Goop - the Minion itself, the table's. */
+const GOOP_SAID = " - halved: a Goop in an unoccupied Square within a Large Sphere around you (From Goop)";
+
+/**
+ * From Goop (5): "When you use a Healing Surge, you may halve the amount of Life Points you regain from that Healing Surge to create a
+ * 'Goop'" - asked, three times a Combat Round. Whether it was.
+ */
+async function goopSplit(actor) {
+  if (actor?.system?.effects?.slots?.["fromGoop.goop"] !== true) return false;
+  const used = actor.getFlag?.(SCOPE, "goopRound");
+  const count = (used?.round === roundKey()) ? (Number(used.count) || 0) : 0;
+  if (count >= 3) return false;
+  if ((await askPlayerChoice(actor, `${actor.name}: From Goop (${count}/3 this Round)`,
+    [{ value: "goop", label: "Halve it for a Goop (out of sequence)" }, { value: "keep", label: "Keep it all" }])) !== "goop") return false;
+  await actor.setFlag(SCOPE, "goopRound", { round: roundKey(), count: count + 1 });
+  return true;
+}
+
 export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0, lifeMultiplier = 1,
-                                          extraDie = 0, viaManeuver = "", surgencyShare = 1 } = {}) {
+                                          extraDie = 0, viaManeuver = "", surgencyShare = 1, lifePerThresholdBT = 0 } = {}) {
   // An effect that names a Surge is not offering a choice between the two: "use a Ki
   // Surge as an Instant Maneuver" is one Surge, and asking which would be wrong.
   const kind = forced ?? await foundry.applications.api.DialogV2.wait({
@@ -34489,7 +34507,9 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
 
     // Majin Regeneration's: Life Points for each Health Threshold below.
     const below = Number(actor.system.threshold?.depth) || 0;
-    const regen = below * (Number(actor.system.effects?.slots?.["surge.life.perThreshold"]?.add) || 0);
+    // From Goop (4): "by 2(bT) for every Health Threshold you are below upon triggering the effect" - this Surge's alone.
+    const regen = below * ((Number(actor.system.effects?.slots?.["surge.life.perThreshold"]?.add) || 0)
+      + (Number(lifePerThresholdBT) || 0) * Math.max(1, Number(actor.system.baseTierOfPower) || 1));
     // Revenge Bomber's "increase the Dice Score by 1d6(T)".
     const tierDie = extraDie ? `${Math.max(1, Number(actor.system.tierOfPower) || 1)}d${extraDie}` : "";
     const formula = [`${dice}d10`, ...extra.map(d => d.formula), ...(tierDie ? [tierDie] : []), "@surgency",
@@ -34499,6 +34519,9 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
 
     // "Double the amount of Life Points you regain from this Healing Surge" - Majin Regeneration's at Defeated.
     const multiplier = Math.max(1, Number(lifeMultiplier) || 1);
+    // From Goop (5): halved for a Goop, where it is chosen.
+    const goop = await goopSplit(actor);
+    const total = goop ? Math.floor((roll.total * multiplier) / 2) : (roll.total * multiplier);
     // Majin Style: "that piece of Apparel regains 1 Break Value. If the piece of Apparel was broken, it stops being broken".
     if (answered?.slots?.["costume.mend"] === true) await mendCostume(actor);
     // Survivor: "your Plating regains 1 Break Value. If the piece of Apparel was broken, it stops being broken".
@@ -34508,16 +34531,16 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     // Majin Malice: "forgo gaining Life Points to instead regain an equal amount of Ki Points and Capacity instead. This
     // can allow your Capacity to exceed your Max Capacity."
     if (answered?.slots?.["surge.asKi"] === true) {
-      const amount = roll.total * multiplier;
+      const amount = total;
       const { ki, capacity } = actor.system;
       const kiBack = Math.min(ki.max, ki.value + amount) - ki.value;
       await actor.update({ "system.ki.value": ki.value + kiBack, "system.capacity.spent": capacity.spent - amount });
       await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
-        flavor: `${source} - Healing Surge as Ki (Majin Malice) - ${kiBack} Ki Points, ${amount} Capacity` });
+        flavor: `${source} - Healing Surge as Ki (Majin Malice) - ${kiBack} Ki Points, ${amount} Capacity${goop ? GOOP_SAID : ""}` });
       return true;
     }
     const { value, max } = actor.system.life;
-    const restored = Math.min(max, value + (roll.total * multiplier)) - value;
+    const restored = Math.min(max, value + total) - value;
     // Through a Surge - what Vampire (5) leaves alone.
     await actor.update({ "system.life.value": value + restored }, { dbuSurge: true });
     // Above a Health Threshold you were under: what answers it - Lightning Surge (3)'s.
@@ -34529,7 +34552,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     // same thing twice.
     await roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor }),
-      flavor: `${source} - Healing Surge${(multiplier > 1) ? ` x${multiplier}` : ""} - ${restored} Life Points restored`
+      flavor: `${source} - Healing Surge${(multiplier > 1) ? ` x${multiplier}` : ""} - ${restored} Life Points restored${goop ? GOOP_SAID : ""}`
     });
     if (crossedUp) await answerFor(actor, "surge-threshold");
     // Feline Rally (3).

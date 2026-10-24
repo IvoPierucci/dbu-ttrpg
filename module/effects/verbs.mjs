@@ -850,11 +850,12 @@ export const VERBS = Object.freeze({
        + "of your next turn."
   },
   surge: {
-    args: [0, 3],
+    args: [0, 4],
     names: [0],
     doc: "Take a Surge. Name \"healing\" or \"ki\" to force which, or neither to be asked. A number after it multiplies "
        + "the Life Points a Healing Surge gives back - Majin Regeneration's \"double the amount\" - and a third, a die rolled "
-       + "once per Tier of Power on top - Revenge Bomber's 1d6(T) (6)."
+       + "once per Tier of Power on top - Revenge Bomber's 1d6(T) (6). A fourth, Life Points per base Tier for each Health "
+       + "Threshold below - From Goop's 2(bT) (4)."
   },
   leaveState: {
     args: [0, 1],

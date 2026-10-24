@@ -1,0 +1,22 @@
+id: from-goop-third-effect
+name: 3rd effect of From Goop
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 4
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+surge: true
+surgeKind: healing
+fromTrait: from-goop
+fromEffect: 3
+source: Core Rule
+description: >
+  From Goop's third effect, as a Maneuver: a Healing Surge for 1 Action and 4(bT) Ki Points, once a Combat Round.
+text: >
+  (3)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action and a Ki Point Cost of 4(bT), use a Healing Surge.
+
+---
+
+# Majin Regeneration (3)'s shape (majin-regeneration-third-effect.dbu): owned by every character, in the list only while
+# From Goop is had (`fromTrait`).
