@@ -1,0 +1,8 @@
+id: chaotic-majin
+name: Chaotic Majin
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Majin
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Maniacal laughter echoes deep inside your soul, a primal force that fills your very being. The entire world holds its breath in your presence- unable to decide how to regard you and your unpredictable nature. With a certainty that you feel deep down inside, you know that only one thing matters in all creation: fun, and you're determined to have fun, no matter the cost.

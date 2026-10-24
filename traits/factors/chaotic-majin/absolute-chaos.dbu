@@ -1,0 +1,19 @@
+id: absolute-chaos
+name: Absolute Chaos
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  You are a being of primordial chaos, inherently unpredictable.
+text: >
+  Absolute Chaos (Body): You are a being of primordial chaos, inherently unpredictable.
+  (1)-[Passive]: Upon gaining access to this Factor, gain access to the Pure Form Transformation.
+  (2)-[Passive]: Pure Form gains the Prelude Aspect.
+  (3)-[Passive]: Upon mastering Pure Form, it gains the Natural (LV1) Aspect. Increase the level of this Aspect by 1 if it is Fully Mastered.
+  (4)-[Passive]: Pure Form becomes part of the Pure Majin Transformation Line, with Internalized Chaos as its Null Stage, and you gain access to that Null Stage.
+
+---
+
+# Not built: every effect is a Transformation's - Pure Form, its Aspects and Mastery, the Pure Majin Line and Internalized Chaos - and
+# Transformations are not in this system yet. The table's till they are.
