@@ -17,7 +17,7 @@ import { compile as compileScript } from "./effects/parser.mjs";
 import { applyPassives, applySlot, PRIORITY } from "./effects/interpreter.mjs";
 import { PHASES } from "./effects/slots.mjs";
 import { traitAside } from "./aside.mjs";
-import { integratedProblem, integratedRoom, isIntegrated } from "./integrated.mjs";
+import { greedyDama, integratedProblem, integratedRoom, isIntegrated } from "./integrated.mjs";
 
 /**
  * The four Item Types, and which list on the Gear tab each is drawn in.
@@ -3154,7 +3154,10 @@ export function damageAttributeOffers(items, maneuver) {
  */
 export function accessoriesInEffect(items) {
   const seen = new Set();
+  // Greedy Rabbit (4): "Apply the effects of any Active Integrated Majin-Dama you possess, ignoring Double-Dip."
+  const everyDama = greedyDama(items);
   return wornAccessories(items).filter(item => {
+    if (everyDama && (item.system.gearId === "majin-dama") && isIntegrated(item)) return true;
     const key = item.system.gearId || item.id;
     if (seen.has(key)) return false;
     seen.add(key);

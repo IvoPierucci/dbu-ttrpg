@@ -1,0 +1,8 @@
+id: usagi-majin
+name: Usagi Majin
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Neko Majin
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Greedy and jealous, you seek to steal the Majin-Dama of the powerful Neko-Majins to become the strongest around... And you'll resort to any petty tactic, even threatening their action figures, to accomplish that goal.

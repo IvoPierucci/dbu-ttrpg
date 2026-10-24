@@ -42,9 +42,11 @@ function looseDama(items) {
 
 /** Whether there is room for one more Active Integrated Accessory. */
 async function activeRoom(actor, except = null) {
-  const { activeIntegrated, INTEGRATED_ACTIVE } = await import("./integrated.mjs");
-  return activeIntegrated(actor.items.contents.filter(item => item.id !== except), "accessory").length
-    < INTEGRATED_ACTIVE.accessory;
+  const { activePool } = await import("./integrated.mjs");
+  // Greedy Rabbit (4)'s two counted apart (integrated.mjs activePool).
+  const { active, most } = activePool(actor.items.contents.filter(item => item.id !== except),
+    { type: "gear", system: { gearId: MAJIN_DAMA, itemType: "accessory" } });
+  return active.length < most;
 }
 
 /** A new Majin-Dama's Item: Integrated, Active where it fits (the user's, for Integrated Items). */

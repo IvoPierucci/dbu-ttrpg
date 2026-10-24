@@ -1,0 +1,21 @@
+id: greedy-rabbit-sixth-effect
+name: 6th effect of Greedy Rabbit
+type: outOfSequence
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: greedy-rabbit
+fromEffect: 6
+source: Core Rule
+description: >
+  Greedy Rabbit's sixth effect, once an Encounter: a Clash (Cognitive/Morale) at a targeted Opponent - won, they enter the Sleeping Combat Condition.
+text: >
+  (6)-[Triggered, 1/Encounter]: Target an Opponent. Make a Clash (Cognitive/Morale) against that Opponent. If you win, they enter the Sleeping Combat Condition.
+
+---
+
+# "[Triggered]" with no trigger named: whenever the player chooses - out of sequence, no Action (chat.mjs greedySleep).
+[on used]
+greedySleep();

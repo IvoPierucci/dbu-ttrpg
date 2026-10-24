@@ -25,6 +25,31 @@
 /** "No more than 1 Accessory or Apparel Item Active" - each - "no more than 2 Weapons Active". */
 export const INTEGRATED_ACTIVE = Object.freeze({ weapon: 2, apparel: 1, accessory: 1 });
 
+/** Greedy Rabbit (4): "You may have 2 Active Integrated Majin-Damas (ignoring the maximum for Integrated Accessories)". */
+export const GREEDY_DAMA = 2;
+
+/** Whether Greedy Rabbit is held - read off the Items, as the effects are still being gathered when it is asked. */
+export function greedyDama(items) {
+  return Array.from(items ?? []).some(item => (item.type === "racial") && (item.flags?.["dbu-ttrpg"]?.sourceId === "greedy-rabbit"));
+}
+
+/** Whether an Item is a Majin-Dama - majin-dama.mjs's, here without importing it. */
+function damaItem(item) {
+  return (item?.type === "gear") && (item.system?.gearId === "majin-dama");
+}
+
+/**
+ * The Active Integrated Items one is counted with, and how many of them may be Active: its kind's - or, with Greedy Rabbit, the
+ * Majin-Damas on their own, two, and the other Accessories their one beside them.
+ */
+export function activePool(items, item) {
+  const kind = integratedKind(item);
+  const active = activeIntegrated(items, kind);
+  if ((kind !== "accessory") || !greedyDama(items)) return { active, most: INTEGRATED_ACTIVE[kind] ?? 0 };
+  const dama = damaItem(item);
+  return { active: active.filter(other => damaItem(other) === dama), most: dama ? GREEDY_DAMA : INTEGRATED_ACTIVE.accessory };
+}
+
 /** Whether an Item is Integrated. */
 export function isIntegrated(item) {
   return (item?.type === "gear") && (item.system?.integrated === true);
@@ -64,8 +89,8 @@ export function integratedProblem(items, item) {
 
 /** Whether there is room for one more Active of its kind. */
 export function integratedRoom(items, item) {
-  const kind = integratedKind(item);
-  return activeIntegrated(items, kind).filter(other => other.id !== item.id).length < (INTEGRATED_ACTIVE[kind] ?? 0);
+  const { active, most } = activePool(items, item);
+  return active.filter(other => other.id !== item.id).length < most;
 }
 
 /** What making it Active writes: worn on no Layer - it is part of them - or wielded. */
@@ -91,7 +116,7 @@ export async function switchIntegrated(actor, item, { paid = false } = {}) {
       return "";
     }
     if (!integratedRoom(items, item)) {
-      const full = activeIntegrated(items, integratedKind(item)).filter(other => other.id !== item.id);
+      const full = activePool(items, item).active.filter(other => other.id !== item.id);
       const chosen = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"], window: { title: `${item.name} - Activate` },
         content: "<p>Which becomes Inactive for it?</p>",

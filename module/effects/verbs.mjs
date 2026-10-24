@@ -404,6 +404,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  greedySleep: {
+    args: [0, 0],
+    doc: "Greedy Rabbit (6): a Clash (Cognitive/Morale) at the targeted Opponent - won, Sleeping (chat.mjs greedySleep)."
+  },
   threeEyesDrop: {
     args: [0, 0],
     doc: "Three-Eyes (6): Life 1 below the Critical line, its Check passed, no Reduced Momentum; then a Ki Surge out of sequence (chat.mjs threeEyesDrop)."

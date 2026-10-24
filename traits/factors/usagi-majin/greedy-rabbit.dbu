@@ -1,0 +1,37 @@
+id: greedy-rabbit
+name: Greedy Rabbit
+order: 1
+category: body
+# "[Feline Build]": it replaces that Secondary Racial Trait - which, the table's.
+importance: secondary
+# (1) Bestial Build and Land-Based Beast, as it is gained - in the Other Traits list, gone with it.
+grantsOther: bestial
+grantsOtherCount: 2
+grantsOtherFrom: bestial-build, land-based-beast
+description: >
+  Instead of taking the physical form of a cat, you more closely resemble a rabbit.
+text: >
+  Greedy Rabbit (Body) [Feline Build]: Instead of taking the physical form of a cat, you more closely resemble a rabbit.
+  (1)-[Passive]: At Character Creation, gain the Bestial Build and Land-Based Beast Bestial Traits.
+  (2)-[Passive]: For every Integrated Majin-Dama you possess, increase your Maximum Life Points by 1 for each Power Level reached.
+  (3)-[Passive]: Increase your Speed by 1(T) and Defense Value by 1(T) for each of your Active Integrated Majin-Damas.
+  (4)-[Passive]: You may have 2 Active Integrated Majin-Damas (ignoring the maximum for Integrated Accessories). Apply the effects of any Active Integrated Majin-Dama you possess, ignoring Double-Dip.
+  (5)-[Triggered/Start of Turn]: Regain 2(bT) Ki Points for every Integrated Majin-Dama you possess (max. 10(bT)).
+  (6)-[Triggered, 1/Encounter]: Target an Opponent. Make a Clash (Cognitive/Morale) against that Opponent. If you win, they enter the Sleeping Combat Condition.
+
+---
+
+# (4) Read where it is held (integrated.mjs greedyDama): two Majin-Damas Active, beside the one other Accessory, and each one's
+# effects (gear.mjs accessoriesInEffect).
+# (6) A Maneuver of its own - maneuvers/greedy-rabbit-sixth-effect.dbu, in the list while this is had.
+[passive]
+# (2) "Even if they are Inactive", as Neko Majin-Dama's x.
+life.perLevel += majinDama.integrated;
+# (3)
+speed.all += majinDama.active * 1(T);
+defenseValue += majinDama.active * 1(T);
+
+# (5) Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 5]
+requires majinDama.integrated > 0;
+ki.value += min(majinDama.integrated, 5) * 2(bT);

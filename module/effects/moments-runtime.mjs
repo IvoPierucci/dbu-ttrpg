@@ -752,6 +752,7 @@ async function runVerb(actor, call, context) {
       await actor.update({ "system.resources": replaceObject(held) });
       return stacksGained(actor, gained);
     }
+    case "greedySleep": return (await import("../chat.mjs")).greedySleep(actor);
     case "threeEyesDrop": return (await import("../chat.mjs")).threeEyesDrop(actor);
     case "heroSwitch": return (await import("../chat.mjs")).heroSwitch(actor);
     case "tamagamiIntegrate": return (await import("../chat.mjs")).tamagamiIntegrate(actor);

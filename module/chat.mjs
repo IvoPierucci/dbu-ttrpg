@@ -1012,6 +1012,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.clawsProne && clash.result && !clash.clawsProne.applied) await settleClaws(message, clash);
   if (clash.venom && clash.result && !clash.venom.applied) await settleVenom(message, clash);
   if (clash.quills && clash.result && !clash.quills.applied) await settleQuills(message, clash);
+  if (clash.greedySleep && clash.result && !clash.greedySleep.applied) await settleGreedySleep(message, clash);
   if (clash.dissipate && clash.result && !clash.dissipate.applied) await settleDissipate(message, clash);
   if (clash.impede && clash.result && !clash.impede.applied) await settleImpede(message, clash);
   if (clash.majinRaised && clash.result && !clash.majinRaised.applied) await settleMajinRaised(message, clash);
@@ -20631,7 +20632,7 @@ export async function cyberCopyUsed(actor) {
 /** Mutant Core (3): "Integrate any Item you possess or currently have Equipped. Regain Ki Points equal to 1/10th of your Maximum Ki Points". */
 export async function mutantIntegrate(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
-  const { activeIntegrated, integratedKind, INTEGRATED_ACTIVE, isIntegrated } = await import("./integrated.mjs");
+  const { integratedKind, integratedRoom, isIntegrated } = await import("./integrated.mjs");
   const items = Array.from(actor.items ?? []).filter(item => integratedKind(item) && !isIntegrated(item) && !item.system?.crafted?.destroyed);
   if (!items.length) {
     ui.notifications.warn(`${actor.name}: Mutant Core - no Item to Integrate.`);
@@ -20641,8 +20642,7 @@ export async function mutantIntegrate(actor) {
     [...items.map(item => ({ value: item.id, label: item.name })), { value: "none", label: "None" }]);
   const item = items.find(each => each.id === picked);
   if (!item) return UNSPENT;
-  const kind = integratedKind(item);
-  const room = activeIntegrated(actor.items.contents, kind).length < (INTEGRATED_ACTIVE[kind] ?? 0);
+  const room = integratedRoom(actor.items.contents, item);
   await item.update({ "system.integrated": true, "system.equipped": room });
   const back = Math.floor((Number(actor.system.ki?.max) || 0) / 10);
   if (back) await regainPools(actor, 0, back);
@@ -21201,6 +21201,33 @@ async function settleQuills(message, clash) {
   const quillset = grantedArmor(actor, "treacherous-spikes");
   if (quillset) await quillset.update({ "system.crafted.breakLost": (Number(quillset.system.crafted?.breakLost) || 0) + 1 });
   return settledNote(message, `Treacherous Spikes: ${target.name} loses ${lost} Life Points${quillset ? `; ${quillset.name} 1 Break Value` : ""}.`);
+}
+
+/** Greedy Rabbit (6): "Target an Opponent. Make a Clash (Cognitive/Morale) against that Opponent." */
+export async function greedySleep(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const aimed = [...new Map(Array.from(game.user?.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid) && !allies.has(other.uuid)).map(other => [other.uuid, other])).values()];
+  if (aimed.length !== 1) {
+    ui.notifications.warn("Greedy Rabbit: target one Opponent.");
+    return UNSPENT;
+  }
+  const [other] = aimed;
+  await postSaveClash(actor, other, { maneuverName: "Greedy Rabbit", saves: ["cognitive", "morale"],
+    reason: `Win and ${other.name} enters the Sleeping Combat Condition.`, greedySleep: { applied: false } });
+  return true;
+}
+
+/** Greedy Rabbit (6) won: "they enter the Sleeping Combat Condition." */
+async function settleGreedySleep(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, greedySleep: { ...clash.greedySleep, applied: true } });
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `Greedy Rabbit: ${target.name} stays awake.`);
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(target, "sleeping", 1) === false) return;
+  return settledNote(message, `Greedy Rabbit: ${target.name} is Sleeping.`);
 }
 
 /** Weather Resilient (3): "If you are in your chosen Battle Weather, you may use a Surge as an Instant Maneuver." */
