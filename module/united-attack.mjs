@@ -213,7 +213,12 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   const leader = attacker ?? globalThis.fromUuidSync?.(attack.attackerUuid ?? "") ?? null;
   const syncOpen = !free && (joiner.system?.effects?.slots?.["sync.freeUnited"] === true) && leader
     && (partnerOf(joiner)?.id === leader.id) && (joiner.getFlag?.("dbu-ttrpg", "superiorUnitedEncounter") !== encounter);
-  const refused = whyNotUnite(joiner, attack, attacker, { actionsLeft: (free || syncOpen) ? () => 1 : actionsLeft });
+  // Dragon Lord's Rage: "If a Studied Ally on an adjacent Square targets an Opponent with an Attacking Maneuver, you may use the
+  // United Attack Maneuver without spending an Action" - once a Round, a box; adjacent, as every United Attack is.
+  const round = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+  const rageOpen = !free && !syncOpen && (joiner.system?.effects?.slots?.["dragonLord.rage"] === true) && Boolean(leader)
+    && (joiner.getFlag?.("dbu-ttrpg", "dragonRageRound") !== round) && (await import("./chat.mjs")).isStudiedBy(joiner, leader.uuid);
+  const refused = whyNotUnite(joiner, attack, attacker, { actionsLeft: (free || syncOpen || rageOpen) ? () => 1 : actionsLeft });
   if (refused) {
     ui.notifications.warn(refused);
     return null;
@@ -241,7 +246,7 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   // Joining a Duel: the wager is the one each Duel Clash asks for, not one made now.
   const cap = duel ? 0 : unitedWagerCap(joiner);
   const teamwork = teamworkOpen(joiner);
-  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork, syncOpen });
+  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork, syncOpen, rageOpen });
   if (!answer) return null;
 
   const choice = answer.itemId ? choices.find(entry => entry.technique.itemId === answer.itemId) : null;
@@ -266,13 +271,15 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
 
   // Paid: 1 Action, then the Ki and the wager together - both come out of Capacity.
   const synced = syncOpen && Boolean(answer.synced);
-  const noAction = free || synced;
+  const raged = rageOpen && Boolean(answer.raged);
+  const noAction = free || synced || raged;
   if (!noAction && !await spendActions(joiner, 1)) return null;
   if (!await spendManeuverCost(joiner, { name: united.name }, cost + wager)) {
     if (!noAction) await refundActions(joiner, 1);
     return null;
   }
   if (synced) await joiner.setFlag("dbu-ttrpg", "superiorUnitedEncounter", encounter);
+  if (raged) await joiner.setFlag("dbu-ttrpg", "dragonRageRound", round);
   await recordManeuverUse(joiner, united);
   // Teamwork (2)'s once a Round, spent.
   const teamworkBonus = (teamwork && answer.teamwork) ? Math.max(1, Number(joiner.system?.tierOfPower) || 1) : 0;
@@ -315,7 +322,7 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
 }
 
 /** The question: how they join, what they bring, what they wager. */
-async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork = false, syncOpen = false }) {
+async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork = false, syncOpen = false, rageOpen = false }) {
   const ways = [
     `<label class="dbu-technique"><input type="radio" name="way" value="" checked/>
       <span class="dbu-technique-name">${escape(attack.profileLabel ?? "Same Profile")}</span>
@@ -350,7 +357,9 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, t
       ${teamwork ? `<label class="dbu-wager" data-tooltip="Their Strike and Wound Rolls 1(T) higher for this Attacking Maneuver. 1/Round.">
         <input type="checkbox" name="teamwork" checked/> <span>Teamwork</span></label>` : ""}
       ${syncOpen ? `<label class="dbu-wager" data-tooltip="Superior Synchronization: join your Partner without spending an Action. 1/Encounter.">
-        <input type="checkbox" name="synced"/> <span>No Action</span></label>` : ""}`,
+        <input type="checkbox" name="synced"/> <span>No Action</span></label>` : ""}
+      ${rageOpen ? `<label class="dbu-wager" data-tooltip="Dragon Lord's Rage: join a Studied Ally without spending an Action. 1/Round.">
+        <input type="checkbox" name="raged"/> <span>No Action</span></label>` : ""}`,
     buttons: [
       { action: "confirm", label: "Join",
         callback: (event, button, dialog) => {
@@ -363,7 +372,8 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, t
           }
           return { itemId, picked, wager: Number(root.querySelector('input[name="wager"]')?.value) || 0,
             teamwork: Boolean(root.querySelector('input[name="teamwork"]')?.checked),
-            synced: Boolean(root.querySelector('input[name="synced"]')?.checked) };
+            synced: Boolean(root.querySelector('input[name="synced"]')?.checked),
+            raged: Boolean(root.querySelector('input[name="raged"]')?.checked) };
         } },
       { action: "cancel", label: "Cancel" }
     ],

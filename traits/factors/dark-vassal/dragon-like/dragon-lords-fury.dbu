@@ -1,0 +1,14 @@
+id: dragon-lords-fury
+name: Dragon Lord's Fury
+order: 1
+optionOf: dragon-like
+description: >
+  Dragon Lord’s Fury [Triggered, 1/Round]: If an Ally is hit by an Attacking Maneuver from a Studied Opponent, you may use the Intervene Maneuver without spending a Counter Action.
+text: >
+  Dragon Lord’s Fury [Triggered, 1/Round]: If an Ally is hit by an Attacking Maneuver from a Studied Opponent, you may use the Intervene Maneuver without spending a Counter Action.
+
+---
+
+[passive]
+# Intervening for an Ally hit by an Opponent you have Studied: asked, no Counter Action, once a Round (chat.mjs playIntervene).
+allow dragonLord.fury;

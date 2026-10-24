@@ -14944,6 +14944,13 @@ function refinedParts(actor, other) {
   return [{ label: "Refined Combat (Studied)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
 }
 
+/** Dragon-like (2): "Increase your Wound Rolls against Studied Opponents by 1(T)." */
+function dragonLikeParts(actor, other) {
+  if (!other || (actor?.system?.effects?.slots?.["dragonLike.vsStudied"] !== true) || !isStudiedBy(actor, other.uuid)) return [];
+  if (alliesOnScene(actor).some(ally => ally.uuid === other.uuid)) return [];
+  return [{ label: "Dragon-like (Studied)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
 /**
  * Supporting Defender (1): "If you are on a Square adjacent to an Opponent, increase all of your Allies' Dodge Rolls, or Strike
  * Rolls when using the Parry effect of the Defend Maneuver, made against that Opponent by 1(T)." The defender's Allies with it,
@@ -26667,9 +26674,17 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     && ((await askPlayerChoice(actor, `${actor.name}: Synchronized Combatants - ${allyActor.name}, your Partner`,
       [{ value: "yes", label: "Intervene without a Counter Action (1/Encounter)" }, { value: "no", label: "No" }])) === "yes");
   if (syncFree) await actor.setFlag(SCOPE, "syncInterveneEncounter", game.combat?.id ?? "none");
+  // Dragon Lord's Fury: "If an Ally is hit by an Attacking Maneuver from a Studied Opponent, you may use the Intervene Maneuver
+  // without spending a Counter Action" - asked, once a Round.
+  const furyFree = !protector && !refinedFree && !pacifistFree && !syncFree && (actor.system?.effects?.slots?.["dragonLord.fury"] === true)
+    && isStudiedBy(actor, attack?.attackerUuid ?? "") && !alliesOnScene(actor).some(each => each.uuid === attack?.attackerUuid)
+    && (actor.getFlag?.(SCOPE, "dragonFuryRound") !== roundKey())
+    && ((await askPlayerChoice(actor, `${actor.name}: Dragon Lord's Fury - ${attack?.attackerName ?? "a Studied Opponent"}, Studied`,
+      [{ value: "yes", label: "Intervene without a Counter Action (1/Round)" }, { value: "no", label: "No" }])) === "yes");
+  if (furyFree) await actor.setFlag(SCOPE, "dragonFuryRound", roundKey());
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
-  if (!protector && !refinedFree && !pacifistFree && !syncFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!protector && !refinedFree && !pacifistFree && !syncFree && !furyFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
@@ -30121,6 +30136,7 @@ async function rollAttackWoundWork(message, attack) {
       { label: "Full Counter", value: Number(defenceFor(attack, target.uuid)?.fullCounter) || 0 },
       ...studiedParts(attacker, target),
       ...refinedParts(attacker, target),
+      ...dragonLikeParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
       { label: "Tai Chi Expert", value: (taiChiWound && !alliesOnScene(attacker).some(ally => ally.uuid === target.uuid))
         ? Math.ceil(Math.max(0, Number(target.system?.might) || 0) / 4) : 0 },

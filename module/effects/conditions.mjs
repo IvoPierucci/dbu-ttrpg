@@ -504,6 +504,13 @@ const PREDICATES = {
     && (scope.data?.parent?.flags?.["dbu-ttrpg"]?.apparelBrokenEncounter === globalThis.game.combat.id),
   // Twin Weapon Specialist (1): "While you are wielding 2+ Weapons of the same Weapon Category" - each as it stands.
   twinWeapons: scope => twinWielded(Array.from(scope.data?.parent?.items ?? [])),
+  // Dragon-like (1): "For each Bestial Trait gained" - the Other Traits this Trait gave, still held.
+  grantedOthersAtLeast: (scope, count, id) => {
+    const items = Array.from(scope.data?.parent?.items ?? []);
+    const own = items.find(item => (item.type === "racial") && (item.flags?.["dbu-ttrpg"]?.sourceId === String(id ?? "")));
+    return Boolean(own) && (items.filter(item => (item.type === "racial") && (item.flags?.["dbu-ttrpg"]?.grantedBy === own.id)).length
+      >= (Number(count) || 0));
+  },
   // Dual Wielding Specialist: "While you are wielding 2+ Weapons".
   weaponsWieldedAtLeast: (scope, count) => Array.from(scope.data?.parent?.items ?? []).filter(item => (item.type === "gear")
     && (item.system?.crafted?.kind === "weapon") && item.system?.equipped && !item.system?.crafted?.destroyed).length

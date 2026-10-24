@@ -515,7 +515,7 @@ const PREDICATE_NAMES = new Set([
   // One Weapon wielded, of that Size (Light Weapons Specialist's).
   "singleWeaponOf",
   // That many Weapons wielded or more (Dual Wielding Specialist's).
-  "weaponsWieldedAtLeast"
+  "weaponsWieldedAtLeast", "grantedOthersAtLeast"
 ]);
 
 /** The ones written without brackets, because they take nothing. */

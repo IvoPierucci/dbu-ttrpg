@@ -1,0 +1,8 @@
+id: dark-vassal
+name: Dark Vassal
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Namekian
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Born to serve, you were engineered by your Namekian parent to take on a unique form, in order to fulfill the role you have been assigned.

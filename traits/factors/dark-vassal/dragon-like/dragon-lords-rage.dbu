@@ -1,0 +1,14 @@
+id: dragon-lords-rage
+name: Dragon Lord's Rage
+order: 2
+optionOf: dragon-like
+description: >
+  Dragon Lord’s Rage [Triggered, 1/Round]: If a Studied Ally on an adjacent Square targets an Opponent with an Attacking Maneuver, you may use the United Attack Maneuver without spending an Action through its effects.
+text: >
+  Dragon Lord’s Rage [Triggered, 1/Round]: If a Studied Ally on an adjacent Square targets an Opponent with an Attacking Maneuver, you may use the United Attack Maneuver without spending an Action through its effects.
+
+---
+
+[passive]
+# Joining an Ally you have Studied: a box in the United Attack's window - no Action, once a Round (united-attack.mjs).
+allow dragonLord.rage;
