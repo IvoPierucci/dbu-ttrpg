@@ -1,0 +1,25 @@
+id: devil
+name: Devil
+order: 2
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1)
+grantsOther: bestial, monstrous
+grantsOtherFrom: winged-beast, unique-monstrosity
+# (2)
+grantsUnique: magical-materialization
+description: >
+  From the depths of HFIL, your darkness spreads as you manifest in the land of the living.
+text: >
+  Devil (Body): From the depths of HFIL, your darkness spreads as you manifest in the land of the living.
+  (1)-[Passive]: You gain access to the Winged Beast Bestial Traits and the Unique Monstrosity Monstrous Trait.
+  (2)-[Passive]: You gain access to the Magical Materialization Unique Ability.
+  (3)-[Passive]: For the Unique Monstrosity Monstrous Trait, you may select any Unique Ability regardless of the TP Cost (follow the usual restrictions for Unique Monstrosity).
+
+---
+
+# (1), (2) Its headers: Winged Beast and Unique Monstrosity in the Other Traits list, Magical Materialization - each gained with it.
+[passive]
+# (3) Unique Monstrosity's choice, of any TP Cost (racial.mjs).
+allow devil.anyUnique;

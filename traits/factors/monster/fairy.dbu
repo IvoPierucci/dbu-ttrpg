@@ -1,0 +1,32 @@
+id: fairy
+name: Fairy
+order: 3
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1)
+choose: list
+choices: Nano, Tiny, Small
+# (3), (4)
+grantsOther: bestial, monstrous
+grantsOtherFrom: winged-beast, unique-monstrosity
+description: >
+  A spirit of nature, your pointed ears and gossamer wings mark you as a powerful trickster.
+text: >
+  Fairy (Body): A spirit of nature, your pointed ears and gossamer wings mark you as a powerful trickster.
+  (1)-[Passive]: Upon gaining this Factor Trait, select a Size Category (Nano/Tiny/Small). That becomes your base Size Category.
+  (2)-[Passive]: Upon gaining this Factor Trait, gain a Skill Improvement.
+  (3)-[Passive]: You gain access to the Winged Beast Bestial Trait.
+  (4)-[Passive]: You gain access to the Unique Monstrosity Monstrous Trait.
+  (5)-[Triggered, 1/Round]: If you make a Skill Clash, increase the Dice Score of that Clash by 2.
+  (6)-[Triggered, 1/Round]: If you make a Clash that uses your Saving Throws, increase the Dice Score of that Clash by 1(T).
+
+---
+
+# (2) The Skill Improvement: the table's, on the Progression tab. (3), (4) Its headers - in the Other Traits list, gained with it.
+[passive]
+# (1) The Size chosen is the one they are built as (actor-character.mjs).
+allow size.base.$choice;
+# (5), (6) A box in the Clash's window, each once a Round: a Skill Clash 2, a Saving Throw's 1(T) (chat.mjs fairyClashOpen).
+allow fairy.skill;
+allow fairy.save;

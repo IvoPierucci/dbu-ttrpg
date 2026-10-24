@@ -28,6 +28,7 @@
  *                                   (`$pastSkill`, `$pastAttribute` in its script; the Talent given; the Tier on its flag)
  *   grantsWeapon: chosen            the Weapon Category its `choose: weaponCategory` names (Integrated Weapon's); with
  *   grantsWeaponQualities: <ids>    Qualities on it in no Slot
+ *   grantsTalentIfManeuver: a=b     the Talent b, where the Maneuver a is open to them already (Ghost's Frequent Flyer)
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
  *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
@@ -810,6 +811,11 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
       .replaceAll("$pastAttribute", past.attribute);
     if (past.talent) made.grants.talents = [...(made.grants.talents ?? []), past.talent];
   }
+  // Ghost (2): "If you already have access to the Soar Maneuver, gain access to the Frequent Flyer Talent" - read before it is gained.
+  const [ifManeuver, insteadTalent] = String(trait.grantsTalentIfManeuver ?? "").split("=").map(each => each.trim());
+  if (ifManeuver && insteadTalent && (actor.system?.effects?.slots?.[`maneuver.${ifManeuver}`] === true)) {
+    made.grants.talents = [...(made.grants.talents ?? []), insteadTalent];
+  }
   // Given by another - Bestial Evolution's Bestial Trait - it goes with that one.
   if (grantedBy) made.data.flags["dbu-ttrpg"].grantedBy = grantedBy;
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
@@ -1144,7 +1150,10 @@ async function giveGrants(actor, item, grants, name) {
   // "Select any Magical Unique Ability with a TP Cost of 30 or less ... You gain access to that Unique Ability while you
   // possess this Trait" (Denizen of the Demon Realm's) - which, asked; its Prerequisites shown, the table's.
   if (grants.uniqueChoice) {
-    const picked = await askUniqueChoice(actor, name, grants.uniqueChoice, held, grants.uniqueChoiceType);
+    // Devil (3): "For the Unique Monstrosity Monstrous Trait, you may select any Unique Ability regardless of the TP Cost".
+    const cap = ((item.flags?.["dbu-ttrpg"]?.sourceId === "unique-monstrosity") && (actor.system?.effects?.slots?.["devil.anyUnique"] === true))
+      ? Infinity : grants.uniqueChoice;
+    const picked = await askUniqueChoice(actor, name, cap, held, grants.uniqueChoiceType);
     if (picked) {
       created.push(freeUnique(uniqueItemFrom, picked, item,
         { chosenType: (picked.uaType === "both") ? (grants.uniqueChoiceType || "") : "" }));

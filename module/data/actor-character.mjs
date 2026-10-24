@@ -2111,7 +2111,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       defenseModifier: (DBUCharacterData.SIZES[sizeKeys[Math.max(0, Math.min(sizeKeys.length - 1,
         defenseAt + (Number(this.effects?.slots?.["size.defenseSteps"]?.add) || 0)))]] ?? size).defensePerTier
         * this.tierOfPower,
-      soakModifier: size.soakPerTier * this.tierOfPower,
+      // Goblin (1): "while your Size Category is smaller than Large, you may use the Large Size Category to calculate your Soak Value
+      // Bonus/Penalty" - where it is the better.
+      soakModifier: (((this.effects?.slots?.["goblin.soakAsLarge"] === true) && (sizeKeys.indexOf(sizeKey) < sizeKeys.indexOf("large")))
+        ? Math.max(size.soakPerTier, DBUCharacterData.SIZES.large.soakPerTier) : size.soakPerTier) * this.tierOfPower,
       speedModifier: size.speed
     };
 

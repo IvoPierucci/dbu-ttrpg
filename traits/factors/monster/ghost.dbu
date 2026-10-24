@@ -1,0 +1,34 @@
+id: ghost
+name: Ghost
+order: 5
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (2) "If you already have access to the Soar Maneuver, gain access to the Frequent Flyer Talent."
+grantsTalentIfManeuver: soar=frequent-flyer
+# (3)
+grantsOther: monstrous
+grantsOtherFrom: spectral-monster
+description: >
+  From beyond the veil, you haunt the living, clinging to the life you lost.
+text: >
+  Ghost (Body): From beyond the veil, you haunt the living, clinging to the life you lost.
+  (1)-[Passive]: You are Unnatural.
+  (2)-[Passive]: You gain access to the Soar Maneuver. If you already have access to the Soar Maneuver, gain access to the Frequent Flyer Talent.
+  (3)-[Passive]: You gain access to the Spectral Monster Monstrous Trait.
+  (4)-[Passive]: Reduce the Damage Category of all Physical or Energy Attacks that hit you to Standard (for your Damage Calculation), but increase the Damage Category of all Magic Attacks that hit you by 1 Category (for your Damage Calculation).
+  (5)-[Triggered/Incorporeal, 1/Encounter]: Use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# (2) The Frequent Flyer Talent, its header's - given where the Soar was yours already as this is gained. (3) Its header.
+[passive]
+# (1), (2)
+allow unnatural;
+allow maneuver.soar;
+# (4) Read where each target's Damage Category is settled (chat.mjs ghostCategory).
+allow ghost.categories;
+
+# (5) Entering the Incorporeal State: the Surge Maneuver out of sequence, a Healing Surge - never Automatic (chat.mjs lionsHeart).
+[triggered/state/incorporeal, 1/encounter, outOfSequence, effect 5]
+lionsHeart();

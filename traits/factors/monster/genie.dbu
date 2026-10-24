@@ -1,0 +1,29 @@
+id: genie
+name: Genie
+order: 4
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (2)
+grantsOther: monstrous
+grantsOtherFrom: unique-monstrosity
+description: >
+  Your magical, mystical nature allows you the uncanny use of preternatural powers and the ability to survive hits that would incinerate lesser beings.
+text: >
+  Genie (Body): Your magical, mystical nature allows you the uncanny use of preternatural powers and the ability to survive hits that would incinerate lesser beings.
+  (1)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (2)-[Passive]: You gain access to the Unique Monstrosity Monstrous Trait.
+  (3)-[Passive]: Increase your Damage Reduction by 1/2 of your Insight Modifier.
+  (4)-[Triggered, 1/Round]: If you receive no Damage from an Opponent’s Attacking Maneuver that targeted you due to any means, you may use a Surge as an Out-of-Sequence Maneuver but only apply 1/4 (rounded up) of your Surgency.
+
+---
+
+# (2) Its header - in the Other Traits list, gained with it.
+[passive]
+# (1) The Magic Modifier where it is the higher.
+allow surgency.magic;
+# (3)
+damageReduction += floor(insight.mod / 2);
+# (4) No Damage from an Opponent's attack at you: the Surge offered on its card, once a Round - a quarter of your Surgency, rounded up
+# (chat.mjs genieOffer).
+allow genie.surge;

@@ -1,0 +1,30 @@
+id: custom-monstrosity
+name: Custom Monstrosity
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (2) "select a Combat Roll or Soak Value".
+choose: list
+choices: Strike, Dodge, Wound, Soak
+# (3)
+grantsOther: monstrous, bestial
+description: >
+  You are a horror to behold unlike any the world has known before you.
+text: >
+  Custom Monstrosity (Body): You are a horror to behold unlike any the world has known before you.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: Upon gaining this Factor Trait, select a Combat Roll or Soak Value. Increase your choice by 1(T).
+  (3)-[Passive]: You gain access to 1 Monstrous Trait and 1 Bestial Trait.
+
+---
+
+# (3) Its header's `grantsOther`: one of each, chosen as it is gained, in the Other Traits list - gone with it.
+[passive]
+# (1)
+racialLifeModifier += 2;
+# (2) As chosen.
+strike += 1(T) * $strike;
+dodge += 1(T) * $dodge;
+wound += 1(T) * $wound;
+soakValue += 1(T) * $soak;

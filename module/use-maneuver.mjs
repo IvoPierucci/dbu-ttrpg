@@ -5137,6 +5137,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       source: maneuver.name,
       kind: maneuver.surgeKind || null,
       dicePerBaseTier: Number(maneuver.surgeDicePerBaseTier) || 0,
+      // Genie (4)'s "only apply 1/4 (rounded up) of your Surgency".
+      surgencyShare: Number(maneuver.surgencyShare) || 1,
       viaManeuver: maneuver.id ?? ""
     })) {
       if (surgeCost > 0) await refundManeuverCost(actor, maneuver);

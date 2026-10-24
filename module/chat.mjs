@@ -9518,7 +9518,8 @@ function clashParts(kind, actor, clash, uuid) {
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
     ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
-    ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid)];
+    ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid),
+    ...fairyClashBonus(actor, clash, uuid)];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -10716,10 +10717,13 @@ async function clashStage(message, actor) {
   const reserved = reservedClashEntry(actor, opened);
   // Scholar's Intellect (2): a Revenge Point a box, up to 2, once a Round.
   const scholar = scholarRevengeOpen(actor, opened);
+  // Fairy (5), (6): a box, each once a Round.
+  const fairy = fairyClashOpen(actor, opened);
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
     { urgent: Boolean(opened.urgent), senses,
       boxes: [...(thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
         tip: "Once a Round. Won, the Basic Attack or a Signature Technique out of sequence at them." }] : []),
+        ...(fairy ? [{ name: "fairy", label: `Fairy: +${fairy}`, tip: "Once a Round." }] : []),
         ...(corsair ? [{ name: "corsair", label: `Sorcering Corsair: +${corsair.label}`,
           tip: "Once a Round: they are beside one of your Allies." }] : []),
         ...(reserved ? [{ name: "reserved", label: "Reserved Combatant: Holding Back ignored",
@@ -10751,6 +10755,10 @@ async function clashStage(message, actor) {
   const scholarPoints = ["scholar1", "scholar2"].filter(name => (ready.boxes ?? []).includes(name)).length;
   const scholarSpent = scholarPoints ? await spendRevenge(actor, scholarPoints) : 0;
   if (scholarSpent) await requestActorUpdate(actor, { [`flags.${SCOPE}.scholarRound`]: roundKey() });
+  const fairyTaken = Boolean(fairy) && (ready.boxes ?? []).includes("fairy");
+  if (fairyTaken) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.${(((opened.category ?? "skill") === "save") ? "fairySaveRound" : "fairySkillRound")}`]: roundKey() });
+  }
   const thiefTaken = Boolean(thief) && (ready.boxes ?? []).includes("thief");
   if (thiefTaken) {
     await spendVocationTension(actor, 1);
@@ -10761,6 +10769,7 @@ async function clashStage(message, actor) {
     ...clash,
     ...answer,
     ...(thiefTaken ? { thiefBy: [...new Set([...(clash.thiefBy ?? []), actor.uuid])] } : {}),
+    ...(fairyTaken ? { fairyBy: [...new Set([...(clash.fairyBy ?? []), actor.uuid])] } : {}),
     ...(corsairTaken ? { corsairBy: [...new Set([...(clash.corsairBy ?? []), actor.uuid])] } : {}),
     ...(scholarSpent ? { scholarSpent: [...(clash.scholarSpent ?? []).filter(entry => entry.uuid !== actor.uuid),
       { uuid: actor.uuid, points: scholarSpent }] } : {}),
@@ -20306,6 +20315,79 @@ export function tremendousOffer(card, actor) {
     maneuverName: "Transformation", reason: "Tremendous Lord (once an Encounter)", grants: { encounterFlag: "tremendousEncounter" } } });
 }
 
+/** Ghost (4): Physical or Energy - "Reduce the Damage Category ... to Standard"; Magic - "increase ... by 1 Category". For its own Damage. */
+function ghostCategory(entry, attack) {
+  const target = entry.actor ?? fromUuidSync(entry.uuid);
+  if (!entry.own?.hit || (target?.system?.effects?.slots?.["ghost.categories"] !== true)) return entry;
+  const category = entry.own.damageCategory;
+  const next = (attack.foundation === "magic") ? resolveDamageCategory(category, 1)
+    : (["physical", "energy"].includes(attack.foundation) && ((DAMAGE_CATEGORIES[category]?.value ?? 1) > DAMAGE_CATEGORIES.standard.value))
+      ? "standard" : category;
+  return (next === category) ? entry : { ...entry, own: { ...entry.own, damageCategory: next } };
+}
+
+/**
+ * Goblin (3): "If you are hit by an Attacking Maneuver while below the Injured Health Threshold, you may choose to reduce your Life Points
+ * to their lowest possible value instead of receiving Damage" - asked, once a Round; taken, what Unrelenting (3)'s Healing Surge doubles
+ * kept on them. The Damage it comes to.
+ */
+async function goblinDrop(target, damage) {
+  if ((damage <= 0) || (target?.system?.effects?.slots?.["goblin.drop"] !== true)) return damage;
+  if (!["injured", "critical"].includes(target.system.threshold?.key) || (target.getFlag?.(SCOPE, "goblinRound") === roundKey())) return damage;
+  const life = Number(target.system.life?.value) || 0;
+  const least = Number(target.system.life?.min) || 0;
+  if ((await askPlayerChoice(target, `${target.name}: Goblin - ${damage} Damage`,
+    [{ value: "yes", label: `Your Life Points to their least (${least}) instead (once a Round)` }, { value: "no", label: "Take the Damage" }])) !== "yes") {
+    return damage;
+  }
+  await requestActorUpdate(target, { [`flags.${SCOPE}.goblinRound`]: roundKey(), [`flags.${SCOPE}.goblinSurge`]: true });
+  return Math.max(0, life - least);
+}
+
+/** Genie (4): no Damage from an Opponent's attack at you - the Surge offered on its card, a quarter of the Surgency. Once a Round. */
+function genieOffer(message, target, attacker) {
+  if ((target?.system?.effects?.slots?.["genie.surge"] !== true) || (target.getFlag?.(SCOPE, "genieRound") === roundKey())) return;
+  if (alliesOnScene(target).some(ally => ally.uuid === attacker.uuid)) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.genieSurge && (offer.actorUuid === target.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "", maneuverName: "Surge",
+    reason: "Genie - no Damage taken; a quarter of your Surgency", genieSurge: true } });
+}
+
+/** Genie (4)'s Surge taken: the Surge Maneuver out of sequence, 1/4 of the Surgency (rounded up). */
+async function takeGenieSurge(message, actor) {
+  if (actor.getFlag?.(SCOPE, "genieRound") === roundKey()) {
+    ui.notifications.warn("Genie: already used this Combat Round.");
+    return null;
+  }
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "surge"));
+  const surge = own ? (await import("./use-maneuver.mjs")).definitionOf(own) : getManeuver("surge");
+  const { useManeuver } = await import("./use-maneuver.mjs");
+  const used = surge ? await useManeuver(actor, { ...surge, surgencyShare: 0.25 }, { outOfSequence: true }) : null;
+  if (!used) return null;
+  await actor.setFlag(SCOPE, "genieRound", roundKey());
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return used;
+}
+
+/**
+ * Fairy (5), (6): a Skill Clash - its Dice Score 2; a Clash of your Saving Throws - 1(T). What it would add, its box offered - or 0,
+ * each once a Round.
+ */
+function fairyClashOpen(actor, clash) {
+  const category = clash?.category ?? "skill";
+  const slots = actor?.system?.effects?.slots ?? {};
+  if ((category === "skill") && (slots["fairy.skill"] === true) && (actor.getFlag?.(SCOPE, "fairySkillRound") !== roundKey())) return "2";
+  if ((category === "save") && (slots["fairy.save"] === true) && (actor.getFlag?.(SCOPE, "fairySaveRound") !== roundKey())) return "1(T)";
+  return 0;
+}
+
+/** Fairy (5), (6)'s, on the side that took it. */
+function fairyClashBonus(actor, clash, uuid) {
+  if (!(clash?.fairyBy ?? []).includes(uuid)) return [];
+  const save = (clash.category === "save");
+  return [{ label: "Fairy", written: save ? "+1(T)" : "+2", value: save ? Math.max(1, Number(actor.system.tierOfPower) || 1) : 2 }];
+}
+
 /**
  * Bio-Berserker (6): an Opponent's Movement begun outside your Field of Aggression - the Exploit at them, offered on its card; whether
  * they ended inside it, the map's.
@@ -24412,6 +24494,7 @@ async function takeOutOfSequence(message, actor, offer) {
     return used;
   }
   if (offer.bagOfTricks) return takeBagOfTricks(message, actor);
+  if (offer.genieSurge) return takeGenieSurge(message, actor);
   if (offer.frequentFlyer) return takeFrequentFlyer(message, actor);
   if (offer.ownOutOfSequence) return ownOutOfSequence(actor, offer.ownOutOfSequence);
   // Wild Counter's, once a Round.
@@ -29493,8 +29576,8 @@ async function rollAttackWoundWork(message, attack) {
   // Armor Plating (3): "reduce the Damage Category of that Attacking Maneuver by 1 Category" - its button taken.
   const raisedFor = targets.map(entry => {
     const steps = raised + vulnerable(entry) - ((attack.armorPlated ?? []).includes(entry.uuid) ? 1 : 0);
-    return (steps && entry.own?.hit)
-      ? { ...entry, own: { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, steps) } } : entry;
+    return ghostCategory((steps && entry.own?.hit)
+      ? { ...entry, own: { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, steps) } } : entry, attack);
   });
   // Iron Guard (2): readied this Round - the first attack to hit them, its Damage Category a step down and Soak 2(T).
   const reached = [];
@@ -29773,7 +29856,9 @@ async function rollAttackWoundWork(message, attack) {
     const ghostly = previous?.incorporealNone ? true : await incorporealAnswer(target, wound, unresisted);
     // Light Consumption (2): its Might Clash won - "you take no Damage from that Attacking Maneuver".
     const consumed = (attack.consumed ?? []).includes(target.uuid);
-    const damage = (ghostly || consumed) ? 0 : (resistedBy ? Math.floor(unresisted / 2) : unresisted);
+    const dealtDamage = (ghostly || consumed) ? 0 : (resistedBy ? Math.floor(unresisted / 2) : unresisted);
+    // Goblin (3): Injured or worse - the Life Points their least instead, asked.
+    const damage = previous?.goblinDrop ? dealtDamage : await goblinDrop(target, dealtDamage);
 
     await maybeShakeAttacker(attacker, attack, defence, damage, target);
 
@@ -32632,6 +32717,8 @@ async function applyAttackDamage(message, target, attack) {
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)) {
     await cerealianBroken(armsUser, target);
   }
+  // Genie (4): "If you receive no Damage from an Opponent's Attacking Maneuver that targeted you due to any means" - the Surge offered.
+  if ((damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) genieOffer(message, target, armsUser);
   // Heart of Evil (3): an Opponent knocked through - the Might Clash, asked.
   if (knockedFor && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) await heartOfEvilKnock(armsUser, target);
   // Mimicry of Bestial Hunger (2), Resilience (2), Rending Claws (3).
@@ -33900,7 +33987,7 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
  * whatever triggered it.
  */
 export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0, lifeMultiplier = 1,
-                                          extraDie = 0, viaManeuver = "" } = {}) {
+                                          extraDie = 0, viaManeuver = "", surgencyShare = 1 } = {}) {
   // An effect that names a Surge is not offering a choice between the two: "use a Ki
   // Surge as an Instant Maneuver" is one Surge, and asking which would be wrong.
   const kind = forced ?? await foundry.applications.api.DialogV2.wait({
@@ -33922,8 +34009,16 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   // Surgency adds the Force Modifier to the Life and Ki regained - but not to the
   // Capacity, which the rule does not mention.
   let surgency = actor.system.surgency;
+  // Genie (4): a share of it, rounded up.
+  if (surgencyShare !== 1) surgency = Math.ceil((Number(surgency) || 0) * surgencyShare);
 
   if (kind === "healing") {
+    // Goblin (3): its Life Points put to their least instead of an attack's Damage - Unrelenting (3)'s Healing Surge, Defeated, its
+    // Surgency doubled; spent by it.
+    if (actor.getFlag?.(SCOPE, "goblinSurge") && actor.system.defeated) {
+      await actor.unsetFlag(SCOPE, "goblinSurge");
+      surgency *= 2;
+    }
     // Regenerating Beast (2): "you cannot use another Healing Surge for the duration of this Combat Round".
     if (game.combat?.started && (actor.getFlag?.(SCOPE, "regenerateLockRound") === roundKey())) {
       ui.notifications.warn(`${actor.name}: no other Healing Surge this Combat Round (Regenerating Beast).`);
