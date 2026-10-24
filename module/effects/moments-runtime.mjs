@@ -1071,6 +1071,11 @@ async function recordUses(actor, spent, definition, context, disarmed = spent) {
 /** What a verb answers when the player chose nothing, so its use is not counted (runPass). */
 export const UNSPENT = "unspent";
 
+/** A verb run by name from outside a script - Alternative Warrior Race (4)'s `gainOneOf`, on an attack's card. */
+export function runVerbNamed(actor, verb, args = [], context = {}) {
+  return runVerb(actor, { verb, args }, context);
+}
+
 /** Whether the block that was used calls one of these verbs. */
 function callsAny(entries, use, verbs) {
   const block = entries.find(entry => entry.sourceId === use.sourceId)?.program?.blocks

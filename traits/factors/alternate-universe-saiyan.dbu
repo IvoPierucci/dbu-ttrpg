@@ -1,0 +1,8 @@
+id: alternate-universe-saiyan
+name: Alternate Universe Saiyan
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Saiyan
+maximumFactor: 1
+prerequisites: Tailless option selected for Saiyan Heritage
+description: >
+  In your universe, the saiyan race evolved differently, losing their tails altogether. Though your kind aren't as bulky as the saiyans of other universes, you make up the difference with the agility of your lithe, sleek form.

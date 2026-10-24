@@ -17836,6 +17836,68 @@ function angelicButtons(message, container, attack) {
   return waiting.length > 0;
 }
 
+/**
+ * Alternative Warrior Race (4) open to the one hit: "an Attacking Maneuver that does not possess a Ki Wager that exceeds 1/2 of the
+ * attacker's Max Capacity or 3+ Energy Charges" - "only ... if you are below the Bruised Health Threshold", once an Encounter.
+ */
+function altWarriorOpen(target, attacker, attack) {
+  if (!target || !attacker || (target.uuid === attacker.uuid) || target.system?.defeated) return false;
+  if (target.system?.effects?.slots?.["altWarrior.escape"] !== true) return false;
+  if (!["bruised", "injured", "critical"].includes(target.system?.threshold?.key ?? "healthy")) return false;
+  if (target.getFlag?.(SCOPE, "altWarriorEncounter") === (game.combat?.id ?? "none")) return false;
+  if (alliesOnScene(target).some(ally => ally.uuid === attacker.uuid)) return false;
+  const wagered = Number(attack?.kiWager) || 0;
+  return !((wagered > ((Number(attacker.system?.capacity?.max) || 0) / 2)) || ((Number(attack?.energyCharges) || 0) >= 3));
+}
+
+/**
+ * Alternative Warrior Race (4), taken: "gain a stack of Battle Born, and then you may roll your Strike Roll or Dodge Roll (you
+ * decide). If the Dice Score of this roll exceeds the Dice Score made by the attacking Character, you are not hit" - their Strike as
+ * it stood against them.
+ */
+async function altWarriorRoll(message, target, kind) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const branch = attack?.result?.targets?.find(entry => entry.uuid === target.uuid);
+  if (!branch || (branch.altWarrior !== "offered")) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.altWarriorEncounter`]: game.combat?.id ?? "none" });
+  const { runVerbNamed } = await import("./effects/moments-runtime.mjs");
+  await runVerbNamed(target, "gainOneOf", ["battlebornstrike", "battleborndodge", "battlebornwound"]);
+  const parts = (kind === "strike")
+    ? [{ label: "Strike", value: target.system.combat.strike, workingsKey: "strike" }, ...musclePenalty(target), ...thresholdPenalty(target)]
+    : DEFENCES.dodge.parts(target, attack);
+  const answer = await rollSide(target, parts, { extraDice: target.system.dice.extra.formula,
+    criticalDice: target.system.dice.critical.formula, combatRoll: true, slot: kind, urgent: Boolean(attack.urgentRolls) });
+  const hit = !(answer && (answer.total > (Number(branch.against) || 0)));
+  await rewriteBranch(message, target.uuid, () => ({ ...(hit ? {} : { answer }), hit, altWarrior: "done" }));
+  if (!hit && (kind === "dodge")) await answerFor(target, "dodged-attack");
+}
+
+/** Alternative Warrior Race (4)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
+function altWarriorButtons(message, container, attack) {
+  const waiting = (attack.result?.targets ?? []).filter(branch => branch.altWarrior === "offered");
+  for (const branch of waiting) {
+    const target = fromUuidSync(branch.uuid);
+    if (!target?.isOwner) continue;
+    const tooltip = `Once an Encounter: a stack of Battle Born, then beat a Strike of ${Number(branch.against) || 0}`;
+    for (const [label, tip, act] of [
+      [`Alternative Warrior Race: Strike - ${target.name}`, tooltip, () => altWarriorRoll(message, target, "strike")],
+      [`Alternative Warrior Race: Dodge - ${target.name}`, tooltip, () => altWarriorRoll(message, target, "dodge")],
+      [`Take the hit - ${target.name}`, "", () => rewriteBranch(message, target.uuid, () => ({ altWarrior: "declined" }))]]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = label;
+      if (tip) button.dataset.tooltip = tip;
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        return act();
+      });
+      container.append(button);
+    }
+  }
+  return waiting.length > 0;
+}
+
 /** Disarming Demeanor (2)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
 function disarmingButtons(message, container, attack) {
   const waiting = (attack.result?.targets ?? []).filter(branch => DISARMING_WAITS.includes(branch.disarming));
@@ -28164,6 +28226,8 @@ async function resolveAttackWork(message, attack) {
       disarming: (hit && !automatic && disarmingOpen(target, attacker)) ? "offered" : null,
       // Angelic Defense (2): hit through a Dodge, and the Dodge again is theirs to take - the Wound Roll waits on it.
       angelic: (hit && !automatic && (defense === "dodge") && answer && angelicOpen(target, attacker)) ? "offered" : null,
+      // Alternative Warrior Race (4): hit, and the roll is theirs to make - the Wound Roll waits on it.
+      altWarrior: (hit && !automatic && altWarriorOpen(target, attacker, attack)) ? "offered" : null,
       applied: false
     });
   }
@@ -35616,6 +35680,8 @@ function renderAttack(message, html) {
   if (!result.wound && disarmingButtons(message, container, attack)) return;
   // Angelic Defense (2): the same, for a Dodge made again.
   if (!result.wound && angelicButtons(message, container, attack)) return;
+  // Alternative Warrior Race (4): the same, for its Strike or Dodge Roll.
+  if (!result.wound && altWarriorButtons(message, container, attack)) return;
 
   // Whoever owes the Wound Roll, which is the attacker on everything but a reflected
   // attack - there it is the Character whose attack was thrown back, and the button

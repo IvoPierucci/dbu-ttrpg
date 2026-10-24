@@ -1,0 +1,34 @@
+id: alternative-warrior-race
+name: Alternative Warrior Race
+order: 1
+category: body
+# "[Powerful Physique]": it replaces that Secondary Racial Trait - which, the table's.
+importance: secondary
+description: >
+  Lithe, slender, and optimized for speed, nothing keeps you from finishing off your target.
+text: >
+  Alternative Warrior Race (Body) [Powerful Physique]: Lithe, slender, and optimized for speed, nothing keeps you from finishing off your target.
+  (1)-[Passive]: While you possess 4+ stacks of Battle Born, increase your Stress Bonus by 1.
+  (2)-[Passive]: While you possess 6+ stacks of Battle Born, increase your Strike and Dodge Rolls by 1(T).
+  (3)-[Passive]: While you possess 2+ stacks of Power, increase your Tier of Power Extra Dice by 1 Dice Category (min. 1d4).
+  (4)-[Triggered, 1/Encounter]: If you are hit by an Attacking Maneuver that does not possess a Ki Wager that exceeds 1/2 of the attacker’s Max Capacity or 3+ Energy Charges, gain a stack of Battle Born, and then you may roll your Strike Roll or Dodge Roll (you decide). If the Dice Score of this roll exceeds the Dice Score made by the attacking Character, you are not hit by that Attacking Maneuver. You can only use this effect if you are below the Bruised Health Threshold.
+
+---
+
+[passive]
+# (1), (2) Battle Born's three together, as Primitive Durability's.
+if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    stressBonus += 1;
+}
+if (stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    strike += 1(T);
+    dodge += 1(T);
+}
+# (3) Under the ceiling every Dice Category raise is held to - at Tier 1, none to a d4.
+if (stacksAtLeast(2, "power")) {
+    dice.extra.category += 1;
+}
+# (4) Hit, Bruised or worse, by an attack not wagered past half its maker's Max Capacity nor of 3+ Energy Charges: on its card before
+# the Wound, once an Encounter - a stack of Battle Born, put where you say, then a Strike or a Dodge Roll against their Strike
+# (chat.mjs altWarriorButtons).
+allow altWarrior.escape;
