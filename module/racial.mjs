@@ -818,6 +818,9 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   await automateAll(actor, item);
   // A Special Item it makes - Neko Majin-Dama's: "At Character Creation, create a Majin-Dama Special Accessory, which is
   // Integrated into your Character".
+  // Any other Basic Item, as a Talent's are - at `grantsGearDC`, Integrated with `grantsGearIntegrated` (Onboard Computer's Scouter).
+  const otherGear = listOf(trait.grantsGear).filter(id => id !== "majin-dama");
+  if (otherGear.length) await (await import("./talents.mjs")).grantTalentGear(actor, item, { ...trait, grantsGear: otherGear.join(",") });
   for (const gearId of listOf(trait.grantsGear)) {
     const { MAJIN_DAMA, damaItemData } = await import("./majin-dama.mjs");
     if (gearId !== MAJIN_DAMA) continue;

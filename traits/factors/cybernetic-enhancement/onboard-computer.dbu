@@ -1,0 +1,30 @@
+id: onboard-computer
+name: Onboard Computer
+order: 9
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1) "Integrate a Scouter with a Craft DC of Master."
+grantsGear: scouter
+grantsGearDC: master
+grantsGearIntegrated: yes
+description: >
+  You have the ability to track targets with the computer built into your augments.
+text: >
+  Onboard Computer (Body): You have the ability to track targets with the computer built into your augments.
+  (1)-[Passive]: Integrate a Scouter with a Craft DC of Master.
+  (2)-[Passive]: Increase the Dice Score of your Perception and Clairvoyance Skill Checks by 2.
+  (3)-[Triggered/Start of Combat Round]: Target an Opponent. Increase either your Strike or Dodge Rolls against them by 2(T) for the duration of this Combat Round.
+
+---
+
+# (1) Its headers: the Scouter made as it is gained - Master, Integrated - on the Gear tab, gone with it.
+[passive]
+# (2)
+skill.perception += 2;
+skill.clairvoyance += 2;
+
+# (3) Which Opponent, and the Strike or the Dodge, asked as the Round begins (chat.mjs onboardFocus). Automatic by default, its
+# Triggered/Automatic button - asked either way.
+[triggered/start-of-round, effect 3]
+onboardFocus();

@@ -385,6 +385,17 @@ async function beginTurn(actor) {
   if (!actor.system.defeated) await (await import("./desperation.mjs")).itsUpToYou(actor);
   // Burrowing Beast (6): "[Automatic/Start of Turn]: You stop being Underground" - the Cover as it was.
   await (await import("./chat.mjs")).leaveUnderground(actor);
+  // Nanomachine Repair (2): "When the Initiative Order comes to your next turn, regain Life Points equal to the Ki Points lost and stop
+  // being Defeated" - before the turn is judged skipped.
+  const nano = actor.getFlag?.("dbu-ttrpg", "nanoRevive");
+  if (nano) {
+    await actor.unsetFlag("dbu-ttrpg", "nanoRevive");
+    const { value, min, max } = actor.system.life;
+    if (actor.system.defeated) {
+      await actor.update({ "system.life.value": Math.min(Number(max) || 0, Math.max(Number(value) || 0, Number(min) || 0) + (Number(nano.amount) || 0)) },
+        { dbuForceUp: true });
+    }
+  }
   // Wild Child (4), (5): the Pseudo-Bestial Traits' access "until the start of your next turn" - this one.
   if (actor.getFlag?.("dbu-ttrpg", "pseudoAccess")) await actor.unsetFlag("dbu-ttrpg", "pseudoAccess");
   // Kindhearted Saiyan (2): "until the start of your next turn" - this one.

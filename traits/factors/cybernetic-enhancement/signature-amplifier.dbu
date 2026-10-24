@@ -1,0 +1,23 @@
+id: signature-amplifier
+name: Signature Amplifier
+order: 12
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Your attacks are imbued with extra force thanks to your machine upgrades.
+text: >
+  Signature Amplifier (Body): Your attacks are imbued with extra force thanks to your machine upgrades.
+  (1)-[Passive]: Reduce the Ki Point Cost of all of your Signature Techniques by 2(T).
+  (2)-[Passive]: All of your Ultimate Signature Techniques of the Physical or Energy Foundation gain a rank of Power Shot.
+  (3)-[Triggered, 1/Round]: If you use the Signature Technique Maneuver to use an Attacking Maneuver of the Physical or Energy Foundation, you may apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+signature.kiCost -= 2(T);
+# (2) A rank of Power Shot on the attack, as an Ultimate of the Physical or Energy Foundation is declared (use-maneuver.mjs).
+allow amplifier.powerShot;
+# (3) Asked as one of the Physical or Energy Foundation is declared, once a Round - an Energy Charge on it (use-maneuver.mjs).
+allow amplifier.charge;

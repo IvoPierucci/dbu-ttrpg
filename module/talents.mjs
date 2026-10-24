@@ -98,7 +98,7 @@ export async function syncProgressionTalents(actor) {
  * A Talent's `grantsGear`: the Basic Items it gives as it is gained - at `grantsGearDC`, where the Item's Craft DC is a choice, and
  * Integrated with `grantsGearIntegrated` (Active where there is room) - each marked as given by it.
  */
-async function grantTalentGear(actor, item, file) {
+export async function grantTalentGear(actor, item, file) {
   const ids = String(file?.grantsGear ?? "").split(",").map(id => id.trim()).filter(Boolean);
   if (!ids.length) return;
   const { gearItemFrom, atCraftDC } = await import("./gear.mjs");

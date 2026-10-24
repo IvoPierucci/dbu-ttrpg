@@ -1,0 +1,24 @@
+id: rocket-sleeves
+name: Rocket Sleeves
+order: 11
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  You have the ability to move faster, farther, and more nimbly while expending less energy.
+text: >
+  Rocket Sleeves (Body): You have the ability to move faster, farther, and more nimbly while expending less energy.
+  (1)-[Passive]: When using the Movement Maneuver, you may move up to your Boosted Speed without increasing the KP Cost of the Maneuver.
+  (2)-[Passive]: Increase your Boosted Speed by 2(T).
+  (3)-[Triggered, 1/Round]: If you use the Movement Maneuver to move a number of Squares up to your Boosted Speed, increase your Wound Rolls by 3(T) until the end of your turn and increase your Dodge Rolls by 1(T) until the start of your next turn.
+
+---
+
+[passive]
+# (1) The Boosted Speed at the Normal Speed's price.
+movement.boostedKiCost = 0;
+# (2)
+speed.boosted += 2(T);
+# (3) The Movement at your Boosted Speed: asked, once a Round - Wound 3(T) till your turn ends, Dodge 1(T) till your next begins
+# (use-maneuver.mjs; rocket-wound-mark, rocket-dodge-mark).
+allow rocket.boost;

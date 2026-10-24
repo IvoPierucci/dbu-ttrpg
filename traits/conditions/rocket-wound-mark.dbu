@@ -1,0 +1,16 @@
+id: rocket-wound-mark
+name: Rocket Sleeves
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Rocket Sleeves's mark.
+combatCondition: no
+source: Core Rule
+description: >
+  Rocket Sleeves: Wound 3(T) till the end of your turn.
+text: >
+  Rocket Sleeves (3): Increase your Wound Rolls by 3(T) until the end of your turn.
+
+---
+
+[passive]
+wound += 3(T);

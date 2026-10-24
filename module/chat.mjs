@@ -20245,6 +20245,89 @@ export async function goldenFruitPower(actor) {
   return enterState(actor, godKi ? "superior" : "god-ki", 1, "next-turn", "Golden Fruit");
 }
 
+/** Synthetic Muscle (2), (3): the Greater Dice on a Physical or Energy attack's Wound - and again, where (3) was paid for. */
+function syntheticDice(attacker, attack) {
+  if ((attacker?.system?.effects?.slots?.["synthetic.greaterDice"] !== true) || !["physical", "energy"].includes(attack?.foundation)) return [];
+  const formula = attacker.system.dice?.greater?.formula ?? "";
+  if (!formula) return [];
+  return [{ label: "Synthetic Muscle", formula }, ...(attack.syntheticAgain ? [{ label: "Synthetic Muscle (again)", formula }] : [])];
+}
+
+/** Synthetic Muscle (3): "If you hit an Opponent ... you may spend 2(bT) Ki Points to apply your Greater Dice ... an additional time" - once a Round. */
+function syntheticButtons(message, attack, container) {
+  if (!attack.result || attack.result.wound || attack.syntheticAgain || !["physical", "energy"].includes(attack.foundation)) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker?.isOwner || (attacker.system?.effects?.slots?.["synthetic.again"] !== true) || !attacker.system.dice?.greater?.formula) return;
+  if (attacker.getFlag?.(SCOPE, "syntheticRound") === roundKey()) return;
+  const allies = alliesOnScene(attacker).map(ally => ally.uuid);
+  if (!targetResults(attack).some(entry => entry.own?.hit && (entry.uuid !== attacker.uuid) && !allies.includes(entry.uuid))) return;
+  const cost = 2 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  cardButton(container, `Synthetic Muscle - ${cost} Ki`, "Once a Round: your Greater Dice on this Wound Roll again.", async () => {
+    if (attacker.getFlag?.(SCOPE, "syntheticRound") === roundKey()) return;
+    const { spendManeuverCost } = await import("./maneuvers.mjs");
+    if (!await spendManeuverCost(attacker, { name: "Synthetic Muscle" }, cost)) return;
+    await attacker.setFlag(SCOPE, "syntheticRound", roundKey());
+    const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+    requestEdit(message, { type: "attack", attack: { ...fresh, syntheticAgain: true } });
+  });
+}
+
+/** Metallic Exoskeleton (2): the Direct Hit or the Guard used - "you may increase your Soak Value ... by your Metal Exoskeleton's Apparel Bonus". */
+async function exoskeletonSoak(target, own) {
+  if (!["directHit", "guard"].includes(own?.defense) || (target?.system?.effects?.slots?.["exoskeleton.soak"] !== true)) return 0;
+  if (target.getFlag?.(SCOPE, "exoskeletonRound") === roundKey()) return 0;
+  const bonus = Number(target.system.naturalArmor?.apparelBonus) || 0;
+  if (!bonus) return 0;
+  if ((await askPlayerChoice(target, `${target.name}: Metallic Exoskeleton`,
+    [{ value: "yes", label: `Soak Value ${bonus} higher for this attack (once a Round)` }, { value: "no", label: "No" }])) !== "yes") return 0;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.exoskeletonRound`]: roundKey() });
+  return bonus;
+}
+
+/** Onboard Computer (3): this Round's Opponent - the Strike at them, or the Dodge against them, 2(T). */
+function onboardParts(actor, otherUuid, roll) {
+  const focus = actor?.getFlag?.(SCOPE, "onboardFocus");
+  if (!focus || !roll || !otherUuid || (focus.uuid !== otherUuid) || (focus.round !== roundKey()) || (focus.kind !== roll)) return [];
+  return [{ label: `Onboard Computer (${focus.name})`, written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
+/** Onboard Computer (3): "Target an Opponent. Increase either your Strike or Dodge Rolls against them by 2(T) for the duration of this Combat Round." */
+export async function onboardFocus(actor) {
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
+    && !allies.has(token.actor.uuid) && !token.actor.system?.defeated).map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Onboard Computer - an Opponent this Round`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const who = opponents.find(each => each.uuid === picked);
+  if (!who) return;
+  const kind = await askPlayerChoice(actor, `${actor.name}: Onboard Computer - ${who.name}`,
+    [{ value: "strike", label: "Your Strike Rolls at them 2(T)" }, { value: "dodge", label: "Your Dodge Rolls against them 2(T)" }]);
+  if (!["strike", "dodge"].includes(kind)) return;
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.onboardFocus`]: { uuid: who.uuid, name: who.name, round: roundKey(), kind } });
+}
+
+/** Nanomachine Repair (2): "Halve your Ki Points" - what is lost kept, for the Life Points your next turn brings back (combat.mjs). */
+export async function nanomachineDefeat(actor) {
+  const ki = Number(actor.system.ki?.value) || 0;
+  const lost = ki - Math.floor(ki / 2);
+  await actor.update({ "system.ki.value": Math.floor(ki / 2) });
+  await actor.setFlag(SCOPE, "nanoRevive", { amount: lost, combat: game.combat?.id ?? "" });
+  ui.notifications.info(`${actor.name}: Nanomachine Repair - ${lost} Ki Points lost; up again with ${lost} Life Points as the next turn comes.`);
+}
+
+/** Mental Supercomputer (4): "Use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, gain an additional Power stack." */
+export async function supercomputerPowerUp(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "power-up"));
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  if (!await useManeuver(actor, own ? definitionOf(own) : getManeuver("power-up"), { outOfSequence: true })) return UNSPENT;
+  const { resourceCeiling, resourceDefinitions } = await import("./effects/traits.mjs");
+  const most = Number(resourceCeiling(resourceDefinitions().power, actor)) || Infinity;
+  const held = Number(actor.system.resources?.power?.stacks) || 0;
+  if (held < most) await setResource(actor, "power", held + 1);
+}
+
 /** Armor Plating (3): "If you are hit by an Attacking Maneuver, reduce the Damage Category of that Attacking Maneuver by 1 Category" - once a Round. */
 function platedButtons(message, attack, container) {
   if (!attack.result || attack.result.wound) return;
@@ -23380,8 +23463,9 @@ export async function askInferior(actor) {
 
 /** Tuffle Superiority (2), (3): Strike and Wound 1(T) against your Inferior this Round - the Wound 1(T) more without Energy of Revenge. */
 function inferiorParts(attacker, target, roll) {
-  // And Namekian-Raised (4)'s - one Opponent chosen this Round, 1(T) at them.
-  return [...superiorityParts(attacker, target, roll), ...namekianFocusParts(attacker, target?.uuid)];
+  // And Namekian-Raised (4)'s - one Opponent chosen this Round, 1(T) at them. Onboard Computer (3)'s Strike.
+  return [...superiorityParts(attacker, target, roll), ...namekianFocusParts(attacker, target?.uuid),
+    ...onboardParts(attacker, target?.uuid, (roll === "strike") ? "strike" : "")];
 }
 
 function superiorityParts(attacker, target, roll) {
@@ -23398,7 +23482,9 @@ function superiorityParts(attacker, target, roll) {
 /** Tuffle Superiority (2): your Dodge against your Inferior's attack, 1(T). */
 function inferiorDodge(actor, attack) {
   // And Namekian-Raised (4)'s - against the one chosen this Round.
-  return [...superiorityDodge(actor, attack), ...namekianFocusParts(actor, attack?.attackerUuid)];
+  return [...superiorityDodge(actor, attack), ...namekianFocusParts(actor, attack?.attackerUuid),
+    // Onboard Computer (3)'s Dodge.
+    ...onboardParts(actor, attack?.attackerUuid, "dodge")];
 }
 
 function superiorityDodge(actor, attack) {
@@ -28581,6 +28667,8 @@ function woundDice(attacker, attack) {
   return [
     // Neo-Tuffle-Raised (3)'s Greater Dice.
     ...neoGreaterDice(attacker, attack),
+    // Synthetic Muscle (2)'s, and (3)'s again.
+    ...syntheticDice(attacker, attack),
     { label: "Extra dice", formula: attacker.system.dice.extra.formula },
     { label: "Energy charges", formula: energyChargeDice(attacker, attack) },
     ...phantomEdgeDice(attacker, attack),
@@ -29322,7 +29410,9 @@ async function rollAttackWoundWork(message, attack) {
 
     // Only what the Damage Category leaves of the Soak Value counts, and the defence
     // adjusts what survives that.
-    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0) + (Number(own.ironSoak) || 0)
+    // Metallic Exoskeleton (2): the Direct Hit or the Guard - its Apparel Bonus "before any calculations", asked.
+    const exoSoak = await exoskeletonSoak(target, own);
+    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0) + (Number(own.ironSoak) || 0) + exoSoak
       // Refined Combat (1) against one Studied, and Defender's half Surgency for this attack.
       + refinedParts(target, attacker).reduce((sum, part) => sum + part.value, 0) + (Number(own.refinedSoak) || 0)
       // Draconic Physique (2): an Impaired Opponent's attack.
@@ -34463,6 +34553,7 @@ function renderAttack(message, html) {
   if (!result?.wound) giantButtons(message, attack, container);
   if (!result?.wound) tremendousLordButtons(message, attack, container);
   if (!result?.wound) platedButtons(message, attack, container);
+  if (!result?.wound) syntheticButtons(message, attack, container);
   if (!result) speedsterButtons(message, attack, container);
   // Dissipating Dodge (2): targeted - Ki for the Defense Value at Nano, before it is settled.
   if (!result) dissipatingButtons(message, attack, container);

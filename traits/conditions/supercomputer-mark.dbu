@@ -1,0 +1,17 @@
+id: supercomputer-mark
+name: Mental Supercomputer
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Mental Supercomputer's mark.
+combatCondition: no
+source: Core Rule
+description: >
+  Mental Supercomputer: Strike 1(T) and Wound 2(T) till the end of your turn.
+text: >
+  Mental Supercomputer (2): When you use the Analysis or Hype Maneuver, increase your Strike and Wound Rolls by 1(T) and 2(T) respectively until the end of your turn.
+
+---
+
+[passive]
+strike += 1(T);
+wound += 2(T);

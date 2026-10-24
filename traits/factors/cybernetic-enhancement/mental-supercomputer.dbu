@@ -1,0 +1,39 @@
+id: mental-supercomputer
+name: Mental Supercomputer
+order: 6
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Your inbuilt hardware is capable of running calculations at speeds well above and beyond your natural capabilities.
+text: >
+  Mental Supercomputer (Body): Your inbuilt hardware is capable of running calculations at speeds well above and beyond your natural capabilities.
+  (1)-[Passive]: Increase your Scholarship and Personality Modifiers by 1(T) while you have 2+ stacks of Power.
+  (2)-[Triggered, 1/Round]: When you use the Analysis or Hype Maneuver, increase your Strike and Wound Rolls by 1(T) and 2(T) respectively until the end of your turn.
+  (3)-[Triggered, 1/Round]: When you use the Command Maneuver, each targeted Minion has their Combat Rolls increased by 1(T) for the duration of their turn.
+  (4)-[Triggered/Start of Turn, 1/Encounter]: Use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, gain an additional Power stack from this use of the Power Up Maneuver.
+
+---
+
+[passive]
+# (1)
+if (stacksAtLeast(2, "power")) {
+    scholarship.mod += 1(T);
+    personality.mod += 1(T);
+}
+# (3) Waits on Minions - the Command Maneuver - not built yet: the table's.
+
+# (2) The Analysis or the Hype: its mark till your turn ends. Automatic by default, its Triggered/Automatic button.
+[triggered/analysis, 1/round, effect 2]
+requires !hasCondition("supercomputer-mark");
+gain(supercomputer-mark);
+expires(supercomputer-mark, turn);
+
+[triggered/hype, 1/round, effect 2]
+requires !hasCondition("supercomputer-mark");
+gain(supercomputer-mark);
+expires(supercomputer-mark, turn);
+
+# (4) Ticked on your turn's card - out of sequence, never Automatic: the Power Up, and a Power stack more (chat.mjs supercomputerPowerUp).
+[triggered/start-of-turn, 1/encounter, outOfSequence, effect 4]
+supercomputerPowerUp();

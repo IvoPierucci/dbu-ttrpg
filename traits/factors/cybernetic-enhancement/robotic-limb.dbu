@@ -1,0 +1,21 @@
+id: robotic-limb
+name: Robotic Limb
+order: 10
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  An extra limb has been added to your body beyond that of your original anatomy, and you have the ability to use it in battle.
+text: >
+  Robotic Limb (Body): An extra limb has been added to your body beyond that of your original anatomy, and you have the ability to use it in battle.
+  (1)-[Passive]: Increase your Strike Rolls when using the Parry effect of the Defend Maneuver by 1(T).
+  (2)-[Passive]: Increase your Wound Rolls for Attacking Maneuvers of the Physical Foundation by 1(T).
+  (3)-[Passive]: Gain access to the Tail Attack Maneuver.
+
+---
+
+[passive]
+# (1), (2), (3)
+parry += 1(T);
+wound.physical += 1(T);
+allow maneuver.tail-attack;

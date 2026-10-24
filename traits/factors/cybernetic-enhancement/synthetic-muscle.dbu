@@ -1,0 +1,24 @@
+id: synthetic-muscle
+name: Synthetic Muscle
+order: 13
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Replacing your organic muscles with artificial ones, you’ve enhanced your strength significantly.
+text: >
+  Synthetic Muscle (Body): Replacing your organic muscles with artificial ones, you’ve enhanced your strength significantly.
+  (1)-[Passive]: You cannot possess any number of Super Stacks.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T) and apply your Greater Dice to the Wound Rolls of your Attacking Maneuvers of the Physical or Energy Foundation.
+  (3)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver of the Physical or Energy Foundation, you may spend 2(bT) Ki Points to apply your Greater Dice to the Wound Roll of that Attacking Maneuver an additional time.
+
+---
+
+[passive]
+# (1) Read where the Super Stacks are counted (actor-character.mjs).
+allow synthetic.noSuperStacks;
+# (2) The Greater Dice on a Physical or Energy attack's Wound (chat.mjs syntheticDice).
+damageReduction += 1(T);
+allow synthetic.greaterDice;
+# (3) Hit: a button on the attack's card before its Wound Roll, once a Round - 2(bT) Ki, the Greater Dice again (chat.mjs syntheticButtons).
+allow synthetic.again;

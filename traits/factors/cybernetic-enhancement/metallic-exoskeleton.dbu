@@ -1,0 +1,22 @@
+id: metallic-exoskeleton
+name: Metallic Exoskeleton
+order: 7
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1) Natural Armor, named so.
+naturalArmor: Metal Exoskeleton
+description: >
+  You have covered your body in a protective metal skin, ensuring your internal organs are safe from external damage.
+text: >
+  Metallic Exoskeleton (Body): You have covered your body in a protective metal skin, ensuring your internal organs are safe from external damage.
+  (1)-[Passive, Ruling]: Upon gaining this Trait, gain a ‘Metal Exoskeleton’ while you possess this Trait. Your Metal Exoskeleton is Natural Armor (see — Natural Armor).
+  (2)-[Triggered, 1/Round]: If you use the Direct Hit or Guard options of the Defend Maneuver, you may increase your Soak Value (before any calculations) by your Metal Exoskeleton’s Apparel Bonus for the duration of that Maneuver.
+
+---
+
+# (1) Its header's `naturalArmor`: the Metal Exoskeleton made as it is gained, gone with it (natural-armor.mjs).
+[passive]
+# (2) The Direct Hit or the Guard: asked as its Damage is worked out, once a Round - the Natural Armor's Apparel Bonus on your Soak Value
+# before anything else (chat.mjs exoskeletonSoak).
+allow exoskeleton.soak;

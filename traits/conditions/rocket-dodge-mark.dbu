@@ -1,0 +1,16 @@
+id: rocket-dodge-mark
+name: Rocket Sleeves
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Rocket Sleeves's mark.
+combatCondition: no
+source: Core Rule
+description: >
+  Rocket Sleeves: Dodge 1(T) till the start of your next turn.
+text: >
+  Rocket Sleeves (3): Increase your Dodge Rolls by 1(T) until the start of your next turn.
+
+---
+
+[passive]
+dodge += 1(T);

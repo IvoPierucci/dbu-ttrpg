@@ -403,6 +403,18 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  supercomputerPowerUp: {
+    args: [0, 0],
+    doc: "Mental Supercomputer (4): the Power Up out of sequence, and a Power stack more for it (chat.mjs supercomputerPowerUp)."
+  },
+  nanomachineDefeat: {
+    args: [0, 0],
+    doc: "Nanomachine Repair (2): Ki halved now; at your next turn, as much Life and up again (chat.mjs nanomachineDefeat)."
+  },
+  onboardFocus: {
+    args: [0, 0],
+    doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
+  },
   lingeringPower: {
     args: [0, 0],
     doc: "Lingering Power (5): Combat Rolls 2(bT) by the Past Life's base Tier, till the end of your next turn (chat.mjs lingeringPower)."

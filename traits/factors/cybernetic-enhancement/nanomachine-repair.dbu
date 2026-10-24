@@ -1,0 +1,23 @@
+id: nanomachine-repair
+name: Nanomachine Repair
+order: 8
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  With nanites in your bloodstream constantly working to heal your wounds, you regenerate at an astonishing rate.
+text: >
+  Nanomachine Repair (Body): With nanites in your bloodstream constantly working to heal your wounds, you regenerate at an astonishing rate.
+  (1)-[Triggered/Start of Combat Round]: Regain 3(bT) Life Points. Increase this amount by 1(bT) for every Health Threshold you are below.
+  (2)-[Triggered/Defeated]: Halve your Ki Points. When the Initiative Order comes to your next turn, regain Life Points equal to the Ki Points lost and stop being Defeated.
+
+---
+
+# (1) Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-round, effect 1]
+life.value += 3(bT) + threshold.depth * 1(bT);
+
+# (2) Chosen on the Defeated card: your Ki Points halved now - and, as your next turn comes, as much in Life Points, up again (chat.mjs
+# nanomachineDefeat, combat.mjs).
+[triggered/defeated, effect 2]
+nanomachineDefeat();

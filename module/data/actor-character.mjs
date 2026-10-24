@@ -2366,7 +2366,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     //
     // Worked out here because Solid Bulk is part of the Soak Value just below, and the
     // Force Modifier Massive Power reads is settled by now.
-    const superStacks = Math.max(0,
+    // Synthetic Muscle (1): "You cannot possess any number of Super Stacks."
+    const superStacks = (this.effects?.slots?.["synthetic.noSuperStacks"] === true) ? 0 : Math.max(0,
       this.superStacks + slot(this, "superStacks"));
 
     // "You can possess up to 3 Super Stacks." Applied once, here, so every reader is

@@ -742,6 +742,9 @@ async function runVerb(actor, call, context) {
       await actor.update({ "system.resources": replaceObject(held) });
       return stacksGained(actor, gained);
     }
+    case "supercomputerPowerUp": return (await import("../chat.mjs")).supercomputerPowerUp(actor);
+    case "nanomachineDefeat": return (await import("../chat.mjs")).nanomachineDefeat(actor);
+    case "onboardFocus": return (await import("../chat.mjs")).onboardFocus(actor);
     case "lingeringPower": return (await import("../chat.mjs")).lingeringPower(actor);
     case "goldenFruitPower": return (await import("../chat.mjs")).goldenFruitPower(actor);
     case "raiseTo": {

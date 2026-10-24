@@ -1219,6 +1219,18 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     await actor.setFlag("dbu-ttrpg", "technicianChargeRound", round);
     answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Technician");
   }
+  // Signature Amplifier (2): "All of your Ultimate Signature Techniques of the Physical or Energy Foundation gain a rank of Power Shot";
+  // (3): one of those Foundations - "you may apply an Energy Charge", asked, once a Round.
+  const amplified = ["physical", "energy"].includes(declared.foundation ?? technique.foundation ?? "");
+  if (amplified && (technique.ultimate || technique.ascended) && (actor.system.effects?.slots?.["amplifier.powerShot"] === true)) {
+    answers.advantages = [...(answers.advantages ?? declared.advantages ?? technique.advantages ?? []), "power-shot"];
+  }
+  if (amplified && (actor.system.effects?.slots?.["amplifier.charge"] === true) && (actor.getFlag?.("dbu-ttrpg", "amplifierRound") !== round)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Signature Amplifier` },
+      content: "<p data-tooltip=\"Once a Round\">An Energy Charge on it?</p>", rejectClose: false })) {
+    await actor.setFlag("dbu-ttrpg", "amplifierRound", round);
+    answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Signature Amplifier");
+  }
   // Power Channeler's: its Energy Charge, and its Opponent no longer Studied once the attack is done.
   if (answers.channeler) {
     await actor.setFlag("dbu-ttrpg", "refined_channeler", round);
@@ -6421,6 +6433,20 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await actor.setFlag("dbu-ttrpg", "movedRound", `${game.combat.id}:${game.combat.round ?? 0}`);
     // Speedster (4)'s, spent.
     if (crossing.free) await actor.setFlag("dbu-ttrpg", "speedsterBoostRound", `${game.combat.id}:${game.combat.round ?? 0}`);
+    // Rocket Sleeves (3): "If you use the Movement Maneuver to move a number of Squares up to your Boosted Speed" - asked, once a Round.
+    const rocketRound = `${game.combat.id}:${game.combat.round ?? 0}`;
+    if ((crossing.speed === "boosted") && (actor.system.effects?.slots?.["rocket.boost"] === true)
+      && (actor.getFlag("dbu-ttrpg", "rocketRound") !== rocketRound)
+      && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Rocket Sleeves` },
+        content: "<p data-tooltip=\"Once a Round\">Wound 3(T) till your turn ends, Dodge 1(T) till your next begins?</p>", rejectClose: false })) {
+      await actor.setFlag("dbu-ttrpg", "rocketRound", rocketRound);
+      const { setCondition } = await import("./conditions.mjs");
+      const { expiresAt } = await import("./effects/moments-runtime.mjs");
+      await setCondition(actor, "rocket-wound-mark", 1);
+      await expiresAt(actor, "rocket-wound-mark", "turn");
+      await setCondition(actor, "rocket-dodge-mark", 1);
+      await expiresAt(actor, "rocket-dodge-mark", "start-of-next-turn");
+    }
     // Mimicry of Rending Claws (3): "during a turn in which you moved your Boosted Speed" - this turn.
     if (crossing.speed === "boosted") await actor.setFlag("dbu-ttrpg", "boostedTurn", `${game.combat.id}:${game.combat.round}:${game.combat.turn}`);
   }
