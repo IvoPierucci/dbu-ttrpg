@@ -1,0 +1,18 @@
+id: zooner-raised-mark
+name: Zooner-Raised
+kind: conditions
+maxStacks: 2
+# Not a Combat Condition: Zooner-Raised (3)'s and (4)'s - a stack for each taken on the attack.
+combatCondition: no
+source: Core Rule
+description: >
+  Zooner-Raised: Awareness, Defense Value and Soak Value 1(bT) lower till the start of your next turn.
+text: >
+  Zooner-Raised (3), (4): After concluding that Attacking Maneuver, reduce your Awareness, Defense Value, and Soak Value by 1(bT) until the start of your next turn.
+
+---
+
+[passive per stack]
+awareness -= 1(bT);
+defenseValue -= 1(bT);
+soakValue -= 1(bT);

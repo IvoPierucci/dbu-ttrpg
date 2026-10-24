@@ -1,0 +1,28 @@
+id: yardrat-raised
+name: Yardrat-Raised
+order: 20
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Enlightened by the calm, collected Yardrats, you possess spiritual depth that others of your race cannot fathom.
+text: >
+  Yardrat-Raised (Mind): Enlightened by the calm, collected Yardrats, you possess spiritual depth that others of your race cannot fathom.
+  (1)-[Passive]: At Character Creation, gain a stack of Spirit Control. This stack of Spirit Control does not count towards your Awakening Limit, and you do not gain the Attribute Modifier Bonus from this stack of Spirit Control.
+  (2)-[Passive]: At Character Creation, you may apply the Yardrat Material Special Apparel Quality as if it was a normal Apparel Quality through creating a Gear Kit.
+  (3)-[Passive]: Reduce the TP Cost of all Unique Abilities by 2.
+  (4)-[Passive]: Treat your uses of the Empower Maneuver as if you spent 1 Action more than you actually did for its effects.
+  (5)-[Triggered, 1/Encounter]: If an Ally gains Ki Points through your use of the Empower Maneuver, they may regain Life Points equal to 1/2 of the Ki Points regained.
+
+---
+
+# (1) Waits on Awakenings, not built: the stack of Spirit Control is the table's. (2) Waits on the Yardrat Material Special Apparel
+# Quality's text (Masters of Movement's too): the table's.
+[passive]
+# (3)
+unique.technical.tpCost -= 2;
+unique.magical.tpCost -= 2;
+# (4) An Action more for everything the Empower does - its Ki, and whatever counts its Actions (use-maneuver.mjs transferKi).
+allow yardratRaised.empower;
+# (5) Ki gained through it: half of it as Life Points, asked of the Ally, once an Encounter (use-maneuver.mjs transferKi).
+allow yardratRaised.heal;

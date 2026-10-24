@@ -19618,6 +19618,11 @@ async function attackDurationEnds(attack) {
   if (!attacker?.isOwner) return;
   // Oni-Raised (3): "after completing the Attacking Maneuver, set your Life Points to their lowest possible value".
   if (attack.oniDrained) await attacker.update({ "system.life.value": Number(attacker.system.life?.min) || 0 });
+  // Zooner-Raised (3), (4): "after concluding that Attacking Maneuver, reduce your Awareness, Defense Value, and Soak Value by 1(bT) until
+  // the start of your next turn" - for each taken.
+  if ((Number(attack.zoonerExposed) || 0) > 0) {
+    await markUntilNextTurn(attacker, attacker, "zooner-raised-mark", Number(attack.zoonerExposed), "start", "Zooner-Raised");
+  }
   // Saiyan-Raised (4): Superior "for the duration of this Attacking Maneuver".
   if (attacker.getFlag?.(SCOPE, "saiyanSuperiorAttack")) {
     await attacker.unsetFlag(SCOPE, "saiyanSuperiorAttack");
@@ -24727,7 +24732,7 @@ export async function postAttack(actor, target, maneuver,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
                                    rapidFist = false, angryNatural = 0, profileCritical = false, adamantineHeal = false,
-                                   energyHoming = false },
+                                   energyHoming = false, zoonerExposed = 0 },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -24911,6 +24916,14 @@ export async function postAttack(actor, target, maneuver,
   if (pierceQuarter) await actor.setFlag(SCOPE, "pseudoFangsRound", roundKey());
   // Mimicry of Rending Claws (2): its Diminishing Defense on Attack Declaration.
   const diminishingEarly = !reflecting && (actor.system.effects?.slots?.["pseudoClaws.diminishing"] === true);
+  // Zooner-Raised (3): a Signature Technique made a Called Shot - "you ignore the Strike Roll penalty", asked, once a Round.
+  const zoonerCalled = !reflecting && maneuver.signature && !maneuver.signatureTechnique && isCalledShot({ modifiers })
+    && (actor.system.effects?.slots?.["zoonerRaised.calledShot"] === true) && (actor.getFlag?.(SCOPE, "zoonerCalledRound") !== roundKey())
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Zooner-Raised` },
+      content: "<p data-tooltip=\"Once a Round. Done, your Awareness, Defense Value and Soak Value 1(bT) lower till the start of your next turn.\">No Strike penalty for the Called Shot?</p>",
+      rejectClose: false });
+  if (zoonerCalled) await actor.setFlag(SCOPE, "zoonerCalledRound", roundKey());
+  const zoonerPrice = (reflecting ? 0 : (Number(zoonerExposed) || 0)) + (zoonerCalled ? 1 : 0);
   // Claws (2): your first Physical Attack at the one whose Melee Range you moved into this Round - carried by it; spent either way.
   const clawed = reflecting ? null : actor.getFlag?.(SCOPE, "clawsTarget");
   const clawsAt = (clawed && (clawed.round === roundKey()) && (foundation === "physical") && everyone.some(who => who?.uuid === clawed.uuid))
@@ -25059,6 +25072,9 @@ export async function postAttack(actor, target, maneuver,
           // Mimicry of Penetrating Fangs (2)'s quarter; Mimicry of Rending Claws (2)'s Diminishing Defense on declaration.
           ...(pierceQuarter ? { pierceQuarter: true } : {}),
           ...(diminishingEarly ? { diminishingEarly: true } : {}),
+          // Zooner-Raised (3)'s Called Shot; the price of it and of (4), paid as it is done.
+          ...(zoonerCalled ? { zoonerCalled: true } : {}),
+          ...(zoonerPrice ? { zoonerExposed: zoonerPrice } : {}),
           // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
@@ -26456,8 +26472,8 @@ function modifierCategoryShift(modifiers) {
 function modifierStrikeParts(attacker, attack) {
   const tier = attacker.system.tierOfPower ?? 1;
   const baseTier = attacker.system.baseTierOfPower ?? 1;
-  // Punching Up: "you suffer no penalties from using the Called Shot Maneuver" - settled as the attack was made.
-  const up = (Number(attack.punchingUp) || 0) > 0;
+  // Punching Up: "you suffer no penalties from using the Called Shot Maneuver" - settled as the attack was made. Zooner-Raised (3), taken.
+  const up = ((Number(attack.punchingUp) || 0) > 0) || Boolean(attack.zoonerCalled);
 
   return [
     ...(attack.modifiers ?? [])

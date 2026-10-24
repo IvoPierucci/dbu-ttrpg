@@ -378,6 +378,8 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
     ui.notifications.warn(`${actor.name} needs an Ally to Empower. Target a token first.`);
     return false;
   }
+  // Yardrat-Raised (4): "Treat your uses of the Empower Maneuver as if you spent 1 Action more than you actually did for its effects."
+  if (actor.system.effects?.slots?.["yardratRaised.empower"] === true) actionsSpent += 1;
 
   const might = actor.system.might ?? 0;
 
@@ -490,6 +492,19 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
   await requestActorUpdate(ally, {
     "system.ki.value": Math.min(ally.system.ki.max, ally.system.ki.value + sent)
   });
+  // Yardrat-Raised (5): "If an Ally gains Ki Points through your use of the Empower Maneuver, they may regain Life Points equal to 1/2 of
+  // the Ki Points regained" - theirs to take, once an Encounter of yours.
+  const encounter = game.combat?.id ?? "none";
+  if ((actor.system.effects?.slots?.["yardratRaised.heal"] === true) && (Math.floor(gained / 2) > 0)
+    && (actor.getFlag?.("dbu-ttrpg", "yardratHealEncounter") !== encounter)) {
+    const { askPlayerChoice } = await import("./chat.mjs");
+    const life = Math.floor(gained / 2);
+    if ((await askPlayerChoice(ally, `${ally.name}: Yardrat-Raised (${actor.name})`,
+      [{ value: "yes", label: `${life} Life Points back (once an Encounter)` }, { value: "no", label: "No" }])) === "yes") {
+      await actor.setFlag("dbu-ttrpg", "yardratHealEncounter", encounter);
+      await requestActorUpdate(ally, { "system.life.value": Math.min(Number(ally.system.life.max) || 0, (Number(ally.system.life.value) || 0) + life) });
+    }
+  }
 
   // Questing Wisdom (3): the Ally's Power Up or Transformation, out of sequence, offered on this card.
   const { questingOffers, trustedAllyOffers, powerGifterOffers } = await import("./chat.mjs");
@@ -1174,6 +1189,16 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Grippy Grabbers");
   }
   delete answers.grippy;
+  // Zooner-Raised (4): "If you use the Signature Technique Maneuver, gain an Energy Charge on that Attacking Maneuver" - asked, once a
+  // Round; its price as the attack is done (chat.mjs attackDurationEnds).
+  if ((actor.system.effects?.slots?.["zoonerRaised.charge"] === true) && (actor.getFlag?.("dbu-ttrpg", "zoonerChargeRound") !== round)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Zooner-Raised` },
+      content: "<p data-tooltip=\"Once a Round. Done, your Awareness, Defense Value and Soak Value 1(bT) lower till the start of your next turn.\">An Energy Charge on it?</p>",
+      rejectClose: false })) {
+    await actor.setFlag("dbu-ttrpg", "zoonerChargeRound", round);
+    answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Zooner-Raised");
+    answers.zoonerExposed = (Number(declared.zoonerExposed) || 0) + 1;
+  }
   // Power Channeler's: its Energy Charge, and its Opponent no longer Studied once the attack is done.
   if (answers.channeler) {
     await actor.setFlag("dbu-ttrpg", "refined_channeler", round);

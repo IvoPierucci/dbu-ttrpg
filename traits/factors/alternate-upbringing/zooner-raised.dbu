@@ -1,0 +1,33 @@
+id: zooner-raised
+name: Zooner-Raised
+order: 21
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait.
+importance: secondary
+description: >
+  Instructed by the illustrious and arrogant peoples of Zoon, your marksmanship is excellent, though you’re often wide open to counterattack.
+text: >
+  Zooner-Raised (Mind): Instructed by the illustrious and arrogant peoples of Zoon, your marksmanship is excellent, though you’re often wide open to counterattack.
+  (1)-[Passive]: While in the Healthy Health Threshold, increase the Wound Rolls of your Signature Techniques by 2(T).
+  (2)-[Passive]: While below the Injured Health Threshold, reduce your Combat Rolls and Soak Value by 1(bT).
+  (3)-[Triggered, 1/Round]: If your Signature Technique becomes a Called Shot, you ignore the Strike Roll penalty from that Attacking Maneuver being a Called Shot. If you do, after concluding that Attacking Maneuver, reduce your Awareness, Defense Value, and Soak Value by 1(bT) until the start of your next turn.
+  (4)-[Triggered, 1/Round]: If you use the Signature Technique Maneuver, gain an Energy Charge on that Attacking Maneuver. If you do, after concluding that Attacking Maneuver, reduce your Awareness, Defense Value, and Soak Value by 1(bT) until the start of your next turn.
+
+---
+
+[passive]
+# (1) Healthy.
+if (!belowThreshold("bruised")) {
+    wound.signature += 2(T);
+}
+# (2) Injured or Critical.
+if (belowThreshold("injured")) {
+    combatRolls -= 1(bT);
+    soakValue -= 1(bT);
+}
+# (3) A Signature Technique made a Called Shot: asked as it is declared, once a Round - no Strike penalty for it (chat.mjs postAttack).
+allow zoonerRaised.calledShot;
+# (4) A Signature Technique declared: asked, once a Round - an Energy Charge on it, beside any other free one (use-maneuver.mjs).
+allow zoonerRaised.charge;
+# Either taken: its mark as the attack is done - Awareness, Defense Value and Soak Value 1(bT) lower till the start of your next turn,
+# for each (zooner-raised-mark; chat.mjs attackDurationEnds).
