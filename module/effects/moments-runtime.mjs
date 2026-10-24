@@ -750,6 +750,7 @@ async function runVerb(actor, call, context) {
       await actor.update({ "system.resources": replaceObject(held) });
       return stacksGained(actor, gained);
     }
+    case "bioBerserk": return (await import("../chat.mjs")).bioBerserk(actor);
     case "undeadRise": return (await import("../chat.mjs")).undeadRise(actor);
     case "sadisticKi": return (await import("../chat.mjs")).sadisticKi(actor);
     case "demonicGod": return (await import("../chat.mjs")).demonicGod(actor);

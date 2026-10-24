@@ -28,6 +28,20 @@ function gapBetween(a, b) {
   return Math.max(Math.ceil(gap(one.x, two.x, one.w, two.w)), Math.ceil(gap(one.y, two.y, one.h, two.h)));
 }
 
+/**
+ * The Opponents on the scene with `gap` Squares or fewer between them and `actor` - not Defeated, of another side. Bio-Berserker's Field
+ * of Aggression (a Large Sphere: 3).
+ */
+export function opponentsWithin(actor, gap) {
+  const from = tokenOf(actor);
+  if (!from) return [];
+  const side = from.document?.disposition ?? from.disposition;
+  return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
+      && ((token.document?.disposition ?? token.disposition) !== side) && ((gapBetween(from.document ?? from, token.document ?? token) ?? 99) <= gap))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+}
+
 /** The Guidance Range itself, as Squares between: a Standard Sphere, a Huge one with Attendant's Focus (1). */
 export function guidanceRangeGap(holder) {
   const huge = holder?.system?.effects?.slots?.["guidance.huge"] === true;

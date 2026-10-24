@@ -1,0 +1,9 @@
+id: unstable-clone
+name: Unstable Clone
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Any
+maximumFactor: 1
+prerequisites: >
+  You must exchange a Secondary Racial Trait of the Mind Category for this Factor's Factor Trait, this Factor must be gained at Character Creation
+description: >
+  The cloning process was flawed, manifesting with your mind being clouded by nothing but thoughts of violence. Everything within your sight must fall before you, rendered immobile by the weight of your aggression. Fueled by the pain of your body systematically coming apart at the seams, you lose any sense of reason and go absolutely berserk.

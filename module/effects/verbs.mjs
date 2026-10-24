@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  bioBerserk: {
+    args: [0, 0],
+    doc: "Bio-Berserker (3): a 1d10 - at a 1, Compelled at a random Opponent in your Field of Aggression (chat.mjs bioBerserk)."
+  },
   undeadRise: {
     args: [0, 0],
     doc: "Undead Survival (4): a Healing Surge, then the Undying State till the Combat Encounter ends (chat.mjs undeadRise)."

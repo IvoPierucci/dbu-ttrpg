@@ -1,6 +1,6 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
-import { alliesWithin, bestTier, guidanceRangeGap, guidingAllies, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
+import { alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
@@ -647,8 +647,8 @@ async function heartOfEvilAgainst(roller, what) {
     if (!holder || seen.has(holder.uuid) || (holder.uuid === roller.uuid) || holder.system?.defeated) continue;
     seen.add(holder.uuid);
     if ((holder.system?.effects?.slots?.["heartOfEvil.stress"] !== true) || alliesOnScene(holder).some(ally => ally.uuid === roller.uuid)) continue;
-    const away = squaresBetween(token, at);
-    if ((away === null) || (away > SPHERE_RADIUS.large)) continue;
+    const away = squaresBetween(token.document ?? token, at);
+    if ((away === null) || (away > SPHERE_RADIUS.large - 1)) continue;
     const step = 3 * Math.max(1, Number(holder.system.baseTierOfPower) || 1);
     const ki = Number(holder.system.ki?.value) || 0;
     const steps = [1, 2].filter(n => (n * step) <= ki);
@@ -7162,6 +7162,8 @@ export async function postManeuver(actor, maneuver,
 
   // The Afterimage Technique's Movement "does not trigger the Exploit Maneuver".
   if (!noExploit) offerExploits(card, actor, maneuver);
+  // Bio-Berserker (6): "Opponents entering your Field of Aggression trigger your Exploit Maneuver."
+  if (!noExploit && maneuver?.movement) bioBerserkerExploits(card, actor, maneuver);
   // Hidden, and powering up, charging or transforming: whoever is Oblivious of them may Search for them.
   offerSearches(card, actor, maneuver);
   // High Speed Ace (2): your Normal Speed moved this Round, said by the player - Wound 1(T) till the Round ends.
@@ -20305,6 +20307,43 @@ export function tremendousOffer(card, actor) {
 }
 
 /**
+ * Bio-Berserker (6): an Opponent's Movement begun outside your Field of Aggression - the Exploit at them, offered on its card; whether
+ * they ended inside it, the map's.
+ */
+function bioBerserkerExploits(card, mover, maneuver) {
+  const from = mover.getActiveTokens?.(false, true)?.[0];
+  if (!card || !from) return;
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const holder = token.actor;
+    if (!holder || seen.has(holder.uuid) || (holder.uuid === mover.uuid) || holder.system?.defeated) continue;
+    seen.add(holder.uuid);
+    if ((holder.system?.effects?.slots?.["bioBerserker.exploit"] !== true) || alliesOnScene(holder).some(ally => ally.uuid === mover.uuid)) continue;
+    if ((squaresBetween(token.document ?? token, from) ?? 99) <= SPHERE_RADIUS.large - 1) continue;
+    if (!holder.items?.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    requestEdit(card, { type: "offer", offer: { actorUuid: holder.uuid, actorName: holder.name, maneuverId: "exploit", maneuverName: "Exploit",
+      targetUuid: mover.uuid, reason: "Bio-Berserker - if they entered your Field of Aggression",
+      provokedBy: { maneuverId: maneuver.id ?? "", maneuverName: maneuver.name ?? "", messageId: card.id } } });
+  }
+}
+
+/**
+ * Bio-Berserker (3): "roll a 1d10. If your result is a 1, you gain the Compelled Combat Condition against a random Opponent within your
+ * Field of Aggression until the start of your next turn."
+ */
+export async function bioBerserk(actor) {
+  const near = opponentsWithin(actor, SPHERE_RADIUS.large - 1);
+  if (!near.length) return;
+  const roll = await new Roll("1d10").evaluate();
+  const at = (roll.total === 1) ? near[Math.floor(Math.random() * near.length)] : null;
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `Bio-Berserker - ${at ? `a 1: Compelled at ${at.name} till the start of the next turn` : "the rage held"}` });
+  if (!at) return;
+  await markUntilNextTurn(actor, actor, "compelled", 1, "start", "Bio-Berserker");
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.afflictedBy.compelled`]: at.uuid });
+}
+
+/**
  * Undead Survival (4): "Use a Healing Surge as an Out-of-Sequence Maneuver, then enter the Undying State until the end of the Combat
  * Encounter. If you do, ignore the 2nd effect of the Undying State" - entered above the Life it would be set from, so its 1 is not.
  */
@@ -25327,6 +25366,18 @@ export async function postAttack(actor, target, maneuver,
   if (pierceQuarter) await actor.setFlag(SCOPE, "pseudoFangsRound", roundKey());
   // Mimicry of Rending Claws (2): its Diminishing Defense on Attack Declaration.
   const diminishingEarly = !reflecting && (actor.system.effects?.slots?.["pseudoClaws.diminishing"] === true);
+  // Bio-Berserker (7): an Opponent in your Field of Aggression targeted - "apply 1/2 of your Damage Attribute", asked, once a Round.
+  const field = reflecting ? [] : opponentsWithin(actor, SPHERE_RADIUS.large - 1).map(each => each.uuid);
+  if ((actor.system.effects?.slots?.["bioBerserker.attribute"] === true) && everyone.some(who => who && field.includes(who.uuid))
+    && (actor.getFlag?.(SCOPE, "bioBerserkerRound") !== roundKey())) {
+    const attribute = damageAttribute ?? DBUCharacterData.FOUNDATIONS[foundation]?.attribute;
+    const half = Math.floor((Number(actor.system.attributes?.[attribute]?.mod) || 0) / 2);
+    if ((half > 0) && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Bio-Berserker` },
+      content: `<p data-tooltip="Once a Round">Half your Damage Attribute (${half}) on its Wound Roll?</p>`, rejectClose: false })) {
+      await actor.setFlag(SCOPE, "bioBerserkerRound", roundKey());
+      woundExtra = [...woundExtra, { label: "Bio-Berserker", value: half }];
+    }
+  }
   // Zooner-Raised (3): a Signature Technique made a Called Shot - "you ignore the Strike Roll penalty", asked, once a Round.
   const zoonerCalled = !reflecting && maneuver.signature && !maneuver.signatureTechnique && isCalledShot({ modifiers })
     && (actor.system.effects?.slots?.["zoonerRaised.calledShot"] === true) && (actor.getFlag?.(SCOPE, "zoonerCalledRound") !== roundKey())

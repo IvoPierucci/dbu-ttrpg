@@ -8,6 +8,9 @@
  * it. Both of those stop being possible when there is only one place that does the sum.
  */
 
+
+import { opponentsWithin, SPHERE_RADIUS } from "../guidance.mjs";
+
 /** Functions an amount may call. */
 export const FUNCTIONS = {
   min: (...args) => Math.min(...args),
@@ -182,6 +185,9 @@ export function resolvePath(p, scope) {
 
   // How many stacks were just gained, where a Moment says - Redirected Energy's "Upon gaining a stack of Overwhelm".
   if (p === "gained") return scope.context?.gained ?? 1;
+
+  // Bio-Berserker (2): the Opponents in your Field of Aggression - a Large Sphere around you - as the scene stands.
+  if (p === "fieldOfAggression") return opponentsWithin(scope.data?.parent, SPHERE_RADIUS.large - 1).length;
 
   const CONTEXTUAL = ["attack", "attacker", "target", "incoming", "clash", "roll",
                       "damage", "burst", "proc"];

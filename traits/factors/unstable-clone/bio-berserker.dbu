@@ -1,0 +1,49 @@
+id: bio-berserker
+name: Bio-Berserker
+order: 1
+category: body
+# "You must exchange a Secondary Racial Trait of the Mind Category for this Factor's Factor Trait" - which, the table's.
+importance: secondary
+description: >
+  Driven by a rage that comes from the instability of your cloning process, you attack anything that moves.
+text: >
+  Bio-Berserker (Body): Driven by a rage that comes from the instability of your cloning process, you attack anything that moves.
+  (1)-[Addendum]: Please refer to the ‘Cloned Character’ information box below.
+  (2)-[Ruling]: All Squares within a Large Sphere AoE (centered on you) are known as your ‘Field of Aggression’.
+  (3)-[Automatic/Start of Turn]: If you have any Opponents within your Field of Aggression, roll a 1d10. If your result is a 1, you gain the Compelled Combat Condition against a random Opponent within your Field of Aggression until the start of your next turn.
+  (4)-[Passive]: For each Opponent within your Field of Aggression, increase your Soak Value and Wound Rolls by 1(T) (max. 5(T)).
+  (5)-[Passive]: While you have an Opponent within your Field of Aggression, increase your Might and Surgency by 1(T).
+  (6)-[Passive]: Opponents entering your Field of Aggression trigger your Exploit Maneuver.
+  (7)-[Triggered, 1/Round]: If you target an Opponent within your Field of Aggression with an Attacking Maneuver, apply 1/2 of your Damage Attribute to that Attacking Maneuver.
+
+  Cloned Character: A Character with the Unstable Clone Factor is a clone of an existing Character. As such, they should have any Factors with Body-Category Factor Traits that the original Character had and should gain access to any Body-Category Awakenings that Character had (once they meet any prerequisites and have space amongst their Awakening Limit to obtain them). They may even have access to any Forms they possessed depending on the exact manner of cloning.
+
+  Ultimately, however, discuss this with your ARC and properly deduce what Transformations and Factors you possess due to your circumstances and where you differ from the original Character that you were cloned from. Your ARC may even allow you to gain access to some of their Signature Techniques and Unique Abilities, if you meet the requirements for them and it fits the exact circumstances of your creation.
+
+  Whatever you gain should be considered with the balance of your particular game in mind.
+
+---
+
+# (1) The Cloned Character box: what the clone keeps of the original - Factors, Awakenings, Forms, Techniques - the ARC's.
+# (2) The Field of Aggression: a Large Sphere around you - 3 Squares or fewer between you and them - counted as the scene stands
+# (`fieldOfAggression`, the Opponents in it; guidance.mjs opponentsWithin).
+[passive]
+# (4) 1(T) each, 5 at most.
+soakValue += min(fieldOfAggression, 5) * 1(T);
+wound += min(fieldOfAggression, 5) * 1(T);
+# (5)
+if (fieldOfAggression > 0) {
+    might += 1(T);
+    surgency += 1(T);
+}
+# (6) An Opponent's Movement from outside it: the Exploit offered on its card - whether they ended inside, the map's (chat.mjs
+# bioBerserkerExploits).
+allow bioBerserker.exploit;
+# (7) An attack at an Opponent in it declared: asked, once a Round - half your Damage Attribute on its Wound (chat.mjs postAttack).
+allow bioBerserker.attribute;
+
+# (3) An Opponent in it as your turn begins: a 1d10, and at a 1 Compelled at a random one of them till the start of your next turn
+# (chat.mjs bioBerserk).
+[automatic/start-of-turn, effect 3]
+requires fieldOfAggression > 0;
+bioBerserk();

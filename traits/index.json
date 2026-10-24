@@ -586,6 +586,8 @@
     "maneuvers/demonic-god-option.dbu",
     "factors/undead.dbu",
     "factors/undead/undead-survival.dbu",
+    "factors/unstable-clone.dbu",
+    "factors/unstable-clone/bio-berserker.dbu",
     "factors/reincarnated.dbu",
     "factors/reincarnated/lingering-power.dbu",
     "conditions/lingering-power-mark.dbu",
