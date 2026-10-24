@@ -1,0 +1,39 @@
+id: dormant-saiya-power
+name: Dormant Saiya Power
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (3) Warrior Blood, its Resource - lost when the Combat Encounter ends, as every Resource is.
+resource: warriorblood
+resourceLabel: Warrior Blood
+resourceMax: 3
+description: >
+  The diluted Saiyan blood flowing through your veins has awoken, granting you some of the resilience and combat prowess of your forefathers.
+text: >
+  Dormant Saiya Power (Body): The diluted Saiyan blood flowing through your veins has awoken, granting you some of the resilience and combat prowess of your forefathers.
+  (1)-[Passive]: You automatically succeed all Steadfast Checks for the Bruised Health Threshold. You also cannot gain any failures for the Bruised Health Threshold due to any rules like Massive Damage (see – Health Thresholds) or any effects such as Pain to Power (see — Limit Break).
+  (2)-[Triggered/Defeated]: You may make a Steadfast Check (if you do, reduce your Dice Score by 2). If you succeed, set your Life Points to 1.
+  (3)-[Triggered/Threshold, Resource]: Gain a stack of Warrior Blood (max. 3). For each stack of Warrior Blood, increase your Wound Rolls by 1(T) and the Dice Score of your Steadfast Checks by 1. If you possess 2+ stacks of Warrior Blood, increase all of your Combat Rolls by 1(T).
+
+---
+
+[passive]
+# (1) The Bruised Threshold's Check passed without rolling, and never failed along with another's (chat.mjs rollSteadfastCheck).
+allow dormantSaiya.bruised;
+# (3) What the stacks are worth.
+if (hasResource("warriorblood")) {
+    wound += warriorblood.stacks * 1(T);
+    steadfast.dice += warriorblood.stacks;
+}
+if (stacksAtLeast(2, "warriorblood")) {
+    combatRolls += 1(T);
+}
+
+# (2) Chosen on the Defeated card: a Steadfast Check, 2 off it - made, your Life Points 1.
+[triggered/defeated, effect 2]
+steadfastEnter(-2, life);
+
+# (3) Knocked through a Health Threshold. Automatic by default, its Triggered/Automatic button.
+[triggered/threshold, effect 3]
+warriorblood.stacks += 1;

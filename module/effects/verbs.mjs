@@ -40,7 +40,8 @@ export const VERBS = Object.freeze({
   steadfastEnter: {
     args: [2, 3],
     names: [1, 2],
-    doc: "Make a Steadfast Check, the amount added to its Dice Score (-2 takes 2 off); passed, enter the named State, for "
+    doc: "Make a Steadfast Check, the amount added to its Dice Score (-2 takes 2 off); passed, enter the named State - or, named `life`, "
+       + "your Life Points 1 (Dormant Saiya Power's) - for "
        + "the duration named after it - Saiyan Heritage's Undying \"until the end of your next turn\" (next-turn)."
   },
   trigger: {

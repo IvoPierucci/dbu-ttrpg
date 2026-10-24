@@ -1,0 +1,8 @@
+id: saiyan-ancestry
+name: Saiyan Ancestry
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Earthling
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  After many generations of breeding with humans, Saiyan blood has become so intermixed with humanity that the Saiyan race is all but forgotten... But not all Earthlings with this warrior blood have lost touch with their progenitors.

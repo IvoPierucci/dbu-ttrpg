@@ -33936,8 +33936,24 @@ export async function rollSteadfastCheck(actor) {
   // 1(WT)" had nowhere at all to land.
   const { die, bonus, target, natural = 0 } = actor.system.steadfast;
 
-  const automatic = pending.slice(0, -1);
+  let automatic = pending.slice(0, -1);
   const rolled = pending[pending.length - 1];
+
+  // Dormant Saiya Power (1): "You automatically succeed all Steadfast Checks for the Bruised Health Threshold. You also cannot gain any
+  // failures for the Bruised Health Threshold due to any rules like Massive Damage" - nor through a mark.
+  if (actor.system.effects?.slots?.["dormantSaiya.bruised"] === true) {
+    if (rolled === "bruised") {
+      await actor.update({ "system.thresholdChecks.bruised": "pass" });
+      await steadfastPassed(actor, "bruised");
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+        flavor: `Steadfast Check - ${THRESHOLDS.bruised.label} - passed automatically (Dormant Saiya Power)` });
+      return true;
+    }
+    if (automatic.includes("bruised")) {
+      updates["system.thresholdChecks.bruised"] = "pass";
+      automatic = automatic.filter(key => key !== "bruised");
+    }
+  }
 
   // Critical Wound (2): this Threshold's Check failed without rolling - the mark used up by it.
   const marked = actor.getFlag?.(SCOPE, "steadfastAutoFail");
