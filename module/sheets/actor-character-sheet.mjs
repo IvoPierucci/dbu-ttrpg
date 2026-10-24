@@ -3,7 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
-import { importCoreTalents, ownedTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
+import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
 import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
@@ -459,6 +459,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       steadfastCheck: DBUCharacterSheet._onSteadfastCheck,
       importTalents: DBUCharacterSheet._onImportTalents,
       reloadTalents: DBUCharacterSheet._onReloadTalents,
+      refreshTalents: DBUCharacterSheet._onRefreshTalents,
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
       attackFeature: DBUCharacterSheet._onAttackFeature,
       takeCollision: DBUCharacterSheet._onTakeCollision,
@@ -2722,6 +2723,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
     if (!confirmed) return;
     return reloadCoreTalents();
+  }
+
+  /** The Talents made to match where they come from - the Progression tab, a Racial Trait - and those from nowhere taken off. */
+  static async _onRefreshTalents() {
+    return refreshTalents(this.actor);
   }
 
   /** GM only: put the published Maneuvers in the compendium to drag from. */

@@ -95,6 +95,48 @@ export async function syncProgressionTalents(actor) {
 }
 
 /**
+ * The Talents with nowhere to come from: neither a reached Talent Addition row of the Progression tab (`fromProgression`) nor a
+ * Racial Trait (`fromTrait` - kept even once the Trait is lost: "you do not lose that Talent"). Read after the tab is synced, so
+ * one a row names is the tab's by then.
+ */
+export function orphanTalents(items) {
+  return Array.from(items ?? []).filter(item => (item.type === "talent")
+    && !item.flags?.["dbu-ttrpg"]?.[FROM_PROGRESSION] && !item.flags?.["dbu-ttrpg"]?.fromTrait);
+}
+
+/**
+ * The Traits tab's "Refresh talents": the Progression tab synced - what its rows name made, what they no longer name taken off -
+ * then each Talent left with nowhere to come from named, and taken off once that is confirmed. What was done, said.
+ */
+export async function refreshTalents(actor) {
+  if (!actor?.isOwner || (actor.type !== "character")) return;
+  const before = new Set(Array.from(actor.items ?? []).filter(item => item.type === "talent").map(item => item.id));
+  await syncProgressionTalents(actor);
+  const orphans = orphanTalents(actor.items);
+  const escape = Handlebars.escapeExpression;
+  const confirmed = orphans.length && await foundry.applications.api.DialogV2.confirm({
+    window: { title: `${actor.name} - Refresh talents` },
+    content: `<p>Neither a Talent Addition row of the Progression tab nor a Racial Trait gives these - remove them?</p>
+      <ul>${orphans.map(item => `<li>${escape(item.name)}</li>`).join("")}</ul>`,
+    rejectClose: false
+  });
+  if (confirmed) {
+    // One that added Options to another - Dynamic Hype's - lost: those Options with it.
+    const { dropGrantedOptions } = await import("./racial.mjs");
+    for (const item of orphans) {
+      const file = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+      if (file?.grantsOptions) await dropGrantedOptions(actor, file);
+    }
+    await actor.deleteEmbeddedDocuments("Item", orphans.map(item => item.id).filter(id => actor.items.get(id)));
+  }
+  const after = new Set(Array.from(actor.items ?? []).filter(item => item.type === "talent").map(item => item.id));
+  const added = [...after].filter(id => !before.has(id)).length;
+  const removed = [...before].filter(id => !after.has(id)).length;
+  ui.notifications.info(`${actor.name}: Talents refreshed - ${added} added, ${removed} removed`
+    + `${(orphans.length && !confirmed) ? `, ${orphans.length} with no source kept` : ""}.`);
+}
+
+/**
  * A Talent's `grantsGear`: the Basic Items it gives as it is gained - at `grantsGearDC`, where the Item's Craft DC is a choice, and
  * Integrated with `grantsGearIntegrated` (Active where there is room) - each marked as given by it.
  */

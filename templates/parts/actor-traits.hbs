@@ -161,6 +161,12 @@
     <summary>
       Talents
       <span class="trait-count">{{talents.length}}</span>
+      {{#if editable}}
+      <button type="button" class="edit-toggle" data-action="refreshTalents"
+              data-tooltip="Match the Talents to where they come from - the Progression tab's rows, a Racial Trait - and remove those with no source">
+        Refresh talents
+      </button>
+      {{/if}}
       {{#if isGM}}
       <button type="button" class="edit-toggle" data-action="importTalents"
               data-tooltip="Fill the DBU Talents compendium with the published talents, ready to drag onto a character">
