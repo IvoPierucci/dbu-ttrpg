@@ -742,6 +742,7 @@ async function runVerb(actor, call, context) {
       await actor.update({ "system.resources": replaceObject(held) });
       return stacksGained(actor, gained);
     }
+    case "lingeringPower": return (await import("../chat.mjs")).lingeringPower(actor);
     case "goldenFruitPower": return (await import("../chat.mjs")).goldenFruitPower(actor);
     case "raiseTo": {
       // To at least this many, past any ceiling, never lower - Born for Battle's 3.

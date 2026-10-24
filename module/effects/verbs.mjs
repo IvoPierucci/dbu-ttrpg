@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  lingeringPower: {
+    args: [0, 0],
+    doc: "Lingering Power (5): Combat Rolls 2(bT) by the Past Life's base Tier, till the end of your next turn (chat.mjs lingeringPower)."
+  },
   fillResource: {
     args: [1, 6],
     names: [0, 1, 2, 3, 4, 5],

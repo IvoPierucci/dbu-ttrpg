@@ -1,0 +1,32 @@
+id: lingering-power
+name: Lingering Power
+order: 1
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (1) The Past Life, asked as it is gained - a Character of this world or one named - and with it the Skill, the Attribute, the Talent
+# and the base Tier of Power its effects read (racial.mjs askPastLife).
+pastLife: true
+description: >
+  Drawing on the strength remaining deep in your soul from your past life, you have greater strength than others of your race.
+text: >
+  Lingering Power (Mind): Drawing on the strength remaining deep in your soul from your past life, you have greater strength than others of your race.
+  (1)-[Ruling]: Upon gaining the Reincarnated Factor, you must select a Character that is deceased (with the permission of your ARC) to be your ‘Past Life’. Your ‘Past Life’ no longer exists as an independent Character.
+  (2)-[Passive]: Gain a Skill Rank in the Skill with the highest number of Skill Ranks among your Past Life’s Skills (if it’s a tie, you decide).
+  (3)-[Passive]: Increase the Attribute Score of the Attribute that your Past Life had the highest Attribute Score in by 2 (if it’s a tie, you decide).
+  (4)-[Passive]: Gain a Talent that your Past Life possessed and you meet the Prerequisites for.
+  (5)-[Triggered/Power, 1/Encounter]: Increase your Combat Rolls by 2(bT), using your Past Life’s base Tier of Power to calculate the bonus, until the end of your next turn.
+
+---
+
+# (1) The ARC's permission, and the Past Life no longer played, are the table's. (4) The Talent chosen with it, given as it is gained
+# and kept as a Racial Trait's Talent is; its Prerequisites the table's.
+[passive]
+# (2), (3) As they were answered.
+skill.$pastSkill.ranks += 1;
+$pastAttribute.score += 2;
+
+# (5) 2(bT) by the Past Life's base Tier, till the end of your next turn (chat.mjs lingeringPower). Automatic by default, its
+# Triggered/Automatic button.
+[triggered/power, 1/encounter, effect 5]
+lingeringPower();

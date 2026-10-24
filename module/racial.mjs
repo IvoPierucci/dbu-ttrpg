@@ -24,6 +24,8 @@
  *                                   `grantsOtherFrom` alone where it names some (Feline Build's two of four)
  *   dragonBall: true                Personified Dragon Ball's set - its name, Size Category (Nano to Small) and stars - asked
  *                                   as it is added, kept on the Item (`dragonBall` flag)
+ *   pastLife: true                  Lingering Power's Past Life, asked as it is added - its Skill, Attribute, Talent and base Tier
+ *                                   (`$pastSkill`, `$pastAttribute` in its script; the Talent given; the Tier on its flag)
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
  *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
@@ -797,6 +799,15 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
     if (!ball) return null;
     made.data.flags["dbu-ttrpg"].dragonBall = ball;
   }
+  // Lingering Power (1): the Past Life - and from it the Skill, the Attribute, the Talent and the base Tier its effects read.
+  if (trait.pastLife) {
+    const past = await askPastLife(actor, trait);
+    if (!past) return null;
+    made.data.flags["dbu-ttrpg"].pastLife = past;
+    made.data.system.script = String(made.data.system.script ?? "").replaceAll("$pastSkill", past.skill)
+      .replaceAll("$pastAttribute", past.attribute);
+    if (past.talent) made.grants.talents = [...(made.grants.talents ?? []), past.talent];
+  }
   // Given by another - Bestial Evolution's Bestial Trait - it goes with that one.
   if (grantedBy) made.data.flags["dbu-ttrpg"].grantedBy = grantedBy;
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
@@ -852,6 +863,73 @@ async function grantWeapon(actor, item, trait) {
   data.system.equipped = activeIntegrated(actor.items.contents, "weapon").length < INTEGRATED_ACTIVE.weapon;
   data.flags = { "dbu-ttrpg": { grantedBy: item.id } };
   await actor.createEmbeddedDocuments("Item", [data]);
+}
+
+/** The Attributes, as the sheet names them. */
+const PAST_ATTRIBUTES = ["agility", "force", "tenacity", "scholarship", "insight", "magic", "personality"];
+
+/**
+ * Lingering Power (1)-(4): "select a Character that is deceased ... to be your 'Past Life'" - one of this world, or one only named. From
+ * one of this world, what (2), (3) and (4) read is offered from it - its Skills with the most Ranks, its Attributes with the highest
+ * Score ("if it's a tie, you decide"), its Talents, its base Tier; from one only named, any. Null where backed out of.
+ */
+export async function askPastLife(actor, trait) {
+  const escape = Handlebars.escapeExpression;
+  const others = Array.from(globalThis.game?.actors ?? []).filter(other => (other.type === "character") && (other.id !== actor?.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const who = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${trait.name} - your Past Life` },
+    content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Past Life</span>
+      <select name="past"><option value="">Not in this world - named</option>${others.map(other =>
+        `<option value="${escape(other.id)}">${escape(other.name)}</option>`).join("")}</select></label>
+      <label class="dbu-respond-option"><span class="dbu-respond-name">Name</span><input type="text" name="name"/></label>`,
+    buttons: [{ action: "next", label: "Next", default: true, callback: (event, button, dialog) => ({
+        id: dialog.element.querySelector('[name="past"]')?.value ?? "",
+        name: String(dialog.element.querySelector('[name="name"]')?.value ?? "").trim() }) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!who || (typeof who !== "object")) return null;
+  const past = others.find(other => other.id === who.id) ?? null;
+  const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
+  const skills = Object.entries(DBUCharacterData.SKILLS);
+  const most = (entries, value) => {
+    const top = Math.max(...entries.map(value));
+    return entries.filter(each => value(each) === top);
+  };
+  // Theirs where they are of this world; any otherwise.
+  const skillOffer = past ? most(skills, ([key]) => Number(past.system?.skills?.[key]?.ranks) || 0) : skills;
+  const attributeOffer = past ? most(PAST_ATTRIBUTES, key => Number(past.system?.attributes?.[key]?.score) || 0) : PAST_ATTRIBUTES;
+  const theirTalents = past ? new Set(Array.from(past.items ?? []).filter(item => item.type === "talent")
+    .map(item => item.flags?.["dbu-ttrpg"]?.sourceId).filter(Boolean)) : null;
+  const talents = traitsOfKind("talents").filter(talent => !theirTalents || theirTalents.has(talent.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const tier = past ? (Number(past.system?.baseTierOfPower) || 1) : 1;
+  const label = key => key.charAt(0).toUpperCase() + key.slice(1);
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${trait.name} - ${past?.name ?? (who.name || "your Past Life")}` },
+    content: `<label class="dbu-respond-option" data-tooltip="Their Skill with the most Skill Ranks - a tie, yours to decide">
+        <span class="dbu-respond-name">Skill Rank</span>
+        <select name="skill">${skillOffer.map(([key, skill]) => `<option value="${escape(key)}">${escape(skill.label)}</option>`).join("")}</select></label>
+      <label class="dbu-respond-option" data-tooltip="Their highest Attribute Score - a tie, yours to decide">
+        <span class="dbu-respond-name">Attribute +2</span>
+        <select name="attribute">${attributeOffer.map(key => `<option value="${key}">${label(key)}</option>`).join("")}</select></label>
+      <label class="dbu-respond-option" data-tooltip="One they possessed - its Prerequisites the table's">
+        <span class="dbu-respond-name">Talent</span>
+        <select name="talent"><option value="">None</option>${talents.map(talent =>
+          `<option value="${escape(talent.id)}">${escape(talent.name)}</option>`).join("")}</select></label>
+      <label class="dbu-respond-option" data-tooltip="Their base Tier of Power - Lingering Power's 5th effect">
+        <span class="dbu-respond-name">Base Tier</span><input type="number" name="tier" min="1" step="1" value="${tier}"/></label>`,
+    buttons: [{ action: "take", label: "Take", default: true, callback: (event, button, dialog) => ({
+        skill: dialog.element.querySelector('[name="skill"]')?.value ?? "",
+        attribute: dialog.element.querySelector('[name="attribute"]')?.value ?? "",
+        talent: dialog.element.querySelector('[name="talent"]')?.value ?? "",
+        tier: Math.max(1, Math.floor(Number(dialog.element.querySelector('[name="tier"]')?.value) || 1)) }) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!answer || (typeof answer !== "object") || !answer.skill || !answer.attribute) return null;
+  return { uuid: past?.uuid ?? "", name: past?.name ?? who.name, ...answer };
 }
 
 /** Were-Beast (2): which of the character's own Racial Traits is the Normal Trait - or none, the table's. */

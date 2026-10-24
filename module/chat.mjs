@@ -20231,6 +20231,13 @@ export function tremendousOffer(card, actor) {
     maneuverName: "Transformation", reason: "Tremendous Lord (once an Encounter)", grants: { encounterFlag: "tremendousEncounter" } } });
 }
 
+/** Lingering Power (5): "Increase your Combat Rolls by 2(bT), using your Past Life's base Tier of Power ... until the end of your next turn." */
+export async function lingeringPower(actor) {
+  const item = Array.from(actor.items ?? []).find(each => each.flags?.[SCOPE]?.sourceId === "lingering-power");
+  const tier = Math.max(1, Number(item?.flags?.[SCOPE]?.pastLife?.tier) || Number(actor.system.baseTierOfPower) || 1);
+  return markUntilNextTurn(actor, actor, "lingering-power-mark", 2 * tier, "end", "Lingering Power");
+}
+
 /** Golden Fruit (3): "Enter the God Ki State until the end of your next turn. If you are already in the God Ki State, enter the Superior State instead." */
 export async function goldenFruitPower(actor) {
   const { enterState } = await import("./effects/moments-runtime.mjs");

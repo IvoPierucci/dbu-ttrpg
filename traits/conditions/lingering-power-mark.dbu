@@ -1,0 +1,16 @@
+id: lingering-power-mark
+name: Lingering Power
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: Lingering Power (5)'s - its 2(bT) by the Past Life's base Tier, as stacks.
+combatCondition: no
+source: Core Rule
+description: >
+  Lingering Power: Combat Rolls higher by a point a stack, till the end of your next turn.
+text: >
+  Lingering Power (5): Increase your Combat Rolls by 2(bT), using your Past Life's base Tier of Power to calculate the bonus, until the end of your next turn.
+
+---
+
+[passive per stack]
+combatRolls += 1;

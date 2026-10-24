@@ -1,0 +1,9 @@
+id: reincarnated
+name: Reincarnated
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Trait is the file in the
+# folder of its name.
+requirement: Any
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  A powerful being, born again. Although you have gone through the process of reincarnation, your soul cleansed and thrown back into the world to be born and raised again... Some of that immense power you once held has remained.
