@@ -1,0 +1,34 @@
+id: undead-survival
+name: Undead Survival
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Your decaying body is animated by unnatural forces, making it more resilient than before.
+text: >
+  Undead Survival (Body): Your decaying body is animated by unnatural forces, making it more resilient than before.
+  (1)-[Passive]: You are Unnatural, but reduce your Racial Life Modifier by 2 (this can allow your Racial Life Modifier to become negative).
+  (2)-[Passive]: Increase the Dice Score of your Steadfast Checks by 1.
+  (3)-[Passive]: While you are in the Undying State, you cannot regain Life Points through the effects of any of your Traits.
+  (4)-[Triggered/Defeated]: Use a Healing Surge as an Out-of-Sequence Maneuver, then enter the Undying State until the end of the Combat Encounter. If you do, ignore the 2nd effect of the Undying State.
+  (5)-[Automatic]: Leave the Undying State if your current Life Points reaches a negative value that equals or exceeds 1/2 (rounded up) of your Maximum Life Points.
+
+---
+
+[passive]
+# (1) Below zero where it comes to it (actor-character.mjs).
+allow unnatural;
+racialLifeModifier -= 2;
+allow racialLife.mayGoNegative;
+# (2)
+steadfast.dice += 1;
+# (3) Undying: what your own effects would give back of Life Points, not given (moments-runtime.mjs).
+allow undead.noTraitHealing;
+# (5) Undying, at minus half your Maximum Life Points rounded up or lower: left - and so Defeated (combat.mjs).
+allow undead.collapse;
+
+# (4) Chosen on the Defeated card: a Healing Surge, then Undying till the Combat Encounter ends - entered with the Surge's Life Points,
+# not set to 1 (chat.mjs undeadRise).
+[triggered/defeated, effect 4]
+undeadRise();

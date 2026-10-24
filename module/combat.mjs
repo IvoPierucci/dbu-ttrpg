@@ -1107,6 +1107,14 @@ export function registerDefeatHooks() {
     if (options.dbuWasDefeated === undefined) return;
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 
+    // Undead Survival (5): "Leave the Undying State if your current Life Points reaches a negative value that equals or exceeds 1/2
+    // (rounded up) of your Maximum Life Points" - and so Defeated (Undying (1)).
+    if ((actor.system.effects?.slots?.["undead.collapse"] === true) && ((Number(actor.system.states?.undying) || 0) > 0)
+      && ((Number(actor.system.life?.value) || 0) <= -Math.ceil((Number(actor.system.life?.max) || 0) / 2))) {
+      const { leaveState } = await import("./effects/moments-runtime.mjs");
+      await leaveState(actor, "undying");
+    }
+
     await announceThreshold(actor, options.dbuThreshold, options.dbuKnockedBy, Boolean(options.dbuKnockedPinpoint),
       Boolean(options.dbuKnockedCritical), options.dbuKnockedProfiles ?? [], Boolean(options.dbuKnockedWoundCritical),
       Boolean(options.dbuKnockerDenied));

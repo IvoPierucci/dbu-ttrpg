@@ -403,6 +403,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  undeadRise: {
+    args: [0, 0],
+    doc: "Undead Survival (4): a Healing Surge, then the Undying State till the Combat Encounter ends (chat.mjs undeadRise)."
+  },
   sadisticKi: {
     args: [0, 0],
     doc: "Sadistic Demon Lord: Ki Points equal to your Might, once a Round between a Combat Condition inflicted and a Defeat (chat.mjs sadisticKi)."

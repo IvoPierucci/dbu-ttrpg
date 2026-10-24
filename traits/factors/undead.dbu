@@ -1,0 +1,9 @@
+id: undead
+name: Undead
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
+requirement: Any
+maximumFactor: 1
+prerequisites: >
+  You are not Unnatural before applying the effects of the Undead Survival Factor.
+description: >
+  Whether by an unearthly spirit or by some supernatural force, these bodies, once deceased, now move with unlife. The exact nature of their return from beyond the veil may vary, but regardless of the reasons or the animating forces, when the dead walk the earth once more, the living are in grave danger.

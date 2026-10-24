@@ -269,6 +269,14 @@ async function writeStateful(actor, slots) {
         && !/^(condition|quality|battlefield|high):/.test(part.sourceId ?? "")).reduce((sum, part) => sum + Number(part.value), 0);
       if (own > 0) raised += own - Math.floor(own / 2);
     }
+    // Undead Survival (3): "While you are in the Undying State, you cannot regain Life Points through the effects of any of your
+    // Traits" - what your own effects add, left off; a Condition's, a Quality's, the Battlefield's are not yours.
+    if ((key === "life.value") && (actor.system.effects?.slots?.["undead.noTraitHealing"] === true)
+      && ((Number(actor.system.states?.undying) || 0) > 0)) {
+      const healed = (slots[key]?.parts ?? []).filter(part => (part.op === "add") && (Number(part.value) > 0)
+        && !/^(condition|quality|battlefield|high):/.test(part.sourceId ?? "")).reduce((sum, part) => sum + Number(part.value), 0);
+      if (healed > 0) raised -= healed;
+    }
     // Raised no further than the most there may be; what was already above it is left.
     const settled = (cap && (raised > before)) ? Math.min(raised, Math.max(before, cap(actor))) : raised;
     if (write) {
@@ -742,6 +750,7 @@ async function runVerb(actor, call, context) {
       await actor.update({ "system.resources": replaceObject(held) });
       return stacksGained(actor, gained);
     }
+    case "undeadRise": return (await import("../chat.mjs")).undeadRise(actor);
     case "sadisticKi": return (await import("../chat.mjs")).sadisticKi(actor);
     case "demonicGod": return (await import("../chat.mjs")).demonicGod(actor);
     case "supercomputerPowerUp": return (await import("../chat.mjs")).supercomputerPowerUp(actor);

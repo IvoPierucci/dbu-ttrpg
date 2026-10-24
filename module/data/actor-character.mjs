@@ -2247,7 +2247,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.skillRankCap = rankCap;
 
     // "If any effect changes your Racial Life Modifier, it applies retroactively" - it is counted for every Power Level.
-    this.racialLifeModifier = withEffects(this, "racialLifeModifier", this.racialLifeModifier);
+    // Undead Survival (1): "this can allow your Racial Life Modifier to become negative".
+    this.racialLifeModifier = withEffects(this, "racialLifeModifier", this.racialLifeModifier,
+      { min: (this.effects?.slots?.["racialLife.mayGoNegative"] === true) ? null : 0 });
 
     this.life.max = DBUCharacterData.maxLife({
       powerLevel: this.powerLevel,

@@ -20305,6 +20305,16 @@ export function tremendousOffer(card, actor) {
 }
 
 /**
+ * Undead Survival (4): "Use a Healing Surge as an Out-of-Sequence Maneuver, then enter the Undying State until the end of the Combat
+ * Encounter. If you do, ignore the 2nd effect of the Undying State" - entered above the Life it would be set from, so its 1 is not.
+ */
+export async function undeadRise(actor) {
+  const { UNSPENT, enterState } = await import("./effects/moments-runtime.mjs");
+  if (!await takeSurge(actor, { source: "Undead Survival", kind: "healing" })) return UNSPENT;
+  await enterState(actor, "undying", 1, "encounter", "Undead Survival");
+}
+
+/**
  * Demonic God: "spend a Counter Action to use the Basic Attack Maneuver, Signature Technique Maneuver, or a Unique Ability with an Action
  * Cost of 1 Action as an Out-of-Sequence Maneuver" - which, asked; the Counter Action paid once it is used.
  */
