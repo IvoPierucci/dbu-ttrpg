@@ -1,0 +1,14 @@
+id: evil-saiyan-of-legend
+name: Evil Saiyan of Legend
+order: 3
+optionOf: heart-of-evil
+# Its Race in brackets - shown, never enforced.
+race: saiyan
+description: >
+  Evil Saiyan of Legend (Saiyan) [Passive]: You gain access to the Evil Saiyan Enhancement. Additionally, reduce the Stress Test Requirement for Evil Saiyan by 3 and it gains the Natural (LV2) Aspect.
+text: >
+  Evil Saiyan of Legend (Saiyan) [Passive]: You gain access to the Evil Saiyan Enhancement. Additionally, reduce the Stress Test Requirement for Evil Saiyan by 3 and it gains the Natural (LV2) Aspect.
+
+---
+
+# Waits on Transformations - the Evil Saiyan Enhancement - not built yet: the table's.

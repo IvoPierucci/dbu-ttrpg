@@ -1,0 +1,14 @@
+id: demonic-god
+name: Demonic God
+order: 5
+optionOf: heart-of-evil
+# Its Race in brackets - shown, never enforced.
+race: shinjin
+description: >
+  Demonic God (Shinjin) [1/Round]: As an Instant Maneuver, you may spend a Counter Action to use the Basic Attack Maneuver, Signature Technique Maneuver, or a Unique Ability with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+text: >
+  Demonic God (Shinjin) [1/Round]: As an Instant Maneuver, you may spend a Counter Action to use the Basic Attack Maneuver, Signature Technique Maneuver, or a Unique Ability with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+
+---
+
+# Its own Maneuver, on the Maneuvers tab (maneuvers/demonic-god-option.dbu).

@@ -1,0 +1,37 @@
+id: heart-of-evil
+name: Heart of Evil
+order: 1
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (4) One of its Options, chosen as it is gained (heart-of-evil/*.dbu) - a Race in brackets shown, never enforced.
+options: 1
+description: >
+  The pure darkness of demonic evil has awakened inside you, unlocking new powers.
+text: >
+  Heart of Evil (Mind): The pure darkness of demonic evil has awakened inside you, unlocking new powers.
+  (1)-[Passive]: Increase your Wound Rolls and Might Clashes against Opponents suffering from a Combat Condition by 1(T).
+  (2)-[Triggered]: If an Opponent within a Large Sphere AoE (centered on you) makes a Stress Test or Steadfast Check while suffering from a Combat Condition, you may spend up to 6(bT) Ki Points. For every 3(bT) Ki Points spent, reduce the Dice Score of their roll by 1.
+  (3)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, make a Might Clash against them. If you win, you may apply one of the following effects to that Opponent:
+  * They gain a stack of the Broken Combat Condition until the end of your next turn.
+  * They gain a stack of the Impaired Combat Condition until the end of your next turn.
+  * They gain the Shaken Combat Condition until the start of your next turn.
+  (4)-[Option]: Upon gaining this Factor Trait, choose one of the following effects (some effects have a Race listed in brackets – you may only choose that effect if your Race matches the listed Race):
+  * Sadistic Demon Lord [Triggered, 1/Round]: If you inflict a Combat Condition upon an Opponent or Defeat an Opponent, regain Ki Points equal to your Might.
+  * Resilient Demon Lord [Triggered]: If you are targeted by an Attacking Maneuver from an Opponent with a Combat Condition, increase your Soak Value and Damage Reduction by 1(T) for the duration of that Attacking Maneuver.
+  * Evil Saiyan of Legend (Saiyan) [Passive]: You gain access to the Evil Saiyan Enhancement. Additionally, reduce the Stress Test Requirement for Evil Saiyan by 3 and it gains the Natural (LV2) Aspect.
+  * Demonic Skills (Namekian) [Triggered]: If you Defeat a Studied Opponent or knock them through a Health Threshold, regain Ki Points equal to your Surgency.
+  * Demonic God (Shinjin) [1/Round]: As an Instant Maneuver, you may spend a Counter Action to use the Basic Attack Maneuver, Signature Technique Maneuver, or a Unique Ability with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+wound.vsConditioned += 1(T);
+clash.mightVsConditioned += 1(T);
+# (2) An Opponent in a Large Sphere around you, suffering from a Combat Condition, making a Steadfast Check or a Stress Test: asked as it
+# is rolled - up to 6(bT) Ki, 1 off it for every 3(bT) (chat.mjs heartOfEvilAgainst).
+allow heartOfEvil.stress;
+# (3) An Opponent knocked through by your attack: asked, once a Round - a Might Clash; won, which of the three, asked (chat.mjs
+# heartOfEvilKnock, settleImpede).
+allow heartOfEvil.clash;

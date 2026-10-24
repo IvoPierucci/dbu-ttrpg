@@ -1,0 +1,19 @@
+id: sadistic-demon-lord
+name: Sadistic Demon Lord
+order: 1
+optionOf: heart-of-evil
+description: >
+  Sadistic Demon Lord [Triggered, 1/Round]: If you inflict a Combat Condition upon an Opponent or Defeat an Opponent, regain Ki Points equal to your Might.
+text: >
+  Sadistic Demon Lord [Triggered, 1/Round]: If you inflict a Combat Condition upon an Opponent or Defeat an Opponent, regain Ki Points equal to your Might.
+
+---
+
+[passive]
+# A Combat Condition put on an Opponent: asked, once a Round between it and the Defeat (chat.mjs sadisticCondition).
+allow sadistic.ki;
+
+# An Opponent Defeated by your attack - once a Round, between the two (chat.mjs sadisticKi). Automatic by default, its
+# Triggered/Automatic button.
+[triggered/defeat-opponent, 1/round, effect 4]
+sadisticKi();

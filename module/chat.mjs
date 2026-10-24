@@ -608,6 +608,69 @@ export function conditionGained(actor, key) {
     if (!context.demonicCombat) honorableInstead(by, actor, key);
     else requestActorUpdate(by, { [`flags.${SCOPE}.inflictedEncounter`]: game.combat.id });
   }
+  // Sadistic Demon Lord: "If you inflict a Combat Condition upon an Opponent" - asked.
+  if (opponent && combat) sadisticCondition(by, actor, key);
+}
+
+/** Sadistic Demon Lord: "regain Ki Points equal to your Might" - once a Round, between a Combat Condition inflicted and a Defeat. */
+export async function sadisticKi(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (actor?.getFlag?.(SCOPE, "sadisticRound") === roundKey()) return UNSPENT;
+  const might = Math.max(0, Number(actor.system.might) || 0);
+  if (!might) return UNSPENT;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.sadisticRound`]: roundKey(),
+    "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + might) });
+}
+
+/** Sadistic Demon Lord: a Combat Condition put on an Opponent - asked, once a Round. */
+async function sadisticCondition(by, target, key) {
+  if ((by?.system?.effects?.slots?.["sadistic.ki"] !== true) || (by.getFlag?.(SCOPE, "sadisticRound") === roundKey())) return;
+  if ((await askPlayerChoice(by, `${by.name}: Sadistic Demon Lord - ${getTrait(key)?.name ?? key} on ${target.name}`,
+    [{ value: "yes", label: `${Math.max(0, Number(by.system.might) || 0)} Ki Points back (once a Round)` }, { value: "no", label: "Not now" }])) !== "yes") return;
+  return sadisticKi(by);
+}
+
+/**
+ * Heart of Evil (2): "If an Opponent within a Large Sphere AoE (centered on you) makes a Stress Test or Steadfast Check while suffering
+ * from a Combat Condition, you may spend up to 6(bT) Ki Points. For every 3(bT) Ki Points spent, reduce the Dice Score of their roll by
+ * 1." Each who holds it, asked as it is rolled - what comes off it, between them.
+ */
+async function heartOfEvilAgainst(roller, what) {
+  if (!roller || !conditioned(roller)) return 0;
+  const { SPHERE_RADIUS } = await import("./guidance.mjs");
+  const at = roller.getActiveTokens?.(false, true)?.[0];
+  if (!at) return 0;
+  let off = 0;
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const holder = token.actor;
+    if (!holder || seen.has(holder.uuid) || (holder.uuid === roller.uuid) || holder.system?.defeated) continue;
+    seen.add(holder.uuid);
+    if ((holder.system?.effects?.slots?.["heartOfEvil.stress"] !== true) || alliesOnScene(holder).some(ally => ally.uuid === roller.uuid)) continue;
+    const away = squaresBetween(token, at);
+    if ((away === null) || (away > SPHERE_RADIUS.large)) continue;
+    const step = 3 * Math.max(1, Number(holder.system.baseTierOfPower) || 1);
+    const ki = Number(holder.system.ki?.value) || 0;
+    const steps = [1, 2].filter(n => (n * step) <= ki);
+    if (!steps.length) continue;
+    const picked = Number(await askPlayerChoice(holder, `${holder.name}: Heart of Evil - ${roller.name}'s ${what}`,
+      [{ value: "0", label: "Nothing" }, ...steps.map(n => ({ value: String(n), label: `${n * step} Ki Points: ${n} off it` }))])) || 0;
+    if (!steps.includes(picked)) continue;
+    await requestActorUpdate(holder, { "system.ki.value": ki - (picked * step) });
+    off += picked;
+  }
+  return off;
+}
+
+/** Heart of Evil (3): an Opponent knocked through by your attack - "make a Might Clash against them", asked, once a Round. */
+async function heartOfEvilKnock(attacker, target) {
+  if ((attacker.system?.effects?.slots?.["heartOfEvil.clash"] !== true) || (attacker.getFlag?.(SCOPE, "heartOfEvilRound") === roundKey())) return;
+  if (alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return;
+  if ((await askPlayerChoice(attacker, `${attacker.name}: Heart of Evil - ${target.name} knocked through`,
+    [{ value: "yes", label: "A Might Clash - won, Broken, Impaired or Shaken" }, { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.heartOfEvilRound`]: roundKey() });
+  return postMightClash(attacker, target, { maneuverName: "Heart of Evil", reason: "Win and they are Broken, Impaired or Shaken - which, yours.",
+    impede: { applied: false, choose: "heart-of-evil", source: "Heart of Evil" } });
 }
 
 /**
@@ -19745,11 +19808,21 @@ export async function demonRaisedSphere(actor, kind = "demon") {
 async function settleImpede(message, clash) {
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, impede: { ...clash.impede, applied: true } });
   // What it puts on them, and till when - Demon-Raised's Impediment unless the Clash names another (Shadow Dragon-, Oni-Raised).
-  const { condition = "impediment", edge = "end", next = false, source = "Demon-Raised" } = clash.impede;
+  let { condition = "impediment", edge = "end", next = false, source = "Demon-Raised" } = clash.impede;
   if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${source}: nothing put on them.`);
   const actor = fromUuidSync(clash.challengerUuid);
   const target = fromUuidSync(clash.defenderUuid);
   if (!actor || !target) return;
+  // Heart of Evil (3): "you may apply one of the following effects" - which, asked of the winner.
+  if (clash.impede.choose === "heart-of-evil") {
+    const picked = await askPlayerChoice(actor, `${actor.name}: Heart of Evil - ${target.name}`,
+      [{ value: "broken", label: "Broken till the end of your next turn" }, { value: "impaired", label: "Impaired till the end of your next turn" },
+        { value: "shaken", label: "Shaken till the start of your next turn" }, { value: "none", label: "None" }]);
+    if (!["broken", "impaired", "shaken"].includes(picked)) return settledNote(message, `${source}: nothing put on them.`);
+    condition = picked;
+    edge = (picked === "shaken") ? "start" : "end";
+    next = true;
+  }
   await markUntilNextTurn(actor, target, condition, 1, edge, source, next);
   const { allConditions } = await import("./conditions.mjs");
   const named = allConditions().find(each => each.key === condition)?.label ?? condition;
@@ -20229,6 +20302,30 @@ export function tremendousOffer(card, actor) {
     || (actor.getFlag?.(SCOPE, "tremendousEncounter") === (game.combat?.id ?? "none"))) return;
   requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "transformation",
     maneuverName: "Transformation", reason: "Tremendous Lord (once an Encounter)", grants: { encounterFlag: "tremendousEncounter" } } });
+}
+
+/**
+ * Demonic God: "spend a Counter Action to use the Basic Attack Maneuver, Signature Technique Maneuver, or a Unique Ability with an Action
+ * Cost of 1 Action as an Out-of-Sequence Maneuver" - which, asked; the Counter Action paid once it is used.
+ */
+export async function demonicGod(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!((Number(actor.system.actions?.counterLeft) || 0) > 0)) {
+    ui.notifications.warn(`${actor.name}: Demonic God - no Counter Action left.`);
+    return UNSPENT;
+  }
+  const { isUniqueAbility } = await import("./unique.mjs");
+  const uniques = Array.from(actor.items ?? []).filter(item => isUniqueAbility(item) && (Number(item.system.actionCost) === 1));
+  const picked = await askPlayerChoice(actor, `${actor.name}: Demonic God`,
+    [{ value: "basic-attack", label: "The Basic Attack" }, { value: "signature-technique", label: "The Signature Technique" },
+      ...uniques.map(item => ({ value: item.id, label: item.name })), { value: "none", label: "None" }]);
+  if (!picked || (picked === "none")) return UNSPENT;
+  const unique = uniques.find(item => item.id === picked);
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const used = unique ? await useManeuver(actor, definitionOf(unique), { outOfSequence: true }) : await ownOutOfSequence(actor, picked);
+  if (!used) return UNSPENT;
+  const { spendActions } = await import("./combat.mjs");
+  await spendActions(actor, 1, "counter");
 }
 
 /** Lingering Power (5): "Increase your Combat Rolls by 2(bT), using your Past Life's base Tier of Power ... until the end of your next turn." */
@@ -29425,6 +29522,9 @@ async function rollAttackWoundWork(message, attack) {
       + balancedParts(target, attack, "Soak").reduce((sum, part) => sum + part.value, 0)
       // Brute (4): half again, for this attack.
       + (attack.bruteSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
+      // Resilient Demon Lord: against the attack of one suffering from a Combat Condition, 1(T).
+      + (((target.system.effects?.slots?.["resilientDemon.soak"] === true) && conditioned(attacker))
+        ? Math.max(1, Number(target.system.tierOfPower) || 1) : 0)
       // Tremendous Lord (3): 1(bT) for each Size Category larger than its maker.
       + (attack.tremendousSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
@@ -32471,6 +32571,8 @@ async function applyAttackDamage(message, target, attack) {
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)) {
     await cerealianBroken(armsUser, target);
   }
+  // Heart of Evil (3): an Opponent knocked through - the Might Clash, asked.
+  if (knockedFor && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) await heartOfEvilKnock(armsUser, target);
   // Mimicry of Bestial Hunger (2), Resilience (2), Rending Claws (3).
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) await pseudoAfterHit(message, armsUser, target, damage, knockedFor);
   // Oni-Raised (2): an Opponent hit, Injured or worse - the Might Clash, asked.
@@ -33430,6 +33532,8 @@ export async function rollSteadfastCheck(actor) {
   // Blood in the Water (2): the same, its own.
   const blood = Number(actor.getFlag?.(SCOPE, "bloodSteadfast")) || 0;
   if (blood) await actor.unsetFlag(SCOPE, "bloodSteadfast");
+  // Heart of Evil (2): what an Opponent near spent on it.
+  const evil = await heartOfEvilAgainst(actor, "Steadfast Check");
   if (karmicSpent) {
     await setResource(actor, "negativeenergy", (Number(actor.system.resources?.negativeenergy?.stacks) || 0) - karmicSpent);
   }
@@ -33447,7 +33551,8 @@ export async function rollSteadfastCheck(actor) {
   const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : "",
     thresholdDice ? String(thresholdDice) : "", lifeSpent ? `${lifeSpent}[Earthling Resolve]` : "",
     karmicSpent ? `${karmicSpent}[Karmic Reflection]` : "", wrath ? `-${wrath}[Wrath of the Dragon]` : "",
-    blood ? `-${blood}[Blood in the Water]` : "", shellSpent ? "1[Sturdy Shell]" : ""].filter(Boolean);
+    blood ? `-${blood}[Blood in the Water]` : "", shellSpent ? "1[Sturdy Shell]" : "",
+    evil ? `-${evil}[Heart of Evil]` : ""].filter(Boolean);
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   // Failed, what may pass it instead is asked first - before anything that failing does.
@@ -33642,6 +33747,9 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
     offerWilling: false, formula: { base: DBUCharacterData.BASE_DIE, parts: windowParts(actor, parts) } });
   if (!ready) return null;
   if (spentOverwhelm) await setResource(actor, "overwhelm", overwhelm - spentOverwhelm);
+  // Heart of Evil (2): what an Opponent near spent on it.
+  const evil = await heartOfEvilAgainst(actor, "Stress Test");
+  if (evil) parts.push({ label: "Heart of Evil", value: -evil });
   return { name: asked.name, roll: true, requirement: asked.requirement, parts, form: asked.form };
 }
 

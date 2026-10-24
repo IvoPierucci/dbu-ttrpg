@@ -1,0 +1,15 @@
+id: resilient-demon-lord
+name: Resilient Demon Lord
+order: 2
+optionOf: heart-of-evil
+description: >
+  Resilient Demon Lord [Triggered]: If you are targeted by an Attacking Maneuver from an Opponent with a Combat Condition, increase your Soak Value and Damage Reduction by 1(T) for the duration of that Attacking Maneuver.
+text: >
+  Resilient Demon Lord [Triggered]: If you are targeted by an Attacking Maneuver from an Opponent with a Combat Condition, increase your Soak Value and Damage Reduction by 1(T) for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# Against the attack of one suffering from a Combat Condition - Demonic Combat (2)'s Damage Reduction, and its Soak (chat.mjs).
+damageReduction.vsConditioned += 1(T);
+allow resilientDemon.soak;

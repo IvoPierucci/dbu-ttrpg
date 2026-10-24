@@ -686,6 +686,15 @@ const PREDICATES = {
       && ((combat?.round ?? 0) <= (Number(studied.through) || 0)));
   },
 
+  /** Demonic Skills: the one you knocked through was one you Studied, while it lasts - defeatedStudied's, for `knockedUuid`. */
+  knockedStudied: scope => {
+    const held = scope.data?.parent?.getFlag?.("dbu-ttrpg", "studied");
+    const combat = globalThis.game?.combat;
+    return Boolean(scope.context?.knockedUuid) && (Array.isArray(held) ? held : [held]).some(studied =>
+      (studied?.uuid === scope.context.knockedUuid) && (studied.combatId === (combat?.id ?? "none"))
+      && ((combat?.round ?? 0) <= (Number(studied.through) || 0)));
+  },
+
   /** Surging (5): the one Defeated was your Focus. */
   defeatedFocus: scope => Boolean(scope.context?.defeatedUuid)
     && (scope.context.defeatedUuid === (scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingFocus") ?? "")),

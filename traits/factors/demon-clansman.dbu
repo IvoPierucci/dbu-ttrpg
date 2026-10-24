@@ -1,0 +1,10 @@
+id: demon-clansman
+name: Demon Clansman
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's) - its Prerequisite and its loss as the
+# Alignment turns, the table's.
+requirement: Any
+maximumFactor: 1
+prerequisites: >
+  To obtain this Factor, a Character must be Pure Evil. If a Character with this Factor's alignment turns to Good or Pure Good, they lose this Factor and regain the Racial Trait they exchanged for this Factor's Factor Trait
+description: >
+  Though not necessarily a demon by blood, the darkness of demonic evil fills your heart and flows through your veins, transforming you into a demon yourself.

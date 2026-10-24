@@ -1,0 +1,21 @@
+id: demonic-skills
+name: Demonic Skills
+order: 4
+optionOf: heart-of-evil
+# Its Race in brackets - shown, never enforced.
+race: namekian
+description: >
+  Demonic Skills (Namekian) [Triggered]: If you Defeat a Studied Opponent or knock them through a Health Threshold, regain Ki Points equal to your Surgency.
+text: >
+  Demonic Skills (Namekian) [Triggered]: If you Defeat a Studied Opponent or knock them through a Health Threshold, regain Ki Points equal to your Surgency.
+
+---
+
+# Automatic by default, its Triggered/Automatic button.
+[triggered/defeat-opponent, effect 4]
+requires defeatedStudied;
+ki.value += surgency;
+
+[triggered/knock-through, effect 4]
+requires knockedStudied;
+ki.value += surgency;

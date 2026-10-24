@@ -403,6 +403,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  sadisticKi: {
+    args: [0, 0],
+    doc: "Sadistic Demon Lord: Ki Points equal to your Might, once a Round between a Combat Condition inflicted and a Defeat (chat.mjs sadisticKi)."
+  },
+  demonicGod: {
+    args: [0, 0],
+    doc: "Demonic God: a Counter Action for the Basic Attack, the Signature Technique or a 1-Action Unique Ability, out of sequence (chat.mjs demonicGod)."
+  },
   supercomputerPowerUp: {
     args: [0, 0],
     doc: "Mental Supercomputer (4): the Power Up out of sequence, and a Power stack more for it (chat.mjs supercomputerPowerUp)."

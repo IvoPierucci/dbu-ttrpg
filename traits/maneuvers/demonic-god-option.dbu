@@ -1,0 +1,21 @@
+id: demonic-god-option
+name: Demonic God
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: demonic-god
+fromEffect: 4
+source: Core Rule
+description: >
+  Heart of Evil's Demonic God, as a Maneuver: a Counter Action for the Basic Attack, the Signature Technique or a 1-Action Unique Ability, out of sequence.
+text: >
+  (4)-[Option]: Demonic God (Shinjin) [1/Round]: As an Instant Maneuver, you may spend a Counter Action to use the Basic Attack Maneuver, Signature Technique Maneuver, or a Unique Ability with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+
+---
+
+# Which, asked; its Counter Action paid once it is used (chat.mjs demonicGod).
+[on used]
+demonicGod();
