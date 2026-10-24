@@ -28,6 +28,8 @@ const STATEFUL = {
   // Regained never past the most there may be - Skill of the Watcher's 2(bT) a Counter Action.
   "life.value": { path: "system.life.value", read: a => a.system.life.value, cap: a => a.system.life.max },
   "ki.value": { path: "system.ki.value", read: a => a.system.ki.value, cap: a => a.system.ki.max },
+  "divineKi.value": { path: "system.divineKi.value", read: a => Number(a.system.divineKi?.value) || 0,
+    cap: a => Number(a.system.divineKi?.max) || 0 },
   // Counter Actions turned into Actions this Round - Celestial Potential's.
   "actions.fromCounter": { path: "system.actionsSpent.fromCounter",
     read: a => Number(a.system.actionsSpent?.fromCounter) || 0 },
@@ -723,6 +725,24 @@ async function runVerb(actor, call, context) {
       return fireMoment(actor, moment, context);
     }
 
+    case "fillResource": {
+      // To its most - Emperor (4)'s. None below it, nothing done and nothing spent.
+      const { resourceCeiling, resourceDefinitions } = await import("./traits.mjs");
+      const definitions = resourceDefinitions();
+      const held = { ...(actor.system.resources ?? {}) };
+      const gained = [];
+      for (const name of args.map(each => String(each).toLowerCase())) {
+        const most = Number(resourceCeiling(definitions[name], actor)) || 0;
+        if (!most || ((Number(held[name]?.stacks) || 0) >= most)) continue;
+        gained.push(name);
+        held[name] = { ...(held[name] ?? {}), stacks: most, max: Math.max(Number(held[name]?.max) || 0, most) };
+      }
+      if (!gained.length) return UNSPENT;
+      const { replaceObject } = await import("../conditions.mjs");
+      await actor.update({ "system.resources": replaceObject(held) });
+      return stacksGained(actor, gained);
+    }
+    case "goldenFruitPower": return (await import("../chat.mjs")).goldenFruitPower(actor);
     case "raiseTo": {
       // To at least this many, past any ceiling, never lower - Born for Battle's 3.
       const floor = Math.max(0, Number(args[0]) || 0);

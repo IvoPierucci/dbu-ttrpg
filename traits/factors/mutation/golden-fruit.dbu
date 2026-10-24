@@ -1,0 +1,29 @@
+id: golden-fruit
+name: Golden Fruit
+order: 11
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# Under the "Shinjin Factor Trait" header: a Shinjin's alone - shown, never enforced.
+race: shinjin
+description: >
+  Born from the blessed Golden Fruit of the Kaiju Tree, you are far stronger than the rest of your kin.
+text: >
+  Golden Fruit (Body): Born from the blessed Golden Fruit of the Kaiju Tree, you are far stronger than the rest of your kin.
+  (1)-[1/Round]: If you are in the God Ki State, you may spend 3(bT) Divine Ki Points to gain 1 Counter Action as an Instant Maneuver.
+  (2)-[Triggered/Start of Turn]: Regain 4(bT) Divine Ki Points.
+  (3)-[Triggered/Power, 1/Encounter]: Enter the God Ki State until the end of your next turn. If you are already in the God Ki State, enter the Superior State instead.
+
+---
+
+[passive]
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/golden-fruit-first-effect.dbu) - paid in Divine Ki, only in God Ki.
+allow maneuver.golden-fruit-first-effect;
+
+# (2) Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 2]
+divineKi.value += 4(bT);
+
+# (3) Automatic by default, its Triggered/Automatic button (chat.mjs goldenFruitPower).
+[triggered/power, 1/encounter, effect 3]
+goldenFruitPower();

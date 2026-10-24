@@ -403,6 +403,15 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Warriors of Glass (1)'s: how many Glass Soldiers asked, 2(bT) Ki each, paid and said (chat.mjs glassSoldiers)."
   },
+  fillResource: {
+    args: [1, 6],
+    names: [0, 1, 2, 3, 4, 5],
+    doc: "Each named Resource to its most - Emperor (4)'s \"maximize your Overwhelm stacks\". Nothing to fill, nothing spent."
+  },
+  goldenFruitPower: {
+    args: [0, 0],
+    doc: "Golden Fruit (3): God Ki till the end of your next turn - in it already, Superior (chat.mjs goldenFruitPower)."
+  },
   mutationRally: {
     args: [1, 1],
     names: [0],

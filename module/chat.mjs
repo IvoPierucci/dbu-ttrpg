@@ -11776,11 +11776,13 @@ function punchingUp(attacker, target, area, modifiers) {
   if (area || !(modifiers ?? []).some(entry => (entry.id ?? entry.modifier?.id) === "called-shot")) return 0;
   // "Except Punching Up": a Ki Avatar's Gigantic does not count for it - the Size beneath it does. Giant Gene (2): Enormous or larger,
   // Large for it.
-  const trueSteps = actor => {
+  // Tremendous Lord (1): "for the effects of your Opponent's Punching Up" - as its target alone.
+  const trueSteps = (actor, targeted = false) => {
     const steps = Number(actor?.system?.size?.trueSteps ?? actor?.system?.size?.steps) || 0;
-    return ((actor?.system?.effects?.slots?.["giantGene.size"] === true) && (steps >= 2)) ? 1 : steps;
+    const slots = actor?.system?.effects?.slots ?? {};
+    return (((slots["giantGene.size"] === true) || (targeted && (slots["tremendous.size"] === true))) && (steps >= 2)) ? 1 : steps;
   };
-  const larger = target ? (trueSteps(target) - trueSteps(attacker)) : 0;
+  const larger = target ? (trueSteps(target, true) - trueSteps(attacker)) : 0;
   return (larger >= 2) ? larger : 0;
 }
 
@@ -20196,6 +20198,46 @@ function bruteButtons(message, attack, container) {
   }
 }
 
+/**
+ * Tremendous Lord (3): "If you are hit by an Attacking Maneuver made by a Character of a smaller Size Category, increase your Soak Value by
+ * 1(bT) for each Size Category you are larger than that attacking Character" - a button before its Wound, once a Round.
+ */
+function tremendousLordButtons(message, attack, container) {
+  if (!attack.result || attack.result.wound) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker) return;
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["tremendous.soak"] !== true)) continue;
+    if (!targetResult(attack, uuid)?.hit || (target.getFlag?.(SCOPE, "tremendousRound") === roundKey())) continue;
+    if ((attack.tremendousSoak ?? []).some(entry => entry.uuid === uuid)) continue;
+    const larger = (Number(target.system.size?.steps) || 0) - (Number(attacker.system?.size?.steps) || 0);
+    if (larger <= 0) continue;
+    const value = larger * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+    cardButton(container, `Tremendous Lord - ${target.name}`, `Once a Round: Soak Value ${value} higher for this attack.`, async () => {
+      if (target.getFlag?.(SCOPE, "tremendousRound") === roundKey()) return;
+      await target.setFlag(SCOPE, "tremendousRound", roundKey());
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, tremendousSoak: [...(fresh.tremendousSoak ?? []), { uuid, value }] } });
+    });
+  }
+}
+
+/** Tremendous Lord (4): Namekian Biology (3)'s Healing Surge used - "immediately afterwards you may use the Transformation Maneuver". */
+export function tremendousOffer(card, actor) {
+  if (!card || (actor?.system?.effects?.slots?.["tremendous.transform"] !== true)
+    || (actor.getFlag?.(SCOPE, "tremendousEncounter") === (game.combat?.id ?? "none"))) return;
+  requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "transformation",
+    maneuverName: "Transformation", reason: "Tremendous Lord (once an Encounter)", grants: { encounterFlag: "tremendousEncounter" } } });
+}
+
+/** Golden Fruit (3): "Enter the God Ki State until the end of your next turn. If you are already in the God Ki State, enter the Superior State instead." */
+export async function goldenFruitPower(actor) {
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  const godKi = (Number(actor.system?.states?.["god-ki"]) || 0) > 0;
+  return enterState(actor, godKi ? "superior" : "god-ki", 1, "next-turn", "Golden Fruit");
+}
+
 /** Giant Gene (5): "If you are hit by a Called Shot, increase your Damage Reduction by 2(bT) for the duration of that Attacking Maneuver." */
 function giantButtons(message, attack, container) {
   if (!attack.result || attack.result.wound || !isCalledShot(attack)) return;
@@ -24128,6 +24170,11 @@ async function takeOutOfSequence(message, actor, offer) {
       await actor.setFlag(SCOPE, "saiyanSuperiorAttack", true);
     }
   }
+  // Once an Encounter by the flag it names - Tremendous Lord (4)'s.
+  if (offer.grants?.encounterFlag && (actor.getFlag?.(SCOPE, offer.grants.encounterFlag) === (game.combat?.id ?? "none"))) {
+    ui.notifications.warn(`${offer.reason ?? "That effect"}: already used this Combat Encounter.`);
+    return null;
+  }
   // Once a Round by the flag it names - Impaling Horn (2)'s, Retractable Limbs (3)'s.
   if (offer.grants?.roundFlag && (actor.getFlag?.(SCOPE, offer.grants.roundFlag) === roundKey())) {
     ui.notifications.warn(`${offer.reason ?? "That effect"}: already used this Combat Round.`);
@@ -24648,6 +24695,7 @@ async function takeOutOfSequence(message, actor, offer) {
   // Violent Rebuke (3)'s, once a Round.
   if (offer.grants?.rebuke) await requestActorUpdate(actor, { [`flags.${SCOPE}.rebukeRound`]: roundKey() });
   if (offer.grants?.roundFlag) await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.grants.roundFlag}`]: roundKey() });
+  if (offer.grants?.encounterFlag) await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.grants.encounterFlag}`]: game.combat?.id ?? "none" });
   // Questing Wisdom (3)'s, once a Round.
   if (offer.grants?.questing) await requestActorUpdate(actor, { [`flags.${SCOPE}.questingRound`]: roundKey() });
   // Power Gifter (2)'s, once a Round - counted on whoever Empowered.
@@ -29240,7 +29288,9 @@ async function rollAttackWoundWork(message, attack) {
       // Balanced Defender (2).
       + balancedParts(target, attack, "Soak").reduce((sum, part) => sum + part.value, 0)
       // Brute (4): half again, for this attack.
-      + (attack.bruteSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
+      + (attack.bruteSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
+      // Tremendous Lord (3): 1(bT) for each Size Category larger than its maker.
+      + (attack.tremendousSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
     // Mimicry of Penetrating Fangs (2): another quarter, the same way.
@@ -33416,6 +33466,9 @@ export async function takeDivineMovement(actor, maneuver) {
  */
 export async function askTransformation(actor, maneuver, actionsSpent = 1) {
   const rolls = !maneuver.noStressTest;
+  // Emperor (3): "spend any amount of Overwhelm Stacks to increase your Stress Bonus by 1 for every 2 stacks of Overwhelm spent".
+  const overwhelm = (rolls && (actor.system.effects?.slots?.["emperor.stress"] === true))
+    ? (Number(actor.system.resources?.overwhelm?.stacks) || 0) : 0;
   const asked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - ${maneuver.name}` },
@@ -33423,12 +33476,16 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
         <input type="text" name="name" autofocus/></label>
       ${rolls ? `<label class="dbu-respond-option"><span class="dbu-respond-name">Stress Test Requirement</span>
         <input type="number" name="requirement" min="0" step="1"/></label>` : ""}
+      ${(overwhelm >= 2) ? `<label class="dbu-respond-option" data-tooltip="Emperor: 1 on the Stress Bonus for every 2 spent">
+        <span class="dbu-respond-name">Overwhelm spent</span>
+        <input type="number" name="overwhelm" min="0" max="${overwhelm}" step="2" value="0"/></label>` : ""}
       <label class="dbu-respond-option" data-tooltip="${Handlebars.escapeExpression(LEGEND_TIP)}">
         <span class="dbu-respond-name">Form</span><input type="checkbox" name="form"/></label>`,
     buttons: [
       { action: "confirm", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
         name: String(dialog.element.querySelector('input[name="name"]')?.value ?? "").trim(),
         requirement: Number(dialog.element.querySelector('input[name="requirement"]')?.value),
+        overwhelm: Number(dialog.element.querySelector('input[name="overwhelm"]')?.value) || 0,
         form: Boolean(dialog.element.querySelector('input[name="form"]')?.checked) }) },
       { action: "cancel", label: "Cancel" }
     ],
@@ -33441,11 +33498,14 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
     return null;
   }
   const minus = (Number(maneuver.stressPerAction) || 0) * Math.max(1, Number(actionsSpent) || 1);
+  const spentOverwhelm = Math.max(0, Math.min(overwhelm, 2 * Math.floor((Number(asked.overwhelm) || 0) / 2)));
   const parts = [{ label: "Stress Bonus", value: Number(actor.system.stressBonus) || 0, workingsKey: "stressBonus" },
-    ...(minus ? [{ label: maneuver.name, value: -minus }] : [])];
+    ...(minus ? [{ label: maneuver.name, value: -minus }] : []),
+    ...(spentOverwhelm ? [{ label: `Emperor (${spentOverwhelm} Overwhelm)`, value: spentOverwhelm / 2 }] : [])];
   const ready = await prepareRoll(actor, [], `${asked.name}: Stress Test`, "", {
     offerWilling: false, formula: { base: DBUCharacterData.BASE_DIE, parts: windowParts(actor, parts) } });
   if (!ready) return null;
+  if (spentOverwhelm) await setResource(actor, "overwhelm", overwhelm - spentOverwhelm);
   return { name: asked.name, roll: true, requirement: asked.requirement, parts, form: asked.form };
 }
 
@@ -34353,6 +34413,7 @@ function renderAttack(message, html) {
   // Brute (4), Giant Gene (5): hit - the Soak Value, the Damage Reduction, before its Wound. Speedster (6): targeted, before it is settled.
   if (!result?.wound) bruteButtons(message, attack, container);
   if (!result?.wound) giantButtons(message, attack, container);
+  if (!result?.wound) tremendousLordButtons(message, attack, container);
   if (!result) speedsterButtons(message, attack, container);
   // Dissipating Dodge (2): targeted - Ki for the Defense Value at Nano, before it is settled.
   if (!result) dissipatingButtons(message, attack, container);

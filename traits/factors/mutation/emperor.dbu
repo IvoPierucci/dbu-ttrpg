@@ -1,0 +1,32 @@
+id: emperor
+name: Emperor
+order: 8
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# Under the "Arcosian Factor Trait" header: a Arcosian's alone - shown, never enforced.
+race: arcosian
+description: >
+  Your power is so immense it must be held back lest it destroy all those around you.
+text: >
+  Emperor (Body): Your power is so immense it must be held back lest it destroy all those around you.
+  (1)-[Passive]: Gain access to all stages of the Metamorphosis Transformation Line.
+  (2)-[Passive]: All of your Forms with a Racial Requirement of Arcosian are considered to be a part of the Metamorphosis Transformation Line for your effects.
+  (3)-[Triggered]: Upon using the Transformation Maneuver, you may spend any amount of Overwhelm Stacks to increase your Stress Bonus by 1 for every 2 stacks of Overwhelm spent for the duration of that Maneuver.
+  (4)-[Triggered, 1/Round]: Upon benefiting from the effects of Legend Realized, maximize your Overwhelm stacks.
+  (5)-[Triggered, 1/Encounter]: At the end of your turn, before you apply the second effect of Overwhelming Fighter, you may use the Transformation Maneuver as an Out-of-Sequence Maneuver if you are below the Injured Health Threshold.
+
+---
+
+# (1), (2) Wait on Transformations - Forms and Transformation Lines - not built yet: the table's.
+[passive]
+# (3) The Transformation Maneuver's window: the Overwhelm spent, 1 on its Stress Test for every 2 (chat.mjs askTransformation).
+allow emperor.stress;
+
+# (4) Legend Realized benefited from (chat.mjs legendRealized): your Overwhelm to its most. Automatic by default, its Triggered/Automatic
+# button.
+[triggered/legend-realized, 1/round, effect 4]
+fillResource(overwhelm);
+
+# (5) Not built: the Transformation out of sequence between your turn's end and Overwhelming Fighter's (2) is the table's - Transformations
+# are not built either.

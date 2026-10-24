@@ -2087,7 +2087,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const size = DBUCharacterData.SIZES[sizeKey] ?? DBUCharacterData.SIZES[DBUCharacterData.DEFAULT_SIZE];
     // Giant Gene (2): "For calculating the bonus/penalty to your Defense Value from your Size Category ... you are considered to be of the
     // Large Size Category if your Size Category is Enormous or larger."
-    const defenseAt = ((this.effects?.slots?.["giantGene.size"] === true) && (sizeKeys.indexOf(sizeKey) >= sizeKeys.indexOf("enormous")))
+    // Tremendous Lord (1): "If your Size Category is greater than Large", the same.
+    const defenseAt = (((this.effects?.slots?.["giantGene.size"] === true) || (this.effects?.slots?.["tremendous.size"] === true))
+      && (sizeKeys.indexOf(sizeKey) >= sizeKeys.indexOf("enormous")))
       ? sizeKeys.indexOf("large") : sizeKeys.indexOf(sizeKey);
 
     this.size = {

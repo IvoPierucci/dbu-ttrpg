@@ -1,0 +1,23 @@
+id: golden-fruit-first-effect
+name: Golden Fruit
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 3
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Paid in Divine Ki Points alone, only in the God Ki State, as a God Maneuver is (maneuvers.mjs whyNotGod, spendManeuverCost) - open
+# through Golden Fruit's `allow`.
+godManeuver: true
+fromTrait: golden-fruit
+fromEffect: 1
+source: Core Rule
+description: >
+  Golden Fruit's first effect, as a Maneuver: 3(bT) Divine Ki Points for a Counter Action, in the God Ki State.
+text: >
+  (1)-[1/Round]: If you are in the God Ki State, you may spend 3(bT) Divine Ki Points to gain 1 Counter Action as an Instant Maneuver.
+
+---
+
+[on used]
+actions.counterGained += 1;

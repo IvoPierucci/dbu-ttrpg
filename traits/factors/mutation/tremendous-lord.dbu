@@ -1,0 +1,27 @@
+id: tremendous-lord
+name: Tremendous Lord
+order: 9
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# Under the "Namekian Factor Trait" header: a Namekian's alone - shown, never enforced.
+race: namekian
+description: >
+  Your body grows to titanic heights, allowing you to literally tower over your enemies.
+text: >
+  Tremendous Lord (Body): Your body grows to titanic heights, allowing you to literally tower over your enemies.
+  (1)-[Passive]: If your Size Category is greater than Large, for calculating the bonus/penalty to your Defense Value from your Size Category, and for the effects of your Opponent’s Punching Up, you are considered to be of the Large Size Category.
+  (2)-[Passive]: Gain access to the Great Namekian Enhancement. Additionally, the Great Namekian Enhancement gains the Natural (LV1) Aspect. This effect does not apply to any other Transformation that would be treated as Great Namekian.
+  (3)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver made by a Character of a smaller Size Category, increase your Soak Value by 1(bT) for each Size Category you are larger than that attacking Character.
+  (4)-[Triggered, 1/Encounter]: If you use a Healing Surge through the 3rd effect of Namekian Biology, immediately afterwards you may use the Transformation Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Read where the Size's Defense Value is (actor-character.mjs), and where an Opponent's Punching Up is (chat.mjs punchingUp).
+allow tremendous.size;
+# (2) Waits on Transformations - the Great Namekian Enhancement - not built yet: the table's.
+# (3) Hit by a smaller Character: a button on the attack's card before its Wound Roll, once a Round (chat.mjs tremendousLordButtons).
+allow tremendous.soak;
+# (4) Namekian Biology (3) used: the Transformation offered on its card, once an Encounter (chat.mjs tremendousOffer).
+allow tremendous.transform;
