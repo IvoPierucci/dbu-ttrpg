@@ -96,12 +96,16 @@ export async function syncProgressionTalents(actor) {
 
 /**
  * The Talents with nowhere to come from: neither a reached Talent Addition row of the Progression tab (`fromProgression`) nor a
- * Racial Trait (`fromTrait` - kept even once the Trait is lost: "you do not lose that Talent"). Read after the tab is synced, so
- * one a row names is the tab's by then.
+ * Racial Trait still held (`fromTrait` - its file's id, or an older Item's id). "You do not lose that Talent" as the Trait goes, by
+ * the rule; here it goes all the same (the user's: given again by adding the Trait back and taking it off). Read after the tab is
+ * synced, so one a row names is the tab's by then.
  */
 export function orphanTalents(items) {
-  return Array.from(items ?? []).filter(item => (item.type === "talent")
-    && !item.flags?.["dbu-ttrpg"]?.[FROM_PROGRESSION] && !item.flags?.["dbu-ttrpg"]?.fromTrait);
+  const list = Array.from(items ?? []);
+  const held = new Set(list.filter(item => item.type === "racial")
+    .flatMap(item => [item.id, item.flags?.["dbu-ttrpg"]?.sourceId].filter(Boolean)));
+  return list.filter(item => (item.type === "talent") && !item.flags?.["dbu-ttrpg"]?.[FROM_PROGRESSION]
+    && !held.has(item.flags?.["dbu-ttrpg"]?.fromTrait ?? ""));
 }
 
 /**
@@ -116,7 +120,7 @@ export async function refreshTalents(actor) {
   const escape = Handlebars.escapeExpression;
   const confirmed = orphans.length && await foundry.applications.api.DialogV2.confirm({
     window: { title: `${actor.name} - Refresh talents` },
-    content: `<p>Neither a Talent Addition row of the Progression tab nor a Racial Trait gives these - remove them?</p>
+    content: `<p>Neither a Talent Addition row of the Progression tab nor a Racial Trait you hold gives these - remove them?</p>
       <ul>${orphans.map(item => `<li>${escape(item.name)}</li>`).join("")}</ul>`,
     rejectClose: false
   });
