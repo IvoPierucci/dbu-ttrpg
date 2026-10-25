@@ -1810,14 +1810,95 @@
   min-width: 70px;
 }
 
-/* A Talent Addition row's search, over its list. */
-.dbu-ttrpg .progression-table .talent-cell .dbu-talent-search {
-  display: block;
+/* A Talent Addition row's list, typed into: the box looks like the row's other lists; the list opens under it (`.up`: over it). */
+.dbu-ttrpg .dbu-combo {
+  position: relative;
+  min-width: 130px;
+}
+
+.dbu-ttrpg .progression-table .dbu-combo .dbu-combo-input {
   width: 100%;
-  min-width: 70px;
-  height: 20px;
-  margin-bottom: 2px;
-  font-size: 0.85em;
+  box-sizing: border-box;
+  padding-right: 18px;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .progression-table .dbu-combo .dbu-combo-input:focus {
+  cursor: text;
+  border-color: var(--dbu-accent);
+  box-shadow: none;
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-caret {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--dbu-text-dim);
+  font-size: 9px;
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  z-index: 50;
+  min-width: 180px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--dbu-panel-raised);
+  border: 1px solid var(--dbu-border-strong);
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  text-align: left;
+}
+
+.dbu-ttrpg .dbu-combo.up .dbu-combo-list {
+  top: auto;
+  bottom: calc(100% + 2px);
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-group {
+  padding: 6px 8px 2px;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-option {
+  padding: 4px 10px 4px 14px;
+  cursor: pointer;
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-none {
+  padding-left: 8px;
+  color: var(--dbu-text-dim);
+  font-style: italic;
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-option mark {
+  background: none;
+  color: var(--dbu-accent);
+  font-weight: 700;
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-option.active,
+.dbu-ttrpg .dbu-combo .dbu-combo-option:hover {
+  background: rgba(245, 166, 35, 0.16);
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-option.chosen::after {
+  content: "  \2713";
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-combo .dbu-combo-empty {
+  padding: 6px 8px;
+  color: var(--dbu-text-dim);
 }
 
 /* One Power Level spans several rows; rule off where a new one begins. */

@@ -2588,35 +2588,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       });
     }
 
-    // A Talent Addition row's search: each letter typed narrows its list - by the Talent's name or its Category's - and Enter
-    // takes the first one left. Never submitted itself, so typing re-renders nothing.
-    for (const search of this.element.querySelectorAll("[data-talent-search]")) {
-      const select = search.parentElement?.querySelector("select");
-      if (!select) continue;
-      const left = () => Array.from(select.querySelectorAll("option")).filter(option => option.value && !option.hidden);
-      search.addEventListener("input", () => {
-        const typed = String(search.value ?? "").trim().toLowerCase();
-        for (const group of select.querySelectorAll("optgroup")) {
-          const inGroup = String(group.label ?? "").toLowerCase().includes(typed);
-          let any = false;
-          for (const option of group.querySelectorAll("option")) {
-            option.hidden = Boolean(typed) && !inGroup && !String(option.textContent ?? "").toLowerCase().includes(typed);
-            any ||= !option.hidden;
-          }
-          group.hidden = !any;
-        }
-      });
-      search.addEventListener("change", event => event.stopPropagation());
-      search.addEventListener("keydown", event => {
-        if (event.key !== "Enter") return;
-        event.preventDefault();
-        event.stopPropagation();
-        const first = left()[0];
-        if (!first || (select.value === first.value)) return;
-        select.value = first.value;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-    }
+    // A Talent Addition row's list, typed into (`[data-combo]`).
+    for (const combo of this.element.querySelectorAll("[data-combo]")) DBUCharacterSheet.#bindCombo(combo);
 
     // An "Attribute Addition" row may spread at most 2 points across its seven
     // attribute cells, and no cell may leave the 0-2 range. The `min`/`max`
@@ -2753,6 +2726,124 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
     if (!confirmed) return;
     return reloadCoreTalents();
+  }
+
+  /**
+   * A list typed into - a Talent Addition row's. The box shows what is chosen; focused, the whole list opens under it (over it,
+   * where there is no room below), and each letter narrows it to the names - or the Categories - holding them, those letters
+   * marked. A click, or Enter on the one marked by the arrows, writes the hidden field and submits it as the row's change; Escape
+   * or a click away closes it and puts the chosen name back.
+   */
+  static #bindCombo(combo) {
+    const field = combo.querySelector('input[type="hidden"]');
+    const box = combo.querySelector(".dbu-combo-input");
+    const list = combo.querySelector(".dbu-combo-list");
+    if (!field || !box || !list) return;
+    const options = Array.from(list.querySelectorAll(".dbu-combo-option"));
+    const groups = Array.from(list.querySelectorAll(".dbu-combo-group"));
+    const empty = list.querySelector(".dbu-combo-empty");
+    const labelOf = value => options.find(option => option.dataset.value === value)?.textContent?.trim() ?? "";
+    const chosenLabel = () => (field.value ? labelOf(field.value) : "");
+    box.value = chosenLabel();
+    let shown = [];
+    let active = -1;
+    const escape = text => String(text).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+    const paint = () => {
+      shown.forEach((option, index) => option.classList.toggle("active", index === active));
+      shown[active]?.scrollIntoView({ block: "nearest" });
+    };
+    const draw = typed => {
+      const query = String(typed ?? "").trim().toLowerCase();
+      const groupHit = new Set(groups.filter(group => group.dataset.group.toLowerCase().includes(query)).map(group => group.dataset.group));
+      shown = [];
+      for (const option of options) {
+        const name = option.textContent.trim();
+        const none = option.dataset.value === "";
+        const hit = !query || (!none && (groupHit.has(option.dataset.group) || name.toLowerCase().includes(query)));
+        option.hidden = !hit;
+        const at = (query && !none) ? name.toLowerCase().indexOf(query) : -1;
+        option.innerHTML = (at < 0) ? escape(name) : `${escape(name.slice(0, at))}<mark>${escape(name.slice(at, at + query.length))}</mark>`
+          + escape(name.slice(at + query.length));
+        if (hit) shown.push(option);
+      }
+      for (const group of groups) {
+        group.hidden = !options.some(option => !option.hidden && (option.dataset.group === group.dataset.group));
+      }
+      if (empty) empty.hidden = shown.length > 0;
+      active = shown.findIndex(option => option.dataset.value && (option.dataset.value === field.value));
+      if (query || (active < 0)) active = shown.findIndex(option => option.dataset.value !== "");
+      paint();
+    };
+    const open = () => {
+      if (!list.hidden) return;
+      list.hidden = false;
+      box.setAttribute("aria-expanded", "true");
+      // Over the box where the scrolling window has no room under it.
+      const scroller = combo.closest(".window-content") ?? document.body;
+      const room = scroller.getBoundingClientRect();
+      const at = box.getBoundingClientRect();
+      combo.classList.toggle("up", ((room.bottom - at.bottom) < list.offsetHeight) && ((at.top - room.top) > (room.bottom - at.bottom)));
+    };
+    const close = () => {
+      list.hidden = true;
+      box.setAttribute("aria-expanded", "false");
+      box.value = chosenLabel();
+    };
+    const pick = option => {
+      if (!option) return;
+      list.hidden = true;
+      box.setAttribute("aria-expanded", "false");
+      box.value = labelOf(option.dataset.value);
+      box.blur();
+      if (field.value === option.dataset.value) return;
+      field.value = option.dataset.value;
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
+    box.addEventListener("focus", () => {
+      box.select();
+      draw("");
+      open();
+    });
+    box.addEventListener("input", () => {
+      draw(box.value);
+      open();
+    });
+    // The box is the list's, not the form's: its own change submits nothing.
+    box.addEventListener("change", event => event.stopPropagation());
+    box.addEventListener("keydown", event => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        if (list.hidden) {
+          draw("");
+          open();
+        } else active = Math.min(shown.length - 1, active + 1);
+        paint();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        active = Math.max(0, active - 1);
+        paint();
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!list.hidden) pick(shown[active]);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+        box.blur();
+      }
+    });
+    // Picked on the press, before the box loses its focus and closes the list.
+    list.addEventListener("pointerdown", event => {
+      const option = event.target.closest(".dbu-combo-option");
+      event.preventDefault();
+      if (option && !option.hidden) pick(option);
+    });
+    box.addEventListener("blur", () => {
+      if (!list.hidden) close();
+    });
   }
 
   /** The Talents made to match where they come from - the Progression tab, a Racial Trait - and those from nowhere taken off. */

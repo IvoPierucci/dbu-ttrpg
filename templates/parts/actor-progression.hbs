@@ -158,19 +158,25 @@
 
         <td class="talent-cell">
           {{#if row.isTalentAddition}}
-            {{! Not submitted: it only narrows the list below as letters are typed - Enter takes the one match left. }}
-            <input type="search" class="dbu-talent-search" data-talent-search placeholder="Search..."
-                   data-tooltip="Type to narrow the Talents (name or Category); Enter takes the first one left"/>
-            <select name="system.progression.{{row.index}}.talent">
-              <option value=""></option>
-              {{#each row.talentGroups as |group|}}
-              <optgroup label="{{group.label}}">
+            {{! A list typed into: the box shows the Talent chosen, letters narrow the list under it (by name or Category), a
+                pick writes the hidden field the row submits. The box itself is never submitted. }}
+            <div class="dbu-combo" data-combo>
+              <input type="hidden" name="system.progression.{{row.index}}.talent" value="{{row.entry.talent}}"/>
+              <input type="text" class="dbu-combo-input" autocomplete="off" spellcheck="false" placeholder="Choose a Talent"
+                     role="combobox" aria-expanded="false" aria-label="Talent"/>
+              <span class="dbu-combo-caret" aria-hidden="true">&#9662;</span>
+              <div class="dbu-combo-list" role="listbox" hidden>
+                <div class="dbu-combo-option dbu-combo-none" role="option" data-value="">None</div>
+                {{#each row.talentGroups as |group|}}
+                <div class="dbu-combo-group" data-group="{{group.label}}">{{group.label}}</div>
                 {{#each group.options as |option|}}
-                <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
+                <div class="dbu-combo-option{{#if option.selected}} chosen{{/if}}" role="option" data-value="{{option.value}}"
+                     data-group="{{group.label}}">{{option.label}}</div>
                 {{/each}}
-              </optgroup>
-              {{/each}}
-            </select>
+                {{/each}}
+                <div class="dbu-combo-empty" hidden>No Talent has that in its name or Category.</div>
+              </div>
+            </div>
           {{else}}
             <input type="hidden" name="system.progression.{{row.index}}.talent" value="{{row.entry.talent}}"/>
           {{/if}}
