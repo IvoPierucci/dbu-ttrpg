@@ -118,18 +118,13 @@
       <tr>
         <th>Level</th>
         <th>Choice</th>
-        <th>Talent</th>
-        {{#each attributeColumns as |column|}}
-        <th data-tooltip="{{column.key}}">{{column.abbr}}</th>
-        {{/each}}
+        <th>Benefits</th>
         <th>TP</th>
-        <th>Skill Ranks</th>
       </tr>
     </thead>
     <tbody>
       {{#each progressionRows as |row|}}
-      <tr class="{{#if row.firstOfLevel}}level-start{{/if}} {{#unless row.reached}}unreached{{/unless}}"
-          {{#if row.isAttributeAddition}}data-attribute-addition{{/if}}>
+      <tr class="{{#if row.firstOfLevel}}level-start{{/if}} {{#unless row.reached}}unreached{{/unless}}">
 
         <td class="level-cell">
           {{! Foundry rebuilds the whole progression array from the submitted form, so
@@ -156,7 +151,19 @@
           {{/if}}
         </td>
 
-        <td class="talent-cell">
+        <td class="benefit-cell">
+          {{! What every row carries whatever it is: its seven Attribute points and its Skill Rank slots - written by the
+              Attribute Addition's and the Skill Improvement's windows, submitted as they close. }}
+          {{#each row.attributeFields as |field|}}
+          <input type="hidden" name="{{field.name}}" value="{{field.value}}" data-dtype="Number" data-benefit-attribute="{{field.key}}"/>
+          {{/each}}
+          {{#each row.skillRanks as |slot|}}
+          <input type="hidden" name="{{slot.name}}" value="{{slot.value}}" data-benefit-skill/>
+          {{/each}}
+          {{#if row.benefit}}
+            <button type="button" class="benefit-pick{{#unless row.benefit.label}} empty{{/unless}}" data-benefit="{{row.benefit.kind}}"
+                    data-benefit-data="{{row.benefit.data}}">{{#if row.benefit.label}}{{row.benefit.label}}{{else}}Choose&hellip;{{/if}}{{#if row.benefit.left}} <span class="benefit-left">({{row.benefit.left}} left)</span>{{/if}}{{#if row.benefit.over}} <span class="benefit-over">(over the cap)</span>{{/if}}</button>
+          {{/if}}
           {{#if row.isTalentAddition}}
             {{! A list typed into: the box shows the Talent chosen, letters narrow the list under it (by name or Category), a
                 pick writes the hidden field the row submits. The box itself is never submitted. }}
@@ -182,40 +189,12 @@
           {{/if}}
         </td>
 
-        {{#each @root.attributeColumns as |column|}}
-        <td>
-          {{#if row.isAttributeAddition}}
-            <input type="number" class="attr-input"
-                   name="system.progression.{{row.index}}.attributes.{{column.key}}"
-                   value="{{lookup row.entry.attributes column.key}}"/>
-          {{else}}
-            <span class="computed-value">{{lookup row.entry.attributes column.key}}</span>
-            <input type="hidden" name="system.progression.{{row.index}}.attributes.{{column.key}}"
-                   value="{{lookup row.entry.attributes column.key}}" data-dtype="Number"/>
-          {{/if}}
-        </td>
-        {{/each}}
 
         <td>
           <span class="computed-value">{{row.entry.technique}}</span>
           <input type="hidden" name="system.progression.{{row.index}}.technique" value="{{row.entry.technique}}" data-dtype="Number"/>
         </td>
 
-        <td class="skill-ranks-cell">
-          {{#each row.skillRanks as |slot|}}
-            {{#if row.isSkillImprovement}}
-              <select name="{{slot.name}}">
-                <option value=""></option>
-                {{#each slot.options as |option|}}
-                <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}
-                        {{#if option.disabled}}disabled{{/if}}>{{option.label}}</option>
-                {{/each}}
-              </select>
-            {{else}}
-              <input type="hidden" name="{{slot.name}}" value="{{slot.value}}"/>
-            {{/if}}
-          {{/each}}
-        </td>
 
       </tr>
       {{/each}}

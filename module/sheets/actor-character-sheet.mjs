@@ -2339,6 +2339,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         if (key) tally[key] = (tally[key] ?? 0) + 1;
       }
     }
+    // And each Attribute's Score going into each row, the same way: 1, the race's, and every row's points above it - the
+    // Score the Attribute Addition's window measures against that row's own cap.
+    const attributeKeys = Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS);
+    const scoresBeforeRow = [];
+    const scores = Object.fromEntries(attributeKeys.map(key => [key, 1 + DBUCharacterData.racialIncreaseFor(
+      this.actor.system.race, this.actor.system.racialAttributeChoices ?? [], key)]));
+    for (const entry of progression) {
+      scoresBeforeRow.push({ ...scores });
+      for (const key of attributeKeys) scores[key] += Number(entry.attributes?.[key]) || 0;
+    }
 
     return progression.map((entry, index, rows) => {
       const isAttributeAddition = entry.choice === "Attribute Addition";
@@ -2357,39 +2367,55 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // not count toward the TP total.
         reached: entry.lvl <= powerLevel,
         talentGroups: isTalentAddition ? talentChoicesFor(this.actor, entry) : [],
-        // The Level 1 Skill Improvement offers 6 rank slots; every other one offers 4.
-        skillRanks: Array.from({ length: DBUCharacterData.skillRankSlotsFor(entry) }, (unused, slot) => {
-          const value = entry.skillRanks[slot] ?? "";
-          const rankCap = DBUCharacterData.skillRankCap(DBUCharacterData.tierOfPowerFor(entry.lvl));
-          const prior = ranksBeforeRow[index];
-
-          const otherSlots = entry.skillRanks.filter((pick, at) => at !== slot);
-
-          return {
-            name: `system.progression.${index}.skillRanks.${slot}`,
-            value,
-            options: Object.entries(SKILLS).map(([key, skill]) => {
-              // A Skill Improvement spreads across distinct Skills, except for the two
-              // extra Ranks the Level 1 one carries.
-              const takenBySibling = !DBUCharacterData.canRepeatSkillRank(entry, key, otherSlots);
-              // Nor can it push a Skill past the cap of this row's Tier of Power. The
-              // Ranks already spent on it in this same grant count too - without them a
-              // racial Rank plus a pair here would quietly reach three.
-              const takenInRow = otherSlots.filter(pick => pick === key).length;
-              const atCap = ((prior[key] ?? 0) + takenInRow + 1) > rankCap;
-
-              return {
-                value: key,
-                label: atCap ? `${skill.label} (cap ${rankCap})` : skill.label,
-                selected: key === value,
-                // The current value stays selectable so the row can still show it.
-                disabled: (key !== value) && (takenBySibling || atCap)
-              };
-            })
-          };
-        })
+        // Every row's seven Attribute points and its Skill Rank slots - 6 for the Level 1 Skill Improvement, 4 otherwise -
+        // carried as hidden fields; the windows write them.
+        attributeFields: attributeKeys.map(key => ({ key, name: `system.progression.${index}.attributes.${key}`,
+          value: Number(entry.attributes?.[key]) || 0 })),
+        skillRanks: Array.from({ length: DBUCharacterData.skillRankSlotsFor(entry) }, (unused, slot) => ({
+          name: `system.progression.${index}.skillRanks.${slot}`,
+          value: entry.skillRanks[slot] ?? ""
+        })),
+        // The Benefits cell's button: what was chosen, said - and what its window needs.
+        benefit: isAttributeAddition ? DBUCharacterSheet.#attributeBenefit(entry, scoresBeforeRow[index])
+          : isSkillImprovement ? DBUCharacterSheet.#skillBenefit(entry, ranksBeforeRow[index], SKILLS) : null
       };
     });
+  }
+
+  /** The name an Attribute goes by, from its key. */
+  static #attributeName(key) {
+    return key.charAt(0).toUpperCase() + key.slice(1);
+  }
+
+  /**
+   * An Attribute Addition row's Benefits: "+1 Agility, +1 Force" or "+2 Magic", whether any Score passes this row's cap
+   * (8 at Tier 1, 3 more each Tier), and for its window the two picks and the Scores going into the row.
+   */
+  static #attributeBenefit(entry, before) {
+    const cap = 8 + ((DBUCharacterData.tierOfPowerFor(entry.lvl) - 1) * 3);
+    const picks = Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)
+      .flatMap(key => Array.from({ length: Math.max(0, Math.min(2, Number(entry.attributes?.[key]) || 0)) }, () => key)).slice(0, 2);
+    const counts = picks.reduce((map, key) => ({ ...map, [key]: (map[key] ?? 0) + 1 }), {});
+    const label = Object.entries(counts).map(([key, n]) => `+${n} ${DBUCharacterSheet.#attributeName(key)}`).join(", ");
+    return { kind: "attributes", label, left: 0, over: Object.entries(counts).some(([key, n]) => (before[key] ?? 0) + n > cap),
+      data: JSON.stringify({ lvl: entry.lvl, cap, before, picks }) };
+  }
+
+  /**
+   * A Skill Improvement row's Benefits: its Skills by name - "+2 Perception" where the Level 1 one doubled one up - the Ranks
+   * still unchosen, whether any passes this row's Rank cap, and for its window the picks, the slots and the Ranks going in.
+   */
+  static #skillBenefit(entry, before, SKILLS) {
+    const cap = DBUCharacterData.skillRankCap(DBUCharacterData.tierOfPowerFor(entry.lvl));
+    const slots = DBUCharacterData.skillRankSlotsFor(entry);
+    const picks = (entry.skillRanks ?? []).filter(key => key && SKILLS[key]).slice(0, slots);
+    const counts = picks.reduce((map, key) => ({ ...map, [key]: (map[key] ?? 0) + 1 }), {});
+    const label = Object.entries(SKILLS).filter(([key]) => counts[key])
+      .map(([key, skill]) => ((counts[key] > 1) ? `+${counts[key]} ${skill.label}` : skill.label)).join(", ");
+    const pairs = DBUCharacterData.isLevel1SkillImprovement(entry) ? DBUCharacterData.PAIRED_SKILL_RANKS_LEVEL_1 : 0;
+    return { kind: "skills", label, left: label ? Math.max(0, slots - picks.length) : 0,
+      over: Object.entries(counts).some(([key, n]) => (before[key] ?? 0) + n > cap),
+      data: JSON.stringify({ lvl: entry.lvl, cap, slots, pairs, before, picks }) };
   }
 
   /** Build the tab configuration used by the "tabs" part template. */
@@ -2564,7 +2590,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Maximum attribute points a single "Attribute Addition" row may distribute. */
-  static ATTRIBUTE_ADDITION_MAX = 2;
 
   /** @override */
   _onRender(context, options) {
@@ -2591,16 +2616,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // A Talent Addition row's list, typed into (`[data-combo]`).
     for (const combo of this.element.querySelectorAll("[data-combo]")) DBUCharacterSheet.#bindCombo(combo);
 
-    // An "Attribute Addition" row may spread at most 2 points across its seven
-    // attribute cells, and no cell may leave the 0-2 range. The `min`/`max`
-    // attributes only constrain the spinner arrows - typed and pasted values are
-    // not enforced by the browser - so clamp on every keystroke instead, and keep
-    // each cell's `max` in step with the points still unspent in that row.
-    for (const row of this.element.querySelectorAll(".progression-table tr[data-attribute-addition]")) {
-      this.#applyAttributeAdditionLimits(row);
-      for (const input of row.querySelectorAll(".attr-input")) {
-        input.addEventListener("input", () => this.#onAttributeAdditionInput(row, input));
-      }
+    // An Attribute Addition's or a Skill Improvement's Benefits: its window of toggles.
+    for (const button of this.element.querySelectorAll("[data-benefit]")) {
+      button.addEventListener("click", () => this.#openBenefits(button));
     }
 
     // Recorded, not re-rendered: opening a section is a local thing, and re-rendering
@@ -2673,35 +2691,130 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Read an attribute cell as a non-negative integer, treating blank/invalid as 0. */
-  static #cellValue(input) {
-    const value = Math.floor(Number(input.value));
-    return Number.isFinite(value) ? Math.max(0, value) : 0;
-  }
-
-  /** Clamp the edited cell so its row never exceeds the row budget, then refresh the caps. */
-  #onAttributeAdditionInput(row, input) {
-    const cells = [...row.querySelectorAll(".attr-input")];
-    const spentElsewhere = cells
-      .filter(cell => cell !== input)
-      .reduce((sum, cell) => sum + DBUCharacterSheet.#cellValue(cell), 0);
-    const allowed = Math.max(0, DBUCharacterSheet.ATTRIBUTE_ADDITION_MAX - spentElsewhere);
-    const clamped = Math.min(DBUCharacterSheet.#cellValue(input), allowed);
-    if (input.value !== String(clamped)) input.value = String(clamped);
-    this.#applyAttributeAdditionLimits(row);
-  }
-
   /**
-   * Cap every cell in the row at its own value plus whatever is left of the budget.
-   * Once the row totals 2, cells sitting at 0 get a max of 0 and cannot be raised.
+   * The Benefits window of an Attribute Addition or a Skill Improvement, over the sheet. Its toggles change only the window;
+   * Close (or Escape, or a click beside it) writes the row's hidden fields and submits them as one change.
+   *
+   * Attributes: two rows of seven, one +1 each - the same in both, +2. Skills: one toggle a Skill, by its Attribute, up to the
+   * row's slots; the Level 1 one may take a Skill twice (`pairs`). Green, chosen; red, past this row's cap - choosable still.
+   * The slots full, the Skills not chosen are shut: it is the row's count, not a cap.
    */
-  #applyAttributeAdditionLimits(row) {
-    const cells = [...row.querySelectorAll(".attr-input")];
-    const spent = cells.reduce((sum, cell) => sum + DBUCharacterSheet.#cellValue(cell), 0);
-    const remaining = Math.max(0, DBUCharacterSheet.ATTRIBUTE_ADDITION_MAX - spent);
-    for (const cell of cells) {
-      cell.min = "0";
-      cell.max = String(DBUCharacterSheet.#cellValue(cell) + remaining);
-    }
+  #openBenefits(button) {
+    const cell = button.closest(".benefit-cell");
+    let data;
+    try { data = JSON.parse(button.dataset.benefitData ?? "{}"); } catch { return; }
+    const kind = button.dataset.benefit;
+    const picks = [...(data.picks ?? [])];
+    const escape = text => String(text).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    const attributes = Object.entries(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)
+      .map(([key, abbr]) => ({ key, abbr, name: DBUCharacterSheet.#attributeName(key) }));
+    const skills = Object.entries(DBUCharacterData.SKILLS).map(([key, skill]) => ({ key, name: skill.label, attribute: skill.attribute }));
+    const counted = list => list.reduce((map, key) => { if (key) map[key] = (map[key] ?? 0) + 1; return map; }, {});
+
+    const overlay = document.createElement("div");
+    overlay.className = "dbu-benefit-overlay";
+    overlay.innerHTML = `<div class="dbu-benefit-window" role="dialog" aria-modal="true">
+      <header><h3></h3><span class="dbu-benefit-sub"></span></header>
+      <div class="dbu-benefit-body"></div>
+      <footer><button type="button" class="dbu-benefit-close">Close</button></footer></div>`;
+    this.element.append(overlay);
+    const body = overlay.querySelector(".dbu-benefit-body");
+    const title = overlay.querySelector("h3");
+    const sub = overlay.querySelector(".dbu-benefit-sub");
+
+    const toggle = ({ id, on, over, shut, html, tip }) => `<button type="button" class="dbu-benefit-toggle${on ? " on" : ""}${over ? " over" : ""}"
+      data-toggle="${escape(id)}" aria-pressed="${on}" ${shut ? "disabled" : ""} data-tooltip="${escape(tip)}">${html}</button>`;
+
+    const drawAttributes = () => {
+      title.textContent = "Attribute Addition";
+      sub.textContent = `Power Level ${data.lvl} · Score cap ${data.cap}`;
+      body.innerHTML = [0, 1].map(slot => `<div><div class="dbu-benefit-label">${slot ? "Second" : "First"} +1</div>
+        <div class="dbu-benefit-row attributes">${attributes.map(({ key, abbr, name }) => {
+          const from = (Number(data.before?.[key]) || 0) + ((picks[1 - slot] === key) ? 1 : 0);
+          const over = (from + 1) > data.cap;
+          return toggle({ id: `${slot}:${key}`, on: picks[slot] === key, over,
+            tip: `${name}: ${from} → ${from + 1}${over ? ` (cap ${data.cap})` : ""}`,
+            html: `<span class="abbr">${abbr}</span><span class="name">${name}</span><span class="step">${from}→${from + 1}</span>` });
+        }).join("")}</div></div>`).join("") + summary();
+    };
+    const drawSkills = () => {
+      const counts = counted(picks);
+      const pairTaken = Object.values(counts).filter(n => n > 1).length >= (Number(data.pairs) || 0);
+      title.textContent = "Skill Improvement";
+      sub.textContent = `Power Level ${data.lvl} · Rank cap ${data.cap} · ${picks.length} of ${data.slots} Ranks`;
+      body.innerHTML = attributes.map(({ key: attribute, name: attributeName }) => {
+        const list = skills.filter(skill => skill.attribute === attribute);
+        if (!list.length) return "";
+        return `<div><div class="dbu-benefit-label">${attributeName}</div><div class="dbu-benefit-row skills">${list.map(({ key, name }) => {
+          const mine = counts[key] ?? 0;
+          const have = Number(data.before?.[key]) || 0;
+          const room = picks.length < data.slots;
+          const adds = (mine === 0) ? room : ((mine === 1) && !pairTaken && room);
+          const to = have + mine + ((mine === 0) && adds ? 1 : 0);
+          // Red where what it holds - or the next Rank it would take - passes the cap.
+          const over = (have + mine + (adds ? 1 : 0)) > data.cap;
+          return toggle({ id: key, on: mine > 0, over, shut: !mine && !adds,
+            tip: `${name}: ${have} Rank${(have === 1) ? "" : "s"} before this row${over ? ` (cap ${data.cap})` : ""}`,
+            html: `${(mine > 1) ? `<span class="badge">+${mine}</span>` : ""}<span class="name">${escape(name)}</span>`
+              + `<span class="step">${have}→${to}</span>` });
+        }).join("")}</div></div>`;
+      }).join("") + `<div class="dbu-benefit-hint">${data.pairs ? "One Skill may take 2 of these Ranks: choose it a second time. " : ""}`
+        + `${(picks.length >= data.slots) ? `All ${data.slots} Ranks chosen: choose a Skill again to take its Rank back.` : ""}</div>` + summary();
+    };
+    const summary = () => {
+      const counts = counted(picks);
+      const names = (kind === "attributes")
+        ? Object.entries(counts).map(([key, n]) => `+${n} ${DBUCharacterSheet.#attributeName(key)}`)
+        : skills.filter(({ key }) => counts[key]).map(({ key, name }) => ((counts[key] > 1) ? `+${counts[key]} ${name}` : name));
+      const over = Object.entries(counts).filter(([key, n]) => ((Number(data.before?.[key]) || 0) + n) > data.cap)
+        .map(([key]) => ((kind === "attributes") ? DBUCharacterSheet.#attributeName(key) : (DBUCharacterData.SKILLS[key]?.label ?? key)));
+      return `<div class="dbu-benefit-summary">${names.length ? `<b>${escape(names.join(", "))}</b>` : "Nothing chosen yet."}`
+        + `${over.length ? ` <span class="over">— ${escape(over.join(", "))} over the cap of ${data.cap}</span>` : ""}</div>`;
+    };
+    const draw = () => ((kind === "attributes") ? drawAttributes() : drawSkills());
+
+    body.addEventListener("click", event => {
+      const pressed = event.target.closest("[data-toggle]");
+      if (!pressed || pressed.disabled) return;
+      const id = pressed.dataset.toggle;
+      if (kind === "attributes") {
+        const [slot, key] = id.split(":");
+        picks[Number(slot)] = (picks[Number(slot)] === key) ? null : key;
+      } else {
+        const counts = counted(picks);
+        const mine = counts[id] ?? 0;
+        const pairTaken = Object.values(counts).filter(n => n > 1).length >= (Number(data.pairs) || 0);
+        const adds = (picks.length < data.slots) && ((mine === 0) || ((mine === 1) && !pairTaken));
+        if (adds) picks.push(id);
+        else for (let at = picks.length - 1; at >= 0; at--) if (picks[at] === id) picks.splice(at, 1);
+      }
+      draw();
+      body.querySelector(`[data-toggle="${CSS.escape(id)}"]`)?.focus();
+    });
+
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      const fields = (kind === "attributes")
+        ? Array.from(cell.querySelectorAll("[data-benefit-attribute]")) : Array.from(cell.querySelectorAll("[data-benefit-skill]"));
+      const counts = counted(picks);
+      const values = (kind === "attributes") ? fields.map(field => String(counts[field.dataset.benefitAttribute] ?? 0))
+        : fields.map((field, at) => picks.filter(Boolean)[at] ?? "");
+      const changed = fields.filter((field, at) => field.value !== values[at]);
+      fields.forEach((field, at) => { field.value = values[at]; });
+      changed[0]?.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const onKey = event => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    };
+    document.addEventListener("keydown", onKey, true);
+    overlay.querySelector(".dbu-benefit-close").addEventListener("click", close);
+    overlay.addEventListener("pointerdown", event => { if (event.target === overlay) close(); });
+    draw();
+    body.querySelector("[data-toggle]:not([disabled])")?.focus();
   }
 
   /** GM only: put the published Talents in the compendium to drag from. */

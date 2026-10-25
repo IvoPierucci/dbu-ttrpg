@@ -1806,8 +1806,250 @@
   min-width: 44px;
 }
 
-.dbu-ttrpg .progression-table .talent-cell select {
-  min-width: 70px;
+/* The Benefits cell: the Talent's list, or the button an Attribute Addition's or a Skill Improvement's window opens from. */
+.dbu-ttrpg .progression-table .benefit-cell {
+  min-width: 200px;
+  text-align: left;
+}
+
+.dbu-ttrpg .progression-table .benefit-pick {
+  width: 100%;
+  min-height: 22px;
+  box-sizing: border-box;
+  background: var(--dbu-panel-raised);
+  color: #f0f0f0;
+  border: 1px solid #555;
+  border-radius: 3px;
+  font: inherit;
+  padding: 2px 6px;
+  text-align: left;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .progression-table .benefit-pick:hover,
+.dbu-ttrpg .progression-table .benefit-pick:focus-visible {
+  border-color: var(--dbu-accent);
+  outline: none;
+  box-shadow: none;
+}
+
+.dbu-ttrpg .progression-table .benefit-pick.empty {
+  color: var(--dbu-text-dim);
+  font-style: italic;
+}
+
+.dbu-ttrpg .progression-table .benefit-pick .benefit-left {
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .progression-table .benefit-pick .benefit-over {
+  color: var(--dbu-pending, #d1544a);
+}
+
+/* Its window, over the whole sheet. */
+.dbu-ttrpg .dbu-benefit-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.dbu-ttrpg .dbu-benefit-window {
+  width: min(640px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--dbu-panel);
+  color: var(--dbu-text);
+  border: 1px solid var(--dbu-border-strong);
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.dbu-ttrpg .dbu-benefit-window header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #333;
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg .dbu-benefit-window header h3 {
+  margin: 0;
+  border: none;
+  font-size: 14px;
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg .dbu-benefit-sub {
+  font-size: 11px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-benefit-body {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.dbu-ttrpg .dbu-benefit-label {
+  margin-bottom: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-benefit-row {
+  display: grid;
+  gap: 4px;
+}
+
+.dbu-ttrpg .dbu-benefit-row.attributes {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.dbu-ttrpg .dbu-benefit-row.skills {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+}
+
+.dbu-ttrpg .dbu-benefit-toggle {
+  position: relative;
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 6px 2px 5px;
+  background: var(--dbu-panel-raised);
+  color: var(--dbu-text);
+  border: 1px solid #555;
+  border-radius: 3px;
+  font: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .dbu-benefit-toggle:hover:not(:disabled) {
+  border-color: var(--dbu-accent);
+  box-shadow: none;
+}
+
+.dbu-ttrpg .dbu-benefit-toggle:focus-visible {
+  outline: 1px solid var(--dbu-accent);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+.dbu-ttrpg .dbu-benefit-toggle .abbr {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dbu-ttrpg .dbu-benefit-toggle .name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9.5px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-benefit-row.skills .dbu-benefit-toggle .name {
+  white-space: normal;
+  text-align: center;
+  font-size: 12px;
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg .dbu-benefit-toggle .step {
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.dbu-ttrpg .dbu-benefit-toggle .badge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7fd69c;
+}
+
+.dbu-ttrpg .dbu-benefit-toggle.over {
+  border-color: var(--dbu-pending, #d1544a);
+  background: rgba(209, 84, 74, 0.18);
+}
+
+.dbu-ttrpg .dbu-benefit-toggle.over .abbr,
+.dbu-ttrpg .dbu-benefit-toggle.over .step {
+  color: var(--dbu-pending, #d1544a);
+}
+
+.dbu-ttrpg .dbu-benefit-toggle.on {
+  border-color: var(--dbu-ready, #2f9e55);
+  background: rgba(47, 158, 85, 0.22);
+}
+
+.dbu-ttrpg .dbu-benefit-toggle.on .abbr,
+.dbu-ttrpg .dbu-benefit-toggle.on .step {
+  color: #7fd69c;
+}
+
+.dbu-ttrpg .dbu-benefit-toggle.on.over {
+  border-color: var(--dbu-pending, #d1544a);
+}
+
+.dbu-ttrpg .dbu-benefit-toggle:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.dbu-ttrpg .dbu-benefit-hint,
+.dbu-ttrpg .dbu-benefit-summary {
+  font-size: 12px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-benefit-summary b {
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg .dbu-benefit-summary .over {
+  color: var(--dbu-pending, #d1544a);
+}
+
+.dbu-ttrpg .dbu-benefit-window footer {
+  padding: 0 12px 12px;
+}
+
+.dbu-ttrpg .dbu-benefit-close {
+  width: 100%;
+  margin: 0;
+  padding: 6px;
+  background: var(--dbu-panel-raised);
+  color: var(--dbu-text);
+  border: 1px solid var(--dbu-border-strong);
+  border-radius: 3px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .dbu-benefit-close:hover,
+.dbu-ttrpg .dbu-benefit-close:focus-visible {
+  border-color: var(--dbu-accent);
+  outline: none;
+  box-shadow: none;
 }
 
 /* A Talent Addition row's list, typed into: the box looks like the row's other lists; the list opens under it (`.up`: over it). */
