@@ -26,8 +26,10 @@ export const FROM_PROGRESSION = "fromProgression";
 /** What the reached Talent Addition rows name, in row order. */
 export function progressionTalentIds(system) {
   const level = Number(system?.powerLevel) || 1;
-  return (system?.progression ?? [])
-    .filter(entry => (entry.choice === "Talent Addition") && ((Number(entry.lvl) || 1) <= level) && entry.talent)
+  return [...(system?.progression ?? [])
+    .filter(entry => (entry.choice === "Talent Addition") && ((Number(entry.lvl) || 1) <= level) && entry.talent),
+    // And each Character Perk's - no Level to reach.
+    ...(system?.characterPerks ?? []).filter(perk => (perk.choice === "Talent Addition") && perk.talent)]
     .map(entry => entry.talent);
 }
 
@@ -50,7 +52,8 @@ export async function syncProgressionTalents(actor) {
     if (sourceOf(item)) adopted.add(item.id);
     return { ...entry, talent: sourceOf(item) };
   });
-  const wanted = new Set(progressionTalentIds({ powerLevel: actor.system.powerLevel, progression: fixed }));
+  const wanted = new Set(progressionTalentIds({ powerLevel: actor.system.powerLevel, progression: fixed,
+    characterPerks: actor.system.characterPerks }));
 
   const ours = item => adopted.has(item.id) || Boolean(item.flags?.["dbu-ttrpg"]?.[FROM_PROGRESSION]);
   const removed = owned.filter(item => ours(item) && !wanted.has(sourceOf(item))).map(item => item.id);
@@ -177,8 +180,8 @@ export async function grantTalentGear(actor, item, file) {
  * and those a Racial Trait gave ("You can take each Talent only once").
  */
 export function talentChoicesFor(actor, entry) {
-  const taken = new Set((actor.system.progression ?? []).filter(other => (other !== entry) && (other.choice === "Talent Addition"))
-    .map(other => other.talent).filter(Boolean));
+  const taken = new Set([...(actor.system.progression ?? []), ...(actor.system.characterPerks ?? [])]
+    .filter(other => (other !== entry) && (other.choice === "Talent Addition")).map(other => other.talent).filter(Boolean));
   for (const item of actor.items ?? []) {
     if ((item.type === "talent") && item.flags?.["dbu-ttrpg"]?.fromTrait) taken.add(item.flags["dbu-ttrpg"].sourceId);
   }

@@ -230,7 +230,8 @@ async function shellBroken(item) {
 // Talents come from the Progression tab: the Talent Addition rows reached, or the Power Level moved - made to match, by
 // whoever made the change.
 Hooks.on("updateActor", async (actor, changes, options, userId) => {
-  if ((userId !== game.user.id) || !changes.system || !(("progression" in changes.system) || ("powerLevel" in changes.system))) return;
+  if ((userId !== game.user.id) || !changes.system
+    || !(("progression" in changes.system) || ("powerLevel" in changes.system) || ("characterPerks" in changes.system))) return;
   const { syncProgressionTalents } = await import("./talents.mjs");
   await syncProgressionTalents(actor);
 });

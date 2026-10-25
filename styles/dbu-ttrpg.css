@@ -1862,6 +1862,67 @@
   color: var(--dbu-pending, #d1544a);
 }
 
+/* The Character Perks list, under the Progression table. */
+.dbu-ttrpg .perk-group {
+  margin-top: 12px;
+}
+
+.dbu-ttrpg .perk-group .perk-add {
+  display: block;
+  margin: 0 0 6px;
+  line-height: 22px;
+  font-size: 11px;
+}
+
+.dbu-ttrpg .perk-table td.perk-remove {
+  width: 22px;
+  padding: 0;
+}
+
+.dbu-ttrpg .perk-table .perk-x {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  color: var(--dbu-text-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .perk-table .perk-x:hover,
+.dbu-ttrpg .perk-table .perk-x:focus-visible {
+  color: var(--dbu-pending, #d1544a);
+  outline: none;
+  box-shadow: none;
+}
+
+.dbu-ttrpg .perk-table td.perk-source {
+  width: 26%;
+}
+
+.dbu-ttrpg .perk-table td.perk-source input {
+  width: 100%;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+}
+
+.dbu-ttrpg .perk-table td.perk-choice {
+  width: 22%;
+}
+
+.dbu-ttrpg .perk-table td.perk-tp {
+  width: 52px;
+}
+
+.dbu-ttrpg .perk-table td.perk-tp input {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
 /* Its window, over the whole sheet. */
 .dbu-ttrpg .dbu-benefit-overlay {
   position: absolute;

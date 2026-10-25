@@ -1771,7 +1771,36 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // Character Perks gained from anywhere - the GM, a tournament - each the table's Choice without its Level: written where it
+    // came from, applying from the moment it is written; its TP as written (15 offered with a Skill Improvement).
+    schema.characterPerks = new fields.ArrayField(
+      new fields.SchemaField({
+        source: new fields.StringField({ required: true, blank: true, initial: "" }),
+        choice: new fields.StringField({ required: true, blank: true, initial: "" }),
+        talent: new fields.StringField({ required: true, blank: true, initial: "" }),
+        attributes: new fields.SchemaField(
+          Object.fromEntries(
+            ["agility", "force", "tenacity", "scholarship", "insight", "magic", "personality"].map(key => [
+              key,
+              new fields.NumberField({ required: true, integer: true, initial: 0 })
+            ])
+          )
+        ),
+        technique: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        skillRanks: new fields.ArrayField(
+          new fields.StringField({ required: true, blank: true, initial: "" }),
+          { required: true, initial: () => Array(DBUCharacterData.SKILL_RANK_SLOTS).fill("") }
+        )
+      }),
+      { required: true, initial: [] }
+    );
+
     return schema;
+  }
+
+  /** The Character Perks of one Choice. */
+  static perksOf(perks, choice) {
+    return (perks ?? []).filter(perk => perk.choice === choice);
   }
 
   /**
@@ -1861,7 +1890,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       atts[key].score = DBUCharacterData.attributeScore(
         this.progression, key, this.powerLevel,
         DBUCharacterData.racialIncreaseFor(this.race, this.racialAttributeChoices, key)
-      );
+      )
+        // And every Character Perk's Attribute Addition.
+        + DBUCharacterData.perksOf(this.characterPerks, "Attribute Addition")
+          .reduce((total, perk) => total + (Number(perk.attributes?.[key]) || 0), 0);
     }
 
     // --- What the Attributes themselves grant ---
@@ -1913,7 +1945,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // are counted here for them to read.
     const ranks = [...(this.racialSkillRanks ?? []), ...(this.progression ?? [])
       .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
-      .flatMap(entry => entry.skillRanks)];
+      .flatMap(entry => entry.skillRanks),
+      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement").flatMap(perk => perk.skillRanks ?? [])];
     const early = {
       attributes: this.attributes,
       skills: Object.fromEntries(Object.keys(DBUCharacterData.SKILLS).map(key =>
@@ -2147,7 +2180,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Rows for Levels the character has not reached yet do not count.
     this.techniquePoints = this.progression
       .filter(entry => entry.lvl <= this.powerLevel)
-      .reduce((total, entry) => total + entry.technique, 0);
+      .reduce((total, entry) => total + entry.technique, 0)
+      // And each Character Perk's, as written on it.
+      + (this.characterPerks ?? []).reduce((total, perk) => total + Math.max(0, Number(perk.technique) || 0), 0);
 
     // Attribute Score cap for the current Tier of Power: 8 at ToP 1, +3 per tier after.
     // The published table only lists ToP 1-5 (8/11/14/17/20); the formula holds beyond
@@ -2187,7 +2222,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       ...this.racialSkillRanks,
       ...this.progression
         .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
-        .flatMap(entry => entry.skillRanks)
+        .flatMap(entry => entry.skillRanks),
+      // And every Character Perk's Skill Improvement.
+      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement").flatMap(perk => perk.skillRanks ?? [])
     ];
 
     const rankCap = DBUCharacterData.skillRankCap(this.tierOfPower);

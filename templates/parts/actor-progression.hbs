@@ -198,4 +198,87 @@
     </tbody>
   </table>
 
+  {{! Character Perks from anywhere: the table's Choices without a Level - where each came from, written; its TP as written. }}
+  <details class="trait-group perk-group" data-section="perks" {{#if openSections.perks}}open{{/if}}>
+    <summary>
+      Character Perks
+      <span class="trait-count">{{characterPerks.length}}</span>
+    </summary>
+    <button type="button" class="edit-toggle perk-add" data-action="addPerk">+ Add Character Perk</button>
+    {{#if characterPerks.length}}
+    <table class="progression-table perk-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Source</th>
+          <th>Choice</th>
+          <th>Benefits</th>
+          <th>TP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each characterPerks as |perk|}}
+        <tr>
+          <td class="perk-remove">
+            <button type="button" class="perk-x" data-action="removePerk" data-index="{{perk.index}}"
+                    data-tooltip="Remove this Character Perk">&#10005;</button>
+          </td>
+          <td class="perk-source">
+            <input type="text" name="system.characterPerks.{{perk.index}}.source" value="{{perk.entry.source}}"
+                   placeholder="Where it came from" {{#if perk.entry.source}}data-tooltip="{{perk.entry.source}}"{{/if}}/>
+          </td>
+          <td class="perk-choice">
+            <select name="system.characterPerks.{{perk.index}}.choice" data-perk-choice>
+              <option value="" {{#unless perk.entry.choice}}selected{{/unless}}>Choose&hellip;</option>
+              <option value="Attribute Addition" {{#if (eq perk.entry.choice "Attribute Addition")}}selected{{/if}}>Attribute Addition</option>
+              <option value="Skill Improvement" {{#if (eq perk.entry.choice "Skill Improvement")}}selected{{/if}}>Skill Improvement</option>
+              <option value="Talent Addition" {{#if (eq perk.entry.choice "Talent Addition")}}selected{{/if}}>Talent Addition</option>
+            </select>
+          </td>
+          <td class="benefit-cell" data-benefit-scope>
+            {{#each perk.attributeFields as |field|}}
+            <input type="hidden" name="{{field.name}}" value="{{field.value}}" data-dtype="Number" data-benefit-attribute="{{field.key}}"/>
+            {{/each}}
+            {{#each perk.skillRanks as |slot|}}
+            <input type="hidden" name="{{slot.name}}" value="{{slot.value}}" data-benefit-skill/>
+            {{/each}}
+            {{#if perk.benefit}}
+              <button type="button" class="benefit-pick{{#unless perk.benefit.label}} empty{{/unless}}" data-benefit="{{perk.benefit.kind}}"
+                      data-benefit-data="{{perk.benefit.data}}">{{#if perk.benefit.label}}{{perk.benefit.label}}{{else}}Choose&hellip;{{/if}}{{#if perk.benefit.left}} <span class="benefit-left">({{perk.benefit.left}} left)</span>{{/if}}{{#if perk.benefit.over}} <span class="benefit-over">(over the cap)</span>{{/if}}</button>
+            {{/if}}
+            {{#if perk.isTalentAddition}}
+            <div class="dbu-combo" data-combo>
+              <input type="hidden" name="system.characterPerks.{{perk.index}}.talent" value="{{perk.entry.talent}}"/>
+              <input type="text" class="dbu-combo-input" autocomplete="off" spellcheck="false" placeholder="Choose a Talent"
+                     role="combobox" aria-expanded="false" aria-label="Talent"/>
+              <span class="dbu-combo-caret" aria-hidden="true">&#9662;</span>
+              <div class="dbu-combo-list" role="listbox" hidden>
+                <div class="dbu-combo-option dbu-combo-none" role="option" data-value="">None</div>
+                {{#each perk.talentGroups as |group|}}
+                <div class="dbu-combo-group" data-group="{{group.label}}">{{group.label}}</div>
+                {{#each group.options as |option|}}
+                <div class="dbu-combo-option{{#if option.selected}} chosen{{/if}}" role="option" data-value="{{option.value}}"
+                     data-group="{{group.label}}">{{option.label}}</div>
+                {{/each}}
+                {{/each}}
+                <div class="dbu-combo-empty" hidden>No Talent has that in its name or Category.</div>
+              </div>
+            </div>
+            {{else}}
+            <input type="hidden" name="system.characterPerks.{{perk.index}}.talent" value="{{perk.entry.talent}}"/>
+            {{/if}}
+          </td>
+          <td class="perk-tp">
+            <input type="number" name="system.characterPerks.{{perk.index}}.technique" value="{{perk.entry.technique}}" min="0"
+                   data-dtype="Number" data-perk-tp/>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="tab-placeholder">No Character Perks yet.</p>
+    {{/if}}
+  </details>
+
 </div>
