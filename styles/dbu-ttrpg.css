@@ -1750,6 +1750,7 @@
 
 .dbu-ttrpg .progression-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
   color: #f0f0f0;
@@ -1789,7 +1790,28 @@
 
 .dbu-ttrpg .progression-table select {
   width: 100%;
-  min-width: 130px;
+  min-width: 0;
+}
+
+/* Its columns: Benefits takes what the others leave. */
+.dbu-ttrpg .progression-table col.col-level {
+  width: 46px;
+}
+
+.dbu-ttrpg .progression-table col.col-choice {
+  width: 140px;
+}
+
+.dbu-ttrpg .progression-table col.col-tp {
+  width: 48px;
+}
+
+.dbu-ttrpg .progression-table col.col-remove {
+  width: 24px;
+}
+
+.dbu-ttrpg .progression-table col.col-source {
+  width: 24%;
 }
 
 .dbu-ttrpg .progression-table .locked-choice {
@@ -1817,12 +1839,17 @@
 
 /* The Benefits cell: the Talent's list, or the button an Attribute Addition's or a Skill Improvement's window opens from. */
 .dbu-ttrpg .progression-table .benefit-cell {
-  min-width: 200px;
+  min-width: 0;
   text-align: left;
 }
 
 .dbu-ttrpg .progression-table .benefit-pick,
 .dbu-ttrpg .racial-skills .benefit-pick {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
   width: 100%;
   min-height: 22px;
   box-sizing: border-box;
@@ -1844,6 +1871,19 @@
   border-color: var(--dbu-accent);
   outline: none;
   box-shadow: none;
+}
+
+/* One line: what was chosen cut short where it does not fit (whole on hover), the counts kept whole beside it. */
+.dbu-ttrpg .benefit-pick .benefit-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dbu-ttrpg .benefit-pick .benefit-left,
+.dbu-ttrpg .benefit-pick .benefit-over {
+  flex: 0 0 auto;
 }
 
 .dbu-ttrpg .progression-table .benefit-pick.empty,
@@ -1875,7 +1915,6 @@
 }
 
 .dbu-ttrpg .perk-table td.perk-remove {
-  width: 22px;
   padding: 0;
 }
 
@@ -1899,32 +1938,16 @@
   box-shadow: none;
 }
 
-.dbu-ttrpg .perk-table td.perk-source {
-  width: 26%;
-}
-
 .dbu-ttrpg .perk-table td.perk-source input {
   width: 100%;
   box-sizing: border-box;
   text-overflow: ellipsis;
 }
 
-.dbu-ttrpg .perk-table td.perk-level {
-  width: 46px;
-}
-
 .dbu-ttrpg .perk-table td.perk-level input {
   width: 100%;
   box-sizing: border-box;
   text-align: center;
-}
-
-.dbu-ttrpg .perk-table td.perk-choice {
-  width: 22%;
-}
-
-.dbu-ttrpg .perk-table td.perk-tp {
-  width: 52px;
 }
 
 .dbu-ttrpg .perk-table td.perk-tp input {
@@ -2141,7 +2164,7 @@
 /* A Talent Addition row's list, typed into: the box looks like the row's other lists; the list opens under it (`.up`: over it). */
 .dbu-ttrpg .dbu-combo {
   position: relative;
-  min-width: 130px;
+  min-width: 0;
 }
 
 .dbu-ttrpg .progression-table .dbu-combo .dbu-combo-input {

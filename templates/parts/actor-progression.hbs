@@ -104,13 +104,20 @@
         <input type="hidden" name="{{slot.name}}" value="{{slot.value}}" data-benefit-skill/>
         {{/each}}
         <button type="button" class="benefit-pick{{#unless racialSkillBenefit.label}} empty{{/unless}}" data-benefit="skills"
-                data-benefit-data="{{racialSkillBenefit.data}}">{{#if racialSkillBenefit.label}}{{racialSkillBenefit.label}}{{else}}Choose&hellip;{{/if}}{{#if racialSkillBenefit.left}} <span class="benefit-left">({{racialSkillBenefit.left}} left)</span>{{/if}}{{#if racialSkillBenefit.over}} <span class="benefit-over">(over the cap)</span>{{/if}}</button>
+                data-benefit-data="{{racialSkillBenefit.data}}" {{#if racialSkillBenefit.label}}data-tooltip="{{racialSkillBenefit.label}}"{{/if}}><span class="benefit-text">{{#if racialSkillBenefit.label}}{{racialSkillBenefit.label}}{{else}}Choose&hellip;{{/if}}</span>{{#if racialSkillBenefit.left}}<span class="benefit-left">({{racialSkillBenefit.left}} left)</span>{{/if}}{{#if racialSkillBenefit.over}}<span class="benefit-over">(over the cap)</span>{{/if}}</button>
       </div>
     </div>
   </section>
   {{/if}}
 
   <table class="progression-table">
+    {{! Widths set here, not by the longest thing in a column: Benefits takes what is left. }}
+    <colgroup>
+      <col class="col-level"/>
+      <col class="col-choice"/>
+      <col class="col-benefits"/>
+      <col class="col-tp"/>
+    </colgroup>
     <thead>
       <tr>
         <th>Level</th>
@@ -159,7 +166,7 @@
           {{/each}}
           {{#if row.benefit}}
             <button type="button" class="benefit-pick{{#unless row.benefit.label}} empty{{/unless}}" data-benefit="{{row.benefit.kind}}"
-                    data-benefit-data="{{row.benefit.data}}">{{#if row.benefit.label}}{{row.benefit.label}}{{else}}Choose&hellip;{{/if}}{{#if row.benefit.left}} <span class="benefit-left">({{row.benefit.left}} left)</span>{{/if}}{{#if row.benefit.over}} <span class="benefit-over">(over the cap)</span>{{/if}}</button>
+                    data-benefit-data="{{row.benefit.data}}" {{#if row.benefit.label}}data-tooltip="{{row.benefit.label}}"{{/if}}><span class="benefit-text">{{#if row.benefit.label}}{{row.benefit.label}}{{else}}Choose&hellip;{{/if}}</span>{{#if row.benefit.left}}<span class="benefit-left">({{row.benefit.left}} left)</span>{{/if}}{{#if row.benefit.over}}<span class="benefit-over">(over the cap)</span>{{/if}}</button>
           {{/if}}
           {{#if row.isTalentAddition}}
             {{! A list typed into: the box shows the Talent chosen, letters narrow the list under it (by name or Category), a
@@ -207,6 +214,14 @@
     <button type="button" class="edit-toggle perk-add" data-action="addPerk">+ Add Character Perk</button>
     {{#if characterPerks.length}}
     <table class="progression-table perk-table">
+      <colgroup>
+        <col class="col-remove"/>
+        <col class="col-source"/>
+        <col class="col-level"/>
+        <col class="col-choice"/>
+        <col class="col-benefits"/>
+        <col class="col-tp"/>
+      </colgroup>
       <thead>
         <tr>
           <th></th>
@@ -249,7 +264,7 @@
             {{/each}}
             {{#if perk.benefit}}
               <button type="button" class="benefit-pick{{#unless perk.benefit.label}} empty{{/unless}}" data-benefit="{{perk.benefit.kind}}"
-                      data-benefit-data="{{perk.benefit.data}}">{{#if perk.benefit.label}}{{perk.benefit.label}}{{else}}Choose&hellip;{{/if}}{{#if perk.benefit.left}} <span class="benefit-left">({{perk.benefit.left}} left)</span>{{/if}}{{#if perk.benefit.over}} <span class="benefit-over">(over the cap)</span>{{/if}}</button>
+                      data-benefit-data="{{perk.benefit.data}}" {{#if perk.benefit.label}}data-tooltip="{{perk.benefit.label}}"{{/if}}><span class="benefit-text">{{#if perk.benefit.label}}{{perk.benefit.label}}{{else}}Choose&hellip;{{/if}}</span>{{#if perk.benefit.left}}<span class="benefit-left">({{perk.benefit.left}} left)</span>{{/if}}{{#if perk.benefit.over}}<span class="benefit-over">(over the cap)</span>{{/if}}</button>
             {{/if}}
             {{#if perk.isTalentAddition}}
             <div class="dbu-combo" data-combo>
