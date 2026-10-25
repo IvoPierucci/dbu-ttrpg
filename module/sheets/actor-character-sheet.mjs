@@ -2375,31 +2375,37 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * The Character Perks list's rows: each the table's Choice with no Level - its window measured at the Power Level the character
-   * has now, against the Scores and Ranks of the table's reached rows and the Perks above it.
+   * The Character Perks list's rows: each the table's Choice at a Level of its own - its window measured at that Level's cap,
+   * against the Scores and Ranks of the table's rows up to that Level and the Perks above it there too.
    */
   #prepareCharacterPerks() {
     const { SKILLS } = DBUCharacterData;
     const system = this.actor.system;
     const powerLevel = system.powerLevel;
     const attributeKeys = Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS);
-    const reached = (system.progression ?? []).filter(entry => entry.lvl <= powerLevel);
-    const scores = Object.fromEntries(attributeKeys.map(key => [key, 1
-      + DBUCharacterData.racialIncreaseFor(system.race, system.racialAttributeChoices ?? [], key)
-      + reached.reduce((total, entry) => total + (Number(entry.attributes?.[key]) || 0), 0)]));
-    const ranks = {};
-    for (const key of [...(system.racialSkillRanks ?? []),
-      ...reached.filter(entry => entry.choice === "Skill Improvement").flatMap(entry => entry.skillRanks)]) {
-      if (key) ranks[key] = (ranks[key] ?? 0) + 1;
-    }
-    return (system.characterPerks ?? []).map((entry, index) => {
-      const before = { scores: { ...scores }, ranks: { ...ranks } };
-      if (entry.choice === "Attribute Addition") for (const key of attributeKeys) scores[key] += Number(entry.attributes?.[key]) || 0;
-      if (entry.choice === "Skill Improvement") for (const key of entry.skillRanks ?? []) if (key) ranks[key] = (ranks[key] ?? 0) + 1;
-      const at = { ...entry, lvl: powerLevel };
+    const perks = system.characterPerks ?? [];
+    return perks.map((entry, index) => {
+      const lvl = DBUCharacterData.perkLevel(entry, powerLevel);
+      const rows = (system.progression ?? []).filter(row => row.lvl <= lvl);
+      const above = perks.slice(0, index).filter(perk => DBUCharacterData.perkLevel(perk, powerLevel) <= lvl);
+      const scores = Object.fromEntries(attributeKeys.map(key => [key, 1
+        + DBUCharacterData.racialIncreaseFor(system.race, system.racialAttributeChoices ?? [], key)
+        + rows.reduce((total, row) => total + (Number(row.attributes?.[key]) || 0), 0)
+        + above.filter(perk => perk.choice === "Attribute Addition").reduce((total, perk) => total + (Number(perk.attributes?.[key]) || 0), 0)]));
+      const ranks = {};
+      for (const key of [...(system.racialSkillRanks ?? []),
+        ...rows.filter(row => row.choice === "Skill Improvement").flatMap(row => row.skillRanks),
+        ...above.filter(perk => perk.choice === "Skill Improvement").flatMap(perk => perk.skillRanks ?? [])]) {
+        if (key) ranks[key] = (ranks[key] ?? 0) + 1;
+      }
+      const before = { scores, ranks };
+      const at = { ...entry, lvl };
       return {
         entry,
         index,
+        lvl,
+        // Its Level not reached yet: shown as the table's rows are, and counting for nothing.
+        reached: lvl <= powerLevel,
         isTalentAddition: entry.choice === "Talent Addition",
         talentGroups: (entry.choice === "Talent Addition") ? talentChoicesFor(this.actor, entry) : [],
         attributeFields: attributeKeys.map(key => ({ key, name: `system.characterPerks.${index}.attributes.${key}`,
@@ -2418,7 +2424,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onAddPerk() {
     this.#openSections.perks = true;
     const perks = foundry.utils.deepClone(this.actor._source.system?.characterPerks ?? []);
-    perks.push({ source: "", choice: "", talent: "",
+    perks.push({ source: "", lvl: Number(this.actor.system.powerLevel) || 1, choice: "", talent: "",
       attributes: Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS).map(key => [key, 0])),
       technique: 0, skillRanks: Array(DBUCharacterData.SKILL_RANK_SLOTS).fill("") });
     return this.actor.update({ "system.characterPerks": perks });
@@ -2775,8 +2781,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .map(([key, abbr]) => ({ key, abbr, name: DBUCharacterSheet.#attributeName(key) }));
     const skills = Object.entries(DBUCharacterData.SKILLS).map(([key, skill]) => ({ key, name: skill.label, attribute: skill.attribute }));
     const counted = list => list.reduce((map, key) => { if (key) map[key] = (map[key] ?? 0) + 1; return map; }, {});
-    // A row's Level; a Character Perk's, the one the character has now.
-    const levelText = () => (data.lvl ? `${data.perk ? "Character Perk · " : ""}Power Level ${data.lvl}${data.perk ? " now" : ""} · ` : "");
+    // A row's Level, or a Character Perk's.
+    const levelText = () => (data.lvl ? `${data.perk ? "Character Perk · " : ""}Power Level ${data.lvl} · ` : "");
 
     const overlay = document.createElement("div");
     overlay.className = "dbu-benefit-overlay";

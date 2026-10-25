@@ -1771,11 +1771,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
-    // Character Perks gained from anywhere - the GM, a tournament - each the table's Choice without its Level: written where it
-    // came from, applying from the moment it is written; its TP as written (15 offered with a Skill Improvement).
+    // Character Perks gained from anywhere - the GM, a tournament - each the table's Choice at a Level of its own: written where it
+    // came from, the Level it was gained at (the character's as it is added), applying once that Level is reached as a row does;
+    // its TP as written (15 offered with a Skill Improvement).
     schema.characterPerks = new fields.ArrayField(
       new fields.SchemaField({
         source: new fields.StringField({ required: true, blank: true, initial: "" }),
+        // None - one written before the Level was - is the Level the character has now.
+        lvl: new fields.NumberField({ required: false, nullable: true, integer: true, min: 1, initial: null }),
         choice: new fields.StringField({ required: true, blank: true, initial: "" }),
         talent: new fields.StringField({ required: true, blank: true, initial: "" }),
         attributes: new fields.SchemaField(
@@ -1798,9 +1801,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     return schema;
   }
 
-  /** The Character Perks of one Choice. */
-  static perksOf(perks, choice) {
-    return (perks ?? []).filter(perk => perk.choice === choice);
+  /** A Character Perk's Level - none written, the one the character has now. */
+  static perkLevel(perk, powerLevel) {
+    return Number(perk?.lvl) || Number(powerLevel) || 1;
+  }
+
+  /** The Character Perks reached at this Power Level - of one Choice, where one is named. */
+  static perksOf(perks, choice, powerLevel) {
+    return (perks ?? []).filter(perk => (!choice || (perk.choice === choice))
+      && (DBUCharacterData.perkLevel(perk, powerLevel) <= (Number(powerLevel) || 1)));
   }
 
   /**
@@ -1892,7 +1901,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         DBUCharacterData.racialIncreaseFor(this.race, this.racialAttributeChoices, key)
       )
         // And every Character Perk's Attribute Addition.
-        + DBUCharacterData.perksOf(this.characterPerks, "Attribute Addition")
+        + DBUCharacterData.perksOf(this.characterPerks, "Attribute Addition", this.powerLevel)
           .reduce((total, perk) => total + (Number(perk.attributes?.[key]) || 0), 0);
     }
 
@@ -1946,7 +1955,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const ranks = [...(this.racialSkillRanks ?? []), ...(this.progression ?? [])
       .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
       .flatMap(entry => entry.skillRanks),
-      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement").flatMap(perk => perk.skillRanks ?? [])];
+      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? [])];
     const early = {
       attributes: this.attributes,
       skills: Object.fromEntries(Object.keys(DBUCharacterData.SKILLS).map(key =>
@@ -2181,8 +2190,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.techniquePoints = this.progression
       .filter(entry => entry.lvl <= this.powerLevel)
       .reduce((total, entry) => total + entry.technique, 0)
-      // And each Character Perk's, as written on it.
-      + (this.characterPerks ?? []).reduce((total, perk) => total + Math.max(0, Number(perk.technique) || 0), 0);
+      // And each Character Perk's reached, as written on it.
+      + DBUCharacterData.perksOf(this.characterPerks, "", this.powerLevel)
+        .reduce((total, perk) => total + Math.max(0, Number(perk.technique) || 0), 0);
 
     // Attribute Score cap for the current Tier of Power: 8 at ToP 1, +3 per tier after.
     // The published table only lists ToP 1-5 (8/11/14/17/20); the formula holds beyond
@@ -2224,7 +2234,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
         .flatMap(entry => entry.skillRanks),
       // And every Character Perk's Skill Improvement.
-      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement").flatMap(perk => perk.skillRanks ?? [])
+      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? [])
     ];
 
     const rankCap = DBUCharacterData.skillRankCap(this.tierOfPower);

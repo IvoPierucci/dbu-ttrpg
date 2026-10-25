@@ -211,6 +211,7 @@
         <tr>
           <th></th>
           <th>Source</th>
+          <th>Level</th>
           <th>Choice</th>
           <th>Benefits</th>
           <th>TP</th>
@@ -218,7 +219,7 @@
       </thead>
       <tbody>
         {{#each characterPerks as |perk|}}
-        <tr>
+        <tr class="{{#unless perk.reached}}unreached{{/unless}}">
           <td class="perk-remove">
             <button type="button" class="perk-x" data-action="removePerk" data-index="{{perk.index}}"
                     data-tooltip="Remove this Character Perk">&#10005;</button>
@@ -226,6 +227,10 @@
           <td class="perk-source">
             <input type="text" name="system.characterPerks.{{perk.index}}.source" value="{{perk.entry.source}}"
                    placeholder="Where it came from" {{#if perk.entry.source}}data-tooltip="{{perk.entry.source}}"{{/if}}/>
+          </td>
+          <td class="perk-level">
+            <input type="number" name="system.characterPerks.{{perk.index}}.lvl" value="{{perk.lvl}}" min="1" max="30" step="1"
+                   data-dtype="Number" {{#unless perk.reached}}data-tooltip="Not reached yet: it counts once the character is Power Level {{perk.lvl}}"{{/unless}}/>
           </td>
           <td class="perk-choice">
             <select name="system.characterPerks.{{perk.index}}.choice" data-perk-choice>

@@ -28,8 +28,9 @@ export function progressionTalentIds(system) {
   const level = Number(system?.powerLevel) || 1;
   return [...(system?.progression ?? [])
     .filter(entry => (entry.choice === "Talent Addition") && ((Number(entry.lvl) || 1) <= level) && entry.talent),
-    // And each Character Perk's - no Level to reach.
-    ...(system?.characterPerks ?? []).filter(perk => (perk.choice === "Talent Addition") && perk.talent)]
+    // And each Character Perk's reached.
+    ...(system?.characterPerks ?? []).filter(perk => (perk.choice === "Talent Addition") && perk.talent
+      && ((Number(perk.lvl) || level) <= level))]
     .map(entry => entry.talent);
 }
 

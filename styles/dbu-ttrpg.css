@@ -1909,6 +1909,16 @@
   text-overflow: ellipsis;
 }
 
+.dbu-ttrpg .perk-table td.perk-level {
+  width: 46px;
+}
+
+.dbu-ttrpg .perk-table td.perk-level input {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
 .dbu-ttrpg .perk-table td.perk-choice {
   width: 22%;
 }
