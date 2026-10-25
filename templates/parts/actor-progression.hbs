@@ -98,16 +98,13 @@
 
     <div class="racial-row">
       <span class="racial-row-label">Skill Ranks</span>
-      <div class="racial-slots">
+      {{! The Skill Improvement's window, for the race's Ranks: the slots hidden, written as it closes. }}
+      <div class="racial-slots racial-skills" data-benefit-scope>
         {{#each racialSkillRanks as |slot|}}
-        <select name="{{slot.name}}">
-          <option value=""></option>
-          {{#each slot.options as |option|}}
-          <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}
-                  {{#if option.disabled}}disabled{{/if}}>{{option.label}}</option>
-          {{/each}}
-        </select>
+        <input type="hidden" name="{{slot.name}}" value="{{slot.value}}" data-benefit-skill/>
         {{/each}}
+        <button type="button" class="benefit-pick{{#unless racialSkillBenefit.label}} empty{{/unless}}" data-benefit="skills"
+                data-benefit-data="{{racialSkillBenefit.data}}">{{#if racialSkillBenefit.label}}{{racialSkillBenefit.label}}{{else}}Choose&hellip;{{/if}}{{#if racialSkillBenefit.left}} <span class="benefit-left">({{racialSkillBenefit.left}} left)</span>{{/if}}{{#if racialSkillBenefit.over}} <span class="benefit-over">(over the cap)</span>{{/if}}</button>
       </div>
     </div>
   </section>
@@ -151,7 +148,7 @@
           {{/if}}
         </td>
 
-        <td class="benefit-cell">
+        <td class="benefit-cell" data-benefit-scope>
           {{! What every row carries whatever it is: its seven Attribute points and its Skill Rank slots - written by the
               Attribute Addition's and the Skill Improvement's windows, submitted as they close. }}
           {{#each row.attributeFields as |field|}}

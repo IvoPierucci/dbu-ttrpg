@@ -1724,6 +1724,15 @@
   color: var(--dbu-accent);
 }
 
+.dbu-ttrpg .racial-slots.racial-skills {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dbu-ttrpg .racial-slots.racial-skills .benefit-pick {
+  max-width: 420px;
+}
+
 .dbu-ttrpg .racial-slots select {
   flex: 0 1 auto;
   min-width: 80px;
@@ -1812,7 +1821,8 @@
   text-align: left;
 }
 
-.dbu-ttrpg .progression-table .benefit-pick {
+.dbu-ttrpg .progression-table .benefit-pick,
+.dbu-ttrpg .racial-skills .benefit-pick {
   width: 100%;
   min-height: 22px;
   box-sizing: border-box;
@@ -1828,22 +1838,27 @@
 }
 
 .dbu-ttrpg .progression-table .benefit-pick:hover,
-.dbu-ttrpg .progression-table .benefit-pick:focus-visible {
+.dbu-ttrpg .progression-table .benefit-pick:focus-visible,
+.dbu-ttrpg .racial-skills .benefit-pick:hover,
+.dbu-ttrpg .racial-skills .benefit-pick:focus-visible {
   border-color: var(--dbu-accent);
   outline: none;
   box-shadow: none;
 }
 
-.dbu-ttrpg .progression-table .benefit-pick.empty {
+.dbu-ttrpg .progression-table .benefit-pick.empty,
+.dbu-ttrpg .racial-skills .benefit-pick.empty {
   color: var(--dbu-text-dim);
   font-style: italic;
 }
 
-.dbu-ttrpg .progression-table .benefit-pick .benefit-left {
+.dbu-ttrpg .progression-table .benefit-pick .benefit-left,
+.dbu-ttrpg .racial-skills .benefit-pick .benefit-left {
   color: var(--dbu-text-dim);
 }
 
-.dbu-ttrpg .progression-table .benefit-pick .benefit-over {
+.dbu-ttrpg .progression-table .benefit-pick .benefit-over,
+.dbu-ttrpg .racial-skills .benefit-pick .benefit-over {
   color: var(--dbu-pending, #d1544a);
 }
 

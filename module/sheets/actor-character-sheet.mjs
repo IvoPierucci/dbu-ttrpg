@@ -1402,6 +1402,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Delayed's Imminent on this character: a mark, not a Combat Condition.
     context.imminent = this.actor.getFlag("dbu-ttrpg", "imminent") ?? [];
     context.racialSkillRanks = this._prepareRacialSkillRanks();
+    context.racialSkillBenefit = this.#racialSkillBenefit();
     context.racialAttributeChoices = this._prepareRacialAttributeChoices();
     const { race, subrace } = this.actor.system;
     context.raceOptions = raceOptions().map(option => ({
@@ -1475,44 +1476,32 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * The Skill Rank slots granted by the character's race. These are earned at Power
-   * Level 1, so they are capped by the Tier 1 limit, and the same Skill cannot be
-   * picked twice within them.
+   * The Skill Rank slots granted by the character's race, as hidden fields - the Skill Improvement's window writes them
+   * (#racialSkillBenefit says what it needs).
    */
   _prepareRacialSkillRanks() {
-    const { SKILLS } = DBUCharacterData;
     const chosen = this.actor.system.racialSkillRanks;
-    const rankCap = DBUCharacterData.skillRankCap(DBUCharacterData.tierOfPowerFor(1));
+    return Array.from({ length: racialSkillRankCount(this.actor.system.race) }, (unused, slot) => ({
+      name: `system.racialSkillRanks.${slot}`,
+      value: chosen[slot] ?? ""
+    }));
+  }
 
+  /**
+   * The race's Skill Ranks as the Skill Improvement's window takes them: one each, up to the race's count, at the Tier 1 cap - and
+   * red, besides, where taking it would push Ranks already spent in the table past the cap of the Tier they were earned at
+   * (`overflow`), as the list it replaces refused.
+   */
+  #racialSkillBenefit() {
+    const { SKILLS } = DBUCharacterData;
+    const slots = racialSkillRankCount(this.actor.system.race);
+    const picks = (this.actor.system.racialSkillRanks ?? []).filter(key => key && SKILLS[key]).slice(0, slots);
     const progression = this.actor.system.progression;
-
-    return Array.from({ length: racialSkillRankCount(this.actor.system.race) }, (unused, slot) => {
-      const value = chosen[slot] ?? "";
-      return {
-        name: `system.racialSkillRanks.${slot}`,
-        value,
-        options: Object.entries(SKILLS).map(([key, skill]) => {
-          // Racial Ranks are all granted at once, so a Skill taken by a sibling slot
-          // would be a second Rank in the same grant - which the rules disallow.
-          const takenBySibling = chosen.some((pick, i) => (i !== slot) && (pick === key));
-
-          // A racial Rank is earned at Power Level 1, so it comes before every Skill
-          // Improvement. Taking one here can therefore push Ranks that were already
-          // spent in the table past the cap of the Tier they were earned at, which
-          // makes this Skill unavailable until one of those is freed.
-          const proposed = chosen.map((pick, i) => (i === slot) ? key : pick);
-          const overflows = !DBUCharacterData.rankSequenceIsLegal(key, proposed, progression);
-
-          return {
-            value: key,
-            label: overflows ? `${skill.label} (cap ${rankCap})` : skill.label,
-            selected: key === value,
-            disabled: (key !== value) && (takenBySibling || overflows)
-          };
-        }),
-        rankCap
-      };
-    });
+    const cap = DBUCharacterData.skillRankCap(DBUCharacterData.tierOfPowerFor(1));
+    const overflow = Object.keys(SKILLS).filter(key => !DBUCharacterData.rankSequenceIsLegal(key, [key], progression));
+    const label = Object.entries(SKILLS).filter(([key]) => picks.includes(key)).map(([, skill]) => skill.label).join(", ");
+    return { label, left: label ? Math.max(0, slots - picks.length) : 0, over: picks.some(key => overflow.includes(key)),
+      data: JSON.stringify({ title: "Racial Skill Ranks", cap, slots, pairs: 0, before: {}, picks, overflow }) };
   }
 
   /**
@@ -2700,7 +2689,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * The slots full, the Skills not chosen are shut: it is the row's count, not a cap.
    */
   #openBenefits(button) {
-    const cell = button.closest(".benefit-cell");
+    const cell = button.closest("[data-benefit-scope]");
     let data;
     try { data = JSON.parse(button.dataset.benefitData ?? "{}"); } catch { return; }
     const kind = button.dataset.benefit;
@@ -2740,8 +2729,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const drawSkills = () => {
       const counts = counted(picks);
       const pairTaken = Object.values(counts).filter(n => n > 1).length >= (Number(data.pairs) || 0);
-      title.textContent = "Skill Improvement";
-      sub.textContent = `Power Level ${data.lvl} · Rank cap ${data.cap} · ${picks.length} of ${data.slots} Ranks`;
+      title.textContent = data.title ?? "Skill Improvement";
+      sub.textContent = `${data.lvl ? `Power Level ${data.lvl} · ` : ""}Rank cap ${data.cap} · ${picks.length} of ${data.slots} Ranks`;
       body.innerHTML = attributes.map(({ key: attribute, name: attributeName }) => {
         const list = skills.filter(skill => skill.attribute === attribute);
         if (!list.length) return "";
@@ -2751,8 +2740,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           const room = picks.length < data.slots;
           const adds = (mine === 0) ? room : ((mine === 1) && !pairTaken && room);
           const to = have + mine + ((mine === 0) && adds ? 1 : 0);
-          // Red where what it holds - or the next Rank it would take - passes the cap.
-          const over = (have + mine + (adds ? 1 : 0)) > data.cap;
+          // Red where what it holds - or the next Rank it would take - passes the cap; or, the race's, where it would push the
+          // table's Ranks past theirs.
+          const over = ((have + mine + (adds ? 1 : 0)) > data.cap) || (data.overflow ?? []).includes(key);
           return toggle({ id: key, on: mine > 0, over, shut: !mine && !adds,
             tip: `${name}: ${have} Rank${(have === 1) ? "" : "s"} before this row${over ? ` (cap ${data.cap})` : ""}`,
             html: `${(mine > 1) ? `<span class="badge">+${mine}</span>` : ""}<span class="name">${escape(name)}</span>`
@@ -2766,7 +2756,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const names = (kind === "attributes")
         ? Object.entries(counts).map(([key, n]) => `+${n} ${DBUCharacterSheet.#attributeName(key)}`)
         : skills.filter(({ key }) => counts[key]).map(({ key, name }) => ((counts[key] > 1) ? `+${counts[key]} ${name}` : name));
-      const over = Object.entries(counts).filter(([key, n]) => ((Number(data.before?.[key]) || 0) + n) > data.cap)
+      const over = Object.entries(counts).filter(([key, n]) => (((Number(data.before?.[key]) || 0) + n) > data.cap)
+        || (data.overflow ?? []).includes(key))
         .map(([key]) => ((kind === "attributes") ? DBUCharacterSheet.#attributeName(key) : (DBUCharacterData.SKILLS[key]?.label ?? key)));
       return `<div class="dbu-benefit-summary">${names.length ? `<b>${escape(names.join(", "))}</b>` : "Nothing chosen yet."}`
         + `${over.length ? ` <span class="over">— ${escape(over.join(", "))} over the cap of ${data.cap}</span>` : ""}</div>`;
