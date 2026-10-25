@@ -364,6 +364,10 @@ function coerce(value) {
   return value;
 }
 
+/** How many Trait files are asked for at once, and how many times one is asked for before it is given up on. */
+const LOAD_AT_ONCE = 32;
+const LOAD_ATTEMPTS = 2;
+
 /**
  * Read every Trait named by the index.
  *
@@ -386,17 +390,31 @@ export async function loadTraits() {
   }
 
   const wanted = Array.isArray(index?.traits) ? index.traits : [];
-  const loaded = await Promise.all(wanted.map(async relative => {
-    try {
-      const response = await fetch(`${ROOT}/${relative}`);
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      return { relative, text: await response.text() };
+  // A few at a time, not all at once: asked for together, the browser gives up on the ones past its limit
+  // (net::ERR_INSUFFICIENT_RESOURCES) and those Traits are missing for the session. One that fails is asked for again.
+  const read = async relative => {
+    const response = await fetch(`${ROOT}/${relative}`);
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    return { relative, text: await response.text() };
+  };
+  const loaded = new Array(wanted.length).fill(null);
+  let next = 0;
+  const worker = async () => {
+    while (next < wanted.length) {
+      const at = next++;
+      const relative = wanted[at];
+      for (let attempt = 1; attempt <= LOAD_ATTEMPTS; attempt++) {
+        try {
+          loaded[at] = await read(relative);
+          break;
+        }
+        catch (error) {
+          if (attempt === LOAD_ATTEMPTS) console.error(`DBU TTRPG | Could not read ${relative}.`, error);
+        }
+      }
     }
-    catch (error) {
-      console.error(`DBU TTRPG | Could not read ${relative}.`, error);
-      return null;
-    }
-  }));
+  };
+  await Promise.all(Array.from({ length: Math.min(LOAD_AT_ONCE, wanted.length) }, worker));
 
   for (const file of loaded) {
     if (!file) continue;
