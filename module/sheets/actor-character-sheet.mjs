@@ -574,6 +574,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     biography: {
       template: "systems/dbu-ttrpg/templates/parts/actor-biography.hbs",
       scrollable: [""]
+    },
+    settings: {
+      template: "systems/dbu-ttrpg/templates/parts/actor-settings.hbs",
+      scrollable: [""]
     }
   };
 
@@ -679,7 +683,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Time outside a Combat Encounter: the Adventure rules.
     adventure: { id: "adventure", group: "primary", label: "Adventure" },
     biography: { id: "biography", group: "primary", label: "Biography" },
-    progression: { id: "progression", group: "primary", label: "Progression" }
+    progression: { id: "progression", group: "primary", label: "Progression" },
+    // This character's own preferences for the sheet and its cards (the user's) - last, after everything they are about.
+    settings: { id: "settings", group: "primary", label: "Settings" }
   };
 
   /** The character's Maneuver Items, as the plain definitions the rules speak in. */
