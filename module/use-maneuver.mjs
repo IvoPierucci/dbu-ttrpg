@@ -974,11 +974,11 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
 
   // Splitting: "select up to 2 Opponents (First Rank) or up to 4 Opponents (Second Rank)" - the
-  // tokens targeted. Who is an Opponent is the player's to say by targeting them.
+  // tokens targeted, Allies among them left out.
   if (has("splitting") && target) {
     const most = (ranks("splitting") >= 2) ? 4 : 2;
     const others = [...new Set(Array.from(game.user.targets ?? []).map(token => token.actor)
-      .filter(other => other && (other.uuid !== target.uuid) && (other.uuid !== actor.uuid)))];
+      .filter(other => other && (other.uuid !== target.uuid) && (other.uuid !== actor.uuid) && !areAllies(other, actor)))];
     if ((others.length + 1) > most) {
       ui.notifications.warn(`${technique.name}: Splitting reaches up to ${most} Opponents; ${others.length + 1} are targeted.`);
       return null;
@@ -2029,7 +2029,7 @@ function magicTrickRanks(actor, maneuver) {
 }
 
 /**
- * Whimsical Magic (8): every Opponent not at Long Range - of another disposition than yours, on the scene, not Defeated -
+ * Whimsical Magic (8): every Opponent not at Long Range - not an Ally of yours, on the scene, not Defeated -
  * but the one aimed at.
  */
 function trickOpponents(actor, aimed) {
@@ -2880,7 +2880,7 @@ export function techniqueDefinition(item) {
 
 /**
  * Neko Mimicry (5): whose a Copied Technique was, on the scene - its uuid, or its name for a copy made before it was kept -
- * and whether an Ally or an Opponent: their token's disposition against yours. Null if they are not here, or yourself.
+ * and whether an Ally or an Opponent: by the Allies lists (allies.mjs). Null if they are not here, or yourself.
  */
 function mimicryOwner(actor, technique) {
   const tokens = globalThis.canvas?.tokens?.placeables ?? [];
@@ -3472,6 +3472,14 @@ async function askMaterialize(actor, maneuver) {
   // Weights' Opponent is the one targeted.
   const accessory = basic && (typeOf(basic) === "accessory");
   const recipient = ((kind === "weights") || (chosen.projectile && (accessory || ["weapon", "apparel"].includes(kind)))) ? target : null;
+  if (recipient && (kind === "weights") && areAllies(recipient, actor)) {
+    ui.notifications.warn(`${maneuver.name}: ${recipient.name} is your Ally - the Weights go on an Opponent.`);
+    return null;
+  }
+  if (recipient && (kind !== "weights") && !areAllies(recipient, actor)) {
+    ui.notifications.warn(`${maneuver.name}: ${recipient.name} is not your Ally - Projectile Materialization arms an Ally.`);
+    return null;
+  }
   return {
     kind, id: basic?.id ?? "", name: basic?.name ?? `${{ weapon: "a Weapon", apparel: "a piece of Apparel", weights: "Weights" }[kind]}`
       + (grade ? ` (Grade ${grade})` : ""),
@@ -3502,7 +3510,8 @@ async function askPrecognition(actor, maneuver) {
     return null;
   }
   const later = combat.turns.slice((combat.turn ?? 0) + 1)
-    .filter(combatant => combatant.actor && (combatant.actor.uuid !== actor.uuid) && !combatant.defeated);
+    .filter(combatant => combatant.actor && (combatant.actor.uuid !== actor.uuid) && !combatant.defeated
+      && !areAllies(combatant.actor, actor));
   if (!later.length) {
     ui.notifications.warn("Nobody is left to act this Combat Round.");
     return null;
@@ -3864,6 +3873,11 @@ async function askSmash(actor, maneuver, { targetUuid = "", combo = false } = {}
     : Array.from(game.user.targets ?? []).map(token => token.actor).filter(other => other && (other.uuid !== actor.uuid));
   if (!targets.length) {
     ui.notifications.warn(`${maneuver.name}: target who it reaches first.`);
+    return null;
+  }
+  const ally = !control && targets.find(other => areAllies(other, actor));
+  if (ally) {
+    ui.notifications.warn(`${maneuver.name}: ${ally.name} is your Ally - it reaches Opponents.`);
     return null;
   }
   const { whyHidden } = await import("./hidden.mjs");

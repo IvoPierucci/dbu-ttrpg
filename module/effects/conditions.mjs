@@ -44,7 +44,7 @@ export function useResourceCeiling(fn) {
  * row here; nothing else changes.
  */
 /**
- * Whether another is an Opponent of theirs - of another token disposition - and not at Long Range: fewer than 9 Squares,
+ * Whether another is an Opponent of theirs - not an Ally (allies.mjs) - and not at Long Range: fewer than 9 Squares,
  * measured on the map; unmeasurable, near.
  */
 function opponentNear(self, other) {
@@ -437,8 +437,8 @@ const PREDICATES = {
   },
 
   /**
-   * Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - the tokens of your token's
-   * disposition on the scene.
+   * Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - your Allies on the
+   * scene (allies.mjs).
    */
   besidePartner: scope => besidePartner(scope.data?.parent),
   rivalOpponent: scope => rivalSide(scope.data?.parent) === "opponent",

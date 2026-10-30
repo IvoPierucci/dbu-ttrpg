@@ -12676,7 +12676,7 @@ async function dance(message, dancer) {
   const para = message.getFlag(SCOPE, PARA_FLAG);
   if (!para || para.danced || para.failed) return;
   const targets = Array.from(game.user.targets ?? []).map(token => token.actor)
-    .filter(other => other && (other.uuid !== dancer.uuid)).slice(0, para.actions);
+    .filter(other => other && (other.uuid !== dancer.uuid) && !areAllies(other, dancer)).slice(0, para.actions);
   if (!targets.length) return ui.notifications.warn("Target who dances with you first.");
   requestEdit(message, { type: "paraPara", para: { ...para, danced: true } });
   for (const target of targets) {
@@ -14212,6 +14212,7 @@ export async function webStrike(actor, item) {
   if (!item?.system?.unique?.applied) return;
   const target = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
   if (!target) return ui.notifications.warn("Target who moved through the Explosive Web first.");
+  if (areAllies(target, actor)) return ui.notifications.warn(`${target.name} is your Ally: the Explosive Web strikes an Opponent.`);
   const mark = `round:web.${target.uuid}`;
   if ((actor.system.usedManeuvers ?? []).includes(mark)) {
     return ui.notifications.warn(`${target.name} has met the Explosive Web already this Combat Round.`);
@@ -16734,7 +16735,7 @@ export async function tornadoTurnStart(actor) {
   if (!spin) return;
   const near = (canvas?.tokens?.placeables ?? []).map(token => token.actor)
     .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid) && !other.system.defeated
-      && !whyNotWithinMelee(actor, other, ""));
+      && !areAllies(other, actor) && !whyNotWithinMelee(actor, other, ""));
   const within = [...new Map(near.map(other => [other.uuid, other])).values()];
   if (!within.length) return stopSpinning(actor);
   await actor.setFlag(SCOPE, "spinning", { ...spin, ending: true });
@@ -18290,8 +18291,8 @@ export function countsAsCopied(item) {
 /**
  * Neko Mimicry (4): "If an Opponent who is not at Long Range uses a Standard Maneuver with an Action Cost of 1 Action, you
  * may use that Maneuver as an Out-of-Sequence Maneuver. If the Maneuver was a Special Maneuver, you must have access to
- * that Special Maneuver to use it." In a Combat Encounter, on its card, to each on the scene with it - of another
- * disposition, not at Long Range from its user - once a Round, counted when taken. One of the library's; not a Technique.
+ * that Special Maneuver to use it." In a Combat Encounter, on its card, to each on the scene with it - not an Ally of
+ * theirs, not at Long Range from its user - once a Round, counted when taken. One of the library's; not a Technique.
  */
 export async function mimicryOffers(card, user, maneuver) {
   if (!card || !game.combat?.started || maneuver?.signature) return;
@@ -19326,6 +19327,7 @@ export async function nobleDragon(actor, context = {}) {
   const target = (typeof aimed === "string") ? fromUuidSync(aimed)
     : (aimed?.uuid ? (fromUuidSync(aimed.uuid) ?? aimed) : (game.user?.targets?.first()?.actor ?? null));
   if (!target || (target.uuid === actor.uuid)) return ui.notifications.warn(`${actor.name}: Noble Dragon needs an Opponent targeted.`);
+  if (areAllies(target, actor)) return ui.notifications.warn(`${actor.name}: ${target.name} is an Ally - Noble Dragon needs an Opponent.`);
   return postSaveClash(actor, target, { maneuverName: "Noble Dragon",
     reason: `Win and you are both Compelled against one another until the start of ${actor.name}'s next turn.`,
     saves: ["morale"], defenderSaves: ["morale"], nobleDragon: { applied: false } });
@@ -19754,7 +19756,7 @@ function angelicOffenseOpen(attacker, attack) {
   if (!attacker || (attacker.system?.effects?.slots?.["angelic.offenseClash"] !== true)) return [];
   if ((game.combat?.started && (actionsWithin(attacker, "counter") < 1)) || (attacker.getFlag?.(SCOPE, "angelicOffenseRound") === roundKey())) return [];
   return (attack.result?.targets ?? []).filter(branch => branch.hit && (branch.uuid !== attacker.uuid))
-    .map(branch => fromUuidSync(branch.uuid)).filter(target => target && !target.system?.defeated);
+    .map(branch => fromUuidSync(branch.uuid)).filter(target => target && !target.system?.defeated && !areAllies(target, attacker));
 }
 
 /** Angelic Offense (2)'s buttons on the attack's card, for the one who hit: a Clash at one of those hit. */
@@ -24280,7 +24282,7 @@ export async function openForPlayer(actor, document, note = "") {
 
 /**
  * Lock On: "Target an Opponent, they become your 'Target' until the start of your next turn." Which, of those on the scene
- * of another disposition than theirs, asked of whoever plays them - or none.
+ * not their Allies, asked of whoever plays them - or none.
  */
 export async function askLockOn(actor) {
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
@@ -24295,7 +24297,7 @@ export async function askLockOn(actor) {
 
 /**
  * Burning Hatred: "Select an Opponent, they become your 'Enemy'. You gain the Compelled Combat Condition against your Enemy
- * until the end of the Combat Round." Which, of those on the scene of another disposition than theirs, asked of whoever
+ * until the end of the Combat Round." Which, of those on the scene not their Allies, asked of whoever
  * plays them - or none, and no Enemy. Compelled against them is the table's: who you were told to attack is not tracked.
  */
 /**
@@ -24340,7 +24342,7 @@ export async function followAlly(actor) {
 
 /**
  * Tuffle Superiority (1): "Target an Opponent. That Opponent becomes your 'Inferior' until the end of the Combat Round." Of
- * those on the scene of another disposition, not Defeated, asked of whoever plays them - or none. While in the Surging
+ * those on the scene not their Allies, not Defeated, asked of whoever plays them - or none. While in the Surging
  * State its (4) gave, "you can only target that Opponent": the same one, unasked.
  *
  * (4): "Upon declaring an Inferior, if they are currently in a higher Health Threshold than you, you may enter the Surging

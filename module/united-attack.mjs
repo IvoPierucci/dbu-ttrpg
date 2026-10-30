@@ -15,6 +15,7 @@
  * Attack.
  */
 
+import { areAllies } from "./allies.mjs";
 import {
   getManeuver, maneuverKiCost, maneuverUsesLeft, recordManeuverUse, spendManeuverCost, squaresAway,
   whyNotAnotherInstant
@@ -191,6 +192,8 @@ export function whyNotUnite(joiner, attack, attacker, { actionsLeft = () => 1 } 
     return `${attack.maneuverName} has Instant Assault: no Instant Maneuver answers it.`;
   }
   if (globalThis.game?.combat?.started && (actionsLeft(joiner) < 1)) return `${joiner.name} has no Actions left this round.`;
+  // An Ally's Attacking Maneuver - by the Allies lists.
+  if (attacker && !areAllies(joiner, attacker)) return `${attack.attackerName ?? attacker.name} is not ${joiner.name}'s Ally.`;
   // "While you are on an adjacent Square" - 1 Square away. Not measurable is not a refusal.
   const away = attacker ? squaresAway(joiner, attacker) : null;
   if ((away !== null) && (away > 1)) return `${joiner.name} is not on a Square adjacent to ${attack.attackerName}.`;

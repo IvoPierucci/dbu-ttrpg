@@ -2442,6 +2442,8 @@ export function interveneOptionCost(option, actor) {
 export function whyNotIntervene(actor, allyUuid,
                                 { interventions = [], targetUuids = [] } = {}) {
   if (actor.uuid === allyUuid) return "You cannot Intervene for yourself.";
+  const ally = globalThis.fromUuidSync?.(allyUuid);
+  if (ally && !areAllies(actor, ally)) return `${ally.name} is not ${actor.name}'s Ally.`;
 
   if (targetUuids.includes(actor.uuid)) {
     return `${actor.name} was targeted by this Attacking Maneuver, so they cannot Intervene against it.`;

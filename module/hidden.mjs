@@ -141,7 +141,7 @@ export function isInvisible(actor) {
 
 /**
  * Invisible's "(1)-[Automatic/Invisible, Automatic/Start of Turn]: You become Hidden to all Opponents" - every token on the
- * scene of another disposition than theirs.
+ * scene not an Ally of theirs.
  */
 export async function hideFromOpponents(actor) {
   if (!isInvisible(actor)) return;
