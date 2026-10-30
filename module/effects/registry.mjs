@@ -932,10 +932,53 @@ export function momentOf(block) {
   return String(block?.moment ?? "").split(/[(/]/)[0];
 }
 
+/**
+ * The States' Triggered effects asked in code rather than written as blocks, by the id that code asks after - Feral (1)'s
+ * Unhinged (chat.mjs askUnhinged), Incorporeal (1)'s (chat.mjs incorporealAnswer). The user's: these are set like the rest.
+ */
+export const STATE_CODE_TRIGGERS = Object.freeze({
+  feral: [{ id: "state:feral#unhinged", level: 2, effect: 1 }],
+  incorporeal: [{ id: "state:incorporeal#no-damage", level: 0, effect: 1 }]
+});
+
+/** A State's Triggered effects that may be set Automatic: not what costs Actions, nor what is chosen as it happens. */
+export function stateTriggerBlocks(trait) {
+  const { program, errors } = compileScript(trait?.script ?? "");
+  if (errors.length) return [];
+  return (program.blocks ?? []).filter(block => (block.mode === "triggered") && !block.budget?.actions && !chosenAsItHappens(block));
+}
+
+let stateDefaults = null;
+
+/** The ids of every State's Triggered effect whose file makes it Automatic until set back (`automaticByDefault`). */
+function stateAutomaticByDefault() {
+  if (stateDefaults) return stateDefaults;
+  const states = traitsOfKind("states");
+  const ids = states.filter(trait => trait.automaticByDefault === true).flatMap(trait => [
+    ...stateTriggerBlocks(trait).map(block => `state:${trait.id}#${block.index}`),
+    ...(STATE_CODE_TRIGGERS[trait.id] ?? []).map(entry => entry.id)
+  ]);
+  // Kept once the Traits are in - asked before they load, it is asked again.
+  if (states.length) stateDefaults = ids;
+  return ids;
+}
+
+/**
+ * Every effect that answers by itself: what the player set Automatic, and a State's Triggered effect its file makes
+ * Automatic (the user's: all but Surging's) unless the player set it back to Triggered.
+ */
+export function automaticIds(actor) {
+  const ids = new Set(actor?.getFlag?.("dbu-ttrpg", "automatic") ?? []);
+  const back = new Set(actor?.getFlag?.("dbu-ttrpg", "triggered") ?? []);
+  for (const id of stateAutomaticByDefault()) if (!back.has(id)) ids.add(id);
+  return ids;
+}
+
 export function reactiveFor(actor, options = {}) {
   const armed = new Set(actor.system?.armedEffects ?? actor.system?.armedTalents ?? []);
-  // What the player set to Automatic on a Racial Trait (the user's): answers its moment each time, never spent off.
-  const automatic = new Set(actor.getFlag?.("dbu-ttrpg", "automatic") ?? []);
+  // What the player set to Automatic on a Racial Trait (the user's): answers its moment each time, never spent off. And a
+  // State's, Automatic until set back.
+  const automatic = automaticIds(actor);
 
   return programsFor(actor, options).flatMap(entry =>
     (entry.program.blocks ?? [])

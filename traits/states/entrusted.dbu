@@ -5,6 +5,8 @@ kind: state
 specialState: true
 # Within anyone's reach (the user's): Combat Recovery, or another's Empower Maneuver - never greyed in the Manage window.
 anyoneMayEnter: true
+# Its Triggered effects Automatic until set back to Triggered on the Settings tab (the user's).
+automaticByDefault: true
 description: >
   Everything your allies had, you are carrying.
 text: >

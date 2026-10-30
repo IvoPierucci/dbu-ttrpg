@@ -4,6 +4,8 @@ kind: state
 levels: 2
 # A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
 specialState: true
+# Its Triggered effects Automatic until set back to Triggered on the Settings tab (the user's).
+automaticByDefault: true
 description: >
   Wild: no Signature Techniques or Unique Abilities, Attacking Maneuvers L(T) cheaper, the Natural Result of Strike,
   Wound, Intimidation and Survival L higher. Unhinged: a Critical Strike or Wound Roll may raise the Damage Category by 1.

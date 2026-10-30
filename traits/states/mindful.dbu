@@ -2,6 +2,8 @@ id: mindful
 name: Mindful
 kind: state
 levels: 3
+# Its Triggered effects Automatic until set back to Triggered on the Settings tab (the user's).
+automaticByDefault: true
 description: >
   Clarity, bought at the cost of force.
 text: >

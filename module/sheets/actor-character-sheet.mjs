@@ -9,8 +9,7 @@ import { traitAside } from "../aside.mjs";
 import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
-import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
-import { compile as compileEffects } from "../effects/parser.mjs";
+import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stateTriggerBlocks } from "../effects/registry.mjs";
 import { grantedUniques } from "../unique.mjs";
 import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
@@ -5531,13 +5530,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!this.isEditable) return;
     // Every block of the one effect the button stands for, set together.
     const ids = String(target.dataset.effectId ?? "").split(",").filter(Boolean);
+    // Automatic now - as set, or by a State's default - goes back to Triggered, remembered as set back; otherwise Automatic.
+    const all = ids.every(id => automaticIds(this.actor).has(id));
     const held = new Set(this.actor.getFlag("dbu-ttrpg", "automatic") ?? []);
-    const all = ids.every(id => held.has(id));
+    const back = new Set(this.actor.getFlag("dbu-ttrpg", "triggered") ?? []);
     for (const id of ids) {
-      if (all) held.delete(id);
-      else held.add(id);
+      if (all) {
+        held.delete(id);
+        back.add(id);
+      } else {
+        held.add(id);
+        back.delete(id);
+      }
     }
-    return this.actor.setFlag("dbu-ttrpg", "automatic", [...held]);
+    return this.actor.update({ "flags.dbu-ttrpg.automatic": [...held], "flags.dbu-ttrpg.triggered": [...back] });
   }
 
   static async _onArmTalent(event, target) {
@@ -5705,26 +5711,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Raging's Apoplectic). One button an effect - "Tranquil · 1st effect" - its blocks (on entering, on a level reached, at
    * the start of a Round) set together.
    */
-  /**
-   * The States' Triggered effects asked in code rather than written as blocks, with the id that code asks after - Feral
-   * (1)'s Unhinged (chat.mjs askUnhinged), Incorporeal (1)'s (chat.mjs incorporealAnswer). The user's: these may be set
-   * Automatic too.
-   */
-  static STATE_CODE_TRIGGERS = Object.freeze({
-    feral: [{ id: "state:feral#unhinged", level: 2, effect: 1 }],
-    incorporeal: [{ id: "state:incorporeal#no-damage", level: 0, effect: 1 }]
-  });
-
   #stateTriggers() {
-    const automatic = new Set(this.actor.getFlag("dbu-ttrpg", "automatic") ?? []);
+    // Automatic as set, or by default - every State's but Surging's (the user's) - unless set back.
+    const automatic = automaticIds(this.actor);
     return traitsOfKind("states").map(trait => {
-      const { program, errors } = compileEffects(trait.script ?? "");
-      if (errors.length) return null;
       // A levelled State's levels by their printed names - "Tranquil (Level 3)".
       const levels = Object.fromEntries([...String(trait.text ?? "").matchAll(/^\s*(.+?) \(Level (\d+)\)\s*$/gm)]
         .map(([, name, level]) => [Number(level), name.trim()]));
-      const buttons = (program.blocks ?? [])
-        .filter(block => (block.mode === "triggered") && !block.budget?.actions && !chosenAsItHappens(block))
+      const buttons = stateTriggerBlocks(trait)
         .map(block => {
           const level = Number(block.modifiers?.fromLevel) || 0;
           const effect = Number(block.modifiers?.effect) || 0;
@@ -5732,7 +5726,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           return { id, group: `${level}|${effect || block.index}`, automatic: automatic.has(id),
             label: [levels[level], effect ? `${ordinal(effect)} effect` : ""].filter(Boolean).join(" \u00b7 ") || trait.name };
         })
-        .concat((DBUCharacterSheet.STATE_CODE_TRIGGERS[trait.id] ?? []).map(({ id, level, effect }) => ({ id,
+        .concat((STATE_CODE_TRIGGERS[trait.id] ?? []).map(({ id, level, effect }) => ({ id,
           group: `${level}|${effect}`, automatic: automatic.has(id),
           label: [levels[level], `${ordinal(effect)} effect`].filter(Boolean).join(" \u00b7 ") })))
         .reduce((buttons, each) => {

@@ -7,7 +7,7 @@ import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelPar
   woundResourceStacks, woundResources } from "./duel.mjs";
 import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
-import { chosenAsItHappens, reactiveFor, usesLeft } from "./effects/registry.mjs";
+import { automaticIds, chosenAsItHappens, reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { bondOf, evaluate as evaluateCondition, partnerOf as partnerOfSync } from "./effects/conditions.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
@@ -1207,7 +1207,7 @@ async function unflinchingWeapon(message, attack, attacker, target) {
   const item = attacker.items?.get(weapon.itemId);
   const soak = Math.max(0, Number(target.system.soakValue) || 0);
   if (!item || !soak) return;
-  const automatic = triggersFor(target, ["unflinching-weapon"]).some(entry => (target.getFlag?.(SCOPE, "automatic") ?? []).includes(entry.blockId));
+  const automatic = triggersFor(target, ["unflinching-weapon"]).some(entry => automaticIds(target).has(entry.blockId));
   if (!automatic && ((await askPlayerChoice(target, `${target.name}: Unflinching Resilience`,
     [{ value: "yes", label: `${item.name} loses ${soak} Life Points` }, { value: "no", label: "No" }])) !== "yes")) return;
   const said = await damageWeapon(attacker, item, soak, getTrait);
@@ -7809,7 +7809,7 @@ export async function answerCounter(actor) {
   const all = triggersFor(actor, ["counter-maneuver"]);
   if (!all.length) return;
   // Set Automatic on the Traits tab, it holds without asking (the user's); the rest are asked in the window.
-  const automatic = new Set(actor.getFlag?.(SCOPE, "automatic") ?? []);
+  const automatic = automaticIds(actor);
   const held = all.filter(entry => automatic.has(entry.blockId));
   const triggers = all.filter(entry => !automatic.has(entry.blockId));
   const before = new Set(actor.system.armedTalents ?? []);
@@ -15302,7 +15302,7 @@ export async function energyControlAsk(actor, maneuver, declared, price) {
   if (!costOpen && !homingOpen) return none;
   // Technique Master (2): with no 1/Round, its Triggered/Automatic button - Automatic, taken without asking (the user's).
   const costAuto = costOpen && (slots["techniqueMaster.freeControl"] === true)
-    && triggersFor(actor, ["energy-control-cost"]).some(entry => (actor.getFlag?.(SCOPE, "automatic") ?? []).includes(entry.blockId));
+    && triggersFor(actor, ["energy-control-cost"]).some(entry => automaticIds(actor).has(entry.blockId));
   if (costAuto && !homingOpen) return { discount: Math.min(2 * tier, Number(price)), homing: false };
   const escape = Handlebars.escapeExpression;
   const picked = await foundry.applications.api.DialogV2.wait({
@@ -15409,7 +15409,7 @@ export async function swaggerEnds(actor) {
   await actor.unsetFlag(SCOPE, "swagger");
   if (!held.attacked || !(Number(held.count) > 0) || !hasTalentItem(actor, "swaggering-wager")) return;
   // Its button: Automatic, gained; Triggered, asked.
-  const automatic = triggersFor(actor, ["swagger-ended"]).some(entry => (actor.getFlag?.(SCOPE, "automatic") ?? []).includes(entry.blockId));
+  const automatic = triggersFor(actor, ["swagger-ended"]).some(entry => automaticIds(actor).has(entry.blockId));
   if (!automatic && ((await askPlayerChoice(actor, `${actor.name}: Swaggering Wager`,
     [{ value: "yes", label: `Gain ${held.count} Swagger` }, { value: "no", label: "No" }])) !== "yes")) return;
   await setResource(actor, "swagger", (Number(actor.system.resources?.swagger?.stacks) || 0) + Number(held.count));
@@ -17358,10 +17358,10 @@ async function foundToss(message) {
  */
 /**
  * Whether a State's Triggered effect built here rather than as a block was set Automatic on the Settings tab (the user's) -
- * Feral (1)'s, Incorporeal (1)'s. Kept with the blocks' own, under an id of its own (the sheet's STATE_CODE_TRIGGERS).
+ * Feral (1)'s, Incorporeal (1)'s. Kept with the blocks' own, under an id of its own (registry.mjs STATE_CODE_TRIGGERS).
  */
 function automaticOn(actor, id) {
-  return (actor?.getFlag?.(SCOPE, "automatic") ?? []).includes(id);
+  return automaticIds(actor).has(id);
 }
 
 async function askUnhinged(attacker, attack, wound) {
@@ -29152,7 +29152,7 @@ async function concentratedFlare(actor) {
   if (!bonus) return [];
   const blocks = triggersFor(actor, ["concentrated-flare"]);
   if (!blocks.length) return [];
-  const automatic = blocks.some(entry => (actor.getFlag?.(SCOPE, "automatic") ?? []).includes(entry.blockId));
+  const automatic = blocks.some(entry => automaticIds(actor).has(entry.blockId));
   if (!automatic && ((await askPlayerChoice(actor, `${actor.name}: Concentrated Energy - Power Flare`,
     [{ value: "yes", label: `Its Wound bonus doubled (+${bonus})` }, { value: "no", label: "No" }])) !== "yes")) return [];
   return [{ label: "Concentrated Energy (Power Flare)", value: bonus }];
@@ -33917,7 +33917,7 @@ function momentTriggers(actor, card) {
   };
   // Nor what is set Automatic: it answered this by itself already - Warrior's Pride's Battle Born at the Encounter's start
   // is not offered again on its card (the user's).
-  const automatic = new Set(actor?.getFlag?.(SCOPE, "automatic") ?? []);
+  const automatic = automaticIds(actor);
   const own = triggersFor(actor, [card.moment]).filter(holds)
     .filter(entry => !automatic.has(entry.blockId) || chosenAsItHappens(entry.program.blocks?.[0]))
     // Spectator (5): none but the Spectator State's own at a turn's or a Round's start.
@@ -34315,7 +34315,7 @@ export async function enterEncounter(actor) {
   await fireMoment(actor, "start-of-encounter");
 
   // What is the player's, offered - not what answered it by itself just now - and what they tick answers it then.
-  const automatic = new Set(actor.getFlag?.(SCOPE, "automatic") ?? []);
+  const automatic = automaticIds(actor);
   const triggers = triggersFor(actor, ["start-of-encounter"])
     .filter(entry => !automatic.has(entry.blockId) || chosenAsItHappens(entry.program.blocks?.[0]));
   if (triggers.length) {

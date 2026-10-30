@@ -3,6 +3,8 @@ name: Incorporeal
 kind: state
 # A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
 specialState: true
+# Its Triggered effects Automatic until set back to Triggered on the Settings tab (the user's).
+automaticByDefault: true
 description: >
   Spectral: an attack's Wound under 1/4 of your Maximum Life Points deals you nothing; Damage ends it; no Attacking Maneuvers; you pass
   through what is in the way; no Collision Damage.
