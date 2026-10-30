@@ -4468,13 +4468,13 @@
   position: static;
 }
 
-/* The Attribute Scores apart from Level and TP: a soft red (the user's). */
+/* The Attribute Scores apart from Level and TP: a soft blue (the user's). */
 .dbu-ttrpg .progression-table.dbu-progress-row th.dbu-score {
-  background: #4a2622;
+  background: #22344a;
 }
 
 .dbu-ttrpg .progression-table.dbu-progress-row td.dbu-score {
-  background: #2e1c1a;
+  background: #1a2433;
 }
 
 /* More TP spent than given: said, never refused. */
