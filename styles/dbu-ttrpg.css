@@ -4287,6 +4287,14 @@
   font-size: 13px;
 }
 
+/* A side title's note - "Base Die: 1d10" - read at a glance: plain, not the tiny capitals a heading's font would make it. */
+.dbu-ttrpg .dbu-side-title .panel-note {
+  font-size: 12px;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .dbu-ttrpg .dbu-side-title + .dbu-box-grid + .dbu-side-title {
   margin-top: 4px;
 }
