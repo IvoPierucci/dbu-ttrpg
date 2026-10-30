@@ -98,21 +98,27 @@
           <col class="col-tp"/>
           <col class="col-tp"/>
         </colgroup>
+        {{! The Scores told apart by a heading of their own over them and the lines either side (the user's), the colours the
+            table's own. }}
         <thead>
           <tr>
-            <th scope="col">Level</th>
+            <th scope="col" rowspan="2">Level</th>
+            <th scope="colgroup" colspan="{{attributeColumns.length}}" class="dbu-score-group">Attribute Scores</th>
+            <th scope="col" rowspan="2" data-tooltip="Left after the Unique Abilities and the Signature Techniques">TP</th>
+            <th scope="col" rowspan="2" data-tooltip="Every Technique Point granted up to your Power Level">Total TP</th>
+          </tr>
+          <tr>
             {{#each attributeColumns as |column|}}
-            <th scope="col" class="dbu-score" data-tooltip="{{column.key}}">{{column.abbr}} Score</th>
+            <th scope="col" class="dbu-score{{#if @first}} dbu-score-first{{/if}}{{#if @last}} dbu-score-last{{/if}}"
+                data-tooltip="{{column.key}}">{{column.abbr}}</th>
             {{/each}}
-            <th scope="col" data-tooltip="Left after the Unique Abilities and the Signature Techniques">TP</th>
-            <th scope="col" data-tooltip="Every Technique Point granted up to your Power Level">Total TP</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>{{system.powerLevel}}</td>
             {{#each attributeColumns as |column|}}
-            <td class="dbu-score">{{column.score}}</td>
+            <td class="dbu-score{{#if @first}} dbu-score-first{{/if}}{{#if @last}} dbu-score-last{{/if}}">{{column.score}}</td>
             {{/each}}
             <td class="{{#if tpSummary.over}}dbu-over{{/if}}"
                 data-tooltip="{{tpSummary.spent}} spent of {{tpSummary.total}}: {{tpSummary.unique}} on Unique Abilities, {{tpSummary.techniques}} on Signature Techniques">{{tpSummary.left}}</td>

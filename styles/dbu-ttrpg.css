@@ -4468,13 +4468,20 @@
   position: static;
 }
 
-/* The Attribute Scores apart from Level and TP: a soft blue (the user's). */
-.dbu-ttrpg .progression-table.dbu-progress-row th.dbu-score {
-  background: #22344a;
+/* The Attribute Scores apart from Level and TP, in the table's own colours (the user's): a heading over them, and a
+   heavier line either side of the group. */
+.dbu-ttrpg .progression-table.dbu-progress-row th.dbu-score-group {
+  border-left: 2px solid var(--dbu-border-strong);
+  border-right: 2px solid var(--dbu-border-strong);
+  letter-spacing: 0.04em;
 }
 
-.dbu-ttrpg .progression-table.dbu-progress-row td.dbu-score {
-  background: #1a2433;
+.dbu-ttrpg .progression-table.dbu-progress-row .dbu-score-first {
+  border-left: 2px solid var(--dbu-border-strong);
+}
+
+.dbu-ttrpg .progression-table.dbu-progress-row .dbu-score-last {
+  border-right: 2px solid var(--dbu-border-strong);
 }
 
 /* More TP spent than given: said, never refused. */
