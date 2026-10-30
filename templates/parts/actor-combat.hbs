@@ -248,10 +248,10 @@
           <div class="stat"><em>Haste</em><span data-tooltip-html="{{workings.haste}}">{{combatRolls.strike.haste}}</span></div>
           <div class="stat"><em>Awareness</em><span data-tooltip-html="{{workings.awareness}}">{{combatRolls.strike.awareness}}</span></div>
         </div>
-        <div class="stat dbu-effects" data-tooltip-html="{{combatRolls.strike.workings}}">
+        <div class="stat dbu-effects" data-tooltip-html="{{combatRolls.strike.effectsTip}}">
           <em>Effects</em><span>{{numberFormat combatRolls.strike.effects decimals=0 sign=true}}</span>
         </div>
-        <div class="stat dbu-total" data-tooltip-html="{{combatRolls.strike.workings}}">
+        <div class="stat dbu-total" data-tooltip-html="{{combatRolls.strike.totalTip}}">
           <em>Strike</em><span>{{combatRolls.strike.total}} <span class="dbu-crit">({{combatRolls.strike.crit}}+)</span></span>
           <i class="dbu-dice{{#if combatRolls.strike.dice.twice}} twice{{/if}}">{{combatRolls.strike.dice.line}}</i>
         </div>
@@ -259,10 +259,10 @@
       <div class="dbu-roll">
         <h4>Dodge</h4>
         <div class="stat"><em>Defense Value</em><span data-tooltip-html="{{workings.defenseValue}}">{{combatRolls.dodge.defenseValue}}</span></div>
-        <div class="stat dbu-effects" data-tooltip-html="{{combatRolls.dodge.workings}}">
+        <div class="stat dbu-effects" data-tooltip-html="{{combatRolls.dodge.effectsTip}}">
           <em>Effects</em><span>{{numberFormat combatRolls.dodge.effects decimals=0 sign=true}}</span>
         </div>
-        <div class="stat dbu-total" data-tooltip-html="{{combatRolls.dodge.workings}}">
+        <div class="stat dbu-total" data-tooltip-html="{{combatRolls.dodge.totalTip}}">
           <em>Dodge</em><span>{{combatRolls.dodge.total}} <span class="dbu-crit">({{combatRolls.dodge.crit}}+)</span></span>
           <i class="dbu-dice{{#if combatRolls.dodge.dice.twice}} twice{{/if}}">{{combatRolls.dodge.dice.line}}</i>
         </div>

@@ -45,7 +45,7 @@ import {
 import { actionsLeft, actionsWithin, convertActions, convertibleActions, isTheirTurn, newRoundFor, spendActions }
   from "../combat.mjs";
 import { whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
-import { baseDieLine, breakdownTable, extraDiceLine, partLine, noteLine, floorLine,
+import { baseDieLine, breakdownTable, contributionLine, extraDiceLine, partLine, noteLine, floorLine,
          fromOutcome, workingsTable, atRollTime } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
@@ -1743,24 +1743,58 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const die = twice ? `2${baseDie.slice(1)} (higher)` : baseDie;
       return { twice, line: `${die}${extra ? ` + ${extra}` : ""}`, short: twice ? `2${baseDie.slice(1)}↑` : baseDie };
     };
+    // Effects (the user's): every one of them, what lowers the roll as it is made among them - Diminishing, the Muscle
+    // Penalty, a Health Threshold's - so the total is what is rolled. Its hover names each; the total's says only
+    // Aptitudes + Effects, each of those saying its own on hover.
+    const muscle = system.superStack?.musclePenalty ?? 0;
+    const thresholdPenalty = system.threshold?.penalty ?? 0;
+    const atTheDice = slot => [
+      ((slot === "strike") && offense.penalty) ? { label: "Diminishing Offense", value: -offense.penalty } : null,
+      ((slot === "dodge") && defense.penalty) ? { label: "Diminishing Defense", value: -defense.penalty } : null,
+      muscle ? { label: "Muscle Penalty", value: -muscle } : null,
+      thresholdPenalty ? { label: "Health Threshold", value: -thresholdPenalty } : null
+    ].filter(Boolean);
+    const rollOf = (slot, sources) => {
+      const value = system.combat?.[slot] ?? 0;
+      const step = system.effects?.workings?.[slot];
+      const later = atTheDice(slot);
+      const total = value + later.reduce((sum, part) => sum + part.value, 0);
+      const base = sources.reduce((sum, source) => sum + source.value, 0);
+      const effectLines = [
+        // What the data model added past the Aptitudes it is made of - the Dodge's own modifier among them.
+        ...(step?.parts ?? []).filter(part => !sources.some(source => source.label === part.label) && Number(part.value))
+          .map(part => partLine({ label: part.label, value: part.value })),
+        ...(step?.contributions ?? []).map(contributionLine),
+        ...later.map(part => partLine(part))
+      ];
+      return { total, effects: total - base, crit: critOf(slot), dice: diceOf(slot),
+        effectsTip: effectLines.length ? breakdownTable(effectLines, total - base) : "",
+        totalTip: breakdownTable([...sources, { label: "Effects", value: total - base }]
+          .filter(part => part.value || (part.label !== "Effects")).map(part => partLine(part)), total) };
+    };
+    const strikeRoll = rollOf("strike", [{ label: "Haste", value: system.haste }, { label: "Awareness", value: system.awareness }]);
+    const dodgeRoll = rollOf("dodge", [{ label: "Defense Value", value: system.defenseValue }]);
     const strike = system.combat?.strike ?? 0;
-    const dodge = system.combat?.dodge ?? 0;
     context.combatRolls = {
-      strike: { haste: system.haste, awareness: system.awareness, effects: strike - system.haste - system.awareness,
-        total: strike, crit: critOf("strike"), dice: diceOf("strike"), workings: workings.strike },
-      dodge: { defenseValue: system.defenseValue, effects: dodge - system.defenseValue, total: dodge,
-        crit: critOf("dodge"), dice: diceOf("dodge"), workings: workings.dodge },
+      strike: { haste: system.haste, awareness: system.awareness, ...strikeRoll },
+      dodge: { defenseValue: system.defenseValue, ...dodgeRoll },
       strikeDice: diceOf("strike"),
       woundDice: diceOf("wound"),
-      byFoundation: Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => ({
-        label: foundation.label,
-        strike: system.combat?.strikeBy?.[key] ?? strike,
-        strikeCrit: critOf("strike"),
-        strikeWorkings: workingsTable(system, `strike.${key}`, { extra: atRollTime(system, "strike") }) || workings.strike,
-        wound: system.combat?.wound?.[key] ?? 0,
-        woundCrit: critOf("wound"),
-        woundWorkings: workings[`wound.${key}`]
-      }))
+      byFoundation: Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => {
+        // The Strike as above, and what raises this Foundation's alone - "Energy Strike" - on it (the user's).
+        const own = system.effects?.workings?.[`strike.${key}`]?.contributions ?? [];
+        const value = strikeRoll.total + ((system.combat?.strikeBy?.[key] ?? strike) - strike);
+        return {
+          label: foundation.label,
+          strike: value,
+          strikeCrit: critOf("strike"),
+          strikeWorkings: breakdownTable([partLine({ label: "Strike", value: strikeRoll.total }), ...own.map(contributionLine)], value),
+          // The Wound as it was: the Damage Attribute, every effect, this Foundation's own, and what the dice pick up.
+          wound: system.combat?.wound?.[key] ?? 0,
+          woundCrit: critOf("wound"),
+          woundWorkings: workings[`wound.${key}`]
+        };
+      })
     };
 
     // The Turn State button's chips: what you are in the middle of, said without opening it. Red where it leaves you open.

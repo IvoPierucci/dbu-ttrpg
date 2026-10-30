@@ -278,7 +278,7 @@ function esc(text) {
  * Soak Value by 2(bT)", "the Dice Score of the Wound Roll is halved" - so each row says
  * the operation and lets the number speak for itself.
  */
-function contributionLine(part) {
+export function contributionLine(part) {
   const value = Number(part.value) || 0;
   const label = part.source || "an effect";
 
