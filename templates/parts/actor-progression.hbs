@@ -90,11 +90,18 @@
   <section class="progression-summary">
     <div class="dbu-table-wrap">
       <table class="progression-table dbu-progress-row">
+        {{! Level and Total TP as wide as the Level and TP of the table under it, so the two line up (the user's). }}
+        <colgroup>
+          <col class="col-level"/>
+          {{#each attributeColumns}}<col/>{{/each}}
+          <col/>
+          <col class="col-tp"/>
+        </colgroup>
         <thead>
           <tr>
             <th scope="col">Level</th>
             {{#each attributeColumns as |column|}}
-            <th scope="col" data-tooltip="{{column.key}}">{{column.abbr}} Score</th>
+            <th scope="col" class="dbu-score" data-tooltip="{{column.key}}">{{column.abbr}} Score</th>
             {{/each}}
             <th scope="col" data-tooltip="Left after the Unique Abilities and the Signature Techniques">TP</th>
             <th scope="col" data-tooltip="Every Technique Point granted up to your Power Level">Total TP</th>
@@ -104,7 +111,7 @@
           <tr>
             <td>{{system.powerLevel}}</td>
             {{#each attributeColumns as |column|}}
-            <td>{{column.score}}</td>
+            <td class="dbu-score">{{column.score}}</td>
             {{/each}}
             <td class="{{#if tpSummary.over}}dbu-over{{/if}}"
                 data-tooltip="{{tpSummary.spent}} spent of {{tpSummary.total}}: {{tpSummary.unique}} on Unique Abilities, {{tpSummary.techniques}} on Signature Techniques">{{tpSummary.left}}</td>
