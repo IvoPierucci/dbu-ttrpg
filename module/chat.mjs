@@ -27327,7 +27327,8 @@ async function markArea(message, attack, { others = false } = {}) {
  */
 async function techniqueOnHit(attacker, attack, target) {
   const tech = attack.technique;
-  if (!tech) return [];
+  // Both "hit an Opponent" - an Ally caught by it gains no Broken (allies.mjs).
+  if (!tech || areAllies(target, attacker)) return [];
   const said = [];
   let broken = featureRanks(tech.features, "penetration");
   const calledShot = isCalledShot(attack);
@@ -27356,7 +27357,8 @@ async function techniqueAfterDamage(message, attack, attacker, target, { damage,
   const tech = attack.technique;
   const has = id => tech.features.includes(id);
   const ranks = id => featureRanks(tech.features, id);
-  const landed = own.hit && !isAbsoluteMiss(own);
+  // Each of these names "an Opponent" (Lead Up's chain too): an Ally caught by it is left out (allies.mjs).
+  const landed = own.hit && !isAbsoluteMiss(own) && !areAllies(target, attacker);
   const said = [];
 
   if (landed && (attacker.system.lastManeuver?.messageId === message.id)) {
@@ -27409,7 +27411,7 @@ async function techniqueAfterDamage(message, attack, attacker, target, { damage,
     });
   }
 
-  if (has("terrain-slam")) {
+  if (has("terrain-slam") && !areAllies(target, attacker)) {
     await postMightClash(attacker, target, {
       maneuverName: "Terrain Slam",
       reason: `${attack.maneuverName} · win, choose an unoccupied Square or a Feature adjacent to `
@@ -33314,7 +33316,9 @@ async function applyAttackDamage(message, target, attack) {
   if (!own || own.applied) return;
   // Delayed: "instead of your Opponent taking any Damage, keep a record of the Dice Score of your
   // Wound Roll and apply a stack of Imminent to the target(s)".
-  if (attack.technique?.features?.includes("delayed") && !attack.detonation && own.hit && !isAbsoluteMiss(own)) {
+  // Not for an Ally caught by it: "your Opponent".
+  if (attack.technique?.features?.includes("delayed") && !attack.detonation && own.hit && !isAbsoluteMiss(own)
+    && !areAllies(target, fromUuidSync(attack.attackerUuid ?? ""))) {
     return holdDelayed(message, attack, target);
   }
   // A Called Shot at a piece of Apparel that hit: "you still take 1/2 of the Damage you
@@ -33348,7 +33352,9 @@ async function applyAttackDamage(message, target, attack) {
   // of Diminishing Defense ..." - offered, below, for the attacker to apply or keep for a later hit this Round.
   const armsUser = fromUuidSync(attack.attackerUuid);
   const arms = Boolean(armsUser) && (armsUser.uuid !== target.uuid) && own.hit && !isAbsoluteMiss(own)
-    && (attack.foundation === "physical") && armsHitOpen(armsUser);
+    && (attack.foundation === "physical") && armsHitOpen(armsUser)
+    // "If you hit an Opponent with a Physical Attack" - not an Ally (allies.mjs).
+    && !areAllies(target, armsUser);
 
   // Floored at zero for everyone except whoever has been granted otherwise - the Undying
   // State being the one thing in the rules that grants it.
@@ -33613,14 +33619,16 @@ async function applyAttackDamage(message, target, attack) {
       ? (Number(sky.knockbackMight) || 0) * Math.max(1, attacker.system.baseTierOfPower ?? 1)
       : 0;
 
-    if (attacker && (broughtItsOwn || here)) {
+    // "If you successfully Damage an Opponent" - and Staggering Attack's below: not an Ally (allies.mjs).
+    const foe = attacker && !areAllies(target, attacker);
+    if (foe && (broughtItsOwn || here)) {
       await openKnockback(attack, attacker, target, { extra, from: here ? sky.name : "" });
     }
 
     // Staggering Attack: "If you inflict Damage to an Opponent with this Attacking
     // Maneuver, make a Might Clash against your Opponent." The same moment Knockback's is
     // opened, for the same reason, and one each.
-    if (attacker && staggers(attack)) await openStagger(attack, attacker, target);
+    if (foe && staggers(attack)) await openStagger(attack, attacker, target);
 
     // Lasting Wounds: "If you deal Damage with an Attacking Maneuver that uses this Weapon,
     // inflict one stack of DOT on an Opponent until the start of your next turn."
@@ -33644,7 +33652,8 @@ async function applyAttackDamage(message, target, attack) {
   // Threshold, make a Might Clash against them. If you win, they are knocked Prone."
   if (attack.weapon?.staggering && knockedThrough && !isAbsoluteMiss(own)) {
     const striker = fromUuidSync(attack.attackerUuid);
-    if (striker) {
+    // "knocks an Opponent through".
+    if (striker && !areAllies(target, striker)) {
       await postMightClash(striker, target, {
         maneuverName: attack.maneuverName,
         clashLabel: `${attack.weapon.name}, Staggering`,

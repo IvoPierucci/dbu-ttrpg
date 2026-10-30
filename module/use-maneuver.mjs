@@ -7006,7 +7006,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
           clash: { skill: "bluff", defenderSkills: ["intuition"] } },
           { techniqueClash: { kind: "fake-out", attackMessageId: card.id, applied: false } });
       }
-      if (features.includes("trick-attack")) {
+      // Trick Attack: "When you target an Opponent with this Attacking Maneuver" - an Ally aimed at is not fooled (allies.mjs).
+      if (features.includes("trick-attack") && !areAllies(target, actor)) {
         await postSkillClash(actor, target, { name: `${maneuver.name} (Trick Attack)`, type: "instant",
           clash: { skill: trickSkill, defenderSkills: ["intuition", "perception"] } },
           { techniqueClash: { kind: "trick-attack", attackMessageId: card.id, applied: false } });
