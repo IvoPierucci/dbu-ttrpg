@@ -2639,7 +2639,10 @@ const TARGET_SIDE = Object.freeze({
   "intuit": "opponent", "search": "opponent", "sense": "opponent", "snatch": "opponent", "terrify": "opponent", "thrust": "opponent",
   "alternate-sight-fourth-effect": "opponent", "experienced-fighter-second-effect": "opponent",
   "light-consumption-first-effect": "opponent", "noble-dragon-maneuver": "opponent",
-  "treatment": "ally", "empower": "ally"
+  "treatment": "ally", "empower": "ally",
+  // Unique Abilities.
+  "bluff-attack": "opponent", "devilmite-beam": "opponent", "internal-assault": "opponent", "mind-control": "opponent",
+  "petrification": "opponent", "punisher-guard": "opponent", "sealing": "opponent", "warped-evolution": "ally"
 });
 
 /** Take the Actions, once the Maneuver has actually committed. */
@@ -5254,7 +5257,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       return false;
     }
     // "Target an Opponent" / "Target an Ally" - by the Allies lists (allies.mjs).
-    const side = TARGET_SIDE[maneuver.id];
+    // A Unique Ability's by its file.
+    const side = TARGET_SIDE[maneuver.id] ?? TARGET_SIDE[actor.items?.get(maneuver.itemId ?? "")?.system?.unique?.libraryId ?? ""];
     const allied = areAllies(targetActor, actor);
     if ((side === "opponent") && allied) {
       ui.notifications.warn(`${targetActor.name} is your Ally: ${maneuver.name} targets an Opponent.`);

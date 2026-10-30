@@ -7465,6 +7465,8 @@ function offerExploits(card, actor, maneuver) {
     if (!other || (other.type !== "character")) continue;
     if (other.uuid === actor.uuid) continue;
     if (!other.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    // "All adjacent Opponents", "any Opponent whose Melee Range you left": never an Ally (allies.mjs).
+    if (areAllies(other, actor)) continue;
     // Hidden: "You do not trigger the Exploit Maneuver from any Oblivious Characters."
     if ((actor.system?.hiddenFrom ?? []).some(entry => entry?.uuid === other.uuid)) continue;
     if (outpaces && Number.isFinite(initiativeOf(other)) && Number.isFinite(initiativeOf(actor))
