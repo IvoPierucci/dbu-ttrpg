@@ -198,7 +198,7 @@
   <section class="panel">
     <h3 class="panel-title">
       Health Threshold
-      <span class="panel-note" data-tooltip="A Steadfast Check: {{steadfast.die}}{{#if steadfast.bonus}} + {{steadfast.bonus}}{{/if}}, needing {{steadfast.target}} or more{{#if steadfast.natural}}, the die moved by {{steadfast.natural}}{{/if}}">Steadfast {{numberFormat steadfast.bonus decimals=0 sign=true}} &middot; {{steadfast.target}}+</span>
+      <span class="panel-note" data-tooltip="A Steadfast Check: {{steadfast.die}}{{#if steadfast.bonus}} + {{steadfast.bonus}}{{/if}}, needing {{steadfast.target}} or more{{#if steadfast.natural}}, the die moved by {{steadfast.natural}}{{/if}}">Steadfast {{numberFormat steadfast.bonus decimals=0 sign=true}}</span>
       {{#if threshold.pending.length}}
       <button type="button" class="edit-toggle" data-action="steadfastCheck"
               data-tooltip="Roll for the thresholds crossed. Crossing several at once fails all but the lowest automatically.">
