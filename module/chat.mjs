@@ -31067,9 +31067,16 @@ async function settleTemperament(message, key) {
 
   if (key === "annoyed") {
     const coin = await new Roll("1d2").evaluate();
+    // Which one, drawn here from those in the Combat Encounter (or on the scene) - by the Allies lists (allies.mjs); what
+    // erasing them does, the table's.
+    const present = [...new Map([...(game.combat?.combatants ?? []).map(entry => entry.actor),
+      ...(canvas?.tokens?.placeables ?? []).map(token => token.actor)].filter(Boolean).map(each => [each.uuid, each])).values()];
+    const pool = (coin.total === 1) ? present.filter(each => (each.uuid === owner.uuid) || areAllies(each, owner))
+      : present.filter(each => (each.uuid !== owner.uuid) && !areAllies(each, owner) && (each.type === "character"));
+    const erased = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     said = `Annoyed. The coin comes up ${(coin.total === 1) ? "heads: a random Character among "
       + `${owner.name} and their Allies` : "tails: a random Character among their Opponents"} is erased `
-      + "from existence. Zen-O is dismissed, and cannot be called again this Combat Encounter.";
+      + `from existence${erased ? ` - ${erased.name}` : ""}. Zen-O is dismissed, and cannot be called again this Combat Encounter.`;
     if (buddy) await buddy.update({ "system.buddy.active": false, "system.buddy.locked": true });
   }
 

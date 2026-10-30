@@ -3,6 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
+import { areAllies } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
 import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
@@ -3756,6 +3757,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (action.key === "heal") {
       // "Target yourself or an adjacent Ally. That target regains 2d10(bT) Life Points."
       const who = game.user.targets.first()?.actor ?? actor;
+      // "yourself or an adjacent Ally" - by the Allies lists (allies.mjs).
+      if ((who.uuid !== actor.uuid) && !areAllies(who, actor)) return ui.notifications.warn(`${who.name} is not your Ally.`);
       if (!await pay()) return;
       const roll = await new Roll(`${2 * baseTier}d10`).evaluate();
       await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `${item.name}: ${who.name}` });
