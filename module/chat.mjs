@@ -1408,6 +1408,8 @@ async function uniqueClashWon(message) {
   const winner = fromUuidSync(won === "challenger" ? clash.challengerUuid : clash.defenderUuid);
   const loser = won === "challenger" ? clash.defenderUuid : clash.challengerUuid;
   if (!winner || (winner.uuid === loser)) return;
+  // "against an Opponent" - every effect answering it says so (Psychic (5), Bag of Tricks): an Ally beaten answers nothing.
+  if (areAllies(winner, fromUuidSync(loser))) return;
   if (!winner.isOwner || !(message.isAuthor || game.user.isGM)) {
     if (!game.user.isGM && game.users.activeGM) game.socket.emit(CHANNEL, { type: "uniqueClashWon", messageId: message.id });
     return;
@@ -30349,7 +30351,7 @@ async function rollAttackWoundWork(message, attack) {
       ? await rollSide(target, [
           { label: "Wound", value: target.system.combat.wound[flareFoundation] ?? 0 },
           { label: "Ki Wager", value: own.defenceWager ?? 0 },
-          ...respondingParts(target),
+          ...respondingParts(target, attack),
           // Concentrated Energy (3).
           ...await concentratedFlare(target)
         ], {
@@ -30728,7 +30730,7 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...rideExploitBonus(actor, attack));
   parts.push(...flyinDodge(actor, attack));
   parts.push(...openedAgainst(actor));
-  parts.push(...respondingParts(actor));
+  parts.push(...respondingParts(actor, attack));
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
   // is what makes this answerable from the defender's side.
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
@@ -31147,7 +31149,7 @@ const DEFENCES = {
       ...chargePenalty(actor, attack),
       ...thresholdPenalty(actor),
       ...openedAgainst(actor),
-      ...respondingParts(actor),
+      ...respondingParts(actor, attack),
       ...rideExploitBonus(actor, attack),
       // With a Weapon: its Size and the Weapon Penalty, chosen when the Parry was.
       ...(defenceFor(attack, actor.uuid)?.parryWith ?? []),
@@ -31213,7 +31215,7 @@ const DEFENCES = {
       ...musclePenalty(actor),
       ...thresholdPenalty(actor),
       ...openedAgainst(actor),
-      ...respondingParts(actor)
+      ...respondingParts(actor, attack)
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.stardust.parts(actor, attack), { ...options, slot: "strike" }),
     soak: (soak) => soak,
@@ -31228,7 +31230,7 @@ const DEFENCES = {
       ...musclePenalty(actor),
       ...thresholdPenalty(actor),
       ...openedAgainst(actor),
-      ...respondingParts(actor)
+      ...respondingParts(actor, attack)
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.judoToss.parts(actor, attack), { ...options, slot: "strike" }),
     soak: (soak) => soak,
@@ -31587,7 +31589,9 @@ function lingeringSources(actor, answered, slot, { naturalAdd = 0, minimumNatura
  * Lingering Instincts (1): "While you have no Counter Actions, all Combat Rolls you make in response to an Opponent's
  * Attacking Maneuver have their Dice Score increased by 1(T)" - none left as the roll is made (the user's).
  */
-function respondingParts(actor) {
+function respondingParts(actor, attack = null) {
+  // "in response to an Opponent's Attacking Maneuver" - not an Ally's (allies.mjs).
+  if (attack?.attackerUuid && areAllies(actor, fromUuidSync(attack.attackerUuid))) return [];
   const value = applySlot(actor?.system?.effects?.slots, "responding.noCounterActions", 0);
   return (value && ((Number(actor.system.actions?.counterLeft) || 0) <= 0))
     ? [{ label: "No Counter Actions", written: "+1(T)", value }] : [];
@@ -35056,7 +35060,8 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
   // Defending is a Counter Maneuver and costs a Counter Action - which was never being
   // spent here, because this path does not go through useManeuver. Karmic Desperation
   // is the one thing that waives it, and it would have had nothing to waive.
-  const answered = atMoment(target, "defending", { attack: true, attacker: true, charges: Number(attack?.energyCharges) || 0 });
+  const answered = atMoment(target, "defending", { attack: true, attacker: true, attackerUuid: attack?.attackerUuid ?? "",
+    charges: Number(attack?.energyCharges) || 0 });
   const free = answered.slots?.["defend.free"] === true;
   // Legacy of the Scholars (3): the Guard's Ki not raised by the attack's Energy Charges.
   const noSurcharge = answered.slots?.["defend.noSurcharge"] === true;

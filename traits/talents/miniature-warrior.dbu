@@ -18,4 +18,5 @@ wound.vsLarger += 1(T);
 
 # (2) Ticked in the window as you are hit, once a Round: no Punching Down on that attack (chat.mjs, where its Damage is).
 [triggered/being-hit, 1/round, effect 2]
+requires byOpponent;
 miniature.noPunchingDown = true;

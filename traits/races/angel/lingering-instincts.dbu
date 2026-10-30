@@ -26,5 +26,5 @@ lingering.nine = true;
 
 # (3) Ticked in Respond as you Defend: no Counter Action for it - with none left, above Injured (Healthy or Bruised).
 [triggered/defending, 1/round, effect 3]
-requires noCounterActions && !belowThreshold("injured");
+requires noCounterActions && !belowThreshold("injured") && byOpponent;
 defend.free = true;

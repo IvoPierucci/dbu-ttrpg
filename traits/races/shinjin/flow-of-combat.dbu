@@ -23,4 +23,5 @@ allow combatRecovery.flowOfCombat;
 
 # (3) Ticked in Respond as you Defend: no Counter Action for it.
 [triggered/defending, 1/encounter, effect 3]
+requires byOpponent;
 defend.free = true;

@@ -19,6 +19,7 @@ allow size.base.enormous;
 # spent, where they are not (chat.mjs, where the hit is settled). Ticked in the On being hit window - no
 # Triggered/Automatic button (the user's).
 [triggered/being-hit, 1/round, effect 2]
+requires byOpponent;
 soak.bySize = true;
 
 # (3) As your turn starts, no Character in the Combat Encounter larger than you: a stack of Overwhelm. Automatic by
