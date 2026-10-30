@@ -4291,8 +4291,9 @@
   margin-top: 4px;
 }
 
-/* The Dice in the Turn State's window: the four in one row, under their title. */
-.dbu-ttrpg .dbu-dice-grid {
+/* The Dice in the Turn State's window: the four in one row, under their title. Both classes, so it outweighs the two
+   columns every box grid has - written before that rule, it lost to it. */
+.dbu-ttrpg .dbu-box-grid.dbu-dice-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: 6px;
 }
