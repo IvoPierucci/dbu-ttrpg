@@ -1212,7 +1212,8 @@ export function registerDefeatHooks() {
     // Defeated by an Opponent's Attacking Maneuver: for its maker, what answers having done it (Lock On's 2nd).
     if (now && options.dbuKnockedBy) {
       const knocker = fromUuidSync(options.dbuKnockedBy);
-      if (knocker && (knocker.uuid !== actor.uuid)) {
+      // An Opponent's - an Ally Defeated is not "an Opponent" Defeated (allies.mjs).
+      if (knocker && (knocker.uuid !== actor.uuid) && !areAllies(knocker, actor)) {
         const { offerTriggers } = await import("./chat.mjs");
         const critical = Boolean(options.dbuKnockedCritical);
         await offerTriggers(knocker, "defeat-opponent", { defeatedUuid: actor.uuid, critical });
@@ -1346,7 +1347,8 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
     const { offerTriggers } = await import("./chat.mjs");
     // Pain Resistant (2): "they cannot trigger any of their effects that trigger when you are knocked through" - the knocker's
     // own skipped, every other's asked as ever.
-    const theirs = !knockerDenied;
+    // And "an Opponent" knocked through, not an Ally (allies.mjs).
+    const theirs = !knockerDenied && !areAllies(knocker, actor);
     // Who was knocked through - Burning Hatred's Enemy.
     // And whether a Called Shot or an attack through the Exploit did it - Scarlet Spotter's.
     // And whether its Strike was a Critical Result - Critical Point's.

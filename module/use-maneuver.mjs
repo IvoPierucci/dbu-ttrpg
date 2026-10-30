@@ -2639,7 +2639,7 @@ const TARGET_SIDE = Object.freeze({
   "intuit": "opponent", "search": "opponent", "sense": "opponent", "snatch": "opponent", "terrify": "opponent", "thrust": "opponent",
   "alternate-sight-fourth-effect": "opponent", "experienced-fighter-second-effect": "opponent",
   "light-consumption-first-effect": "opponent", "noble-dragon-maneuver": "opponent",
-  "treatment": "ally"
+  "treatment": "ally", "empower": "ally"
 });
 
 /** Take the Actions, once the Maneuver has actually committed. */

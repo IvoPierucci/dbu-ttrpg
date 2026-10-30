@@ -16720,6 +16720,8 @@ export async function postTornado(actor, maneuver) {
  */
 function offerTornadoStrike(message, attack, spinner, why) {
   if (!spinningOf(spinner) || (attack.attackerUuid === spinner.uuid)) return;
+  // "If an Opponent misses you".
+  if (areAllies(spinner, fromUuidSync(attack.attackerUuid ?? ""))) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: spinner.uuid, actorName: spinner.name, maneuverId: "basic-attack",
     maneuverName: "Basic Attack", targetUuid: attack.attackerUuid, reason: `${spinningOf(spinner).name} - ${why}`,
     grants: { profileChoices: ["launching", "sweeping", "elementalWind"] } } });
@@ -17463,6 +17465,8 @@ const FAKE_DEATH_FLAG = "fakeDeath";
  * Opponent(s) through the effects of Fake Death by an Opponent who you are not Hidden from" - for 4(T) KP.
  */
 async function offerFakeDeath(target, attacker, { damaged = false } = {}) {
+  // "an Opponent's Attacking Maneuver" - not an Ally's (allies.mjs).
+  if (attacker && areAllies(target, attacker)) return;
   const item = Array.from(target.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.fakesDeath);
   if (!item) return;
   const { fakeDeathEntries, isHiddenFrom } = await import("./hidden.mjs");
@@ -17875,6 +17879,8 @@ function offerWatcherPowerUp(message, actor, why) {
  */
 function offerRubberyMove(message, mover, moved, { grapple = false, stretched = false } = {}) {
   if (!mover || !moved || (mover.uuid === moved.uuid) || (mover.system?.effects?.slots?.["rubbery.move"] !== true)) return;
+  // "Upon hitting an Opponent" - but a Grapple, whoever it holds.
+  if (!grapple && areAllies(mover, moved)) return;
   const stretch = stretched ? (Number(mover.system.effects?.slots?.["meleeRange.stretch"]?.add) || 0) : 0;
   const squares = Math.max(0, Number(mover.system.meleeRange) || 0) + stretch + 1;
   // Whose it is - Rubbery Body's, or Namekian Biology's (5), the same words.
@@ -22152,6 +22158,8 @@ async function endAngelicGuardDown(target) {
  */
 function offerFlowExploit(message, actor, attacker) {
   if (!actor || !attacker || (actor.system?.effects?.slots?.["exploit.onNoDamage"] !== true)) return;
+  // "an Opponent's Attacking Maneuver".
+  if (areAllies(actor, attacker)) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.maneuverId === "exploit")
     && (offer.actorUuid === actor.uuid))) return;
   if (!actor.items?.some(item => (item.type === "maneuver") && item.system.exploit)) return;
@@ -28612,7 +28620,8 @@ function joltOpen(actor, attack) {
 async function offerShockTornado(message, attack, actor) {
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (!message || !attacker || !actor || (attacker.uuid === actor.uuid) || actor.system?.defeated
-    || (actor.system?.effects?.slots?.["counter.shockTornado"] !== true) || (actor.getFlag?.(SCOPE, "shockTornadoRound") === roundKey())) return;
+    || (actor.system?.effects?.slots?.["counter.shockTornado"] !== true) || (actor.getFlag?.(SCOPE, "shockTornadoRound") === roundKey())
+    || areAllies(actor, attacker)) return;
   const { whyNotWithinMelee } = await import("./maneuvers.mjs");
   if (whyNotWithinMelee(actor, attacker, "")) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "thrust",
@@ -30158,6 +30167,8 @@ async function rollAttackWoundWork(message, attack) {
   // it gives counts on it (Overwhelming Fighter's Overwhelm). Asked first where it is the player's. What it says about the
   // Wound against each one hit - Overwhelming Pressure's - kept for the loop below.
   const struck = targets.filter(({ uuid, own }) => own.hit && (uuid !== attacker.uuid));
+  // Of them, the Opponents - what answers hitting "an Opponent" leaves an Ally hit out (allies.mjs).
+  const struckOpponents = struck.filter(({ actor: hit }) => !areAllies(hit, attacker));
   let pressing = null;
   // Searing Anger (3): the Overwhelm stacks' bonus once more on this Wound Roll (woundParts), and Overwhelm down to 1 once
   // it is made.
@@ -30165,14 +30176,14 @@ async function rollAttackWoundWork(message, attack) {
   // Stealthy Trick (3): 1(T) for every 2 stacks of Overwhelm, against each one hit who was Oblivious of you.
   let unseen = 0;
   // Answered as the hit landed - before the Wound's window was opened, where it was - and not again (answerHit).
-  const hitAnswer = await answerHit(message, attack, attacker, struck);
+  const hitAnswer = await answerHit(message, attack, attacker, struckOpponents);
   attack = { ...attack, ...hitAnswer.marks };
   searing = hitAnswer.searing;
   unseen = hitAnswer.unseen;
   if (hitAnswer.pressure) {
     // "1(T) for every Health Threshold they are below" - each their own; with (2), "as if all ... were below the same
     // number of Health Thresholds as the Character below the most".
-    const most = hitAnswer.pressureMost ? Math.max(...struck.map(({ actor: hit }) => thresholdsBelow(hit))) : null;
+    const most = hitAnswer.pressureMost ? Math.max(...struckOpponents.map(({ actor: hit }) => thresholdsBelow(hit))) : null;
     const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
     pressing = target => (most ?? thresholdsBelow(target)) * tier;
   }
@@ -30253,7 +30264,7 @@ async function rollAttackWoundWork(message, attack) {
   }
   // "If you hit an Opponent with an Attacking Maneuver, after concluding that Attacking Maneuver" - Redirected Energy's,
   // with its Ki Point Cost.
-  if (struck.length) await answerFor(attacker, "hit-concluded", { attack: { kiCost: attackKiCost(attack) } });
+  if (struckOpponents.length) await answerFor(attacker, "hit-concluded", { attack: { kiCost: attackKiCost(attack) } });
 
   // What an attack can get past of somebody's Damage Reduction, for this attack only.
   // Collected from the attacker once, since it is their effect and their client that
