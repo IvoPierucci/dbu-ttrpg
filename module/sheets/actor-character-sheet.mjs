@@ -1668,7 +1668,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       dimOffense: { value: offense.stacks ?? 0, note: offense.penalty ? `Strike -${offense.penalty}` : "",
         tip: "One stack for each Attacking Maneuver after the third this round. Each takes 1(bT) off your Strike Rolls." },
       dimDefense: { value: defense.stacks ?? 0,
-        note: [defense.penalty ? `Dodge -${defense.penalty}` : "", `+${defense.perAttack ?? 0} per attack`].filter(Boolean).join(" · "),
+        // What it costs, and nothing else - not how many an attack adds (the user's).
+        note: defense.penalty ? `Dodge -${defense.penalty}` : "",
         tip: "Each stack reduces your Dodge Rolls by 1. Gained per Attacking Maneuver aimed at you, unless you use the Defend Maneuver." },
       size: { value: size.label ?? "", tip: (built && (built !== size.label))
         ? `Your Size Category right now. Built as ${built}: an effect has moved it.`
