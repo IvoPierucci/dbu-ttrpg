@@ -1754,11 +1754,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       muscle ? { label: "Muscle Penalty", value: -muscle } : null,
       thresholdPenalty ? { label: "Health Threshold", value: -thresholdPenalty } : null
     ].filter(Boolean);
+    // Minimums: "No rule can cause you to have a negative numeric value" - a total the penalties take below nothing stops
+    // at 0, said on its hover (the roll does the same, chat.mjs). What Effects comes to is shown as it is.
+    const atLeastNothing = (lines, raw) => (raw < 0) ? [...lines, floorLine(-raw, 0, "no value goes below 0")] : lines;
     const rollOf = (slot, sources) => {
       const value = system.combat?.[slot] ?? 0;
       const step = system.effects?.workings?.[slot];
       const later = atTheDice(slot);
-      const total = value + later.reduce((sum, part) => sum + part.value, 0);
+      const raw = value + later.reduce((sum, part) => sum + part.value, 0);
+      const total = Math.max(0, raw);
       const base = sources.reduce((sum, source) => sum + source.value, 0);
       const effectLines = [
         // What the data model added past the Aptitudes it is made of - the Dodge's own modifier among them.
@@ -1767,17 +1771,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         ...(step?.contributions ?? []).map(contributionLine),
         ...later.map(part => partLine(part))
       ];
-      return { total, effects: total - base, crit: critOf(slot), dice: diceOf(slot),
-        effectsTip: effectLines.length ? breakdownTable(effectLines, total - base) : "",
-        totalTip: breakdownTable([...sources, { label: "Effects", value: total - base }]
-          .filter(part => part.value || (part.label !== "Effects")).map(part => partLine(part)), total) };
+      return { total, raw, effects: raw - base, crit: critOf(slot), dice: diceOf(slot),
+        effectsTip: effectLines.length ? breakdownTable(effectLines, raw - base) : "",
+        totalTip: breakdownTable(atLeastNothing([...sources, { label: "Effects", value: raw - base }]
+          .filter(part => part.value || (part.label !== "Effects")).map(part => partLine(part)), raw), total) };
     };
     const strikeRoll = rollOf("strike", [{ label: "Haste", value: system.haste }, { label: "Awareness", value: system.awareness }]);
     // A Foundation's Wound as its workings say it, one line each, and the Health Threshold's penalty after them.
     const woundOf = key => {
       const step = system.effects?.workings?.[`wound.${key}`];
       const value = system.combat?.wound?.[key] ?? 0;
-      const total = value - thresholdPenalty;
+      const raw = value - thresholdPenalty;
+      const total = Math.max(0, raw);
       const named = (step?.parts ?? []).filter(part => Number(part.value) !== 0);
       const lines = [
         ...(named.length ? named.map(part => partLine({ label: part.label, value: part.value }))
@@ -1785,7 +1790,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         ...(step?.contributions ?? []).map(contributionLine),
         ...(thresholdPenalty ? [partLine({ label: "Health Threshold", value: -thresholdPenalty })] : [])
       ];
-      return { total, tip: breakdownTable(lines, total) };
+      return { total, tip: breakdownTable(atLeastNothing(lines, raw), total) };
     };
     const dodgeRoll = rollOf("dodge", [{ label: "Defense Value", value: system.defenseValue }]);
     const strike = system.combat?.strike ?? 0;
@@ -1797,12 +1802,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       byFoundation: Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => {
         // The Strike as above, and what raises this Foundation's alone - "Energy Strike" - on it (the user's).
         const own = system.effects?.workings?.[`strike.${key}`]?.contributions ?? [];
-        const value = strikeRoll.total + ((system.combat?.strikeBy?.[key] ?? strike) - strike);
+        const raw = strikeRoll.raw + ((system.combat?.strikeBy?.[key] ?? strike) - strike);
+        const value = Math.max(0, raw);
         return {
           label: foundation.label,
           strike: value,
           strikeCrit: critOf("strike"),
-          strikeWorkings: breakdownTable([partLine({ label: "Strike", value: strikeRoll.total }), ...own.map(contributionLine)], value),
+          strikeWorkings: breakdownTable(atLeastNothing([partLine({ label: "Strike", value: strikeRoll.raw }),
+            ...own.map(contributionLine)], raw), value),
           // The Wound: the Damage Attribute, every effect, this Foundation's own - and a Health Threshold's penalty in the
           // number too, as the Strike's is (the user's), a line of its own under them.
           wound: woundOf(key).total,
