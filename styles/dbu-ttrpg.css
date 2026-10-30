@@ -4291,6 +4291,12 @@
   margin-top: 4px;
 }
 
+/* The Dice in the Turn State's window: the four in one row, under their title. */
+.dbu-ttrpg .dbu-dice-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 6px;
+}
+
 /* Every row as tall as every other (the user's). */
 .dbu-ttrpg .dbu-box-grid {
   display: grid;

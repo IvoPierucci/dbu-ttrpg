@@ -134,14 +134,6 @@
     </div>
 
     <div class="dbu-combat-side">
-      {{! Dice that ride alongside the Base Die. }}
-      <h3 class="dbu-side-title">Dice <span class="panel-note">Base Die: 1d10</span></h3>
-      <div class="dbu-box-grid">
-        {{#each diceBoxes as |box|}}
-        <div class="stat" data-tooltip="{{box.tip}}"><em>{{box.label}}</em><span>{{box.value}}</span></div>
-        {{/each}}
-      </div>
-
       <h3 class="dbu-side-title">Aptitudes</h3>
       <div class="dbu-box-grid">
         <div class="stat" data-tooltip="{{aptitudes.dimOffense.tip}}">
@@ -308,6 +300,15 @@
         </button>
       </header>
       <div class="dbu-combat-window-body">
+        {{! Dice that ride alongside the Base Die - at the top of the Turn State (the user's). }}
+        <div>
+          <h4 class="dbu-side-title">Dice <span class="panel-note">Base Die: 1d10</span></h4>
+          <div class="dbu-box-grid dbu-dice-grid">
+            {{#each diceBoxes as |box|}}
+            <div class="stat" data-tooltip="{{box.tip}}"><em>{{box.label}}</em><span>{{box.value}}</span></div>
+            {{/each}}
+          </div>
+        </div>
         <div class="turn-state">
           {{#each imminent as |mark|}}
           {{! Delayed's mark: not a Combat Condition, so it is not among them. }}
