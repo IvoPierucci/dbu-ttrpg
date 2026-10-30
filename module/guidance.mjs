@@ -7,8 +7,11 @@
  * Minor 1, Standard 3, Large 4, Huge 5, Destructive 6. Counted here as the Squares between two tokens, 0 when adjacent - so a
  * Standard Sphere reaches whoever has 2 Squares or fewer between them and you.
  *
- * No imports: the character's own data reads it as it is prepared (Attendant's Focus (2)).
+ * One import, itself of none - who is whose Ally (allies.mjs): the character's own data reads this as it is prepared
+ * (Attendant's Focus (2)).
  */
+
+import { areAllies } from "./allies.mjs";
 
 export const SPHERE_RADIUS = Object.freeze({ minor: 1, standard: 3, large: 4, huge: 5, destructive: 6 });
 
@@ -35,10 +38,9 @@ function gapBetween(a, b) {
 export function opponentsWithin(actor, gap) {
   const from = tokenOf(actor);
   if (!from) return [];
-  const side = from.document?.disposition ?? from.disposition;
   return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
     .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
-      && ((token.document?.disposition ?? token.disposition) !== side) && ((gapBetween(from.document ?? from, token.document ?? token) ?? 99) <= gap))
+      && !areAllies(token.actor, actor) && ((gapBetween(from.document ?? from, token.document ?? token) ?? 99) <= gap))
     .map(token => [token.actor.uuid, token.actor])).values()];
 }
 
@@ -64,10 +66,9 @@ export function withinGuidance(holder, other, gap = guidanceGap(holder)) {
  * Guidance Range itself.
  */
 export function guidingAllies(actor, slot, { range = false } = {}) {
-  const own = tokenOf(actor)?.disposition;
-  if (own === undefined) return [];
+  if (!actor) return [];
   return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.document?.disposition === own))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areAllies(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()]
     .filter(holder => !holder.system?.defeated && (holder.system?.effects?.slots?.[slot] === true)
       && withinGuidance(holder, actor, range ? guidanceRangeGap(holder) : guidanceGap(holder)));
@@ -80,20 +81,18 @@ export function bestTier(holders) {
 
 /** The Allies of `actor` on the scene in the Spectator State holding `slot` - Way of the Champion's, read by each Ally. */
 export function spectatingAllies(actor, slot) {
-  const own = tokenOf(actor)?.disposition;
-  if (own === undefined) return [];
+  if (!actor) return [];
   return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.document?.disposition === own))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areAllies(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()]
     .filter(holder => ((Number(holder.system?.states?.spectator) || 0) > 0) && (holder.system?.effects?.slots?.[slot] === true));
 }
 
 /** The Allies of `actor` on the scene, not Defeated, holding `slot`, with `gap` Squares or fewer between them - Party Tactics' Minor Sphere. */
 export function alliesWithin(actor, slot, gap) {
-  const own = tokenOf(actor)?.disposition;
-  if (own === undefined) return [];
+  if (!actor) return [];
   return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.document?.disposition === own))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areAllies(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()]
     .filter(holder => !holder.system?.defeated && (holder.system?.effects?.slots?.[slot] === true) && withinGuidance(holder, actor, gap));
 }

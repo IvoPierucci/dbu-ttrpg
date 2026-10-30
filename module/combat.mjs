@@ -10,6 +10,7 @@
  * Actions away. None of them have anywhere to happen without it.
  */
 
+import { areAllies } from "./allies.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
@@ -1193,11 +1194,10 @@ export function registerDefeatHooks() {
 
     // An Ally of theirs, not a Minion, Defeated: for each of their Allies on the scene, what answers it (Battle Tension's).
     if (now && !actor.system?.minion) {
-      const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
-      if (own !== undefined) {
+      {
         const { offerTriggers } = await import("./chat.mjs");
         const allies = new Map((canvas?.tokens?.placeables ?? [])
-          .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.document?.disposition === own)
+          .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areAllies(token.actor, actor)
             && !token.actor.system?.defeated)
           .map(token => [token.actor.uuid, token.actor]));
         for (const ally of allies.values()) {

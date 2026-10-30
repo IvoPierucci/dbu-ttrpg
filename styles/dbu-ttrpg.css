@@ -1902,6 +1902,91 @@
   color: var(--dbu-pending, #d1544a);
 }
 
+/* The Settings tab's Allies. */
+.dbu-ttrpg .ally-panel .ally-add {
+  display: block;
+  margin: 0 0 6px;
+  line-height: 22px;
+  font-size: 11px;
+}
+
+.dbu-ttrpg .ally-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+.dbu-ttrpg .ally-list .ally {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg .ally-list .ally-x {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  color: var(--dbu-text-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .ally-list .ally-x:hover,
+.dbu-ttrpg .ally-list .ally-x:focus-visible {
+  color: var(--dbu-pending, #d1544a);
+  outline: none;
+  box-shadow: none;
+}
+
+.dbu-ttrpg .ally-list .ally-x-space {
+  flex: 0 0 auto;
+  width: 21px;
+}
+
+.dbu-ttrpg .ally-list .ally-img {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: none;
+  object-fit: cover;
+}
+
+.dbu-ttrpg .ally-list .ally-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dbu-ttrpg .ally-list .ally-note {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+  font-style: italic;
+}
+
+.dbu-ttrpg .ally-list .ally.missing .ally-name {
+  color: var(--dbu-text-dim);
+  font-style: italic;
+}
+
+.dbu-dialog .dbu-ally-pick img {
+  width: 22px;
+  height: 22px;
+  border: none;
+  object-fit: cover;
+}
+
 /* The Character Perks list, under the Progression table. */
 .dbu-ttrpg .perk-group {
   margin-top: 12px;

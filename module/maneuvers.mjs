@@ -1,3 +1,4 @@
+import { areAllies } from "./allies.mjs";
 import { guidanceRangeGap } from "./guidance.mjs";
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { getTrait, printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
@@ -1471,7 +1472,7 @@ export async function askGlassApply(actor, declared) {
   const members = new Map(able(actor) ? [[actor.uuid, actor]] : []);
   if (own) {
     for (const doc of (canvas?.tokens?.placeables ?? []).map(token => token.document)) {
-      if (!doc?.actor || members.has(doc.actor.uuid) || !able(doc.actor) || (doc.disposition !== own.disposition)) continue;
+      if (!doc?.actor || members.has(doc.actor.uuid) || !able(doc.actor) || ((doc.actor.uuid !== actor.uuid) && !areAllies(doc.actor, actor))) continue;
       if (squaresBetween(doc, own) === 0) members.set(doc.actor.uuid, doc.actor);
     }
   }
@@ -2125,8 +2126,7 @@ export function whyNotWithinMelee(actor, target, what, extra = 0) {
   // Melee Range by 3 when using this Basic Item".
   // Attendant's Focus (3): "For any effects or Maneuvers that would target an Ally, your Melee Range is considered to be your
   // Guidance Range" - one of their side.
-  const ally = (actor?.system?.effects?.slots?.["attendant.allyReach"] === true) && (from?.disposition !== undefined)
-    && (from.disposition === to?.disposition);
+  const ally = (actor?.system?.effects?.slots?.["attendant.allyReach"] === true) && areAllies(from, to);
   const reach = Math.max(0, (actor.system.meleeRange ?? 0) + (Number(extra) || 0), ally ? guidanceRangeGap(actor) : 0);
   if (squares <= reach) return null;
 

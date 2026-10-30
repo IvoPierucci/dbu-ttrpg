@@ -15,6 +15,7 @@ import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spen
 import { activeBuddy, activeBuddies, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
+import { areAllies } from "./allies.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
@@ -704,14 +705,13 @@ export async function surgeOutOfSequence(actor) {
  */
 async function expertOffers(message, attacker) {
   if (!message || !attacker || !canvas?.tokens) return;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const { whyNotWithinMelee } = await import("./maneuvers.mjs");
   const on = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()].filter(Boolean);
   for (const watcher of on) {
     if ((watcher.uuid === attacker.uuid) || watcher.system?.defeated || (watcher.system?.effects?.slots?.["exploit.byAllies"] !== true)
-      || (side(watcher) === side(attacker)) || (watcher.getFlag?.(SCOPE, "expertRound") === roundKey())
+      || areAllies(watcher, attacker) || (watcher.getFlag?.(SCOPE, "expertRound") === roundKey())
       || !watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
-    const near = on.filter(each => !each.system?.defeated && (side(each) === side(watcher)) && (each.uuid !== attacker.uuid)
+    const near = on.filter(each => !each.system?.defeated && ((each.uuid === watcher.uuid) || areAllies(each, watcher)) && (each.uuid !== attacker.uuid)
       && !whyNotWithinMelee(each, attacker, ""));
     if (near.length < 2) continue;
     requestEdit(message, { type: "offer", offer: { actorUuid: watcher.uuid, actorName: watcher.name, maneuverId: "exploit",
@@ -727,10 +727,9 @@ async function expertOffers(message, attacker) {
  */
 export async function openingsOffers(message, user) {
   if (!message || !user || !canvas?.tokens) return;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const watchers = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
     .filter(watcher => watcher && (watcher.uuid !== user.uuid) && !watcher.system?.defeated
-      && (watcher.system?.effects?.slots?.["exploit.onPowerUp"] === true) && (side(watcher) !== side(user))
+      && (watcher.system?.effects?.slots?.["exploit.onPowerUp"] === true) && !areAllies(watcher, user)
       && (watcher.getFlag?.(SCOPE, "openingsRound") !== roundKey())
       && watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)
       && !atLongRange(watcher, user));
@@ -778,11 +777,10 @@ export async function superiorSyncOffers(message, user, maneuverId) {
 const TACTICS_OFFERED = new Set();
 async function tacticsOffers(actor, key, message) {
   if (!actor || !canvas?.tokens) return;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const { squaresAway } = await import("./maneuvers.mjs");
   const watchers = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
     .filter(watcher => watcher && (watcher.uuid !== actor.uuid) && !watcher.system?.defeated
-      && (watcher.system?.effects?.slots?.["exploit.onConditioned"] === true) && (side(watcher) !== side(actor))
+      && (watcher.system?.effects?.slots?.["exploit.onConditioned"] === true) && !areAllies(watcher, actor)
       && (watcher.getFlag?.(SCOPE, "tacticsRound") !== roundKey())
       && watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)
       && ((squaresAway(watcher, actor) ?? Infinity) <= 4));
@@ -6528,9 +6526,8 @@ export async function patientFighterShare(combatant) {
   const combat = combatant?.parent;
   if (!actor || !combat || (actor.system?.effects?.slots?.["initiative.patientShare"] !== true)
     || (Number(combat.round) > 1) || (actor.getFlag?.(SCOPE, "patientFighterEncounter") === combat.id)) return;
-  const side = combatant.token?.disposition;
   const allies = Array.from(combat.combatants).filter(entry => (entry.id !== combatant.id) && entry.actor
-    && (entry.token?.disposition === side) && Number.isFinite(entry.initiative));
+    && areAllies(entry.actor, actor) && Number.isFinite(entry.initiative));
   if (!allies.length) return;
   const step = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
   const picked = await askPlayerChoice(actor, `${actor.name}: Patient Fighter - ${step} off your Initiative, onto`,
@@ -9661,8 +9658,7 @@ function beatdownClashBonus(actor, clash, uuid) {
   const slot = actor?.system?.effects?.slots?.["clash.mightVsConditioned"];
   if ((clash?.category !== "might") || !(Number(slot?.add) || 0)) return [];
   const other = fromUuidSync((uuid === clash.challengerUuid) ? (clash.defenderUuid ?? "") : (clash.challengerUuid ?? ""));
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if (!other || (other.uuid === actor.uuid) || (side(other) === side(actor)) || !conditioned(other)) return [];
+  if (!other || (other.uuid === actor.uuid) || areAllies(other, actor) || !conditioned(other)) return [];
   return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: Number(slot.add) }];
 }
 
@@ -18276,8 +18272,6 @@ export async function mimicryOffers(card, user, maneuver) {
   if (!card || !game.combat?.started || maneuver?.signature) return;
   const library = getManeuver(maneuver?.id ?? "");
   if (!library || (library.type !== "standard") || (Number(library.actionCost) !== 1)) return;
-  const side = user.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if (side === undefined) return;
   const { atLongRange, whyNotSpecial } = await import("./maneuvers.mjs");
   const seen = new Set();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
@@ -18285,7 +18279,7 @@ export async function mimicryOffers(card, user, maneuver) {
     if (!other || (other.type !== "character") || (other.uuid === user.uuid) || seen.has(other.uuid)) continue;
     seen.add(other.uuid);
     if (other.system?.defeated || (other.system?.effects?.slots?.["mimicry.copyManeuver"] !== true)) continue;
-    if ((token.document?.disposition === side) || (other.getFlag?.(SCOPE, "mimicryRound") === roundKey())) continue;
+    if (areAllies(other, user) || (other.getFlag?.(SCOPE, "mimicryRound") === roundKey())) continue;
     if (atLongRange(other, user) || whyNotSpecial(other, library)) continue;
     requestEdit(card, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId: library.id,
       maneuverName: library.name, reason: `Neko Mimicry - ${user.name}'s ${library.name}`, grants: { mimicry: true } } });
@@ -22574,8 +22568,7 @@ function conduitClashButtons(message, clash, container) {
   const ally = fromUuidSync(clash.defenderUuid ?? "");
   const challenger = fromUuidSync(clash.challengerUuid ?? "");
   if (!ally || !challenger) return;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if (side(challenger) === side(ally)) return;
+  if (areAllies(challenger, ally)) return;
   const seen = new Set();
   for (const token of canvas?.tokens?.placeables ?? []) {
     const yardrat = token.actor;
@@ -22703,9 +22696,8 @@ function spiritualStrikeButtons(message, attack, container) {
   if (attack.result?.wound) return;
   const ally = fromUuidSync(attack.attackerUuid ?? "");
   if (!ally) return;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const opponents = attackTargets(attack).map(entry => fromUuidSync(entry.uuid ?? ""))
-    .filter(each => each && (each.uuid !== ally.uuid) && (side(each) !== side(ally)) && !each.system?.defeated);
+    .filter(each => each && (each.uuid !== ally.uuid) && !areAllies(each, ally) && !each.system?.defeated);
   if (!opponents.length) return;
   const seen = new Set();
   for (const token of canvas?.tokens?.placeables ?? []) {
@@ -22855,8 +22847,7 @@ function bondButtons(message, attack, container) {
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   const hits = (result.targets ?? []).filter(entry => entry.hit).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
   if (!attacker || !hits.length) return;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-  const opposed = (one, other) => (one.uuid !== other.uuid) && (side(one) !== side(other));
+  const opposed = (one, other) => (one.uuid !== other.uuid) && !areAllies(one, other);
   const seen = new Set();
   for (const token of canvas?.tokens?.placeables ?? []) {
     const yardrat = token.actor;
@@ -23037,14 +23028,12 @@ export async function glassification(actor, actions) {
   }
   // Each Character: a Clash, Corporeal against any Saving Throw - its times, in stacks of Slowed.
   const first = game.combat?.turns?.[0]?.actor?.uuid === actor.uuid;
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   for (const [value, n] of times) {
     if (!value.startsWith("character:")) continue;
     const target = fromUuidSync(value.slice(10));
     if (!target) continue;
     // Glass Mastery (4): an Ally - won, Life and Ki in place of Slowed.
-    const heal = (actor.system.effects?.slots?.["glassification.healAllies"] === true) && (own !== undefined)
-      && (target.getActiveTokens?.(false, true)?.[0]?.disposition === own);
+    const heal = (actor.system.effects?.slots?.["glassification.healAllies"] === true) && areAllies(target, actor);
     await postSaveClash(actor, target, { maneuverName: "Glassification",
       reason: heal ? `Win and ${target.name} regains Life and Ki Points.`
         : `Win and ${target.name} gains ${n} stack${(n === 1) ? "" : "s"} of Slowed.`,
@@ -23634,9 +23623,8 @@ export async function miniMajin(actor, perBaseTier = 0) {
 export async function aiiieee(actor) {
   if (!actor) return;
   await requestActorUpdate(actor, { "system.life.value": 1 });
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   const others = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
-    && (token.actor.type === "character") && ((own === undefined) || (token.document?.disposition !== own)))
+    && (token.actor.type === "character") && !areAllies(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   for (const other of others) {
     await postSkillClash(actor, other, { name: "AIIIEEEEEEE", type: "outOfSequence",
@@ -23756,14 +23744,13 @@ function floatMirrorButtons(message, container, attack) {
   if (!result || result.wound || deflection(attack)) return;
   const aimed = attackTargets(attack).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
   if (!aimed.length || !aimed.every(each => (each.system?.battlefield?.squareQualities ?? []).includes("glass"))) return;
-  const sides = new Set(aimed.map(each => each.getActiveTokens?.(false, true)?.[0]?.disposition));
   const seen = new Set();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const actor = token.actor;
     if (!actor?.isOwner || seen.has(actor.uuid) || (actor.uuid === attack.attackerUuid)) continue;
     seen.add(actor.uuid);
     if (actor.system?.effects?.slots?.["maneuver.float-mirror"] !== true) continue;
-    if (!aimed.some(each => each.uuid === actor.uuid) && !sides.has(token.document?.disposition)) continue;
+    if (!aimed.some(each => (each.uuid === actor.uuid) || areAllies(each, actor))) continue;
     const item = actor.items?.find(each => (each.type === "maneuver") && ((each.system.maneuverId || "") === "float-mirror"));
     if (!item) continue;
     const button = document.createElement("button");
@@ -23935,9 +23922,8 @@ const HANDED_ON = Object.freeze(["impediment", "guard-down", "broken", "impaired
 async function offerConditionHandOff(actor) {
   if ((actor?.system?.effects?.slots?.["pressure.handOff"] !== true) || (actor.getFlag?.(SCOPE, "handOffRound") === roundKey())) return;
   if (!HANDED_ON.some(key => (Number(actor.system.conditions?.[key]) || 0) > 0)) return;
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && ((own === undefined) || (token.document?.disposition !== own))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !areAllies(token.actor, actor)
       && !token.actor.system?.defeated && !atLongRange(actor, token.actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) return;
@@ -23992,8 +23978,7 @@ function conditioned(actor) {
 function tacticianParts(actor, other) {
   const slot = actor?.system?.effects?.slots?.["combatRolls.vsConditioned"];
   const add = Number(slot?.add) || 0;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if (!add || !other || (other.uuid === actor.uuid) || (side(other) === side(actor)) || !conditioned(other)) return [];
+  if (!add || !other || (other.uuid === actor.uuid) || areAllies(other, actor) || !conditioned(other)) return [];
   return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: add }];
 }
 
@@ -24017,9 +24002,8 @@ export async function knockedProneClash(actor, knockedUuid) {
  */
 export async function demonicImpediment(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
-  const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && ((own === undefined) || (token.document?.disposition !== own))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !areAllies(token.actor, actor)
       && !token.actor.system?.defeated && !atLongRange(actor, token.actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) {
@@ -24274,9 +24258,8 @@ export async function openForPlayer(actor, document, note = "") {
  * of another disposition than theirs, asked of whoever plays them - or none.
  */
 export async function askLockOn(actor) {
-  const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && ((own === undefined) || (token.document?.disposition !== own)))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !areAllies(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) return;
   const picked = await askPlayerChoice(actor, `${actor.name}: Lock On`,
@@ -24311,10 +24294,9 @@ export async function followAlly(actor) {
   const turns = combat?.turns ?? [];
   const mine = turns.find(combatant => combatant.actor?.uuid === actor?.uuid);
   if (!mine) return (await import("./effects/moments-runtime.mjs")).UNSPENT;
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   const allies = turns.filter(combatant => combatant.actor && (combatant.id !== mine.id)
     && ((Number(combatant.initiative) || 0) < (Number(mine.initiative) || 0))
-    && ((own === undefined) || (combatant.token?.disposition === own)));
+    && areAllies(combatant.actor, actor));
   // Nobody to follow, or "None": its use not spent (the user's).
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   if (!allies.length) {
@@ -24346,10 +24328,9 @@ export async function askInferior(actor) {
   const held = surging ? fromUuidSync(actor.getFlag?.(SCOPE, "inferiorSurging") ?? "") : null;
   let inferior = (held && !held.system?.defeated) ? held : null;
   if (!inferior) {
-    const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
     const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
       .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
-        && ((own === undefined) || (token.document?.disposition !== own)))
+        && !areAllies(token.actor, actor))
       .map(token => [token.actor.uuid, token.actor])).values()];
     if (!opponents.length) return;
     const picked = await askPlayerChoice(actor, `${actor.name}: Tuffle Superiority - your Inferior`,
@@ -24406,9 +24387,8 @@ function superiorityDodge(actor, attack) {
 }
 
 export async function askEnemy(actor) {
-  const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && ((own === undefined) || (token.document?.disposition !== own)))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !areAllies(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) return;
   const picked = await askPlayerChoice(actor, `${actor.name}: Burning Hatred`,
@@ -28666,9 +28646,8 @@ async function takeMagicCharge(message, actor) {
 export function offerPointBlank(card, actor) {
   if (!card || (actor?.system?.effects?.slots?.["charge.pointBlank"] !== true)
     || (actor.getFlag?.(SCOPE, "pointBlankEncounter") === (game.combat?.id ?? "none")) || !chargedAsEnergy(actor)) return;
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   const near = (canvas?.tokens?.placeables ?? []).some(token => token.actor && (token.actor.uuid !== actor.uuid)
-    && ((own === undefined) || (token.document?.disposition !== own)) && !token.actor.system?.defeated
+    && !areAllies(token.actor, actor) && !token.actor.system?.defeated
     && !whyNotWithinMelee(actor, token.actor, ""));
   if (!near) return;
   const item = actor.items.get(actor.system.charging.maneuverId);
@@ -28771,11 +28750,10 @@ export function personalSpaceTurnEnd(leaving) {
     const moment = message.getFlag(SCOPE, MOMENT_FLAG);
     return (moment?.moment === "start-of-turn") && (moment.subjectUuid === leaving?.uuid);
   });
-  const own = leaving?.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if (!card || (own === undefined)) return;
+  if (!card || !leaving) return;
   for (const token of canvas?.tokens?.placeables ?? []) {
     const other = token.actor;
-    if (!other || (other.uuid === leaving.uuid) || (token.document?.disposition === own)) continue;
+    if (!other || (other.uuid === leaving.uuid) || areAllies(other, leaving)) continue;
     if (whyNotWithinMelee(other, leaving, "")) continue;
     offerPersonalSpace(card, other);
   }
@@ -29547,12 +29525,11 @@ function thresholdsBelow(actor) {
   return keys.filter((key, index) => (index <= at) && DBUCharacterData.THRESHOLDS[key].counts).length;
 }
 
-/** Their Allies on the scene: the tokens of their own token's disposition, but theirs. */
+/** Their Allies on the scene: the Characters there their Allies list - or theirs - names (allies.mjs), never themselves. */
 export function alliesOnScene(actor) {
-  const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if (own === undefined) return [];
+  if (!actor) return [];
   return [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.document?.disposition === own) && (token.actor.uuid !== actor.uuid))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areAllies(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
 }
 
@@ -30025,11 +30002,10 @@ function focusedButtons(message, container, attack) {
   const result = attack?.result;
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (!result || result.wound || !attacker?.isOwner || (attacker.system.effects?.slots?.["strike.focusedReroll"] !== true)) return;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const used = attacker.getFlag?.(SCOPE, "focusedRound") === roundKey();
   for (const branch of result.targets ?? []) {
     const target = fromUuidSync(branch.uuid ?? "");
-    if (!target || branch.hit || !branch.answer || branch.focused || (side(target) === side(attacker))) continue;
+    if (!target || branch.hit || !branch.answer || branch.focused || areAllies(target, attacker)) continue;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dbu-clash-button";

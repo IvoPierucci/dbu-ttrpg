@@ -332,7 +332,11 @@ for (const hook of ["createItem", "updateItem", "deleteItem"]) {
 }
 Hooks.on("deleteToken", () => conduitRefresh());
 Hooks.on("updateToken", (token, changes) => {
-  if (["disposition", "x", "y"].some(key => key in (changes ?? {}))) conduitRefresh();
+  if (["x", "y"].some(key => key in (changes ?? {}))) conduitRefresh();
+});
+// Allies are each character's Allies list now (allies.mjs): read again as one changes.
+Hooks.on("updateActor", (actor, changes) => {
+  if (changes?.system && ("allies" in changes.system)) conduitRefresh();
 });
 // Arboreal (5): "If you are moved for any reason while Rooted, you stop being Rooted" - the token moved, by whoever moved it.
 Hooks.on("updateToken", async (token, changes, options, userId) => {

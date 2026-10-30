@@ -1774,6 +1774,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Character Perks gained from anywhere - the GM, a tournament - each the table's Choice at a Level of its own: written where it
     // came from, the Level it was gained at (the character's as it is added), applying once that Level is reached as a row does;
     // its TP as written (15 offered with a Skill Improvement).
+    // The Settings tab's Allies: the world Actors' ids this character counts as Allies - and is counted one by (allies.mjs).
+    schema.allies = new fields.ArrayField(
+      new fields.StringField({ required: true, blank: false }),
+      { required: true, initial: [] }
+    );
+
     schema.characterPerks = new fields.ArrayField(
       new fields.SchemaField({
         source: new fields.StringField({ required: true, blank: true, initial: "" }),

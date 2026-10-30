@@ -7,6 +7,7 @@
  * and this system has already been bitten by that once.
  */
 
+import { areAllies } from "./allies.mjs";
 import { favoredChoiceOf } from "./data/item-maneuver.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import {
@@ -2036,11 +2037,9 @@ function magicTrickRanks(actor, maneuver) {
  * but the one aimed at.
  */
 function trickOpponents(actor, aimed) {
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if (own === undefined) return [];
   return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
     .filter(token => token.actor && (token.actor.type === "character") && (token.actor.uuid !== actor.uuid)
-      && (token.actor.uuid !== aimed?.uuid) && (token.document?.disposition !== own) && !token.actor.system?.defeated
+      && (token.actor.uuid !== aimed?.uuid) && !areAllies(token.actor, actor) && !token.actor.system?.defeated
       && !atLongRange(actor, token.actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
 }
@@ -2112,10 +2111,9 @@ async function askMagicTrick(actor, maneuver, target) {
   const squares = (maneuver.movePerRank ?? 1) * ranks;
   const aimed = target ? target.name : "";
   // Whimsical Magic (8): aimed at an Opponent, once an Encounter - asked with the effect.
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   const allOffered = Boolean(target) && (actor.system.effects?.slots?.["whimsical.trickAll"] === true)
-    && (actor.getFlag?.("dbu-ttrpg", "trickAllEncounter") !== (game.combat?.id ?? "none")) && (own !== undefined)
-    && (target.getActiveTokens?.(false, true)?.[0]?.disposition !== own) && (trickOpponents(actor, target).length > 0);
+    && (actor.getFlag?.("dbu-ttrpg", "trickAllEncounter") !== (game.combat?.id ?? "none"))
+    && !areAllies(target, actor) && (trickOpponents(actor, target).length > 0);
   // Trickster Magician (2): "you may apply up to 3 of its effects at once" - boxes rather than one choice, once an Encounter.
   const multi = (actor.system.effects?.slots?.["trickster.multi"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "tricksterEncounter") !== (game.combat?.id ?? "none"));
@@ -2890,13 +2888,12 @@ export function techniqueDefinition(item) {
  */
 function mimicryOwner(actor, technique) {
   const tokens = globalThis.canvas?.tokens?.placeables ?? [];
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   const token = tokens.find(each => each.actor && technique.copiedFrom && (each.actor.uuid === technique.copiedFrom))
     ?? tokens.find(each => each.actor && !technique.copiedFrom && technique.copiedFromName
       && (each.actor.name === technique.copiedFromName));
   const owner = token?.actor;
-  if (!owner || (owner.uuid === actor.uuid) || (own === undefined)) return null;
-  return { kind: (token.document?.disposition === own) ? "ally" : "opponent", uuid: owner.uuid, name: owner.name };
+  if (!owner || (owner.uuid === actor.uuid)) return null;
+  return { kind: areAllies(owner, actor) ? "ally" : "opponent", uuid: owner.uuid, name: owner.name };
 }
 
 /**
@@ -3760,8 +3757,7 @@ async function askHeal(actor, maneuver) {
     // Priest (4): an Ally, anywhere but at Long Range; otherwise within your Melee Range.
     const far = chosen.far
       ? ((atLongRange(actor, targeted) && `${targeted.name} is at Long Range.`)
-        || (((targeted.getActiveTokens?.(false, true)?.[0]?.disposition ?? 0)
-          !== (actor.getActiveTokens?.(false, true)?.[0]?.disposition ?? 0)) && `${targeted.name} is not an Ally.`))
+        || (!areAllies(targeted, actor) && `${targeted.name} is not an Ally.`))
       : whyNotWithinMelee(actor, targeted, maneuver.name);
     if (far) {
       ui.notifications.warn(far);
@@ -5082,10 +5078,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // The Disarm Maneuver: an Opponent wielding a Weapon, within your Melee Range - its Clash.
   if (maneuver.id === "disarm") {
     const { wieldedWeapons } = await import("./gear.mjs");
-    const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
-    const theirs = targetActor?.getActiveTokens?.(false, true)?.[0]?.disposition;
     const refused = !targetActor ? "Target an Opponent first."
-      : ((own !== undefined) && (own === theirs)) ? `${targetActor.name} is not an Opponent.`
+      : areAllies(targetActor, actor) ? `${targetActor.name} is not an Opponent.`
       : !wieldedWeapons(Array.from(targetActor.items ?? [])).length ? `${targetActor.name} wields no Weapon.`
       : whyNotWithinMelee(actor, targetActor, maneuver.name);
     if (refused) {
@@ -6853,11 +6847,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Terrifying Presence (1): "you can target all Opponents within a Sphere AoE centered on you" - a Clash at every other
   // Opponent targeted, as at the first.
   if (card && maneuver.terrify && targetActor && (actor.system.effects?.slots?.["terrify.presence"] === true)) {
-    // An Opponent: of another disposition than yours, as Whimsical Magic's are told apart.
-    const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+    // An Opponent: not an Ally of yours, as Whimsical Magic's are told apart.
     const others = [...new Map(Array.from(game.user.targets ?? [])
       .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.uuid !== targetActor.uuid)
-        && ((own === undefined) || (token.document?.disposition !== own)))
+        && !areAllies(token.actor, actor))
       .map(token => [token.actor.uuid, token.actor])).values()];
     const { postSkillClash } = await import("./chat.mjs");
     for (const other of others) await postSkillClash(actor, other, maneuver, { terrify: { applied: false } });
@@ -6865,10 +6858,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Improved Taunt (2): "you can target all Opponents within a Sphere AoE centered on you" - a Morale Clash at every other
   // Opponent targeted, as at the first.
   if (card && maneuver.insult && targetActor && (actor.system.effects?.slots?.["insult.sphere"] === true)) {
-    const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
     const others = [...new Map(Array.from(game.user.targets ?? [])
       .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.uuid !== targetActor.uuid)
-        && ((own === undefined) || (token.document?.disposition !== own)))
+        && !areAllies(token.actor, actor))
       .map(token => [token.actor.uuid, token.actor])).values()];
     for (const other of others) {
       await postSaveClash(actor, other, { maneuverName: maneuver.name, saves: maneuver.clashSaves,

@@ -8,6 +8,7 @@
  * it is reported.
  */
 
+import { areAllies } from "../allies.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { traitAside } from "../aside.mjs";
@@ -48,8 +49,7 @@ export function useResourceCeiling(fn) {
  */
 function opponentNear(self, other) {
   if (!self || !other || (self.uuid === other.uuid)) return false;
-  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if ((side(self) === undefined) || (side(self) === side(other))) return false;
+  if (!self.getActiveTokens?.(false, true)?.[0] || areAllies(self, other)) return false;
   const mine = self.getActiveTokens?.(false, true)?.[0];
   const theirs = other.getActiveTokens?.(false, true)?.[0];
   const grid = globalThis.canvas?.grid;
@@ -75,10 +75,9 @@ function initiativeAgainstAll(actor, holds) {
   const combat = globalThis.game?.combat;
   const own = combat?.combatants?.find(entry => entry.actor?.uuid === actor?.uuid);
   if (!own || !Number.isFinite(own.initiative)) return false;
-  const side = own.token?.disposition;
   // A Defeated one's "turn in the Initiative Order is skipped and ultimately ignored for calculating Initiative Advantage".
   if (actor?.system?.defeated) return false;
-  const opponents = Array.from(combat.combatants ?? []).filter(entry => (entry.id !== own.id) && (entry.token?.disposition !== side)
+  const opponents = Array.from(combat.combatants ?? []).filter(entry => (entry.id !== own.id) && !areAllies(entry.actor, actor)
     && !entry.actor?.system?.defeated);
   return (opponents.length > 0) && opponents.every(entry => Number.isFinite(entry.initiative) && holds(entry.initiative, own.initiative));
 }
@@ -136,16 +135,15 @@ function rivalSide(self) {
   const mine = self?.getActiveTokens?.(false, true)?.[0];
   const theirs = rival ? (globalThis.canvas?.tokens?.placeables ?? []).find(token => token.actor?.id === rival.id)?.document : null;
   if (!mine || !theirs) return "";
-  return (mine.disposition === theirs.disposition) ? "ally" : "opponent";
+  return areAllies(self, rival) ? "ally" : "opponent";
 }
 
 /** Chosen Rival (4): "your Rival is your only non-Defeated Ally" - the one Ally on the scene still standing. */
 function rivalOnlyAlly(self) {
   const rival = rivalOf(self);
-  const own = self?.getActiveTokens?.(false, true)?.[0]?.disposition;
-  if (!rival || (own === undefined)) return false;
+  if (!rival || !self) return false;
   const standing = [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.document?.disposition === own) && (token.actor.uuid !== self.uuid) && !token.actor.system?.defeated)
+    .filter(token => token.actor && areAllies(token.actor, self) && (token.actor.uuid !== self.uuid) && !token.actor.system?.defeated)
     .map(token => [token.actor.uuid, token.actor])).values()];
   return (standing.length === 1) && (standing[0].id === rival.id);
 }
@@ -160,7 +158,7 @@ function besideChosen(self, other, { ally = false } = {}) {
   const mine = self?.getActiveTokens?.(false, true)?.[0];
   const theirs = other ? (globalThis.canvas?.tokens?.placeables ?? []).find(token => token.actor?.id === other.id)?.document : null;
   const grid = globalThis.canvas?.grid?.size;
-  if (!mine || !theirs || !grid || (mine.parent?.id !== theirs.parent?.id) || (ally && (mine.disposition !== theirs.disposition))) return false;
+  if (!mine || !theirs || !grid || (mine.parent?.id !== theirs.parent?.id) || (ally && !areAllies(self, other))) return false;
   const gap = (p, q, pSize, qSize) => Math.max(0, Math.max(p - (q + qSize), q - (p + pSize)));
   const apart = Math.max(Math.ceil(gap(mine.x / grid, theirs.x / grid, mine.width ?? 1, theirs.width ?? 1)),
     Math.ceil(gap(mine.y / grid, theirs.y / grid, mine.height ?? 1, theirs.height ?? 1)));
@@ -401,8 +399,7 @@ const PREDICATES = {
     const knocker = globalThis.fromUuidSync?.(scope.context?.knockerUuid ?? "");
     const knocked = globalThis.fromUuidSync?.(scope.context?.knockedUuid ?? "");
     if (!self || !knocker || !knocked) return false;
-    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-    if ((knocker.uuid !== self.uuid) && (side(knocker) !== side(self))) return false;
+    if ((knocker.uuid !== self.uuid) && !areAllies(knocker, self)) return false;
     return opponentNear(self, knocked);
   },
 
@@ -411,8 +408,7 @@ const PREDICATES = {
     const self = scope.data?.parent;
     const knocker = globalThis.fromUuidSync?.(scope.context?.knockerUuid ?? "");
     if (!self || !knocker || (knocker.uuid === self.uuid)) return false;
-    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-    return (side(knocker) !== undefined) && (side(knocker) === side(self));
+    return areAllies(knocker, self);
   },
 
   /** Critical Wound (2): the attack that knocked them through a Critical Result on its Wound Roll (moment knock-through). */
@@ -423,8 +419,7 @@ const PREDICATES = {
     const self = scope.data?.parent;
     const knocked = globalThis.fromUuidSync?.(scope.context?.knockedUuid ?? "");
     if (!self || !knocked || (knocked.uuid === self.uuid)) return false;
-    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-    return side(knocked) !== side(self);
+    return !areAllies(knocked, self);
   },
 
   /** Buddy to Buddies (1): a Buddy of yours Active - not destroyed, not locked. */
@@ -531,8 +526,7 @@ const PREDICATES = {
     const self = scope.data?.parent;
     const loser = globalThis.fromUuidSync?.(scope.context?.opponentUuid ?? "");
     if (!self || !loser || !scope.context?.ownUnique) return false;
-    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-    return side(loser) !== side(self);
+    return !areAllies(loser, self);
   },
   // Desperate Support (3): "forgo regaining Life and Ki Points" - this Round's, chosen as the turn began.
   desperateForgone: scope => scope.data?.parent?.getFlag?.("dbu-ttrpg", "desperateForgone")
@@ -548,10 +542,10 @@ const PREDICATES = {
 
   alliesStanding: scope => {
     const self = scope.data?.parent;
-    const own = self?.getActiveTokens?.(false, true)?.[0]?.document?.disposition;
-    if (own === undefined) return false;
-    const allies = (globalThis.canvas?.tokens?.placeables ?? []).map(token => (token.document?.disposition === own) ? token.actor : null)
-      .filter(other => other && (other.uuid !== self.uuid));
+    if (!self) return false;
+    const allies = [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+      .filter(token => token.actor && (token.actor.uuid !== self.uuid) && areAllies(token.actor, self))
+      .map(token => [token.actor.uuid, token.actor])).values()];
     return (allies.length > 0) && allies.every(other => !other.system?.defeated);
   },
 
@@ -584,8 +578,7 @@ const PREDICATES = {
     if (!self || !uuid) return false;
     if (uuid === self.uuid) return true;
     const other = globalThis.fromUuidSync?.(uuid);
-    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-    if (!other || (side(self) === undefined) || (side(self) === side(other))) return false;
+    if (!other || !self.getActiveTokens?.(false, true)?.[0] || areAllies(self, other)) return false;
     const mine = self.getActiveTokens?.(false, true)?.[0];
     const theirs = other.getActiveTokens?.(false, true)?.[0];
     const grid = globalThis.canvas?.grid;
@@ -664,10 +657,7 @@ const PREDICATES = {
     const self = scope.data?.parent;
     if (!uuid || !self) return true;
     if (uuid === self.uuid) return false;
-    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-    const mine = side(self);
-    const theirs = side(globalThis.fromUuidSync?.(uuid));
-    return (mine === undefined) || (theirs === undefined) || (theirs !== mine);
+    return !areAllies(self, globalThis.fromUuidSync?.(uuid));
   },
 
   /**
@@ -678,10 +668,7 @@ const PREDICATES = {
     const uuid = scope.context?.knockerUuid ?? "";
     const self = scope.data?.parent;
     if (!uuid || !self || (uuid === self.uuid)) return false;
-    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
-    const mine = side(self);
-    const theirs = side(globalThis.fromUuidSync?.(uuid));
-    return (mine === undefined) || (theirs === undefined) || (theirs !== mine);
+    return !areAllies(self, globalThis.fromUuidSync?.(uuid));
   },
 
   /** At the Life Points they would be Defeated at, or below - Undying (2)'s "when you would have been Defeated". */

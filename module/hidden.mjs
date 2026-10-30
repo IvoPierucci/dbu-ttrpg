@@ -15,6 +15,7 @@
  * Kept on the Hidden one, as `system.hiddenFrom`: whom from, and how many attacks were aimed at them this Combat Round.
  */
 
+import { areAllies } from "./allies.mjs";
 import { squaresBetween, MAGNITUDES, magnitudeIndex } from "./maneuvers.mjs";
 
 /** The Hide and Search Maneuvers, by their files. */
@@ -144,12 +145,11 @@ export function isInvisible(actor) {
  */
 export async function hideFromOpponents(actor) {
   if (!isInvisible(actor)) return;
-  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   const others = new Map();
   for (const token of globalThis.canvas?.tokens?.placeables ?? []) {
     const other = token.actor;
     if (!other || (other.uuid === actor.uuid) || (other.type !== "character")) continue;
-    if ((own !== undefined) && (token.document?.disposition === own)) continue;
+    if (areAllies(other, actor)) continue;
     others.set(other.uuid, other);
   }
   for (const other of others.values()) await hideFrom(actor, other, { quiet: true });

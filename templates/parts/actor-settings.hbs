@@ -1,9 +1,35 @@
 <div class="tab {{tabs.settings.cssClass}}" data-group="primary" data-tab="settings">
 
-  {{! This character's preferences - empty until the first one is decided. }}
-  <section class="panel">
-    <h3 class="panel-title">Settings</h3>
-    <p class="tab-placeholder">No settings yet.</p>
+  {{! Who this character's Allies are, for every effect: those on this list, and those whose own list names them - both ways.
+      Nobody else, whatever their token's disposition. }}
+  <section class="panel ally-panel">
+    <h3 class="panel-title">Allies</h3>
+    {{#if editable}}
+    <button type="button" class="edit-toggle ally-add" data-action="addAllies">+ Add Allies</button>
+    {{/if}}
+    {{#if allies.length}}
+    <ul class="ally-list">
+      {{#each allies as |ally|}}
+      <li class="ally{{#if ally.theirs}} theirs{{/if}}{{#if ally.missing}} missing{{/if}}">
+        {{#if ally.theirs}}
+        <span class="ally-x-space"></span>
+        {{else}}
+          {{#if @root.editable}}
+          <button type="button" class="ally-x" data-action="removeAlly" data-ally-id="{{ally.id}}"
+                  data-tooltip="Take {{ally.name}} off the Allies list">&#10005;</button>
+          {{else}}
+          <span class="ally-x-space"></span>
+          {{/if}}
+        {{/if}}
+        {{#if ally.img}}<img class="ally-img" src="{{ally.img}}" alt=""/>{{/if}}
+        <span class="ally-name">{{ally.name}}</span>
+        {{#if ally.theirs}}<span class="ally-note" data-tooltip="Their Allies list names this character - taken off from their sheet">from their list</span>{{/if}}
+      </li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="tab-placeholder">No Allies yet. Every other Character counts as an Opponent.</p>
+    {{/if}}
   </section>
 
 </div>

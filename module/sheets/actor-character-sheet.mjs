@@ -462,6 +462,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       refreshTalents: DBUCharacterSheet._onRefreshTalents,
       addPerk: DBUCharacterSheet._onAddPerk,
       removePerk: DBUCharacterSheet._onRemovePerk,
+      addAllies: DBUCharacterSheet._onAddAllies,
+      removeAlly: DBUCharacterSheet._onRemoveAlly,
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
       attackFeature: DBUCharacterSheet._onAttackFeature,
       takeCollision: DBUCharacterSheet._onTakeCollision,
@@ -797,6 +799,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
     context.progressionRows = this._prepareProgressionRows();
     context.characterPerks = this.#prepareCharacterPerks();
+    context.allies = this.#prepareAllies();
     // Handlebars has no literal-array helper, so the Attribute columns are supplied
     // here. The progression table's headings and cells both read from this, so they
     // cannot drift apart.
@@ -2424,6 +2427,55 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           : (entry.choice === "Skill Improvement") ? DBUCharacterSheet.#skillBenefit(at, before.ranks, SKILLS, true) : null
       };
     });
+  }
+
+  /**
+   * The Settings tab's Allies: those on this character's list, and - not to be taken off here - those whose own list names this
+   * character, Allies all the same (allies.mjs). By name; one no longer in the world, said so.
+   */
+  #prepareAllies() {
+    const own = (this.actor.system.allies ?? []).map(id => {
+      const actor = game.actors?.get(id);
+      return { id, name: actor?.name ?? "(no longer in this world)", img: actor?.img ?? "", missing: !actor, theirs: false };
+    });
+    const listed = new Set(own.map(entry => entry.id));
+    const theirs = (game.actors?.contents ?? [])
+      .filter(actor => (actor.id !== this.actor.id) && !listed.has(actor.id) && (actor.system?.allies ?? []).includes(this.actor.id))
+      .map(actor => ({ id: actor.id, name: actor.name, img: actor.img, missing: false, theirs: true }));
+    return [...own, ...theirs].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * "Add Allies": every Character this user may see the sheet of - Observer or more - but this one and those already on the list,
+   * ticked in a window; added together.
+   */
+  static async _onAddAllies() {
+    const listed = new Set(this.actor.system.allies ?? []);
+    const offered = (game.actors?.contents ?? [])
+      .filter(actor => (actor.type === "character") && (actor.id !== this.actor.id) && !listed.has(actor.id)
+        && actor.testUserPermission(game.user, "OBSERVER"))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (!offered.length) return ui.notifications.info("No other Character whose sheet you can see is left to add.");
+    const escape = Handlebars.escapeExpression;
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Add Allies` },
+      content: `<div class="dbu-ally-pick">${offered.map(actor => `<label class="dbu-respond-option">
+        <input type="checkbox" name="${escape(actor.id)}"/><img src="${escape(actor.img ?? "")}" alt=""/>
+        <span class="dbu-respond-name">${escape(actor.name)}</span></label>`).join("")}</div>`,
+      buttons: [{ action: "add", label: "Add", default: true, callback: (event, button, dialog) =>
+        offered.filter(actor => dialog.element.querySelector(`input[name="${CSS.escape(actor.id)}"]`)?.checked).map(actor => actor.id) },
+      { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if (!Array.isArray(picked) || !picked.length) return;
+    return this.actor.update({ "system.allies": [...listed, ...picked] });
+  }
+
+  /** One taken off this character's Allies list. */
+  static async _onRemoveAlly(event, target) {
+    const id = target?.dataset?.allyId ?? "";
+    const allies = (this.actor.system.allies ?? []).filter(each => each !== id);
+    return this.actor.update({ "system.allies": allies });
   }
 
   /** A Character Perk more, at the end of the list - its list opened. */
