@@ -11949,7 +11949,8 @@ export async function tinyTarget(actor) {
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor);
-  const larger = [...new Map(pool.filter(other => other && (other.uuid !== actor.uuid) && (sizeDifference(other, actor) >= 2))
+  const larger = [...new Map(pool.filter(other => other && (other.uuid !== actor.uuid) && !areAllies(other, actor)
+    && (sizeDifference(other, actor) >= 2))
     .map(other => [other.uuid, other])).values()];
   if (!larger.length) return;
   const near = other => {
@@ -12942,6 +12943,7 @@ async function dimensionalHole(message, holder) {
   const into = Array.from(game.user.targets ?? []).map(token => token.actor)
     .find(other => other && (other.uuid !== holder.uuid) && !(attack.targets ?? []).some(entry => entry.uuid === other.uuid));
   if (!into) return ui.notifications.warn("Target the Opponent it goes to first.");
+  if (areAllies(into, holder)) return ui.notifications.warn(`${into.name} is your Ally: Dimensional Hole sends it to an Opponent.`);
   if (!await spendActions(holder, 1, "counter")) return;
   await recordManeuverType(holder, "counter");
   await requestActorUpdate(holder, { "system.usedManeuvers": [...(holder.system.usedManeuvers ?? []), "encounter:dimensional-hole"] });
@@ -14230,6 +14232,7 @@ export async function webSave(actor, item) {
   const blocked = whyNotAnotherInstant(actor);
   if (blocked) return ui.notifications.warn(`${actor.name}: ${blocked}`);
   const ally = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
+  if (ally && !areAllies(ally, actor)) return ui.notifications.warn(`${ally.name} is not your Ally: Web Save moves a willing Ally.`);
   await recordManeuverType(actor, "instant");
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">Web Save: ${Handlebars.escapeExpression(ally?.name ?? "a willing Ally")} moves to `
@@ -16792,6 +16795,7 @@ export async function spinToWin(actor) {
   if (!spinningOf(actor)?.spinToWin) return;
   const target = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
   if (!target) return ui.notifications.warn("Target the adjacent Opponent first.");
+  if (areAllies(target, actor)) return ui.notifications.warn(`${target.name} is your Ally: Spin to Win is for an Opponent.`);
   return spinThrust(actor, target.uuid);
 }
 
@@ -16846,8 +16850,9 @@ export async function springTrap(actor, item, asInstant) {
   const unique = item?.system?.unique;
   if (!unique?.trapTechnique) return;
   // Everyone it is sprung at - the Sphere around the Trap Square, or the Technique's own AoE from it: the tokens targeted.
+  // "Against your Opponent": your Allies among those targeted left out.
   const caught = [...new Map(Array.from(game.user.targets ?? []).map(token => token.actor)
-    .filter(other => other && (other.uuid !== actor.uuid)).map(other => [other.uuid, other])).values()];
+    .filter(other => other && (other.uuid !== actor.uuid) && !areAllies(other, actor)).map(other => [other.uuid, other])).values()];
   const [target, ...rest] = caught;
   if (!target) return ui.notifications.warn("Target the Opponents it is sprung at first.");
   const extraTargets = rest.map(other => ({ uuid: other.uuid, name: other.name }));
@@ -17770,6 +17775,10 @@ async function settleTalk(message, clash) {
   if (whoWonClash(clash.result) === "challenger") {
     if (talk.mode === "ally") {
       await settledNote(message, `${target.name} is no longer ${clash.defenderName}'s Ally.`);
+      // Each taken off the other's Allies list - a button on this card, for whoever plays the one who Talked (the user's).
+      requestEdit(message, { type: "offer", offer: { actorUuid: talker.uuid, actorName: talker.name, maneuverId: "",
+        maneuverName: "Make allies changes", reason: `${target.name} and ${clash.defenderName} off each other's Allies lists`,
+        alliesChange: { oneUuid: target.uuid, otherUuid: clash.challengerUuid === talker.uuid ? clash.defenderUuid : clash.challengerUuid } } });
       return;
     }
     const { setCondition } = await import("./conditions.mjs");
@@ -17785,6 +17794,22 @@ async function settleTalk(message, clash) {
     await requestActorUpdate(talker, { [`flags.${SCOPE}.talkBarred`]: { combatId, uuids: [...new Set([...uuids, target.uuid])] } });
     await settledNote(message, `${talker.name} cannot Talk to ${target.name} again this Combat Encounter.`);
   }
+}
+
+/** Talk's "Make allies changes": the two taken off each other's Allies lists, both ways - and the name kept from the players with it. */
+async function takeAlliesChange({ oneUuid, otherUuid } = {}) {
+  const one = fromUuidSync(oneUuid ?? "");
+  const other = fromUuidSync(otherUuid ?? "");
+  if (!one || !other) return;
+  const { allyKey } = await import("./allies.mjs");
+  for (const [who, gone] of [[one, other], [other, one]]) {
+    const key = allyKey(gone);
+    const base = who.isToken ? (game.actors?.get(who.id) ?? who) : who;
+    if (!(base.system?.allies ?? []).includes(key)) continue;
+    await requestActorUpdate(base, { "system.allies": (base.system.allies ?? []).filter(each => each !== key),
+      "system.alliesHidden": (base.system.alliesHidden ?? []).filter(each => each !== key) });
+  }
+  ui.notifications.info(`${one.name} and ${other.name} are no longer Allies.`);
 }
 
 /**
@@ -24419,7 +24444,7 @@ export async function rulerAllies(actor) {
   const pool = [...new Map((game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor))
-    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid) && areAllies(other, actor))
     .map(other => [other.uuid, other])).values()];
   if (!pool.length) return ui.notifications.warn(`${actor.name}: Ruler - no Allies to target.`);
   const escape = Handlebars.escapeExpression;
@@ -25135,6 +25160,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.iaijutsuSheathe) return takeIaijutsuSheathe(message, actor, offer.iaijutsuSheathe);
   if (offer.varietyGrab) return takeVarietyGrab(message, actor, offer.varietyGrab);
   if (offer.watchful) return takeWatchful(message, actor, offer.watchful);
+  if (offer.alliesChange) return takeAlliesChange(offer.alliesChange);
   if (offer.mysticalGaze) return takeMysticalGaze(message, actor, offer);
   if (offer.catsPaw) return takeCatsPaw(message, actor, offer.catsPaw);
   if (offer.slimyGrab) return takeSlimyGrab(message, actor, offer);
@@ -30990,14 +31016,15 @@ async function settleTemperament(message, key) {
   let said = temperament.says;
 
   if (key === "entertained") {
+    // The one Entertained and their Allies, every one ticked.
     const everyone = (game.combat?.combatants?.contents ?? []).map(entry => entry.actor)
-      .filter((actor, at, all) => actor && (all.indexOf(actor) === at));
+      .filter((actor, at, all) => actor && (all.indexOf(actor) === at) && ((actor.uuid === owner.uuid) || areAllies(actor, owner)));
     const escape = Handlebars.escapeExpression;
     const chosen = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"], window: { title: "Entertained" },
       content: `<p>Whose Combat Rolls are 1(bT) higher next Combat Round: ${escape(owner.name)} and their Allies.</p>`
         + everyone.map(actor => `<label class="dbu-wager"><input type="checkbox" name="who" value="${escape(actor.uuid)}" `
-          + `${(actor.uuid === owner.uuid) ? "checked" : ""}/><span>${escape(actor.name)}</span></label>`).join(""),
+          + `checked/><span>${escape(actor.name)}</span></label>`).join(""),
       buttons: [{ action: "confirm", label: "Confirm", callback: (event, button, dialog) =>
         [...dialog.element.querySelectorAll('input[name="who"]:checked')].map(input => input.value) },
         { action: "cancel", label: "Cancel" }],

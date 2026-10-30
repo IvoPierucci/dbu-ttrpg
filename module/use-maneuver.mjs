@@ -1400,20 +1400,16 @@ async function techniqueTableQuestions(actor, technique) {
   const ask = async (title, content) => foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"], window: { title }, content, rejectClose: false });
   if (has("concentration")) {
+    // An Opponent - not on either Allies list - with you in their Melee Range: not usable.
     const near = [...new Map((canvas?.tokens?.placeables ?? [])
       .map(token => token.actor)
-      .filter(other => other && (other.uuid !== actor.uuid) && (other.type === "character")
+      .filter(other => other && (other.uuid !== actor.uuid) && (other.type === "character") && !areAllies(other, actor)
         && (squaresAway(other, actor) !== null) && !whyNotWithinMelee(other, actor, ""))
       .map(other => [other.uuid, other])).values()];
     if (near.length) {
-      const names = near.map(other => Handlebars.escapeExpression(other.name)).join(", ");
-      const opponent = await ask(`${technique.name} - Concentration`,
-        `<p>${names} ${(near.length === 1) ? "has" : "have"} ${Handlebars.escapeExpression(actor.name)} `
-        + "in Melee Range. Is any of them an Opponent? If so, this Technique cannot be used.</p>");
-      if (opponent) {
-        ui.notifications.warn(`${technique.name}: Concentration - an Opponent is too close.`);
-        return false;
-      }
+      ui.notifications.warn(`${technique.name}: Concentration - ${near.map(other => other.name).join(", ")} `
+        + `${(near.length === 1) ? "has" : "have"} you in Melee Range.`);
+      return false;
     }
   }
   // Sneak Attack: "You can only use this Signature Technique when Hidden, and all of your target(s) for this Attacking
@@ -3817,8 +3813,9 @@ async function askIllusion(actor, maneuver) {
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor);
-  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
-    .map(other => [other.uuid, other])).values()];
+  // "Your Opponents in" it: your Allies left out.
+  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid)
+    && !areAllies(other, actor)).map(other => [other.uuid, other])).values()];
   if (!others.length) {
     ui.notifications.warn(`${maneuver.name}: nobody to deceive${game.combat?.started ? "" : " - target them first"}.`);
     return null;
@@ -3963,6 +3960,10 @@ async function askEnhance(actor, maneuver) {
   const ally = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
   if (!ally) {
     ui.notifications.warn(`${maneuver.name}: target the Ally first.`);
+    return null;
+  }
+  if (!areAllies(ally, actor)) {
+    ui.notifications.warn(`${maneuver.name}: ${ally.name} is not your Ally.`);
     return null;
   }
   const away = squaresAway(actor, ally);
@@ -4121,8 +4122,9 @@ async function askHide(actor, maneuver, { burst = false, area = "Minor Sphere", 
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor);
-  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
-    .map(other => [other.uuid, other])).values()];
+  // "Your Opponents" - but a burst's area, whoever is in it.
+  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid)
+    && (burst || !areAllies(other, actor))).map(other => [other.uuid, other])).values()];
   if (!others.length) {
     ui.notifications.warn(`${maneuver.name}: nobody to hide from${game.combat?.started ? "" : " - target them first"}.`);
     return null;
@@ -4212,8 +4214,9 @@ async function askTalk(actor, target, maneuver) {
   const compelled = (Number(target.system?.conditions?.compelled) || 0) > 0;
   const pool = game.combat?.started ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : (canvas?.tokens?.placeables ?? []).map(token => token.actor);
+  // Whose Ally they were turned into: one of their Allies.
   const turners = [...new Map(pool.filter(other => other && (other.type === "character")
-    && (other.uuid !== actor.uuid) && (other.uuid !== target.uuid)).map(other => [other.uuid, other])).values()];
+    && (other.uuid !== actor.uuid) && (other.uuid !== target.uuid) && areAllies(other, target)).map(other => [other.uuid, other])).values()];
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - ${maneuver.name}` },
