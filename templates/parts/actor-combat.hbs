@@ -134,6 +134,18 @@
     </div>
 
     <div class="dbu-combat-side">
+      {{! The Saving Throws, where the Dice were (the user's) - each rolled from its name, a racial one marked. }}
+      <h3 class="dbu-side-title">Saving Throws</h3>
+      <div class="dbu-box-grid">
+        {{#each saves as |save|}}
+        <div class="stat {{#if save.racial}}stat-racial{{/if}}">
+          <button type="button" class="stat-roll" data-action="rollSave" data-save="{{save.key}}"
+                  data-tooltip="Roll 1d10 + {{save.label}} &middot; crits on {{save.criticalTarget}}+{{#if save.racial}} &middot; racial Saving Throw{{/if}}"><em>{{save.label}}</em></button>
+          <span data-tooltip-html="{{save.workings}}">{{save.value}}</span>
+        </div>
+        {{/each}}
+      </div>
+
       <h3 class="dbu-side-title">Aptitudes</h3>
       <div class="dbu-box-grid">
         <div class="stat" data-tooltip="{{aptitudes.dimOffense.tip}}">
