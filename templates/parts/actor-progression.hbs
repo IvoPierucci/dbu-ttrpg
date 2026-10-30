@@ -37,21 +37,37 @@
         <input type="number" name="system.powerLevel" value="{{system.powerLevel}}" min="1" max="30"/>
       </label>
 
-      {{! ToP Mod and Crit Target are on the Settings tab (the user's). }}
-      {{! Sum of every TP grant from Level 1 up to the current Power Level. }}
-      <span class="character-readout" data-tooltip="Total granted up to your Power Level">
-        <em>Technique Points</em>
-        <span class="computed-value headline">{{system.techniquePoints}}</span>
-      </span>
+      {{! ToP Mod and Crit Target are on the Settings tab (the user's); the Technique Points in the table below. }}
     </div>
   </section>
 
-  <!-- Where the table's Attribute columns and the Aptitudes they feed end up. -->
+  {{! Where the character stands, in one row (the user's): the Level, each Attribute's Score, the Technique Points left
+      after the Unique Abilities and Signature Techniques, and every one Progression has given. }}
   <section class="progression-summary">
-    <div class="stat-grid scores">
-      {{#each attributeColumns as |column|}}
-      <div class="stat" data-tooltip="{{column.key}}"><em>{{column.abbr}}</em><span>{{column.score}}</span></div>
-      {{/each}}
+    <div class="dbu-table-wrap">
+      <table class="dbu-ctable dbu-progress-row">
+        <thead>
+          <tr>
+            <th scope="col">Level</th>
+            {{#each attributeColumns as |column|}}
+            <th scope="col" data-tooltip="{{column.key}}">{{column.abbr}}</th>
+            {{/each}}
+            <th scope="col" data-tooltip="Left after the Unique Abilities and the Signature Techniques">TP</th>
+            <th scope="col" data-tooltip="Every Technique Point granted up to your Power Level">Total TP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{system.powerLevel}}</td>
+            {{#each attributeColumns as |column|}}
+            <td>{{column.score}}</td>
+            {{/each}}
+            <td class="{{#if tpSummary.over}}dbu-over{{/if}}"
+                data-tooltip="{{tpSummary.spent}} spent of {{tpSummary.total}}: {{tpSummary.unique}} on Unique Abilities, {{tpSummary.techniques}} on Signature Techniques">{{tpSummary.left}}</td>
+            <td>{{tpSummary.total}}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 

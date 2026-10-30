@@ -1461,6 +1461,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.maneuverGroups = this._prepareManeuverGroups();
     context.techniques = this._prepareTechniques();
     context.uniqueAbilities = await this.#prepareUniqueAbilities(context.techniques);
+    // Progression's one-row table (the user's): the Technique Points left once the Unique Abilities and the Signature
+    // Techniques are paid for, and every one Progression has given. Below nothing is said, as overspending is - red.
+    {
+      const total = Number(this.actor.system.techniquePoints) || 0;
+      const spent = context.uniqueAbilities?.together ?? 0;
+      context.tpSummary = { total, spent, left: total - spent, over: spent > total,
+        unique: context.uniqueAbilities?.spent ?? 0, techniques: context.techniques?.spent ?? 0 };
+    }
     // Delayed's Imminent on this character: a mark, not a Combat Condition.
     context.imminent = this.actor.getFlag("dbu-ttrpg", "imminent") ?? [];
     this.#prepareCombatTab(context);
@@ -1480,7 +1488,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // the Micro Band - is not a choice, and selecting where it put them would save it as
     // one the next time the sheet was submitted.
     const { size } = this.actor.system;
-    const built = size.chosen ?? size.key;
+    // Read off the derived Size, or the stored one where it was not derived - and Medium where neither says: a picker with
+    // nothing selected shows its first option, Small, and the next submit of the sheet saved that (the user's: new
+    // characters came out Small).
+    const built = ((typeof size === "string") ? size : (size?.chosen ?? size?.key)) || DBUCharacterData.DEFAULT_SIZE;
     context.sizeOptions = Object.entries(DBUCharacterData.SIZES)
       .filter(([key, definition]) => definition.selectable || (key === built))
       .map(([key, definition]) => ({
