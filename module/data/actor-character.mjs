@@ -1779,6 +1779,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       new fields.StringField({ required: true, blank: false }),
       { required: true, initial: [] }
     );
+    // Those of them whose name this sheet keeps from its players - "Unknown Ally" to them; the ARC sees every name.
+    schema.alliesHidden = new fields.ArrayField(
+      new fields.StringField({ required: true, blank: false }),
+      { required: true, initial: [] }
+    );
 
     schema.characterPerks = new fields.ArrayField(
       new fields.SchemaField({

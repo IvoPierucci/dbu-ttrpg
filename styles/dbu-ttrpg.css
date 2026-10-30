@@ -1975,9 +1975,63 @@
   font-style: italic;
 }
 
+.dbu-ttrpg .ally-list .ally-unknown {
+  display: grid;
+  place-items: center;
+  background: var(--dbu-panel-raised);
+  border: 1px solid var(--dbu-border);
+  border-radius: 3px;
+  color: var(--dbu-text-dim);
+  font-weight: bold;
+}
+
+.dbu-ttrpg .ally-list .ally-eye {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  color: var(--dbu-accent);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .ally-list .ally-eye.off {
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .ally-list .ally-eye:hover,
+.dbu-ttrpg .ally-list .ally-eye:focus-visible {
+  outline: none;
+  box-shadow: none;
+  color: var(--dbu-text);
+}
+
 .dbu-ttrpg .ally-list .ally.missing .ally-name {
   color: var(--dbu-text-dim);
   font-style: italic;
+}
+
+.dbu-dialog .dbu-ally-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dbu-dialog .dbu-ally-pick-row > .dbu-respond-option {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dbu-dialog .dbu-ally-show {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .dbu-dialog .dbu-ally-pick img {

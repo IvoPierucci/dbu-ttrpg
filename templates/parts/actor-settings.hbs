@@ -21,9 +21,14 @@
           <span class="ally-x-space"></span>
           {{/if}}
         {{/if}}
-        {{#if ally.img}}<img class="ally-img" src="{{ally.img}}" alt=""/>{{/if}}
+        {{#if ally.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if ally.img}}<img class="ally-img" src="{{ally.img}}" alt=""/>{{/if}}{{/if}}
         <span class="ally-name">{{ally.name}}</span>
         {{#if ally.theirs}}<span class="ally-note" data-tooltip="Their Allies list names this character - taken off from their sheet">from their list</span>{{/if}}
+        {{#if @root.isGM}}{{#unless ally.theirs}}
+        <button type="button" class="ally-eye{{#if ally.nameHidden}} off{{/if}}" data-action="toggleAllyName" data-ally-id="{{ally.id}}"
+                data-tooltip="{{#if ally.nameHidden}}Hidden: this sheet's players see &quot;Unknown Ally&quot;{{else}}Shown to this sheet's players{{/if}}">
+          <i class="fa-solid {{#if ally.nameHidden}}fa-eye-slash{{else}}fa-eye{{/if}}"></i></button>
+        {{/unless}}{{/if}}
       </li>
       {{/each}}
     </ul>

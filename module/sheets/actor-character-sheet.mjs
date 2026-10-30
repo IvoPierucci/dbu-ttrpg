@@ -464,6 +464,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       removePerk: DBUCharacterSheet._onRemovePerk,
       addAllies: DBUCharacterSheet._onAddAllies,
       removeAlly: DBUCharacterSheet._onRemoveAlly,
+      toggleAllyName: DBUCharacterSheet._onToggleAllyName,
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
       attackFeature: DBUCharacterSheet._onAttackFeature,
       takeCollision: DBUCharacterSheet._onTakeCollision,
@@ -2434,15 +2435,28 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * character, Allies all the same (allies.mjs). By name; one no longer in the world, said so.
    */
   #prepareAllies() {
+    // Kept from the players: an Ally this list hides the name of, or - from another's list - one they may not see the sheet of.
+    const gm = game.user.isGM;
+    const hidden = new Set(this.actor.system.alliesHidden ?? []);
+    const shown = (actor, concealed) => (gm || !concealed)
+      ? { name: actor?.name ?? "(no longer in this world)", img: actor?.img ?? "" }
+      : { name: "Unknown Ally", img: "", unknown: true };
     const own = (this.actor.system.allies ?? []).map(id => {
       const actor = game.actors?.get(id);
-      return { id, name: actor?.name ?? "(no longer in this world)", img: actor?.img ?? "", missing: !actor, theirs: false };
+      return { id, ...shown(actor, hidden.has(id)), missing: !actor, theirs: false, nameHidden: hidden.has(id) };
     });
     const listed = new Set(own.map(entry => entry.id));
     const theirs = (game.actors?.contents ?? [])
       .filter(actor => (actor.id !== this.actor.id) && !listed.has(actor.id) && (actor.system?.allies ?? []).includes(this.actor.id))
-      .map(actor => ({ id: actor.id, name: actor.name, img: actor.img, missing: false, theirs: true }));
-    return [...own, ...theirs].sort((a, b) => a.name.localeCompare(b.name));
+      .map(actor => ({ id: actor.id, ...shown(actor, !actor.testUserPermission(game.user, "OBSERVER")), missing: false, theirs: true }));
+    // The unknown last, each alike.
+    return [...own, ...theirs].sort((a, b) => (Number(Boolean(a.unknown)) - Number(Boolean(b.unknown))) || a.name.localeCompare(b.name));
+  }
+
+  /** Whether every player of this sheet may see a Character's sheet - its name shown to them by default as it is added. */
+  #playersSee(other) {
+    return game.users.filter(user => !user.isGM && this.actor.testUserPermission(user, "OWNER"))
+      .every(user => other.testUserPermission(user, "OBSERVER"));
   }
 
   /**
@@ -2457,25 +2471,45 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .sort((a, b) => a.name.localeCompare(b.name));
     if (!offered.length) return ui.notifications.info("No other Character whose sheet you can see is left to add.");
     const escape = Handlebars.escapeExpression;
+    // Beside each, whether this sheet's players see its name - on where they may see its sheet, off where they may not
+    // ("Unknown Ally"); the ARC's to change.
     const picked = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Add Allies` },
-      content: `<div class="dbu-ally-pick">${offered.map(actor => `<label class="dbu-respond-option">
-        <input type="checkbox" name="${escape(actor.id)}"/><img src="${escape(actor.img ?? "")}" alt=""/>
-        <span class="dbu-respond-name">${escape(actor.name)}</span></label>`).join("")}</div>`,
+      content: `<div class="dbu-ally-pick">${offered.map(actor => `<div class="dbu-ally-pick-row">
+        <label class="dbu-respond-option"><input type="checkbox" name="${escape(actor.id)}"/><img src="${escape(actor.img ?? "")}" alt=""/>
+          <span class="dbu-respond-name">${escape(actor.name)}</span></label>
+        <label class="dbu-ally-show" data-tooltip="Off: this sheet's players see &quot;Unknown Ally&quot;">
+          <input type="checkbox" name="show-${escape(actor.id)}" ${this.#playersSee(actor) ? "checked" : ""}/> Show name</label>
+        </div>`).join("")}</div>`,
       buttons: [{ action: "add", label: "Add", default: true, callback: (event, button, dialog) =>
-        offered.filter(actor => dialog.element.querySelector(`input[name="${CSS.escape(actor.id)}"]`)?.checked).map(actor => actor.id) },
+        offered.filter(actor => dialog.element.querySelector(`input[name="${CSS.escape(actor.id)}"]`)?.checked).map(actor => ({ id: actor.id,
+          show: Boolean(dialog.element.querySelector(`input[name="show-${CSS.escape(actor.id)}"]`)?.checked) })) },
       { action: "cancel", label: "Cancel" }],
       rejectClose: false
     });
     if (!Array.isArray(picked) || !picked.length) return;
-    return this.actor.update({ "system.allies": [...listed, ...picked] });
+    const hidden = new Set(this.actor.system.alliesHidden ?? []);
+    for (const { id, show } of picked) {
+      if (show) hidden.delete(id);
+      else hidden.add(id);
+    }
+    return this.actor.update({ "system.allies": [...listed, ...picked.map(entry => entry.id)], "system.alliesHidden": [...hidden] });
   }
 
   /** One taken off this character's Allies list. */
   static async _onRemoveAlly(event, target) {
     const id = target?.dataset?.allyId ?? "";
-    const allies = (this.actor.system.allies ?? []).filter(each => each !== id);
-    return this.actor.update({ "system.allies": allies });
+    return this.actor.update({ "system.allies": (this.actor.system.allies ?? []).filter(each => each !== id),
+      "system.alliesHidden": (this.actor.system.alliesHidden ?? []).filter(each => each !== id) });
+  }
+
+  /** The ARC's eye on one of the list: its name shown to this sheet's players, or "Unknown Ally". */
+  static async _onToggleAllyName(event, target) {
+    const id = target?.dataset?.allyId ?? "";
+    const hidden = new Set(this.actor.system.alliesHidden ?? []);
+    if (hidden.has(id)) hidden.delete(id);
+    else hidden.add(id);
+    return this.actor.update({ "system.alliesHidden": [...hidden] });
   }
 
   /** A Character Perk more, at the end of the list - its list opened. */
