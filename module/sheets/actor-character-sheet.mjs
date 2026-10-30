@@ -1773,6 +1773,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           .filter(part => part.value || (part.label !== "Effects")).map(part => partLine(part)), total) };
     };
     const strikeRoll = rollOf("strike", [{ label: "Haste", value: system.haste }, { label: "Awareness", value: system.awareness }]);
+    // A Foundation's Wound as its workings say it, one line each, and the Health Threshold's penalty after them.
+    const woundOf = key => {
+      const step = system.effects?.workings?.[`wound.${key}`];
+      const value = system.combat?.wound?.[key] ?? 0;
+      const total = value - thresholdPenalty;
+      const named = (step?.parts ?? []).filter(part => Number(part.value) !== 0);
+      const lines = [
+        ...(named.length ? named.map(part => partLine({ label: part.label, value: part.value }))
+          : [partLine({ label: "Base", value: step?.base ?? value })]),
+        ...(step?.contributions ?? []).map(contributionLine),
+        ...(thresholdPenalty ? [partLine({ label: "Health Threshold", value: -thresholdPenalty })] : [])
+      ];
+      return { total, tip: breakdownTable(lines, total) };
+    };
     const dodgeRoll = rollOf("dodge", [{ label: "Defense Value", value: system.defenseValue }]);
     const strike = system.combat?.strike ?? 0;
     context.combatRolls = {
@@ -1789,10 +1803,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           strike: value,
           strikeCrit: critOf("strike"),
           strikeWorkings: breakdownTable([partLine({ label: "Strike", value: strikeRoll.total }), ...own.map(contributionLine)], value),
-          // The Wound as it was: the Damage Attribute, every effect, this Foundation's own, and what the dice pick up.
-          wound: system.combat?.wound?.[key] ?? 0,
+          // The Wound: the Damage Attribute, every effect, this Foundation's own - and a Health Threshold's penalty in the
+          // number too, as the Strike's is (the user's), a line of its own under them.
+          wound: woundOf(key).total,
           woundCrit: critOf("wound"),
-          woundWorkings: workings[`wound.${key}`]
+          woundWorkings: woundOf(key).tip
         };
       })
     };
