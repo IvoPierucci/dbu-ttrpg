@@ -1491,7 +1491,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Read off the derived Size, or the stored one where it was not derived - and Medium where neither says: a picker with
     // nothing selected shows its first option, Small, and the next submit of the sheet saved that (the user's: new
     // characters came out Small).
-    const built = ((typeof size === "string") ? size : (size?.chosen ?? size?.key)) || DBUCharacterData.DEFAULT_SIZE;
+    const read = ((typeof size === "string") ? size : (size?.chosen ?? size?.key)) || DBUCharacterData.DEFAULT_SIZE;
+    // Nor a value that is no Size at all: that too would leave the picker on its first option.
+    const built = (read in DBUCharacterData.SIZES) ? read : DBUCharacterData.DEFAULT_SIZE;
     context.sizeOptions = Object.entries(DBUCharacterData.SIZES)
       .filter(([key, definition]) => definition.selectable || (key === built))
       .map(([key, definition]) => ({
