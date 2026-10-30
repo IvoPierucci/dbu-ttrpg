@@ -4301,6 +4301,14 @@
   font-size: 15px;
 }
 
+/* Initiative's name is a button, and Foundry gives a button a height of its own (2em) - which made its row, Might's too,
+   taller than the rest. As tall as the other names here. */
+.dbu-ttrpg .dbu-box-grid .stat-roll {
+  height: auto;
+  min-height: 0;
+  line-height: inherit;
+}
+
 .dbu-ttrpg .dbu-box-grid .stat-roll em {
   color: var(--dbu-accent);
 }
