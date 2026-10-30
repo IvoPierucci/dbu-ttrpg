@@ -17356,10 +17356,19 @@ async function foundToss(message) {
  * increase the Damage Category of that Attacking Maneuver by 1 Category (this effect does not stack if you scored a
  * Critical Result on both Combat Rolls)" - asked of its user once the Wound Roll is made.
  */
+/**
+ * Whether a State's Triggered effect built here rather than as a block was set Automatic on the Settings tab (the user's) -
+ * Feral (1)'s, Incorporeal (1)'s. Kept with the blocks' own, under an id of its own (the sheet's STATE_CODE_TRIGGERS).
+ */
+function automaticOn(actor, id) {
+  return (actor?.getFlag?.(SCOPE, "automatic") ?? []).includes(id);
+}
+
 async function askUnhinged(attacker, attack, wound) {
   if (!attacker?.isOwner || ((Number(attacker.system.states?.feral) || 0) < 2)) return false;
   const critical = (attack.result?.strike?.outcome === "critical") || (wound?.outcome === "critical");
   if (!critical) return false;
+  if (automaticOn(attacker, "state:feral#unhinged")) return true;
   return foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"],
     window: { title: "Unhinged" },
@@ -20414,6 +20423,7 @@ async function incorporealShaken(actor) {
 async function incorporealAnswer(target, wound, damage) {
   if (!((Number(target?.system?.states?.incorporeal) || 0) > 0) || !(damage > 0)) return null;
   if (!((Number(wound?.total) || 0) < ((Number(target.system.life?.max) || 0) / 4))) return null;
+  if (automaticOn(target, "state:incorporeal#no-damage")) return true;
   return (await askPlayerChoice(target, `${target.name}: Incorporeal - its Wound under a quarter of your Maximum Life Points`,
     [{ value: "yes", label: "Take no Damage from it" }, { value: "no", label: "Take it" }])) === "yes";
 }

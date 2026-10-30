@@ -25,9 +25,6 @@ text: >
 
 ---
 
-# (2) is a Counter Action more for every Round spent in it, the one it is entered in included: the
-# Counter Actions are counted against what is spent this Round, so one more is there at once.
-#
 # (3), (4) and (5) are once a Combat Round, each counted on its own - `round:multiple-arms.*` among
 # the uses a new Round hands back (chat.mjs ARMS_USES). (3) and (4) are Triggered: the player's to
 # use or not, so each is a button - (3) a card offered on a Physical hit, (4) "Roll 4: Multiple Arms"
@@ -35,8 +32,15 @@ text: >
 # until it is pressed. (5) is the "Instant" button on the Basic Attack's row.
 [passive]
 weapons.wielded min= 4;
-actions.counter += 1;
 diminishing.defense.onPhysicalHit = true;
 combination.extraRoll = true;
 basicAttack.asInstant = true;
 attacks.free min= 4;
+
+# (2) Triggered, as printed: a Counter Action gained on entering, and again as each Combat Round starts while in it - held as
+# Mindful's Tranquil holds its, gone when the Round turns over. Offered, or set Automatic on the Settings tab (the user's).
+[triggered/state/multiple-arms, effect 2]
+actions.counterGained += 1;
+
+[triggered/start-of-round, effect 2]
+actions.counterGained += 1;
