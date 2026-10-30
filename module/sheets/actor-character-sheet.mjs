@@ -11,8 +11,9 @@ import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnf
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stateTriggerBlocks } from "../effects/registry.mjs";
 import { grantedUniques } from "../unique.mjs";
-import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
+import { getTrait, printedLines, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
+import { entryTip } from "../maneuvers.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
@@ -1613,9 +1614,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       resources: windowIs === "resources", conditions: windowIs === "conditions" };
 
     // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
+    // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together.
     const shownOf = (list, row, active, byDefault = false) => {
       const pinned = (pins[list] ?? []).includes(row.key) || (byDefault && !(unpins[list] ?? []).includes(row.key));
-      return { ...row, byDefault, pinned, shown: pinned || active, temporary: active && !pinned };
+      const tip = (row.text !== undefined)
+        ? entryTip(printedLines(row.text), row.special ? ["Special State: entered only through an effect."] : []) : "";
+      return { ...row, byDefault, pinned, shown: pinned || active, temporary: active && !pinned, tip };
     };
 
     // States, and the Special States apart (the user's: only Mindful, Raging, Superior, Surging and Undying are entered for

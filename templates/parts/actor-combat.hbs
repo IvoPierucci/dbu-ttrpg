@@ -27,7 +27,7 @@
           {{#each stateRows as |state|}}
           <div class="dbu-crow{{#if state.active}} active{{/if}}">
             <button type="button" class="condition-toggle" data-action="toggleState"
-                    data-state="{{state.key}}" data-tooltip="{{#if state.special}}Special State: entered only through an effect. {{/if}}{{state.text}}"
+                    data-state="{{state.key}}" data-tooltip-html="{{state.tip}}"
                     aria-pressed="{{#if state.active}}true{{else}}false{{/if}}">
               <span class="condition-mark">{{#if state.active}}&#10003;{{/if}}</span>
               <span class="condition-name">{{state.name}}</span>
@@ -90,7 +90,7 @@
           {{#each conditionRows as |condition|}}
           <div class="dbu-crow{{#if condition.active}} active{{/if}}">
             <button type="button" class="condition-toggle" data-action="toggleCondition"
-                    data-condition="{{condition.key}}" data-tooltip="{{condition.text}}"
+                    data-condition="{{condition.key}}" data-tooltip-html="{{condition.tip}}"
                     aria-pressed="{{#if condition.active}}true{{else}}false{{/if}}">
               <span class="condition-mark">{{#if condition.active}}&#10003;{{/if}}</span>
               <span class="condition-name">{{condition.name}}</span>
@@ -565,7 +565,7 @@
 
         {{#if combatWindow.conditions}}
         {{#each conditionPicks as |condition|}}
-        <label class="dbu-pick{{#if condition.pinned}} on{{/if}}" data-tooltip="{{condition.text}}">
+        <label class="dbu-pick{{#if condition.pinned}} on{{/if}}" data-tooltip-html="{{condition.tip}}">
           <input type="checkbox" data-action="pinCombat" data-list="conditions" data-key="{{condition.key}}" {{#if condition.pinned}}checked{{/if}}/>
           {{condition.name}}
         </label>
