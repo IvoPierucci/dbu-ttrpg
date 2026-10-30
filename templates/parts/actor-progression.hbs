@@ -90,11 +90,12 @@
   <section class="progression-summary">
     <div class="dbu-table-wrap">
       <table class="progression-table dbu-progress-row">
-        {{! Level and Total TP as wide as the Level and TP of the table under it, so the two line up (the user's). }}
+        {{! Level and Total TP as wide as the Level and TP of the table under it, so the two line up - and TP as wide as Total TP
+            (the user's). }}
         <colgroup>
           <col class="col-level"/>
           {{#each attributeColumns}}<col/>{{/each}}
-          <col/>
+          <col class="col-tp"/>
           <col class="col-tp"/>
         </colgroup>
         <thead>
