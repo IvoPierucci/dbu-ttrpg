@@ -37,6 +37,20 @@
     {{/if}}
   </section>
 
+  {{! Set by hand, for what nothing on the sheet works out yet - from the Progression tab (the user's). }}
+  <section class="panel">
+    <h3 class="panel-title">Tier of Power and Critical Target</h3>
+    <div class="character-fields">
+      <label data-tooltip="Adjustment from Transformations and effects. Breakthrough caps the result at BToP + 2.">ToP Mod
+        <input type="number" name="system.tierOfPowerModifier" value="{{system.tierOfPowerModifier}}"/>
+      </label>
+
+      <label data-tooltip="Base Die result needed to crit. Effects can lower it to 7.">Crit Target
+        <input type="number" name="system.criticalTarget" value="{{system.criticalTarget}}" min="7" max="10"/>
+      </label>
+    </div>
+  </section>
+
   {{! The States' Triggered effects, set beforehand as a Racial Trait's are (the user's): Triggered, offered where its
       moment is, to take or leave; Automatic, it answers that moment by itself, every time - the State held or not yet. }}
   {{#if stateTriggers.length}}

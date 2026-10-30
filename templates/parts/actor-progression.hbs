@@ -37,14 +37,7 @@
         <input type="number" name="system.powerLevel" value="{{system.powerLevel}}" min="1" max="30"/>
       </label>
 
-      <label data-tooltip="Adjustment from Transformations and effects. Breakthrough caps the result at BToP + 2.">ToP Mod
-        <input type="number" name="system.tierOfPowerModifier" value="{{system.tierOfPowerModifier}}"/>
-      </label>
-
-      <label data-tooltip="Base Die result needed to crit. Effects can lower it to 7.">Crit Target
-        <input type="number" name="system.criticalTarget" value="{{system.criticalTarget}}" min="7" max="10"/>
-      </label>
-
+      {{! ToP Mod and Crit Target are on the Settings tab (the user's). }}
       {{! Sum of every TP grant from Level 1 up to the current Power Level. }}
       <span class="character-readout" data-tooltip="Total granted up to your Power Level">
         <em>Technique Points</em>
