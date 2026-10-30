@@ -2630,6 +2630,18 @@ export async function takeRapidMovement(actor) {
   await (await import("./chat.mjs")).answerFor(actor, "rapid-movement");
 }
 
+/**
+ * Whom a Maneuver that targets one Character must be aimed at, by its entry's "Target an Opponent" or "Target an Ally" - told
+ * apart by the Allies lists (allies.mjs). The Attacking Maneuvers left out: an attack may still be aimed at an Ally.
+ */
+const TARGET_SIDE = Object.freeze({
+  "analysis": "opponent", "feint": "opponent", "god-bind": "opponent", "insult": "opponent", "internal-attack": "opponent",
+  "intuit": "opponent", "search": "opponent", "sense": "opponent", "snatch": "opponent", "terrify": "opponent", "thrust": "opponent",
+  "alternate-sight-fourth-effect": "opponent", "experienced-fighter-second-effect": "opponent",
+  "light-consumption-first-effect": "opponent", "noble-dragon-maneuver": "opponent",
+  "treatment": "ally"
+});
+
 /** Take the Actions, once the Maneuver has actually committed. */
 async function payActions(actor, maneuver, spent = null) {
   const { kind, amount } = actionCostOf(maneuver, spent);
@@ -5239,6 +5251,17 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       : ((maneuver.id === SENSE_MANEUVER) || several) ? "" : whyHidden(actor, targetActor);
     if (unseen) {
       ui.notifications.warn(unseen);
+      return false;
+    }
+    // "Target an Opponent" / "Target an Ally" - by the Allies lists (allies.mjs).
+    const side = TARGET_SIDE[maneuver.id];
+    const allied = areAllies(targetActor, actor);
+    if ((side === "opponent") && allied) {
+      ui.notifications.warn(`${targetActor.name} is your Ally: ${maneuver.name} targets an Opponent.`);
+      return false;
+    }
+    if ((side === "ally") && !allied && (targetActor.uuid !== actor.uuid)) {
+      ui.notifications.warn(`${targetActor.name} is not your Ally: ${maneuver.name} targets an Ally.`);
       return false;
     }
   }
