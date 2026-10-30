@@ -3758,7 +3758,8 @@ async function beginGrapple(grappler, grappled) {
   // Extension Attack (2): "While you are Grappling an Opponent who is 3 or more Squares away from you, you do not suffer the Guard Down
   // Condition."
   const { squaresAway } = await import("./maneuvers.mjs");
-  const extended = (grappler.system?.effects?.slots?.["extension.noGuardDown"] === true) && ((Number(squaresAway(grappler, grappled)) || 0) >= 3);
+  const extended = (grappler.system?.effects?.slots?.["extension.noGuardDown"] === true) && !areAllies(grappler, grappled)
+    && ((Number(squaresAway(grappler, grappled)) || 0) >= 3);
   for (const actor of [grappler, grappled]) {
     if ((actor === grappler) && ((gripDifference(grappler, grappled) >= 3) || extended)) continue;
     await setCondition(actor, "guard-down", 1);
@@ -17913,14 +17914,14 @@ function offerBouncyMove(message, actor, attacker) {
  */
 function offerDisarming(message, attacker, target) {
   if (!attacker || !target || (attacker.uuid === target.uuid) || attacker.system?.defeated
-    || (attacker.system?.effects?.slots?.["disarming.onMiss"] !== true)) return;
+    || (attacker.system?.effects?.slots?.["disarming.onMiss"] !== true) || areAllies(target, attacker)) return;
   offerMove(message, attacker, { key: `disarming:${target.uuid}`, flag: "disarmingMissed",
     name: `Bluff ${target.name}`, reason: "Disarming Demeanor - Bluff vs Perception/Intuition", clashAt: target.uuid });
 }
 
 /** Disarming Demeanor (2) open to the one hit: theirs, unspent this Round, at an Opponent. */
 function disarmingOpen(target, attacker) {
-  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated
+  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated && !areAllies(target, attacker)
     && (target.system?.effects?.slots?.["disarming.onHit"] === true)
     && (target.getFlag?.(SCOPE, "disarmingHit") !== roundKey()));
 }
@@ -17982,7 +17983,7 @@ async function redefendWith(message, target, defence, wager = 0, foundation = "e
  * unspent this Round, at an Opponent.
  */
 function angelicOpen(target, attacker) {
-  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated
+  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated && !areAllies(target, attacker)
     && (target.system?.effects?.slots?.["angelic.redodge"] === true)
     && (!game.combat?.started || (actionsWithin(target, "counter") >= 1))
     && (target.getFlag?.(SCOPE, "angelicRound") !== roundKey()));
@@ -19730,7 +19731,7 @@ async function spendOverwhelm(attack) {
  * it had, so that is not asked again.
  */
 function offerTailGrapple(message, attacker, target, attack) {
-  if (!attacker || !target || (attack?.maneuverId !== "tail-attack")) return;
+  if (!attacker || !target || (attack?.maneuverId !== "tail-attack") || areAllies(target, attacker)) return;
   if (attacker.system?.effects?.slots?.["tail.grapple"] !== true) return;
   if (attacker.getFlag?.(SCOPE, "tailGrappleRound") === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.tailGrapple && (offer.targetUuid === target.uuid))) return;
@@ -23218,7 +23219,8 @@ function clawsButtons(message, attack, container) {
   if (!attacker?.isOwner || !attack.claws || attack.clawsDone || (attacker.getFlag?.(SCOPE, "clawsRound") === roundKey())) return;
   const entry = targetResults(attack).find(each => (each.uuid === attack.claws) && each.own?.hit);
   const target = entry ? fromUuidSync(entry.uuid) : null;
-  if (!target) return;
+  // "hit an Opponent" - not an Ally (allies.mjs).
+  if (!target || areAllies(target, attacker)) return;
   const button = document.createElement("button");
   button.type = "button";
   button.className = "dbu-clash-button";
@@ -26903,8 +26905,10 @@ async function openIntervene(message, attack) {
  * Protector's waiver, asked: theirs, unused this Round, the Ally within 8 Squares (unmeasured - no tokens - the table's).
  * Taken, the Round's use noted. Whether it was.
  */
-async function protectorWaives(actor, ally) {
+async function protectorWaives(actor, ally, attacker = null) {
   if (actor?.system?.effects?.slots?.["protector.intervene"] !== true) return false;
+  // "If an Opponent hits one of your Allies" - not an Ally's attack (allies.mjs).
+  if (attacker && areAllies(actor, attacker)) return false;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.(SCOPE, "protectorRound") === round) return false;
   const away = squaresBetween(actor.getActiveTokens?.(false, true)?.[0], ally?.getActiveTokens?.(false, true)?.[0]);
@@ -26952,7 +26956,7 @@ async function playIntervene(message, attack, { who, ally, effect }) {
 
   // Protector: "you may use the Intervene Maneuver without spending a Counter Action as long as you are within 8 Squares of
   // that Ally. If you do, increase your Damage Reduction by 2(T)" - asked, once a Round.
-  const protector = await protectorWaives(actor, allyActor);
+  const protector = await protectorWaives(actor, allyActor, fromUuidSync(attack?.attackerUuid ?? ""));
   // Refined Combat's Protector: "When a Studied Ally is hit by an Attacking Maneuver, you may use the Intervene Maneuver
   // without spending a Counter Action" - asked, once a Round.
   const refinedFree = !protector && refinedOpen(actor, "protector") && isStudiedBy(actor, allyActor.uuid)
@@ -27883,7 +27887,7 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
 
   // Disarming Demeanor (3): answered with the Defend Maneuver - the attack waits on its attacker.
   const attacker = fromUuidSync(attack.attackerUuid);
-  const swap = (defence in DEFEND_OPTIONS) && disarmingSwapOpen(attacker, attack)
+  const swap = (defence in DEFEND_OPTIONS) && !areAllies(target, attacker) && disarmingSwapOpen(attacker, attack)
     ? { disarmingSwap: { pending: true, uuid: target.uuid, name: target.name, entry } } : {};
 
   return settleAttack(message, {
