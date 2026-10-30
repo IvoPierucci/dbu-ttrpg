@@ -137,12 +137,13 @@ function resourceRows(system, owned = null) {
   // can hold Power, and a row that appears only once you have some cannot tell you the
   // Resource is there. That is why the two checklists above it list what you could have.
   //
-  // "Could have" is holding the Trait that hands it out, which today means owning that
-  // Maneuver: every Resource in the library is declared by one. When a Condition or a
-  // Talent declares one, this is the line that grows.
+  // "Could have" is holding the Trait that hands it out, whatever kind it is - a Racial Trait's, a Talent's, a Maneuver's
+  // (the user's: "only the ones a Trait of yours gives access to"). A Special Maneuver's once a Skill has opened it - Holding
+  // Back at 2 Ranks of Concealment. Power, everybody's through Power Up; Unfamiliar, anybody's, since an Opponent inflicts it.
+  const opened = new Set((system.specialManeuvers ?? []).filter(entry => entry.open).map(entry => entry.maneuver));
   const reachable = Object.entries(known)
-    .filter(([, definition]) => !definition.internal && !definition.manual
-      && definition.id && owned?.has(definition.id))
+    .filter(([, definition]) => !definition.internal && definition.id && (definition.manual || (definition.id === "power-up")
+      || ((getTrait(definition.id)?.special === true) ? opened.has(definition.id) : owned?.has(definition.id))))
     .map(([key]) => key);
 
   const keys = [...new Set([
@@ -166,6 +167,11 @@ function resourceRows(system, owned = null) {
       return {
         key,
         name,
+        // Whether something of theirs gives it - offered in the Manage window - rather than only held right now.
+        reachable: reachable.includes(key),
+        // What gives it, said in the Manage window. Not Power's: everybody has Power Up (the user's).
+        source: (definition.id === "power-up") ? "" : definition.manual ? "can be inflicted on you"
+          : definition.source ? `from ${definition.source}` : "",
         stacks: Number(resource.stacks) || 0,
         // The file's ceiling wins over the one written onto the character: the file is
         // where the rule lives, and a character still carrying an older copy of it
@@ -244,17 +250,39 @@ function stackRows(system, owned = null) {
 /**
  * The Traits this character carries, by the id a Trait file is keyed under.
  *
- * Which is what answers "could they get this Resource". Maneuvers only, because a
- * Maneuver is the only kind of Trait that declares one today - a Maneuver Item carries
- * the id of the file it came from, and one built by hand carries none, which is right:
- * a Maneuver somebody wrote themselves declares no Resource.
+ * Which is what answers "could they get this Resource". Every kind of Item: a Maneuver by the file it came from, a Unique
+ * Ability by its library entry (Body Change's Unfamiliar), a Gear Item by its own, a Racial Trait or a Talent by the
+ * source it was added from. One built by hand carries none, which is right: a Trait somebody wrote themselves declares no
+ * Resource.
  */
 function traitsOwned(actor) {
   return new Set(actor.items
-    .filter(item => item.type === "maneuver")
-    // A Unique Ability by its file - Body Change's Unfamiliar.
-    .map(item => item.system.maneuverId || item.system.unique?.libraryId)
+    .flatMap(item => [item.system.maneuverId, item.system.unique?.libraryId, item.system.gearId,
+      item.flags?.["dbu-ttrpg"]?.sourceId])
     .filter(Boolean));
+}
+
+/**
+ * What this character's own Traits say, each with its name - what "a Trait that names it" is asked of (the user's): a
+ * Special State only such a Trait enters, the Super Stacks only such a Trait gives. Every Item they carry, its file's
+ * words where it has one, and the Advantages built into their Signature Techniques.
+ */
+function ownWords(actor) {
+  const words = [];
+  for (const item of actor.items ?? []) {
+    const id = item.system?.maneuverId || item.system?.unique?.libraryId || item.system?.gearId
+      || item.flags?.["dbu-ttrpg"]?.sourceId || "";
+    // Duel's Super Stacks are lost in it, never given - the one everybody's Maneuver that names them.
+    if (id === "duel") continue;
+    const file = id ? getTrait(id) : null;
+    words.push({ name: item.name, text: [file?.text, file?.script, item.system?.text, item.system?.script]
+      .filter(Boolean).join("\n") });
+    for (const feature of signatureOfTechnique(item).features) {
+      const def = featureDefOf(feature.id);
+      if (def) words.push({ name: `${def.name} (${item.name})`, text: [def.text, def.script].filter(Boolean).join("\n") });
+    }
+  }
+  return words;
 }
 
 /**
@@ -520,6 +548,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       escapeGrapple: DBUCharacterSheet._onEscapeGrapple,
       deleteItem: DBUCharacterSheet._onDeleteItem,
       toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
+      openCombatWindow: DBUCharacterSheet._onOpenCombatWindow,
+      closeCombatWindow: DBUCharacterSheet._onCloseCombatWindow,
+      pinCombat: DBUCharacterSheet._onPinCombat,
+      setThresholdCheck: DBUCharacterSheet._onSetThresholdCheck,
+      stepCapacity: DBUCharacterSheet._onStepCapacity,
       toggleCondition: DBUCharacterSheet._onToggleCondition,
       toggleState: DBUCharacterSheet._onToggleState,
       stepState: DBUCharacterSheet._onStepState,
@@ -593,6 +626,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * and it should lapse when the sheet is closed.
    */
   #combatEditMode = false;
+
+  /**
+   * Which of the Combat tab's windows is open over the sheet: the Turn State, or a list's Manage window - "turn", "states",
+   * "resources", "conditions" - or none. Kept on the sheet so a re-render, which a tick in the window causes, leaves it open.
+   */
+  #combatWindow = null;
+
+  /** The Escape that closes that window rather than the sheet, while one is open. */
+  #combatKey = null;
 
   /**
    * Which collapsible sections are open, by their `data-section` name.
@@ -1415,6 +1457,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.uniqueAbilities = await this.#prepareUniqueAbilities(context.techniques);
     // Delayed's Imminent on this character: a mark, not a Combat Condition.
     context.imminent = this.actor.getFlag("dbu-ttrpg", "imminent") ?? [];
+    this.#prepareCombatTab(context);
     context.racialSkillRanks = this._prepareRacialSkillRanks();
     context.racialSkillBenefit = this.#racialSkillBenefit();
     context.racialAttributeChoices = this._prepareRacialAttributeChoices();
@@ -1544,6 +1587,179 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       name: other?.name ?? "somebody who is no longer here",
       actions: actionsLeft(this.actor, "standard")
     };
+  }
+
+  /**
+   * The Combat tab as the user laid it out (2026-10-30): the Turn State behind one long button, three short lists beside
+   * Dice, Aptitudes and Capacity, then the Health Thresholds and the Combat Rolls.
+   *
+   * Each list shows what its Manage window chose and whatever is happening besides - the second "temporary", gone when it
+   * ends. The Manage windows offer what this character could come to have: every State and Combat Condition, a Special
+   * State greyed while no Trait of theirs names it (still pickable - the user's), the Resources something of theirs gives.
+   */
+  #prepareCombatTab(context) {
+    const system = this.actor.system;
+    const slots = system.effects?.slots ?? {};
+    const pins = system.combatPins ?? {};
+    const words = ownWords(this.actor);
+    const namedBy = pattern => words.filter(entry => pattern.test(entry.text)).map(entry => entry.name);
+    const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const windowIs = this.#combatWindow;
+    context.combatWindow = { open: Boolean(windowIs), turn: windowIs === "turn", states: windowIs === "states",
+      resources: windowIs === "resources", conditions: windowIs === "conditions" };
+
+    const shownOf = (list, row, active) => {
+      const pinned = (pins[list] ?? []).includes(row.key);
+      return { ...row, pinned, shown: pinned || active, temporary: active && !pinned };
+    };
+
+    // States, and the Special States apart (the user's: only Mindful, Raging, Superior, Surging and Undying are entered for
+    // the story). One only a Trait enters is greyed in Manage while none of theirs names it - "the Liquid State".
+    const states = [...context.states, ...context.specialStates].map(state => {
+      const traitOnly = state.special && !state.anyone;
+      const by = traitOnly ? namedBy(new RegExp(`\\b${escapeRegex(state.name)} (Special )?State`)) : [];
+      return { ...shownOf("states", state, state.active), greyed: traitOnly && !by.length, grantedBy: by.join(", ") };
+    });
+    context.stateRows = states.filter(state => state.shown);
+    context.statePicks = { states: states.filter(state => !state.special), special: states.filter(state => state.special) };
+
+    // The published Combat Conditions, each a checklist entry as before.
+    const conditions = context.conditions.map(condition => shownOf("conditions", condition, condition.active));
+    context.conditionRows = conditions.filter(condition => condition.shown);
+    context.conditionPicks = conditions;
+
+    // Everything with stacks. The Super Stacks only where something of theirs gives them (the user's: Signature
+    // Advantages, Talents, Transformations) - Synthetic Muscle's "cannot possess any" never.
+    const superReachable = (slots["synthetic.noSuperStacks"] !== true) && (namedBy(/Super Stack/).length > 0);
+    const resources = context.stacks.map(row => {
+      const reachable = row.key.startsWith("diminishing.") || ((row.key === "superStack") ? superReachable : row.reachable);
+      const givers = (row.key === "superStack") ? namedBy(/Super Stack/).join(", ") : "";
+      const source = givers ? `from ${givers}` : (row.source ?? "");
+      return { ...shownOf("resources", row, row.stacks > 0), reachable, source };
+    });
+    context.resourceRows = resources.filter(row => row.shown);
+    context.resourcePicks = resources.filter(row => row.reachable || (row.stacks > 0));
+
+    // Dice, above the Aptitudes.
+    context.diceBoxes = [
+      { label: "ToP Extra Dice", value: system.dice?.extra?.formula || "—",
+        tip: "Rolled alongside the Base Die. Grows with Tier of Power." },
+      { label: "Greater Dice", value: system.dice?.greater?.formula ? `+${system.dice.greater.formula}` : "—",
+        tip: "Extra Dice granted by effects, one Category above the Tier of Power Extra Dice." },
+      { label: "Critical Dice", value: system.dice?.critical?.formula ? `+${system.dice.critical.formula}` : "—",
+        tip: "Added on a critical. Skill rolls always use a flat 1d4 instead." },
+      { label: "Max Category Increase", value: system.dice?.maxCategoryIncrease ?? 0,
+        tip: "Most Dice Categories an Extra Dice may be raised by: Base Tier of Power + 1. Energy Charges are exempt." }
+    ];
+
+    // The Aptitudes, the two Diminishing counters first (the user's).
+    const offense = system.diminishing?.offense ?? {};
+    const defense = system.diminishing?.defense ?? {};
+    const size = system.size ?? {};
+    const built = DBUCharacterData.SIZES[size.chosen ?? size.key]?.label ?? size.label;
+    context.aptitudes = {
+      dimOffense: { value: offense.stacks ?? 0, note: offense.penalty ? `Strike -${offense.penalty}` : "",
+        tip: "One stack for each Attacking Maneuver after the third this round. Each takes 1(bT) off your Strike Rolls." },
+      dimDefense: { value: defense.stacks ?? 0,
+        note: [defense.penalty ? `Dodge -${defense.penalty}` : "", `+${defense.perAttack ?? 0} per attack`].filter(Boolean).join(" · "),
+        tip: "Each stack reduces your Dodge Rolls by 1. Gained per Attacking Maneuver aimed at you, unless you use the Defend Maneuver." },
+      size: { value: size.label ?? "", tip: (built && (built !== size.label))
+        ? `Your Size Category right now. Built as ${built}: an effect has moved it.`
+        : "Your Size Category right now - what an effect changes, not the one chosen in Progression." },
+      // "Counted in Squares beyond the ones you are touching": 0 is the adjacent Squares, one away.
+      reach: { value: `${(Number(system.meleeRange) || 0) + 1} sq.` }
+    };
+
+    // Capacity, set by hand as well as by the Maneuvers that spend it.
+    context.capacity = { spent: system.capacity?.spent ?? 0, max: system.capacity?.max ?? 0,
+      remaining: system.capacity?.remaining ?? 0 };
+
+    // The Health Thresholds as the user's sheet has them: a box per Threshold, ticked when its Steadfast Check was passed.
+    const keys = Object.keys(DBUCharacterData.THRESHOLDS);
+    const here = keys.indexOf(system.threshold?.key ?? "healthy");
+    const lifeMax = Number(system.life?.max) || 0;
+    context.steadfastBoxes = keys
+      .map((key, index) => ({ key, index }))
+      .filter(({ key }) => DBUCharacterData.THRESHOLDS[key].counts)
+      .map(({ key, index }) => {
+        // Where it begins: at or below this much Life - the line of the Threshold above it.
+        const above = DBUCharacterData.THRESHOLDS[keys[index - 1]]?.above ?? 0;
+        const reached = index <= here;
+        const auto = slots[`steadfast.autoPass.${key}`] === true;
+        const result = system.thresholdChecks?.[key] ?? "";
+        const passed = auto || (result === "pass");
+        return {
+          key,
+          label: DBUCharacterData.THRESHOLDS[key].label,
+          at: Math.floor(lifeMax * above),
+          here: index === here,
+          reached,
+          passed,
+          auto,
+          pending: reached && !auto && !result,
+          tip: !reached ? "Not reached"
+            : auto ? "Passed by an effect"
+            : !result ? "Not rolled yet: the Steadfast Check is still to make"
+            : passed ? "Steadfast Check passed. Untick it to make it a failure"
+            : "Steadfast Check failed. Tick it to make it a pass"
+        };
+      });
+
+    // The Combat Rolls: a box each for Strike and Dodge - what the value is made of, what effects add, the total with its
+    // Critical Target and the dice it is rolled with - and a row per Foundation for Strike and Wound underneath.
+    const workings = context.workings ?? {};
+    const baseDie = DBUCharacterData.BASE_DIE;
+    const extra = system.dice?.extra?.formula ?? "";
+    // The Critical Target a Combat Roll of this kind is made against, as the roll itself works it out (chat.mjs).
+    const critOf = slot => {
+      const base = Number(system.criticalTarget) || 10;
+      const shift = (Number(slots["criticalTarget.combat"]?.add) || 0) + (Number(slots[`criticalTarget.${slot}`]?.add) || 0);
+      const whip = ["strike", "wound"].includes(slot) && (slots["pseudoTail.criticalSeven"] === true);
+      const aimedAt = whip ? Math.min(7, base) : base;
+      return (shift || whip) ? Math.max(Math.min(aimedAt, DBUCharacterData.CRITICAL_TARGET_MIN), aimedAt + shift) : base;
+    };
+    // The Base Die, twice where an effect rolls it twice and keeps the higher - Masterful Strike, Masterful Dodge,
+    // Critical Wound.
+    const diceOf = slot => {
+      const twice = slots[`${slot}.baseDieTwice`] === true;
+      const die = twice ? `2${baseDie.slice(1)} (higher)` : baseDie;
+      return { twice, line: `${die}${extra ? ` + ${extra}` : ""}`, short: twice ? `2${baseDie.slice(1)}↑` : baseDie };
+    };
+    const strike = system.combat?.strike ?? 0;
+    const dodge = system.combat?.dodge ?? 0;
+    context.combatRolls = {
+      strike: { haste: system.haste, awareness: system.awareness, effects: strike - system.haste - system.awareness,
+        total: strike, crit: critOf("strike"), dice: diceOf("strike"), workings: workings.strike },
+      dodge: { defenseValue: system.defenseValue, effects: dodge - system.defenseValue, total: dodge,
+        crit: critOf("dodge"), dice: diceOf("dodge"), workings: workings.dodge },
+      strikeDice: diceOf("strike"),
+      woundDice: diceOf("wound"),
+      byFoundation: Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => ({
+        label: foundation.label,
+        strike: system.combat?.strikeBy?.[key] ?? strike,
+        strikeCrit: critOf("strike"),
+        strikeWorkings: workingsTable(system, `strike.${key}`, { extra: atRollTime(system, "strike") }) || workings.strike,
+        wound: system.combat?.wound?.[key] ?? 0,
+        woundCrit: critOf("wound"),
+        woundWorkings: workings[`wound.${key}`]
+      }))
+    };
+
+    // The Turn State button's chips: what you are in the middle of, said without opening it. Red where it leaves you open.
+    const grapple = context.grapple;
+    context.turnChips = [
+      ...(context.imminent ?? []).map(mark => ({ label: "Imminent", warn: true, tip: `${mark.name} by ${mark.attackerName}` })),
+      grapple ? { label: grapple.grappler ? "Grappling" : "Grappled", warn: true,
+        tip: grapple.grappler ? `Holding ${grapple.name}` : `Held by ${grapple.name}` } : null,
+      context.charging ? { label: "Charging", tip: context.charging.name } : null,
+      ...(context.marks ?? []).map(mark => ({ label: mark.name, tip: mark.description })),
+      context.inside ? { label: "Inside", tip: context.inside.name } : null,
+      context.transfigured ? { label: "Turned into", tip: context.transfigured.item } : null,
+      context.weather ? { label: "Weather", tip: context.weather.note } : null,
+      context.delayed ? { label: "Delaying Maneuver", tip: context.delayed.name } : null,
+      context.hidden?.from?.length ? { label: "Hidden", tip: context.hidden.summary } : null
+    ].filter(Boolean);
   }
 
   /** The Grappler lets go. An Instant Maneuver, on their turn. */
@@ -2041,9 +2257,28 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
   }
 
-  /** A Resource the table gives and takes, a stack at a time - Unfamiliar. */
+  /**
+   * A Resource the table gives and takes, a stack at a time - Unfamiliar, and from the Combat tab's Resources list every
+   * row there: the Diminishing counters and the Super Stacks are kept elsewhere on the character, and stepped there.
+   */
   static async _onStepResource(event, target) {
     const key = target.dataset.resource;
+    const step = Number(target.dataset.step) || 0;
+    const system = this.actor.system;
+    if (key === "diminishing.defense") {
+      return this.actor.update({ "system.diminishingDefense": Math.max(0, (Number(system.diminishingDefense) || 0) + step) });
+    }
+    if (key === "superStack") {
+      return this.actor.update({ "system.superStacks": Math.max(0, Math.min(DBUCharacterData.MAX_SUPER_STACKS,
+        (Number(system.superStacks) || 0) + step)) });
+    }
+    if (key === "diminishing.offense") {
+      // A stack is an attack past the round's free ones: added past them, taken off while there is one.
+      const attacks = Number(system.attacksThisRound) || 0;
+      const stacks = system.diminishing?.offense?.stacks ?? 0;
+      const free = stacks ? (attacks - stacks) : Math.max(attacks, DBUCharacterData.FREE_ATTACKS_PER_ROUND);
+      return this.actor.update({ "system.attacksThisRound": Math.max(0, free + Math.max(0, stacks + step)) });
+    }
     const now = Number(this.actor.system.resources?.[key]?.stacks) || 0;
     const { setResource } = await import("../chat.mjs");
     return setResource(this.actor, key, Math.max(0, now + (Number(target.dataset.step) || 0)));
@@ -2742,6 +2977,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** Maximum attribute points a single "Attribute Addition" row may distribute. */
 
   /** @override */
+  /** A Combat tab window does not outlive the sheet, nor does its Escape. */
+  _onClose(options) {
+    if (this.#combatKey) document.removeEventListener("keydown", this.#combatKey, true);
+    this.#combatKey = null;
+    this.#combatWindow = null;
+    super._onClose(options);
+  }
+
   _onRender(context, options) {
     super._onRender(context, options);
 
@@ -2778,6 +3021,27 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         const tp = row.querySelector("[data-perk-tp]");
         if (tp) tp.value = String((select.value === "Skill Improvement") ? DBUCharacterData.SKILL_IMPROVEMENT_TP : 0);
       });
+    }
+
+    // The Combat tab's open window, over the whole sheet as the Benefits windows are: taken out of the tab it was drawn in.
+    // One left from the render before goes - unless this render drew none, and the window is still meant to be open.
+    {
+      const fresh = this.element.querySelector(".tab .dbu-combat-overlay");
+      const old = this.element.querySelectorAll(":scope > .dbu-combat-overlay");
+      if (fresh || !this.#combatWindow) old.forEach(overlay => overlay.remove());
+      if (fresh) {
+        this.element.append(fresh);
+        fresh.addEventListener("pointerdown", event => { if (event.target === fresh) this.#closeCombatWindow(); });
+        if (!this.#combatKey) {
+          this.#combatKey = event => {
+            if ((event.key !== "Escape") || !this.#combatWindow) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.#closeCombatWindow();
+          };
+          document.addEventListener("keydown", this.#combatKey, true);
+        }
+      }
     }
 
     // An Attribute Addition's or a Skill Improvement's Benefits: its window of toggles.
@@ -6398,6 +6662,51 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static _onToggleCombatEdit() {
     this.#combatEditMode = !this.#combatEditMode;
     this.render();
+  }
+
+  /** The Turn State's window, or a list's Manage window, over the sheet. */
+  static _onOpenCombatWindow(event, target) {
+    this.#combatWindow = target.dataset.window || null;
+    this.render();
+  }
+
+  /** Closed: the button, Escape, or a click beside it. The Turn State's Edit locks again with it. */
+  static _onCloseCombatWindow() {
+    this.#closeCombatWindow();
+  }
+
+  #closeCombatWindow() {
+    const wasEditing = this.#combatEditMode;
+    this.#combatWindow = null;
+    this.#combatEditMode = false;
+    this.element?.querySelectorAll(":scope > .dbu-combat-overlay").forEach(overlay => overlay.remove());
+    if (this.#combatKey) document.removeEventListener("keydown", this.#combatKey, true);
+    this.#combatKey = null;
+    if (wasEditing) this.render();
+  }
+
+  /** A Manage window's tick: shown in its list while nothing is happening, or not. */
+  static async _onPinCombat(event, target) {
+    const list = target.dataset.list;
+    const key = target.dataset.key;
+    if (!["states", "resources", "conditions"].includes(list) || !key) return;
+    const now = new Set(this.actor.system.combatPins?.[list] ?? []);
+    if (target.checked) now.add(key);
+    else now.delete(key);
+    return this.actor.update({ [`system.combatPins.${list}`]: [...now] });
+  }
+
+  /** A Health Threshold's box: ticked, its Steadfast Check was passed; unticked, failed (the user's sheet). */
+  static async _onSetThresholdCheck(event, target) {
+    const key = target.dataset.threshold;
+    if (!(key in (this.actor.system.thresholdChecks ?? {}))) return;
+    return this.actor.update({ [`system.thresholdChecks.${key}`]: target.checked ? "pass" : "fail" });
+  }
+
+  /** The Capacity spent this round, a Ki at a time - by hand, without a Maneuver (the user's). */
+  static async _onStepCapacity(event, target) {
+    const spent = Number(this.actor.system.capacity?.spent) || 0;
+    return this.actor.update({ "system.capacity.spent": Math.max(0, spent + (Number(target.dataset.step) || 0)) });
   }
 
   /**

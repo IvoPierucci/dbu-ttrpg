@@ -105,7 +105,9 @@ export function statesFor(actor) {
       active: level > 0,
       levelled: (Number(trait.levels) || 1) > 1,
       // A Special State: entered only through an effect, never for the story (the user's terminology).
-      special: trait.specialState === true
+      special: trait.specialState === true,
+      // One of them anybody may come to be in - Entrusted, Spectator - rather than only through a Trait that names it.
+      anyone: trait.anyoneMayEnter === true
     };
   });
 }

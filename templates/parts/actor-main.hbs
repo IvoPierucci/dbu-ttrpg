@@ -28,21 +28,10 @@
   <section class="panel">
     <h3 class="panel-title">Aptitudes</h3>
     <div class="stat-grid">
-      <div class="stat"><em>Might</em><span data-tooltip-html="{{workings.might}}">{{system.might}}</span></div>
+      {{! Might, Soak, Damage Reduction, Initiative and the Speeds are on the Combat tab (the user's). }}
       <div class="stat"><em>Surgency</em><span data-tooltip-html="{{workings.surgency}}">{{system.surgency}}</span></div>
-      <div class="stat"><em>Soak Value</em><span data-tooltip-html="{{workings.soakValue}}">{{system.soakValue}}</span></div>
-      <div class="stat"
-           data-tooltip="Taken off a Wound Roll like Soak, but the Damage Category does not reduce or ignore it, and multipliers on Soak do not touch it.">
-        <em>Damage Reduction</em>
-        <span data-tooltip-html="{{workings.damageReduction}}">{{system.damageReduction}}</span>
-      </div>
-      <div class="stat">
-        <button type="button" class="stat-roll" data-action="rollInitiative"
-                data-tooltip="Roll Initiative, and place yourself in the Combat Tracker if you are in one"><em>Initiative</em></button>
-        <span data-tooltip-html="{{workings.initiative}}">{{system.initiativeBonus}}</span>
-      </div>
-      <div class="stat"><em>Speed</em><span>{{system.speed.normal}}</span></div>
-      <div class="stat"><em>Speed (Boosted)</em><span>{{system.speed.boosted}}</span></div>
+      <div class="stat" data-tooltip="A Stress Test is 1d10 plus this. Power Level + 1, less one per Steadfast failure.">
+        <em>Stress Bonus</em><span data-tooltip-html="{{workings.stressBonus}}">{{system.stressBonus}}</span></div>
       <div class="stat" data-tooltip="Your Scholarship Modifier when you create or modify an Item, without any bonus from Enhancements and Forms.">
         <em>Ingenuity</em><span>{{system.ingenuity}}</span></div>
     </div>

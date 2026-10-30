@@ -37,4 +37,39 @@
     {{/if}}
   </section>
 
+  {{! Turning the round and the Encounter over by hand - for a table playing without a formal Encounter, and for putting
+      things right when one gets out of step. A Combat does the round on its own. }}
+  <section class="panel">
+    <h3 class="panel-title">Rounds and Encounters</h3>
+    <div class="capacity">
+      <button type="button" data-action="resetCapacity" class="capacity-reset"
+              data-tooltip="Give back the Actions and the Capacity, and clear the attacks made and the Diminishing stacks. A Combat does this on its own each round.">New round</button>
+      <button type="button" data-action="resetEncounter" class="capacity-reset"
+              data-tooltip="Restore maneuvers limited to once per encounter">New encounter</button>
+      {{#if canEnterEncounter}}
+      {{! For somebody who walked into an Encounter already under way: it began for
+          everyone else when it began, and it begins for them now. Gone once taken, and
+          back with the next Encounter. }}
+      <button type="button" data-action="enterEncounter" class="capacity-reset"
+              data-tooltip="The Combat Encounter begins for you now. Applies your start-of-Encounter effects, once.">Enter the encounter</button>
+      {{/if}}
+    </div>
+  </section>
+
+  {{! Stand-ins for systems that do not exist yet, so the rules that depend on them
+      can still be tried out. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Debug
+      <span class="panel-note">Manual stand-ins for unimplemented systems</span>
+    </h3>
+    <label class="debug-toggle"
+           data-tooltip="From a Form entered through the Transformation Maneuver: Maximum Ki doubled, Max Capacity increased by half.">
+      <input type="checkbox" name="system.debug.kiMultiplier"
+             {{#if system.debug.kiMultiplier}}checked{{/if}}/>
+      Ki Multiplier
+      {{#if system.debug.kiMultiplier}}<em>Ki x2 &middot; Capacity x1.5</em>{{/if}}
+    </label>
+  </section>
+
 </div>

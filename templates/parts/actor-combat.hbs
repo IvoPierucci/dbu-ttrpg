@@ -1,202 +1,197 @@
 <div class="tab {{tabs.combat.cssClass}}" data-group="primary" data-tab="combat">
 
-  {{! These values are kept by hand during play, so they are locked until asked for:
-      a stray click should not quietly change what a character has left. }}
-  {{#if imminent.length}}
-  {{! Delayed's mark: not a Combat Condition, so it is not among them. }}
-  <section class="panel">
-    {{#each imminent as |mark|}}
-    <p class="dbu-profile-note">Imminent &mdash; {{mark.name}} by {{mark.attackerName}}</p>
-    {{/each}}
-  </section>
-  {{/if}}
-
-  <section class="panel">
-    <h3 class="panel-title">
-      Turn State
-      <button type="button" class="edit-toggle {{#if combatEditMode}}active{{/if}}"
-              data-action="toggleCombatEdit"
-              data-tooltip="Unlock the turn state and action counts for editing">
-        {{#if combatEditMode}}Done{{else}}Edit{{/if}}
-      </button>
-    </h3>
-
-    <div class="turn-state">
-      <div class="stat"
-           data-tooltip="An Instant Maneuver cannot follow another Instant.">
-        <em>Last was Instant</em>
-        {{#if combatEditMode}}
-        <input type="checkbox" name="system.lastManeuverWasInstant"
-               {{#if system.lastManeuverWasInstant}}checked{{/if}}/>
-        {{else}}
-        <span>{{#if system.lastManeuverWasInstant}}Yes{{else}}No{{/if}}</span>
-        {{/if}}
-      </div>
-
-      {{#if charging}}
-      {{! While a charge is held, the rules close off most of what you could otherwise
-          do - so it is said plainly rather than only discovered by being refused. }}
-      <div class="stat stat-charging"
-           data-tooltip="Until this is thrown you suffer Guard Down and cannot use another Attacking or Standard Maneuver.">
-        <em>Charging</em>
-        <span>{{charging.name}}<span class="stat-of">{{#if charging.profile}} &middot; {{charging.profile}}{{/if}} &middot; {{charging.charges}} charge{{#unless charging.one}}s{{/unless}}</span></span>
-      </div>
-      {{/if}}
-
-      {{#each marks as |mark|}}
-      {{! Hyped, Analyzed - marks a Maneuver put on somebody. Not Combat Conditions: the
-          entries that create them do not call them that, and the checklist below is the
-          published ones. Said here because this is where the sheet says what you are in
-          the middle of. }}
-      <div class="stat stat-charging" data-tooltip="{{mark.description}}">
-        <em>{{mark.name}}</em>
-        <span>{{#if mark.stacking}}{{mark.stacks}}{{else}}yes{{/if}}</span>
-        {{#if mark.note}}<i class="stat-note">{{mark.note}}</i>{{/if}}
-        {{#if mark.endable}}
-        <button type="button" class="gear-remove" data-action="endMark" data-mark="{{mark.key}}"
-                data-tooltip="End it">&times;</button>
-        {{/if}}
-      </div>
+  {{! The Turn State, behind one long button (the user's): every player knows what their turn holds, so it opens when
+      asked. What it is in the middle of is said on the button anyway - red where it leaves you open. }}
+  <button type="button" class="dbu-turn-button" data-action="openCombatWindow" data-window="turn"
+          data-tooltip="Actions, attacks, what you are in the middle of. Open it to see it all, and to edit it.">
+    <span class="dbu-turn-name">Turn State</span>
+    <span class="dbu-turn-chips">
+      {{#each turnChips as |chip|}}
+      <span class="dbu-chip{{#if chip.warn}} warn{{/if}}" data-tooltip="{{chip.tip}}">{{chip.label}}</span>
       {{/each}}
+    </span>
+    <span class="dbu-turn-open">Open &#9656;</span>
+  </button>
 
-      {{#if inside}}
-      {{! Inside somebody, from the Internal Attack Maneuver. Out of the Initiative Order
-          until they burst out, which is a thing everyone at the table needs to see. }}
-      <div class="stat stat-charging" data-tooltip="They lose 2(T) of Soak Value and Defense Value until you come back out. Burst out from the card that put you in there.">
-        <em>Inside</em>
-        <span>{{inside.name}}</span>
-        <i class="stat-note">{{inside.note}}</i>
-      </div>
-      {{/if}}
+  <div class="dbu-combat-top">
+    {{! Three short lists, each showing what its Manage window chose and whatever is happening besides - that one
+        "temporary", and gone when it ends. }}
+    <div class="dbu-combat-lists">
+      <section class="dbu-clist">
+        <header class="dbu-clist-head">
+          <h3>States</h3>
+          <button type="button" class="dbu-manage" data-action="openCombatWindow" data-window="states"
+                  data-tooltip="Choose which States this list shows while you are not in them">Manage</button>
+        </header>
+        <div class="dbu-clist-rows">
+          {{#each stateRows as |state|}}
+          <div class="dbu-crow{{#if state.active}} active{{/if}}">
+            <button type="button" class="condition-toggle" data-action="toggleState"
+                    data-state="{{state.key}}" data-tooltip="{{#if state.special}}Special State: entered only through an effect. {{/if}}{{state.text}}"
+                    aria-pressed="{{#if state.active}}true{{else}}false{{/if}}">
+              <span class="condition-mark">{{#if state.active}}&#10003;{{/if}}</span>
+              <span class="condition-name">{{state.name}}</span>
+            </button>
+            {{#if state.temporary}}<span class="dbu-temp" data-tooltip="Not chosen in Manage: shown while it lasts">temporary</span>{{/if}}
+            {{#if state.levelled}}
+            {{! Levels are not unlocks: at level 2 the level 1 effect is worth 2(T), so
+                which level you are at changes every number the State gives. }}
+            <span class="condition-stacks">
+              <button type="button" class="stack-step" data-action="stepState"
+                      data-state="{{state.key}}" data-step="-1"
+                      data-tooltip="One level lower">&minus;</button>
+              <span class="stack-count">{{state.level}}/{{state.levels}}</span>
+              <button type="button" class="stack-step" data-action="stepState"
+                      data-state="{{state.key}}" data-step="1"
+                      data-tooltip="One level higher">+</button>
+            </span>
+            {{/if}}
+          </div>
+          {{else}}
+          <p class="dbu-clist-empty">Nothing chosen. Manage picks what shows here.</p>
+          {{/each}}
+        </div>
+      </section>
 
-      {{#if transfigured}}
-      {{! What they were turned into by the Transfiguration Maneuver. The Condition is in
-          the list above; this is the Item, which the rule needs by name for the rest of
-          the Encounter - "for all intents and purposes, becomes that Item". }}
-      <div class="stat stat-charging" data-tooltip="Turned into this until the end of the Combat Encounter. If the Item is destroyed or used up, they die - a Karma Point avoids dying and not being Defeated. Targeting them with the Transfiguration Maneuver turns them back.">
-        <em>Turned into</em>
-        <span>{{transfigured.item}}</span>
-        <i class="stat-note">{{transfigured.note}}</i>
-      </div>
-      {{/if}}
+      <section class="dbu-clist">
+        <header class="dbu-clist-head">
+          <h3>Resources</h3>
+          <button type="button" class="dbu-manage" data-action="openCombatWindow" data-window="resources"
+                  data-tooltip="Choose which Resources this list shows while you hold none">Manage</button>
+        </header>
+        <div class="dbu-clist-rows">
+          {{#each resourceRows as |row|}}
+          <div class="dbu-crow{{#if row.stacks}} active{{/if}}" data-tooltip="{{row.tooltip}}">
+            <span class="dbu-crow-label">{{row.name}}{{#if row.stacks}}{{#if row.note}}<small>{{row.note}}</small>{{/if}}{{/if}}</span>
+            {{#if row.temporary}}<span class="dbu-temp" data-tooltip="Not chosen in Manage: shown while you hold it">temporary</span>{{/if}}
+            <span class="condition-stacks">
+              <button type="button" class="stack-step" data-action="stepResource"
+                      data-resource="{{row.key}}" data-step="-1" data-tooltip="One less">&minus;</button>
+              {{! A Resource with no ceiling says how many and nothing more: "3/0" would be
+                  a maximum of nothing rather than no maximum at all. }}
+              <span class="stack-count">{{row.stacks}}{{#if row.max}}/{{row.max}}{{/if}}</span>
+              <button type="button" class="stack-step" data-action="stepResource"
+                      data-resource="{{row.key}}" data-step="1" data-tooltip="One more">+</button>
+            </span>
+          </div>
+          {{else}}
+          <p class="dbu-clist-empty">Nothing chosen. Manage picks what shows here.</p>
+          {{/each}}
+        </div>
+      </section>
 
-      {{#if weather}}
-      {{! What Battle Weathers count as for this character. A row of its own rather than
-          part of a mark: it is a fact about them as they stand, whatever put it there. }}
-      <div class="stat stat-charging" data-tooltip="{{weather.note}}">
-        <em>Weather</em>
-        <span>{{weather.tiers}} Tier{{#unless weather.one}}s{{/unless}} lower</span>
-      </div>
-      {{/if}}
-
-      {{#if delayed}}
-      {{! A Maneuver paid for and held back. Nothing watches for the trigger - it is in
-          the player's own words and the table is what calls it - so what this row is for
-          is having it written where everybody can read it. }}
-      <div class="stat stat-charging"
-           data-tooltip="Paid for and waiting. Use it from the card that announced it, as an Out-of-Sequence Maneuver costing nothing. It lapses at the start of your next turn.">
-        <em>Holding</em>
-        <span>{{delayed.name}}</span>
-        <i class="stat-note">on {{delayed.trigger}}</i>
-      </div>
-      {{/if}}
-
-      {{! What is left this round over what the round gives you. Both refill when the
-          round turns over, so the second number is the one that is yours to change. }}
-      <div class="stat" data-tooltip="Standard Actions left this round, of what each round gives you">
-        <em>Standard Actions</em>
-        {{#if combatEditMode}}
-        <input type="number" data-action-type="standard" value="{{system.actions.standard}}" min="0"/>
-        {{else}}
-        <span>{{actionsLeft.standard}}<span class="stat-of">/{{system.actions.standard}}</span></span>
+      <section class="dbu-clist">
+        <header class="dbu-clist-head">
+          <h3>Combat Conditions</h3>
+          <button type="button" class="dbu-manage" data-action="openCombatWindow" data-window="conditions"
+                  data-tooltip="Choose which Combat Conditions this list shows while you do not have them">Manage</button>
+        </header>
+        <div class="dbu-clist-rows">
+          {{#each conditionRows as |condition|}}
+          <div class="dbu-crow{{#if condition.active}} active{{/if}}">
+            <button type="button" class="condition-toggle" data-action="toggleCondition"
+                    data-condition="{{condition.key}}" data-tooltip="{{condition.text}}"
+                    aria-pressed="{{#if condition.active}}true{{else}}false{{/if}}">
+              <span class="condition-mark">{{#if condition.active}}&#10003;{{/if}}</span>
+              <span class="condition-name">{{condition.name}}</span>
+            </button>
+            {{#if condition.temporary}}<span class="dbu-temp" data-tooltip="Not chosen in Manage: shown while it lasts">temporary</span>{{/if}}
+            {{#if condition.stacking}}
+            {{! A stacking Condition needs a number, not a tick: Broken at three stacks is
+                a different rule from Broken at one. }}
+            <span class="condition-stacks">
+              <button type="button" class="stack-step" data-action="stepCondition"
+                      data-condition="{{condition.key}}" data-step="-1"
+                      data-tooltip="One less stack">&minus;</button>
+              <span class="stack-count">{{condition.stacks}}/{{condition.maxStacks}}</span>
+              <button type="button" class="stack-step" data-action="stepCondition"
+                      data-condition="{{condition.key}}" data-step="1"
+                      data-tooltip="One more stack">+</button>
+            </span>
+            {{/if}}
+          </div>
+          {{else}}
+          <p class="dbu-clist-empty">Nothing chosen. Manage picks what shows here.</p>
+          {{/each}}
+        </div>
+        {{#if conditionAbilities}}
+        {{! What a Condition lets you do about it: standing up from Prone, or clashing
+            free of Pinned. Each costs the Actions its own effect asks for. Under the list, so it never scrolls away. }}
+        <ul class="condition-abilities">
+          {{#each conditionAbilities as |ability|}}
+          <li>
+            <button type="button" class="rollable" data-action="useConditionAbility"
+                    data-source="{{ability.sourceId}}" data-block="{{ability.block}}"
+                    {{#unless ability.affordable}}disabled{{/unless}}
+                    data-tooltip="{{ability.tooltip}}">
+              {{ability.label}}
+            </button>
+          </li>
+          {{/each}}
+        </ul>
         {{/if}}
-      </div>
-
-      <div class="stat" data-tooltip="Counter Actions left this round, of what each round gives you">
-        <em>Counter Actions</em>
-        {{#if combatEditMode}}
-        <input type="number" data-action-type="counter" value="{{system.actions.counter}}" min="0"/>
-        {{else}}
-        <span>{{actionsLeft.counter}}<span class="stat-of">/{{system.actions.counter}}</span></span>
-        {{#if actionsLeft.convertible}}
-        <a class="dbu-convert-action" data-action="convertAction"
-           data-tooltip="Convert a Standard Action into a Counter Action. At most 6 Counter Actions a Combat Round."><i class="fas fa-right-left"></i></a>
-        {{/if}}
-        {{/if}}
-      </div>
-
-      {{! Wear accrued within a Combat Round. Both clear when the round turns over. }}
-      <div class="stat"
-           data-tooltip="Attacking Maneuvers made this round. Each one after the third costs a stack, and each stack reduces your Strike Rolls by 1(bT).">
-        <em>Attacks this round</em>
-        {{#if combatEditMode}}
-        <input type="number" name="system.attacksThisRound" value="{{system.attacksThisRound}}" min="0"/>
-        {{else}}
-        <span>{{system.attacksThisRound}}</span>
-        {{/if}}
-        <i class="stat-note">Dim. Offense {{system.diminishing.offense.stacks}} &middot; Strike -{{system.diminishing.offense.penalty}}</i>
-      </div>
-
-      {{! Two a Combat Round, and the count resets with the round like the one above. }}
-      <div class="stat"
-           data-tooltip="Absolute Attacks made this round. Two is the limit, and a third cannot be declared.">
-        <em>Absolute Attacks</em>
-        {{#if combatEditMode}}
-        <input type="number" name="system.absoluteAttacksThisRound"
-               value="{{system.absoluteAttacksThisRound}}" min="0"/>
-        {{else}}
-        <span>{{system.absoluteAttacks.used}}<span class="stat-of">/{{system.absoluteAttacks.max}}</span></span>
-        {{/if}}
-      </div>
-
-      <div class="stat"
-           data-tooltip="Each stack reduces your Dodge Rolls by 1. Gained per Attacking Maneuver aimed at you, unless you use the Defend Maneuver.">
-        <em>Dim. Defense</em>
-        {{#if combatEditMode}}
-        <input type="number" name="system.diminishingDefense" value="{{system.diminishingDefense}}" min="0"/>
-        {{else}}
-        <span>{{system.diminishingDefense}}</span>
-        {{/if}}
-        <i class="stat-note">Dodge -{{system.diminishing.defense.penalty}} &middot; +{{system.diminishing.defense.perAttack}} per attack</i>
-      </div>
-
-      {{! Not a Combat Condition, though it stacks like one - and not per-round wear
-          either: how long a stack lasts is decided by whatever applied it. }}
-      <div class="stat"
-           data-tooltip="Each stack costs you 1(bT) Life Points at the start of your turn. How long a stack lasts is decided by whatever applied it.">
-        <em>Damage Over Time</em>
-        {{#if combatEditMode}}
-        <input type="number" name="system.dotStacks" value="{{system.dotStacks}}" min="0"/>
-        {{else}}
-        <span>{{system.dot.stacks}}</span>
-        {{/if}}
-        {{#if system.dot.stacks}}
-        <i class="stat-note">-{{system.dot.total}} Life at the start of your turn</i>
-        {{/if}}
-      </div>
-
-      {{! Not per-round wear like the two above: Super Stacks are held until something
-          takes them away. Shown beside them because this is where the counters live. }}
-      <div class="stat"
-           data-tooltip="Muscle Penalty: 1(bT) off Strike and Dodge per stack, 1(bT) more at three. Solid Bulk: 1(bT) of Soak per stack. Massive Power: 1/4 of your Force Modifier on the Wound Rolls of Physical and Energy Attacks, per stack.">
-        <em>Super Stacks</em>
-        {{#if combatEditMode}}
-        <input type="number" name="system.superStacks" value="{{system.superStacks}}"
-               min="0" max="{{system.superStack.max}}"/>
-        {{else}}
-        <span>{{system.superStack.stacks}}<span class="stat-of">/{{system.superStack.max}}</span></span>
-        {{/if}}
-        {{#if system.superStack.stacks}}
-        <i class="stat-note">Strike &amp; Dodge -{{system.superStack.musclePenalty}}
-          &middot; Soak +{{system.superStack.solidBulk}}
-          &middot; Wound +{{system.superStack.massivePower}}</i>
-        {{/if}}
-      </div>
-
+      </section>
     </div>
-  </section>
 
-  {{! Where the character stands, and what being there is costing them. }}
+    <div class="dbu-combat-side">
+      {{! Dice that ride alongside the Base Die. }}
+      <h3 class="dbu-side-title">Dice <span class="panel-note">Base Die: 1d10</span></h3>
+      <div class="dbu-box-grid">
+        {{#each diceBoxes as |box|}}
+        <div class="stat" data-tooltip="{{box.tip}}"><em>{{box.label}}</em><span>{{box.value}}</span></div>
+        {{/each}}
+      </div>
+
+      <h3 class="dbu-side-title">Aptitudes</h3>
+      <div class="dbu-box-grid">
+        <div class="stat" data-tooltip="{{aptitudes.dimOffense.tip}}">
+          <em>Dim. Offense</em><span>{{aptitudes.dimOffense.value}}</span>
+          {{#if aptitudes.dimOffense.note}}<i class="stat-note">{{aptitudes.dimOffense.note}}</i>{{/if}}
+        </div>
+        <div class="stat" data-tooltip="{{aptitudes.dimDefense.tip}}">
+          <em>Dim. Defense</em><span>{{aptitudes.dimDefense.value}}</span>
+          <i class="stat-note">{{aptitudes.dimDefense.note}}</i>
+        </div>
+        <div class="stat"><em>Might</em><span data-tooltip-html="{{workings.might}}">{{system.might}}</span></div>
+        <div class="stat">
+          <button type="button" class="stat-roll" data-action="rollInitiative"
+                  data-tooltip="Roll Initiative, and place yourself in the Combat Tracker if you are in one"><em>Initiative</em></button>
+          <span data-tooltip-html="{{workings.initiative}}">{{system.initiativeBonus}}</span>
+        </div>
+        <div class="stat"><em>Soak Value</em><span data-tooltip-html="{{workings.soakValue}}">{{system.soakValue}}</span></div>
+        <div class="stat"
+             data-tooltip="Taken off a Wound Roll like Soak, but the Damage Category does not reduce or ignore it, and multipliers on Soak do not touch it.">
+          <em>Damage Reduction</em>
+          <span data-tooltip-html="{{workings.damageReduction}}">{{system.damageReduction}}</span>
+        </div>
+        <div class="stat" data-tooltip="{{aptitudes.size.tip}}"><em>Current Size</em><span>{{aptitudes.size.value}}</span></div>
+        <div class="stat"><em>Melee Reach</em><span data-tooltip-html="{{workings.meleeRange}}">{{aptitudes.reach.value}}</span></div>
+        <div class="stat"><em>Speed</em><span>{{system.speed.normal}} sq.</span></div>
+        <div class="stat"><em>Speed (Boosted)</em><span>{{system.speed.boosted}} sq.</span></div>
+      </div>
+
+      {{! The most Ki that may be spent within one Combat Round - set by hand too, without a Maneuver (the user's). }}
+      <div class="dbu-capacity" data-tooltip="Ki spendable per Combat Round. Refills when the round turns over.">
+        <div class="dbu-capacity-head">
+          <em>Capacity</em>
+          <span class="dbu-capacity-edit">
+            <button type="button" class="stack-step" data-action="stepCapacity" data-step="-1"
+                    data-tooltip="Give back 1 Ki of Capacity">&minus;</button>
+            <input type="number" name="system.capacity.spent" value="{{capacity.spent}}" min="0"
+                   aria-label="Ki spent this round"/>
+            <span class="dbu-capacity-of">/ {{capacity.max}}</span>
+            <button type="button" class="stack-step" data-action="stepCapacity" data-step="1"
+                    data-tooltip="Spend 1 Ki of Capacity">+</button>
+          </span>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width: {{capacityPercent}}%"></div></div>
+        <span class="dbu-capacity-left">{{capacity.remaining}} left this round</span>
+      </div>
+    </div>
+  </div>
+
+  {{! Where the character stands, and what being there is costing them: a box per Threshold, ticked when its Steadfast
+      Check was passed (the user's sheet). }}
   <section class="panel">
     <h3 class="panel-title">
       Health Threshold
@@ -207,350 +202,377 @@
       </button>
       {{/if}}
     </h3>
-    <div class="stat-grid">
-      <div class="stat threshold-{{system.threshold.key}}">
-        <em>Threshold</em><span>{{system.threshold.label}}</span>
-      </div>
-      <div class="stat" data-tooltip="Failed Steadfast Checks at or below your current threshold">
-        <em>Failures</em><span>{{system.threshold.failures}}</span>
-      </div>
-      <div class="stat" data-tooltip="1(bT) per failed Steadfast Check, off Strike, Dodge and Wound">
-        <em>Combat Rolls</em><span>-{{system.threshold.penalty}}</span>
-      </div>
-      <div class="stat" data-tooltip="A Stress Test is 1d10 plus this. Power Level + 1, less one per Steadfast failure.">
-        <em>Stress Bonus</em><span>{{system.stressBonus}}</span>
-      </div>
+    <div class="stat dbu-threshold-now threshold-{{system.threshold.key}}">
+      <em>Threshold</em><span>{{system.threshold.label}}</span>
+    </div>
+    <div class="dbu-table-wrap">
+      <table class="dbu-ctable dbu-steadfast">
+        <thead>
+          <tr>
+            {{#each steadfastBoxes as |box|}}
+            <th scope="col" class="{{#if box.here}}here{{/if}}">{{box.label}} <span>(&le;{{box.at}})</span></th>
+            {{/each}}
+            <th scope="col">Penalties</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            {{#each steadfastBoxes as |box|}}
+            <td class="{{#if box.here}}here{{/if}}{{#unless box.reached}} unreached{{/unless}}{{#if box.pending}} pending{{/if}}"
+                data-tooltip="{{box.tip}}">
+              <input type="checkbox" data-action="setThresholdCheck" data-threshold="{{box.key}}"
+                     aria-label="{{box.label}}: Steadfast Check passed"
+                     {{#if box.passed}}checked{{/if}} {{#unless box.reached}}disabled{{/unless}} {{#if box.auto}}disabled{{/if}}/>
+            </td>
+            {{/each}}
+            <td class="dbu-penalty" data-tooltip="1(bT) per failed Steadfast Check, off Strike, Dodge and Wound">-{{system.threshold.penalty}}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
-  <!-- Values used only in combat. -->
+  {{! Each of these says what it is made of, and what it will pick up on the way to
+      the dice - Diminishing Offense, a Health Threshold, the Extra Dice - none of
+      which is in the number, because none of it is true of a character rather than
+      of a roll. }}
   <section class="panel">
     <h3 class="panel-title">
       Combat Rolls
-      {{! Tier of Power Extra Dice ride on every one of these. }}
-      <span class="panel-note">Rolled as 1d10{{#if system.dice.extra.formula}} + {{system.dice.extra.formula}}{{/if}} + the value</span>
+      <span class="panel-note">Base Die + ToP Extra Dice + the value</span>
     </h3>
-    <div class="stat-grid">
-      {{! Each of these says what it is made of, and what it will pick up on the way to
-          the dice - Diminishing Offense, a Health Threshold, the Extra Dice - none of
-          which is in the number, because none of it is true of a character rather than
-          of a roll. }}
-      <div class="stat"><em>Strike</em>
-        <span data-tooltip-html="{{workings.strike}}">{{system.combat.strike}}</span></div>
-      {{! A Foundation's own Strike, shown only where something raises it apart. }}
-      {{#each strikeRolls as |strike|}}
-      <div class="stat">
-        <em>Strike &middot; {{strike.label}}</em>
-        <span data-tooltip-html="{{strike.workings}}">{{strike.value}}</span>
-      </div>
-      {{/each}}
-      <div class="stat"><em>Dodge</em>
-        <span data-tooltip-html="{{workings.dodge}}">{{system.combat.dodge}}</span></div>
-      {{! Wound uses the Damage Attribute, which depends on the attack's Foundation. }}
-      {{#each woundRolls as |wound|}}
-      <div class="stat">
-        <em>Wound &middot; {{wound.label}}</em>
-        <span data-tooltip-html="{{wound.workings}}">{{wound.value}}</span>
-      </div>
-      {{/each}}
-    </div>
-  </section>
-
-  <!-- Dice that ride alongside the Base Die. -->
-  <section class="panel">
-    <h3 class="panel-title">
-      Dice
-      <span class="panel-note">Base Die: 1d10</span>
-    </h3>
-    <div class="stat-grid">
-      <div class="stat" data-tooltip="Rolled alongside the Base Die. Grows with Tier of Power.">
-        <em>Extra Dice</em>
-        <span>{{#if system.dice.extra.formula}}{{system.dice.extra.formula}}{{else}}&mdash;{{/if}}</span>
-      </div>
-      <div class="stat" data-tooltip="Extra Dice granted by effects, one Category above the Tier of Power Extra Dice.">
-        <em>Greater Dice</em>
-        <span>{{system.dice.greater.formula}}</span>
-      </div>
-      <div class="stat" data-tooltip="Added on a critical. Skill rolls always use a flat 1d4 instead.">
-        <em>Critical Dice</em>
-        <span>{{system.dice.critical.formula}}</span>
-      </div>
-      <div class="stat" data-tooltip="Most Dice Categories an Extra Dice may be raised by: Base Tier of Power + 1. Energy Charges are exempt.">
-        <em>Max Category Increase</em>
-        <span>{{system.dice.maxCategoryIncrease}}</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- The most Ki that may be spent within one Combat Round. -->
-  <section class="panel">
-    <h3 class="panel-title">
-      Capacity
-      <span class="panel-note">Ki spendable per Combat Round</span>
-    </h3>
-    <div class="capacity">
-      <div class="resource-card resource-capacity">
-        <label>Spent this round</label>
-        <div class="resource-values">
-          <span class="computed-value">{{system.capacity.spent}}</span>
-          <span class="resource-sep">/</span>
-          <span class="computed-value">{{system.capacity.max}}</span>
+    <div class="dbu-rolls">
+      <div class="dbu-roll">
+        <h4>Strike</h4>
+        <div class="dbu-cells">
+          <div class="stat"><em>Haste</em><span data-tooltip-html="{{workings.haste}}">{{combatRolls.strike.haste}}</span></div>
+          <div class="stat"><em>Awareness</em><span data-tooltip-html="{{workings.awareness}}">{{combatRolls.strike.awareness}}</span></div>
         </div>
-        <div class="meter"><div class="meter-fill" style="width: {{capacityPercent}}%"></div></div>
+        <div class="stat dbu-effects" data-tooltip-html="{{combatRolls.strike.workings}}">
+          <em>Effects</em><span>{{numberFormat combatRolls.strike.effects decimals=0 sign=true}}</span>
+        </div>
+        <div class="stat dbu-total" data-tooltip-html="{{combatRolls.strike.workings}}">
+          <em>Strike</em><span>{{combatRolls.strike.total}} <span class="dbu-crit">({{combatRolls.strike.crit}}+)</span></span>
+          <i class="dbu-dice{{#if combatRolls.strike.dice.twice}} twice{{/if}}">{{combatRolls.strike.dice.line}}</i>
+        </div>
       </div>
-      <button type="button" data-action="resetCapacity" class="capacity-reset"
-              data-tooltip="Give back the Actions and the Capacity, and clear the attacks made and the Diminishing stacks. A Combat does this on its own each round.">New round</button>
-      <button type="button" data-action="resetEncounter" class="capacity-reset"
-              data-tooltip="Restore maneuvers limited to once per encounter">New encounter</button>
-      {{#if canEnterEncounter}}
-      {{! For somebody who walked into an Encounter already under way: it began for
-          everyone else when it began, and it begins for them now. Gone once taken, and
-          back with the next Encounter. }}
-      <button type="button" data-action="enterEncounter" class="capacity-reset"
-              data-tooltip="The Combat Encounter begins for you now. Applies your start-of-Encounter effects, once.">Enter the encounter</button>
-      {{/if}}
-      <span class="capacity-note">{{system.capacity.remaining}} left this round</span>
+      <div class="dbu-roll">
+        <h4>Dodge</h4>
+        <div class="stat"><em>Defense Value</em><span data-tooltip-html="{{workings.defenseValue}}">{{combatRolls.dodge.defenseValue}}</span></div>
+        <div class="stat dbu-effects" data-tooltip-html="{{combatRolls.dodge.workings}}">
+          <em>Effects</em><span>{{numberFormat combatRolls.dodge.effects decimals=0 sign=true}}</span>
+        </div>
+        <div class="stat dbu-total" data-tooltip-html="{{combatRolls.dodge.workings}}">
+          <em>Dodge</em><span>{{combatRolls.dodge.total}} <span class="dbu-crit">({{combatRolls.dodge.crit}}+)</span></span>
+          <i class="dbu-dice{{#if combatRolls.dodge.dice.twice}} twice{{/if}}">{{combatRolls.dodge.dice.line}}</i>
+        </div>
+      </div>
+    </div>
+
+    {{! Strike and Wound by the attack's Foundation - Wound uses the Damage Attribute the Foundation names. }}
+    <div class="dbu-table-wrap">
+      <table class="dbu-ctable dbu-attack-types">
+        <thead>
+          <tr>
+            <th scope="col">Attack Type</th>
+            <th scope="col">Strike (crit) <span class="{{#if combatRolls.strikeDice.twice}}twice{{/if}}">{{combatRolls.strikeDice.short}}</span></th>
+            <th scope="col">Wound (crit) <span class="{{#if combatRolls.woundDice.twice}}twice{{/if}}">{{combatRolls.woundDice.short}}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each combatRolls.byFoundation as |row|}}
+          <tr>
+            <th scope="row">{{row.label}}</th>
+            <td data-tooltip-html="{{row.strikeWorkings}}">{{numberFormat row.strike decimals=0 sign=true}} <span>({{row.strikeCrit}}+)</span></td>
+            <td data-tooltip-html="{{row.woundWorkings}}">{{numberFormat row.wound decimals=0 sign=true}} <span>({{row.woundCrit}}+)</span></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
     </div>
   </section>
 
-  {{#if grapple}}
-  {{! A Grapple holds two characters and each of them has half of it. The row says which
-      half this one is, because most of the rules in the entry turn on that, and offers
-      only the button that half has. }}
-  <section class="panel dbu-grapple">
-    <h3 class="panel-title">
-      Grapple
-      <span class="panel-note">
-        {{#if grapple.grappler}}Grappler &middot; holding {{grapple.name}}
-        {{else}}Grappled &middot; held by {{grapple.name}}{{/if}}
-      </span>
-    </h3>
+  {{! The window over the sheet - moved out of the tab when drawn (the sheet's _onRender), as the Benefits windows are. }}
+  {{#if combatWindow.open}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window{{#if combatWindow.turn}} turn{{/if}}" role="dialog" aria-modal="true">
+      {{#if combatWindow.turn}}
+      <header>
+        <h3>Turn State</h3>
+        {{! These values are kept by hand during play, so they are locked until asked for:
+            a stray click should not quietly change what a character has left. }}
+        <button type="button" class="edit-toggle {{#if combatEditMode}}active{{/if}}"
+                data-action="toggleCombatEdit"
+                data-tooltip="Unlock the turn state and action counts for editing">
+          {{#if combatEditMode}}Done{{else}}Edit{{/if}}
+        </button>
+      </header>
+      <div class="dbu-combat-window-body">
+        <div class="turn-state">
+          {{#each imminent as |mark|}}
+          {{! Delayed's mark: not a Combat Condition, so it is not among them. }}
+          <div class="stat stat-charging stat-warn stat-wide" data-tooltip="A Delayed attack waiting on you">
+            <em>Imminent</em><span>{{mark.name}}</span><i class="stat-note">by {{mark.attackerName}}</i>
+          </div>
+          {{/each}}
 
-    <p class="dbu-grapple-note">Guard Down for as long as it lasts, and it cannot be
-      taken off while you are in it.</p>
+          {{#if charging}}
+          {{! While a charge is held, the rules close off most of what you could otherwise
+              do - so it is said plainly rather than only discovered by being refused. }}
+          <div class="stat stat-charging stat-wide"
+               data-tooltip="Until this is thrown you suffer Guard Down and cannot use another Attacking or Standard Maneuver.">
+            <em>Charging</em>
+            <span>{{charging.name}}<span class="stat-of">{{#if charging.profile}} &middot; {{charging.profile}}{{/if}} &middot; {{charging.charges}} charge{{#unless charging.one}}s{{/unless}}</span></span>
+          </div>
+          {{/if}}
 
-    {{#if grapple.grappler}}
-    <button type="button" data-action="releaseGrapple" class="capacity-reset"
-            data-tooltip="End the Grapple. An Instant Maneuver, on your turn.">Let go</button>
-    {{else}}
-    {{! One Action, one Check. What the earlier attempts this turn bought shows beside
-        it, since that is what decides whether another one is worth an Action. }}
-    <button type="button" data-action="escapeGrapple" class="capacity-reset"
-            data-tooltip="Spend 1 Action on a Grapple Check against the Grappler. Lose it and you can try again: every Action spent this turn raises the next Check by 1(T).">Escape</button>
-    {{#if grapple.tried}}
-    <span class="capacity-note">{{grapple.tried}} tried this turn &middot; next Check
-      +{{grapple.nextBonus}}</span>
-    {{/if}}
-    <span class="capacity-note">{{grapple.actions}} Actions left this round</span>
-    {{/if}}
-  </section>
+          {{#each marks as |mark|}}
+          {{! Hyped, Analyzed - marks a Maneuver put on somebody. Not Combat Conditions: the
+              entries that create them do not call them that. Said here because this is where
+              the sheet says what you are in the middle of. }}
+          <div class="stat stat-charging" data-tooltip="{{mark.description}}">
+            <em>{{mark.name}}</em>
+            <span>{{#if mark.stacking}}{{mark.stacks}}{{else}}yes{{/if}}</span>
+            {{#if mark.note}}<i class="stat-note">{{mark.note}}</i>{{/if}}
+            {{#if mark.endable}}
+            <button type="button" class="gear-remove" data-action="endMark" data-mark="{{mark.key}}"
+                    data-tooltip="End it">&times;</button>
+            {{/if}}
+          </div>
+          {{/each}}
+
+          {{#if inside}}
+          {{! Inside somebody, from the Internal Attack Maneuver. Out of the Initiative Order
+              until they burst out, which is a thing everyone at the table needs to see. }}
+          <div class="stat stat-charging" data-tooltip="They lose 2(T) of Soak Value and Defense Value until you come back out. Burst out from the card that put you in there.">
+            <em>Inside</em>
+            <span>{{inside.name}}</span>
+            <i class="stat-note">{{inside.note}}</i>
+          </div>
+          {{/if}}
+
+          {{#if transfigured}}
+          {{! What they were turned into by the Transfiguration Maneuver. The Condition is in
+              the list; this is the Item, which the rule needs by name for the rest of
+              the Encounter - "for all intents and purposes, becomes that Item". }}
+          <div class="stat stat-charging" data-tooltip="Turned into this until the end of the Combat Encounter. If the Item is destroyed or used up, they die - a Karma Point avoids dying and not being Defeated. Targeting them with the Transfiguration Maneuver turns them back.">
+            <em>Turned into</em>
+            <span>{{transfigured.item}}</span>
+            <i class="stat-note">{{transfigured.note}}</i>
+          </div>
+          {{/if}}
+
+          {{#if weather}}
+          {{! What Battle Weathers count as for this character. A row of its own rather than
+              part of a mark: it is a fact about them as they stand, whatever put it there. }}
+          <div class="stat stat-charging" data-tooltip="{{weather.note}}">
+            <em>Weather</em>
+            <span>{{weather.tiers}} Tier{{#unless weather.one}}s{{/unless}} lower</span>
+          </div>
+          {{/if}}
+
+          {{#if delayed}}
+          {{! A Maneuver paid for and held back. Nothing watches for the trigger - it is in
+              the player's own words and the table is what calls it - so what this row is for
+              is having it written where everybody can read it. Called Delaying Maneuver, not
+              Holding: Holding Back's stacks are something else (the user's). }}
+          <div class="stat stat-charging"
+               data-tooltip="Paid for and waiting. Use it from the card that announced it, as an Out-of-Sequence Maneuver costing nothing. It lapses at the start of your next turn.">
+            <em>Delaying Maneuver</em>
+            <span>{{delayed.name}}</span>
+            <i class="stat-note">on {{delayed.trigger}}</i>
+          </div>
+          {{/if}}
+
+          <div class="stat"
+               data-tooltip="An Instant Maneuver cannot follow another Instant.">
+            <em>Last was Instant</em>
+            {{#if combatEditMode}}
+            <input type="checkbox" name="system.lastManeuverWasInstant"
+                   {{#if system.lastManeuverWasInstant}}checked{{/if}}/>
+            {{else}}
+            <span>{{#if system.lastManeuverWasInstant}}Yes{{else}}No{{/if}}</span>
+            {{/if}}
+          </div>
+
+          {{! What is left this round over what the round gives you. Both refill when the
+              round turns over, so the second number is the one that is yours to change. }}
+          <div class="stat" data-tooltip="Standard Actions left this round, of what each round gives you">
+            <em>Standard Actions</em>
+            {{#if combatEditMode}}
+            <input type="number" data-action-type="standard" value="{{system.actions.standard}}" min="0"/>
+            {{else}}
+            <span>{{actionsLeft.standard}}<span class="stat-of">/{{system.actions.standard}}</span></span>
+            {{/if}}
+          </div>
+
+          <div class="stat" data-tooltip="Counter Actions left this round, of what each round gives you">
+            <em>Counter Actions</em>
+            {{#if combatEditMode}}
+            <input type="number" data-action-type="counter" value="{{system.actions.counter}}" min="0"/>
+            {{else}}
+            <span>{{actionsLeft.counter}}<span class="stat-of">/{{system.actions.counter}}</span></span>
+            {{#if actionsLeft.convertible}}
+            <a class="dbu-convert-action" data-action="convertAction"
+               data-tooltip="Convert a Standard Action into a Counter Action. At most 6 Counter Actions a Combat Round."><i class="fas fa-right-left"></i></a>
+            {{/if}}
+            {{/if}}
+          </div>
+
+          {{! Wear accrued within a Combat Round; it clears when the round turns over. The Diminishing it costs is among the
+              Aptitudes now (the user's). }}
+          <div class="stat"
+               data-tooltip="Attacking Maneuvers made this round. Each one after the third costs a stack, and each stack reduces your Strike Rolls by 1(bT).">
+            <em>Attacks this round</em>
+            {{#if combatEditMode}}
+            <input type="number" name="system.attacksThisRound" value="{{system.attacksThisRound}}" min="0"/>
+            {{else}}
+            <span>{{system.attacksThisRound}}</span>
+            {{/if}}
+          </div>
+
+          {{! Two a Combat Round, and the count resets with the round like the one above. }}
+          <div class="stat"
+               data-tooltip="Absolute Attacks made this round. Two is the limit, and a third cannot be declared.">
+            <em>Absolute Attacks</em>
+            {{#if combatEditMode}}
+            <input type="number" name="system.absoluteAttacksThisRound"
+                   value="{{system.absoluteAttacksThisRound}}" min="0"/>
+            {{else}}
+            <span>{{system.absoluteAttacks.used}}<span class="stat-of">/{{system.absoluteAttacks.max}}</span></span>
+            {{/if}}
+          </div>
+
+          {{! Not a Combat Condition, though it stacks like one - and not per-round wear
+              either: how long a stack lasts is decided by whatever applied it. }}
+          <div class="stat"
+               data-tooltip="Each stack costs you 1(bT) Life Points at the start of your turn. How long a stack lasts is decided by whatever applied it.">
+            <em>Damage Over Time</em>
+            {{#if combatEditMode}}
+            <input type="number" name="system.dotStacks" value="{{system.dotStacks}}" min="0"/>
+            {{else}}
+            <span>{{system.dot.stacks}}</span>
+            {{/if}}
+            {{#if system.dot.stacks}}
+            <i class="stat-note">-{{system.dot.total}} Life at the start of your turn</i>
+            {{/if}}
+          </div>
+        </div>
+
+        <div class="dbu-turn-pair">
+          {{#if grapple}}
+          {{! A Grapple holds two characters and each of them has half of it. The row says which
+              half this one is, because most of the rules in the entry turn on that, and offers
+              only the button that half has. }}
+          <section class="panel dbu-grapple">
+            <h3 class="panel-title">
+              Grapple
+              <span class="panel-note">
+                {{#if grapple.grappler}}Grappler &middot; holding {{grapple.name}}
+                {{else}}Grappled &middot; held by {{grapple.name}}{{/if}}
+              </span>
+            </h3>
+
+            <p class="dbu-grapple-note">Guard Down for as long as it lasts, and it cannot be
+              taken off while you are in it.</p>
+
+            {{#if grapple.grappler}}
+            <button type="button" data-action="releaseGrapple" class="capacity-reset"
+                    data-tooltip="End the Grapple. An Instant Maneuver, on your turn.">Let go</button>
+            {{else}}
+            {{! One Action, one Check. What the earlier attempts this turn bought shows beside
+                it, since that is what decides whether another one is worth an Action. }}
+            <button type="button" data-action="escapeGrapple" class="capacity-reset"
+                    data-tooltip="Spend 1 Action on a Grapple Check against the Grappler. Lose it and you can try again: every Action spent this turn raises the next Check by 1(T).">Escape</button>
+            {{#if grapple.tried}}
+            <span class="capacity-note">{{grapple.tried}} tried this turn &middot; next Check
+              +{{grapple.nextBonus}}</span>
+            {{/if}}
+            <span class="capacity-note">{{grapple.actions}} Actions left this round</span>
+            {{/if}}
+          </section>
+          {{/if}}
+
+          {{! Hidden and Oblivious (the user's rulings): whom this character is Hidden from - they cannot target them - and
+              whom they are Oblivious of. }}
+          <section class="panel">
+            <h3 class="panel-title">
+              Hidden
+              <span class="panel-note">{{#if hidden.any}}{{hidden.summary}}{{else}}None{{/if}}</span>
+            </h3>
+            <ul class="condition-list dbu-stack-list">
+              {{#each hidden.from as |entry|}}
+              <li class="condition condition-active"
+                  data-tooltip="{{entry.name}} cannot target you. Ends when you hit them, after {{entry.of}} attacks at them, or when you end your turn in their Melee Range">
+                <span class="condition-name">Hidden from {{entry.name}}</span>
+                <span class="stack-count">{{entry.attacks}}/{{entry.of}}</span>
+                <button type="button" class="stack-step" data-action="revealTo" data-uuid="{{entry.uuid}}"
+                        data-tooltip="No longer Hidden from them">&times;</button>
+              </li>
+              {{/each}}
+              {{#each hidden.of as |entry|}}
+              <li class="condition" data-tooltip="You cannot target {{entry.name}}">
+                <span class="condition-name">Oblivious of {{entry.name}}</span>
+              </li>
+              {{/each}}
+            </ul>
+            <button type="button" class="dbu-clash-button" data-action="hideFromTargeted"
+                    data-tooltip="Hidden from everyone you have targeted">Hide from targeted</button>
+          </section>
+        </div>
+      </div>
+
+      {{else}}
+      <header>
+        <h3>Manage {{#if combatWindow.states}}States{{/if}}{{#if combatWindow.resources}}Resources{{/if}}{{#if combatWindow.conditions}}Combat Conditions{{/if}}</h3>
+      </header>
+      <p class="dbu-manage-note">Tick what stays in the list even when it is not happening. Anything else still shows while
+        it is.{{#if combatWindow.resources}} Only the Resources something of yours gives are here.{{/if}}</p>
+      <div class="dbu-combat-window-body dbu-picks">
+        {{#if combatWindow.states}}
+        <div class="dbu-pick-sub">States</div>
+        {{#each statePicks.states as |state|}}
+        <label class="dbu-pick{{#if state.pinned}} on{{/if}}">
+          <input type="checkbox" data-action="pinCombat" data-list="states" data-key="{{state.key}}" {{#if state.pinned}}checked{{/if}}/>
+          {{state.name}}
+        </label>
+        {{/each}}
+        <div class="dbu-pick-sub" data-tooltip="Entered only through an effect that gives them">Special States</div>
+        {{#each statePicks.special as |state|}}
+        {{! Greyed while no Trait of theirs names it - still pickable (the user's). }}
+        <label class="dbu-pick{{#if state.pinned}} on{{/if}}{{#if state.greyed}} greyed{{/if}}"
+               {{#if state.greyed}}data-tooltip="Only a Trait that names it gives this, and none of yours does"{{/if}}>
+          <input type="checkbox" data-action="pinCombat" data-list="states" data-key="{{state.key}}" {{#if state.pinned}}checked{{/if}}/>
+          {{state.name}}
+          {{#if state.grantedBy}}<span class="dbu-pick-from">from {{state.grantedBy}}</span>{{/if}}
+        </label>
+        {{/each}}
+        {{/if}}
+
+        {{#if combatWindow.resources}}
+        {{#each resourcePicks as |row|}}
+        <label class="dbu-pick{{#if row.pinned}} on{{/if}}" data-tooltip="{{row.tooltip}}">
+          <input type="checkbox" data-action="pinCombat" data-list="resources" data-key="{{row.key}}" {{#if row.pinned}}checked{{/if}}/>
+          {{row.name}}
+          {{#if row.source}}<span class="dbu-pick-from">{{row.source}}</span>{{/if}}
+        </label>
+        {{/each}}
+        {{/if}}
+
+        {{#if combatWindow.conditions}}
+        {{#each conditionPicks as |condition|}}
+        <label class="dbu-pick{{#if condition.pinned}} on{{/if}}" data-tooltip="{{condition.text}}">
+          <input type="checkbox" data-action="pinCombat" data-list="conditions" data-key="{{condition.key}}" {{#if condition.pinned}}checked{{/if}}/>
+          {{condition.name}}
+        </label>
+        {{/each}}
+        {{/if}}
+      </div>
+      {{/if}}
+
+      <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
+    </div>
+  </div>
   {{/if}}
-
-  {{! States. Entered by hand for the same reason Conditions are, and shown next to
-      them because the two reference each other constantly in the rules. }}
-  <section class="panel">
-    <details class="condition-group" data-section="states"
-             {{#if openSections.states}}open{{/if}}>
-      <summary class="panel-title">
-        States
-        {{#if anyState}}
-        <span class="panel-note">{{stateSummary}}</span>
-        {{else}}
-        <span class="panel-note">Normal</span>
-        {{/if}}
-      </summary>
-
-      <ul class="condition-list">
-        {{#each states as |state|}}
-        <li class="condition {{#if state.active}}condition-active{{/if}}">
-          <button type="button" class="condition-toggle" data-action="toggleState"
-                  data-state="{{state.key}}" data-tooltip="{{state.text}}"
-                  aria-pressed="{{#if state.active}}true{{else}}false{{/if}}">
-            <span class="condition-mark">{{#if state.active}}&#10003;{{/if}}</span>
-            <span class="condition-name">{{state.name}}</span>
-          </button>
-
-          {{#if state.levelled}}
-          {{! Levels are not unlocks: at level 2 the level 1 effect is worth 2(T), so
-              which level you are at changes every number the State gives. }}
-          <span class="condition-stacks">
-            <button type="button" class="stack-step" data-action="stepState"
-                    data-state="{{state.key}}" data-step="-1"
-                    data-tooltip="One level lower">&minus;</button>
-            <span class="stack-count">{{state.level}}/{{state.levels}}</span>
-            <button type="button" class="stack-step" data-action="stepState"
-                    data-state="{{state.key}}" data-step="1"
-                    data-tooltip="One level higher">+</button>
-          </span>
-          {{/if}}
-        </li>
-        {{/each}}
-      </ul>
-
-      {{! The Special States: no Narrative Requirement, entered only through an effect that gives them. Still ticked by
-          hand, for the effects not built yet. }}
-      {{#if specialStates.length}}
-      <h4 class="condition-subhead" data-tooltip="Entered only through an effect that gives them">Special States</h4>
-      <ul class="condition-list">
-        {{#each specialStates as |state|}}
-        <li class="condition {{#if state.active}}condition-active{{/if}}">
-          <button type="button" class="condition-toggle" data-action="toggleState"
-                  data-state="{{state.key}}" data-tooltip="Special State: entered only through an effect. {{state.text}}"
-                  aria-pressed="{{#if state.active}}true{{else}}false{{/if}}">
-            <span class="condition-mark">{{#if state.active}}&#10003;{{/if}}</span>
-            <span class="condition-name">{{state.name}}</span>
-          </button>
-        </li>
-        {{/each}}
-      </ul>
-      {{/if}}
-    </details>
-  </section>
-
-  {{! Combat Conditions. Set by hand, because most of the ways one is inflicted are not
-      things the system resolves - though an effect can set one too, and this shows it. }}
-  <section class="panel">
-    <details class="condition-group" data-section="conditions"
-             {{#if openSections.conditions}}open{{/if}}>
-      <summary class="panel-title">
-        Combat Conditions
-        {{#if anyCondition}}
-        <span class="panel-note">{{conditionSummary}}</span>
-        {{else}}
-        <span class="panel-note">None</span>
-        {{/if}}
-      </summary>
-
-      <ul class="condition-list">
-        {{#each conditions as |condition|}}
-        <li class="condition {{#if condition.active}}condition-active{{/if}}">
-          <button type="button" class="condition-toggle" data-action="toggleCondition"
-                  data-condition="{{condition.key}}" data-tooltip="{{condition.text}}"
-                  aria-pressed="{{#if condition.active}}true{{else}}false{{/if}}">
-            <span class="condition-mark">{{#if condition.active}}&#10003;{{/if}}</span>
-            <span class="condition-name">{{condition.name}}</span>
-          </button>
-
-          {{#if condition.stacking}}
-          {{! A stacking Condition needs a number, not a tick: Broken at three stacks is
-              a different rule from Broken at one. }}
-          <span class="condition-stacks">
-            <button type="button" class="stack-step" data-action="stepCondition"
-                    data-condition="{{condition.key}}" data-step="-1"
-                    data-tooltip="One less stack">&minus;</button>
-            <span class="stack-count">{{condition.stacks}}/{{condition.maxStacks}}</span>
-            <button type="button" class="stack-step" data-action="stepCondition"
-                    data-condition="{{condition.key}}" data-step="1"
-                    data-tooltip="One more stack">+</button>
-          </span>
-          {{/if}}
-        </li>
-        {{/each}}
-      </ul>
-
-      {{#if conditionAbilities}}
-      {{! What a Condition lets you do about it: standing up from Prone, or clashing
-          free of Pinned. Each costs the Actions its own effect asks for. }}
-      <ul class="condition-abilities">
-        {{#each conditionAbilities as |ability|}}
-        <li>
-          <button type="button" class="rollable" data-action="useConditionAbility"
-                  data-source="{{ability.sourceId}}" data-block="{{ability.block}}"
-                  {{#unless ability.affordable}}disabled{{/unless}}
-                  data-tooltip="{{ability.tooltip}}">
-            {{ability.label}}
-          </button>
-        </li>
-        {{/each}}
-      </ul>
-      {{/if}}
-    </details>
-  </section>
-
-  {{! Everything with stacks on it, beside the two checklists above because it answers
-      the same kind of question: not what this round is made of, but what you are
-      carrying. The two Diminishing counters are here as well as in the Turn State panel -
-      that one is where they are edited and where what each costs you is said, and this is
-      where you count them with everything else. }}
-  <section class="panel">
-    <details class="condition-group" data-section="resources"
-             {{#if openSections.resources}}open{{/if}}>
-      <summary class="panel-title">
-        Resources
-        {{#if anyStacks}}
-        <span class="panel-note">{{stackSummary}}</span>
-        {{else}}
-        <span class="panel-note">None</span>
-        {{/if}}
-      </summary>
-
-      <ul class="condition-list dbu-stack-list">
-        {{#each stacks as |row|}}
-        <li class="condition {{#if row.stacks}}condition-active{{/if}}"
-            data-tooltip="{{row.tooltip}}">
-          <span class="condition-name">{{row.name}}</span>
-          {{! A Resource with no ceiling says how many and nothing more: "3/0" would be
-              a maximum of nothing rather than no maximum at all. }}
-          <span class="stack-count">{{row.stacks}}{{#if row.max}}/{{row.max}}{{/if}}</span>
-        </li>
-        {{/each}}
-      </ul>
-
-      {{#if anyStacks}}
-      {{! What the ones that are doing something are doing, under the roll-call - the
-          count alone says you have two of something and not what two costs. }}
-      <ul class="condition-abilities dbu-stack-notes">
-        {{#each stacks as |row|}}
-        {{#if row.note}}
-        <li><em>{{row.name}}</em> {{row.note}}</li>
-        {{/if}}
-        {{/each}}
-      </ul>
-      {{/if}}
-    </details>
-
-    {{! Hidden and Oblivious (the user's rulings): whom this character is Hidden from - they cannot target them - and
-        whom they are Oblivious of. }}
-    <details class="condition-group" data-section="hidden" {{#if openSections.hidden}}open{{/if}}>
-      <summary class="panel-title">
-        Hidden
-        <span class="panel-note">{{#if hidden.any}}{{hidden.summary}}{{else}}None{{/if}}</span>
-      </summary>
-      <ul class="condition-list dbu-stack-list">
-        {{#each hidden.from as |entry|}}
-        <li class="condition condition-active"
-            data-tooltip="{{entry.name}} cannot target you. Ends when you hit them, after {{entry.of}} attacks at them, or when you end your turn in their Melee Range">
-          <span class="condition-name">Hidden from {{entry.name}}</span>
-          <span class="stack-count">{{entry.attacks}}/{{entry.of}}</span>
-          <button type="button" class="stack-step" data-action="revealTo" data-uuid="{{entry.uuid}}"
-                  data-tooltip="No longer Hidden from them">&times;</button>
-        </li>
-        {{/each}}
-        {{#each hidden.of as |entry|}}
-        <li class="condition" data-tooltip="You cannot target {{entry.name}}">
-          <span class="condition-name">Oblivious of {{entry.name}}</span>
-        </li>
-        {{/each}}
-      </ul>
-      <button type="button" class="dbu-clash-button" data-action="hideFromTargets"
-              data-tooltip="Hidden from everyone you have targeted">Hide from targeted</button>
-    </details>
-  </section>
-
-  {{! Stand-ins for systems that do not exist yet, so the rules that depend on them
-      can still be tried out. }}
-  <section class="panel">
-    <h3 class="panel-title">
-      Debug
-      <span class="panel-note">Manual stand-ins for unimplemented systems</span>
-    </h3>
-    <label class="debug-toggle"
-           data-tooltip="From a Form entered through the Transformation Maneuver: Maximum Ki doubled, Max Capacity increased by half.">
-      <input type="checkbox" name="system.debug.kiMultiplier"
-             {{#if system.debug.kiMultiplier}}checked{{/if}}/>
-      Ki Multiplier
-      {{#if system.debug.kiMultiplier}}<em>Ki x2 &middot; Capacity x1.5</em>{{/if}}
-    </label>
-  </section>
 
 </div>

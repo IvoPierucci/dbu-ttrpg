@@ -4063,3 +4063,586 @@
   border: none;
   cursor: pointer;
 }
+
+/* --- The Combat tab (the user's layout, 2026-10-30) ---------------------------------------------------------------
+   Every grid here has a fixed number of columns, so a wider or narrower sheet scales the boxes without moving anything
+   to another row. Only a very narrow sheet drops the two halves to one column. */
+.dbu-ttrpg .tab[data-tab="combat"] {
+  container-type: inline-size;
+}
+
+/* The Turn State, one long button over the tab with the chips of what you are in the middle of. */
+.dbu-ttrpg .dbu-turn-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: var(--dbu-panel-raised);
+  color: var(--dbu-text);
+  text-align: left;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .dbu-turn-button:hover {
+  border-color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-turn-name {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.dbu-ttrpg .dbu-turn-chips {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dbu-ttrpg .dbu-chip {
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 16px;
+  border: 1px solid var(--dbu-accent);
+  border-radius: 8px;
+  color: var(--dbu-accent);
+  background: rgba(245, 166, 35, 0.12);
+}
+
+/* Imminent, a Grapple: what leaves you open, in red. */
+.dbu-ttrpg .dbu-chip.warn {
+  border-color: #d1544a;
+  color: #e8796f;
+  background: rgba(209, 84, 74, 0.14);
+}
+
+.dbu-ttrpg .dbu-turn-open {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-turn-button:hover .dbu-turn-open {
+  color: var(--dbu-accent);
+}
+
+/* The three lists, beside Dice, Aptitudes and Capacity. */
+.dbu-ttrpg .dbu-combat-top {
+  display: grid;
+  grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+@container (max-width: 480px) {
+  .dbu-ttrpg .dbu-combat-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.dbu-ttrpg .dbu-combat-lists {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dbu-ttrpg .dbu-clist {
+  min-width: 0;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: var(--dbu-panel);
+}
+
+.dbu-ttrpg .dbu-clist-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
+  border-bottom: 1px solid var(--dbu-border);
+  background: var(--dbu-panel-raised);
+}
+
+.dbu-ttrpg .dbu-clist-head h3 {
+  flex: 1 1 auto;
+  margin: 0;
+  border: none;
+  font-size: 12px;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-manage {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 0 8px;
+  line-height: 18px;
+  font-size: 10px;
+}
+
+.dbu-ttrpg .dbu-clist-rows {
+  max-height: 126px;
+  overflow-y: auto;
+  padding: 3px 0;
+}
+
+.dbu-ttrpg .dbu-clist-empty {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-crow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 1px 10px;
+}
+
+.dbu-ttrpg .dbu-crow:hover {
+  background: var(--dbu-panel-raised);
+}
+
+.dbu-ttrpg .dbu-crow.active {
+  background: rgba(245, 166, 35, 0.1);
+}
+
+.dbu-ttrpg .dbu-crow .condition-toggle {
+  min-width: 0;
+}
+
+.dbu-ttrpg .dbu-crow.active .condition-toggle {
+  color: var(--dbu-accent);
+  font-weight: bold;
+}
+
+.dbu-ttrpg .dbu-crow .condition-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dbu-ttrpg .dbu-crow-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-crow.active .dbu-crow-label {
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg .dbu-crow-label small {
+  display: block;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-crow.active .stack-count {
+  color: var(--dbu-text);
+}
+
+/* Shown though not chosen in Manage, while it lasts. */
+.dbu-ttrpg .dbu-temp {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  font-size: 9px;
+  line-height: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px dashed var(--dbu-border-strong);
+  border-radius: 3px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-clist .condition-abilities {
+  margin: 0;
+  padding: 5px 8px;
+}
+
+/* Dice, Aptitudes and Capacity: boxes two to a row. */
+.dbu-ttrpg .dbu-combat-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dbu-ttrpg .dbu-side-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--dbu-border);
+  font-size: 13px;
+}
+
+.dbu-ttrpg .dbu-side-title + .dbu-box-grid + .dbu-side-title {
+  margin-top: 4px;
+}
+
+.dbu-ttrpg .dbu-box-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dbu-ttrpg .dbu-box-grid .stat span {
+  font-size: 15px;
+}
+
+.dbu-ttrpg .dbu-box-grid .stat-roll em {
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-capacity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: var(--dbu-panel);
+}
+
+.dbu-ttrpg .dbu-capacity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dbu-ttrpg .dbu-capacity-head em {
+  font-style: normal;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-capacity-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dbu-ttrpg .dbu-capacity-edit input {
+  width: 3.4em;
+  height: 22px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.dbu-ttrpg .dbu-capacity-of {
+  font-size: 12px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-capacity .meter-fill {
+  background: var(--dbu-ki);
+}
+
+.dbu-ttrpg .dbu-capacity-left {
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+  text-align: right;
+}
+
+/* The Health Threshold and the tables under it. */
+.dbu-ttrpg .dbu-threshold-now {
+  margin-bottom: 6px;
+}
+
+.dbu-ttrpg .dbu-threshold-now.threshold-bruised { border-color: #f5a623; }
+.dbu-ttrpg .dbu-threshold-now.threshold-injured { border-color: #e07b39; }
+.dbu-ttrpg .dbu-threshold-now.threshold-critical { border-color: #c0392b; }
+
+.dbu-ttrpg .dbu-table-wrap {
+  overflow-x: auto;
+}
+
+.dbu-ttrpg .dbu-ctable {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbu-ttrpg .dbu-ctable th,
+.dbu-ttrpg .dbu-ctable td {
+  padding: 4px 8px;
+  border: 1px solid var(--dbu-border);
+  text-align: center;
+}
+
+.dbu-ttrpg .dbu-ctable thead th {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dbu-accent);
+  background: var(--dbu-panel-raised);
+}
+
+.dbu-ttrpg .dbu-ctable thead th span {
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-ctable thead th span.twice {
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-ctable tbody th {
+  width: 28%;
+  text-align: left;
+  font-weight: 600;
+  background: var(--dbu-panel-raised);
+}
+
+.dbu-ttrpg .dbu-ctable td {
+  font-weight: bold;
+}
+
+.dbu-ttrpg .dbu-ctable td span {
+  font-weight: normal;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-steadfast thead th.here {
+  color: #e8796f;
+}
+
+.dbu-ttrpg .dbu-steadfast td.here {
+  background: rgba(192, 57, 43, 0.12);
+}
+
+.dbu-ttrpg .dbu-steadfast td.unreached {
+  opacity: 0.4;
+}
+
+/* Reached and not rolled yet: the Steadfast Check is still to make. */
+.dbu-ttrpg .dbu-steadfast td.pending input {
+  outline: 1px dashed var(--dbu-border-strong);
+  outline-offset: 2px;
+}
+
+.dbu-ttrpg .dbu-steadfast input {
+  margin: 0;
+}
+
+/* Strike and Dodge: what each is made of, what effects add, the total. */
+.dbu-ttrpg .dbu-rolls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dbu-ttrpg .dbu-roll {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+}
+
+.dbu-ttrpg .dbu-roll h4 {
+  margin: 0;
+  border: none;
+  font-size: 11px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-cells {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.dbu-ttrpg .dbu-effects span {
+  font-size: 13px;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-total {
+  border-color: var(--dbu-border-strong);
+  background: var(--dbu-panel-raised);
+}
+
+.dbu-ttrpg .dbu-total > span {
+  font-size: 19px;
+}
+
+.dbu-ttrpg .dbu-total .dbu-crit {
+  font-size: 11px;
+  font-weight: normal;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-dice {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-dice.twice {
+  color: var(--dbu-accent);
+}
+
+/* The window over the sheet: the Turn State, or a list's Manage. */
+.dbu-ttrpg .dbu-combat-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.dbu-ttrpg .dbu-combat-window {
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 100%);
+  max-height: 100%;
+  border: 1px solid var(--dbu-border-strong);
+  border-radius: 4px;
+  background: var(--dbu-panel);
+  color: var(--dbu-text);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.dbu-ttrpg .dbu-combat-window.turn {
+  width: min(620px, 100%);
+}
+
+.dbu-ttrpg .dbu-combat-window header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--dbu-border);
+  background: #333;
+}
+
+.dbu-ttrpg .dbu-combat-window header h3 {
+  margin: 0;
+  border: none;
+  font-size: 14px;
+}
+
+.dbu-ttrpg .dbu-combat-window-body {
+  display: grid;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+.dbu-ttrpg .dbu-combat-window .turn-state {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dbu-ttrpg .stat-wide {
+  grid-column: 1 / -1;
+}
+
+.dbu-ttrpg .stat-warn {
+  border-color: #d1544a;
+}
+
+.dbu-ttrpg .stat-warn span {
+  color: #e8796f;
+}
+
+.dbu-ttrpg .dbu-turn-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.dbu-ttrpg .dbu-turn-pair .condition-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dbu-ttrpg .dbu-manage-note {
+  margin: 0;
+  padding: 6px 12px 0;
+  font-size: 11px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-picks {
+  gap: 0;
+  padding: 6px 0;
+}
+
+.dbu-ttrpg .dbu-pick-sub {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 12px;
+  color: var(--dbu-text-dim);
+  cursor: pointer;
+}
+
+.dbu-ttrpg .dbu-pick:hover,
+.dbu-ttrpg .dbu-pick.on {
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg .dbu-pick:hover {
+  background: var(--dbu-panel-raised);
+}
+
+.dbu-ttrpg .dbu-pick input {
+  margin: 0;
+}
+
+/* A Special State no Trait of theirs names: greyed, still pickable (the user's). */
+.dbu-ttrpg .dbu-pick.greyed {
+  opacity: 0.5;
+}
+
+.dbu-ttrpg .dbu-pick-from {
+  margin-left: auto;
+  font-size: 10px;
+  font-style: italic;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-combat-window footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 12px 10px;
+  border-top: 1px solid var(--dbu-border);
+}

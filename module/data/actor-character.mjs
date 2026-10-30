@@ -1785,6 +1785,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // The Combat tab's three lists (the user's): what each keeps showing while nothing is happening - chosen in its Manage
+    // window. Whatever is happening shows anyway, chosen or not.
+    schema.combatPins = new fields.SchemaField({
+      states: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }),
+      resources: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }),
+      conditions: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] })
+    });
+
     schema.characterPerks = new fields.ArrayField(
       new fields.SchemaField({
         source: new fields.StringField({ required: true, blank: true, initial: "" }),
