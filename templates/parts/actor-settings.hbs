@@ -37,6 +37,33 @@
     {{/if}}
   </section>
 
+  {{! The States' Triggered effects, set beforehand as a Racial Trait's are (the user's): Triggered, offered where its
+      moment is, to take or leave; Automatic, it answers that moment by itself, every time - the State held or not yet. }}
+  {{#if stateTriggers.length}}
+  <section class="panel">
+    <h3 class="panel-title">
+      Triggered / Automatic
+      <span class="panel-note">States</span>
+    </h3>
+    <ul class="dbu-state-triggers">
+      {{#each stateTriggers as |state|}}
+      <li>
+        <span class="dbu-state-trigger-name">{{state.name}}</span>
+        <span class="dbu-state-trigger-buttons">
+          {{#each state.buttons as |trigger|}}
+          <button type="button" class="trait-arm {{#if trigger.automatic}}active{{/if}}"
+                  data-action="automateTrigger" data-effect-id="{{trigger.id}}"
+                  data-tooltip="{{trigger.label}}">
+            {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
+          </button>
+          {{/each}}
+        </span>
+      </li>
+      {{/each}}
+    </ul>
+  </section>
+  {{/if}}
+
   {{! Turning the round and the Encounter over by hand - for a table playing without a formal Encounter, and for putting
       things right when one gets out of step. A Combat does the round on its own. }}
   <section class="panel">

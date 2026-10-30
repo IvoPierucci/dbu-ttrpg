@@ -10,6 +10,7 @@ import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnf
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
+import { compile as compileEffects } from "../effects/parser.mjs";
 import { grantedUniques } from "../unique.mjs";
 import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
@@ -1443,6 +1444,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       triggered: this.#toggleButtons(item, triggered)
     }));
     context.racialTraits = this.#racialTraitChoices(triggered);
+    context.stateTriggers = this.#stateTriggers();
     // Evolution, Bestial and Monstrous Traits: the same rows, in a list of their own (the user's).
     context.otherTraits = this.#racialTraitChoices(triggered, ownedOtherTraits(this.actor));
     context.isGM = game.user.isGM;
@@ -5694,6 +5696,41 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if ((need?.type !== "predicate") || (need.name !== "hasTalent")) return true;
     const id = String(need.args?.[0]?.value ?? need.args?.[0] ?? "");
     return Array.from(this.actor.items).some(item => (item.type === "talent") && (item.flags?.["dbu-ttrpg"]?.sourceId === id));
+  }
+
+  /**
+   * The Settings tab's Triggered/Automatic for States (the user's): every State's Triggered effects, set beforehand as a
+   * Racial Trait's are - whether or not the character is in it now, so it answers by itself the moment they enter. The same
+   * ones left out as there: what costs Actions, what is chosen as it happens (a window, an Out-of-Sequence Maneuver -
+   * Raging's Apoplectic). One button an effect - "Tranquil · 1st effect" - its blocks (on entering, on a level reached, at
+   * the start of a Round) set together.
+   */
+  #stateTriggers() {
+    const automatic = new Set(this.actor.getFlag("dbu-ttrpg", "automatic") ?? []);
+    return traitsOfKind("states").map(trait => {
+      const { program, errors } = compileEffects(trait.script ?? "");
+      if (errors.length) return null;
+      // A levelled State's levels by their printed names - "Tranquil (Level 3)".
+      const levels = Object.fromEntries([...String(trait.text ?? "").matchAll(/^\s*(.+?) \(Level (\d+)\)\s*$/gm)]
+        .map(([, name, level]) => [Number(level), name.trim()]));
+      const buttons = (program.blocks ?? [])
+        .filter(block => (block.mode === "triggered") && !block.budget?.actions && !chosenAsItHappens(block))
+        .map(block => {
+          const level = Number(block.modifiers?.fromLevel) || 0;
+          const effect = Number(block.modifiers?.effect) || 0;
+          const id = `state:${trait.id}#${block.index}`;
+          return { id, group: `${level}|${effect || block.index}`, automatic: automatic.has(id),
+            label: [levels[level], effect ? `${ordinal(effect)} effect` : ""].filter(Boolean).join(" \u00b7 ") || trait.name };
+        })
+        .reduce((buttons, each) => {
+          const same = buttons.find(other => other.group === each.group);
+          if (!same) return [...buttons, each];
+          same.id = `${same.id},${each.id}`;
+          same.automatic = same.automatic && each.automatic;
+          return buttons;
+        }, []);
+      return buttons.length ? { key: trait.id, name: trait.name, buttons } : null;
+    }).filter(Boolean);
   }
 
   #toggleButtons(item, triggered) {

@@ -4665,3 +4665,30 @@
   padding: 6px 12px 10px;
   border-top: 1px solid var(--dbu-border);
 }
+
+/* --- Settings: the States' Triggered / Automatic (the user's) ------------------------------------------------------ */
+.dbu-ttrpg .dbu-state-triggers {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbu-ttrpg .dbu-state-triggers li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.dbu-ttrpg .dbu-state-trigger-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dbu-ttrpg .dbu-state-trigger-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

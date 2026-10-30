@@ -39,11 +39,11 @@ threshold.penalty = 0;
 # Apoplectic (1): entering Apoplectic - Raging entered at it, or gone up to it (state-level, a new moment) - and as your
 # turn begins: a button, never Automatic (it hands over an Out-of-Sequence Maneuver); the Basic Attack out of sequence, once
 # a Round between the three (chat.mjs rageStrike).
-[triggered/state/raging, from 3, outOfSequence]
+[triggered/state/raging, from 3, outOfSequence, effect 1]
 rageStrike();
 
-[triggered/state-level/raging, from 3, outOfSequence]
+[triggered/state-level/raging, from 3, outOfSequence, effect 1]
 rageStrike();
 
-[triggered/start-of-turn from 3, outOfSequence]
+[triggered/start-of-turn from 3, outOfSequence, effect 1]
 rageStrike();

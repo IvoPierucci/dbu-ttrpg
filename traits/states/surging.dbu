@@ -33,7 +33,7 @@ gain("Fatigued", 1);
 expires(fatigued, next-turn);
 
 # (5) Your Focus Defeated by you: a button - left, and (2) ignored.
-[triggered/defeat-opponent]
+[triggered/defeat-opponent, effect 5]
 requires defeatedFocus;
 surgingSpare();
 leaveState("Surging");

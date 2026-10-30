@@ -41,5 +41,5 @@ stressBonus += 1;
 # Written as unspending one rather than as raising the round's allowance, because that
 # is what "gain" means here - what is held is how many you spent, and what is left is
 # the allowance less that.
-[triggered/state/entrusted]
+[triggered/state/entrusted, effect 3]
 actions.remaining += 1;

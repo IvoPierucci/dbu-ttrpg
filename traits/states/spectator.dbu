@@ -18,10 +18,10 @@ text: >
 
 # (1) On entering it, and as your turn begins while still in it: which Ally asked - Cheered on them, its stacks your base Tier,
 # till the start of your next turn on your clock, and off as you leave the State (chat.mjs spectatorCheer, spectatorLeft).
-[triggered/state/spectator]
+[triggered/state/spectator, effect 1]
 spectatorCheer();
 
-[triggered/start-of-turn]
+[triggered/start-of-turn, effect 1]
 spectatorCheer();
 
 [on removed]
