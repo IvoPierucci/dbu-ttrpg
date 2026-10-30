@@ -256,7 +256,8 @@ function stackRows(system, owned = null) {
  * Resource.
  */
 function traitsOwned(actor) {
-  return new Set(actor.items
+  // A Collection has no flatMap: an Array of it does.
+  return new Set(Array.from(actor.items ?? [])
     .flatMap(item => [item.system.maneuverId, item.system.unique?.libraryId, item.system.gearId,
       item.flags?.["dbu-ttrpg"]?.sourceId])
     .filter(Boolean));
