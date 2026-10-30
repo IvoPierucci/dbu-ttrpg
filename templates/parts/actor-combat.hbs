@@ -145,12 +145,11 @@
       <h3 class="dbu-side-title">Aptitudes</h3>
       <div class="dbu-box-grid">
         <div class="stat" data-tooltip="{{aptitudes.dimOffense.tip}}">
-          <em>Dim. Offense</em><span>{{aptitudes.dimOffense.value}}</span>
-          {{#if aptitudes.dimOffense.note}}<i class="stat-note">{{aptitudes.dimOffense.note}}</i>{{/if}}
+          {{! What it costs beside the count, on its line - a line under it made the row taller than the rest (the user's). }}
+          <em>Dim. Offense</em><span>{{aptitudes.dimOffense.value}}{{#if aptitudes.dimOffense.note}}<i class="dbu-inline-note">{{aptitudes.dimOffense.note}}</i>{{/if}}</span>
         </div>
         <div class="stat" data-tooltip="{{aptitudes.dimDefense.tip}}">
-          <em>Dim. Defense</em><span>{{aptitudes.dimDefense.value}}</span>
-          <i class="stat-note">{{aptitudes.dimDefense.note}}</i>
+          <em>Dim. Defense</em><span>{{aptitudes.dimDefense.value}}<i class="dbu-inline-note">{{aptitudes.dimDefense.note}}</i></span>
         </div>
         <div class="stat"><em>Might</em><span data-tooltip-html="{{workings.might}}">{{system.might}}</span></div>
         <div class="stat">

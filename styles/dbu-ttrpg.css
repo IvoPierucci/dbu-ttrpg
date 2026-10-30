@@ -4291,10 +4291,21 @@
   margin-top: 4px;
 }
 
+/* Every row as tall as every other (the user's). */
 .dbu-ttrpg .dbu-box-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: 6px;
+}
+
+/* A Diminishing counter's cost, beside its count rather than under it. */
+.dbu-ttrpg .dbu-box-grid .dbu-inline-note {
+  margin-left: 6px;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: normal;
+  color: var(--dbu-text-dim);
 }
 
 .dbu-ttrpg .dbu-box-grid .stat span {
