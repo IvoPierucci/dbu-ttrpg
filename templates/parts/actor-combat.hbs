@@ -195,6 +195,7 @@
   <section class="panel">
     <h3 class="panel-title">
       Health Threshold
+      <span class="panel-note" data-tooltip="A Steadfast Check: {{steadfast.die}}{{#if steadfast.bonus}} + {{steadfast.bonus}}{{/if}}, needing {{steadfast.target}} or more{{#if steadfast.natural}}, the die moved by {{steadfast.natural}}{{/if}}">Steadfast {{numberFormat steadfast.bonus decimals=0 sign=true}} &middot; {{steadfast.target}}+</span>
       {{#if threshold.pending.length}}
       <button type="button" class="edit-toggle" data-action="steadfastCheck"
               data-tooltip="Roll for the thresholds crossed. Crossing several at once fails all but the lowest automatically.">
@@ -533,8 +534,10 @@
         <div class="dbu-pick-sub">States</div>
         {{#each statePicks.states as |state|}}
         <label class="dbu-pick{{#if state.pinned}} on{{/if}}">
-          <input type="checkbox" data-action="pinCombat" data-list="states" data-key="{{state.key}}" {{#if state.pinned}}checked{{/if}}/>
+          <input type="checkbox" data-action="pinCombat" data-list="states" data-key="{{state.key}}"
+                 data-default="{{#if state.byDefault}}true{{/if}}" {{#if state.pinned}}checked{{/if}}/>
           {{state.name}}
+          {{#if state.grantedBy}}<span class="dbu-pick-from">from {{state.grantedBy}}</span>{{/if}}
         </label>
         {{/each}}
         <div class="dbu-pick-sub" data-tooltip="Entered only through an effect that gives them">Special States</div>
@@ -542,7 +545,8 @@
         {{! Greyed while no Trait of theirs names it - still pickable (the user's). }}
         <label class="dbu-pick{{#if state.pinned}} on{{/if}}{{#if state.greyed}} greyed{{/if}}"
                {{#if state.greyed}}data-tooltip="Only a Trait that names it gives this, and none of yours does"{{/if}}>
-          <input type="checkbox" data-action="pinCombat" data-list="states" data-key="{{state.key}}" {{#if state.pinned}}checked{{/if}}/>
+          <input type="checkbox" data-action="pinCombat" data-list="states" data-key="{{state.key}}"
+                 data-default="{{#if state.byDefault}}true{{/if}}" {{#if state.pinned}}checked{{/if}}/>
           {{state.name}}
           {{#if state.grantedBy}}<span class="dbu-pick-from">from {{state.grantedBy}}</span>{{/if}}
         </label>
@@ -552,7 +556,8 @@
         {{#if combatWindow.resources}}
         {{#each resourcePicks as |row|}}
         <label class="dbu-pick{{#if row.pinned}} on{{/if}}" data-tooltip="{{row.tooltip}}">
-          <input type="checkbox" data-action="pinCombat" data-list="resources" data-key="{{row.key}}" {{#if row.pinned}}checked{{/if}}/>
+          <input type="checkbox" data-action="pinCombat" data-list="resources" data-key="{{row.key}}"
+                 data-default="{{#if row.byDefault}}true{{/if}}" {{#if row.pinned}}checked{{/if}}/>
           {{row.name}}
           {{#if row.source}}<span class="dbu-pick-from">{{row.source}}</span>{{/if}}
         </label>

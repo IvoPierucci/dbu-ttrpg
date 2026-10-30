@@ -1792,6 +1792,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       resources: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }),
       conditions: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] })
     });
+    // What a list shows unasked and the player took off it in Manage: a State an effect of theirs enters, a Resource
+    // something of theirs gives (the user's - every one of those is ticked until it is unticked).
+    schema.combatUnpins = new fields.SchemaField({
+      states: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }),
+      resources: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }),
+      conditions: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] })
+    });
 
     schema.characterPerks = new fields.ArrayField(
       new fields.SchemaField({

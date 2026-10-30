@@ -1602,6 +1602,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const system = this.actor.system;
     const slots = system.effects?.slots ?? {};
     const pins = system.combatPins ?? {};
+    const unpins = system.combatUnpins ?? {};
     const words = ownWords(this.actor);
     const namedBy = pattern => words.filter(entry => pattern.test(entry.text)).map(entry => entry.name);
     const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1610,17 +1611,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.combatWindow = { open: Boolean(windowIs), turn: windowIs === "turn", states: windowIs === "states",
       resources: windowIs === "resources", conditions: windowIs === "conditions" };
 
-    const shownOf = (list, row, active) => {
-      const pinned = (pins[list] ?? []).includes(row.key);
-      return { ...row, pinned, shown: pinned || active, temporary: active && !pinned };
+    // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
+    const shownOf = (list, row, active, byDefault = false) => {
+      const pinned = (pins[list] ?? []).includes(row.key) || (byDefault && !(unpins[list] ?? []).includes(row.key));
+      return { ...row, byDefault, pinned, shown: pinned || active, temporary: active && !pinned };
     };
 
     // States, and the Special States apart (the user's: only Mindful, Raging, Superior, Surging and Undying are entered for
-    // the story). One only a Trait enters is greyed in Manage while none of theirs names it - "the Liquid State".
+    // the story). One an effect of theirs enters is listed unasked - Arrogant Declaration's Superior (the user's); one only
+    // a Trait enters is greyed in Manage while none of theirs names it - "the Liquid State".
     const states = [...context.states, ...context.specialStates].map(state => {
       const traitOnly = state.special && !state.anyone;
-      const by = traitOnly ? namedBy(new RegExp(`\\b${escapeRegex(state.name)} (Special )?State`)) : [];
-      return { ...shownOf("states", state, state.active), greyed: traitOnly && !by.length, grantedBy: by.join(", ") };
+      const by = namedBy(new RegExp(`\\b${escapeRegex(state.name)} (Special )?State`));
+      return { ...shownOf("states", state, state.active, by.length > 0), greyed: traitOnly && !by.length,
+        grantedBy: by.join(", ") };
     });
     context.stateRows = states.filter(state => state.shown);
     context.statePicks = { states: states.filter(state => !state.special), special: states.filter(state => state.special) };
@@ -1637,7 +1641,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const reachable = row.key.startsWith("diminishing.") || ((row.key === "superStack") ? superReachable : row.reachable);
       const givers = (row.key === "superStack") ? namedBy(/Super Stack/).join(", ") : "";
       const source = givers ? `from ${givers}` : (row.source ?? "");
-      return { ...shownOf("resources", row, row.stacks > 0), reachable, source };
+      // Every one they can come to hold is listed unasked but Unfamiliar, which an Opponent inflicts (the user's).
+      return { ...shownOf("resources", row, row.stacks > 0, reachable && (row.key !== "unfamiliar")), reachable, source };
     });
     context.resourceRows = resources.filter(row => row.shown);
     context.resourcePicks = resources.filter(row => row.reachable || (row.stacks > 0));
@@ -1671,6 +1676,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // "Counted in Squares beyond the ones you are touching": 0 is the adjacent Squares, one away.
       reach: { value: `${(Number(system.meleeRange) || 0) + 1} sq.` }
     };
+
+    // The Steadfast Check, in the Health Threshold's title: its die, its bonus, what it needs.
+    const steadfast = system.steadfast ?? {};
+    context.steadfast = { die: String(steadfast.die ?? DBUCharacterData.STEADFAST_DIE).replace(/^2d(\d+)kh$/, "2d$1 (higher)"),
+      bonus: Number(steadfast.bonus) || 0, natural: Number(steadfast.natural) || 0, target: steadfast.target ?? 6 };
 
     // Capacity, set by hand as well as by the Maneuvers that spend it.
     context.capacity = { spent: system.capacity?.spent ?? 0, max: system.capacity?.max ?? 0,
@@ -6686,15 +6696,25 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (wasEditing) this.render();
   }
 
-  /** A Manage window's tick: shown in its list while nothing is happening, or not. */
+  /**
+   * A Manage window's tick: shown in its list while nothing is happening, or not. One the list shows unasked is taken off
+   * by being remembered as unticked; any other is put on by being remembered as ticked.
+   */
   static async _onPinCombat(event, target) {
     const list = target.dataset.list;
     const key = target.dataset.key;
     if (!["states", "resources", "conditions"].includes(list) || !key) return;
-    const now = new Set(this.actor.system.combatPins?.[list] ?? []);
-    if (target.checked) now.add(key);
-    else now.delete(key);
-    return this.actor.update({ [`system.combatPins.${list}`]: [...now] });
+    const byDefault = target.dataset.default === "true";
+    const pins = new Set(this.actor.system.combatPins?.[list] ?? []);
+    const unpins = new Set(this.actor.system.combatUnpins?.[list] ?? []);
+    if (target.checked) {
+      unpins.delete(key);
+      if (!byDefault) pins.add(key);
+    } else {
+      pins.delete(key);
+      if (byDefault) unpins.add(key);
+    }
+    return this.actor.update({ [`system.combatPins.${list}`]: [...pins], [`system.combatUnpins.${list}`]: [...unpins] });
   }
 
   /** A Health Threshold's box: ticked, its Steadfast Check was passed; unticked, failed (the user's sheet). */
