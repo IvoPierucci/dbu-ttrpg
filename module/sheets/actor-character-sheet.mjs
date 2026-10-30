@@ -277,7 +277,10 @@ function ownWords(actor) {
     // Duel's Super Stacks are lost in it, never given - the one everybody's Maneuver that names them.
     if (id === "duel") continue;
     const file = id ? getTrait(id) : null;
-    words.push({ name: item.name, text: [file?.text, file?.script, item.system?.text, item.system?.script]
+    // A Racial Trait's effect kept as a Maneuver of its own - "3rd effect of Majin Regeneration" - is named by the Trait it
+    // is an effect of (the user's: that name said nothing).
+    const name = (file?.fromTrait && getTrait(file.fromTrait)?.name) || item.name;
+    words.push({ name, text: [file?.text, file?.script, item.system?.text, item.system?.script]
       .filter(Boolean).join("\n") });
     for (const feature of signatureOfTechnique(item).features) {
       const def = featureDefOf(feature.id);
@@ -1606,7 +1609,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const pins = system.combatPins ?? {};
     const unpins = system.combatUnpins ?? {};
     const words = ownWords(this.actor);
-    const namedBy = pattern => words.filter(entry => pattern.test(entry.text)).map(entry => entry.name);
+    // Each name once: two effects of one Trait are one Trait.
+    const namedBy = pattern => [...new Set(words.filter(entry => pattern.test(entry.text)).map(entry => entry.name))];
     const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     const windowIs = this.#combatWindow;
