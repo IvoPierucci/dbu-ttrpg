@@ -4020,6 +4020,33 @@ export function minionCaps(actor) {
   return { combat, outside: combat + Math.max(1, Number(actor?.system?.baseTierOfPower) || 1) };
 }
 
+/**
+ * Limited Control, kept by what makes Minions (the user's: refused, not only warned): how many more Minions a Master may have
+ * made now - their maximum in the Combat Encounter they are in, counting their Minions in it, and their maximum outside of one,
+ * counting every Minion of theirs. Mass Multi-Form's (`outsideCap`) are not counted; Ruler's Defeated ones not, in a Combat.
+ */
+export function minionRoom(master) {
+  if (!master) return 0;
+  const caps = minionCaps(master);
+  const actors = globalThis.game?.actors;
+  const held = minionsOf(master).map(id => actors?.get?.(id)).filter(minion => minion && !minion.getFlag?.("dbu-ttrpg", "outsideCap"));
+  const combat = globalThis.game?.combats?.contents?.find?.(each => each.combatants.some(entry => entry.actorId === master.id)) ?? null;
+  const inIt = combat ? held.filter(minion => combat.combatants.some(entry => entry.actorId === minion.id)
+    && (!caps.notDefeated || !minion.system?.defeated)).length : 0;
+  return Math.max(0, Math.min(caps.outside - held.length, combat ? (caps.combat - inIt) : Infinity));
+}
+
+/**
+ * Why a Maneuver that makes Minions cannot be used now for want of room (minionRoom), or null - before anything is paid. Multi-Form
+ * Technique asks its own, its Mass Multi-Form's outside the maximum (use-maneuver.mjs askMultiForm).
+ */
+export function whyNoMinionRoom(actor, maneuver) {
+  if (!makesMinions(actor, maneuver) || (uniqueLibraryOf(actor, maneuver) === "multi-form-technique")) return null;
+  if (minionRoom(actor) >= 1) return null;
+  const most = minionCaps(actor);
+  return `${actor.name} may possess no more Minions (${most.combat} in a Combat Encounter, ${most.outside} outside of one): ${maneuver.name}.`;
+}
+
 /** A Master and their Minions but this one: whose uses of a limited Maneuver may be this one's too. */
 function minionFamily(actor) {
   const actors = globalThis.game?.actors;

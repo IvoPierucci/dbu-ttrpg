@@ -37,7 +37,7 @@ import {
   paidSince,
   godStrikeCost,
   squaresAway,
-  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotAtMaster, whyNotCopyClone,
+  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotAtMaster, whyNotCopyClone, whyNoMinionRoom, minionRoom,
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
@@ -4063,9 +4063,13 @@ async function askMultiForm(actor, maneuver) {
   const { boughtTraits } = await import("./unique.mjs");
   const most = Math.max(Number(getTrait(unique.libraryId)?.multiFormMost) || 1,
     ...boughtTraits(unique, getTrait).map(trait => Number(trait.multiFormMost) || 0));
-  const room = most - (Number(unique.duplicates) || 0);
+  // Limited Control too - but Mass Multi-Form's "do not count towards your maximum number of Minions".
+  const mass = boughtTraits(unique, getTrait).some(trait => (Number(trait.multiFormMost) || 0) > 1);
+  const capped = mass ? Infinity : minionRoom(actor);
+  const room = Math.min(most - (Number(unique.duplicates) || 0), capped);
   if (room <= 0) {
-    ui.notifications.warn(`${actor.name} already has ${most} Duplicate Minion${(most === 1) ? "" : "s"}.`);
+    ui.notifications.warn((capped <= 0) ? `${actor.name} may possess no more Minions: ${maneuver.name}.`
+      : `${actor.name} already has ${most} Duplicate Minion${(most === 1) ? "" : "s"}.`);
     return null;
   }
   const each = maneuverKiCost(maneuver, null, actor);
@@ -4801,6 +4805,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   const notForMinions = whyNotMinionManeuver(actor, maneuver);
   if (notForMinions) {
     ui.notifications.warn(notForMinions);
+    return false;
+  }
+  // Limited Control: one that makes Minions, with no room for another.
+  const noRoom = whyNoMinionRoom(actor, maneuver);
+  if (noRoom) {
+    ui.notifications.warn(noRoom);
     return false;
   }
 

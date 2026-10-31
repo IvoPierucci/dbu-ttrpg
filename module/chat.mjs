@@ -80,7 +80,8 @@ import {
   favoredElement,
   favoredDamage,
   whyNotMinionManeuver,
-  whyNotCopyClone
+  whyNotCopyClone,
+  minionRoom
 } from "./maneuvers.mjs";
 import { appliedTraits, boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
 
@@ -452,6 +453,16 @@ export async function requestMakeMinion(master, options = {}) {
   if (isMinion(master)) {
     ui.notifications.warn(`${master.name} is a Minion: a Minion cannot create a Minion.`);
     return [];
+  }
+  // Limited Control (the user's: refused): no more than there is room for - Mass Multi-Form's outside it.
+  if (!options.extra?.outsideCap) {
+    const room = minionRoom(master);
+    const asked = Math.max(1, Number(options.count) || 1);
+    if (room < asked) {
+      ui.notifications.warn(`${master.name} may possess no more Minions: ${room ? `${room} made, not ${asked}` : "none made"}.`);
+      if (!room) return [];
+      options = { ...options, count: room };
+    }
   }
   if (game.user.isGM) return (await import("./minion-make.mjs")).makeMinion(master, options);
   if (!game.users.activeGM) {
@@ -13944,7 +13955,13 @@ export async function askKamikaze(actor, maneuver, actionsSpent) {
   if (!unique) return null;
   const actions = Math.max(1, Number(actionsSpent) || 1);
   const each = 3 * Math.max(1, actor.system.baseTierOfPower ?? 1);
-  const doubles = boughtTraits(unique, getTrait).some(trait => trait.ghostsDouble === true);
+  // Limited Control: a Ghost for each Action, room for each.
+  const room = minionRoom(actor);
+  if (room < actions) {
+    ui.notifications.warn(`${actor.name} may possess ${room ? `only ${room} more` : "no more"} Minion${(room === 1) ? "" : "s"}: ${maneuver.name}.`);
+    return null;
+  }
+  const doubles = boughtTraits(unique, getTrait).some(trait => trait.ghostsDouble === true) && (room >= 2 * actions);
   if (!doubles) return { count: actions, extraKi: 0 };
   const chosen = await pick(maneuver.name, "How many Kamikaze Ghosts?", [
     { action: "single", label: `${actions}` },
@@ -23602,8 +23619,14 @@ export async function tuffleLegacy(actor) {
 export async function yakiSwarm(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const each = 4 * Math.max(1, Number(actor?.system?.baseTierOfPower) || 1);
+  // Limited Control: no more Yaki than there is room for.
+  const room = Math.min(2, minionRoom(actor));
+  if (!room) {
+    ui.notifications.warn(`${actor.name} may possess no more Minions: Yaki Swarm.`);
+    return UNSPENT;
+  }
   const count = Number(await askPlayerChoice(actor, `${actor.name}: Yaki Swarm`,
-    [{ value: "1", label: `1 Yaki - ${each} Ki` }, { value: "2", label: `2 Yaki - ${2 * each} Ki` }])) || 0;
+    [{ value: "1", label: `1 Yaki - ${each} Ki` }, { value: "2", label: `2 Yaki - ${2 * each} Ki` }].slice(0, room))) || 0;
   if (!count) return UNSPENT;
   const { spendManeuverCost } = await import("./maneuvers.mjs");
   if (!await spendManeuverCost(actor, { name: "Yaki Swarm" }, count * each)) return UNSPENT;
@@ -23917,7 +23940,13 @@ export async function glassKnights(actor) {
   if (!actor) return;
   const step = 4 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
   const ki = Number(actor.system.ki?.value) || 0;
-  const most = Math.min(2, Math.floor(ki / step));
+  // Limited Control: no more than there is room for.
+  const room = minionRoom(actor);
+  if (!room) {
+    ui.notifications.warn(`${actor.name} may possess no more Minions: Autonomous Glass Soldiers.`);
+    return;
+  }
+  const most = Math.min(2, Math.floor(ki / step), room);
   const many = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Autonomous Glass Soldiers`, most, `Glass Knights (${step} Ki each)`));
   if (!(many > 0)) return;
   const copiesMost = (actor.system.effects?.slots?.["glass.copies"] === true) ? Math.min(many, Math.floor((ki - many * step) / step)) : 0;
@@ -32864,6 +32893,7 @@ async function returnInitialWagers(attack, attacker) {
  */
 function whyNotMirror(actor, attack, item, counterLeft = 1) {
   if (isMinion(actor)) return "a Minion cannot create a Minion";
+  if (minionRoom(actor) < 1) return "no room for another Minion (Limited Control)";
   if (!attack || !attackTargets(attack).some(entry => entry.uuid === actor?.uuid)) return "only a target of this attack";
   if (attack.result) return "only before the attack resolves";
   if (attack.duel) return "a Duel is already on this attack";
@@ -35060,6 +35090,8 @@ const GOOP_SAID = " - halved: a Goop in an unoccupied Square within a Large Sphe
 async function goopSplit(actor) {
   // "Minions cannot create or be the Master of a Minion": not asked of one.
   if ((actor?.system?.effects?.slots?.["fromGoop.goop"] !== true) || isMinion(actor)) return false;
+  // Limited Control: not asked without room for the Goop.
+  if (minionRoom(actor) < 1) return false;
   const used = actor.getFlag?.(SCOPE, "goopRound");
   const count = (used?.round === roundKey()) ? (Number(used.count) || 0) : 0;
   if (count >= 3) return false;
