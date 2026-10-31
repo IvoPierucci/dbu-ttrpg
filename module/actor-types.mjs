@@ -19,6 +19,20 @@ export function isMinion(actor) {
 }
 
 /**
+ * Special Minions (Minion Rules): "Special Minions ignore the Weakness, Single Attack, Thresholds, and Ki Points & Capacity
+ * rules for Minions." A Minion that is not one - the Settings tab's Special Minion box off, and not a Duplicate ("Duplicates ...
+ * are Special Minions") - which is what those four rules ask.
+ */
+export function typicalMinion(actor) {
+  return isMinion(actor) && !actor.system?.specialMinion && !actor.system?.duplicate;
+}
+
+/** A Duplicate Minion (Minion Rules): the Settings tab's Duplicate box - what From Goop's kind of effect makes. */
+export function isDuplicate(actor) {
+  return isMinion(actor) && Boolean(actor.system?.duplicate);
+}
+
+/**
  * Whether a Minion has its Act Phase this Combat Round: "Minions skip the Act Phase of their Turn ... unless they have been
  * targeted by the Command Maneuver by their Master" - the Round its Master's Command was for (chat.mjs commandMinions).
  */

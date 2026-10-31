@@ -14,7 +14,7 @@ import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stat
 import { grantedUniques } from "../unique.mjs";
 import { getTrait, printedLines, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
-import { entryTip } from "../maneuvers.mjs";
+import { entryTip, minionCaps } from "../maneuvers.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
@@ -862,6 +862,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.isMinion = this.actor.type === "minion";
     context.minionsList = context.isMinion ? [] : this.#prepareMinions();
     context.masterEntry = context.isMinion ? this.#prepareMaster() : null;
+    // A Duplicate is a Special Minion: the box shown ticked, and left to the Duplicate box.
+    context.specialMinionShown = Boolean(this.actor.system.specialMinion || this.actor.system.duplicate);
+    // Limited Control: how many Minions are theirs to have, out of a Combat Encounter and in one.
+    context.minionCaps = context.isMinion ? null : minionCaps(this.actor);
     // Handlebars has no literal-array helper, so the Attribute columns are supplied
     // here. The progression table's headings and cells both read from this, so they
     // cannot drift apart.
@@ -1741,7 +1745,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.steadfastBoxes = keys
       .map((key, index) => ({ key, index }))
       // A Minion's only one is Injured (Minion Rules).
-      .filter(({ key }) => DBUCharacterData.THRESHOLDS[key].counts && (!system.minion || (key === "injured")))
+      .filter(({ key }) => DBUCharacterData.THRESHOLDS[key].counts && (!system.typicalMinion || (key === "injured")))
       .map(({ key, index }) => {
         // Where it begins: at or below this much Life - the line of the Threshold above it.
         const above = DBUCharacterData.THRESHOLDS[keys[index - 1]]?.above ?? 0;
@@ -2885,8 +2889,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return minionsOf(this.actor).map(id => {
       const actor = game.actors?.get(id);
       const seen = gm || Boolean(actor?.testUserPermission(game.user, "OBSERVER"));
+      const kind = actor?.system?.duplicate ? "Duplicate" : (actor?.system?.specialMinion ? "Special" : "");
       return { id, name: actor ? (seen ? actor.name : "Unknown Minion") : "(no longer in this world)", img: seen ? (actor?.img ?? "") : "",
-        unknown: !seen, missing: !actor, theirs: !own.has(id) };
+        unknown: !seen, missing: !actor, theirs: !own.has(id), kind: seen ? kind : "" };
     }).sort((a, b) => (Number(a.unknown) - Number(b.unknown)) || a.name.localeCompare(b.name));
   }
 
@@ -2912,6 +2917,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         && actor.testUserPermission(game.user, "OBSERVER"))
       .sort((a, b) => a.name.localeCompare(b.name));
     if (!offered.length) return ui.notifications.info("No Minion without a Master whose sheet you can see is left to add.");
+    // Limited Control: no more than the base Tier of Power and the one of a Combat Encounter.
+    const room = minionCaps(this.actor).outside - listed.size;
+    if (room <= 0) return ui.notifications.warn(`${this.actor.name} may possess ${listed.size} Minions at most.`);
     const escape = Handlebars.escapeExpression;
     const picked = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Add Minions` },
@@ -2924,6 +2932,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rejectClose: false
     });
     if (!Array.isArray(picked) || !picked.length) return;
+    if (picked.length > room) return ui.notifications.warn(`${this.actor.name} has room for ${room} more Minion${(room === 1) ? "" : "s"}.`);
     return this.actor.update({ "system.minions": [...new Set([...(this.actor.system.minions ?? []), ...picked])] });
   }
 
@@ -2938,9 +2947,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (this.actor.type !== "minion") return;
     if (masterOf(this.actor)) return ui.notifications.warn(`${this.actor.name} already has a Master.`);
     const offered = (game.actors?.contents ?? [])
-      .filter(actor => (actor.type === "character") && actor.testUserPermission(game.user, "OBSERVER"))
+      .filter(actor => (actor.type === "character") && actor.testUserPermission(game.user, "OBSERVER")
+        // Limited Control: a Character with room for one more.
+        && (minionsOf(actor).length < minionCaps(actor).outside))
       .sort((a, b) => a.name.localeCompare(b.name));
-    if (!offered.length) return ui.notifications.info("No Character whose sheet you can see to be the Master.");
+    if (!offered.length) return ui.notifications.info("No Character whose sheet you can see with room for a Minion to be the Master.");
     const escape = Handlebars.escapeExpression;
     const picked = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Master` },

@@ -1,5 +1,5 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
-import { isCharacter, isMinion } from "./actor-types.mjs";
+import { commandedNow, isCharacter, isMinion, typicalMinion } from "./actor-types.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
@@ -16,7 +16,7 @@ import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spen
 import { activeBuddy, activeBuddies, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
-import { areAllies, minionsOf } from "./allies.mjs";
+import { areAllies, masterOf, minionsOf } from "./allies.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
@@ -15804,7 +15804,7 @@ export async function highRiskForgo(actor, before) {
   const max = Number(actor.system.life?.max) || 0;
   const gained = (Number(actor.system.life?.value) || 0) - (Number(before) || 0);
   if (gained <= 0) return;
-  if (!["injured", "critical"].includes(DBUCharacterData.thresholdKey(before, max, isMinion(actor)))) return;
+  if (!["injured", "critical"].includes(DBUCharacterData.thresholdKey(before, max, typicalMinion(actor)))) return;
   if (actor.getFlag?.(SCOPE, "highRiskRound") === roundKey()) return;
   const ki = Math.floor(gained / 2);
   const answer = await askPlayerChoice(actor, `${actor.name}: High Risk Battler - ${gained} Life Points`,
@@ -15917,9 +15917,18 @@ export async function commandMinions(actor) {
     ui.notifications.warn(`${actor.name} is a Minion: it has no Minions to Command.`);
     return UNSPENT;
   }
-  const yours = minionsOf(actor).map(id => game.actors?.get(id)).filter(minion => minion && !minion.system?.defeated);
+  // Limited Control: "it can only be used once per Combat Round on each Minion" - and on those in the Combat Encounter, where
+  // there is one.
+  const fighting = game.combat?.started ? new Set((game.combat.combatants?.contents ?? []).map(each => each.actor?.id)) : null;
+  const yours = minionsOf(actor).map(id => game.actors?.get(id))
+    .filter(minion => minion && !minion.system?.defeated && (!fighting || fighting.has(minion.id)));
   if (!yours.length) {
     ui.notifications.warn(`${actor.name} has no Minions to Command.`);
+    return UNSPENT;
+  }
+  const free = yours.filter(minion => !commandedNow(minion));
+  if (!free.length) {
+    ui.notifications.warn(`${actor.name}'s Minions have all been Commanded this Combat Round.`);
     return UNSPENT;
   }
   const most = actionsLeft(actor, "standard");
@@ -15931,11 +15940,11 @@ export async function commandMinions(actor) {
   const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${actor.name} - Command` },
     content: `<p class="dbu-respond-hint">Up to ${most}: a Standard Action of yours each.</p>
-      <div class="dbu-ally-pick">${yours.map(minion => `<div class="dbu-ally-pick-row">
+      <div class="dbu-ally-pick">${free.map(minion => `<div class="dbu-ally-pick-row">
         <label class="dbu-respond-option"><input type="checkbox" name="${escape(minion.id)}"/><img src="${escape(minion.img ?? "")}" alt=""/>
           <span class="dbu-respond-name">${escape(minion.name)}</span></label></div>`).join("")}</div>`,
     buttons: [{ action: "command", label: "Command", default: true, callback: (event, button, dialog) =>
-      yours.filter(minion => dialog.element.querySelector(`input[name="${CSS.escape(minion.id)}"]`)?.checked) },
+      free.filter(minion => dialog.element.querySelector(`input[name="${CSS.escape(minion.id)}"]`)?.checked) },
     { action: "cancel", label: "Cancel" }],
     rejectClose: false
   });
@@ -15945,6 +15954,8 @@ export async function commandMinions(actor) {
     return UNSPENT;
   }
   if (!await spendActions(actor, picked.length, "standard")) return UNSPENT;
+  // Recovery Periods ask whether a Master gave orders this Round (combat.mjs recoveryPeriods).
+  await actor.setFlag(SCOPE, "commandedRound", roundKey());
   for (const minion of picked) {
     await requestActorUpdate(minion, { [`flags.${SCOPE}.commanded`]: roundKey(),
       "system.actionsSpent.converted": (Number(minion.system?.actionsSpent?.converted) || 0) + 1 });
@@ -31446,9 +31457,9 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
   // Shock Collar's Prone.
   const thresholds = Object.keys(DBUCharacterData.THRESHOLDS);
   const knockedThrough = thresholds.indexOf(
-    DBUCharacterData.thresholdKey(floor, target.system.life.max, isMinion(target)))
+    DBUCharacterData.thresholdKey(floor, target.system.life.max, typicalMinion(target)))
     > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
-      target.system.life.max, isMinion(target)));
+      target.system.life.max, typicalMinion(target)));
 
   // Of their own doing, and to 0 or below - Revenge Bomber's "Defeated by one of your effects reducing your Life Points to
   // 0". Written with the Life Points, so the defeat it begins already knows.
@@ -33431,9 +33442,9 @@ async function applyAttackDamage(message, target, attack) {
   // leaves no record of having been crossed.
   const thresholds = Object.keys(DBUCharacterData.THRESHOLDS);
   const knockedThrough = thresholds.indexOf(
-    DBUCharacterData.thresholdKey(floor, target.system.life.max, isMinion(target)))
+    DBUCharacterData.thresholdKey(floor, target.system.life.max, typicalMinion(target)))
     > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
-      target.system.life.max, isMinion(target)));
+      target.system.life.max, typicalMinion(target)));
 
   // Pain Resistant (2): an Opponent knocking them through - no Bonus Momentum for them, nothing of theirs answering it.
   const painDenied = knockedThrough && armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)
@@ -34107,6 +34118,31 @@ function deathButtons(message, card, subject, buttons) {
     made.addEventListener("click", run);
     buttons.append(made);
   };
+  // Minion Defeat (Minion Rules): "Minions are killed if their Life Points reach 0, unless their Master spends a Karma Point to
+  // keep them alive." No intent to declare: their Master's Karma Point, asked of the Master's player, or the Dead Special State.
+  if (isMinion(subject)) {
+    if (card.deathSettled) return;
+    const master = game.actors?.get(masterOf(subject));
+    const karma = Number(master?.system?.karma) || 0;
+    if (master && (karma >= 1) && (game.user.isGM || master.isOwner)) {
+      button(`Keep alive (${master.name}'s Karma)`, `${master.name} spends 1 Karma Point: Defeated, not killed.`, async () => {
+        await requestActorUpdate(master, { "system.karma": karma - 1 });
+        requestEdit(message, { type: "moment", moment: { ...card, deathSettled: "survived",
+          detail: `${master.name} spends 1 Karma Point: ${subject.name} is kept alive.` } });
+      });
+    }
+    if (game.user.isGM || subject.isOwner || master?.isOwner) {
+      button("Killed", "A Minion at 0 Life Points is killed - the Dead Special State - unless its Master spends a Karma Point.",
+        async () => {
+          if (!((Number(subject.system.states?.dead) || 0) > 0)) {
+            await (await import("./effects/moments-runtime.mjs")).enterState(subject, "dead", 1, null, "Minion Defeat");
+          }
+          requestEdit(message, { type: "moment", moment: { ...card, deathSettled: "died",
+            detail: `${subject.name}, a Minion, is killed - the Dead Special State.` } });
+        });
+    }
+    return;
+  }
   const knocker = card.knockedBy ? fromUuidSync(card.knockedBy) : null;
   if (!card.intent && (game.user.isGM || knocker?.isOwner)) {
     button("Death", "Their intent: Death - they die unless they spend 1 Karma Point. Your own effects and an attack at someone "
@@ -34947,8 +34983,8 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     await actor.update({ "system.life.value": value + restored }, { dbuSurge: true });
     // Above a Health Threshold you were under: what answers it - Lightning Surge (3)'s.
     const keys = Object.keys(DBUCharacterData.THRESHOLDS);
-    const crossedUp = Boolean(restored) && (keys.indexOf(DBUCharacterData.thresholdKey(value + restored, max, isMinion(actor)))
-      < keys.indexOf(DBUCharacterData.thresholdKey(value, max, isMinion(actor))));
+    const crossedUp = Boolean(restored) && (keys.indexOf(DBUCharacterData.thresholdKey(value + restored, max, typicalMinion(actor)))
+      < keys.indexOf(DBUCharacterData.thresholdKey(value, max, typicalMinion(actor))));
 
     // The Surge announces itself: a separate message for the Maneuver would say the
     // same thing twice.

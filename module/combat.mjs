@@ -10,7 +10,7 @@
  * Actions away. None of them have anywhere to happen without it.
  */
 
-import { areAllies } from "./allies.mjs";
+import { areAllies, masterOf, minionsOf } from "./allies.mjs";
 import { commandedNow, isCharacter } from "./actor-types.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
@@ -154,9 +154,12 @@ async function startRound(combat) {
     }
   }
 
+  // Recovery Periods, for the Round that ended - said on the Round's card.
+  const recovered = ((combat.round ?? 0) > 1) ? await recoveryPeriods(combat) : [];
   const roundCard = await announce("start-of-round", {
     title: `Start of Combat Round ${combat.round}`,
-    subjects: combatants(combat).map(actor => actor.uuid)
+    subjects: combatants(combat).map(actor => actor.uuid),
+    ...(recovered.length ? { detail: recovered.join(" ") } : {})
   });
   // Experienced Fighter (1): Combat Recovery out of sequence, on the Round's card.
   if ((combat.round ?? 0) > 1) {
@@ -165,6 +168,66 @@ async function startRound(combat) {
       await experiencedRoundStart(actor, roundCard, lastAttacks.get(actor.uuid), `${combat.id}:${(combat.round ?? 0) - 1}`);
     }
   }
+}
+
+/**
+ * Recovery Periods (Minion Rules): "If you did not give your Minions orders with the Command Maneuver this Combat Round, at the
+ * end of this Combat Round, all of your Minions regain 1d8(T) Life and Ki Points (roll once - all of your Minions that qualify
+ * regain those Life and Ki Points)." The Round that ended: each Master in it who did not Command (chat.mjs commandMinions), their
+ * Minions in it not Defeated - one roll of the Master's Tier of Power in d8s. What happened, for the Round's card.
+ */
+async function recoveryPeriods(combat) {
+  const ended = `${combat.id}:${(Number(combat.round) || 0) - 1}`;
+  const here = combatants(combat);
+  const told = [];
+  for (const master of here.filter(actor => actor.type !== "minion")) {
+    if (master.getFlag?.("dbu-ttrpg", "commandedRound") === ended) continue;
+    const ids = new Set(minionsOf(master));
+    const theirs = here.filter(actor => ids.has(actor.id) && !actor.system?.defeated);
+    if (!theirs.length) continue;
+    const tier = Math.max(1, Number(master.system?.tierOfPower) || 1);
+    const roll = await new Roll(`${tier}d8`).evaluate();
+    for (const minion of theirs) {
+      const life = minion.system.life ?? {};
+      const ki = minion.system.ki ?? {};
+      await minion.update({
+        "system.life.value": Math.max(Number(life.value) || 0, Math.min(Number(life.max) || 0, (Number(life.value) || 0) + roll.total)),
+        "system.ki.value": Math.max(Number(ki.value) || 0, Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + roll.total))
+      });
+    }
+    told.push(`Recovery Period: ${master.name}'s Minions (${theirs.map(minion => minion.name).join(", ")}) regain `
+      + `${roll.total} Life and Ki Points (${tier}d8).`);
+  }
+  return told;
+}
+
+/**
+ * Duplicates (Minion Rules): "At the end of a Combat Encounter, or if you leave a Combat Encounter for any reason ... all of
+ * your Duplicate Minions cease to exist." The Actor deleted (the user's: kept, the world fills up with them), its tokens on every
+ * Scene with it, and taken off its Master's Minions list. "Any Apparel, Accessories or Weapons created along with a Duplicate are
+ * destroyed" with it - its own Items.
+ */
+export async function dismissDuplicates(duplicates) {
+  for (const duplicate of new Set(duplicates)) {
+    const world = game.actors?.get(duplicate?.id ?? "");
+    if (!world?.system?.duplicate) continue;
+    const master = game.actors.get(masterOf(world));
+    if (master && (master.system?.minions ?? []).includes(world.id)) {
+      await master.update({ "system.minions": master.system.minions.filter(id => id !== world.id) });
+    }
+    for (const scene of game.scenes ?? []) {
+      const tokens = scene.tokens.filter(token => token.actorId === world.id).map(token => token.id);
+      if (tokens.length) await scene.deleteEmbeddedDocuments("Token", tokens);
+    }
+    const name = world.name;
+    await world.delete();
+    ui.notifications?.info(`${name}, a Duplicate, ceases to exist.`);
+  }
+}
+
+/** A Master's Duplicates - world Actors naming them, or named by them. */
+function duplicatesOf(master) {
+  return minionsOf(master).map(id => game.actors?.get(id)).filter(minion => minion?.system?.duplicate);
 }
 
 /**
@@ -758,6 +821,30 @@ export function registerCombatHooks() {
     if (followerSkips(arriving)) return combat.nextTurn();
   });
 
+  // A Master leaving a Combat Encounter "for any reason": their Duplicates cease to exist.
+  Hooks.on("deleteCombatant", async combatant => {
+    if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    const actor = combatant.actor;
+    if (!combatant.parent?.started || !isCharacter(actor) || (actor.type === "minion")) return;
+    await dismissDuplicates(duplicatesOf(actor));
+  });
+
+  // Limited Control: "You can only possess a single Minion during a Combat Encounter (Minion Talents increase this number)" -
+  // a Minion over that, told to the GM.
+  Hooks.on("createCombatant", async combatant => {
+    if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    const master = game.actors?.get(masterOf(combatant.actor));
+    if (!master) return;
+    const ids = new Set(minionsOf(master));
+    const here = new Set((combatant.parent?.combatants?.contents ?? []).map(each => each.actor?.id).filter(id => ids.has(id)));
+    const { minionCaps } = await import("./maneuvers.mjs");
+    const most = minionCaps(master).combat;
+    if (here.size > most) {
+      ui.notifications.warn(`${master.name} may possess ${most} Minion${(most === 1) ? "" : "s"} in a Combat Encounter: `
+        + `${here.size} of theirs are in this one.`);
+    }
+  });
+
   Hooks.on("deleteCombat", async combat => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
     // Switch to a Hero (2): "until the end of the Combat Encounter".
@@ -769,6 +856,10 @@ export function registerCombatHooks() {
 
     // Leaving an Encounter clears what only lasted for it.
     for (const actor of combatants(combat)) await endEncounterFor(actor);
+    // And every Duplicate in it, or of a Master in it, ceases to exist.
+    const here = combatants(combat);
+    await dismissDuplicates([...here.filter(actor => actor.system?.duplicate),
+      ...here.filter(actor => actor.type !== "minion").flatMap(duplicatesOf)]);
 
     await announceEncounterEnd(rounds);
   });

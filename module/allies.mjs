@@ -19,11 +19,17 @@ export function listedAllies(who) {
   return Array.from(actorOf(who)?.system?.allies ?? []).filter(Boolean);
 }
 
-/** Whether the two are Allies: two Characters, not one, either named on the other's list - or a Minion and its Master. */
+/**
+ * Whether the two are Allies: two Characters, not one, either named on the other's list - or a Minion and its Master. But a
+ * Duplicate (Minion Rules): "While Minions are usually treated as Allies, a Duplicate is not considered their Master's Ally nor
+ * vice-versa" - whatever a list says.
+ */
 export function areAllies(one, other) {
   const a = allyKey(one);
   const b = allyKey(other);
   if (!a || !b || (a === b)) return false;
+  const duplicate = who => (actorOf(who)?.type === "minion") && Boolean(actorOf(who)?.system?.duplicate);
+  if ((duplicate(one) && (masterOf(one) === b)) || (duplicate(other) && (masterOf(other) === a))) return false;
   return listedAllies(one).includes(b) || listedAllies(other).includes(a)
     || (masterOf(one) === b) || (masterOf(other) === a);
 }

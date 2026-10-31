@@ -1,4 +1,4 @@
-import { areAllies } from "./allies.mjs";
+import { areAllies, masterOf, minionsOf } from "./allies.mjs";
 import { commandedNow } from "./actor-types.mjs";
 import { guidanceRangeGap } from "./guidance.mjs";
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
@@ -3926,8 +3926,86 @@ function profileOptionCost(maneuver, profileId, actor) {
 export function whyNotMinionAttack(actor, maneuver) {
   if ((actor?.type !== "minion") || !maneuver?.attacking || !globalThis.game?.combat?.started) return null;
   if (!commandedNow(actor)) return `${actor.name} is a Minion: no Attacking Maneuver without its Act Phase - its Master's Command.`;
+  // Special Minions ignore the Single Attack rule.
+  if (actor.system?.specialMinion || actor.system?.duplicate) return null;
   if ((Number(actor.system?.attacksThisRound) || 0) >= 1) return `${actor.name} is a Minion: one Attacking Maneuver a Combat Round.`;
   return null;
+}
+
+/**
+ * Maneuvers of Minions (Minion Rules): "Some Maneuvers and Unique Abilities will have a section underneath detailing their
+ * interaction with Minions" - its "–Minions:" line as printed: "free", "non-minion", "n/a", or "" for none. A Unique Ability's
+ * from its own file.
+ */
+export function minionLine(actor, maneuver) {
+  const library = uniqueLibraryOf(actor, maneuver);
+  const text = String(getTrait(library || maneuver?.id || "")?.text ?? "");
+  return text.match(/[–-]\s*Minions:\s*(Free|Non-Minion|N\/A)/i)?.[1]?.toLowerCase() ?? "";
+}
+
+/** The library id of the Unique Ability a Maneuver is, or "" for one that is not. */
+function uniqueLibraryOf(actor, maneuver) {
+  return String(actor?.items?.get?.(maneuver?.itemId ?? "")?.system?.unique?.libraryId ?? "");
+}
+
+/**
+ * Non-Minion: "This Maneuver cannot be used by a Minion (even Special or Duplicate Minions)." And a Duplicate: "Duplicate
+ * Minions also cannot ... use the Empower Maneuver".
+ */
+export function whyNotMinionManeuver(actor, maneuver) {
+  if ((actor?.type !== "minion") || !maneuver) return null;
+  if (minionLine(actor, maneuver) === "non-minion") return `${actor.name} is a Minion: ${maneuver.name} is Non-Minion.`;
+  if (actor.system?.duplicate && (maneuver.id === "empower")) return `${actor.name} is a Duplicate: no Empower Maneuver.`;
+  return null;
+}
+
+/** A Duplicate: "Duplicate Minions also cannot ... target their Master with any Unique Ability or Special Maneuver". */
+export function whyNotAtMaster(actor, maneuver, targets = []) {
+  if ((actor?.type !== "minion") || !actor.system?.duplicate || !maneuver) return null;
+  if (!maneuver.special && !uniqueLibraryOf(actor, maneuver)) return null;
+  const master = masterOf(actor);
+  return (master && targets.some(target => target?.id === master))
+    ? `${actor.name} is a Duplicate: ${maneuver.name} cannot target its Master.` : null;
+}
+
+/**
+ * Limited Control (Minion Rules): "You can only possess a single Minion during a Combat Encounter (Minion Talents increase this
+ * number). Your maximum number of Minions you can possess outside of a Combat Encounter is equal to the number you can possess
+ * inside of a Combat Encounter plus your base Tier of Power." What a Talent adds to the first: the `minions.combat` Slot.
+ */
+export function minionCaps(actor) {
+  const combat = Math.max(0, applySlot(actor?.system?.effects?.slots, "minions.combat", 1));
+  return { combat, outside: combat + Math.max(1, Number(actor?.system?.baseTierOfPower) || 1) };
+}
+
+/** A Master and their Minions but this one: whose uses of a limited Maneuver may be this one's too. */
+function minionFamily(actor) {
+  const actors = globalThis.game?.actors;
+  if (!actors || !actor) return [];
+  const master = (actor.type === "minion") ? actors.get?.(masterOf(actor)) : actor;
+  if (!master) return [];
+  return [master.id, ...minionsOf(master)].filter(id => id !== actor.id).map(id => actors.get?.(id)).filter(Boolean);
+}
+
+/**
+ * Whether one of the family's uses of a limited Maneuver counts against another's. Special Allowance: "When using Special
+ * Maneuvers or Unique Abilities, Masters and Minions make use of the same [x/Round] or [x/Encounter] limitations" - but a "Free"
+ * one: "This Maneuver ignores the Special Allowance rule." And a Duplicate: "Duplicate Minions and their Masters make use of the
+ * [x/Encounter] limitations" - any Maneuver's, between the Master and their Duplicates.
+ */
+function sharesLimit(actor, partner, maneuver) {
+  if ((maneuver.special || uniqueLibraryOf(actor, maneuver)) && (minionLine(actor, maneuver) !== "free")) return true;
+  const side = who => (who.type !== "minion") || Boolean(who.system?.duplicate);
+  return (maneuver.usageLimit?.per === "encounter") && side(actor) && side(partner);
+}
+
+/** A partner's uses of the same Maneuver - a Unique Ability by the one of theirs from the same file. */
+function partnerSpent(actor, partner, maneuver) {
+  const library = uniqueLibraryOf(actor, maneuver);
+  const theirs = library ? Array.from(partner.items ?? []).find(item => item.system?.unique?.libraryId === library) : null;
+  if (library && !theirs) return 0;
+  const same = theirs ? { ...maneuver, id: theirs.id } : maneuver;
+  return (partner.system?.usedManeuvers ?? []).filter(entry => usedIs(entry, same)).length;
 }
 
 export function whyNotAnotherAbsolute(actor, maneuver) {
@@ -4204,7 +4282,10 @@ export function maneuverUsesLeft(actor, maneuver) {
   if ((actor?.system?.effects?.slots?.["mimicry.copyAny"] === true)
     && (actor.items?.get?.(maneuver.itemId ?? "")?.system?.unique?.libraryId === "copy-being")) return Infinity;
 
-  const spent = (actor.system.usedManeuvers ?? []).filter(entry => usedIs(entry, maneuver)).length;
+  const spent = (actor.system.usedManeuvers ?? []).filter(entry => usedIs(entry, maneuver)).length
+    // And a Master's or a Minion's of theirs, where the Minion Rules share the limit.
+    + minionFamily(actor).filter(partner => sharesLimit(actor, partner, maneuver))
+      .reduce((sum, partner) => sum + partnerSpent(actor, partner, maneuver), 0);
   // And what an effect adds to it - Energizing Training's Surge "an additional time".
   const more = Math.max(0, applySlot(actor.system.effects?.slots, `${maneuver.id}.uses`, 0));
   const left = Math.max(0, maneuver.usageLimit.amount + more - spent);

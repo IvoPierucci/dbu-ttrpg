@@ -37,7 +37,7 @@ import {
   paidSince,
   godStrikeCost,
   squaresAway,
-  whyNotAnotherAbsolute, whyNotMinionAttack,
+  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotAtMaster,
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
@@ -4797,6 +4797,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ui.notifications.warn(`${actor.name} has no uses of ${maneuver.name} left.`);
     return false;
   }
+  // Maneuvers of Minions: a Non-Minion one, and a Duplicate's Empower.
+  const notForMinions = whyNotMinionManeuver(actor, maneuver);
+  if (notForMinions) {
+    ui.notifications.warn(notForMinions);
+    return false;
+  }
 
   if (!permitted(actor, maneuver)) return false;
 
@@ -5244,6 +5250,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
     if ((targetActor.uuid === actor.uuid) && !selfTreated) {
       ui.notifications.warn(`${maneuver.name} cannot target its own user.`);
+      return false;
+    }
+    // A Duplicate's Unique Abilities and Special Maneuvers, never at its Master.
+    const atMaster = whyNotAtMaster(actor, maneuver,
+      [targetActor, ...Array.from(game.user.targets ?? []).map(token => token.actor)].filter(Boolean));
+    if (atMaster) {
+      ui.notifications.warn(atMaster);
       return false;
     }
     // Hidden: "that enemy cannot target you with any Maneuver or effect" - but for the Search Maneuver, which targets

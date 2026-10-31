@@ -67,9 +67,29 @@
     <p class="tab-placeholder">No Master yet.</p>
     {{/if}}
   </section>
+
+  {{! The Minion's kind (the user's): a Special Minion, and a Duplicate - "Duplicates ... are Special Minions". }}
+  <section class="panel minion-kind-panel">
+    <h3 class="panel-title">Kind of Minion</h3>
+    <label class="debug-toggle"
+           data-tooltip="Special Minions ignore the Weakness, Single Attack, Thresholds, and Ki Points &amp; Capacity rules for Minions.">
+      <input type="checkbox" name="system.specialMinion" {{#if specialMinionShown}}checked{{/if}}
+             {{#if system.duplicate}}disabled{{/if}} {{#unless editable}}disabled{{/unless}}/>
+      Special Minion
+      {{#if system.duplicate}}<em>as a Duplicate</em>{{/if}}
+    </label>
+    <label class="debug-toggle"
+           data-tooltip="A copy of its Master, and a Special Minion: not its Master's Ally nor they its; no Empower; no Unique Ability or Special Maneuver at its Master; their [x/Encounter] limits shared. It ceases to exist - deleted - at the end of the Combat Encounter.">
+      <input type="checkbox" name="system.duplicate" {{#if system.duplicate}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
+      Duplicate
+    </label>
+  </section>
   {{else}}
   <section class="panel ally-panel">
-    <h3 class="panel-title">Minions</h3>
+    <h3 class="panel-title">
+      Minions
+      {{#if minionCaps}}<span class="panel-note" data-tooltip="Limited Control: one in a Combat Encounter (Minion Talents increase this number); outside of one, that plus your base Tier of Power">{{minionCaps.combat}} in combat &middot; {{minionCaps.outside}} at most</span>{{/if}}
+    </h3>
     {{#if editable}}
     <button type="button" class="edit-toggle ally-add" data-action="addMinions">+ Add Minions</button>
     {{/if}}
@@ -89,6 +109,7 @@
         {{/if}}
         {{#if minion.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if minion.img}}<img class="ally-img" src="{{minion.img}}" alt=""/>{{/if}}{{/if}}
         <span class="ally-name">{{minion.name}}</span>
+        {{#if minion.kind}}<span class="ally-note">{{minion.kind}}</span>{{/if}}
         {{#if minion.theirs}}<span class="ally-note" data-tooltip="This Minion's sheet names you as its Master - taken off there">from their sheet</span>{{/if}}
       </li>
       {{/each}}

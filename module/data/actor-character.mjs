@@ -114,7 +114,7 @@ function perThreshold(data, key) {
   const per = data.effects?.slots?.[`${key}.perThreshold`];
   if (!per?.add) return { value: 0, parts: [] };
   const keys = Object.keys(DBUCharacterData.THRESHOLDS);
-  const at = keys.indexOf(DBUCharacterData.thresholdKey(data.life.value, data.life.max, data.minion));
+  const at = keys.indexOf(DBUCharacterData.thresholdKey(data.life.value, data.life.max, data.typicalMinion));
   const below = keys.filter((each, index) => (index <= at) && DBUCharacterData.THRESHOLDS[each].counts).length;
   const value = per.add * below;
   const source = (per.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects";
@@ -1509,6 +1509,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // checkbox gone. A Character's Minions, by world Actor id, and a Minion's one Master: either side is enough (allies.mjs).
     schema.minions = new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] });
     schema.master = new fields.StringField({ required: true, blank: true, initial: "" });
+    // A Minion's kind (the user's, on its Settings tab): a Special Minion, and a Duplicate - "Duplicates ... are Special Minions".
+    schema.specialMinion = new fields.BooleanField({ required: true, initial: false });
+    schema.duplicate = new fields.BooleanField({ required: true, initial: false });
 
     // Whether this character is Adventuring - what a Buddy's Adventure Effect waits on. A switch
     // on the Biography tab, by the table's ruling: off when a Combat Encounter starts, on again
@@ -1907,6 +1910,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // A Minion (the rulebook's Minion Rules, the user's Actor type): read by every rule that treats one apart.
     this.minion = this.parent?.type === "minion";
+    // Special Minions: "Special Minions ignore the Weakness, Single Attack, Thresholds, and Ki Points & Capacity rules for
+    // Minions" - a Duplicate one of them. What those four ask: a Minion that is neither.
+    this.typicalMinion = this.minion && !this.specialMinion && !this.duplicate;
     // "Karma: Minions do not possess Karma Points."
     if (this.minion) this.karma = 0;
 
@@ -2023,8 +2029,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       report: message => this.effects.errors.push(message),
       // For a Buddy's Buddy Attribute, and the Skills its script names by the Score they use.
       baseTier: DBUCharacterData.tierOfPowerFor(this.powerLevel),
-      // A Minion's Weakness at base Tier 1 is an effect of its own (registry.mjs).
-      minion: this.minion,
+      // A Minion's Weakness at base Tier 1 is an effect of its own (registry.mjs) - not a Special Minion's.
+      minion: this.typicalMinion,
       skills: DBUCharacterData.SKILLS
     });
 
@@ -2050,7 +2056,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // before the Maximum Life Points it is read against are worked out again below: against those of the last time they
     // were, kept on the Actor. Without it the bulk read no Threshold at all - always Healthy. Settled for good further down.
     const lastLifeMax = Number(this.parent?._dbuLifeMax) || 0;
-    this.threshold = { key: lastLifeMax ? DBUCharacterData.thresholdKey(this.life.value, lastLifeMax, this.minion) : "healthy" };
+    this.threshold = { key: lastLifeMax ? DBUCharacterData.thresholdKey(this.life.value, lastLifeMax, this.typicalMinion) : "healthy" };
 
     // Neko Majin-Dama's x: "your number of Integrated Majin-Dama (even if they are Inactive)" - and (5)'s none.
     const damas = Array.from(this.parent?.items ?? []).filter(item => (item.type === "gear")
@@ -2066,7 +2072,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // more per five Levels, reaching 7 at Level 30.
     // Weakness (Minion Rules): "all Minions having their base Tier of Power reduced by 1 (if their base Tier of Power is
     // already 1, reduce their Saving Throws and Combat Rolls by 1)" - the second an effect of its own (registry.mjs).
-    this.baseTierOfPower = this.minion ? Math.max(1, DBUCharacterData.tierOfPowerFor(this.powerLevel) - 1)
+    this.baseTierOfPower = this.typicalMinion ? Math.max(1, DBUCharacterData.tierOfPowerFor(this.powerLevel) - 1)
       : DBUCharacterData.tierOfPowerFor(this.powerLevel);
 
 
@@ -2367,7 +2373,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.ki.max = Math.max(0, withEffects(this, "ki.max", this.ki.max));
     // Ki Points & Capacity (Minion Rules): "the typical Capacity Rate for their Power Level but set their Maximum Ki Points to
     // 1/2 of what it would usually be" - rounded down.
-    if (this.minion) this.ki.max = Math.floor(this.ki.max / 2);
+    if (this.typicalMinion) this.ki.max = Math.floor(this.ki.max / 2);
 
     // God Ki's Divine Ki Points: "an amount equal to 1/2 of their Maximum Ki Points (ignoring any increases from Ki
     // Multiplier)" - read before the Multiplier below.
@@ -2775,12 +2781,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // its own. What it costs comes from the Steadfast Checks failed at or below that
     // point; results recorded above it are ignored, since rising back up clears them.
     const keys = Object.keys(DBUCharacterData.THRESHOLDS);
-    const current = DBUCharacterData.thresholdKey(this.life.value, this.life.max, this.minion);
+    const current = DBUCharacterData.thresholdKey(this.life.value, this.life.max, this.typicalMinion);
     const currentIndex = keys.indexOf(current);
 
     // A Minion's only one is Injured.
     const reached = keys
-      .filter((key, index) => (index <= currentIndex) && DBUCharacterData.THRESHOLDS[key].counts && (!this.minion || (key === "injured")));
+      .filter((key, index) => (index <= currentIndex) && DBUCharacterData.THRESHOLDS[key].counts && (!this.typicalMinion || (key === "injured")));
 
     // One an effect passes - Saiyan Heritage's Bruised - is passed, and no failure for it counts.
     const passes = key => this.effects?.slots?.[`steadfast.autoPass.${key}`] === true;
