@@ -765,106 +765,113 @@ export function registerCombatHooks() {
     const rounds = combat.round ?? 0;
 
     // Leaving an Encounter clears what only lasted for it.
-    for (const actor of combatants(combat)) {
-      // A False Moon stands no longer than the Combat Encounter it was made in - Lasting Moon's included.
-      const { falseMoonGone } = await import("./chat.mjs");
-      for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.fakeMoon)) {
-        await falseMoonGone(actor, item);
-      }
-      // Counter Jury-rigging (2)'s Quality, with the Round it was for.
-      await (await import("./chat.mjs")).juryRigEnds(actor);
-      // All-Out Start (2)'s, with the Encounter.
-      if (actor.getFlag?.("dbu-ttrpg", "allOutUntil")) {
-        const { setCondition } = await import("./conditions.mjs");
-        if ((Number(actor.system.conditions?.["all-out-mark"]) || 0) > 0) await setCondition(actor, "all-out-mark", 0);
-        await actor.unsetFlag("dbu-ttrpg", "allOutUntil");
-      }
-      // Instant Craft (2)'s: "It is destroyed at the end of the Combat Encounter."
-      const instant = Array.from(actor.items ?? []).filter(item => item.getFlag?.("dbu-ttrpg", "instantCraft")).map(item => item.id);
-      if (instant.length) await actor.deleteEmbeddedDocuments("Item", instant);
-      // Finish Sign: its Finisher stacks are a Resource and end with the Encounter - and what they were for with them.
-      for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.finishTechnique)) {
-        await item.update({ "system.unique.finishTechnique": "" });
-      }
-      // Instant Recovery (Damage & Recovery): "After you have overcome a Combat Encounter ... regain 1/10th of your Maximum Life
-      // Points and Ki Point Pool" - rounded down.
-      const lifeNow = Number(actor.system.life?.value) || 0;
-      const lifeMax = Number(actor.system.life?.max) || 0;
-      const kiNow = Number(actor.system.ki?.value) || 0;
-      const kiMax = Number(actor.system.ki?.max) || 0;
-      if (actor.getFlag?.("dbu-ttrpg", "defeatSettled")) await actor.unsetFlag("dbu-ttrpg", "defeatSettled");
-      await actor.update({
-        "system.life.value": Math.max(lifeNow, Math.min(lifeMax, lifeNow + Math.floor(lifeMax / 10))),
-        "system.ki.value": Math.max(kiNow, Math.min(kiMax, kiNow + Math.floor(kiMax / 10))),
-        "system.talentUses.encounter": [],
-        "system.armedTalents": [],
-        "system.usedManeuvers": [],
-        "system.resources": replaceObject(keptResources(actor.system.resources)),
-        // Wild Child's access to its Pseudo-Bestial Traits, with it.
-        "flags.dbu-ttrpg.-=pseudoAccess": null,
-        "system.defeatsEscaped": 0,
-        "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
-        // The next Encounter is a different one, and begins for them again.
-        "system.enteredEncounter": false,
-        // And they are Adventuring again.
-        "system.adventuring": true,
-        // A charge that was never thrown does not follow you out of the Encounter,
-        // and neither does a hold: a Grapple is a hold in a fight, and the fight is over.
-        ...NOT_CHARGING,
-        ...NOT_GRAPPLING,
-        "system.foresight": FORESEEN_NOTHING
-      });
-      await stopCharging(actor);
-      // Every clock stops here, not only the ones counting the Encounter: a turn edge
-      // that never arrives is a duration that never ends, and there are no more turns.
-      await encounterEnded(actor);
-      // "At the end of each Combat Encounter, your Natural Armor is fully repaired."
-      await (await import("./natural-armor.mjs")).repairNaturalArmor(actor);
-      // A Frozen Turn still open - its last attack never finished: time runs again with the Encounter's end.
-      if (actor.getFlag?.("dbu-ttrpg", "frozenTurn")) await (await import("./chat.mjs")).endFrozenTurn(actor);
-      // Quick Learner: "At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access
-      // to it permanently. If you do, it stops being a Copied Technique." Asked of whoever plays them.
-      // Copy Index (2): "select one Copied Technique to retain access to until the end of your next Combat Encounter" - one,
-      // offered beside the rest till it is taken.
-      let retainOpen = actor.system?.effects?.slots?.["copyIndex.retain"] === true;
-      for (const item of Array.from(actor.items ?? []).filter(each => each.getFlag?.("dbu-ttrpg", "copied"))) {
-        const { askPlayerChoice } = await import("./chat.mjs");
-        const kept = await askPlayerChoice(actor, `${actor.name}: ${item.name}`,
-          [{ value: "keep", label: "Keep it (its TP Cost yours)" },
-            ...(retainOpen ? [{ value: "retain", label: "Retain it till your next Combat Encounter ends (Copy Index)" }] : []),
-            { value: "lose", label: "Let it go" }]);
-        if (kept === "retain") {
-          retainOpen = false;
-          continue;
-        }
-        if (kept === "keep") {
-          // Advanced Learner (1): "Reduce the Technique Point Cost of any Copied Technique that would be gained at the end of a
-          // Combat Encounter by 3" - a Technique's Free TP, a Unique Ability's TP change.
-          const off = (actor.system?.effects?.slots?.["advancedLearner.tpOff"] === true)
-            ? ((item.system?.tags ?? []).includes("uniqueAbility")
-              ? { "system.unique.tpChange": (Number(item.system.unique?.tpChange) || 0) - 3 }
-              : { "system.signature.freeTP": (Number(item.system.signature?.freeTP) || 0) + 3 })
-            : {};
-          // Whose it was, kept - Quick Thinking (2) has it count as Copied still (Neko Mimicry's (5) reads whose).
-          await item.update({ name: item.name.replace(/ \(Copied\)$/, ""), "flags.dbu-ttrpg.keptCopy": item.getFlag("dbu-ttrpg", "copied"),
-            "flags.dbu-ttrpg.-=copied": null, ...off });
-        }
-        else await actor.deleteEmbeddedDocuments("Item", [item.id]);
-      }
-      // Inherited Creativity's Technique: "for the remainder of the Combat Encounter".
-      const made = Array.from(actor.items ?? []).filter(each => each.getFlag?.("dbu-ttrpg", "encounterTechnique")).map(each => each.id);
-      if (made.length) await actor.deleteEmbeddedDocuments("Item", made);
-      await firstRoundsEnd(actor);
-      await regenerateWeapons(actor);
-      // Delayed's records and Imminent marks, which only lasted for the Encounter.
-      const { clearDelayed, endVolleyball } = await import("./chat.mjs");
-      await clearDelayed(actor);
-      // And Volleyball Time!, which paused it.
-      if (actor.getFlag?.("dbu-ttrpg", "volleyball")) await endVolleyball(actor, { quiet: true });
-    }
+    for (const actor of combatants(combat)) await endEncounterFor(actor);
 
     await announceEncounterEnd(rounds);
   });
+}
+
+/**
+ * One character's Combat Encounter, ended: everything that lasted only for it cleared, and what its end gives done - the
+ * Combat deleted from the tracker, or the sheet's New encounter for a table playing without one (the user's: a penalty
+ * "for the remainder of the Combat Encounter" - Arrogant Declaration's - outlived that button).
+ */
+export async function endEncounterFor(actor) {
+  // A False Moon stands no longer than the Combat Encounter it was made in - Lasting Moon's included.
+  const { falseMoonGone } = await import("./chat.mjs");
+  for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.fakeMoon)) {
+    await falseMoonGone(actor, item);
+  }
+  // Counter Jury-rigging (2)'s Quality, with the Round it was for.
+  await (await import("./chat.mjs")).juryRigEnds(actor);
+  // All-Out Start (2)'s, with the Encounter.
+  if (actor.getFlag?.("dbu-ttrpg", "allOutUntil")) {
+    const { setCondition } = await import("./conditions.mjs");
+    if ((Number(actor.system.conditions?.["all-out-mark"]) || 0) > 0) await setCondition(actor, "all-out-mark", 0);
+    await actor.unsetFlag("dbu-ttrpg", "allOutUntil");
+  }
+  // Instant Craft (2)'s: "It is destroyed at the end of the Combat Encounter."
+  const instant = Array.from(actor.items ?? []).filter(item => item.getFlag?.("dbu-ttrpg", "instantCraft")).map(item => item.id);
+  if (instant.length) await actor.deleteEmbeddedDocuments("Item", instant);
+  // Finish Sign: its Finisher stacks are a Resource and end with the Encounter - and what they were for with them.
+  for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.finishTechnique)) {
+    await item.update({ "system.unique.finishTechnique": "" });
+  }
+  // Instant Recovery (Damage & Recovery): "After you have overcome a Combat Encounter ... regain 1/10th of your Maximum Life
+  // Points and Ki Point Pool" - rounded down.
+  const lifeNow = Number(actor.system.life?.value) || 0;
+  const lifeMax = Number(actor.system.life?.max) || 0;
+  const kiNow = Number(actor.system.ki?.value) || 0;
+  const kiMax = Number(actor.system.ki?.max) || 0;
+  if (actor.getFlag?.("dbu-ttrpg", "defeatSettled")) await actor.unsetFlag("dbu-ttrpg", "defeatSettled");
+  await actor.update({
+    "system.life.value": Math.max(lifeNow, Math.min(lifeMax, lifeNow + Math.floor(lifeMax / 10))),
+    "system.ki.value": Math.max(kiNow, Math.min(kiMax, kiNow + Math.floor(kiMax / 10))),
+    "system.talentUses.encounter": [],
+    "system.armedTalents": [],
+    "system.usedManeuvers": [],
+    "system.resources": replaceObject(keptResources(actor.system.resources)),
+    // Wild Child's access to its Pseudo-Bestial Traits, with it.
+    "flags.dbu-ttrpg.-=pseudoAccess": null,
+    "system.defeatsEscaped": 0,
+    "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
+    // The next Encounter is a different one, and begins for them again.
+    "system.enteredEncounter": false,
+    // And they are Adventuring again.
+    "system.adventuring": true,
+    // A charge that was never thrown does not follow you out of the Encounter,
+    // and neither does a hold: a Grapple is a hold in a fight, and the fight is over.
+    ...NOT_CHARGING,
+    ...NOT_GRAPPLING,
+    "system.foresight": FORESEEN_NOTHING
+  });
+  await stopCharging(actor);
+  // Every clock stops here, not only the ones counting the Encounter: a turn edge
+  // that never arrives is a duration that never ends, and there are no more turns.
+  await encounterEnded(actor);
+  // "At the end of each Combat Encounter, your Natural Armor is fully repaired."
+  await (await import("./natural-armor.mjs")).repairNaturalArmor(actor);
+  // A Frozen Turn still open - its last attack never finished: time runs again with the Encounter's end.
+  if (actor.getFlag?.("dbu-ttrpg", "frozenTurn")) await (await import("./chat.mjs")).endFrozenTurn(actor);
+  // Quick Learner: "At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access
+  // to it permanently. If you do, it stops being a Copied Technique." Asked of whoever plays them.
+  // Copy Index (2): "select one Copied Technique to retain access to until the end of your next Combat Encounter" - one,
+  // offered beside the rest till it is taken.
+  let retainOpen = actor.system?.effects?.slots?.["copyIndex.retain"] === true;
+  for (const item of Array.from(actor.items ?? []).filter(each => each.getFlag?.("dbu-ttrpg", "copied"))) {
+    const { askPlayerChoice } = await import("./chat.mjs");
+    const kept = await askPlayerChoice(actor, `${actor.name}: ${item.name}`,
+      [{ value: "keep", label: "Keep it (its TP Cost yours)" },
+        ...(retainOpen ? [{ value: "retain", label: "Retain it till your next Combat Encounter ends (Copy Index)" }] : []),
+        { value: "lose", label: "Let it go" }]);
+    if (kept === "retain") {
+      retainOpen = false;
+      continue;
+    }
+    if (kept === "keep") {
+      // Advanced Learner (1): "Reduce the Technique Point Cost of any Copied Technique that would be gained at the end of a
+      // Combat Encounter by 3" - a Technique's Free TP, a Unique Ability's TP change.
+      const off = (actor.system?.effects?.slots?.["advancedLearner.tpOff"] === true)
+        ? ((item.system?.tags ?? []).includes("uniqueAbility")
+          ? { "system.unique.tpChange": (Number(item.system.unique?.tpChange) || 0) - 3 }
+          : { "system.signature.freeTP": (Number(item.system.signature?.freeTP) || 0) + 3 })
+        : {};
+      // Whose it was, kept - Quick Thinking (2) has it count as Copied still (Neko Mimicry's (5) reads whose).
+      await item.update({ name: item.name.replace(/ \(Copied\)$/, ""), "flags.dbu-ttrpg.keptCopy": item.getFlag("dbu-ttrpg", "copied"),
+        "flags.dbu-ttrpg.-=copied": null, ...off });
+    }
+    else await actor.deleteEmbeddedDocuments("Item", [item.id]);
+  }
+  // Inherited Creativity's Technique: "for the remainder of the Combat Encounter".
+  const made = Array.from(actor.items ?? []).filter(each => each.getFlag?.("dbu-ttrpg", "encounterTechnique")).map(each => each.id);
+  if (made.length) await actor.deleteEmbeddedDocuments("Item", made);
+  await firstRoundsEnd(actor);
+  await regenerateWeapons(actor);
+  // Delayed's records and Imminent marks, which only lasted for the Encounter.
+  const { clearDelayed, endVolleyball } = await import("./chat.mjs");
+  await clearDelayed(actor);
+  // And Volleyball Time!, which paused it.
+  if (actor.getFlag?.("dbu-ttrpg", "volleyball")) await endVolleyball(actor, { quiet: true });
 }
 
 /**

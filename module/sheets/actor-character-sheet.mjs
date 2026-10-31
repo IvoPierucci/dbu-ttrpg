@@ -6924,14 +6924,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   static async _onResetEncounter() {
-    return this.actor.update({
-      "system.usedManeuvers": [],
-      "system.talentUses.encounter": [],
-      // A new Encounter begins for them again, so the start of it is theirs to take
-      // once more. A table not running a formal Encounter reaches it only this way.
-      "system.enteredEncounter": false,
-      "system.armedTalents": []
-    });
+    // The Encounter before it ended, as the tracker's own end does it - what lasted "for the remainder of the Combat
+    // Encounter" goes with it (the user's: Arrogant Declaration's penalty stayed) - and a new one begins for them, its start
+    // theirs to take once more. A table not running a formal Encounter reaches it only this way.
+    const { endEncounterFor } = await import("../combat.mjs");
+    return endEncounterFor(this.actor);
   }
 
   /**
