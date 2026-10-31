@@ -1,0 +1,22 @@
+id: team-reliance
+name: Team Reliance
+order: 4
+category: mind
+importance: secondary
+description: >
+  Unable to fend for themselves reliably without superior technology, Tuffles rely on their comrades to survive.
+text: >
+  Team Reliance (Mind): Unable to fend for themselves reliably without superior technology, Tuffles rely on their comrades to survive.
+  (1)-[Passive]: All of your Allies on an adjacent Square to you have their Combat Rolls increased by 1/4 (rounded up) of your Insight, Personality, or Scholarship Modifier (whichever is highest). This effect does not stack; if multiple Characters are applying this effect, only gain the highest bonus from among them.
+  (2)-[Triggered, 1/Round]: If an adjacent Ally uses an Attacking Maneuver, you may use the United Attack Maneuver without spending an Action through its effects.
+  (3)-[Triggered, 1/Round]: If an adjacent Ally is hit by an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, increase the Wound Roll by x(T) and you must target the Character that hit your Ally with one of their Attacking Maneuvers.
+---
+
+[passive]
+# (1) Read by each adjacent Ally - the highest of those giving it (actor-character.mjs allyRolls).
+allow teamReliance.aura;
+# (2) Joining an adjacent Ally's attack: a "No Action" box in the United Attack's window, once a Round (united-attack.mjs).
+allow teamReliance.freeUnited;
+# (3) An adjacent Ally hit: the Basic Attack out of sequence at whoever hit them, offered on the attack's card once a Round - x(T),
+# Need for Revenge's Spite, on its Wound Roll (chat.mjs offerTeamReliance).
+allow teamReliance.strike;

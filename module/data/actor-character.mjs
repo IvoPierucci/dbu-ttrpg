@@ -2113,10 +2113,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // Friend Robot (Purpose): "All Allies within a Large Sphere AoE (centered on you) have their Combat Rolls increased by 1(T) while you
       // possess 2+ stacks of Power" - an Ally's, within 3 Squares of them; the best Tier of those.
       // Pink Tennenman (Recolored Saibaman): an adjacent Ally's, Racial Life Modifier 3+ - "This effect does not stack", the best of them.
+      // Team Reliance (1): an adjacent Ally's, 1/4 (rounded up) of their highest of Insight, Personality and Scholarship Modifiers - the
+      // highest of those giving it.
       allyRolls: (() => {
         const friends = this.parent ? alliesWithin(this.parent, "purpose.friend", 3) : [];
         const pinks = this.parent ? alliesWithin(this.parent, "recolored.pink", 0) : [];
-        return (friends.length ? Math.max(1, bestTier(friends)) : 0) + (pinks.length ? Math.max(1, bestTier(pinks)) : 0);
+        const reliance = (this.parent ? alliesWithin(this.parent, "teamReliance.aura", 0) : []).reduce((top, holder) => Math.max(top,
+          Math.ceil(Math.max(0, ...["insight", "personality", "scholarship"].map(key => Number(holder.system?.attributes?.[key]?.mod) || 0)) / 4)), 0);
+        return (friends.length ? Math.max(1, bestTier(friends)) : 0) + (pinks.length ? Math.max(1, bestTier(pinks)) : 0) + reliance;
       })(),
       skills: DBUCharacterData.SKILLS
     });

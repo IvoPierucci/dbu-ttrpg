@@ -20549,6 +20549,28 @@ async function regainPools(actor, life = 0, ki = 0) {
 }
 
 /**
+ * Team Reliance (3): "If an adjacent Ally is hit by an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence
+ * Maneuver. If you do, increase the Wound Roll by x(T) and you must target the Character that hit your Ally" - offered on the attack's
+ * card to each Ally adjacent to the one hit, once a Round; x their Spite (Need for Revenge's).
+ */
+function offerTeamReliance(message, attack, target) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker || !target) return;
+  const offers = message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
+  for (const ally of alliesOnScene(target)) {
+    if (ally.system?.defeated || (ally.uuid === attacker.uuid) || (ally.system?.effects?.slots?.["teamReliance.strike"] !== true)
+      || (ally.getFlag?.(SCOPE, "relianceStrikeRound") === roundKey()) || !adjacent(ally, target)
+      || offers.some(offer => (offer.grants?.roundFlag === "relianceStrikeRound") && (offer.actorUuid === ally.uuid))) continue;
+    const x = Number(ally.system?.resources?.spite?.stacks) || 0;
+    const tier = Math.max(1, Number(ally.system?.tierOfPower) || 1);
+    requestEdit(message, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: `Team Reliance - ${target.name} hit, once a Round`,
+      grants: { roundFlag: "relianceStrikeRound",
+        ...(x ? { woundExtra: [{ label: "Team Reliance", written: `+${x}(T)`, value: x * tier }] } : {}) } } });
+  }
+}
+
+/**
  * Super Elastic Body (3): "you may use the Launch Maneuver as an Out-of-Sequence Maneuver against the attacking Character as if they were
  * in a Grapple with you as the Grappler" - offered on the card, once a Round.
  */
@@ -34368,6 +34390,8 @@ async function applyAttackDamage(message, target, attack) {
   }
   // Slimy Consistency (3): a Physical Attack's hit for no Damage - the Grapple, the Basic Attack, or a Might Clash for their Weapon.
   if (own.hit && (damage <= 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerSlimy(message, attack, target, armsUser);
+  // Team Reliance (3): hit - the Basic Attack at its maker for each adjacent Ally of theirs holding it, once a Round.
+  if (own.hit && !isAbsoluteMiss(own)) offerTeamReliance(message, attack, target);
   // Retractable Limbs (3): an Opponent's Called Shot avoided, or for no Damage - the Basic Attack, out of sequence, once a Round.
   if (((damage <= 0) || isAbsoluteMiss(own)) && armsUser && (armsUser.uuid !== target.uuid) && isCalledShot(attack)
     && (target.system?.effects?.slots?.["retractable.counter"] === true) && (target.getFlag?.(SCOPE, "retractableRound") !== roundKey())
