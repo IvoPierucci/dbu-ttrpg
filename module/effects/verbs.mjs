@@ -601,8 +601,10 @@ export const VERBS = Object.freeze({
        + "rounded up, till the start of your next turn (chat.mjs mutationRally)."
   },
   tuffleLegacy: {
-    args: [0, 0],
-    doc: "Tuffle-Raised (3): an Ally - 2x(bT) Life and Ki Points, Combat Rolls x(bT) till the end of their next turn (chat.mjs tuffleLegacy)."
+    args: [0, 1],
+    names: [0],
+    doc: "Tuffle-Raised (3), Need for Revenge (4) - `spite`: an Ally - 2x(bT) Life and Ki Points, Combat Rolls x(bT) till the end of their "
+      + "next turn, x that Resource's stacks (chat.mjs tuffleLegacy)."
   },
   wildChildAccess: {
     args: [0, 0],

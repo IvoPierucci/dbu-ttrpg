@@ -1,0 +1,41 @@
+id: need-for-revenge
+name: Need for Revenge
+order: 2
+category: mind
+importance: primary
+# (1) Spite: the 'x' of the Tuffle Racial Traits - a Resource, lost with the Encounter as every Resource is.
+resource: spite
+resourceLabel: Spite
+resourceMax: 99
+description: >
+  After near annihilation following an already arduous journey to establish themselves as the dominant species on their planet, Tuffles have grown spiteful towards anyone who tries to harm them.
+text: >
+  Need for Revenge (Mind): After near annihilation following an already arduous journey to establish themselves as the dominant species on their planet, Tuffles have grown spiteful towards anyone who tries to harm them.
+  (1)-[Triggered, Resource]: If you are knocked through a Health Threshold, or an Ally (except a Minion) is Defeated, gain a stack of Spite. For the effects of your Tuffle Racial Traits, ‘x’ is equal to your number of Spite stacks.
+  (2)-[Passive]: Reduce the Ki Point Cost for your Attacking Maneuvers by x(T).
+  (3)-[Passive]: Increase your Defense Value by 1/2 of x(T).
+  (4)-[Triggered/Defeated]: Target an Ally, they regain 2x(bT) Life and Ki Points and their Combat Rolls are increased by x(bT) until the end of their next turn.
+---
+
+[passive]
+if (hasResource("spite")) {
+    # (2)
+    attack.kiCost -= spite.stacks * 1(T);
+    # (3) Half of x, rounded down, (T).
+    defenseValue += floor(spite.stacks / 2) * 1(T);
+}
+
+# (1) Knocked through a Health Threshold. Automatic by default, its Triggered/Automatic button.
+[triggered/threshold, effect 1]
+spite.stacks += 1;
+
+# (1) An Ally of yours Defeated, not a Minion. Automatic by default, its Triggered/Automatic button.
+[triggered/ally-defeated, effect 1]
+requires !defeatedMinion;
+spite.stacks += 1;
+
+# (4) Defeated, with Spite: an Ally, asked - 2x(bT) Life and Ki Points, Combat Rolls x(bT) till the end of their next turn (chat.mjs
+# tuffleLegacy). Chosen on the Defeated card.
+[triggered/defeated, effect 4]
+requires hasResource("spite");
+tuffleLegacy(spite);

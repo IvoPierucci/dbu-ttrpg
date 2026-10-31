@@ -1,0 +1,16 @@
+id: need-for-revenge-mark
+name: Need for Revenge
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: Need for Revenge (4)'s - its x(bT), the giver's Base Tier, as stacks.
+combatCondition: no
+source: Core Rule
+description: >
+  Need for Revenge: Combat Rolls higher by a point a stack, till the end of your next turn.
+text: >
+  Need for Revenge (4): Target an Ally, they regain 2x(bT) Life and Ki Points and their Combat Rolls are increased by x(bT) until the end of their next turn.
+
+---
+
+[passive per stack]
+combatRolls += 1;

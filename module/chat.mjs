@@ -24139,24 +24139,26 @@ export async function wildChildFeral(actor) {
 
 /**
  * Tuffle-Raised (3): "Target an Ally, they regain 2x(bT) Life and Ki Points and their Combat Rolls are increased by x(bT) until the end
- * of their next turn" - x its first effect's count, the Base Tier yours.
+ * of their next turn" - x its first effect's count, the Base Tier yours. Need for Revenge (4) word for word, x its Spite stacks.
  */
-export async function tuffleLegacy(actor) {
+const LEGACIES = { grudge: { name: "Tuffle-Raised", mark: "tuffle-raised-mark" }, spite: { name: "Need for Revenge", mark: "need-for-revenge-mark" } };
+export async function tuffleLegacy(actor, resource = "grudge") {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
-  const times = Number(actor?.system?.resources?.grudge?.stacks) || 0;
+  const { name, mark } = LEGACIES[resource] ?? LEGACIES.grudge;
+  const times = Number(actor?.system?.resources?.[resource]?.stacks) || 0;
   const allies = alliesOnScene(actor).filter(ally => (ally.uuid !== actor.uuid) && !ally.system?.defeated);
   if (!times || !allies.length) {
-    if (times) ui.notifications.info(`${actor.name}: Tuffle-Raised - no Ally standing.`);
+    if (times) ui.notifications.info(`${actor.name}: ${name} - no Ally standing.`);
     return UNSPENT;
   }
-  const picked = await askPlayerChoice(actor, `${actor.name}: Tuffle-Raised - an Ally`,
+  const picked = await askPlayerChoice(actor, `${actor.name}: ${name} - an Ally`,
     [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
   const ally = allies.find(each => each.uuid === picked);
   if (!ally) return UNSPENT;
   const each = times * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
   await regainPools(ally, 2 * each, 2 * each);
-  await markUntilNextTurn(ally, ally, "tuffle-raised-mark", each, "end", "Tuffle-Raised");
-  ui.notifications.info(`${actor.name}: Tuffle-Raised - ${ally.name}, ${2 * each} Life and Ki, Combat Rolls ${each} higher.`);
+  await markUntilNextTurn(ally, ally, mark, each, "end", name);
+  ui.notifications.info(`${actor.name}: ${name} - ${ally.name}, ${2 * each} Life and Ki, Combat Rolls ${each} higher.`);
 }
 
 /**

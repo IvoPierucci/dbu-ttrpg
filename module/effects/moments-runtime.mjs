@@ -533,7 +533,7 @@ async function runVerb(actor, call, context) {
     }
 
     case "mutationRally": return (await import("../chat.mjs")).mutationRally(actor, args[0]);
-    case "tuffleLegacy": return (await import("../chat.mjs")).tuffleLegacy(actor);
+    case "tuffleLegacy": return (await import("../chat.mjs")).tuffleLegacy(actor, String(args[0] ?? "grudge"));
     case "wildChildAccess": return (await import("../chat.mjs")).wildChildAccess(actor);
     case "wildChildFeral": return (await import("../chat.mjs")).wildChildFeral(actor);
     case "neoTuffleFocus": return (await import("../chat.mjs")).neoTuffleFocus(actor);
