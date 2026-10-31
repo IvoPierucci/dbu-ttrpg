@@ -219,6 +219,8 @@ export async function dismissDuplicates(duplicates) {
       const tokens = scene.tokens.filter(token => token.actorId === world.id).map(token => token.id);
       if (tokens.length) await scene.deleteEmbeddedDocuments("Token", tokens);
     }
+    // Counted on its Master's Unique Ability - one fewer there.
+    await (await import("./minion-make.mjs")).countDown(world);
     const name = world.name;
     await world.delete();
     ui.notifications?.info(`${name}, a Duplicate, ceases to exist.`);
@@ -843,7 +845,9 @@ export function registerCombatHooks() {
     const { minionCaps } = await import("./maneuvers.mjs");
     const caps = minionCaps(master);
     const here = new Set((combatant.parent?.combatants?.contents ?? []).map(each => each.actor)
-      .filter(each => each && ids.has(each.id) && (!caps.notDefeated || !each.system?.defeated)).map(each => each.id));
+      .filter(each => each && ids.has(each.id) && (!caps.notDefeated || !each.system?.defeated)
+        // Mass Multi-Form: "These Minions do not count towards your maximum number of Minions."
+        && !each.getFlag?.("dbu-ttrpg", "outsideCap")).map(each => each.id));
     const most = caps.combat;
     if (here.size > most) {
       ui.notifications.warn(`${master.name} may possess ${most} Minion${(most === 1) ? "" : "s"} in a Combat Encounter: `

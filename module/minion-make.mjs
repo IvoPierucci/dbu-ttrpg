@@ -11,6 +11,7 @@
  */
 
 import DBUCharacterData from "./data/actor-character.mjs";
+import { masterOf } from "./allies.mjs";
 
 const SCOPE = "dbu-ttrpg";
 
@@ -50,8 +51,10 @@ export function smallerSize(size, steps = 1) {
  * Priest's Namekian Race).
  */
 export function minionData(master, { name = "", duplicate = false, gear = true, sizeSteps = 0, kind = "", made = "", extra = {},
-                                     system: own = {} } = {}) {
-  const source = master.toObject();
+                                     system: own = {}, copy = null } = {}) {
+  // Copy Clone's: "instead of a Duplicate Minion of yourself, it is a Duplicate Minion of that Character (you are still their Master)".
+  const source = (copy ?? master).toObject();
+  const ownership = foundry.utils.deepClone((copy ? master.toObject() : source).ownership ?? {});
   const system = { ...own, master: master.id, duplicate: Boolean(duplicate), specialMinion: false };
   if (duplicate) {
     for (const key of DUPLICATED_FIELDS) {
@@ -72,7 +75,7 @@ export function minionData(master, { name = "", duplicate = false, gear = true, 
     name: called,
     type: "minion",
     ...(duplicate ? { img: source.img } : {}),
-    ownership: foundry.utils.deepClone(source.ownership ?? {}),
+    ownership,
     prototypeToken: { ...(duplicate ? foundry.utils.deepClone(source.prototypeToken ?? {}) : {}), name: called, actorLink: true },
     system,
     items,
@@ -110,8 +113,9 @@ export async function makeMinion(master, options = {}) {
   const token = master.getActiveTokens?.(false, true)?.[0] ?? null;
   const combat = game.combats?.contents?.find(each => each.combatants.some(combatant => combatant.actorId === master.id)) ?? null;
   const roundKey = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const copy = options.copyOf ? (globalThis.fromUuidSync?.(options.copyOf) ?? null) : null;
   for (let n = 0; n < Math.max(1, Number(options.count) || 1); n++) {
-    const actor = await Actor.create(minionData(master, { ...options, made: roundKey }));
+    const actor = await Actor.create(minionData(master, { ...options, copy, made: roundKey }));
     if (!actor) continue;
     await actor.update({ "system.life.value": Number(actor.system.life?.max) || 0, "system.ki.value": Number(actor.system.ki?.max) || 0 });
     made.push(actor);
@@ -127,10 +131,32 @@ export async function makeMinion(master, options = {}) {
 }
 
 /**
+ * A Minion counted on its Master's Unique Ability - Multi-Form Technique's Duplicate Minions, Super Ghost Kamikaze Attack's Kamikaze
+ * Ghosts (flag `countedOn`: the Item and its count) - one fewer there as it is Defeated or ceases to be. Counted down once.
+ */
+export async function countDown(actor) {
+  const counted = actor?.getFlag?.(SCOPE, "countedOn");
+  if (!counted?.itemId || !counted.field) return;
+  try { await actor.unsetFlag(SCOPE, "countedOn"); }
+  catch { /* Not theirs to change: counted down all the same. */ }
+  const master = game.actors?.get(masterOf(actor));
+  const item = master?.items?.get(counted.itemId);
+  const left = Number(item?.system?.unique?.[counted.field]) || 0;
+  if (!item || (left <= 0)) return;
+  // Multi-Form Technique's row Applied while any stands.
+  const changes = { [`system.unique.${counted.field}`]: left - 1,
+    ...(((counted.field === "duplicates") && (left <= 1)) ? { "system.unique.applied": false } : {}) };
+  if (master.isOwner) return item.update(changes);
+  const { requestActorUpdate } = await import("./chat.mjs");
+  return requestActorUpdate(master, { items: [{ _id: item.id, ...changes }] });
+}
+
+/**
  * Duplicated Items: "Any Apparel, Accessories or Weapons created along with a Duplicate are destroyed when that Duplicate is
  * Defeated or otherwise ceases to be." Its own copies of its Master's - taken off it as its Defeat settles.
  */
 export async function destroyDuplicatedItems(actor) {
+  await countDown(actor);
   if (!actor?.system?.duplicate) return;
   const ids = Array.from(actor.items ?? []).filter(item => item.getFlag?.(SCOPE, "duplicated")).map(item => item.id);
   if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids);

@@ -6,18 +6,19 @@ tpCost: 10
 type: standard
 actionCost: 2
 kiCostPerBaseTier: 8
-# "Create a Duplicate Minion" - made by the table, as every other sheet is (the user's ruling); counted on the Item.
+# "Create a Duplicate Minion" - made beside you (chat.mjs postMultiForm, minion-make.mjs) and counted on the Item, one fewer as one
+# is Defeated or gone; theirs a copy of this, its Duplicates out - their Tier of Power 1 lower too.
 # "While you have a Duplicate Minion created through the Multi-Form Technique, reduce the Tier of Power of you ... by 1 (if
 # already Tier of Power 1, reduce your/their Combat Rolls by 2 instead)" - yours while the count is above none
-# (actor-character.mjs, chat.mjs thresholdPenalty); theirs, the table's. "If you fail a Steadfast Check ... those Minions
-# are Defeated" - the count to none, said. "As an Instant Maneuver during your turn, you can erase all of your Duplicate
+# (actor-character.mjs, chat.mjs thresholdPenalty). "If you fail a Steadfast Check ... those Minions are Defeated" - the count
+# to none, and they gone. "As an Instant Maneuver during your turn, you can erase all of your Duplicate
 # Minions" - its row's Applied. "You can only possess 1 Duplicate Minion" - 3 with Mass Multi-Form.
 multiForm: true
 multiFormMost: 1
 instantRelease: true
 source: Core Rule
 description: >
-  A Duplicate Minion (the table's to make); while you have one, your Tier of Power 1 lower - or Combat Rolls 2 lower at
+  A Duplicate Minion, made beside you; while you have one, your Tier of Power 1 lower - or Combat Rolls 2 lower at
   Tier 1. Defeated if you fail a Steadfast Check; erased as an Instant on your turn.
 text: >
   Multi-Form Technique: You possess the ability to split yourself into multiple separate entities for a time, allowing

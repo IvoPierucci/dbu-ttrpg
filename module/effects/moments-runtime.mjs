@@ -427,6 +427,7 @@ async function runVerb(actor, call, context) {
       (Number(args[0]) === 1) ? Infinity : Math.max(1, Math.min(3, Number(context?.actionsSpent) || 1)), { newOnes: Number(args[0]) === 1 });
     case "pokoMinion": return (await import("../chat.mjs")).pokoMinion(actor);
     case "yakiMaster": return (await import("../chat.mjs")).yakiMaster(actor);
+    case "copyClone": return (await import("../chat.mjs")).copyClone(actor, context?.targets?.[0] ?? null);
     case "consumeBrood": return (await import("../chat.mjs")).consumeBrood(actor);
     case "spectatorLeft": return (await import("../chat.mjs")).spectatorLeft(actor);
     case "motivatingPerformance": return (await import("../chat.mjs")).motivatingPerformance(actor);

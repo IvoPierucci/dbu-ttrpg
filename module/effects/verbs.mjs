@@ -137,6 +137,10 @@ export const VERBS = Object.freeze({
     doc: "From Goop: your Goops ticked and Defeated, half their Life Points back - 0 one for each Action spent and none made this "
        + "Turn (6), 1 any number (7) (chat.mjs reabsorbGoops)."
   },
+  copyClone: {
+    args: [0, 0],
+    doc: "Copy Clone: a Duplicate Minion of the Character targeted, yours, made beside you (chat.mjs copyClone)."
+  },
   yakiMaster: {
     args: [0, 0],
     doc: "Yaki Master (2): not Bonded, a Yaki of yours asked - its Act Phase this Combat Round and a Counter Action more (chat.mjs yakiMaster)."

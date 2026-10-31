@@ -3971,6 +3971,20 @@ export function whyNotMinionManeuver(actor, maneuver) {
 const GOOP_MANEUVERS = Object.freeze(["movement"]);
 const BATTLE_GOO_MANEUVERS = Object.freeze(["basic-attack", "intervene"]);
 
+/**
+ * Copy Clone: "Target a Character (except a Fusion) on the Battlefield who is not at Long Range ... You cannot target a Character
+ * whose Tier of Power is higher than yours." Why not this one, or null. A Fusion is not in this system yet - the table's.
+ */
+export function whyNotCopyClone(actor, maneuver, target) {
+  if (uniqueLibraryOf(actor, maneuver) !== "copy-clone") return null;
+  if (!target || !["character", "minion"].includes(target.type)) return `${maneuver.name}: target a Character.`;
+  if (atLongRange(actor, target)) return `${maneuver.name}: ${target.name} is at Long Range.`;
+  if ((Number(target.system?.tierOfPower) || 1) > (Number(actor.system?.tierOfPower) || 1)) {
+    return `${maneuver.name}: ${target.name}'s Tier of Power is higher than ${actor.name}'s.`;
+  }
+  return null;
+}
+
 /** A Duplicate: "Duplicate Minions also cannot ... target their Master with any Unique Ability or Special Maneuver". */
 export function whyNotAtMaster(actor, maneuver, targets = []) {
   if ((actor?.type !== "minion") || !actor.system?.duplicate || !maneuver) return null;

@@ -9,9 +9,9 @@ actionCostMax: 3
 # "KP Cost: Variable (3(bT) for each Kamikaze Ghost)" - an Action a Ghost; Balloon Flash Bomber's more paid as they are made.
 kiCostPerBaseTier: 3
 kiPerAction: true
-# "For each Action spent, create a Kamikaze Ghost!" - counted on the Item, the Duplicate Minions the table's to make (the
-# user's ruling). Its Explode button: the Ghost's Basic Attack out of sequence, Clearing with Small Scale Blast's Minor
-# Sphere, Wound Roll + its Life Points, then Defeated (chat.mjs postKamikaze, explodeGhost).
+# "For each Action spent, create a Kamikaze Ghost!" - counted on the Item and made beside you, at half their Life Points
+# (chat.mjs postKamikaze, minion-make.mjs). Its Explode button: the Ghost's Basic Attack out of sequence, Clearing with Small Scale Blast's Minor
+# Sphere, Wound Roll + its Life Points, then Defeated and gone (chat.mjs explodeGhost) - from its own sheet, or its maker's.
 kamikaze: true
 source: Core Rule
 description: >

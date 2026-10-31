@@ -2391,6 +2391,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
     // Life Points (Minion Rules): "set their Maximum Life Points to 1/4 (rounded up) of what it would usually be."
     if (this.minion) this.life.max = Math.ceil(this.life.max / 4);
+    // Super Ghost Kamikaze Attack: "The Kamikaze Ghosts are Duplicate Minions with their Life Points reduced by 1/2" - down.
+    if (this.minion && (this.parent?.getFlag?.("dbu-ttrpg", "minionKind") === "kamikaze")) this.life.max = Math.floor(this.life.max / 2);
     // A Master's to their Minions, "after all other calculations": Leader's, and so many for each Power Level reached.
     if (this.minionGifts) this.life.max += this.minionGifts.lifeMax + (this.minionGifts.lifePerLevel * (Number(this.powerLevel) || 0));
     // Minion Creation, Step 11: "this bonus to your Life Points is applied after all calculation".

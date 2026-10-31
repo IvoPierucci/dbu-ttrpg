@@ -12625,7 +12625,9 @@ function mindReadBonus(actor, opponent, { defending = false } = {}) {
 
 /**
  * Multi-Form Technique, used: "Create a Duplicate Minion" - Mass Multi-Form's more, its KP Cost again for each after the
- * first - counted on the Item; the Minions themselves are the table's to make (the user's ruling).
+ * first - counted on the Item, and made beside you (minion-make.mjs): counted first, so each copies a Multi-Form Technique with
+ * Duplicates out - "reduce the Tier of Power of you and any Duplicate Minions created through the Multi-Form Technique by 1". One
+ * Defeated or gone, one fewer (minion-make.mjs countDown). Mass Multi-Form's "do not count towards your maximum number of Minions".
  */
 export async function postMultiForm(actor, maneuver, plan) {
   const item = actor.items?.get(maneuver.itemId);
@@ -12636,15 +12638,25 @@ export async function postMultiForm(actor, maneuver, plan) {
   }
   const now = (Number(item.system.unique.duplicates) || 0) + plan.count;
   await item.update({ "system.unique.duplicates": now, "system.unique.applied": true });
+  const mass = boughtTraits(item.system.unique, getTrait).some(trait => (Number(trait.multiFormMost) || 0) > 1);
+  await requestMakeMinion(actor, { name: actor.name, count: plan.count, duplicate: true, kind: "multi-form",
+    extra: { countedOn: { itemId: item.id, field: "duplicates" }, ...(mass ? { outsideCap: true } : {}) } });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${plan.count} Duplicate Minion${(plan.count === 1) ? "" : "s"}`
-      + ` (${now} held) - made on the table. Tier of Power 1 lower while they stand.</p>` });
+      + ` (${now} held) - made beside ${Handlebars.escapeExpression(actor.name)}. Tier of Power 1 lower while they stand.</p>` });
 }
 
-/** The Duplicate Minions gone - Defeated by a failed Steadfast Check, or erased: the count to none. */
+/**
+ * The Duplicate Minions gone - Defeated by a failed Steadfast Check, or erased: the count to none, and those made through it
+ * gone with it (combat.mjs dismissDuplicates).
+ */
 export async function endMultiForm(actor, item, why) {
   if (!((Number(item?.system?.unique?.duplicates) || 0) > 0)) return;
   await item.update({ "system.unique.duplicates": 0, "system.unique.applied": false });
+  const made = minionsOf(actor).map(id => game.actors?.get(id))
+    .filter(minion => minion && (minion.getFlag?.(SCOPE, "countedOn")?.itemId === item.id));
+  if (made.length && game.user.isGM) await (await import("./combat.mjs")).dismissDuplicates(made);
+  else if (made.length) game.socket.emit(CHANNEL, { type: "dismissDuplicates", ids: made.map(minion => minion.id) });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}'s Duplicate Minions ${why}.</div>` });
 }
@@ -13934,7 +13946,10 @@ export async function askKamikaze(actor, maneuver, actionsSpent) {
   return { count: 2 * actions, extraKi };
 }
 
-/** Paid for: the Ghosts counted on the Item - "Duplicate Minions with their Life Points reduced by 1/2", the table's to make. */
+/**
+ * Paid for: the Ghosts counted on the Item - "Duplicate Minions with their Life Points reduced by 1/2" - and made beside you
+ * (minion-make.mjs; their half Life, actor-character.mjs). One Defeated or gone, one fewer (minion-make.mjs countDown).
+ */
 export async function postKamikaze(actor, maneuver, plan) {
   const item = actor.items?.get(maneuver.itemId);
   if (!item) return null;
@@ -13943,6 +13958,8 @@ export async function postKamikaze(actor, maneuver, plan) {
       "system.capacity.spent": actor.system.capacity.spent + plan.extraKi });
   }
   await item.update({ "system.unique.ghosts": (Number(item.system.unique.ghosts) || 0) + plan.count });
+  await requestMakeMinion(actor, { name: "Kamikaze Ghost", count: plan.count, duplicate: true, kind: "kamikaze",
+    extra: { countedOn: { itemId: item.id, field: "ghosts" } } });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${plan.count} Kamikaze Ghost${(plan.count === 1) ? "" : "s"} - `
       + "Duplicate Minions with half their Life Points.</p>" });
@@ -13958,14 +13975,25 @@ export async function postKamikaze(actor, maneuver, plan) {
  */
 export async function explodeGhost(actor, item) {
   const left = Number(item?.system?.unique?.ghosts) || 0;
-  if (!left) return;
+  // A Ghost made (minion-make.mjs): its own sheet's, or one of its maker's asked - its own Life Points on the Wound Roll, the
+  // attack its own. None made: counted on the Item alone, as the table runs it.
+  const own = actor.getFlag?.(SCOPE, "minionKind") === "kamikaze";
+  const made = own ? [actor] : minionsOf(actor).map(id => game.actors?.get(id))
+    .filter(minion => minion && (minion.getFlag?.(SCOPE, "minionKind") === "kamikaze") && !minion.system?.defeated);
+  if (!left && !made.length) return;
   const caught = Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean);
   if (!caught.length) return ui.notifications.warn("Target who the blast catches first.");
-  const magic = Number(actor.system.attributes?.magic?.mod) || 0;
+  const ghostId = (made.length > 1) ? await askPlayerChoice(actor, `${item.name} - which Kamikaze Ghost`,
+    made.map(ghost => ({ value: ghost.id, label: `${ghost.name} - ${Number(ghost.system.life?.value) || 0} Life` }))) : made[0]?.id;
+  const ghost = made.find(each => each.id === ghostId) ?? null;
+  if (made.length && !ghost) return;
+  const bomber = ghost ?? actor;
+  const magic = Number(bomber.system.attributes?.magic?.mod) || 0;
+  const life = ghost ? Math.max(0, Number(ghost.system.life?.value) || 0) : 0;
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${item.name} - Explode` },
-    content: `<label>Its Life Points <input type="number" name="lp" min="0" step="1" value="0"/></label>
+    content: `<label>Its Life Points <input type="number" name="lp" min="0" step="1" value="${life}" ${ghost ? "readonly" : ""}/></label>
       <label>Damage Attribute <select name="attribute" class="dbu-gear-pick">
         <option value="">Force Modifier</option><option value="magic">Magic Modifier (${magic})</option></select></label>`,
     buttons: [{ action: "go", label: "Explode", default: true, callback: (event, button, dialog) => ({
@@ -13976,19 +14004,35 @@ export async function explodeGhost(actor, item) {
   });
   if (!chosen || (chosen === "cancel")) return;
   const [first, ...rest] = caught;
-  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+  const offer = { actorUuid: bomber.uuid, actorName: bomber.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
     targetUuid: first.uuid, reason: `${item.name} - a Kamikaze Ghost`, free: true,
     grants: { profile: "clearing", unarmed: true,
       area: { ...(PROFILES.clearing?.area ?? { shape: "sphere", centredOnSquare: true }), magnitude: "minor" },
       ...(chosen.magic ? { damageAttribute: { label: "Magic Modifier", value: magic } } : {}),
       ghostBlast: { lp: chosen.lp, name: item.name },
       extraTargets: rest.map(other => ({ uuid: other.uuid, name: other.name })) } };
-  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: bomber }), content: "",
     flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
-  const made = await takeOutOfSequence(card, actor, offer);
-  if (!made) return;
-  await item.update({ "system.unique.ghosts": Math.max(0, left - 1) });
+  const went = await takeOutOfSequence(card, bomber, offer);
+  if (!went) return;
+  // "After using this effect, the Kamikaze Ghost is Defeated" - one made gone, counted down as it goes (minion-make.mjs).
+  if (ghost) {
+    if (game.user.isGM) await (await import("./combat.mjs")).dismissDuplicates([ghost]);
+    else game.socket.emit(CHANNEL, { type: "dismissDuplicates", ids: [ghost.id] });
+  }
+  else await item.update({ "system.unique.ghosts": Math.max(0, left - 1) });
   await settledNote(card, `A Kamikaze Ghost goes off, and is Defeated - ${Math.max(0, left - 1)} left.`);
+}
+
+/**
+ * Copy Clone: "You create a Duplicate Minion, but instead of a Duplicate Minion of yourself, it is a Duplicate Minion of that
+ * Character (you are still their Master)." Made beside you, a copy of the one targeted (minion-make.mjs) - checked before it was
+ * paid (maneuvers.mjs whyNotCopyClone).
+ */
+export async function copyClone(actor, target) {
+  if (!actor || !target) return;
+  await requestMakeMinion(actor, { name: `${target.name} (Copy Clone)`, duplicate: true, copyOf: target.uuid, kind: "copy-clone" });
+  ui.notifications.info(`${actor.name}: Copy Clone - a Duplicate Minion of ${target.name}, theirs to command.`);
 }
 
 /** What Telekinesis's Advancements add: Psychic Counter, Weapon Fixer, Advanced Telekinesis. */

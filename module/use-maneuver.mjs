@@ -37,7 +37,7 @@ import {
   paidSince,
   godStrikeCost,
   squaresAway,
-  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotAtMaster,
+  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotAtMaster, whyNotCopyClone,
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
@@ -5257,6 +5257,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       [targetActor, ...Array.from(game.user.targets ?? []).map(token => token.actor)].filter(Boolean));
     if (atMaster) {
       ui.notifications.warn(atMaster);
+      return false;
+    }
+    // Copy Clone: a Character not at Long Range, of a Tier of Power no higher than yours.
+    const notCopied = whyNotCopyClone(actor, maneuver, targetActor);
+    if (notCopied) {
+      ui.notifications.warn(notCopied);
       return false;
     }
     // Hidden: "that enemy cannot target you with any Maneuver or effect" - but for the Search Maneuver, which targets

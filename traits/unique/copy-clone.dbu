@@ -6,7 +6,9 @@ tpCost: 20
 type: standard
 actionCost: 1
 kiCostPerBaseTier: 8
-# All the table's (the user's ruling): the Duplicate Minion of the one targeted is theirs to run.
+# The Character targeted - not at Long Range, no higher a Tier of Power (maneuvers.mjs whyNotCopyClone) - copied into a Duplicate
+# Minion of yours, made beside you (chat.mjs copyClone). A Fusion, not in this system yet, the table's.
+requiresTarget: true
 source: Core Rule
 description: >
   A Duplicate Minion of a Character on the Battlefield not at Long Range and of no higher Tier, under your command.
@@ -23,3 +25,9 @@ text: >
   –Effect: Target a Character (except a Fusion) on the Battlefield who is not at Long Range. You create a Duplicate
   Minion, but instead of a Duplicate Minion of yourself, it is a Duplicate Minion of that Character (you are still their
   Master). You cannot target a Character whose Tier of Power is higher than yours.
+
+---
+
+# Paid for: the Duplicate Minion of the one targeted (chat.mjs copyClone).
+[on used]
+copyClone();
