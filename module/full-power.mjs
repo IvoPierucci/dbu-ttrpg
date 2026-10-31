@@ -70,9 +70,9 @@ export function isTechniqueData(data) {
 export const SAIBAMAN = Object.freeze([
   { name: "Acid Spit", level: "super", foundation: "energy", profile: "blast",
     features: [["sustained", 4], ["inaccurate", 2]] },
-  // "Energy (Explosion)" - the Clearing Profile's former name (the user's). Its listed 10(T), not the 9(T) the rules make of it, as High Power
-  // Rush's; "If this Character is a Minion, it may still use the Saibaman Bomb Signature Technique" (technique-use.mjs whyNotTechnique).
-  { name: "Saibaman Bomb", level: "ultimate", foundation: "energy", profile: "clearing", fixedKiPerTier: 10, minionUltimate: true,
+  // "Energy (Explosion)" - the Clearing Profile's former name (the user's). Its Ki Point Cost the 9(T) the rules make of it, not the listed
+  // 10(T) (the user's); "If this Character is a Minion, it may still use the Saibaman Bomb Signature Technique" (technique-use.mjs).
+  { name: "Saibaman Bomb", level: "ultimate", foundation: "energy", profile: "clearing", minionUltimate: true,
     features: [["final-chance", 1], ["power-shot", 3], ["grappling", 1], ["all-or-nothing", 1], ["self-explosion", 1], ["volatile-explosion", 1]] }
 ]);
 
