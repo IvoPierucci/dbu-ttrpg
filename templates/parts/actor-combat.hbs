@@ -173,6 +173,25 @@
         <div class="stat"><em>Speed (Boosted)</em><span>{{system.speed.boosted}} sq.</span></div>
       </div>
 
+      {{! God Ki's Divine Ki to the Capacity's left, the two sharing the row; without it the Capacity has the row (the user's). }}
+      <div class="dbu-capacity-row">
+      {{#if system.divineKi.active}}
+      <div class="dbu-capacity dbu-divine"
+           data-tooltip="God Ki's Divine Ki Points: spent in place of Ki Points while ticked - all of a price or none, at half its Capacity">
+        <div class="dbu-capacity-head">
+          <em>Divine Ki <input type="checkbox" name="system.divineKi.use" {{checked system.divineKi.use}}
+                               aria-label="Spend Divine Ki in place of Ki"/></em>
+          <span class="dbu-capacity-edit">
+            <input type="number" name="system.divineKi.value" value="{{system.divineKi.value}}" min="0"
+                   aria-label="Divine Ki Points"/>
+            <span class="dbu-capacity-of">/ {{system.divineKi.max}}</span>
+          </span>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width: {{divineKiPercent}}%"></div></div>
+        <span class="dbu-capacity-left">{{#if system.divineKi.use}}Spent in place of Ki{{else}}Ki spent as usual{{/if}}</span>
+      </div>
+      {{/if}}
+
       {{! The most Ki that may be spent within one Combat Round - set by hand too, without a Maneuver (the user's). }}
       <div class="dbu-capacity" data-tooltip="Ki spendable per Combat Round. Refills when the round turns over.">
         <div class="dbu-capacity-head">
@@ -189,6 +208,7 @@
         </div>
         <div class="meter"><div class="meter-fill" style="width: {{capacityPercent}}%"></div></div>
         <span class="dbu-capacity-left">{{capacity.remaining}} left this round</span>
+      </div>
       </div>
     </div>
   </div>

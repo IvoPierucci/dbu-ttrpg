@@ -860,6 +860,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Bar widths, since Handlebars cannot divide.
     context.lifePercent = DBUCharacterSheet.#percentFull(this.actor.system.life);
     context.kiPercent = DBUCharacterSheet.#percentFull(this.actor.system.ki);
+    context.divineKiPercent = DBUCharacterSheet.#percentFull(this.actor.system.divineKi ?? {});
     // Wound is per Foundation, so the labels come from the same config the values do.
     context.woundRolls = Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => ({
       label: foundation.label,

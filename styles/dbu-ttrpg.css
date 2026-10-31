@@ -4339,6 +4339,31 @@
   color: var(--dbu-accent);
 }
 
+/* The Capacity alone on its row, or sharing it half and half with God Ki's Divine Ki. */
+.dbu-ttrpg .dbu-capacity-row {
+  display: flex;
+  gap: 6px;
+}
+
+.dbu-ttrpg .dbu-capacity-row > .dbu-capacity {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dbu-ttrpg .dbu-divine .meter-fill {
+  background: #d4af37;
+}
+
+.dbu-ttrpg .dbu-divine .dbu-capacity-head em {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dbu-ttrpg .dbu-divine .dbu-capacity-head em input {
+  margin: 0;
+}
+
 .dbu-ttrpg .dbu-capacity {
   display: flex;
   flex-direction: column;
