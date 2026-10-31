@@ -1637,11 +1637,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stateTriggers: windowIs === "stateTriggers" };
 
     // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
-    // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together.
+    // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together. What
+    // it does and no more: the rules that follow its last effect - God Ki's on Divine Ki Points - are left off (the user's).
+    const effectsOnly = text => {
+      const lines = printedLines(text);
+      const last = lines.reduce((at, line, index) => (/^\(\d+\)-/.test(line) ? index : at), -1);
+      return (last < 0) ? lines : lines.slice(0, last + 1);
+    };
     const shownOf = (list, row, active, byDefault = false) => {
       const pinned = (pins[list] ?? []).includes(row.key) || (byDefault && !(unpins[list] ?? []).includes(row.key));
       const tip = (row.text !== undefined)
-        ? entryTip(printedLines(row.text), row.special ? ["Special State: entered only through an effect."] : []) : "";
+        ? entryTip(effectsOnly(row.text), row.special ? ["Special State: entered only through an effect."] : []) : "";
       return { ...row, byDefault, pinned, shown: pinned || active, temporary: active && !pinned, tip };
     };
 
