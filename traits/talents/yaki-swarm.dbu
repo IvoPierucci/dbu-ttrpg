@@ -15,5 +15,9 @@ text: >
 ---
 
 # (1) Its own Maneuver, on the Maneuvers tab (maneuvers/yaki-swarm-first-effect.dbu): 1 or 2 Yaki, 4(bT) Ki each, said on its card -
-# the Minions themselves, and their Squares within the Large Sphere, the table's.
-# Not built: (2), (3) - which Minion is a Yaki, and whose, wait on the user's design of Minions.
+# each Yaki made beside you, its name alone - the Custom Species Race the GM's to fill in (chat.mjs yakiSwarm).
+[passive]
+# (2) Power of the Weak (4) open to a Yaki of yours (effects/conditions.mjs bondOpen).
+allow yaki.bond;
+# (3) Given to a Yaki Bonded to you as it is prepared (allies.mjs minionGifts).
+yaki.bondedRolls += 1(T);

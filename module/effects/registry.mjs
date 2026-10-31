@@ -108,13 +108,15 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
   const lines = [
     gifts?.combatRolls ? `combatRolls += ${gifts.combatRolls};` : "",
     gifts?.soakValue ? `soakValue += ${gifts.soakValue};` : "",
-    miniMinions ? `soakValue -= ${miniMinions}(T);\ndefenseValue += ${miniMinions}(T);` : ""
+    miniMinions ? `soakValue -= ${miniMinions}(T);\ndefenseValue += ${miniMinions}(T);` : "",
+    ...(gifts?.allows ?? []).map(key => `allow ${key};`)
   ].filter(Boolean);
   if (lines.length) {
     const { program, errors } = compile("minion-gifts", { script: `[passive]\n${lines.join("\n")}` }, report);
     if (!errors.length) {
       entries.push({ program, priority: PRIORITY.base, sourceId: "minion-gifts", sourceUuid: null,
-        sourceName: miniMinions && !gifts?.combatRolls && !gifts?.soakValue ? "Mini Minions" : "Master's effects", level: 0, stacks: 1 });
+        sourceName: miniMinions && !gifts?.combatRolls && !gifts?.soakValue && !gifts?.allows?.length ? "Mini Minions" : "Master's effects",
+        level: 0, stacks: 1 });
     }
   }
 

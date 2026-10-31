@@ -1,0 +1,16 @@
+id: supercomputer-command-mark
+name: Mental Supercomputer
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: Mental Supercomputer (3)'s - its 1(T), the Commander's Tier, as stacks.
+combatCondition: no
+source: Core Rule
+description: >
+  Mental Supercomputer: Combat Rolls higher by a point a stack, for the duration of your turn.
+text: >
+  (3)-[Triggered, 1/Round]: When you use the Command Maneuver, each targeted Minion has their Combat Rolls increased by 1(T) for the duration of their turn.
+
+---
+
+[passive per stack]
+combatRolls += 1;

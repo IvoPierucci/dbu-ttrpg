@@ -13,4 +13,11 @@ text: >
 
 ---
 
-# Not built: both effects are your Yaki's - Minions wait on the user's design (and the Battle Yardrat Awakening on Awakenings).
+# The Battle Yardrat Awakening it asks for waits on Awakenings.
+[passive]
+# (1) Not Bonded yourself: every Yaki of yours Bonded for Yaki Swarm (3) (allies.mjs minionGifts).
+allow yakiMaster.allBonded;
+
+# (2) On the Round's card: not Bonded, a Yaki asked - its Act Phase and a Counter Action (chat.mjs yakiMaster).
+[triggered/start-of-round, effect 2]
+yakiMaster();

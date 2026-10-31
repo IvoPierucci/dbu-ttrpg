@@ -1,0 +1,22 @@
+id: consumable-minions-maneuver
+name: Consumable Minions
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: consumable-minions
+fromEffect: 2
+source: Core Rule
+description: >
+  Defeat any number of your Brood Parent Minions and regain a quarter of their Ki Points.
+text: >
+  (2)-[1/Round]: Consumable Minions - As an Instant Maneuver, you may target any number of your Minions created through the first effect of Brood Parent and Defeat them. You regain Ki Points equal to 1/4 (rounded up) of their collected Ki Points. You cannot target a Minion with this effect if it was created during this Combat Round.
+
+---
+
+# Owned by every character, listed while the Consumable Minions Option (Brood Parent (2)) is had. Your Brood Parent Minions not made
+# this Round, ticked - Defeated, a quarter of their Ki back (chat.mjs consumeBrood).
+[on used]
+consumeBrood();

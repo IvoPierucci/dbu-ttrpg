@@ -559,7 +559,10 @@ const PREDICATES = {
     const ally = scope.context?.allyUuid;
     if (!self || !ally || (bondOf(self)?.uuid === ally) || (self.system?.effects?.slots?.["twinned.partner"] === true)) return false;
     const empowered = globalThis.fromUuidSync?.(ally);
-    if (empowered?.system?.minion && (self.system?.effects?.slots?.["leadership.bondMinion"] !== true)) return false;
+    // Yaki Swarm (2): "Yaki can become Bonded through the 4th effect of Power of the Weak despite being Minions" - your own.
+    const yaki = (empowered?.getFlag?.("dbu-ttrpg", "minionKind") === "yaki") && (empowered?.system?.master === self.id)
+      && (self.system?.effects?.slots?.["yaki.bond"] === true);
+    if (empowered?.system?.minion && !yaki && (self.system?.effects?.slots?.["leadership.bondMinion"] !== true)) return false;
     const others = [...(globalThis.game?.actors ?? []), ...(globalThis.canvas?.tokens?.placeables ?? []).map(token => token.actor)];
     return !others.some(other => other && (other.uuid !== self.uuid) && (bondOf(other)?.uuid === ally));
   },

@@ -15956,14 +15956,24 @@ export async function commandMinions(actor) {
     return UNSPENT;
   }
   const escape = Handlebars.escapeExpression;
+  // Mental Supercomputer (3): "[Triggered, 1/Round]: When you use the Command Maneuver, each targeted Minion has their Combat Rolls
+  // increased by 1(T) for the duration of their turn" - the player's, ticked on the same window.
+  const boostOpen = (actor.system.effects?.slots?.["supercomputer.command"] === true)
+    && (actor.getFlag?.(SCOPE, "supercomputerCommandRound") !== roundKey());
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  let boosted = false;
   const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${actor.name} - Command` },
     content: `<p class="dbu-respond-hint">Up to ${most}: a Standard Action of yours each.</p>
       <div class="dbu-ally-pick">${free.map(minion => `<div class="dbu-ally-pick-row">
         <label class="dbu-respond-option"><input type="checkbox" name="${escape(minion.id)}"/><img src="${escape(minion.img ?? "")}" alt=""/>
-          <span class="dbu-respond-name">${escape(minion.name)}</span></label></div>`).join("")}</div>`,
-    buttons: [{ action: "command", label: "Command", default: true, callback: (event, button, dialog) =>
-      free.filter(minion => dialog.element.querySelector(`input[name="${CSS.escape(minion.id)}"]`)?.checked) },
+          <span class="dbu-respond-name">${escape(minion.name)}</span></label></div>`).join("")}</div>
+      ${boostOpen ? `<label class="dbu-respond-option" data-tooltip="Once a Round: each Minion Commanded, its Combat Rolls ${tier} higher for its turn">
+        <input type="checkbox" name="dbu-supercomputer" checked/> Mental Supercomputer: +${tier} Combat Rolls</label>` : ""}`,
+    buttons: [{ action: "command", label: "Command", default: true, callback: (event, button, dialog) => {
+      boosted = boostOpen && Boolean(dialog.element.querySelector('input[name="dbu-supercomputer"]')?.checked);
+      return free.filter(minion => dialog.element.querySelector(`input[name="${CSS.escape(minion.id)}"]`)?.checked);
+    } },
     { action: "cancel", label: "Cancel" }],
     rejectClose: false
   });
@@ -15979,6 +15989,61 @@ export async function commandMinions(actor) {
     await requestActorUpdate(minion, { [`flags.${SCOPE}.commanded`]: roundKey(),
       "system.actionsSpent.converted": (Number(minion.system?.actionsSpent?.converted) || 0) + 1 });
   }
+  if (boosted) {
+    await actor.setFlag(SCOPE, "supercomputerCommandRound", roundKey());
+    for (const minion of picked) {
+      await markUntilNextTurn(minion, minion, "supercomputer-command-mark", tier, "end", "Mental Supercomputer");
+    }
+  }
+}
+
+/**
+ * Yaki Master (2): "[Triggered/Start of Combat Round]: If you are not Bonded, target one of your Yaki Minions. That Yaki gains access
+ * to its Act Phase this Combat Round and gains 1 Counter Action." Which, asked - as the Command gives it.
+ */
+export async function yakiMaster(actor) {
+  if (!actor) return;
+  if (actor.getFlag?.(SCOPE, "bonded")) return ui.notifications.warn(`${actor.name} is Bonded: Yaki Master gives no Yaki its Act Phase.`);
+  const yaki = minionsOf(actor).map(id => game.actors?.get(id))
+    .filter(minion => minion && (minion.getFlag?.(SCOPE, "minionKind") === "yaki") && !minion.system?.defeated && !commandedNow(minion));
+  if (!yaki.length) return ui.notifications.info(`${actor.name} has no Yaki without its Act Phase this Round.`);
+  const id = await askPlayerChoice(actor, `${actor.name}: Yaki Master`, yaki.map(minion => ({ value: minion.id, label: minion.name })));
+  const minion = yaki.find(each => each.id === id);
+  if (!minion) return;
+  await requestActorUpdate(minion, { [`flags.${SCOPE}.commanded`]: roundKey(),
+    "system.actionsSpent.converted": (Number(minion.system?.actionsSpent?.converted) || 0) + 1 });
+}
+
+/**
+ * Consumable Minions: "As an Instant Maneuver, you may target any number of your Minions created through the first effect of Brood
+ * Parent and Defeat them. You regain Ki Points equal to 1/4 (rounded up) of their collected Ki Points. You cannot target a Minion with
+ * this effect if it was created during this Combat Round." Which, ticked; Defeated as consumed, so gone (minion-make.mjs).
+ */
+export async function consumeBrood(actor) {
+  if (!actor) return;
+  const brood = minionsOf(actor).map(id => game.actors?.get(id))
+    .filter(minion => minion && (minion.getFlag?.(SCOPE, "minionKind") === "brood") && !minion.system?.defeated
+      && (minion.getFlag?.(SCOPE, "madeAt") !== roundKey()));
+  if (!brood.length) return ui.notifications.info(`${actor.name} has no Brood Parent Minion to consume (not one made this Round).`);
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Consumable Minions` },
+    content: `<p class="dbu-respond-hint">Any number: a quarter of their Ki Points back, rounded up.</p>
+      <div class="dbu-ally-pick">${brood.map(minion => `<div class="dbu-ally-pick-row">
+        <label class="dbu-respond-option"><input type="checkbox" name="${escape(minion.id)}"/><img src="${escape(minion.img ?? "")}" alt=""/>
+          <span class="dbu-respond-name">${escape(minion.name)} - ${Number(minion.system.ki?.value) || 0} Ki</span></label></div>`).join("")}</div>`,
+    buttons: [{ action: "take", label: "Defeat them", default: true, callback: (event, button, dialog) =>
+      brood.filter(minion => dialog.element.querySelector(`input[name="${CSS.escape(minion.id)}"]`)?.checked) },
+    { action: "cancel", label: "None" }],
+    rejectClose: false
+  });
+  if (!Array.isArray(picked) || !picked.length) return;
+  const back = Math.ceil(picked.reduce((sum, minion) => sum + Math.max(0, Number(minion.system.ki?.value) || 0), 0) / 4);
+  const ki = actor.system.ki ?? {};
+  if (back) await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
+  if (game.user.isGM) await (await import("./combat.mjs")).dismissDuplicates(picked);
+  else game.socket.emit(CHANNEL, { type: "dismissDuplicates", ids: picked.map(minion => minion.id) });
+  ui.notifications.info(`${actor.name}: Consumable Minions - ${picked.length} Defeated, ${back} Ki Points back.`);
 }
 
 export async function spectatorCheer(actor) {

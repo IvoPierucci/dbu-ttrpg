@@ -137,6 +137,14 @@ export const VERBS = Object.freeze({
     doc: "From Goop: your Goops ticked and Defeated, half their Life Points back - 0 one for each Action spent and none made this "
        + "Turn (6), 1 any number (7) (chat.mjs reabsorbGoops)."
   },
+  yakiMaster: {
+    args: [0, 0],
+    doc: "Yaki Master (2): not Bonded, a Yaki of yours asked - its Act Phase this Combat Round and a Counter Action more (chat.mjs yakiMaster)."
+  },
+  consumeBrood: {
+    args: [0, 0],
+    doc: "Consumable Minions: your Brood Parent Minions ticked and Defeated, a quarter of their Ki back (up) (chat.mjs consumeBrood)."
+  },
   pokoMinion: {
     args: [0, 0],
     doc: "Poko Priest: a Namekian Minion made beside you, the Dark Vassal Factor and its 2(bT) Attribute Points said (chat.mjs pokoMinion)."

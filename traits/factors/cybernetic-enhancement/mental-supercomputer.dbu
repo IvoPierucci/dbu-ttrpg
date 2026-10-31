@@ -21,7 +21,9 @@ if (stacksAtLeast(2, "power")) {
     scholarship.mod += 1(T);
     personality.mod += 1(T);
 }
-# (3) Waits on Minions - the Command Maneuver - not built yet: the table's.
+# (3) Ticked on the Command's own window, once a Round - each Minion Commanded, its Combat Rolls 1(T) higher till its turn ends
+# (chat.mjs commandMinions, supercomputer-command-mark).
+allow supercomputer.command;
 
 # (2) The Analysis or the Hype: its mark till your turn ends - once a Round between the two, the one limit of its printed effect
 # (`effect 2` on both). Automatic by default, one Triggered/Automatic button.

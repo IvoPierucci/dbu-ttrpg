@@ -69,9 +69,16 @@ export function minionGifts(who) {
   const master = globalThis.game?.actors?.get?.(masterOf(actor));
   const slots = master?.system?.effects?.slots;
   const add = key => Number(slots?.[key]?.add) || 0;
-  const goop = actor?.getFlag?.("dbu-ttrpg", "minionKind") === "goop";
-  return { combatRolls: add("minions.combatRolls"), soakValue: add("minions.soakValue"), lifeMax: add("minions.lifeMax"),
-    lifePerLevel: add("minions.lifePerLevel") + (goop ? add("goops.lifePerLevel") : 0) };
+  const kind = actor?.getFlag?.("dbu-ttrpg", "minionKind") ?? "";
+  // Yaki Swarm (3): "While a Yaki is a Bonded Ally, they have their Combat Rolls increased by 1(T)" - Bonded to their Master; Yaki
+  // Master (1): "While you are not Bonded, all of your Yaki are considered Bonded for the 3rd effect of Yaki Swarm."
+  const bonded = master?.getFlag?.("dbu-ttrpg", "bonded")?.uuid ?? "";
+  const yakiBonded = (kind === "yaki") && (bonded ? ((bonded === actor?.uuid) || (globalThis.fromUuidSync?.(bonded)?.id === actor?.id))
+    : (slots?.["yakiMaster.allBonded"] === true));
+  return { combatRolls: add("minions.combatRolls") + (yakiBonded ? add("yaki.bondedRolls") : 0), soakValue: add("minions.soakValue"),
+    lifeMax: add("minions.lifeMax"), lifePerLevel: add("minions.lifePerLevel") + ((kind === "goop") ? add("goops.lifePerLevel") : 0),
+    // Draining Minions: "Your Minions created through the first effect of Brood Parent gain access to the Power Drain Maneuver."
+    allows: ((kind === "brood") && (slots?.["brood.drain"] === true)) ? ["maneuver.power-drain"] : [] };
 }
 
 /**

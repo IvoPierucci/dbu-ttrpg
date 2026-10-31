@@ -7,4 +7,6 @@ text: >
 
 ---
 
-# Not built: the Minions it is about are the table's - Minions wait on the user's design.
+# Each of your Brood Parent Minions given the Power Drain Maneuver as it is prepared (allies.mjs minionGifts).
+[passive]
+allow brood.drain;
