@@ -1,0 +1,35 @@
+id: nameless-horde
+name: Nameless Horde
+order: 1
+category: body
+importance: primary
+# (4) The 'Full Power' Signature Techniques, made as it is added and gone with it (full-power.mjs) - no Technique Points for them.
+grantsTechniques: full-power
+description: >
+  Blending into the crowd, you work seamlessly with the group around you.
+text: >
+  Nameless Horde (Body): Blending into the crowd, you work seamlessly with the group around you.
+  (1)-[Passive]: While below the Injured Health Threshold, increase your Wound Rolls for Attacking Maneuvers made through the Basic Attack Maneuver by 2(T).
+  (2)-[Passive]: You cannot create or otherwise gain Signature Techniques, except through the effects of Transformation Traits.
+  (3)-[Passive]: Increase your Maximum Life Points (after all modifications) by 1/2 of your amount of Technique Points.
+  (4)-[Passive, Ruling]: You have access to the ‘Full Power’ Signature Techniques (detailed below). These Signature Techniques are considered to have been used through the Basic Attack Maneuver as well for all of your effects and, if an effect allows you to use the Basic Attack Maneuver, you may instead use the Signature Technique Maneuver to use a ‘Full Power’ Signature Technique. Any ‘Full Power’ Signature Technique is still used through the Signature Technique Maneuver and thus has the usual limitations involved in that.
+  (5)-[Triggered/Power, 1/Round]: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Read on the Wound Roll of a Basic Attack - a 'Full Power' Technique's as well (chat.mjs twoWorldsWoundParts).
+if (belowThreshold("injured")) {
+    wound.basicAttack += 2(T);
+}
+# (2) Refused: no new Signature Technique made or gained, the 'Full Power' ones and a Transformation's aside (the user's) - those had
+# before it said on the Techniques list (full-power.mjs whyNoNewTechnique).
+allow namelessHorde.noSignature;
+# (3) Half the Technique Points granted up to their Power Level, rounded down, after everything else (actor-character.mjs).
+allow namelessHorde.techniqueLife;
+# (4) The Basic Attack's for every effect of theirs (maneuvers.mjs throughBasicAttack); an effect's Basic Attack offered as one of them
+# instead (use-maneuver.mjs useManeuver).
+
+# (5) The Power Up used: the Basic Attack out of sequence - or a 'Full Power' Technique. Ticked in its window, never Automatic.
+[triggered/power, 1/round, outOfSequence, effect 5]
+namelessStrike();

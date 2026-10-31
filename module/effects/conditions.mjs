@@ -341,6 +341,19 @@ const PREDICATES = {
    * Is this character below that Health Threshold - in it or a lower one, as Final Chance and All Out read "below the
    * Injured Health Threshold" (Blood of the Warrior's).
    */
+  /**
+   * The Health Threshold the `threshold` Moment answers was that one crossed - "[Triggered/Injured]": from above it to it or below it
+   * (From the Stars (4)'s). Where it was knocked from is not known, the one landed in alone.
+   */
+  knockedThrough: (scope, name) => {
+    const keys = ["healthy", "bruised", "injured", "critical"];
+    const wanted = keys.indexOf(String(name).toLowerCase());
+    const now = keys.indexOf(String(scope.context?.threshold ?? ""));
+    const from = keys.indexOf(String(scope.context?.from ?? ""));
+    if ((wanted <= 0) || (now < 0)) return false;
+    return (from < 0) ? (now === wanted) : ((from < wanted) && (now >= wanted));
+  },
+
   belowThreshold: (scope, name) => {
     const keys = ["healthy", "bruised", "injured", "critical"];
     const wanted = keys.indexOf(String(name).toLowerCase());
@@ -539,6 +552,19 @@ const PREDICATES = {
   },
   // Eternal Rival (3): "If you are adjacent to your Rival" - whichever side they are on.
   besideRival: scope => besideChosen(scope.data?.parent, rivalOf(scope.data?.parent)),
+
+  /**
+   * From the Stars (2): "While all of your Allies are Defeated" - an Ally on the scene at least (the user's), and every one of them
+   * Defeated.
+   */
+  alliesAllDefeated: scope => {
+    const self = scope.data?.parent;
+    if (!self) return false;
+    const allies = [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+      .filter(token => token.actor && (token.actor.uuid !== self.uuid) && areAllies(token.actor, self))
+      .map(token => [token.actor.uuid, token.actor])).values()];
+    return (allies.length > 0) && allies.every(other => other.system?.defeated);
+  },
 
   alliesStanding: scope => {
     const self = scope.data?.parent;

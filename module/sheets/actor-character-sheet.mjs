@@ -2180,14 +2180,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Neither a Copied one nor a Genetic Donor's (Genetic Catalogue) is paid for with your TP.
     const built = items.filter(isBuiltTechnique).filter(item => !item.getFlag?.("dbu-ttrpg", "copied") && !item.getFlag?.("dbu-ttrpg", "genetic"))
       .map(signatureOfTechnique);
-    const counted = built.filter(sig => !sig.fromTransformation);
+    // Nor Nameless Horde (4)'s 'Full Power' ones, given rather than made.
+    const counted = built.filter(sig => !sig.fromTransformation && !sig.fullPower);
     const ultimates = counted.filter(sig => isUltimateLevel(sig.level)).length;
     const supers = counted.filter(sig => !isUltimateLevel(sig.level)).length;
     const dramatic = built.filter(sig => sig.level === "dramatic").length;
     const spent = built.reduce((sum, sig) => sum + techniqueTPChargedOf(sig, this.actor.system.effects?.slots), 0);
     const available = Number(actor.system.techniquePoints) || 0;
+    // Nameless Horde (2): "You cannot create or otherwise gain Signature Techniques, except through the effects of Transformation
+    // Traits" - those had before it, said (the user's).
+    const barred = (actor.system.effects?.slots?.["namelessHorde.noSignature"] === true)
+      ? built.filter(sig => !sig.fullPower && !sig.fromTransformation).length : 0;
     const warnings = [
       (spent > available) ? `${spent} TP spent on Techniques, and ${available} TP to spend.` : "",
+      barred ? `${barred} Signature Technique${(barred === 1) ? "" : "s"} besides the 'Full Power' ones: Nameless Horde (2) - none may be created or gained.` : "",
       (ultimates > Math.max(1, supers)) ? `${ultimates} Ultimates for ${supers} Supers: one Ultimate more needs one Super more.` : "",
       (dramatic > 1) ? `${dramatic} Dramatic Finishers: a character may possess one.` : ""
     ].filter(Boolean);
@@ -2709,6 +2715,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   static async _onNewTechnique() {
     if (!this.isEditable) return;
+    const { whyNoNewTechnique } = await import("../full-power.mjs");
+    const why = whyNoNewTechnique(this.actor);
+    if (why) return ui.notifications.warn(why);
     const [item] = await this.actor.createEmbeddedDocuments("Item", [{
       name: "New Signature Technique",
       type: "maneuver",

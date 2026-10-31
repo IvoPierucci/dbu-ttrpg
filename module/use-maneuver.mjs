@@ -81,7 +81,7 @@ import { traitAside } from "./aside.mjs";
 import { emptiesCapacity } from "./signature.mjs";
 import { ULTIMATES_PER_ENCOUNTER, buildArea, choicesOf, isBuilt, isUltimate, signatureOf,
   techniqueKiPerTier } from "./technique.mjs";
-import { MAGNITUDES, atLongRange, magnitudeIndex } from "./maneuvers.mjs";
+import { MAGNITUDES, atLongRange, magnitudeIndex, throughBasicAttack } from "./maneuvers.mjs";
 import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAgainst }
   from "./technique-use.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
@@ -1823,7 +1823,7 @@ async function applyModifiers(actor, applied, { maneuver = null, declared = null
   let lightKi = 0;
   const lightRound = actor.getFlag?.("dbu-ttrpg", "lightCalledRound") === round;
   if (called && (applied.find(entry => entry === called)?.actions > 0) && !lightRound
-    && (actor.system.effects?.slots?.["lightWeapons.calledShot"] === true) && ((maneuver?.id ?? "") === "basic-attack")
+    && (actor.system.effects?.slots?.["lightWeapons.calledShot"] === true) && throughBasicAttack(maneuver)
     && declared?.weapon && !declared.weapon.unarmed && (declared.weapon.weaponSize === "small")) {
     const cost = 4 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
     if (await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
@@ -2892,6 +2892,8 @@ export function techniqueDefinition(item) {
     featureChoices: { ...favoredChoiceOf(item), ...choicesOf(sig) },
     fromTransformation: sig.fromTransformation,
     godFinisher: sig.godFinisher,
+    // Nameless Horde (4): the Basic Attack's for its maker's effects (full-power.mjs throughBasicAttack).
+    ...(sig.fullPower ? { fullPower: true } : {}),
     ...(ultimate ? { usageLimit: { amount: 1, per: "encounter" } } : {})
   };
 }
@@ -4693,6 +4695,21 @@ async function revertTransfiguration(actor, target, maneuver) {
  * Range - and the choice is spent once a Maneuver is made.
  */
 export async function useManeuver(actor, maneuver, options = {}) {
+  // Nameless Horde (4): "if an effect allows you to use the Basic Attack Maneuver, you may instead use the Signature Technique
+  // Maneuver to use a 'Full Power' Signature Technique" - which, asked; through the Signature Technique Maneuver, its limits its own.
+  if (options.outOfSequence && ((maneuver?.id ?? "") === "basic-attack") && !options.techniqueId) {
+    const fullPower = Array.from(actor?.items ?? []).filter(item => (item.type === "maneuver") && item.system?.signature?.fullPower)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (fullPower.length) {
+      const { askPlayerChoice } = await import("./chat.mjs");
+      const which = await askPlayerChoice(actor, `${actor.name}: the Basic Attack, or a 'Full Power' Signature Technique`,
+        [{ value: "basic-attack", label: "Basic Attack" }, ...fullPower.map(item => ({ value: item.id, label: item.name }))]);
+      if (!which) return false;
+      if (which !== "basic-attack") {
+        return useTechnique(actor, which, { outOfSequence: true, targetUuid: options.targetUuid ?? "", via: options.via ?? "" });
+      }
+    }
+  }
   // Tail Proficiency (3): a Tail Attack through it alone - once an Encounter, the Simple Profile, no variant asked.
   const { tailProficiencyOnly, tailProfiles } = await import("./maneuvers.mjs");
   if (tailProficiencyOnly(actor, maneuver)) maneuver = { ...maneuver, encounterLimit: 1, tailVariant: "simple-only", ...tailProfiles("") };

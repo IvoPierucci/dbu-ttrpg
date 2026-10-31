@@ -494,6 +494,8 @@ const PREDICATE_NAMES = new Set([
   "using",
   // Resources' stacks between them, and a Health Threshold reached - Blood of the Warrior's.
   "stacksAtLeast", "belowThreshold",
+  // The Health Threshold the Moment answers crossed - "[Triggered/Injured]" (From the Stars').
+  "knockedThrough",
   // The attack defended against has that many Energy Charges - Legacy of the Scholars'.
   "chargesAtLeast",
   // A Health Threshold's penalties suffered - Parasite-Drained's.
@@ -563,8 +565,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "knockedNear", "failedNear",
   // The Ally Empowered open to a Bond (Power of the Weak's).
   "bondOpen",
-  // An Ally on the scene, and none of them Defeated (Conduit of Spirit's).
-  "alliesStanding",
+  // An Ally on the scene, and none of them Defeated (Conduit of Spirit's); and every one of them Defeated (From the Stars').
+  "alliesStanding", "alliesAllDefeated",
   // On a Square adjacent to your Partner, an Ally (Synchronized Combatants').
   "besidePartner",
   // Two Weapons wielded or more of one Weapon Category (Twin Weapon Specialist's).

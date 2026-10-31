@@ -1,0 +1,17 @@
+id: from-the-stars-mark
+name: From the Stars
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: From the Stars (4)'s - its 1(T), the giver's Tier of Power, as stacks; set to the highest given, never added
+# ("This effect cannot stack on a single Character"), and gone with the Combat Encounter (combat.mjs endEncounterFor).
+combatCondition: no
+source: Core Rule
+description: >
+  From the Stars: Combat Rolls higher by a point a stack, for the Combat Encounter.
+text: >
+  From the Stars (4): You may then target one Ally, they have their Combat Rolls increased by 1(T) for the remainder of the Combat Encounter. This effect cannot stack on a single Character if multiple Characters apply this effect.
+
+---
+
+[passive per stack]
+combatRolls += 1;

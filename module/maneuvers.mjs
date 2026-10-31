@@ -1672,7 +1672,7 @@ export async function askInjuring(actor, declared) {
  * declared, once a Round; carried as `spiritualFree` (maneuverKiCost).
  */
 export async function askSpiritualFree(actor, declared, maneuver) {
-  if (!declared || (maneuver?.id !== BASIC_ATTACK) || (actor?.system?.effects?.slots?.["warrior.freeBasic"] !== true)) return declared;
+  if (!declared || !throughBasicAttack(maneuver) || (actor?.system?.effects?.slots?.["warrior.freeBasic"] !== true)) return declared;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.("dbu-ttrpg", "spiritualFreeRound") === round) return declared;
   const yes = await foundry.applications.api.DialogV2.confirm({
@@ -1980,7 +1980,7 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   }
   // Greed of the Hera (3): "If you would use the Basic Attack Maneuver to make an Attacking Maneuver that does not possess
   // an AoE, you may spend 3(bT) Ki Points to apply a Cone or Line AoE to that Attacking Maneuver."
-  if (!noArea && (maneuver.id === BASIC_ATTACK) && (slots["greed.area"] === true)) {
+  if (!noArea && throughBasicAttack(maneuver) && (slots["greed.area"] === true)) {
     declared = await askAddedArea(actor, declared, { title: "Greed of the Hera", flag: "greedAreaRound", ki: 3 * bT });
   }
   // Mage (3): "When using a Magic Attack that does not possess an AoE, you can spend 2(bT) Ki Points to apply a Line or Cone
@@ -4096,6 +4096,17 @@ export function whyNotAnotherAbsolute(actor, maneuver) {
  */
 const BASIC_ATTACK = "basic-attack";
 
+/**
+ * Whether an attack - or the Maneuver it is made through - counts as the Basic Attack Maneuver's for its maker's effects: the
+ * Basic Attack itself, or a 'Full Power' Signature Technique (Nameless Horde (4): "considered to have been used through the Basic
+ * Attack Maneuver as well for all of your effects"). Not for the once-a-Profile-a-Round rule, a rule and not an effect - nor for
+ * anybody else's effects (Dimensional Hole's "targeted by the Basic Attack Maneuver").
+ */
+export function throughBasicAttack(attackOrManeuver) {
+  const id = attackOrManeuver?.maneuverId ?? attackOrManeuver?.id ?? "";
+  return (id === BASIC_ATTACK) || Boolean(attackOrManeuver?.fullPower);
+}
+
 /** "...except for the Simple Profile." One exemption, in one place. */
 const UNLIMITED_THROUGH_BASIC_ATTACK = Object.freeze(new Set(["simple"]));
 
@@ -4412,7 +4423,7 @@ export async function askReservedTail(actor, maneuver, declared) {
  * Technique's would be (chat.mjs postAttack, `borrowed`).
  */
 export async function askAngelicAdvantage(actor, maneuver, declared) {
-  if (!declared || (maneuver?.id !== "basic-attack") || (actor?.system?.effects?.slots?.["angelic.advantage"] !== true)) return declared;
+  if (!declared || !throughBasicAttack(maneuver) || (actor?.system?.effects?.slots?.["angelic.advantage"] !== true)) return declared;
   if ((actor.system.threshold?.key ?? "healthy") !== "healthy") return declared;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.("dbu-ttrpg", "angelicAdvantageRound") === round) return declared;

@@ -56,6 +56,9 @@ export function signatureOf(item) {
     superProfile: sig.superProfile ?? "",
     fromTransformation: Boolean(sig.fromTransformation),
     godFinisher: Boolean(sig.godFinisher),
+    // Nameless Horde (4)'s 'Full Power' Techniques: given, no Technique Points (full-power.mjs) - and one's Ki Point Cost as listed.
+    fullPower: Boolean(sig.fullPower),
+    fixedKiPerTier: Math.max(0, Number(sig.fixedKiPerTier) || 0),
     // Inherited Creativity's: made for the Combat Encounter alone - no Technique Points, no Disadvantages.
     encounterOnly: Boolean(item?.flags?.["dbu-ttrpg"]?.encounterTechnique),
     freeTP: Math.max(0, Math.floor(Number(sig.freeTP) || 0)),
@@ -163,7 +166,8 @@ function powerfulFreeOf(item) {
  */
 export function techniqueTPCharged(sig, slots = null) {
   // God Finisher's: "you do not spend any Technique Points" - and Inherited Creativity's, for the Encounter alone.
-  if (sig?.godFinisher || sig?.encounterOnly) return 0;
+  // And Nameless Horde (4)'s 'Full Power' ones: "You have access to" them.
+  if (sig?.godFinisher || sig?.encounterOnly || sig?.fullPower) return 0;
   // Earthling-Raised's "Reduce the Technique Point Cost to create a Signature Technique by 2 after all other calculations".
   const after = Number(slots?.["signature.tpCost"]?.add) || 0;
   return Math.max(0, techniqueTP(sig, slots) - Math.max(0, Number(sig.freeTP) || 0) + after);
@@ -222,6 +226,8 @@ export function superProfileKiPerTier(superId, secondProfile = "") {
  * under the Profile.
  */
 export function techniqueKiPerTier(sig, slots = null) {
+  // High Power Rush's listed 7(T), whatever the rules make of it (the user's) - what it adds to its Profile's.
+  if (Number(sig?.fixedKiPerTier) > 0) return Number(sig.fixedKiPerTier) - profileKiPerTier(sig.profile);
   const x = Math.ceil(techniqueTP(sig, slots) / 5);
   const own = Math.max(0, x - (4 * ranksOf(sig, "efficiency")) + (4 * ranksOf(sig, "inefficiency")));
   return own + (sig.superProfile ? superProfileKiPerTier(sig.superProfile, sig.secondProfile) : 0);

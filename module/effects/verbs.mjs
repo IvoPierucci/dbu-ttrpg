@@ -490,6 +490,20 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
   },
+  namelessStrike: {
+    args: [0, 0],
+    doc: "Nameless Horde (5): the Basic Attack out of sequence - or a 'Full Power' Signature Technique (chat.mjs namelessStrike)."
+  },
+  starsAnswer: {
+    args: [0, 0],
+    doc: "From the Stars (3): the Power Up or the Basic Attack out of sequence, which asked - the Basic Attack at whoever's Attacking "
+       + "Maneuver Defeated the Ally, else the nearest Opponent (chat.mjs starsAnswer)."
+  },
+  starsFall: {
+    args: [0, 0],
+    doc: "From the Stars (4): Defeated, nothing answering it; an Ally asked - Combat Rolls 1(T) for the Combat Encounter, not "
+       + "stacking (chat.mjs starsFall)."
+  },
   lingeringPower: {
     args: [0, 0],
     doc: "Lingering Power (5): Combat Rolls 2(bT) by the Past Life's base Tier, till the end of your next turn (chat.mjs lingeringPower)."

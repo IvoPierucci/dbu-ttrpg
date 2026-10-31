@@ -775,6 +775,9 @@ async function runVerb(actor, call, context) {
     case "nanomachineDefeat": return (await import("../chat.mjs")).nanomachineDefeat(actor);
     case "onboardFocus": return (await import("../chat.mjs")).onboardFocus(actor);
     case "lingeringPower": return (await import("../chat.mjs")).lingeringPower(actor);
+    case "namelessStrike": return (await import("../chat.mjs")).namelessStrike(actor);
+    case "starsAnswer": return (await import("../chat.mjs")).starsAnswer(actor, context);
+    case "starsFall": return (await import("../chat.mjs")).starsFall(actor);
     case "goldenFruitPower": return (await import("../chat.mjs")).goldenFruitPower(actor);
     case "raiseTo": {
       // To at least this many, past any ceiling, never lower - Born for Battle's 3.

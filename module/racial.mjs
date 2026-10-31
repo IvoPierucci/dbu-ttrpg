@@ -31,7 +31,10 @@
  *   grantsTalentIfManeuver: a=b     the Talent b, where the Maneuver a is open to them already (Ghost's Frequent Flyer)
  *   grantsOtherOptions: a=b         the Other Trait a granted with its Option b, not asked (Troll's Thick Hide); and
  *   grantsOtherChoices: a=b         with its `choose:` answered b (Plant Monster's Elemental (Plantlife))
- *   grantsTalentChoiceFrom: <ids>   a Talent of those Talent Categories, chosen as it is added - or none (Protector of the Dragon Ball's)
+ *   grantsTalentChoiceFrom: <ids>   a Talent of those Talent Categories, chosen as it is added - or none (Protector of the Dragon Ball's);
+ *                                   `any` for a Talent of any of them (From the Stars')
+ *   grantsTechniques: full-power    Nameless Horde (4)'s 'Full Power' Signature Techniques, made as it is added (full-power.mjs) -
+ *                                   gone with it
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
  *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
@@ -50,6 +53,7 @@
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { isCharacter } from "./actor-types.mjs";
 import { getRace, isMinionRace, subraceName } from "./races.mjs";
+import { fullPowerItems, isTechniqueData, whyNoNewTechnique } from "./full-power.mjs";
 import { traitAside } from "./aside.mjs";
 
 /** The Item type a Racial Trait is. */
@@ -845,7 +849,9 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   if (fromCategories.length) {
     const { talentCategoryOf } = await import("./talent-categories.mjs");
     const had = new Set(Array.from(actor.items ?? []).filter(each => each.type === "talent").map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
-    const offered = traitsOfKind("talents").filter(talent => fromCategories.includes(talentCategoryOf(talent)?.id) && !had.has(talent.id))
+    const anyCategory = fromCategories.includes("any");
+    const offered = traitsOfKind("talents").filter(talent => (anyCategory || fromCategories.includes(talentCategoryOf(talent)?.id))
+      && !had.has(talent.id))
       .sort((a, b) => a.name.localeCompare(b.name));
     if (offered.length) {
       const escape = Handlebars.escapeExpression;
@@ -885,6 +891,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   // A Weapon it makes - Claws': "Create a Physical Weapon of the Slashing Category with a Craftsmanship Grade of 2 ... This Weapon
   // becomes Integrated while you possess this Bestial Trait" - on the Gear tab, gone with it.
   if (trait.grantsWeapon) await grantWeapon(actor, item, trait);
+  // Nameless Horde (4): "You have access to the 'Full Power' Signature Techniques" - on the Techniques list, gone with it.
+  if (String(trait.grantsTechniques ?? "") === "full-power") await actor.createEmbeddedDocuments("Item", fullPowerItems(item.id));
   // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
   // And a Quality on it in no Slot - Sturdy Shell's Dense Armor, Treacherous Spikes' Spiked.
@@ -1517,6 +1525,15 @@ export async function removeRacialTrait(actor, itemId) {
 
 /** Deleted any other way - from the sidebar, by a macro - what it gave goes too. */
 export function registerRacialHooks() {
+  // Nameless Horde (2): no Signature Technique gained any other way - Copied, given, dropped on the sheet.
+  Hooks.on("preCreateItem", (item, data) => {
+    const actor = item.parent;
+    if (!actor || (actor.documentName !== "Actor") || !isTechniqueData(data)) return;
+    const why = whyNoNewTechnique(actor, data);
+    if (!why) return;
+    ui.notifications.warn(why);
+    return false;
+  });
   // Weapon Ports' Installed Weapons "cannot be destroyed through any means": no Life Points lost, no Break Value, never
   // destroyed - whatever writes it.
   Hooks.on("preUpdateItem", (item, changes) => {

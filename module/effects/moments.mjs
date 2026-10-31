@@ -174,8 +174,9 @@ const TABLE = [
     doc: "Fired for whoever an Opponent's Attacking Maneuver dealt Damage to, once it is applied (chat.mjs applyAttackDamage) - "
        + "Energy of Revenge's. What is the player's is asked in a window first." },
   { key: "ally-defeated", label: "An Ally is Defeated", provides: [],
-    doc: "Fired for each Ally on the scene of whoever is Defeated - not for a Minion's defeat - with them as `defeatedUuid` "
-       + "(combat.mjs) - Battle Tension's. What is the player's is asked in a window first." },
+    doc: "Fired for each Ally on the scene of whoever is Defeated, with them as `defeatedUuid`, whose Attacking Maneuver did it as "
+       + "`knockerUuid` - a Minion's too, told by `defeatedMinion` (combat.mjs) - Battle Tension's, From the Stars'. What is the "
+       + "player's is asked in a window first." },
   { key: "opponent-knocked", label: "Someone is knocked through a Health Threshold by an Attacking Maneuver", provides: [],
     doc: "Fired for whoever has an effect answering it as anybody is knocked through a Health Threshold by an Attacking "
        + "Maneuver, with `knockedUuid` and `knockerUuid` (combat.mjs) - Wrath of the Dragon's (you or an Ally: knockedNear), "

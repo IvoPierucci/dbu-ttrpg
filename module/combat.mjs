@@ -913,6 +913,11 @@ export async function endEncounterFor(actor) {
   }
   // Counter Jury-rigging (2)'s Quality, with the Round it was for.
   await (await import("./chat.mjs")).juryRigEnds(actor);
+  // From the Stars (4)'s: "for the remainder of the Combat Encounter".
+  if ((Number(actor.system.conditions?.["from-the-stars-mark"]) || 0) > 0) {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "from-the-stars-mark", 0);
+  }
   // All-Out Start (2)'s, with the Encounter.
   if (actor.getFlag?.("dbu-ttrpg", "allOutUntil")) {
     const { setCondition } = await import("./conditions.mjs");
@@ -1328,8 +1333,9 @@ export function registerDefeatHooks() {
       }
     }
 
-    // An Ally of theirs, not a Minion, Defeated: for each of their Allies on the scene, what answers it (Battle Tension's).
-    if (now && !actor.system?.minion) {
+    // An Ally of theirs Defeated: for each of their Allies on the scene, what answers it (Battle Tension's) - a Minion's too, for what
+    // does not except Minions (From the Stars', Tuffle-Raised's); what does asks `defeatedMinion`.
+    if (now) {
       {
         const { offerTriggers } = await import("./chat.mjs");
         const allies = new Map((canvas?.tokens?.placeables ?? [])
@@ -1478,7 +1484,8 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
   // The Moment says it "fires after the Maneuver that pushed you through finishes",
   // and this is that: Life Points are written when the Damage is applied, which is the
   // last step of the Maneuver and a deliberate one.
-  await fireMoment(actor, "threshold", { threshold: now, knockerUuid: knockedBy });
+  // And where from - "[Triggered/Injured]" asks for the Injured one crossed (From the Stars', knockedThrough).
+  await fireMoment(actor, "threshold", { threshold: now, from: before, knockerUuid: knockedBy });
   // And for whoever knocked them through - an Opponent's Attacking Maneuver's Damage: Inherited Aggression's Battle Born.
   const knocker = knockedBy ? fromUuidSync(knockedBy) : null;
   if (knocker && (knocker.uuid !== actor.uuid)) {
@@ -1517,6 +1524,7 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
     subjects: witnesses(actor),
     detail: `${THRESHOLDS[before].label} to ${THRESHOLDS[now].label}`,
     threshold: now,
+    thresholdFrom: before,
     // Who did it - what is ticked on the card answers it (Tuffle-Raised's "by an Opponent's Attacking Maneuver").
     knockedBy
   });

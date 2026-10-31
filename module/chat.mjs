@@ -81,7 +81,8 @@ import {
   favoredDamage,
   whyNotMinionManeuver,
   whyNotCopyClone,
-  minionRoom
+  minionRoom,
+  throughBasicAttack
 } from "./maneuvers.mjs";
 import { appliedTraits, boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
 
@@ -16439,6 +16440,69 @@ async function offerPowerOrTransform(actor, reason) {
     flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offers } } });
 }
 
+/**
+ * Nameless Horde (5): "[Triggered/Power, 1/Round]: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver" - or a 'Full Power'
+ * Signature Technique instead (use-maneuver.mjs useManeuver). Unspent where none is made.
+ */
+export async function namelessStrike(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  return (await ownOutOfSequence(actor, "basic-attack")) ? undefined : UNSPENT;
+}
+
+/**
+ * From the Stars (3): "If an Ally is Defeated, you may use the Power Up Maneuver or Basic Attack Maneuver as an Out-of-Sequence
+ * Maneuver. If you use the Basic Attack Maneuver through this effect, you must target the nearest Opponent. If that Ally was defeated
+ * by an Opponent's Attacking Maneuver, you must target that Opponent instead." Which, asked; the Basic Attack at that one - the
+ * nearest asked where several are. Unspent where none is made.
+ */
+export async function starsAnswer(actor, context = {}) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const which = await askPlayerChoice(actor, `${actor.name}: From the Stars`,
+    [{ value: "power-up", label: "Power Up" }, { value: "basic-attack", label: "Basic Attack" }]);
+  if (which === "power-up") return (await ownOutOfSequence(actor, "power-up")) ? undefined : UNSPENT;
+  if (which !== "basic-attack") return UNSPENT;
+  const knocker = fromUuidSync(context?.knockerUuid ?? "");
+  let target = (knocker && (knocker.uuid !== actor.uuid) && areOpponents(knocker, actor) && !knocker.system?.defeated) ? knocker : null;
+  if (!target) {
+    const { nearestOpponents } = await import("./guidance.mjs");
+    const nearest = nearestOpponents(actor);
+    const picked = (nearest.length > 1) ? await askPlayerChoice(actor, `${actor.name}: From the Stars - the nearest Opponent`,
+      nearest.map(each => ({ value: each.uuid, label: each.name }))) : nearest[0]?.uuid;
+    target = nearest.find(each => each.uuid === picked) ?? null;
+  }
+  if (!target) {
+    ui.notifications.warn(`${actor.name}: From the Stars - no Opponent to target.`);
+    return UNSPENT;
+  }
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "basic-attack"));
+  const basic = own ? definitionOf(own) : getManeuver("basic-attack");
+  return (basic && await useManeuver(actor, basic, { outOfSequence: true, targetUuid: target.uuid })) ? undefined : UNSPENT;
+}
+
+/**
+ * From the Stars (4): "[Triggered/Injured]: You are Defeated (you cannot trigger any effects in response to this). You may then target
+ * one Ally, they have their Combat Rolls increased by 1(T) for the remainder of the Combat Encounter. This effect cannot stack on a single
+ * Character if multiple Characters apply this effect." Defeated as Complete Annihilation's are - nothing answering it - then the Ally,
+ * asked: the mark at your Tier of Power, the highest one given standing (it ends with the Encounter, combat.mjs endEncounterFor).
+ */
+export async function starsFall(actor) {
+  if (!actor) return;
+  await actor.update({ "system.life.value": Number(actor.system.life?.min) || 0 }, { dbuSilenced: true });
+  const allies = alliesOnScene(actor).filter(ally => (ally.uuid !== actor.uuid) && !ally.system?.defeated);
+  if (!allies.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: From the Stars - an Ally`,
+    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const ally = allies.find(each => each.uuid === picked);
+  if (!ally) return;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(ally, "from-the-stars-mark", Math.max(tier, Number(ally.system.conditions?.["from-the-stars-mark"]) || 0));
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">From the Stars:
+    ${Handlebars.escapeExpression(actor.name)} is Defeated - ${Handlebars.escapeExpression(ally.name)}'s Combat Rolls ${tier} higher for
+    the Combat Encounter.</div>` });
+}
+
 /** One of the character's own Maneuvers, by its file's id, used out of sequence - Warm Up (2)'s. */
 async function ownOutOfSequence(actor, id) {
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
@@ -26792,6 +26856,8 @@ export async function postAttack(actor, target, maneuver,
           targetName: target.name,
           // The Maneuver it was made through - the Basic Attack Dimensional Hole answers.
           maneuverId: maneuver.id ?? "",
+          // A 'Full Power' Signature Technique's - the Basic Attack's too for its maker's effects (Nameless Horde (4)).
+          ...(maneuver.fullPower ? { fullPower: true } : {}),
           // Spirit Sword's, made through it: its Staggered and Super Spirit Sword's use again, once it lands.
           ...(spiritSword ? { spiritSword } : {}),
           // Who has confirmed what they are bringing, and what each target answered
@@ -29876,6 +29942,9 @@ function twoWorldsWoundParts(attacker, attack) {
   const parts = [];
   const signature = Number(slots["wound.signature"]?.add) || 0;
   if (signature && attack.technique && !attack.technique.borrowed) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
+  // Nameless Horde (1): "Attacking Maneuvers made through the Basic Attack Maneuver" - a 'Full Power' Technique's as well.
+  const basic = Number(slots["wound.basicAttack"]?.add) || 0;
+  if (basic && throughBasicAttack(attack)) parts.push({ label: `${named("wound.basicAttack")} (Basic Attack)`, value: basic });
   // Last Resort (1): "If your Capacity is 0 when you roll the Wound Roll for a Signature Technique" - read now.
   const spent = Number(slots["wound.signatureNoCapacity"]?.add) || 0;
   if (spent && attack.technique && !attack.technique.borrowed && ((Number(attacker.system.capacity?.remaining) || 0) <= 0)) {
@@ -34546,7 +34615,8 @@ async function answerMoment(message, card, actor) {
   const keyword = chosen.filter(entry => !lethal.includes(entry));
   // What was ticked alone: what is Automatic answered the Moment when it happened, and is not answered twice.
   if (keyword.length) {
-    await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold, knockerUuid: card.knockedBy ?? "" } : (defeated ? { damage: 0 } : {}),
+    await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold, from: card.thresholdFrom ?? "", knockerUuid: card.knockedBy ?? "" }
+      : (defeated ? { damage: 0 } : {}),
       { blocks: keyword.map(entry => entry.blockId) });
   }
   if (lethal.length) await fireMoment(actor, "lethal-damage", { damage: 0 }, { blocks: lethal.map(entry => entry.blockId) });

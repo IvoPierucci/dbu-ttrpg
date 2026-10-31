@@ -32,6 +32,21 @@ function gapBetween(a, b) {
 }
 
 /**
+ * The Opponents on the scene nearest to `actor` - not Defeated, of another side - every one at that fewest Squares between, where
+ * several are (From the Stars (3)'s "the nearest Opponent"). None off a scene.
+ */
+export function nearestOpponents(actor) {
+  const from = tokenOf(actor);
+  if (!from) return [];
+  const gaps = [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated && areOpponents(token.actor, actor))
+    .map(token => [token.actor.uuid, { actor: token.actor, gap: gapBetween(from.document ?? from, token.document ?? token) }])).values()]
+    .filter(entry => entry.gap !== null);
+  const least = Math.min(...gaps.map(entry => entry.gap));
+  return gaps.filter(entry => entry.gap === least).map(entry => entry.actor);
+}
+
+/**
  * The Opponents on the scene with `gap` Squares or fewer between them and `actor` - not Defeated, of another side. Bio-Berserker's Field
  * of Aggression (a Large Sphere: 3).
  */

@@ -43,6 +43,7 @@ tension.stacks += 1;
 # (3) An Ally of yours on the scene Defeated, not a Minion - ally-defeated, a new moment (combat.mjs). Automatic by default,
 # its Triggered/Automatic button.
 [triggered/ally-defeated, effect 3]
+requires !defeatedMinion;
 tension.stacks += 1;
 
 # (6) The Power Up used, 3+ stacks: ticked in its window - which Combat Condition, asked where there are several; a stack

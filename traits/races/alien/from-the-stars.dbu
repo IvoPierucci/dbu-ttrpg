@@ -1,0 +1,35 @@
+id: from-the-stars
+name: From the Stars
+order: 2
+category: mind
+importance: primary
+# (1) "Gain an additional Talent at Character Creation" - one of any Talent Category, chosen as it is added; its Prerequisites the
+# table's, and kept as a Racial Trait's Talent is.
+grantsTalentChoiceFrom: any
+description: >
+  Raised on a world at once strange and mundane, you identify with your allies universally, rather than with a single species.
+text: >
+  From the Stars (Mind): Raised on a world at once strange and mundane, you identify with your allies universally, rather than with a single species.
+  (1)-[Passive]: Gain an additional Talent at Character Creation.
+  (2)-[Passive]: While all of your Allies are Defeated, increase your Combat Rolls by 1(T).
+  (3)-[Triggered, 1/Round]: If an Ally is Defeated, you may use the Power Up Maneuver or Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you use the Basic Attack Maneuver through this effect, you must target the nearest Opponent. If that Ally was defeated by an Opponent’s Attacking Maneuver, you must target that Opponent instead.
+  (4)-[Triggered/Injured]: You are Defeated (you cannot trigger any effects in response to this). You may then target one Ally, they have their Combat Rolls increased by 1(T) for the remainder of the Combat Encounter. This effect cannot stack on a single Character if multiple Characters apply this effect.
+
+---
+
+[passive]
+# (2) An Ally on the scene at least (the user's), and every one of them Defeated.
+if (alliesAllDefeated) {
+    combatRolls += 1(T);
+}
+
+# (3) An Ally Defeated - a Minion too: the Power Up or the Basic Attack out of sequence, which asked; the Basic Attack at whoever's
+# Attacking Maneuver did it, else the nearest Opponent (chat.mjs starsAnswer). Ticked in its window, never Automatic.
+[triggered/ally-defeated, 1/round, outOfSequence, effect 3]
+starsAnswer();
+
+# (4) Knocked through the Injured Health Threshold: Defeated, nothing answering it - then an Ally, asked: Combat Rolls 1(T) for the
+# Combat Encounter, the highest given standing (chat.mjs starsFall). Chosen on the Threshold's card, it starts Triggered.
+[triggered/threshold, startsTriggered, effect 4]
+requires knockedThrough("injured");
+starsFall();

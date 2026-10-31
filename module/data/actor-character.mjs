@@ -2415,6 +2415,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     if (this.minionGifts) this.life.max += this.minionGifts.lifeMax + (this.minionGifts.lifePerLevel * (Number(this.powerLevel) || 0));
     // Minion Creation, Step 11: "this bonus to your Life Points is applied after all calculation".
     if (this.minion && this.minionLifeStep) this.life.max += 2 * (Number(this.powerLevel) || 0);
+    // Nameless Horde (3): "Increase your Maximum Life Points (after all modifications) by 1/2 of your amount of Technique Points" -
+    // every one granted up to their Power Level, rounded down.
+    if (this.effects?.slots?.["namelessHorde.techniqueLife"] === true) this.life.max += Math.floor((Number(this.techniquePoints) || 0) / 2);
     // Kept for the next preparation's early Threshold.
     if (this.parent) this.parent._dbuLifeMax = this.life.max;
 
