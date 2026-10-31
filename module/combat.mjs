@@ -715,6 +715,9 @@ export function registerCombatHooks() {
     // Points remaining" - its attack over by the time the turn moves on.
     const spent = combatants(combat).filter(actor => actor.getFlag?.("dbu-ttrpg", "goopIntervened"));
     if (spent.length) await dismissDuplicates(spent);
+    // Mirrored Attack's Duplicate, its attack concluded by the time the turn moves on - gone, if nothing took it yet (chat.mjs).
+    const mirrored = combatants(combat).filter(actor => actor.getFlag?.("dbu-ttrpg", "mirrorOf"));
+    if (mirrored.length) await dismissDuplicates(mirrored);
 
     // A turn handed on by its own Initiative moving - Patient Sniper's, at the Round's start: begun, and not ended here.
     const handedOn = combat.getFlag?.("dbu-ttrpg", "turnHandedOn");

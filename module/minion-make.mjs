@@ -4,7 +4,8 @@
  * Encounter they are in. A Duplicate is a copy of its Master: "Duplicates possess the same Attribute Scores, Apparel, Accessories,
  * Weapons, Talents, Racial Traits, Signature Techniques, Unique Abilities, and Transformations as their Master (they must also
  * select all the same Option effects and anything chosen through a Passive effect)" - their Items with what was chosen on them,
- * and what the Progression tab chose. Any other Minion is made with its name alone, its sheet the GM's to fill: the Minion
+ * kept by their ids so whatever names one still does (an Integrated Item's Apparel, the Triggered effects made Automatic, copied
+ * too), and what the Progression tab chose. Any other Minion is made with its name alone, its sheet the GM's to fill: the Minion
  * Creation Rules, and the Custom Species Race, are the table's.
  *
  * Made on the GM's client - a player may not create an Actor - so a player's effect asks for it (chat.mjs requestMakeMinion).
@@ -66,7 +67,6 @@ export function minionData(master, { name = "", duplicate = false, gear = true, 
   else system.powerLevel = Number(source.system?.powerLevel) || 1;
   const items = duplicate ? (source.items ?? []).filter(item => isDuplicatedItem(item, gear)).map(item => {
     const copy = foundry.utils.deepClone(item);
-    delete copy._id;
     if (isDuplicatedGear(copy)) foundry.utils.setProperty(copy, `flags.${SCOPE}.duplicated`, true);
     return copy;
   }) : [];
@@ -79,8 +79,17 @@ export function minionData(master, { name = "", duplicate = false, gear = true, 
     prototypeToken: { ...(duplicate ? foundry.utils.deepClone(source.prototypeToken ?? {}) : {}), name: called, actorLink: true },
     system,
     items,
-    flags: { [SCOPE]: { minionKind: kind, madeAt: made, ...extra } }
+    flags: { [SCOPE]: { ...(duplicate ? chosenFlags(source) : {}), minionKind: kind, madeAt: made,
+      // Copy Clone's: a Duplicate of another, at their Power Level - not grown with its Master's (dbu-ttrpg.mjs).
+      ...(copy ? { copied: true } : {}), ...extra } }
   };
+}
+
+/** What a Duplicate's original chose of how their Triggered effects go - Automatic, or asked - by the Items' ids. */
+function chosenFlags(source) {
+  const own = source.flags?.[SCOPE] ?? {};
+  return Object.fromEntries(["automatic", "triggered"].filter(key => Array.isArray(own[key]))
+    .map(key => [key, foundry.utils.deepClone(own[key])]));
 }
 
 /** The Squares around a token, nearest first - ring by ring, up to `rings` away. */
@@ -127,6 +136,8 @@ export async function makeMinion(master, options = {}) {
       await combat.createEmbeddedDocuments("Combatant", [{ actorId: actor.id, tokenId: created.id, sceneId: token.parent.id }]);
     }
   }
+  // Mirrored Attack's: put in its user's place on the attack it was made for (chat.mjs mirrorTakesAttack).
+  if (options.mirror && made[0]) await (await import("./chat.mjs")).mirrorTakesAttack(options.mirror, made[0]);
   return made;
 }
 

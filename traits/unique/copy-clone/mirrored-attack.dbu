@@ -3,9 +3,11 @@ name: Mirrored Attack
 advancement: true
 prerequisite: N/A
 tpCost: 10
-# Copy Clone answers an attack aimed at you, from Respond (1 Counter Action, its KP): the Duplicate of the attacker
-# Duels them. The user's ruling: a Duel whose Clashes the Duplicate rolls with the attacker's own bonuses, its Ki Wagers
-# taken from nobody - the Duplicate is a Character apart - and you are not hit, whoever wins.
+# Copy Clone answers an attack aimed at you, from Respond (1 Counter Action, its KP, Copy Clone's limits on the attacker):
+# a Duplicate Minion of the attacker, yours, made beside you, takes your place among the targets - you are not hit, whoever
+# wins - and Duels them with a Power Duel if a Duel is possible, its Clashes, wagers and Wound its own (a copy of the
+# attacker's); if not, it answers as any target does. Gone once the attack is concluded (chat.mjs playMirror,
+# mirrorTakesAttack, mirrorEnds).
 mirroredAttack: true
 source: Core Rule
 description: >

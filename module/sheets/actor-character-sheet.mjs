@@ -865,7 +865,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // A Duplicate is a Special Minion: the box shown ticked, and left to the Duplicate box.
     context.specialMinionShown = Boolean(this.actor.system.specialMinion || this.actor.system.duplicate);
     // Growing Minions: a Minion with a Master at its Master's Power Level (dbu-ttrpg.mjs) - not set here.
-    context.powerLevelFromMaster = context.isMinion && Boolean(masterOf(this.actor));
+    context.powerLevelFromMaster = context.isMinion && Boolean(masterOf(this.actor)) && !this.actor.getFlag?.("dbu-ttrpg", "copied");
     // Limited Control: how many Minions are theirs to have, out of a Combat Encounter and in one.
     context.minionCaps = context.isMinion ? null : { ...minionCaps(this.actor), unlimited: !Number.isFinite(minionCaps(this.actor).outside) };
     // Handlebars has no literal-array helper, so the Attribute columns are supplied
