@@ -1,0 +1,37 @@
+id: skills-of-a-genius
+name: Skills of a Genius
+order: 3
+category: mind
+importance: secondary
+# (1) Three different Skills of Scholarship or Insight, chosen as it is gained (racial.mjs choicesFor).
+choose: skill
+choose2: skill
+choose3: skill
+chooseAttribute: scholarship, insight
+description: >
+  Tuffles are renowned throughout the universe for their impressive minds and their ability to learn, adapt, and discover anything they put their minds to.
+text: >
+  Skills of a Genius (Mind): Tuffles are renowned throughout the universe for their impressive minds and their ability to learn, adapt, and discover anything they put their minds to.
+  (1)-[Passive]: At Character Creation, select 3 Skills that use Scholarship or Insight. Gain a Skill Rank in those selected Skills.
+  (2)-[Passive]: While you have no stacks of Spite, increase the Natural Result for any roll made using your Skills by 1.
+  (3)-[Triggered, 1/Round]: If you win a Clash in which you made a roll using one of your Skills, regain Ki Points equal to the highest Attribute Modifier between your Insight, Personality, and Scholarship Attributes.
+  (4)-[Triggered, 1/Round]: While you have stacks of Spite, when you hit an Opponent with an Attacking Maneuver, you can spend up to 2x(bT) Ki Points to increase the Wound Roll by an equal amount. This spending of Ki Points does not reduce your Capacity.
+---
+
+[passive]
+# (1) Counted with the Progression tab's.
+skill.$choice.ranks += 1;
+skill.$choice2.ranks += 1;
+skill.$choice3.ranks += 1;
+# (2) Spite is Need for Revenge's: a Skill Check's or a Skill Clash's (actor-character.mjs, `skills.allNatural`).
+if (!hasResource("spite")) {
+    skills.allNatural += 1;
+}
+# (4) Hit an Opponent with Spite: how much Ki, asked once a Round - as much on the Wound Roll, the Capacity untouched (chat.mjs
+# geniusWoundKi).
+allow genius.woundKi;
+
+# (3) A Clash won with a Skill of yours. Automatic by default, its Triggered/Automatic button.
+[triggered/clash-win, 1/round, effect 3]
+requires wonWithAnySkill;
+ki.value += max(insight.mod, personality.mod, scholarship.mod);

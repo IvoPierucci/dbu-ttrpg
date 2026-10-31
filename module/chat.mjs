@@ -20505,6 +20505,24 @@ async function spendBlasterKi(attacker, attack, struck) {
 }
 
 /**
+ * Skills of a Genius (4): "While you have stacks of Spite, when you hit an Opponent with an Attacking Maneuver, you can spend up to
+ * 2x(bT) Ki Points to increase the Wound Roll by an equal amount. This spending of Ki Points does not reduce your Capacity." How many,
+ * asked once a Round - none, not spent; out of the Ki only. What was spent, or 0.
+ */
+async function geniusWoundKi(attacker, struck) {
+  const spite = Number(attacker?.system?.resources?.spite?.stacks) || 0;
+  if ((attacker?.system?.effects?.slots?.["genius.woundKi"] !== true) || (spite <= 0)
+    || (attacker.getFlag?.(SCOPE, "geniusWoundRound") === roundKey())) return 0;
+  if (!struck.some(({ uuid }) => areOpponents(attacker, fromUuidSync(uuid)))) return 0;
+  const most = Math.min(2 * spite * Math.max(1, Number(attacker.system.baseTierOfPower) || 1), Number(attacker.system.ki?.value) || 0);
+  if (most <= 0) return 0;
+  const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: Skills of a Genius`, most, "Ki Points - as much on the Wound Roll"));
+  if (spent <= 0) return 0;
+  await requestActorUpdate(attacker, { "system.ki.value": attacker.system.ki.value - spent, [`flags.${SCOPE}.geniusWoundRound`]: roundKey() });
+  return spent;
+}
+
+/**
  * Assassinate (2): "If you hit an Oblivious Character with an Attacking Maneuver, you may spend 5(bT) Ki Points to increase the
  * Damage Category of that Attacking Maneuver by 1 Category." Asked as the hit lands on one Oblivious of you, once a Round; the
  * Ki paid, the attack marked (`assassinated`) - its Damage Category 1 higher for everyone it reached.
@@ -30199,6 +30217,9 @@ async function answerHit(message, attack, attacker, struck) {
   // Blaster Master (1): Ki spent on it, asked - as much on the Wound Roll (woundParts).
   const blasted = await spendBlasterKi(attacker, attack, struck);
   if (blasted) Object.assign(answer.marks, { blasterWound: blasted.spent, blasterName: blasted.name });
+  // Skills of a Genius (4): with Spite, Ki spent on it, asked once a Round - not out of the Capacity.
+  const genius = await geniusWoundKi(attacker, struck);
+  if (genius) answer.marks.geniusWound = genius;
   // Burning Fury (2): 4(bT) Life Points for Broken on one hit, asked.
   await burningFuryBreak(attacker, struck);
   // Assassinate (2): one Oblivious of you hit - 5(bT) Ki for the Damage Category, asked.
@@ -30384,6 +30405,8 @@ function woundParts(attacker, attack) {
     ...multiTypeParts(attacker, attack),
     // Blaster Master (1): the Ki spent as it hit.
     ...((Number(attack.blasterWound) || 0) ? [{ label: attack.blasterName || "Blaster Master", value: Number(attack.blasterWound) }] : []),
+    // Skills of a Genius (4): the Ki spent as it hit.
+    ...((Number(attack.geniusWound) || 0) ? [{ label: "Skills of a Genius", value: Number(attack.geniusWound) }] : []),
     // Furious Flex (2): the Top Layer destroyed as it hit.
     ...((Number(attack.furiousWound) || 0) ? [{ label: `Furious Flex (${attack.furiousName || "Top Layer"} destroyed)`, value: Number(attack.furiousWound) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,

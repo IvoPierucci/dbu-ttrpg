@@ -574,6 +574,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // The Ally knocked through adjacent to you (Pieces of the Hive's); an Ally adjacent to you (Difference in Shell's); the same with
   // no Rook (Petite Genius's).
   "knockedBeside", "allyBeside", "allyAdjacent",
+  // The Clash won with a Skill of yours, any (Skills of a Genius's).
+  "wonWithAnySkill",
   // The Attacking Maneuver dodged an Opponent's (Caste Combat's Knight).
   "dodgedOpponent",
   // An Ally, not a Minion, within your Area of Rule (Afterlife Officials'); any Ally (Skilled Ogre's).

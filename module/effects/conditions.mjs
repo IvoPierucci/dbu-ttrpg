@@ -215,6 +215,9 @@ const PREDICATES = {
   /** The Clash won was won with this Skill (Stealthy Trick's) - clash-win's context. */
   wonWithSkill: (scope, id) => (scope.context?.skill ?? "") === String(id),
 
+  /** The Clash won one in which a Skill of yours was rolled, whichever - Skills of a Genius's. */
+  wonWithAnySkill: scope => Boolean(scope.context?.skill),
+
   /** The Maneuver being declared is an Attacking Maneuver - Demonic Pressure's. */
   declaringAttack: scope => Boolean(scope.context?.maneuver?.attacking),
 

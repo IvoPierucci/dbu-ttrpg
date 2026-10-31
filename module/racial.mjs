@@ -490,11 +490,12 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
   if ((kind === "skill") || (kind === "skillRanked")) {
     const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
     const except = new Set(listOf(source?.chooseExcept).map(each => each.toLowerCase()));
-    // Or only those of one Attribute - Intelligent Fighter's "a Skill that uses Insight as its Attribute".
-    const attribute = String(source?.chooseAttribute ?? "").trim().toLowerCase();
+    // Or only those of one Attribute - Intelligent Fighter's "a Skill that uses Insight as its Attribute" - or of either of two (Skills
+    // of a Genius's "Skills that use Scholarship or Insight").
+    const attributes = listOf(source?.chooseAttribute).map(each => each.toLowerCase());
     const ranks = key => (Number(actor?.system?.skills?.[key]?.ranks) || 0) + earlier.filter(each => each === key).length;
     return Object.entries(DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
-      .filter(([, skill]) => !attribute || (skill.attribute === attribute))
+      .filter(([, skill]) => !attributes.length || attributes.includes(skill.attribute))
       .filter(([key]) => (kind === "skill") || (ranks(key) >= 2))
       // A second Skill chosen after a first is another one - Practiced's "2 different Skills".
       .filter(([key]) => (kind !== "skill") || !earlier.includes(key))
@@ -646,8 +647,8 @@ export async function answeredTalent(data, trait, actor) {
 }
 
 /**
- * What a Trait's or a Talent's own `choose:` (and `choose2:`) was answered with, as rows its sheet can change: which, what
- * is chosen, and what may be. The Option's own choices are its Option's, not these.
+ * What a Trait's or a Talent's own `choose:` (and `choose2:`, `choose3:`) was answered with, as rows its sheet can change: which,
+ * what is chosen, and what may be. The Option's own choices are its Option's, not these.
  */
 export async function choiceRowsOf(item) {
   const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
@@ -656,15 +657,17 @@ export async function choiceRowsOf(item) {
   const chosen = item.system.chosen ?? [];
   const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
   const second = chosen.find(entry => entry.key === `${file.id}#2`)?.value ?? "";
+  const third = file.choose3 ? (chosen.find(entry => entry.key === `${file.id}#3`)?.value ?? "") : "";
   const row = async (which, kind, current, earlier) => ({ which, current,
-    label: (which === 2) ? "2nd choice" : (file.choose2 ? "1st choice" : "Choice"),
+    label: (which === 3) ? "3rd choice" : (which === 2) ? "2nd choice" : (file.choose2 ? "1st choice" : "Choice"),
     options: (await choicesFor(kind, file, { actor, earlier }))
       // What it has now stays offered, whatever the list says of it today.
       .concat((current && !(await choicesFor(kind, file, { actor, earlier })).some(([value]) => value === current))
         ? [[current, chosen.find(entry => entry.value === current)?.label?.split(": ").pop() ?? current]] : [])
       .map(([value, label]) => ({ value, label, selected: value === current })) });
-  return [await row(1, file.choose, first, second ? [second] : []),
-    ...(file.choose2 ? [await row(2, file.choose2, second, first ? [first] : [])] : [])];
+  return [await row(1, file.choose, first, [second, third].filter(Boolean)),
+    ...(file.choose2 ? [await row(2, file.choose2, second, [first, third].filter(Boolean))] : []),
+    ...(file.choose3 ? [await row(3, file.choose3, third, [first, second].filter(Boolean))] : [])];
 }
 
 /**
@@ -674,13 +677,15 @@ export async function choiceRowsOf(item) {
 export async function changeChoice(item, which, value) {
   const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   if (!file?.choose || !value) return false;
-  const key = (which === 2) ? `${file.id}#2` : file.id;
-  const kind = (which === 2) ? file.choose2 : file.choose;
+  const key = (which === 3) ? `${file.id}#3` : (which === 2) ? `${file.id}#2` : file.id;
+  const kind = (which === 3) ? file.choose3 : (which === 2) ? file.choose2 : file.choose;
+  if (!kind) return false;
   const offered = await choicesFor(kind, file, { actor: item.actor ?? null });
   const label = offered.find(([each]) => each === value)?.[1] ?? value;
   let chosen = [...(item.system.chosen ?? []).filter(entry => entry.key !== key), { key, value, label: `${file.name}: ${label}` }];
   const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
   const second = chosen.find(entry => entry.key === `${file.id}#2`)?.value ?? "";
+  const third = file.choose3 ? (chosen.find(entry => entry.key === `${file.id}#3`)?.value ?? "") : "";
   // Favored Technique's Advantage's own choice, asked again - of the Advantage, or of the Technique a `feature` choice reads.
   if (file.choose2 === "advantageUpTo10") {
     const third = await favoredFeatureChoice(file, item.actor ?? null, first, second);
@@ -689,6 +694,7 @@ export async function changeChoice(item, which, value) {
   }
   // Its own part: the file's script with both answers written in - a list's flags too.
   let own = String(file.script ?? "").trim();
+  if (third) own = own.replaceAll("$choice3", third);
   if (second) own = own.replaceAll("$choice2", second);
   const flags = (file.choose === "list") ? (await choicesFor("list", file)).map(([each]) => each).sort((a, b) => b.length - a.length) : [];
   own = flags.reduce((text, each) => text.replaceAll(`$${each}`, (each === first) ? "1" : "0"), own.replaceAll("$choice", first));
@@ -750,6 +756,13 @@ async function answered(source, chosen, actor = null, preset = "") {
     const third = await favoredFeatureChoice(source, actor, choice.value, second.value);
     if (third === null) return null;
     if (third) chosen.push(third);
+    // A third after both - `choose3:`, `$choice3` - Skills of a Genius's "select 3 Skills".
+    if (source.choose3) {
+      const last = await askChoice(source, source.choose3, { actor, earlier: [choice.value, second.value] });
+      if (!last) return null;
+      chosen.push({ key: `${source.id}#3`, value: last.value, label: `${source.name}: ${last.label}` });
+      script = script.replaceAll("$choice3", last.value);
+    }
   }
   // A list's: each of its values a number too - `$tiny` 1 where Tiny was chosen, 0 where it was not.
   const flags = (source.choose === "list") ? (await choicesFor("list", source)).map(([value]) => value)
