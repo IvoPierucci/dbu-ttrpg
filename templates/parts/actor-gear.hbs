@@ -5,6 +5,111 @@
     counted as Basic Items for rules and effects" and so share the first.
 
     Apparel and Weapons are built on their own sheets rather than picked from a list. }}
+
+  {{! What is worn, in one table above the lists (the user's, from their sheet): a row a Layer, the Integrated pieces, and
+      the Accessories with their text. Only the Top Layer's Category applies - the others' shown struck. }}
+  <section class="panel dbu-worn">
+    <div class="dbu-table-wrap">
+      <table class="progression-table dbu-worn-table">
+        <colgroup>
+          <col class="dbu-worn-col-name"/><col class="dbu-worn-col-category"/><col class="dbu-worn-col-benefit"/>
+          <col class="dbu-worn-col-bv"/><col class="dbu-worn-col-doff"/><col class="dbu-worn-col-penalty"/><col/>
+        </colgroup>
+        <thead>
+          <tr>
+            <th colspan="5" class="dbu-worn-title">Worn Apparel</th>
+            <th colspan="2" class="dbu-worn-penalty"
+                data-tooltip="For each piece worn after the first, your Combat Rolls drop by 1/2 your base Tier of Power (rounded up). Integrated pieces, and those that say so (Standard Clothing), do not count.">
+              Penalty from Layers <b>{{#if worn.penalty}}-{{worn.penalty}}{{else}}0{{/if}}</b></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each worn.layers as |layer|}}
+          <tr class="dbu-worn-head">
+            <th scope="row">{{layer.label}}{{#unless layer.top}} <small>(inactive Benefit)</small>{{/unless}}</th>
+            <th data-tooltip="Its Apparel Category">Category</th>
+            <th data-tooltip="What its Category gives - the Top Layer's alone applies">Benefit</th>
+            <th data-tooltip="Break Value left, of its most">BV</th>
+            <th data-tooltip="What taking it off gives your Combat Rolls">Doff Bonus</th>
+            <th data-tooltip="Whether it counts toward the Penalty from Layers">Penalty</th>
+            <th>Qualities</th>
+          </tr>
+          <tr>
+            {{#if layer.piece}}
+          <td class="dbu-worn-name">{{layer.piece.name}}</td>
+          <td{{#unless layer.piece.applies}} class="dbu-worn-inactive"{{/unless}}>{{layer.piece.category}}</td>
+          <td{{#unless layer.piece.applies}} class="dbu-worn-inactive"{{/unless}}>{{#if layer.piece.applies}}{{layer.piece.benefit}}{{else}}<s>{{layer.piece.benefit}}</s>{{/if}}</td>
+          <td{{#if layer.piece.broken}} class="dbu-over"{{/if}}>{{layer.piece.bv}}</td>
+          <td>+{{layer.piece.doff}}</td>
+          <td>{{#if layer.piece.counts}}<span class="dbu-worn-counts">Counts</span>{{else}}&mdash;{{/if}}</td>
+          <td class="dbu-worn-qualities">{{layer.piece.qualities}}</td>
+            {{else}}
+            <td class="dbu-worn-name dbu-worn-empty">Nothing worn</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+            <td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+            {{/if}}
+          </tr>
+          {{/each}}
+
+          {{#each worn.integrated as |piece|}}
+          <tr class="dbu-worn-head">
+            <th scope="row">Integrated</th>
+            <th>Active</th>
+            <th>Benefit</th>
+            <th>BV</th>
+            <th colspan="3">Qualities</th>
+          </tr>
+          <tr>
+            <td class="dbu-worn-name">{{piece.name}}</td>
+            <td><button type="button" class="dbu-worn-active{{#if piece.active}} on{{/if}}" data-action="switchIntegrated"
+                        data-item-id="{{piece.itemId}}" aria-pressed="{{#if piece.active}}true{{else}}false{{/if}}"
+                        data-tooltip="{{#if piece.active}}Deactivate{{else}}Activate{{/if}} - a No Effort Maneuver, in a Combat Encounter"></button></td>
+            {{! Its Category's Benefit where it applies - Natural Armor's always - struck where it does not. }}
+            <td{{#unless piece.applies}} class="dbu-worn-inactive"{{/unless}}>{{#if piece.applies}}{{piece.benefit}}{{else}}<s>{{piece.benefit}}</s>{{/if}}</td>
+            <td{{#if piece.broken}} class="dbu-over"{{/if}}>{{piece.bv}}</td>
+            <td colspan="3" class="dbu-worn-qualities">{{piece.qualities}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dbu-table-wrap">
+      <table class="progression-table dbu-worn-table">
+        <colgroup><col class="dbu-worn-col-name"/><col class="dbu-worn-col-hide"/><col/></colgroup>
+        <thead>
+          <tr>
+            <th colspan="3" class="dbu-worn-title">Accessories
+              <span class="dbu-worn-count">{{worn.accessoriesWorn}} worn of {{worn.accessoriesMax}}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="dbu-worn-head"><th scope="row">Accessory</th><th>Hide Text</th><th>Description</th></tr>
+          {{#each worn.accessories as |accessory|}}
+          <tr>
+            <td class="dbu-worn-name">{{accessory.name}}</td>
+            <td><button type="button" class="dbu-worn-hide{{#if accessory.hidden}} on{{/if}}" data-action="toggleGearText"
+                        data-item-id="{{accessory.itemId}}">{{#if accessory.hidden}}Show{{else}}Hide{{/if}}</button></td>
+            <td class="dbu-worn-desc">{{#if accessory.hidden}}&mdash;{{else}}{{#each accessory.lines as |line|}}<div>{{line}}</div>{{/each}}{{/if}}</td>
+          </tr>
+          {{else}}
+          <tr><td class="dbu-worn-name dbu-worn-empty">None worn</td><td>&mdash;</td><td>&mdash;</td></tr>
+          {{/each}}
+          {{#if worn.integratedAccessories.length}}
+          <tr class="dbu-worn-head"><th scope="row">Integrated Accessory</th><th>Active</th><th>Description</th></tr>
+          {{#each worn.integratedAccessories as |accessory|}}
+          <tr>
+            <td class="dbu-worn-name">{{accessory.name}}</td>
+            <td><button type="button" class="dbu-worn-active{{#if accessory.active}} on{{/if}}" data-action="switchIntegrated"
+                        data-item-id="{{accessory.itemId}}" aria-pressed="{{#if accessory.active}}true{{else}}false{{/if}}"
+                        data-tooltip="{{#if accessory.active}}Deactivate{{else}}Activate{{/if}} - a No Effort Maneuver, in a Combat Encounter"></button></td>
+            <td class="dbu-worn-desc">{{#each accessory.lines as |line|}}<div>{{line}}</div>{{/each}}</td>
+          </tr>
+          {{/each}}
+          {{/if}}
+        </tbody>
+      </table>
+    </div>
+  </section>
   <section class="panel">
     <details class="condition-group" data-section="gearBasic"
              {{#if openSections.gearBasic}}open{{/if}}>

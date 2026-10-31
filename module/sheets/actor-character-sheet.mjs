@@ -26,7 +26,9 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   remoteKinds, remotesAll, remoteCost, snacksLeft, snackKey, drawChanges, emptySheath,
   buddyLine, buddyHeader, buddyChoiceLabel, callProblem, activeBuddy, activeBuddies, buddiesAllowed, buddyActions, buddyUseKey,
   shiftProblem, rideSquares, rideFits, buddyAttribute,
-  shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
+  shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC,
+  apparelPenaltyPieces, categoryApplies, doffBonusFor, qualityEntries, wornAccessories, ACCESSORIES_WORN } from "../gear.mjs";
+import { isIntegrated } from "../integrated.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -444,6 +446,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleSpecialty: DBUCharacterSheet._onToggleSpecialty,
       rollSave: DBUCharacterSheet._onSaveRoll,
       rollMight: DBUCharacterSheet._onMightRoll,
+      toggleGearText: DBUCharacterSheet._onToggleGearText,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
       bestialApply: DBUCharacterSheet._onBestialApply,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
@@ -1213,6 +1216,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // so a renamed one shows as renamed.
     context.gear = { basic: [], apparel: [], weapon: [], buddy: [] };
     const gearItems = this.actor.items.filter(owned => owned.type === "gear");
+    context.worn = this.#wornTable(gearItems);
     for (const item of gearItems) {
       // Inside a Capsule, it is shown on the Capsule's row rather than its own - in the Inner Room, on its own, marked.
       if (isStored(gearItems, item) && !item.flags?.["dbu-ttrpg"]?.innerRoom) continue;
@@ -1862,6 +1866,76 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       context.delayed ? { label: "Delaying Maneuver", tip: context.delayed.name } : null,
       context.hidden?.from?.length ? { label: "Hidden", tip: context.hidden.summary } : null
     ].filter(Boolean);
+  }
+
+  /**
+   * The Gear tab's table of what is worn (the user's, from their sheet): a row a Layer - the piece on it, what its Category
+   * gives (the Top Layer's alone applies, the others' shown struck), its Break Value, its Doff Bonus, whether it counts
+   * toward the Apparel Penalty, its Qualities - the Integrated pieces, and the Accessories with their text, hidden at will.
+   */
+  #wornTable(gearItems) {
+    const system = this.actor.system;
+    const baseTier = system.baseTierOfPower ?? 1;
+    const top = topLayerPiece(gearItems);
+    const qualities = item => qualityEntries(item.system.crafted)
+      .map(entry => entry.name || getTrait(entry.id)?.name || entry.id).join(", ");
+    // What a Category gives, at this piece's Apparel Bonus - the four the rules have; a Category of the table's own by name.
+    const benefitOf = (item, reading) => {
+      const bonus = reading?.bonus ?? 0;
+      switch (item.system.crafted?.category) {
+        case "armor": return `DR +${Math.floor(bonus * (reading?.armorDamageReduction ?? 1))}`;
+        case "weights": return `Rolls -${bonus}`;
+        case "combat-clothing": return `DV +${Math.ceil(bonus / 2)}`;
+        case "standard-clothing": return "No Apparel Penalty";
+        default: return reading?.categoryName ?? "";
+      }
+    };
+    const rowOf = item => {
+      const applies = categoryApplies(item, top);
+      const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier });
+      const counted = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier, category: applies });
+      return {
+        itemId: item.id,
+        name: item.name,
+        category: reading?.categoryName ?? "",
+        benefit: benefitOf(item, reading),
+        applies,
+        bv: `${reading?.breakLeft ?? 0}/${reading?.breakValue ?? 0}`,
+        broken: (reading?.breakLeft ?? 1) === 0,
+        doff: doffBonusFor(item, this.actor, { getTrait }).amount,
+        counts: !isIntegrated(item) && (counted?.countsForPenalty !== false),
+        qualities: qualities(item)
+      };
+    };
+    const apparel = gearItems.filter(item => item.system.crafted?.kind === "apparel");
+    const layers = Object.entries(APPAREL_LAYERS).map(([key, layer]) => {
+      const piece = apparel.find(item => item.system.equipped && !isIntegrated(item) && (item.system.layer === key));
+      return { key, label: `${layer.label} Layer`, top: key === "top", piece: piece ? rowOf(piece) : null };
+    });
+    const integrated = apparel.filter(item => isIntegrated(item))
+      .map(item => ({ ...rowOf(item), active: Boolean(item.system.equipped) }));
+    const hidden = item => item.getFlag?.("dbu-ttrpg", "hideText") === true;
+    const linesOf = item => printedLines(item.system.text || getTrait(item.system.gearId)?.text || "").filter(Boolean);
+    const worn = wornAccessories(gearItems);
+    return {
+      penalty: apparelPenaltyPieces(gearItems, getTrait) * Math.ceil(baseTier / 2),
+      layers,
+      integrated,
+      accessories: worn.filter(item => !isIntegrated(item))
+        .map(item => ({ itemId: item.id, name: item.name, hidden: hidden(item), lines: linesOf(item) })),
+      accessoriesWorn: worn.filter(item => !isIntegrated(item)).length,
+      accessoriesMax: ACCESSORIES_WORN,
+      integratedAccessories: gearItems.filter(item => isAccessory(item) && isIntegrated(item))
+        .map(item => ({ itemId: item.id, name: item.name, active: Boolean(item.system.equipped), hidden: hidden(item),
+          lines: linesOf(item) }))
+    };
+  }
+
+  /** An Accessory's text on the Gear tab's table, hidden or shown (the user's: "Hide Text"). */
+  static async _onToggleGearText(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    return item.setFlag("dbu-ttrpg", "hideText", !(item.getFlag("dbu-ttrpg", "hideText") === true));
   }
 
   /** The Grappler lets go. An Instant Maneuver, on their turn. */

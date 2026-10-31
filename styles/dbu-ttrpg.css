@@ -4768,3 +4768,128 @@
   flex-wrap: wrap;
   gap: 4px;
 }
+
+/* --- The Gear tab's table of what is worn (the user's, from their sheet) ------------------------------------------------ */
+.dbu-ttrpg .dbu-worn {
+  display: grid;
+  gap: 10px;
+}
+
+.dbu-ttrpg .dbu-worn-table {
+  min-width: 560px;
+}
+
+.dbu-ttrpg .dbu-worn-table thead th {
+  position: static;
+}
+
+.dbu-ttrpg .dbu-worn-table col.dbu-worn-col-name { width: 24%; }
+.dbu-ttrpg .dbu-worn-table col.dbu-worn-col-category { width: 15%; }
+.dbu-ttrpg .dbu-worn-table col.dbu-worn-col-benefit { width: 15%; }
+.dbu-ttrpg .dbu-worn-table col.dbu-worn-col-bv { width: 7%; }
+.dbu-ttrpg .dbu-worn-table col.dbu-worn-col-doff { width: 10%; }
+.dbu-ttrpg .dbu-worn-table col.dbu-worn-col-penalty { width: 9%; }
+.dbu-ttrpg .dbu-worn-table col.dbu-worn-col-hide { width: 12%; }
+
+.dbu-ttrpg .dbu-worn-title {
+  font-size: 14px;
+}
+
+.dbu-ttrpg .dbu-worn-penalty,
+.dbu-ttrpg .dbu-worn-count {
+  font-weight: normal;
+  color: var(--dbu-text-dim);
+  text-align: right;
+}
+
+.dbu-ttrpg .dbu-worn-penalty b {
+  margin-left: 4px;
+  color: #f0f0f0;
+}
+
+.dbu-ttrpg .dbu-worn-count {
+  float: right;
+  font-size: 11px;
+}
+
+/* A Layer's heading row, the table's darker grey. */
+.dbu-ttrpg .dbu-worn-head th {
+  background: #333;
+  font-weight: 600;
+}
+
+.dbu-ttrpg .dbu-worn-head th[scope="row"] {
+  text-align: left;
+}
+
+.dbu-ttrpg .dbu-worn-head small {
+  font-weight: normal;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-worn-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dbu-ttrpg .dbu-worn-name {
+  text-align: left;
+  font-weight: 600;
+}
+
+.dbu-ttrpg .dbu-worn-table td.dbu-worn-empty {
+  font-weight: normal;
+  font-style: italic;
+  color: var(--dbu-text-dim);
+}
+
+/* A lower Layer's Category, which does not apply: dimmed, its Benefit struck. */
+.dbu-ttrpg .dbu-worn-table td.dbu-worn-inactive {
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-worn-counts {
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-worn-qualities {
+  text-align: left;
+  color: var(--dbu-text-dim);
+  white-space: nowrap;
+}
+
+.dbu-ttrpg .dbu-worn-table td.dbu-worn-desc {
+  text-align: left;
+  color: var(--dbu-text-dim);
+  white-space: normal;
+}
+
+.dbu-ttrpg .dbu-worn-hide {
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding: 0 6px;
+  line-height: 18px;
+  font-size: 11px;
+}
+
+.dbu-ttrpg .dbu-worn-hide.on {
+  color: var(--dbu-accent);
+  border-color: var(--dbu-accent);
+}
+
+/* Integrated: Active as a box ticked or not, the Activate/Deactivate button it stands for. */
+.dbu-ttrpg .dbu-worn-active {
+  width: 14px;
+  height: 14px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--dbu-border-strong);
+  border-radius: 2px;
+  background: none;
+}
+
+.dbu-ttrpg .dbu-worn-active.on {
+  background: var(--dbu-accent);
+  border-color: var(--dbu-accent);
+}
