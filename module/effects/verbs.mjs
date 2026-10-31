@@ -490,6 +490,14 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
   },
+  guardRobot: {
+    args: [0, 0],
+    doc: "Guard Robot: a Might Clash with an Opponent - won, Compelled at you (chat.mjs guardRobot)."
+  },
+  aidRobot: {
+    args: [0, 0],
+    doc: "Aid Robot: 2(bT) Life and Ki to every Ally within a Large Sphere - twice that with 2+ stacks of Power (chat.mjs aidRobot)."
+  },
   employedStrength: {
     args: [0, 0],
     doc: "Employed for Strength: a Might Clash with every Opponent within your Area of Rule - won, their Life Points by your Force "

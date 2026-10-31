@@ -1,0 +1,15 @@
+id: aid-robot
+name: Aid Robot
+order: 4
+optionOf: purpose
+optionEffect: 2
+description: >
+  All Allies within a Large Sphere AoE (centered on you) regain 2(bT) Life and Ki Points. Double the amount regained if you possess 2+ stacks of Power.
+text: >
+  Aid Robot [Triggered/Start of Turn]: All Allies within a Large Sphere AoE (centered on you) regain 2(bT) Life and Ki Points. Double the amount regained if you possess 2+ stacks of Power.
+
+---
+
+# Your turn begins: every Ally within 3 Squares regains it (chat.mjs aidRobot). Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 2]
+aidRobot();

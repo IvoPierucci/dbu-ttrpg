@@ -1720,6 +1720,29 @@ export async function askCasteKing(actor, declared) {
 }
 
 /**
+ * Lifeless Weapon (3): "[Triggered, 1/Encounter]: When making an Attacking Maneuver while below the Injured Health Threshold, you can reduce
+ * your Life Points to 0 (you are not Defeated until after concluding the Attacking Maneuver) to increase the Wound Roll of that Attacking
+ * Maneuver by an amount equal to 1/2 of the Life Points lost." Asked as it is declared - half, rounded down; the Life Points taken as it is
+ * paid for, its Defeat held as Final Chance's is (use-maneuver.mjs).
+ */
+export async function askLifelessWeapon(actor, declared) {
+  if (!declared || (actor?.system?.effects?.slots?.["lifeless.lifeToZero"] !== true)) return declared;
+  if (!["injured", "critical"].includes(actor.system.threshold?.key ?? "healthy")) return declared;
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.("dbu-ttrpg", "lifelessEncounter") === encounter) return declared;
+  const life = Number(actor.system.life?.value) || 0;
+  const wound = Math.floor(life / 2);
+  if (life <= 0) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Lifeless Weapon` },
+    content: `<p data-tooltip="Once a Combat Encounter. Not Defeated until this attack is concluded.">Your Life Points to 0 - +${wound} on this
+      Wound Roll (half of the ${life} lost)?</p>`, rejectClose: false });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "lifelessEncounter", encounter);
+  return { ...declared, lifelessLife: life,
+    woundExtra: [...(declared.woundExtra ?? []), { label: `Lifeless Weapon (${life} Life Points)`, value: wound }] };
+}
+
+/**
  * Ferocious Assault (3): "[Triggered, 1/Encounter]: When making an Attacking Maneuver while below the Injured Health Threshold, reduce your
  * Life Points to 1 (you automatically succeed the Steadfast Check for the Critical Health Threshold). Increase the Wound Roll of this
  * Attacking Maneuver by the reduction to your Life Points." Asked as it is declared; the Life Points taken then, a row on its Wound, and

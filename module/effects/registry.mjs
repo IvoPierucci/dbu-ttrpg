@@ -99,8 +99,17 @@ function activeOptionsOnly(item, program) {
  * The Priority comes from the kind of source, exactly as the rulebook's ladder orders
  * them - which is also what the folder a Trait lives in will say once Traits are files.
  */
-export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {}, minion = false, gifts = null, miniMinions = 0 } = {}) {
+export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {}, minion = false, gifts = null, miniMinions = 0,
+  allyRolls = 0 } = {}) {
   const entries = [];
+
+  // What an Ally's effect gives this one's Combat Rolls, read off them (actor-character.mjs) - Friend Robot's 1(T) within a Large Sphere.
+  if (allyRolls) {
+    const { program, errors } = compile("ally-rolls", { script: `[passive]\ncombatRolls += ${Number(allyRolls) || 0};` }, report);
+    if (!errors.length) {
+      entries.push({ program, priority: PRIORITY.base, sourceId: "ally-rolls", sourceUuid: null, sourceName: "Friend Robot", level: 0, stacks: 1 });
+    }
+  }
 
   // What a Master's effects give their Minions (allies.mjs minionGifts) - Combat Rolls and Soak Value; the Life after the quarter.
   // And Mini Minions (Brood Parent): "for each reduction, reduce their Soak Value by an additional 1(T) and increase their

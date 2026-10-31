@@ -1,0 +1,17 @@
+id: friend-robot
+name: Friend Robot
+order: 3
+optionOf: purpose
+optionEffect: 2
+description: >
+  All Allies within a Large Sphere AoE (centered on you) have their Combat Rolls increased by 1(T) while you possess 2+ stacks of Power.
+text: >
+  Friend Robot [Passive]: All Allies within a Large Sphere AoE (centered on you) have their Combat Rolls increased by 1(T) while you possess 2+ stacks of Power.
+
+---
+
+# Read by each Ally within 3 Squares of you as they are prepared (actor-character.mjs; registry.mjs ally-rolls) - while you hold 2+ stacks.
+[passive]
+if (stacksAtLeast(2, "power")) {
+    allow purpose.friend;
+}

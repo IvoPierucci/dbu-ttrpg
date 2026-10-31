@@ -2,7 +2,7 @@ import { traitAside } from "../aside.mjs";
 import { minionGifts } from "../allies.mjs";
 const { fields } = foundry.data;
 
-import { alliesHolding, alliesInMelee, alliesRuling, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
+import { alliesHolding, alliesInMelee, alliesRuling, alliesWithin, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
@@ -2109,6 +2109,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // What its Master's effects give it, and Brood Parent's Mini Minions.
       gifts: this.minionGifts,
       miniMinions: this.minion ? (Number(this.parent?.getFlag?.("dbu-ttrpg", "miniMinions")) || 0) : 0,
+      // Friend Robot (Purpose): "All Allies within a Large Sphere AoE (centered on you) have their Combat Rolls increased by 1(T) while you
+      // possess 2+ stacks of Power" - an Ally's, within 3 Squares of them; the best Tier of those.
+      allyRolls: (() => {
+        const friends = this.parent ? alliesWithin(this.parent, "purpose.friend", 3) : [];
+        return friends.length ? Math.max(1, bestTier(friends)) : 0;
+      })(),
       skills: DBUCharacterData.SKILLS
     });
 

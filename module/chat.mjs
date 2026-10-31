@@ -1060,6 +1060,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.dissipate && clash.result && !clash.dissipate.applied) await settleDissipate(message, clash);
   if (clash.impede && clash.result && !clash.impede.applied) await settleImpede(message, clash);
   if (clash.ruleLife && clash.result && !clash.ruleLife.applied) await settleRuleLife(message, clash);
+  if (clash.guardCompel && clash.result && !clash.guardCompel.applied) await settleGuardCompel(message, clash);
   if (clash.majinRaised && clash.result && !clash.majinRaised.applied) await settleMajinRaised(message, clash);
   if (clash.lightConsume && clash.result && !clash.lightConsume.applied) await settleLightConsume(message, clash);
   if (clash.lightCounter && clash.result && !clash.lightCounter.applied) await settleLightCounter(message, clash);
@@ -4347,6 +4348,8 @@ function collisionHalved(target) {
 /** What of a Collision's Damage they take: none in the Incorporeal State ("You cannot suffer from Collision Damage"), halved, or all. */
 function collisionAmount(target, amount) {
   if ((Number(target?.system?.states?.incorporeal) || 0) > 0) return 0;
+  // Full Metal Body (2): "While you are above the Injured Health Threshold, ignore all Collision Damage."
+  if (target?.system?.effects?.slots?.["fullMetal.noCollision"] === true) return 0;
   return collisionHalved(target) ? Math.floor(amount / 2) : amount;
 }
 
@@ -11060,11 +11063,18 @@ async function resolveSkillClash(message, clash) {
   const hidden = (clash.category === "skill") && (skillPicked(clash, clash.defenderUuid) === "concealment")
     && ((divine(defender) && !senses(challenger))
       || (defender.system.effects?.slots?.["concealment.autoSucceed"] === true));
-  let defenderSide = hidden
-    ? { ...rolledDefence, succeeded: true, lines: [...(rolledDefence.lines ?? []), noteLine(
-      (defender.system.effects?.slots?.["concealment.autoSucceed"] === true) ? "Energy Core" : "God Ki - it cannot be sensed")] }
+  // Lifeless Weapon (1): "you automatically succeed at all Cognitive Clashes that an Opponent has initiated".
+  // Full Metal Body (3): "you automatically succeed at all Corporeal Clashes that an Opponent has initiated" - Healthy.
+  const answered = (clash.category === "save") ? savePicked(clash, clash.defenderUuid) : "";
+  const lifeless = !hidden && areOpponents(challenger, defender)
+    && (((answered === "cognitive") && (defender.system.effects?.slots?.["lifeless.cognitive"] === true))
+      || ((answered === "corporeal") && (defender.system.effects?.slots?.["fullMetal.corporeal"] === true)));
+  let defenderSide = (hidden || lifeless)
+    ? { ...rolledDefence, succeeded: true, lines: [...(rolledDefence.lines ?? []), noteLine(lifeless
+      ? ((answered === "corporeal") ? "Full Metal Body" : "Lifeless Weapon")
+      : (defender.system.effects?.slots?.["concealment.autoSucceed"] === true) ? "Energy Core" : "God Ki - it cannot be sensed")] }
     : rolledDefence;
-  let challengerResult = hidden ? { ...challengerSide, succeeded: false } : challengerSide;
+  let challengerResult = (hidden || lifeless) ? { ...challengerSide, succeeded: false } : challengerSide;
 
   // Heart of Courage (4): lost, a Might or Saving Throw Clash an Opponent opened - won instead, asked.
   if (await courageWins(clash, challenger, defender, { challenger: challengerResult, defender: defenderSide })) {
@@ -16462,6 +16472,52 @@ export async function lightningPower(actor) {
 }
 
 /**
+ * Guard Robot (Purpose): "[Triggered/Power]: Target an Opponent. Make a Might Clash against them. If you win, they gain the Compelled Combat
+ * Condition with you as a target." The Opponent targeted - or asked among those on the scene. Unspent with none.
+ */
+export async function guardRobot(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const targeted = Array.from(game.user?.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid)
+    && areOpponents(other, actor));
+  const choices = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid) && !other.system?.defeated && areOpponents(other, actor))
+    .map(other => [other.uuid, other])).values()];
+  const picked = targeted?.uuid ?? ((choices.length > 1) ? await askPlayerChoice(actor, `${actor.name}: Guard Robot - an Opponent`,
+    choices.map(other => ({ value: other.uuid, label: other.name }))) : choices[0]?.uuid);
+  const target = targeted ?? choices.find(other => other.uuid === picked);
+  if (!target) return UNSPENT;
+  await postMightClash(actor, target, { maneuverName: "Guard Robot", reason: `Win and they are Compelled - at ${actor.name}.`,
+    guardCompel: { applied: false } });
+}
+
+/** Guard Robot's Clash, settled: won, Compelled - at its maker. */
+async function settleGuardCompel(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, guardCompel: { ...clash.guardCompel, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Guard Robot: nothing put on them.");
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(target, "compelled", 1) === false) return;
+  return settledNote(message, `Guard Robot: ${target.name} is Compelled - at ${clash.challengerName}.`);
+}
+
+/**
+ * Aid Robot (Purpose): "[Triggered/Start of Turn]: All Allies within a Large Sphere AoE (centered on you) regain 2(bT) Life and Ki Points. Double
+ * the amount regained if you possess 2+ stacks of Power." Within 3 Squares of them. Unspent with none there.
+ */
+export async function aidRobot(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const near = alliesOnScene(actor).filter(ally => (ally.uuid !== actor.uuid) && !ally.system?.defeated
+    && withinGuidance(actor, ally, SPHERE_RADIUS.large - 1));
+  if (!near.length) return UNSPENT;
+  const each = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1)
+    * (((Number(actor.system.resources?.power?.stacks) || 0) >= 2) ? 2 : 1);
+  for (const ally of near) await regainPools(ally, each, each);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">Aid Robot:
+    ${Handlebars.escapeExpression(near.map(ally => ally.name).join(", "))} - ${each} Life and Ki Points.</div>` });
+}
+
+/**
  * Employed for Strength (Afterlife Officials (4)): "Make a Might Clash against all Opponents within your Area of Rule. If you win, they have
  * their Life Points reduced by your Force Modifier." A Might Clash with each - its Force Modifier as it is now. Unspent with nobody there.
  */
@@ -20482,6 +20538,9 @@ async function attackDurationEnds(attack) {
   const { setCondition } = await import("./conditions.mjs");
   for (const { uuid } of attackTargets(attack ?? {})) {
     const target = fromUuidSync(uuid);
+    // Full Metal Body (4): "You do not lose this stack of Power until after the Attacking Maneuver is completed."
+    const pledged = (attack?.metalCut ?? []).filter(entry => entry.uuid === uuid).length;
+    if (pledged && target?.isOwner) await setResource(target, "power", Math.max(0, (Number(target.system.resources?.power?.stacks) || 0) - pledged));
     if (target?.isOwner && ((Number(target.system?.conditions?.["shinjin-counter-mark"]) || 0) > 0)) await setCondition(target, "shinjin-counter-mark", 0);
   }
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
@@ -20801,6 +20860,41 @@ function plateButtons(message, attack, container) {
         { uuid: entry.uuid, value, by: entry.uuid, plate: true }] } });
     });
   }
+}
+
+/**
+ * Full Metal Body (4): "[Triggered, 2/Round]: If you are hit by an Opponent's Attacking Maneuver, you may spend a stack of Power to reduce the
+ * Wound Roll by 1/2 of your Damage Reduction. You do not lose this stack of Power until after the Attacking Maneuver is completed." A button
+ * for each one hit holding Power not yet spent on it, twice a Round - half the Damage Reduction, rounded down, off the Wound against them
+ * (metalParts); the stack taken as the attack is concluded (attackDurationEnds).
+ */
+function metalButtons(message, attack, container) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  for (const entry of targetResults(attack).filter(each => each.own?.hit)) {
+    const target = fromUuidSync(entry.uuid);
+    if (!target?.isOwner || (entry.uuid === attack.attackerUuid) || (target.system?.effects?.slots?.["fullMetal.spend"] !== true)) continue;
+    if (attacker && !areOpponents(attacker, target)) continue;
+    const pledged = (attack.metalCut ?? []).filter(each => each.uuid === entry.uuid).length;
+    const used = target.getFlag?.(SCOPE, "metalRound");
+    const usedNow = (used?.round === roundKey()) ? (Number(used.n) || 0) : 0;
+    if ((usedNow >= 2) || ((Number(target.system.resources?.power?.stacks) || 0) <= pledged)) continue;
+    const value = Math.floor((Number(target.system.damageReduction) || 0) / 2);
+    if (!value) continue;
+    cardButton(container, `Full Metal Body - ${target.name}`, `A stack of Power, twice a Round: ${value} off the Wound Roll against you - the stack lost once the attack is done.`, async () => {
+      const now = target.getFlag?.(SCOPE, "metalRound");
+      const n = (now?.round === roundKey()) ? (Number(now.n) || 0) : 0;
+      if (n >= 2) return;
+      await target.setFlag(SCOPE, "metalRound", { round: roundKey(), n: n + 1 });
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, metalCut: [...(fresh.metalCut ?? []), { uuid: entry.uuid, value }] } });
+    });
+  }
+}
+
+/** Full Metal Body (4)'s, against the one who spent it. */
+function metalParts(attack, target) {
+  const cut = (attack.metalCut ?? []).filter(entry => entry.uuid === target?.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
+  return cut ? [{ label: "Full Metal Body", value: -cut }] : [];
 }
 
 /** Petrification Plating (4): "remove all of your Plates. Increase your Combat Rolls by 1(T) for every Plate removed until the start of your next turn." */
@@ -26562,6 +26656,20 @@ export async function postAttack(actor, target, maneuver,
   if (integrationCharge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Power of the Hera (4): "apply an equal amount of Energy Charges to that Attacking Maneuver" - the Greed spent.
   if (greedCharges && !reflecting) charges = (Number(charges) || 0) + (Number(greedCharges) || 0);
+  // Combat Mode (2): "you can add an Energy Charge to that Attacking Maneuver for each stack of Power you possess. After using this effect,
+  // remove all stacks of Power you possess and gain an equal amount of stacks for the Fatigued Combat Condition" - asked, once an Encounter.
+  const powerHeld = Number(actor.system.resources?.power?.stacks) || 0;
+  if (!reflecting && (powerHeld > 0) && (actor.system.effects?.slots?.["combatMode.charges"] === true)
+    && (actor.getFlag?.(SCOPE, "combatModeEncounter") !== (game.combat?.id ?? "none"))
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Combat Mode` },
+      content: `<p data-tooltip="Once an Encounter. Your Power gone, a stack of Fatigued for each.">${powerHeld} Energy Charge${(powerHeld === 1) ? "" : "s"}
+        on it - one a stack of Power?</p>`, rejectClose: false })) {
+    await actor.setFlag(SCOPE, "combatModeEncounter", game.combat?.id ?? "none");
+    charges = (Number(charges) || 0) + powerHeld;
+    await setResource(actor, "power", 0);
+    const { gainCondition } = await import("./effects/moments-runtime.mjs");
+    await gainCondition(actor, "fatigued", powerHeld);
+  }
   // Fight against Power (3): an Energy Charge for every 2 stacks of Tension.
   if (tensionCharges && !reflecting) charges = (Number(charges) || 0) + (Number(tensionCharges) || 0);
   // Hate Empowerment (1): the Energy Charge its Revenge Points bought.
@@ -31035,6 +31143,7 @@ async function rollAttackWoundWork(message, attack) {
       ...refinedParts(attacker, target),
       ...dragonLikeParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
+      ...metalParts(attack, target),
       { label: "Tai Chi Expert", value: (taiChiWound && !alliesOnScene(attacker).some(ally => ally.uuid === target.uuid))
         ? Math.ceil(Math.max(0, Number(target.system?.might) || 0) / 4) : 0 },
       { label: attack.technique?.name ?? "Technique",
@@ -36363,6 +36472,8 @@ function renderAttack(message, html) {
   if (!result) spectralButtons(message, attack, container);
   // Petrification Plating (3), Ravaging Charger (3): hit - before its Wound.
   if (result && !result.wound) plateButtons(message, attack, container);
+  // Full Metal Body (4): hit by an Opponent - before its Wound.
+  if (result && !result.wound) metalButtons(message, attack, container);
   if (result && !result.wound) ravagingButtons(message, attack, container);
   // Telepathic Teamwork (2): an Ally's attack - 1(T) on its Strike, its Wound too at one Studied - before the Strike is rolled.
   if (!result) telepathicTeamworkButtons(message, attack, container);

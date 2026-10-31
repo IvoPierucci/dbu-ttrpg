@@ -1,0 +1,25 @@
+id: combat-mode
+name: Combat Mode
+order: 3
+category: mind
+importance: secondary
+description: >
+  You are designed with your combat functionality in mind, allowing you to quickly shift focus when battle starts.
+text: >
+  Combat Mode (Mind): You are designed with your combat functionality in mind, allowing you to quickly shift focus when battle starts.
+  (1)-[Triggered/Power]: Spend 3(bT) Ki Points to gain an additional stack of Power.
+  (2)-[Triggered, 1/Encounter]: When making an Attacking Maneuver, you can add an Energy Charge to that Attacking Maneuver for each stack of Power you possess. After using this effect, remove all stacks of Power you possess and gain an equal amount of stacks for the Fatigued Combat Condition.
+
+---
+
+[passive]
+# (2) Asked as an Attacking Maneuver is made with Power held, once an Encounter: a Charge a stack, then the Power gone and as many stacks of
+# Fatigued (chat.mjs postAttack).
+allow combatMode.charges;
+
+# (1) Asked in the Power Up's window: 3(bT) Ki, a stack more - Power still at most 2, its own clock as the Power Up's (Surging Power's own).
+[triggered/power, effect 1]
+requires power.stacks < 2 && ki.value >= 3(bT);
+ki.value -= 3(bT);
+power.stacks += 1;
+expires(power, next-turn);

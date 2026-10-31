@@ -1,0 +1,9 @@
+id: mecha-mimicry
+name: Mecha Mimicry
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Trait: Robot Ripoff 1.
+requirement: >
+  Robot
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  You were created in the image of another being. Whether that’s to act as a sparring partner, or to hunt down and kill that being, your creator gave you a semblance of their likeness.

@@ -1,0 +1,26 @@
+id: purpose
+name: Purpose
+order: 2
+category: mind
+importance: primary
+description: >
+  As with any tool, you are designed to serve a specific purpose.
+text: >
+  Purpose (Mind): As with any tool, you are designed to serve a specific purpose.
+  (1)-[Passive]: While you possess 2+ stacks of Power, increase your Might by 1(T).
+  (2)-[Option]: Upon gaining this Racial Trait, choose one of the following effects:
+
+  * Assault Robot [Passive]: While you possess 2+ stacks of Power, increase your Wound Rolls by 2(T).
+  * Guard Robot [Triggered/Power]: Target an Opponent. Make a Might Clash against them. If you win, they gain the Compelled Combat Condition with you as a target.
+  * Friend Robot [Passive]: All Allies within a Large Sphere AoE (centered on you) have their Combat Rolls increased by 1(T) while you possess 2+ stacks of Power.
+  * Aid Robot [Triggered/Start of Turn]: All Allies within a Large Sphere AoE (centered on you) regain 2(bT) Life and Ki Points. Double the amount regained if you possess 2+ stacks of Power.
+
+---
+
+[passive]
+# (1)
+if (stacksAtLeast(2, "power")) {
+    might += 1(T);
+}
+
+# (2) Its Option, chosen as it is added - each a file beside it.

@@ -1,0 +1,15 @@
+id: guard-robot
+name: Guard Robot
+order: 2
+optionOf: purpose
+optionEffect: 2
+description: >
+  Target an Opponent. Make a Might Clash against them. If you win, they gain the Compelled Combat Condition with you as a target.
+text: >
+  Guard Robot [Triggered/Power]: Target an Opponent. Make a Might Clash against them. If you win, they gain the Compelled Combat Condition with you as a target.
+
+---
+
+# The Power Up used: a Might Clash with the Opponent targeted - won, Compelled at you (chat.mjs guardRobot). Ticked in its window.
+[triggered/power, effect 2]
+guardRobot();

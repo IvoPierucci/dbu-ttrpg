@@ -39,6 +39,8 @@
  *                                   chosen, not asked (Difference in Shell's Choice, by Pieces of the Hive's) - asked where it has none
  *   platingBonusPerBaseTier: 1      (an Option's) its Natural Armor's Apparel Bonus that many (bT) higher - `platingBonusWhile:
  *                                   allyBeside` with an Ally adjacent alone (Difference in Shell's King and Queen)
+ *   grantsFactorTraitOf: <factor>   a Factor Trait of that Factor chosen as it is added - gone with it (Robot Ripoff's of Alternate
+ *                                   Upbringing)
  *   grantedLifeCost: 1              the Racial Life Modifier that much lower for each Trait it gave still had (Bestial Presence's)
  *   holdsState / zeroScore          (a Trait's or an Option's) a State it keeps you in; an Attribute Score it holds at 0 (Savage's)
  *   grantsTechniques: full-power    Nameless Horde (4)'s 'Full Power' Signature Techniques, made as it is added (full-power.mjs) -
@@ -924,6 +926,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
       if (given && trait.wereTraits) await given.setFlag("dbu-ttrpg", "wereTrait", true);
     }
   }
+  // Robot Ripoff (2): "Gain a Factor Trait from Alternate Upbringing" - which, asked; gone with it.
+  if (trait.grantsFactorTraitOf) await grantFactorTrait(actor, item, String(trait.grantsFactorTraitOf));
   // Were-Beast (2): "the Secondary Racial Trait you exchanged for this Factor Trait becomes known as your 'Normal Trait'" - which, asked.
   if (trait.asksNormalTrait) await askNormalTrait(actor, item);
   return item;
@@ -1087,6 +1091,26 @@ async function grantOtherTrait(actor, item, group, from = [], presets = {}) {
   const trait = offered.find(entry => entry.id === picked);
   return trait ? addRacialTrait(actor, trait, { grantedBy: item.id, presetOption: presets.options?.[trait.id] ?? "",
     presetChoice: presets.choices?.[trait.id] ?? "" }) : null;
+}
+
+/** A Factor Trait of that Factor, chosen - one not had already - given by `item`, gone with it; "Later, by hand" for none. */
+async function grantFactorTrait(actor, item, factor) {
+  const had = new Set(Array.from(actor.items ?? []).map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
+  const offered = traitsOfKind("factors").filter(each => (each.owner === factor) && !each.optionOf && !had.has(each.id))
+    .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || a.name.localeCompare(b.name));
+  if (!offered.length) return null;
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${item.name} - a ${factorName(factor)} Factor Trait` },
+    content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Factor Trait</span>
+      <select name="factor">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select></label>`,
+    buttons: [{ action: "take", label: "Gain", default: true,
+      callback: (event, button, dialog) => dialog.element.querySelector('[name="factor"]')?.value ?? "" },
+      { action: "later", label: "Later, by hand" }],
+    rejectClose: false
+  });
+  const chosen = offered.find(each => each.id === picked);
+  return chosen ? addRacialTrait(actor, chosen, { grantedBy: item.id }) : null;
 }
 
 /** `grantsOtherOptions: a=b` and `grantsOtherChoices: a=b` - the Option and the choice each granted Other Trait is given with. */

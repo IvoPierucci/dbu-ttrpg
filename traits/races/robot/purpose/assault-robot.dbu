@@ -1,0 +1,16 @@
+id: assault-robot
+name: Assault Robot
+order: 1
+optionOf: purpose
+optionEffect: 2
+description: >
+  While you possess 2+ stacks of Power, increase your Wound Rolls by 2(T).
+text: >
+  Assault Robot [Passive]: While you possess 2+ stacks of Power, increase your Wound Rolls by 2(T).
+
+---
+
+[passive]
+if (stacksAtLeast(2, "power")) {
+    wound += 2(T);
+}

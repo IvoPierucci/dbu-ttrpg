@@ -1,0 +1,32 @@
+id: full-metal-body
+name: Full Metal Body
+order: 4
+category: body
+importance: secondary
+description: >
+  Composed entirely of metal (or some similar substance), you are incredibly difficult to damage.
+text: >
+  Full Metal Body (Body): Composed entirely of metal (or some similar substance), you are incredibly difficult to damage.
+  (1)-[Passive]: While you possess 2+ stacks of Power, increase your Damage Reduction by 1(T).
+  (2)-[Passive]: While you are above the Injured Health Threshold, ignore all Collision Damage.
+  (3)-[Passive]: While you are above the Bruised Health Threshold, you automatically succeed at all Corporeal Clashes that an Opponent has initiated.
+  (4)-[Triggered, 2/Round]: If you are hit by an Opponent’s Attacking Maneuver, you may spend a stack of Power to reduce the Wound Roll by 1/2 of your Damage Reduction. You do not lose this stack of Power until after the Attacking Maneuver is completed.
+
+---
+
+[passive]
+# (1)
+if (stacksAtLeast(2, "power")) {
+    damageReduction += 1(T);
+}
+# (2) Healthy or Bruised: no Collision Damage (chat.mjs collisionAmount).
+if (!belowThreshold("injured")) {
+    allow fullMetal.noCollision;
+}
+# (3) Healthy: a Saving Throw Clash an Opponent opened, answered with Corporeal, won (chat.mjs settleClash).
+if (!belowThreshold("bruised")) {
+    allow fullMetal.corporeal;
+}
+# (4) Hit by an Opponent: a button on its card before the Wound, twice a Round - a stack of Power for half your Damage Reduction off the Wound,
+# the stack lost once it is done (chat.mjs metalButtons).
+allow fullMetal.spend;

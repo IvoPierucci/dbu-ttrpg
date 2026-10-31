@@ -1,0 +1,27 @@
+id: lifeless-weapon
+name: Lifeless Weapon
+order: 1
+category: body
+importance: primary
+description: >
+  Lacking the awareness and self-preservation of sentient species, you are closer to a tool than a person.
+text: >
+  Lifeless Weapon (Body): Lacking the awareness and self-preservation of sentient species, you are closer to a tool than a person.
+  (1)-[Passive]: You do not suffer from the penalties of Health Thresholds. Additionally, you are Unnatural and you automatically succeed at all Cognitive Clashes that an Opponent has initiated.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T) while you are above the Injured Health Threshold.
+  (3)-[Triggered, 1/Encounter]: When making an Attacking Maneuver while below the Injured Health Threshold, you can reduce your Life Points to 0 (you are not Defeated until after concluding the Attacking Maneuver) to increase the Wound Roll of that Attacking Maneuver by an amount equal to 1/2 of the Life Points lost.
+
+---
+
+[passive]
+# (1) No Health Threshold's penalties; Unnatural - no Suffocating, no Poisoned; a Saving Throw Clash an Opponent opened answered with Cognitive,
+# won (chat.mjs settleClash).
+threshold.penalty = 0;
+forbid unnatural;
+allow lifeless.cognitive;
+# (2) Healthy or Bruised.
+if (!belowThreshold("injured")) {
+    damageReduction += 1(T);
+}
+# (3) Asked as an Attacking Maneuver is declared, Injured or worse, once an Encounter (maneuvers.mjs askLifelessWeapon).
+allow lifeless.lifeToZero;

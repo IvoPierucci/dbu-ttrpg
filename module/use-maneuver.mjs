@@ -5633,6 +5633,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askAngryWarrior(actor, declared);
     declared = await (await import("./maneuvers.mjs")).askApoplecticBeast(actor, declared);
     declared = await (await import("./maneuvers.mjs")).askFerociousAssault(actor, declared);
+    declared = await (await import("./maneuvers.mjs")).askLifelessWeapon(actor, declared);
     declared = await (await import("./maneuvers.mjs")).askCasteKing(actor, declared);
     // Glass Combat (4): the Glass Profile applied - yours, or an adjacent Ally's - for 2(bT) Ki, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askGlassApply(actor, declared);
@@ -6499,6 +6500,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   }
   if (!crossing) await spendLifeWager(actor, declared);
   if (!crossing && declared) declared = { ...declared, paid: paidSince(actor, before) };
+  // Lifeless Weapon (3): its Life Points to 0 as it is paid for - "not Defeated until after concluding the Attacking Maneuver", held as
+  // Final Chance's.
+  if (declared?.lifelessLife) {
+    await actor.update({ "system.life.value": 0, "flags.dbu-ttrpg.ownDefeat": true }, { dbuDefeatHeld: true });
+    await actor.setFlag("dbu-ttrpg", "finalChance", "pending");
+  }
   if (declared?.finalChanceLife) {
     // Their own effect taking them to 0 - Revenge Bomber's (3).
     await actor.update({ "system.life.value": 0, "flags.dbu-ttrpg.ownDefeat": true }, { dbuDefeatHeld: true });

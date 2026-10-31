@@ -1,0 +1,25 @@
+id: robot-ripoff
+name: Robot Ripoff
+order: 1
+category: body
+# "[Purpose]": it replaces that Primary Racial Trait - which, the table's.
+importance: primary
+race: robot
+# (2) "Gain a Factor Trait from Alternate Upbringing" - chosen as it is added, gone with it. "Additionally, this Factor is also treated as
+# Alternate Upbringing" - for what asks after it, the table's.
+grantsFactorTraitOf: alternate-upbringing
+description: >
+  You are a robotic version of another person, and thus bear a passing resemblance to them.
+text: >
+  Robot Ripoff (Body) [Purpose]: You are a robotic version of another person, and thus bear a passing resemblance to them.
+  (1)-[Passive]: While you possess 2+ stacks of Power, increase your Force and Magic Modifiers by 1(T).
+  (2)-[Passive]: Gain a Factor Trait from Alternate Upbringing. Additionally, this Factor is also treated as Alternate Upbringing.
+
+---
+
+[passive]
+# (1)
+if (stacksAtLeast(2, "power")) {
+    force.mod += 1(T);
+    magic.mod += 1(T);
+}
