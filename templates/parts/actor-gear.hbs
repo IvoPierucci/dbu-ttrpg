@@ -41,7 +41,7 @@
           <td{{#unless layer.piece.applies}} class="dbu-worn-inactive"{{/unless}}>{{#if layer.piece.applies}}{{layer.piece.benefit}}{{else}}<s>{{layer.piece.benefit}}</s>{{/if}}</td>
           <td{{#if layer.piece.broken}} class="dbu-over"{{/if}}>{{layer.piece.bv}}</td>
           <td>+{{layer.piece.doff}}</td>
-          <td>{{#if layer.piece.counts}}<span class="dbu-worn-counts">Counts</span>{{else}}&mdash;{{/if}}</td>
+          <td>{{#if layer.piece.counts}}Counts{{else}}&mdash;{{/if}}</td>
           <td class="dbu-worn-qualities">{{layer.piece.qualities}}</td>
             {{else}}
             <td class="dbu-worn-name dbu-worn-empty">Nothing worn</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
