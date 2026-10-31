@@ -1,0 +1,27 @@
+id: surprise-tactics
+name: Surprise Tactics
+order: 3
+category: mind
+importance: secondary
+description: >
+  Quick and sneaky, your inherent tendencies, especially in groups, tend towards ambush tactics.
+text: >
+  Surprise Tactics (Mind): Quick and sneaky, your inherent tendencies, especially in groups, tend towards ambush tactics.
+  (1)-[Passive]: Gain 1 Skill Rank each in Acrobatics and Stealth.
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver against an Opponent, make a Skill Clash (Stealth vs Perception/Clairvoyance) against them. If you win, increase your Strike and Wound Rolls for that Attacking Maneuver by 1(T) and x(T) respectively – where x is equal to 1/2 of your Life Modifier.
+  (3)-[Triggered/Injured]: You may use the Grapple Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+skill.acrobatics.ranks += 1;
+skill.stealth.ranks += 1;
+# (2) Asked as an Attacking Maneuver at an Opponent is made, once a Round - a Skill Clash at each, the attack held till they are settled; won,
+# Strike 1(T) and Wound half your Life Modifier (T), rounded down, against them (chat.mjs surpriseClashes).
+allow surprise.clash;
+
+# (3) Knocked through the Injured Health Threshold: the Grapple out of sequence - chosen on the Threshold's card, never Automatic.
+[triggered/threshold, outOfSequence, effect 3]
+requires knockedThrough("injured");
+grappleStrike();

@@ -63,6 +63,34 @@ export function isTechniqueData(data) {
   return (data?.type === "maneuver") && ((data.system?.tags ?? []).includes("signature") || Boolean(data.system?.signature?.profile));
 }
 
+/**
+ * Seedling Biology (1)'s: "You gain access to ... the Saibaman Bomb and Acid Spit Signature Techniques (see - Signature Examples)" - built as
+ * listed, no Technique Points taken for them (the whole of them free).
+ */
+export const SAIBAMAN = Object.freeze([
+  { name: "Acid Spit", level: "super", foundation: "energy", profile: "blast",
+    features: [["sustained", 4], ["inaccurate", 2]] },
+  // "Energy (Explosion)" - the Clearing Profile's former name (the user's). Its listed 10(T), not the 9(T) the rules make of it, as High Power
+  // Rush's; "If this Character is a Minion, it may still use the Saibaman Bomb Signature Technique" (technique-use.mjs whyNotTechnique).
+  { name: "Saibaman Bomb", level: "ultimate", foundation: "energy", profile: "clearing", fixedKiPerTier: 10, minionUltimate: true,
+    features: [["final-chance", 1], ["power-shot", 3], ["grappling", 1], ["all-or-nothing", 1], ["self-explosion", 1], ["volatile-explosion", 1]] }
+]);
+
+/** The Technique Items a Trait's `grantsTechniques` names, given by its Item: Nameless Horde's 'Full Power' ones, the Saibamen's. */
+export function grantedTechniqueItems(set, grantedBy = "") {
+  if (set === "full-power") return fullPowerItems(grantedBy);
+  if (set !== "saibaman") return [];
+  return SAIBAMAN.map(entry => {
+    const signature = { level: entry.level, foundation: entry.foundation, profile: entry.profile, freeTP: 999,
+      fixedKiPerTier: Number(entry.fixedKiPerTier) || 0,
+      features: entry.features.map(([id, ranks, choice = ""]) => ({ id, ranks, choice })) };
+    return { name: entry.name, type: "maneuver", img: "icons/magic/lightning/bolt-strike-blue.webp",
+      flags: { [SCOPE]: { ...(grantedBy ? { grantedBy } : {}), ...(entry.minionUltimate ? { minionUltimate: true } : {}) } },
+      system: { type: "standard", attacking: true, requiresTarget: true, tags: ["signature"], signature,
+        script: composeTechniqueEffects(signature, "") } };
+  });
+}
+
 /** Whether an Item is one of them. */
 export function isFullPower(item) {
   return Boolean(item?.system?.signature?.fullPower);

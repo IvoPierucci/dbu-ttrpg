@@ -1,0 +1,40 @@
+id: seedling-biology
+name: Seedling Biology
+order: 1
+category: body
+importance: primary
+# (1) Acid Spit and Saibaman Bomb - its "Explosion" the Clearing Profile's former name (the user's) - made as it is added and gone with it, no
+# Technique Points taken; a Minion may still use the Bomb (full-power.mjs). The Unification Maneuver is the Unify Maneuver (its script).
+grantsTechniques: saibaman
+# (2) "your ARC will increase your Racial Life Modifier by up to 3 depending on the Soil Quality" - asked as it is added, `$choice`; changeable on
+# its Options tab.
+choose: list
+choices: 0, 1, 2, 3
+description: >
+  Grown from a seed, your strength is dependent on the nourishment you were able to draw from the soil you grew from.
+text: >
+  Seedling Biology (Body): Grown from a seed, your strength is dependent on the nourishment you were able to draw from the soil you grew from.
+  (1)-[Passive]: You gain access to the Unification Maneuver and the Saibaman Bomb and Acid Spit Signature Techniques (see – Signature Examples). If this Character is a Minion, it may still use the Saibaman Bomb Signature Technique.
+  (2)-[Passive]: At Character Creation, your ARC will increase your Racial Life Modifier by up to 3 depending on the Soil Quality you originate from – the higher the quality, the higher the Racial Life Modifier increases.
+  (3)-[Passive]: Increase your Defense Value by 1(T). Increase this bonus by 1(T) while your Racial Life Modifier is 3+, or by 2(T) if your Racial Life Modifier is 7+.
+  (4)-[Triggered/Start of Turn]: Regain Life Points equal to x(bT) – where x is equal to your Racial Life Modifier (max. 7(bT)).
+
+---
+
+[passive]
+# (1)
+allow maneuver.unify;
+# (2) The Soil Quality's, as the ARC said it.
+racialLifeModifier += $choice;
+# (3) The Racial Life Modifier as it stands - whole before this is read (actor-character.mjs).
+defenseValue += 1(T);
+if (racialLifeModifier >= 3 && racialLifeModifier < 7) {
+    defenseValue += 1(T);
+}
+if (racialLifeModifier >= 7) {
+    defenseValue += 2(T);
+}
+
+# (4) Your turn begins: Life Points by your Racial Life Modifier, 7 at most, each (bT). Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 4]
+life.value += min(max(racialLifeModifier, 0), 7) * 1(bT);

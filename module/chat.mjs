@@ -905,6 +905,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.stealthStrike && clash.result && !clash.stealthStrike.applied) {
     await settleStealthStrike(message, clash);
   }
+  if (clash.surprise && clash.result && !clash.surprise.applied) await settleSurprise(message, clash);
 
   if (clash.searchMark && clash.result && !clash.searchMark.applied) {
     await settleSearchMark(message, clash);
@@ -16324,6 +16325,65 @@ async function stealthStrikeClashes(card, actor) {
   }
 }
 
+/**
+ * Surprise Tactics (2): "[Triggered, 1/Round]: When making an Attacking Maneuver against an Opponent, make a Skill Clash (Stealth vs
+ * Perception/Clairvoyance) against them. If you win, increase your Strike and Wound Rolls for that Attacking Maneuver by 1(T) and x(T)
+ * respectively - where x is equal to 1/2 of your Life Modifier." Asked as the attack is made, once a Round: a Clash at each Opponent it is aimed
+ * at, the attack held till they are settled - with Stealth Strike's, if both (`stealthHold`); won, the two on its rolls against them
+ * (surpriseParts).
+ */
+async function surpriseClashes(card, actor) {
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || (actor?.system?.effects?.slots?.["surprise.clash"] !== true) || (actor.getFlag?.(SCOPE, "surpriseRound") === roundKey())) return;
+  const aimed = attackTargets(attack).map(entry => fromUuidSync(entry.uuid))
+    .filter(other => other && (other.uuid !== actor.uuid) && areOpponents(other, actor));
+  if (!aimed.length) return;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Surprise Tactics` },
+    content: `<p data-tooltip="Won: Strike 1(T), Wound half your Life Modifier (T), against them. Once a Round.">A Skill Clash (Stealth vs
+      Perception/Clairvoyance) at ${Handlebars.escapeExpression(aimed.map(other => other.name).join(", "))}?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return;
+  await actor.setFlag(SCOPE, "surpriseRound", roundKey());
+  const now = card.getFlag(SCOPE, ATTACK_FLAG);
+  const held = now?.stealthHold?.pending ? (Number(now.stealthHold.left) || 0) : 0;
+  await requestEdit(card, { type: "attack", attack: { ...now,
+    stealthHold: { pending: true, left: held + aimed.length, name: held ? now.stealthHold.name : "Surprise Tactics" } } });
+  for (const other of aimed) {
+    await postSkillClash(actor, other, { name: "Surprise Tactics", type: "outOfSequence",
+      clash: { skill: "stealth", defenderSkills: ["perception", "clairvoyance"] } }, { surprise: { applied: false, attackMessageId: card.id } });
+  }
+}
+
+/** Surprise Tactics (2), settled: won, the Strike and the Wound against them kept on the attack; the last Clash held, the attack let go. */
+async function settleSurprise(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, surprise: { ...clash.surprise, applied: true } });
+  const attacker = fromUuidSync(clash.challengerUuid);
+  const card = game.messages.get(clash.surprise.attackMessageId ?? "");
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack) return;
+  let next = attack;
+  if (attacker && (whoWonClash(clash.result) === "challenger") && !attack.result) {
+    const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
+    const half = Math.floor(Math.max(0, Number(attacker.system.racialLifeModifier) || 0) / 2);
+    next = { ...attack, surpriseBy: [...(attack.surpriseBy ?? []).filter(entry => entry.uuid !== clash.defenderUuid),
+      { uuid: clash.defenderUuid, strike: tier, wound: half * tier, half }] };
+    await settledNote(message, `Surprise Tactics: Strike +1(T), Wound +${half}(T) against ${clash.defenderName}.`);
+  }
+  else await settledNote(message, `${clash.defenderName} sees it coming.`);
+  const left = Math.max(0, (Number(next.stealthHold?.left) || 1) - 1);
+  next = { ...next, stealthHold: { ...next.stealthHold, left, pending: left > 0 } };
+  return left ? requestEdit(card, { type: "attack", attack: next }) : settleAttack(card, next);
+}
+
+/** Surprise Tactics (2)'s, against the one the Clash was won against. */
+function surpriseParts(attack, target, roll) {
+  const won = (attack?.surpriseBy ?? []).find(entry => entry.uuid === target?.uuid);
+  if (!won || !(Number(won[roll]) || 0)) return [];
+  return [{ label: "Surprise Tactics", written: (roll === "strike") ? "+1(T)" : `+${won.half}(T)`, value: Number(won[roll]) }];
+}
+
 /** Stealth Strike (2), settled: won, Hidden from them for the attack; the last of its Clashes, the attack let go. */
 async function settleStealthStrike(message, clash) {
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, stealthStrike: { ...clash.stealthStrike, applied: true } });
@@ -16727,6 +16787,47 @@ export async function starsAnswer(actor, context = {}) {
     ui.notifications.warn(`${actor.name}: From the Stars - no Opponent to target.`);
     return UNSPENT;
   }
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "basic-attack"));
+  const basic = own ? definitionOf(own) : getManeuver("basic-attack");
+  return (basic && await useManeuver(actor, basic, { outOfSequence: true, targetUuid: target.uuid })) ? undefined : UNSPENT;
+}
+
+/**
+ * Desperate Grip (3): "If you end the Combat Round in a Grapple as the Grappler, you may use the Signature Technique Maneuver as an
+ * Out-of-Sequence Maneuver. If you do, you must use the Saibaman Bomb Signature Technique for its effects." The Bomb Seedling Biology gave -
+ * or one of that name. Unspent without it.
+ */
+export async function gripBomb(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const items = Array.from(actor?.items ?? []).filter(item => item.type === "maneuver");
+  const bomb = items.find(item => item.flags?.[SCOPE]?.minionUltimate === true) ?? items.find(item => item.name === "Saibaman Bomb");
+  if (!bomb) {
+    ui.notifications.warn(`${actor?.name}: Desperate Grip - no Saibaman Bomb Signature Technique.`);
+    return UNSPENT;
+  }
+  const { useTechnique } = await import("./use-maneuver.mjs");
+  return (await useTechnique(actor, bomb.id, { outOfSequence: true })) ? undefined : UNSPENT;
+}
+
+/** Surprise Tactics (3): "[Triggered/Injured]: You may use the Grapple Maneuver as an Out-of-Sequence Maneuver." Unspent where none is made. */
+export async function grappleStrike(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  return (await ownOutOfSequence(actor, "grapple")) ? undefined : UNSPENT;
+}
+
+/**
+ * Savagery (2): "[Triggered/Start of Combat Round]: Make a Basic Attack Maneuver against the closest Opponent as an Out-of-Sequence Maneuver."
+ * The nearest - asked among ties. Unspent with none.
+ */
+export async function nearestStrike(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { nearestOpponents } = await import("./guidance.mjs");
+  const nearest = nearestOpponents(actor);
+  const picked = (nearest.length > 1) ? await askPlayerChoice(actor, `${actor.name}: the closest Opponent`,
+    nearest.map(each => ({ value: each.uuid, label: each.name }))) : nearest[0]?.uuid;
+  const target = nearest.find(each => each.uuid === picked);
+  if (!target) return UNSPENT;
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
   const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "basic-attack"));
   const basic = own ? definitionOf(own) : getManeuver("basic-attack");
@@ -27262,6 +27363,7 @@ export async function postAttack(actor, target, maneuver,
   }
   // Stealth Strike (2): its Clash at each it is aimed at, the attack held till they are settled.
   if (card && !reflecting) await stealthStrikeClashes(card, actor);
+  if (card && !reflecting) await surpriseClashes(card, actor);
   // Yoink (3): at the one Snatched from this turn - Guard Down for this attack.
   if (card && !reflecting) await yoinkGuardAttack(card, actor);
   // Experienced Fighter (1): this Round's attacks, one with a Ki Wager or more than 1 Energy Charge marked.
@@ -28928,7 +29030,7 @@ async function resolveAttackWork(message, attack) {
     // and what it is worth against each of them is not the same number.
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
-      ...brigandParts(attacker, target, "strike"), ...flankerParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
+      ...brigandParts(attacker, target, "strike"), ...flankerParts(attacker, target, "strike"), ...surpriseParts(attack, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
       ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target),
       ...smallerParts(attacker, target), ...analyticParts(attacker, target, "strike"), ...obliviousParts(attacker, target),
       ...hiddenRollParts(attacker, target),
@@ -31143,7 +31245,7 @@ async function rollAttackWoundWork(message, attack) {
       ...refinedParts(attacker, target),
       ...dragonLikeParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
-      ...metalParts(attack, target),
+      ...metalParts(attack, target), ...surpriseParts(attack, target, "wound"),
       { label: "Tai Chi Expert", value: (taiChiWound && !alliesOnScene(attacker).some(ally => ally.uuid === target.uuid))
         ? Math.ceil(Math.max(0, Number(target.system?.might) || 0) / 4) : 0 },
       { label: attack.technique?.name ?? "Technique",

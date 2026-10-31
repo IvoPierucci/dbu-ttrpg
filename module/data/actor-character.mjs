@@ -2153,6 +2153,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     runPhase(this, "tier");
     // And held at 0 past what an effect adds to it.
     for (const key of zeroScores) atts[key].score = 0;
+    // The Racial Life Modifier with what effects do to it - a Tier-phase Slot - settled here, so whatever reads it reads it whole ("while your
+    // Racial Life Modifier is 3+", Seedling Biology's); its floor, which a Core-phase effect may lift, where the Life Points are worked out.
+    this.racialLifeModifier = withEffects(this, "racialLifeModifier", this.racialLifeModifier, { min: null });
+    // And what is gained "for the remainder of the Combat Encounter (this does not retroactively increase your Life Points)" - Savagery's (3),
+    // (4), a Resource; Recolored Saibaman's while below Injured: counted for whatever reads it, not for the Maximum Life Points.
+    this.lifeModifierGained = (Number(this.resources?.lifemodifier?.stacks) || 0) + slot(this, "lifeModifier.gained");
+    this.racialLifeModifier += this.lifeModifierGained;
 
     // Base Tier of Power follows from Power Level alone: 1 for Levels 1-4, then one
     // more per five Levels, reaching 7 at Level 30.
@@ -2446,13 +2453,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // "If any effect changes your Racial Life Modifier, it applies retroactively" - it is counted for every Power Level.
     // Undead Survival (1): "this can allow your Racial Life Modifier to become negative".
-    this.racialLifeModifier = withEffects(this, "racialLifeModifier", this.racialLifeModifier,
-      { min: (this.effects?.slots?.["racialLife.mayGoNegative"] === true) ? null : 0 });
+    if (this.effects?.slots?.["racialLife.mayGoNegative"] !== true) this.racialLifeModifier = Math.max(0, this.racialLifeModifier);
 
     this.life.max = DBUCharacterData.maxLife({
       powerLevel: this.powerLevel,
       tenacityScore: atts.tenacity.score,
-      racialLifeModifier: this.racialLifeModifier,
+      // Without what was gained not retroactively.
+      racialLifeModifier: this.racialLifeModifier - (Number(this.lifeModifierGained) || 0),
       lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel")
     });
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));

@@ -1,0 +1,47 @@
+id: savagery
+name: Savagery
+order: 2
+category: mind
+importance: primary
+# (3), (4) The Life Modifier gained "for the remainder of the Combat Encounter (this does not retroactively increase your Life Points)" - a
+# Resource, lost with the Encounter as every Resource is; counted in the Racial Life Modifier for what reads it, not in the Maximum Life Points
+# (actor-character.mjs).
+resource: lifemodifier
+resourceLabel: Life Modifier (gained)
+resourceMax: 99
+description: >
+  Nearly mindless and certainly aggressive, you respect only the strongest and attempt to trample anything else in your path.
+text: >
+  Savagery (Mind): Nearly mindless and certainly aggressive, you respect only the strongest and attempt to trample anything else in your path.
+  (1)-[Passive]: While not wearing any Apparel, increase your Defense Value and Soak Value by 1(bT).
+  (2)-[Triggered/Start of Combat Round]: Make a Basic Attack Maneuver against the closest Opponent as an Out-of-Sequence Maneuver.
+  (3)-[Triggered, 1/Round]: If you Defeat an Opponent, increase your Life Modifier by 1 for the remainder of the Combat Encounter (this does not retroactively increase your Life Points).
+  (4)-[Triggered/Power, 1/Encounter]: Increase your Life Modifier by 1 for each Health Threshold you are below (this does not retroactively increase your Life Points). As a Minion, instead increase your Life Modifier by 2 if you are below the Injured Health Threshold.
+
+---
+
+[passive]
+# (1)
+if (wearingNoApparel) {
+    defenseValue += 1(bT);
+    soakValue += 1(bT);
+}
+
+# (2) The Combat Round begins: the Basic Attack out of sequence at the closest Opponent (chat.mjs nearestStrike) - chosen on its card, never
+# Automatic.
+[triggered/start-of-round, outOfSequence, effect 2]
+nearestStrike();
+
+# (3) An Opponent Defeated by your Attacking Maneuver: the Life Modifier 1 higher for the Encounter. Automatic by default, its
+# Triggered/Automatic button.
+[triggered/defeat-opponent, 1/round, effect 3]
+lifemodifier.stacks += 1;
+
+# (4) The Power Up used: 1 for each Health Threshold you are below - a Minion, 2 below Injured instead. Ticked in its window.
+[triggered/power, 1/encounter, effect 4]
+requires !isMinion && (threshold.depth > 0);
+lifemodifier.stacks += threshold.depth;
+
+[triggered/power, 1/encounter, effect 4]
+requires isMinion && belowThreshold("injured");
+lifemodifier.stacks += 2;

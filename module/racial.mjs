@@ -63,7 +63,7 @@
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { isCharacter } from "./actor-types.mjs";
 import { getRace, isMinionRace, subraceName } from "./races.mjs";
-import { fullPowerItems, isTechniqueData, whyNoNewTechnique } from "./full-power.mjs";
+import { grantedTechniqueItems, isTechniqueData, whyNoNewTechnique } from "./full-power.mjs";
 import { traitAside } from "./aside.mjs";
 
 /** The Item type a Racial Trait is. */
@@ -908,7 +908,9 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   // becomes Integrated while you possess this Bestial Trait" - on the Gear tab, gone with it.
   if (trait.grantsWeapon) await grantWeapon(actor, item, trait);
   // Nameless Horde (4): "You have access to the 'Full Power' Signature Techniques" - on the Techniques list, gone with it.
-  if (String(trait.grantsTechniques ?? "") === "full-power") await actor.createEmbeddedDocuments("Item", fullPowerItems(item.id));
+  // Seedling Biology (1): the Saibamen's Signature Techniques, the same way.
+  const techniques = grantedTechniqueItems(String(trait.grantsTechniques ?? ""), item.id);
+  if (techniques.length) await actor.createEmbeddedDocuments("Item", techniques);
   // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
   // And a Quality on it in no Slot - Sturdy Shell's Dense Armor, Treacherous Spikes' Spiked.

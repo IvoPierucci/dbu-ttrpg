@@ -490,6 +490,18 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
   },
+  gripBomb: {
+    args: [0, 0],
+    doc: "Desperate Grip (3): the Signature Technique Maneuver out of sequence - the Saibaman Bomb (chat.mjs gripBomb)."
+  },
+  grappleStrike: {
+    args: [0, 0],
+    doc: "Surprise Tactics (3): the Grapple Maneuver out of sequence (chat.mjs grappleStrike)."
+  },
+  nearestStrike: {
+    args: [0, 0],
+    doc: "Savagery (2): the Basic Attack out of sequence at the closest Opponent, asked among ties (chat.mjs nearestStrike)."
+  },
   guardRobot: {
     args: [0, 0],
     doc: "Guard Robot: a Might Clash with an Opponent - won, Compelled at you (chat.mjs guardRobot)."
