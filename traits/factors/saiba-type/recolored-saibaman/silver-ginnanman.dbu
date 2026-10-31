@@ -1,0 +1,15 @@
+id: silver-ginnanman
+name: Silver Ginnanman
+order: 7
+optionOf: recolored-saibaman
+optionEffect: 3
+description: >
+  Select an Ally. They may use a Ki Surge as an Out-of-Sequence Maneuver. Increase the amount of Ki Points they regain by 2x(bT), where x is equal to your Racial Life Modifier.
+text: >
+  Silver Ginnanman [Triggered/Defeated]: Select an Ally. They may use a Ki Surge as an Out-of-Sequence Maneuver. Increase the amount of Ki Points they regain by 2x(bT), where x is equal to your Racial Life Modifier.
+
+---
+
+# Chosen on the Defeated card: an Ally, asked - their Ki Surge, if they take it, and 2x(bT) more Ki (chat.mjs recoloredSurge).
+[triggered/defeated, outOfSequence, effect 3]
+recoloredSurge(ki);

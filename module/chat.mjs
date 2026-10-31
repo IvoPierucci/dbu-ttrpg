@@ -16794,6 +16794,27 @@ export async function starsAnswer(actor, context = {}) {
 }
 
 /**
+ * Gold Kinkanman, Silver Ginnanman (Recolored Saibaman): "[Triggered/Defeated]: Select an Ally. They may use a Healing [Ki] Surge as an
+ * Out-of-Sequence Maneuver. Increase the amount of Life [Ki] Points they regain by 2x(bT), where x is equal to your Racial Life Modifier."
+ * Which Ally, asked; then whether they take it, asked of them - the Surge, and that much more after it.
+ */
+export async function recoloredSurge(actor, kind = "healing") {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = alliesOnScene(actor).filter(ally => (ally.uuid !== actor.uuid) && !ally.system?.defeated);
+  if (!allies.length) return UNSPENT;
+  const name = (kind === "ki") ? "Silver Ginnanman" : "Gold Kinkanman";
+  const picked = await askPlayerChoice(actor, `${actor.name}: ${name} - an Ally`,
+    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const ally = allies.find(each => each.uuid === picked);
+  if (!ally) return UNSPENT;
+  const more = 2 * Math.max(0, Number(actor.system.racialLifeModifier) || 0) * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  if ((await askPlayerChoice(ally, `${ally.name}: ${name} (${actor.name})`,
+    [{ value: "yes", label: `A ${(kind === "ki") ? "Ki" : "Healing"} Surge out of sequence - ${more} more` }, { value: "no", label: "No" }])) !== "yes") return;
+  await takeSurge(ally, { source: name, kind });
+  if (more) await regainPools(ally, (kind === "ki") ? 0 : more, (kind === "ki") ? more : 0);
+}
+
+/**
  * Desperate Grip (3): "If you end the Combat Round in a Grapple as the Grappler, you may use the Signature Technique Maneuver as an
  * Out-of-Sequence Maneuver. If you do, you must use the Saibaman Bomb Signature Technique for its effects." The Bomb Seedling Biology gave -
  * or one of that name. Unspent without it.
@@ -30459,14 +30480,16 @@ function woundBase(attacker, attack) {
   const own = attack.damageAttribute;
   const attribute = DBUCharacterData.FOUNDATIONS[attack.foundation]?.attribute;
   const theirs = attacker.system.attributes?.[attribute]?.mod ?? 0;
+  // Saibabrute (3): the Damage Attribute of a Physical or Energy Attack raised - whichever stands (`damageAttribute.<foundation>`).
+  const raised = Number(attacker?.system?.effects?.slots?.[`damageAttribute.${attack?.foundation}`]?.add) || 0;
   // Low-Power Crush: "Halve your Damage Attribute for this Attacking Maneuver" - whichever stands.
   if (attack.technique?.halfDamageAttribute) {
-    const whole = own ? (Number(own.value) || 0) : theirs;
+    const whole = (own ? (Number(own.value) || 0) : theirs) + raised;
     const named = own ? own.label : `${attribute?.charAt(0).toUpperCase() ?? ""}${attribute?.slice(1) ?? ""}`;
     return { label: `Wound (1/2 ${named})`, value: wound - theirs + Math.floor(whole / 2) };
   }
-  if (!own) return { label: "Wound", value: wound };
-  return { label: `Wound (${own.label})`, value: wound - theirs + (Number(own.value) || 0) };
+  if (!own) return raised ? { label: "Wound (Damage Attribute raised)", value: wound + raised } : { label: "Wound", value: wound };
+  return { label: `Wound (${own.label})`, value: wound - theirs + (Number(own.value) || 0) + raised };
 }
 
 function profileWoundParts(attacker, attack) {
@@ -30479,8 +30502,10 @@ function profileWoundParts(attacker, attack) {
   if (profile?.extraDamageAttribute || attack.technique?.extraDamageAttribute) {
     const foundation = DBUCharacterData.FOUNDATIONS[attack.foundation];
     const own = attack.damageAttribute;
-    const modifier = own ? (Number(own.value) || 0)
-      : (attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0);
+    const modifier = (own ? (Number(own.value) || 0)
+      : (attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0))
+      // Saibabrute (3)'s, raised.
+      + (Number(attacker.system.effects?.slots?.[`damageAttribute.${attack.foundation}`]?.add) || 0);
     const said = own ? own.label : foundation.label;
     const source = profile?.extraDamageAttribute ? profile.label : "Complete Annihilation";
     if (modifier) parts.push({ label: `${source} (${said})`, value: modifier });
@@ -35398,6 +35423,8 @@ async function heartOfGlassFail(actor) {
  * whose Checks these were, where known.
  */
 async function steadfastFailed(actor, failed = []) {
+  // Copy Being: "you stop being a Copy if you ... fail a Steadfast Check" (its mark, Copyman's).
+  if ((Number(actor.system.conditions?.["being-a-copy"]) || 0) > 0) await (await import("./conditions.mjs")).setCondition(actor, "being-a-copy", 0);
   // Fight or Flight (2): "If you fail, you gain the Shaken Combat Condition against the nearest Opponent until the end of your next turn" -
   // a Health Threshold's Check.
   if ((actor.system.effects?.slots?.["fightOrFlight.steadfast"] === true) && failed.length) await fightOrFlightShaken(actor, failed);

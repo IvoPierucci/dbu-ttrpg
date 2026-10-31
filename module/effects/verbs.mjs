@@ -490,6 +490,11 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
   },
+  recoloredSurge: {
+    args: [0, 1],
+    names: [0],
+    doc: "Gold Kinkanman (healing), Silver Ginnanman (ki): an Ally's Surge out of sequence, 2x(bT) more (chat.mjs recoloredSurge)."
+  },
   gripBomb: {
     args: [0, 0],
     doc: "Desperate Grip (3): the Signature Technique Maneuver out of sequence - the Saibaman Bomb (chat.mjs gripBomb)."

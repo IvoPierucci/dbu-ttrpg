@@ -1,0 +1,16 @@
+id: white-jinkouman
+name: White Jinkouman
+order: 5
+optionOf: recolored-saibaman
+optionEffect: 3
+description: >
+  While your Racial Life Modifier is 3+, increase your Awareness by 1(T).
+text: >
+  White Jinkouman [Passive]: While your Racial Life Modifier is 3+, increase your Awareness by 1(T).
+
+---
+
+[passive]
+if (racialLifeModifier >= 3) {
+    awareness += 1(T);
+}

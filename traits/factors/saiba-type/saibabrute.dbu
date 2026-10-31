@@ -1,0 +1,30 @@
+id: saibabrute
+name: Saibabrute
+order: 3
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, as it names no Primary one to replace.
+importance: secondary
+race: saibaman
+# (2) "You gain the Muscular Warrior Talent" - kept if it is lost, as a Racial Trait's Talent is.
+grantsTalent: muscular-warrior
+description: >
+  You are a hulking giant of a Saibaman, able to hurt your enemies with far greater ease than any before you.
+text: >
+  Saibabrute (Body): You are a hulking giant of a Saibaman, able to hurt your enemies with far greater ease than any before you.
+  (1)-[Passive]: Your base Size Category is Large.
+  (2)-[Passive]: You gain the Muscular Warrior Talent.
+  (3)-[Passive]: Increase your Damage Attribute for Physical and Energy Attacks by x(bT), where x is equal to 1/2 of your Racial Life Modifier. For this effect, x cannot exceed 3.
+  (4)-[Passive]: While your Racial Life Modifier is 3+, increase the Dice Score of your Steadfast Checks by 1.
+
+---
+
+[passive]
+# (1)
+allow size.base.large;
+# (3) Half the Racial Life Modifier, rounded down, 3 at most - on the Damage Attribute wherever it is applied (chat.mjs woundBase).
+damageAttribute.physical += min(floor(max(racialLifeModifier, 0) / 2), 3) * 1(bT);
+damageAttribute.energy += min(floor(max(racialLifeModifier, 0) / 2), 3) * 1(bT);
+# (4)
+if (racialLifeModifier >= 3) {
+    steadfast.dice += 1;
+}

@@ -255,7 +255,7 @@ const READ_OFF_OTHERS = new Set(["conduit-of-spirit", "synchronized-combatants",
   "difference-in-shell", "caste-combat", "afterlife-officials", "skilled-ogre"]);
 // Attendant's Focus (2): what it gives is read by everyone else - so with one on the scene, everyone is read again.
 const READ_BY_OTHERS = new Set(["attendants-focus", "way-of-the-champion", "feline-rally", "kindhearted-saiyan", "life-among-the-dead",
-  "bureaucratic-beatdown", "purpose"]);
+  "bureaucratic-beatdown", "purpose", "recolored-saibaman"]);
 function conduitRefresh() {
   const actors = new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor));
   const everyone = [...actors].some(actor => Array.from(actor?.items ?? []).some(item => READ_BY_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)));

@@ -1,0 +1,25 @@
+id: copyman
+name: Copyman
+order: 2
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, as it names no Primary one to replace.
+importance: secondary
+race: saibaman
+# (1) "You gain access to the Copy Being Unique Ability" - free, without its Requirements, gone with it.
+grantsUnique: copy-being
+description: >
+  You are able to perfectly mimic another being, using their own abilities against them.
+text: >
+  Copyman (Body): You are able to perfectly mimic another being, using their own abilities against them.
+  (1)-[Passive]: You gain access to the Copy Being Unique Ability, but reduce your Racial Life Modifier by 1.
+  (2)-[Passive]: While you are not a Copy, increase your Racial Life Modifier by 2 (this does not retroactively increase your Life Points).
+
+---
+
+[passive]
+# (1)
+racialLifeModifier -= 1;
+# (2) Not a Copy - Copy Being's mark (Being a Copy) - 2 for what reads the Racial Life Modifier, not for the Maximum Life Points.
+if (!hasCondition("being-a-copy")) {
+    lifeModifier.gained += 2;
+}

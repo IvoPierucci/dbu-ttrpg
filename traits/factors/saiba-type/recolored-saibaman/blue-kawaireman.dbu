@@ -1,0 +1,16 @@
+id: blue-kawaireman
+name: Blue Kawaireman
+order: 2
+optionOf: recolored-saibaman
+optionEffect: 3
+description: >
+  While your Racial Life Modifier is 3+, increase your Defense Value by 1(T).
+text: >
+  Blue Kawaireman [Passive]: While your Racial Life Modifier is 3+, increase your Defense Value by 1(T).
+
+---
+
+[passive]
+if (racialLifeModifier >= 3) {
+    defenseValue += 1(T);
+}

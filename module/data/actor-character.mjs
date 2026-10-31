@@ -2112,9 +2112,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       miniMinions: this.minion ? (Number(this.parent?.getFlag?.("dbu-ttrpg", "miniMinions")) || 0) : 0,
       // Friend Robot (Purpose): "All Allies within a Large Sphere AoE (centered on you) have their Combat Rolls increased by 1(T) while you
       // possess 2+ stacks of Power" - an Ally's, within 3 Squares of them; the best Tier of those.
+      // Pink Tennenman (Recolored Saibaman): an adjacent Ally's, Racial Life Modifier 3+ - "This effect does not stack", the best of them.
       allyRolls: (() => {
         const friends = this.parent ? alliesWithin(this.parent, "purpose.friend", 3) : [];
-        return friends.length ? Math.max(1, bestTier(friends)) : 0;
+        const pinks = this.parent ? alliesWithin(this.parent, "recolored.pink", 0) : [];
+        return (friends.length ? Math.max(1, bestTier(friends)) : 0) + (pinks.length ? Math.max(1, bestTier(pinks)) : 0);
       })(),
       skills: DBUCharacterData.SKILLS
     });

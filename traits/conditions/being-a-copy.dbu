@@ -1,0 +1,14 @@
+id: being-a-copy
+name: Being a Copy
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Copy Being's Copy, while it lasts - set as Copy Being is used, gone with a Defeat, the Combat Encounter's end or a
+# failed Steadfast Check; taken off by hand for its Instant Maneuver. The copying itself is the table's (Copyman's "While you are not a Copy").
+combatCondition: no
+source: Core Rule
+description: >
+  Being a Copy: Copy Being's - you are a Copy of another Character.
+text: >
+  Copy Being: You can only use Copy Being once per Combat Encounter, and you stop being a Copy if you are Defeated, the Combat Encounter ends, or if you fail a Steadfast Check. You can also stop being a Copy as an Instant Maneuver.
+
+---

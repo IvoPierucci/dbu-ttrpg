@@ -1,0 +1,17 @@
+id: pink-tennenman
+name: Pink Tennenman
+order: 4
+optionOf: recolored-saibaman
+optionEffect: 3
+description: >
+  While your Racial Life Modifier is 3+, increase the Combat Rolls of your adjacent Allies by 1(T). This effect does not stack if multiple Characters with this effect are adjacent to you.
+text: >
+  Pink Tennenman [Passive]: While your Racial Life Modifier is 3+, increase the Combat Rolls of your adjacent Allies by 1(T). This effect does not stack if multiple Characters with this effect are adjacent to you.
+
+---
+
+# Read by each adjacent Ally as they are prepared - the best of those (actor-character.mjs; registry.mjs ally-rolls).
+[passive]
+if (racialLifeModifier >= 3) {
+    allow recolored.pink;
+}

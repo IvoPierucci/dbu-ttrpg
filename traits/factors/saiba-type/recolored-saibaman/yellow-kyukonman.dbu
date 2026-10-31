@@ -1,0 +1,16 @@
+id: yellow-kyukonman
+name: Yellow Kyukonman
+order: 3
+optionOf: recolored-saibaman
+optionEffect: 3
+description: >
+  While your Racial Life Modifier is 3+, increase your Soak Value by 2(T).
+text: >
+  Yellow Kyukonman [Passive]: While your Racial Life Modifier is 3+, increase your Soak Value by 2(T).
+
+---
+
+[passive]
+if (racialLifeModifier >= 3) {
+    soakValue += 2(T);
+}

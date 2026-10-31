@@ -1,0 +1,10 @@
+id: saiba-type
+name: Saiba-Type
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Traits: Recolored Saibaman 1,
+# Copyman 2, Saibabrute 3.
+requirement: >
+  Saibamen
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Engineered, adapted, or grown in unusual soil, you’ve become unusual in some way compared to your Saiba-brethren.

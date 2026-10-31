@@ -965,6 +965,8 @@ export async function endEncounterFor(actor) {
   await encounterEnded(actor);
   // "At the end of each Combat Encounter, your Natural Armor is fully repaired."
   await (await import("./natural-armor.mjs")).repairNaturalArmor(actor);
+  // Copy Being: "you stop being a Copy if ... the Combat Encounter ends".
+  if ((Number(actor.system.conditions?.["being-a-copy"]) || 0) > 0) await (await import("./conditions.mjs")).setCondition(actor, "being-a-copy", 0);
   // A Frozen Turn still open - its last attack never finished: time runs again with the Encounter's end.
   if (actor.getFlag?.("dbu-ttrpg", "frozenTurn")) await (await import("./chat.mjs")).endFrozenTurn(actor);
   // Quick Learner: "At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access
@@ -1412,6 +1414,8 @@ export async function beginDefeat(actor, { silenced = false, knockedBy = "" } = 
       // Duplicated Items: a Duplicate's Apparel, Accessories and Weapons destroyed with its Defeat.
       await (await import("./minion-make.mjs")).destroyDuplicatedItems(actor);
       await fireMoment(actor, "defeat-resolved");
+      // Copy Being: "you stop being a Copy if you are Defeated".
+      if ((Number(actor.system.conditions?.["being-a-copy"]) || 0) > 0) await (await import("./conditions.mjs")).setCondition(actor, "being-a-copy", 0);
       // Petrification's Slowed, from this character's uses of it, gone with their Defeat.
       const { petrifierDefeated, endShapeshift } = await import("./chat.mjs");
       await petrifierDefeated(actor);

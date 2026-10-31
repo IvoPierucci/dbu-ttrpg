@@ -1,0 +1,15 @@
+id: gold-kinkanman
+name: Gold Kinkanman
+order: 6
+optionOf: recolored-saibaman
+optionEffect: 3
+description: >
+  Select an Ally. They may use a Healing Surge as an Out-of-Sequence Maneuver. Increase the amount of Life Points they regain by 2x(bT), where x is equal to your Racial Life Modifier.
+text: >
+  Gold Kinkanman [Triggered/Defeated]: Select an Ally. They may use a Healing Surge as an Out-of-Sequence Maneuver. Increase the amount of Life Points they regain by 2x(bT), where x is equal to your Racial Life Modifier.
+
+---
+
+# Chosen on the Defeated card: an Ally, asked - their Healing Surge, if they take it, and 2x(bT) more Life (chat.mjs recoloredSurge).
+[triggered/defeated, outOfSequence, effect 3]
+recoloredSurge(healing);

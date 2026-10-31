@@ -1,0 +1,35 @@
+id: recolored-saibaman
+name: Recolored Saibaman
+order: 1
+category: body
+# "[Surprise Tactics]": it replaces that Secondary Racial Trait.
+importance: secondary
+race: saibaman
+optionEffect: 3
+description: >
+  Instead of the typical green of a Saibaman, you sport a fancy new palette swap.
+text: >
+  Recolored Saibaman (Body) [Surprise Tactics]: Instead of the typical green of a Saibaman, you sport a fancy new palette swap.
+  (1)-[Passive]: Increase your Racial Life Modifier by 1 while you are below the Injured Health Threshold (this does not retroactively increase your Life Points).
+  (2)-[Passive]: Increase the Wound Rolls of your Signature Techniques by x(T), where x is equal to 1/2 of your Racial Life Modifier (min. 1).
+  (3)-[Option]: Upon gaining this Factor Trait, select and gain access to one of the following effects:
+
+  * Red Pepperman [Passive]: While your Racial Life Modifier is 3+, increase your Wound Rolls and Might by 2(T) and 1(T) respectively.
+  * Blue Kawaireman [Passive]: While your Racial Life Modifier is 3+, increase your Defense Value by 1(T).
+  * Yellow Kyukonman [Passive]: While your Racial Life Modifier is 3+, increase your Soak Value by 2(T).
+  * Pink Tennenman [Passive]: While your Racial Life Modifier is 3+, increase the Combat Rolls of your adjacent Allies by 1(T). This effect does not stack if multiple Characters with this effect are adjacent to you.
+  * White Jinkouman [Passive]: While your Racial Life Modifier is 3+, increase your Awareness by 1(T).
+  * Gold Kinkanman [Triggered/Defeated]: Select an Ally. They may use a Healing Surge as an Out-of-Sequence Maneuver. Increase the amount of Life Points they regain by 2x(bT), where x is equal to your Racial Life Modifier.
+  * Silver Ginnanman [Triggered/Defeated]: Select an Ally. They may use a Ki Surge as an Out-of-Sequence Maneuver. Increase the amount of Ki Points they regain by 2x(bT), where x is equal to your Racial Life Modifier.
+
+---
+
+[passive]
+# (1) Injured or worse: 1 for what reads the Racial Life Modifier, not for the Maximum Life Points (actor-character.mjs).
+if (belowThreshold("injured")) {
+    lifeModifier.gained += 1;
+}
+# (2) Half the Racial Life Modifier, rounded down - 1 at least.
+wound.signature += max(floor(racialLifeModifier / 2), 1) * 1(T);
+
+# (3) Its Option, chosen as it is added - each a file beside it.

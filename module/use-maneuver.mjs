@@ -6992,6 +6992,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && (maneuver.id === "switch-to-a-hero-second-effect")) (await import("./chat.mjs")).heroTransformOffer(card, actor);
   // Protector of the Dragon Ball (2): whom, asked - the Dragon Ball offered on its card.
   if (card && (maneuver.id === "protector-second-effect")) await (await import("./chat.mjs")).tamagamiOffer(card, actor);
+  // Copy Being used: a Copy now - its mark, till Defeated, the Encounter's end or a Steadfast Check failed, or taken off by hand (Copyman's
+  // "While you are not a Copy").
+  if (actor.items?.get?.(maneuver.itemId ?? "")?.system?.unique?.libraryId === "copy-being") {
+    await (await import("./conditions.mjs")).setCondition(actor, "being-a-copy", 1);
+  }
   // Mimicry Program (2): Copy Being used - "you must select a Cyber Copy you possess for its effects".
   if ((actor.system.effects?.slots?.["mimicry.copyAny"] === true)
     && (actor.items?.get?.(maneuver.itemId ?? "")?.system?.unique?.libraryId === "copy-being")) (await import("./chat.mjs")).cyberCopyUsed(actor);

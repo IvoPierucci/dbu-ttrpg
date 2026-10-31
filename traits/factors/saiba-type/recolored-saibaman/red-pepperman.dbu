@@ -1,0 +1,17 @@
+id: red-pepperman
+name: Red Pepperman
+order: 1
+optionOf: recolored-saibaman
+optionEffect: 3
+description: >
+  While your Racial Life Modifier is 3+, increase your Wound Rolls and Might by 2(T) and 1(T) respectively.
+text: >
+  Red Pepperman [Passive]: While your Racial Life Modifier is 3+, increase your Wound Rolls and Might by 2(T) and 1(T) respectively.
+
+---
+
+[passive]
+if (racialLifeModifier >= 3) {
+    wound += 2(T);
+    might += 1(T);
+}

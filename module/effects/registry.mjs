@@ -107,7 +107,7 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
   if (allyRolls) {
     const { program, errors } = compile("ally-rolls", { script: `[passive]\ncombatRolls += ${Number(allyRolls) || 0};` }, report);
     if (!errors.length) {
-      entries.push({ program, priority: PRIORITY.base, sourceId: "ally-rolls", sourceUuid: null, sourceName: "Friend Robot", level: 0, stacks: 1 });
+      entries.push({ program, priority: PRIORITY.base, sourceId: "ally-rolls", sourceUuid: null, sourceName: "An Ally's effects", level: 0, stacks: 1 });
     }
   }
 
