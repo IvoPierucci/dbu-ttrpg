@@ -9,6 +9,7 @@
  */
 
 import { areAllies, areOpponents, besideAnAlly } from "../allies.mjs";
+import { withinAreaOfRule } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { traitAside } from "../aside.mjs";
@@ -564,6 +565,18 @@ const PREDICATES = {
       .filter(token => token.actor && (token.actor.uuid !== self.uuid) && areAllies(token.actor, self))
       .map(token => [token.actor.uuid, token.actor])).values()];
     return (allies.length > 0) && allies.every(other => other.system?.defeated);
+  },
+
+  /** Skilled Ogre (2): an Ally of yours - a Minion too - within your Area of Rule. */
+  allyRuled: scope => {
+    const self = scope.data?.parent;
+    return Boolean(self) && withinAreaOfRule(self, other => areAllies(other, self)).length > 0;
+  },
+
+  /** Afterlife Officials (2): an Ally of yours, not a Minion, within your Area of Rule (guidance.mjs). */
+  allyInAreaOfRule: scope => {
+    const self = scope.data?.parent;
+    return Boolean(self) && withinAreaOfRule(self, other => areAllies(other, self) && (other.type !== "minion")).length > 0;
   },
 
   /** That Attribute's Score the highest of yours - a tie included (Caste Combat's Queen: "If Personality has the highest Attribute Score"). */

@@ -1,0 +1,26 @@
+id: bureaucratic-beatdown
+name: Bureaucratic Beatdown
+order: 4
+category: mind
+importance: secondary
+description: >
+  Under your mild manners and your calm office worker persona lies the heart of a man willing to fight for his cause.
+text: >
+  Bureaucratic Beatdown (Mind): Under your mild manners and your calm office worker persona lies the heart of a man willing to fight for his cause.
+  (1)-[Passive]: While your Life Points are below the Injured Health Threshold, you and all Allies within your Area of Rule have your/their Wound Rolls increased by 2(T).
+  (2)-[Passive]: While your Life Points are below the Injured Health Threshold, you and all Allies within your Area of Rule have your/their Soak Value and Defense Value increased by 1(T).
+  (3)-[Triggered, 1/Encounter]: If you target an Opponent with an Attacking Maneuver while in the Undying State, you may apply 2 Energy Charges to that Attacking Maneuver. These Energy Charges do not count towards your maximum. If you do, after completing the Attacking Maneuver, you leave the Undying State and have your Life Points reduced to 1 (if they’re above 0) or you are Defeated (if they’re at or below 0).
+
+---
+
+[passive]
+# (1), (2) Yours; and your Allies' within your Area of Rule, read by each as they are prepared or attack (actor-character.mjs, chat.mjs
+# beatdownWoundParts) - while you are Injured or worse.
+if (belowThreshold("injured")) {
+    wound += 2(T);
+    soakValue += 1(T);
+    defenseValue += 1(T);
+    allow beatdown.allies;
+}
+# (3) Asked as an Attacking Maneuver at an Opponent is made in the Undying State, once an Encounter (chat.mjs postAttack).
+allow beatdown.charges;

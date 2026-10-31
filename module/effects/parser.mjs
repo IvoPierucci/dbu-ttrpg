@@ -575,6 +575,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "knockedBeside", "allyBeside",
   // The Attacking Maneuver dodged an Opponent's (Caste Combat's Knight).
   "dodgedOpponent",
+  // An Ally, not a Minion, within your Area of Rule (Afterlife Officials'); any Ally (Skilled Ogre's).
+  "allyInAreaOfRule", "allyRuled",
   // On a Square adjacent to your Partner, an Ally (Synchronized Combatants').
   "besidePartner",
   // Two Weapons wielded or more of one Weapon Category (Twin Weapon Specialist's).

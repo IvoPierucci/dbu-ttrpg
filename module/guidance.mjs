@@ -32,6 +32,29 @@ function gapBetween(a, b) {
 }
 
 /**
+ * The Oni's Area of Rule (Afterlife Officials (1)): "All Squares within a Sphere AoE (centered on you) are within your 'Area of Rule'" - a
+ * Standard Sphere, a Magnitude larger for each `areaOfRule.magnitude` (Employed for Size's), Destructive at most - as the Squares there may
+ * be between: its radius less one.
+ */
+export function areaOfRuleGap(actor) {
+  const order = ["minor", "standard", "large", "huge", "destructive"];
+  const steps = Math.round(Number(actor?.system?.effects?.slots?.["areaOfRule.magnitude"]?.add) || 0);
+  const magnitude = order[Math.max(0, Math.min(order.length - 1, order.indexOf("standard") + steps))];
+  return SPHERE_RADIUS[magnitude] - 1;
+}
+
+/** Those within someone's Area of Rule, not Defeated, but themselves - every one, an Ally or not; `test` narrows it. */
+export function withinAreaOfRule(actor, test = () => true) {
+  const from = tokenOf(actor);
+  if (!from) return [];
+  const gap = areaOfRuleGap(actor);
+  return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated && test(token.actor)
+      && ((gapBetween(from.document ?? from, token.document ?? token) ?? 99) <= gap))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+}
+
+/**
  * The Opponents on the scene nearest to `actor` - not Defeated, of another side - every one at that fewest Squares between, where
  * several are (From the Stars (3)'s "the nearest Opponent"). None off a scene.
  */
@@ -115,6 +138,11 @@ export function alliesWithin(actor, slot, gap) {
 /** The Allies of `actor` on the scene, not Defeated, holding `slot` - wherever they stand (Feline Rally's "all of your Allies"). */
 export function alliesHolding(actor, slot) {
   return alliesWithin(actor, slot, Infinity);
+}
+
+/** The Allies of `actor` on the scene, not Defeated, holding `slot`, with `actor` in their Area of Rule (Life Among the Dead's). */
+export function alliesRuling(actor, slot) {
+  return alliesWithin(actor, slot, Infinity).filter(holder => withinGuidance(holder, actor, areaOfRuleGap(holder)));
 }
 
 /** The Allies of `actor` on the scene, not Defeated, holding `slot`, with `actor` in their Melee Range (Kindhearted Saiyan's). */

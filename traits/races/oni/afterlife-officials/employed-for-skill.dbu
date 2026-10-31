@@ -1,0 +1,18 @@
+id: employed-for-skill
+name: Employed for Skill
+order: 3
+optionOf: afterlife-officials
+optionEffect: 3
+description: >
+  Increase the amount of Technique Points you gain from Skill Improvement by 3.
+text: >
+  Employed for Skill [Passive]: Increase the amount of Technique Points you gain from Skill Improvement by 3.
+  Employed for Skill [Triggered]: When you use the Signature Technique Maneuver, you may either: remove up to 2 Advantages (or ranks of Advantages) from that Signature Technique to increase its Wound Roll by 2(T) for each Advantage removed, or remove up to 2 Disadvantages (or ranks of Disadvantages) with a TP Cost of 6 or less from that Signature Technique but increase its Ki Point Cost by 1(T) for each Disadvantage removed.
+
+---
+
+[passive]
+techniquePoints.perSkillImprovement += 3;
+# (4) Asked as a Signature Technique is declared: Advantages off for Wound, or Disadvantages off for Ki - that use alone (maneuvers.mjs
+# askEmployedSkill).
+allow employed.skillTrim;

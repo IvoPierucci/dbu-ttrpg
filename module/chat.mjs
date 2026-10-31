@@ -1,7 +1,7 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { commandedNow, isCharacter, isMinion, typicalMinion } from "./actor-types.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
-import { alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
+import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
@@ -1059,6 +1059,7 @@ async function settleClashEffects(messageId, clash) {
   if (clash.greedySleep && clash.result && !clash.greedySleep.applied) await settleGreedySleep(message, clash);
   if (clash.dissipate && clash.result && !clash.dissipate.applied) await settleDissipate(message, clash);
   if (clash.impede && clash.result && !clash.impede.applied) await settleImpede(message, clash);
+  if (clash.ruleLife && clash.result && !clash.ruleLife.applied) await settleRuleLife(message, clash);
   if (clash.majinRaised && clash.result && !clash.majinRaised.applied) await settleMajinRaised(message, clash);
   if (clash.lightConsume && clash.result && !clash.lightConsume.applied) await settleLightConsume(message, clash);
   if (clash.lightCounter && clash.result && !clash.lightCounter.applied) await settleLightCounter(message, clash);
@@ -9701,7 +9702,26 @@ function clashParts(kind, actor, clash, uuid) {
     ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
     ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid),
-    ...fairyClashBonus(actor, clash, uuid)];
+    ...fairyClashBonus(actor, clash, uuid), ...ogreClashBonus(actor, clash, uuid)];
+}
+
+/**
+ * Skilled Ogre (3): "If an Ally within your Area of Rule makes a Skill Clash, they may use your Skill Bonus for the relevant Skill instead of
+ * their own." The Oni's whose Area of Rule they stand in, not used this Round, with the higher Skill Bonus for the Skill this side uses - the
+ * highest of them - as { lender, value: what it adds }, or null.
+ */
+function ogreLendOpen(actor, clash, skill) {
+  if (((clash?.category ?? "skill") !== "skill") || !skill || !actor) return null;
+  const own = Number(actor.system.skills?.[skill]?.bonus) || 0;
+  return alliesRuling(actor, "skilledOgre.lend").filter(lender => lender.getFlag?.(SCOPE, "ogreLendRound") !== roundKey())
+    .map(lender => ({ lender, value: (Number(lender.system.skills?.[skill]?.bonus) || 0) - own }))
+    .filter(entry => entry.value > 0).sort((a, b) => b.value - a.value)[0] ?? null;
+}
+
+/** Skilled Ogre (3)'s, on the side that took it: the lender's Skill Bonus for theirs. */
+function ogreClashBonus(actor, clash, uuid) {
+  const lent = (clash?.ogreLent ?? []).find(entry => entry.uuid === uuid);
+  return lent ? [{ label: `Skilled Ogre (${lent.name}'s Skill Bonus)`, value: Number(lent.value) || 0 }] : [];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -10920,11 +10940,15 @@ async function clashStage(message, actor) {
   const scholar = scholarRevengeOpen(actor, opened);
   // Fairy (5), (6): a box, each once a Round.
   const fairy = fairyClashOpen(actor, opened);
+  // Skilled Ogre (3): an Oni's Skill Bonus for theirs, within their Area of Rule - a box, once a Round theirs.
+  const ogre = ogreLendOpen(actor, opened, picked);
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
     { urgent: Boolean(opened.urgent), senses,
       boxes: [...(thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
         tip: "Once a Round. Won, the Basic Attack or a Signature Technique out of sequence at them." }] : []),
         ...(fairy ? [{ name: "fairy", label: `Fairy: +${fairy}`, tip: "Once a Round." }] : []),
+        ...(ogre ? [{ name: "ogre", label: `Skilled Ogre: ${ogre.lender.name}'s Skill Bonus, +${ogre.value}`,
+          tip: "Instead of your own - once a Round theirs." }] : []),
         ...(corsair ? [{ name: "corsair", label: `Sorcering Corsair: +${corsair.label}`,
           tip: "Once a Round: they are beside one of your Allies." }] : []),
         ...(reserved ? [{ name: "reserved", label: "Reserved Combatant: Holding Back ignored",
@@ -10960,6 +10984,8 @@ async function clashStage(message, actor) {
   if (fairyTaken) {
     await requestActorUpdate(actor, { [`flags.${SCOPE}.${(((opened.category ?? "skill") === "save") ? "fairySaveRound" : "fairySkillRound")}`]: roundKey() });
   }
+  const ogreTaken = Boolean(ogre) && (ready.boxes ?? []).includes("ogre");
+  if (ogreTaken) await requestActorUpdate(ogre.lender, { [`flags.${SCOPE}.ogreLendRound`]: roundKey() });
   const thiefTaken = Boolean(thief) && (ready.boxes ?? []).includes("thief");
   if (thiefTaken) {
     await spendVocationTension(actor, 1);
@@ -10971,6 +10997,8 @@ async function clashStage(message, actor) {
     ...answer,
     ...(thiefTaken ? { thiefBy: [...new Set([...(clash.thiefBy ?? []), actor.uuid])] } : {}),
     ...(fairyTaken ? { fairyBy: [...new Set([...(clash.fairyBy ?? []), actor.uuid])] } : {}),
+    ...(ogreTaken ? { ogreLent: [...(clash.ogreLent ?? []).filter(entry => entry.uuid !== actor.uuid),
+      { uuid: actor.uuid, name: ogre.lender.name, value: ogre.value }] } : {}),
     ...(corsairTaken ? { corsairBy: [...new Set([...(clash.corsairBy ?? []), actor.uuid])] } : {}),
     ...(scholarSpent ? { scholarSpent: [...(clash.scholarSpent ?? []).filter(entry => entry.uuid !== actor.uuid),
       { uuid: actor.uuid, points: scholarSpent }] } : {}),
@@ -12056,7 +12084,9 @@ function punchingUp(attacker, target, area, modifiers) {
   const trueSteps = (actor, targeted = false) => {
     const steps = Number(actor?.system?.size?.trueSteps ?? actor?.system?.size?.steps) || 0;
     const slots = actor?.system?.effects?.slots ?? {};
-    return (((slots["giantGene.size"] === true) || (targeted && (slots["tremendous.size"] === true))) && (steps >= 2)) ? 1 : steps;
+    // Employed for Size (Afterlife Officials (4)): as Giant Gene (2).
+    return (((slots["giantGene.size"] === true) || (slots["employed.sizeAsLarge"] === true) || (targeted && (slots["tremendous.size"] === true)))
+      && (steps >= 2)) ? 1 : steps;
   };
   const larger = target ? (trueSteps(target, true) - trueSteps(attacker)) : 0;
   return (larger >= 2) ? larger : 0;
@@ -15259,6 +15289,12 @@ function telepathicWoundParts(attacker) {
   return [{ label: "Telepathic Teamwork", written: "+1(T)", value: Math.max(1, Number(tier) || 1) }];
 }
 
+/** Bureaucratic Beatdown (1): an Ally's, below Injured, within whose Area of Rule the attacker stands - 2(T), the best of them. */
+function beatdownWoundParts(attacker) {
+  const holders = attacker ? alliesRuling(attacker, "beatdown.allies") : [];
+  return holders.length ? [{ label: "Bureaucratic Beatdown", written: "+2(T)", value: 2 * Math.max(1, bestTier(holders)) }] : [];
+}
+
 /** Way of the Champion (1): "Increase the Wound Rolls ... of your Allies by 1(T) while you are in the Spectator State." */
 function championWoundParts(attacker) {
   const holders = attacker ? spotters(attacker, "champion.allies") : [];
@@ -16423,6 +16459,62 @@ export async function warmUpPower(actor) {
  */
 export async function lightningPower(actor) {
   return offerPowerOrTransform(actor, "Lightning Surge - above a Health Threshold again");
+}
+
+/**
+ * Employed for Strength (Afterlife Officials (4)): "Make a Might Clash against all Opponents within your Area of Rule. If you win, they have
+ * their Life Points reduced by your Force Modifier." A Might Clash with each - its Force Modifier as it is now. Unspent with nobody there.
+ */
+export async function employedStrength(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { withinAreaOfRule } = await import("./guidance.mjs");
+  const near = withinAreaOfRule(actor, other => areOpponents(other, actor));
+  if (!near.length) return UNSPENT;
+  const amount = Math.max(0, Number(actor.system.attributes?.force?.mod) || 0);
+  for (const other of near) {
+    await postMightClash(actor, other, { maneuverName: "Employed for Strength",
+      reason: `Win and they lose ${amount} Life Points (your Force Modifier).`, ruleLife: { applied: false, amount } });
+  }
+  return true;
+}
+
+/** Employed for Strength's Clash, settled: won, the Life Points off. */
+async function settleRuleLife(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, ruleLife: { ...clash.ruleLife, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, "Employed for Strength: nothing lost.");
+  const target = fromUuidSync(clash.defenderUuid);
+  const amount = Number(clash.ruleLife?.amount) || 0;
+  if (!target || !amount) return;
+  await reduceLifePoints(target, amount, { reason: "Employed for Strength" });
+  return settledNote(message, `Employed for Strength: ${target.name} loses ${amount} Life Points.`);
+}
+
+/**
+ * Employed for Speed (Afterlife Officials (4)): "You may move to any unoccupied Square within your Area of Rule. This movement does not trigger
+ * the Exploit Maneuver." Offered on your latest card - the turn's; moved by hand, nothing offering the Exploit.
+ */
+export async function employedSpeed(actor) {
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor?.id);
+  if (!card) return;
+  offerMove(card, actor, { key: `employedSpeed:${actor.uuid}`, flag: "employedSpeedRound", name: "Employed for Speed",
+    reason: "to any unoccupied Square within your Area of Rule - it does not trigger the Exploit Maneuver" });
+}
+
+/**
+ * Employed for Smarts (Afterlife Officials (4)): "When you use the Analysis Maneuver, all Allies within your Area of Rule regain Ki Points equal
+ * to 1/2 of your Scholarship Modifier. Then, you may select one willing Ally to use the Power Up Maneuver as an Out-of-Sequence Maneuver."
+ * The Ki, rounded down; the Ally asked, the Power Up offered to them.
+ */
+export async function employedSmarts(actor) {
+  const { withinAreaOfRule } = await import("./guidance.mjs");
+  const allies = withinAreaOfRule(actor, other => areAllies(other, actor));
+  const ki = Math.floor(Math.max(0, Number(actor.system.attributes?.scholarship?.mod) || 0) / 2);
+  if (ki) for (const ally of allies) await regainPools(ally, 0, ki);
+  if (!allies.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Employed for Smarts - an Ally's Power Up`,
+    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const ally = allies.find(each => each.uuid === picked);
+  if (ally) await offerPowerOrTransform(ally, `Employed for Smarts - ${actor.name}'s Analysis`, ["power-up"]);
 }
 
 /**
@@ -20396,6 +20488,17 @@ async function attackDurationEnds(attack) {
   if (!attacker?.isOwner) return;
   // Oni-Raised (3): "after completing the Attacking Maneuver, set your Life Points to their lowest possible value".
   if (attack.oniDrained) await attacker.update({ "system.life.value": Number(attacker.system.life?.min) || 0 });
+  // Bureaucratic Beatdown (3): "after completing the Attacking Maneuver, you leave the Undying State and have your Life Points reduced to 1
+  // (if they're above 0) or you are Defeated (if they're at or below 0)" - leaving it at 0 or below Defeats them (Undying's own).
+  if (attack.beatdownSpent) {
+    if ((Number(attacker.system.life?.value) || 0) > 1) await attacker.update({ "system.life.value": 1 });
+    const { leaveState } = await import("./effects/moments-runtime.mjs");
+    while ((Number(attacker.system.states?.undying) || 0) > 0) {
+      const before = Number(attacker.system.states.undying) || 0;
+      await leaveState(attacker, "undying");
+      if ((Number(attacker.system.states?.undying) || 0) >= before) break;
+    }
+  }
   // Zooner-Raised (3), (4): "after concluding that Attacking Maneuver, reduce your Awareness, Defense Value, and Soak Value by 1(bT) until
   // the start of your next turn" - for each taken.
   if ((Number(attack.zoonerExposed) || 0) > 0) {
@@ -26530,6 +26633,19 @@ export async function postAttack(actor, target, maneuver,
     await actor.setFlag(SCOPE, "oniChargesEncounter", game.combat?.id ?? "none");
     uncappedCharges = (Number(uncappedCharges) || 0) + 2;
   }
+  // Bureaucratic Beatdown (3): an Opponent targeted in the Undying State - 2 Energy Charges past your most; done, out of Undying, your Life
+  // Points 1 or Defeated (attackDurationEnds) - asked, once an Encounter.
+  const beatdownSpent = !reflecting && (actor.system.effects?.slots?.["beatdown.charges"] === true)
+    && ((Number(actor.system.states?.undying) || 0) > 0)
+    && (actor.getFlag?.(SCOPE, "beatdownEncounter") !== (game.combat?.id ?? "none"))
+    && everyone.some(who => who && (who.uuid !== actor.uuid) && areOpponents(who, actor))
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Bureaucratic Beatdown` },
+      content: "<p data-tooltip=\"Once an Encounter. Past your most; done, out of the Undying State - your Life Points 1, or Defeated at 0 or below.\">2 Energy Charges on it?</p>",
+      rejectClose: false });
+  if (beatdownSpent) {
+    await actor.setFlag(SCOPE, "beatdownEncounter", game.combat?.id ?? "none");
+    uncappedCharges = (Number(uncappedCharges) || 0) + 2;
+  }
   // Heran-Raised (1): an Opponent it targets with one of your Allies beside them - Strike and Wound 1(T).
   if ((actor.system.effects?.slots?.["heranRaised.flank"] === true) && !reflecting && heranFlanked(actor, everyone)) {
     const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
@@ -26779,6 +26895,7 @@ export async function postAttack(actor, target, maneuver,
           // Neo-Tuffle-Raised (3)'s Greater Dice; Oni-Raised (3)'s price, paid as it is done.
           ...(neoGreater ? { neoGreater: true } : {}),
           ...(oniDrained ? { oniDrained: true } : {}),
+          ...(beatdownSpent ? { beatdownSpent: true } : {}),
           // Mimicry of Penetrating Fangs (2)'s quarter; Mimicry of Rending Claws (2)'s Diminishing Defense on declaration.
           ...(pierceQuarter ? { pierceQuarter: true } : {}),
           ...(diminishingEarly ? { diminishingEarly: true } : {}),
@@ -29958,7 +30075,7 @@ function woundParts(attacker, attack) {
     // Variable Fighter (2).
     ...variableParts(attacker, attack, "wound"),
     // Way of the Champion (1): an Ally in the Spectator State.
-    ...championWoundParts(attacker),
+    ...championWoundParts(attacker), ...beatdownWoundParts(attacker),
     // Telepathic Teamwork (1): linked by Telepathy, in each other's Melee Range.
     ...telepathicWoundParts(attacker),
     // Party Tactics (1): an Ally beside you.

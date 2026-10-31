@@ -1,0 +1,37 @@
+id: afterlife-officials
+name: Afterlife Officials
+order: 1
+category: body
+importance: primary
+description: >
+  As a native of the Afterlife, you help to maintain order and efficiency, helping the souls of the departed move through the celestial red tape.
+text: >
+  Afterlife Officials (Body): As a native of the Afterlife, you help to maintain order and efficiency, helping the souls of the departed move through the celestial red tape.
+  (1)-[Ruling]: All Squares within a Sphere AoE (centered on you) are within your ‘Area of Rule’.
+  (2)-[Passive]: While you have an Ally (except a Minion) within your Area of Rule, increase your Soak Value by 1(T).
+  (3)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Employed for Strength [Passive]: Increase your Force Modifier by 1(T).
+  * Employed for Speed [Passive]: Increase your Agility Modifier by 1(T).
+  * Employed for Skill [Passive]: Increase the amount of Technique Points you gain from Skill Improvement by 3.
+  * Employed for Size [Passive]: Your Size Category is Gigantic.
+  * Employed for Smarts [Passive]: While your Scholarship Score has the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative by 1(bT).
+
+  (4)-[Choice]: Depending on your choice for the Option effect of this Trait, gain the following effect:
+
+  * Employed for Strength [Triggered/Start of Turn]: Make a Might Clash against all Opponents within your Area of Rule. If you win, they have their Life Points reduced by your Force Modifier.
+  * Employed for Speed [Triggered/Start of Turn]: You may move to any unoccupied Square within your Area of Rule. This movement does not trigger the Exploit Maneuver.
+  * Employed for Skill [Triggered]: When you use the Signature Technique Maneuver, you may either: remove up to 2 Advantages (or ranks of Advantages) from that Signature Technique to increase its Wound Roll by 2(T) for each Advantage removed, or remove up to 2 Disadvantages (or ranks of Disadvantages) with a TP Cost of 6 or less from that Signature Technique but increase its Ki Point Cost by 1(T) for each Disadvantage removed.
+  * Employed for Size [Passive]: For calculating the bonus/penalty to your Defense Value from your Size Category, and for the effects of Punching Up, you are considered to be of the Large Size Category if your Size Category is Enormous or larger. Additionally, increase the Magnitude of your Area of Rule by 1 Magnitude.
+  * Employed for Smarts [Triggered, 1/Round]: When you use the Analysis Maneuver, all Allies within your Area of Rule regain Ki Points equal to 1/2 of your Scholarship Modifier. Then, you may select one willing Ally to use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) A Standard Sphere around you - a Magnitude larger with Employed for Size (guidance.mjs areaOfRuleGap).
+[passive]
+# (2)
+if (allyInAreaOfRule) {
+    soakValue += 1(T);
+}
+
+# (3), (4) Its Option, chosen as it is added - each a file beside it holding both its (3) and its (4).

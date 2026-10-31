@@ -490,6 +490,19 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
   },
+  employedStrength: {
+    args: [0, 0],
+    doc: "Employed for Strength: a Might Clash with every Opponent within your Area of Rule - won, their Life Points by your Force "
+       + "Modifier (chat.mjs employedStrength)."
+  },
+  employedSpeed: {
+    args: [0, 0],
+    doc: "Employed for Speed: a move within your Area of Rule offered on your latest card, no Exploit (chat.mjs employedSpeed)."
+  },
+  employedSmarts: {
+    args: [0, 0],
+    doc: "Employed for Smarts: Ki to every Ally within your Area of Rule, then an Ally's Power Up offered (chat.mjs employedSmarts)."
+  },
   weaponizedPower: {
     args: [0, 0],
     doc: "Weaponized Vitality (3): the Power Up offered out of sequence on the latest card (chat.mjs weaponizedPower)."

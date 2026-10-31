@@ -1,0 +1,20 @@
+id: employed-for-strength
+name: Employed for Strength
+order: 1
+optionOf: afterlife-officials
+optionEffect: 3
+description: >
+  Increase your Force Modifier by 1(T).
+text: >
+  Employed for Strength [Passive]: Increase your Force Modifier by 1(T).
+  Employed for Strength [Triggered/Start of Turn]: Make a Might Clash against all Opponents within your Area of Rule. If you win, they have their Life Points reduced by your Force Modifier.
+
+---
+
+[passive]
+force.mod += 1(T);
+
+# (4) Your turn begins: a Might Clash with every Opponent within your Area of Rule - won, their Life Points by your Force Modifier (chat.mjs
+# employedStrength). Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 4]
+employedStrength();

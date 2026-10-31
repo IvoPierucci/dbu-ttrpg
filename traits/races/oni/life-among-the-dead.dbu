@@ -1,0 +1,30 @@
+id: life-among-the-dead
+name: Life Among the Dead
+order: 2
+category: body
+importance: primary
+description: >
+  Being a native of the Afterlife, your body is more resilient and less likely to fail.
+text: >
+  Life Among the Dead (Body): Being a native of the Afterlife, your body is more resilient and less likely to fail.
+  (1)-[Passive]: Ignore the third effect of the Undying State.
+  (2)-[Passive]: Increase the Dice Score of your Steadfast Checks by 1.
+  (3)-[Passive]: Increase the Soak Value of all Allies in your Area of Rule by 1(T).
+  (4)-[Triggered/Defeated]: Make a Steadfast Check with your Dice Score reduced by 3. If you succeed at that Steadfast Check, enter the Undying State until the end of your next turn.
+
+---
+
+[passive]
+# (1) The Undying State's "Reduce your Combat Rolls by 1(T)" given back while you are in it.
+if (inState("undying")) {
+    combatRolls += 1(T);
+}
+# (2)
+steadfast.dice += 1;
+# (3) Read by each Ally as they are prepared - their Soak Value, while they stand within your Area of Rule (actor-character.mjs, guidance.mjs
+# alliesRuling).
+allow lifeAmongDead.allySoak;
+
+# (4) Chosen on the Defeated card: the Steadfast Check at 3 less - passed, Undying till the end of your next turn.
+[triggered/defeated, effect 4]
+steadfastEnter(-3, undying, next-turn);

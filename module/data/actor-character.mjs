@@ -2,7 +2,7 @@ import { traitAside } from "../aside.mjs";
 import { minionGifts } from "../allies.mjs";
 const { fields } = foundry.data;
 
-import { alliesHolding, alliesInMelee, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
+import { alliesHolding, alliesInMelee, alliesRuling, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
@@ -2267,7 +2267,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Giant Gene (2): "For calculating the bonus/penalty to your Defense Value from your Size Category ... you are considered to be of the
     // Large Size Category if your Size Category is Enormous or larger."
     // Tremendous Lord (1): "If your Size Category is greater than Large", the same.
-    const defenseAt = (((this.effects?.slots?.["giantGene.size"] === true) || (this.effects?.slots?.["tremendous.size"] === true))
+    // Employed for Size (Afterlife Officials (4)): the same words.
+    const defenseAt = (((this.effects?.slots?.["giantGene.size"] === true) || (this.effects?.slots?.["tremendous.size"] === true)
+      || (this.effects?.slots?.["employed.sizeAsLarge"] === true))
       && (sizeKeys.indexOf(sizeKey) >= sizeKeys.indexOf("enormous")))
       ? sizeKeys.indexOf("large") : sizeKeys.indexOf(sizeKey);
 
@@ -2393,10 +2395,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // it. That last step had been missing: the Slot existed and was written by two
         // Conditions, and nothing here ever read it.
         // And what goes on every Skill's - Thief's "Increase the Skill Bonus of your Skills by 1" (`skills.allBonus`).
+        // And on every Skill of its Attribute - Skilled Ogre's (`skills.of.<attribute>`).
         bonus: withEffects(this, `skill.${key}.bonus`,
           Math.floor(atts[scoreFrom].score / 2) + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment
-            + slot(this, "skills.allBonus"), {
+            + slot(this, "skills.allBonus") + slot(this, `skills.of.${skill.attribute}`), {
             parts: [
+              ...(slot(this, `skills.of.${skill.attribute}`) ? [{ label: (this.effects?.slots?.[`skills.of.${skill.attribute}`]?.parts ?? [])
+                .map(part => part.source).find(Boolean) || "Its Attribute's Skills", value: slot(this, `skills.of.${skill.attribute}`) }] : []),
               ...(slot(this, "skills.allBonus") ? [{ label: (this.effects?.slots?.["skills.allBonus"]?.parts ?? [])
                 .map(part => part.source).find(Boolean) || "Every Skill", value: slot(this, "skills.allBonus") }] : []),
               { label: `1/2 ${scoreFrom.charAt(0).toUpperCase()}${scoreFrom.slice(1)} Score`,
@@ -2632,6 +2637,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // settled before the Super Stacks are, so it is added to it now.
     const compactDefense = (this.superStack.stacks === 1) ? slot(this, "superStack.compactDefense") : 0;
     if (compactDefense) this.defenseValue += compactDefense;
+    // Bureaucratic Beatdown (2): an Ally's, below Injured, within whose Area of Rule this one stands - 1(T), the best of them.
+    {
+      const beaters = this.parent ? alliesRuling(this.parent, "beatdown.allies") : [];
+      if (beaters.length) this.defenseValue += Math.max(1, bestTier(beaters));
+    }
 
     // Soak Value: the Tenacity Modifier - "You have a Minimum Soak Value of 1(bT) regardless of your Tenacity Modifier (this
     // Minimum Soak Value can be reduced through other factors)" (Damage & Recovery): the base Tier of Power. External effects
@@ -2667,8 +2677,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Kindhearted Saiyan (1): "All Allies within your Melee Range have their Soak Value increased by 1(T)" - the best Tier of those.
     const kindhearted = this.parent ? alliesInMelee(this.parent, "kindhearted.soak") : [];
     const kind = kindhearted.length ? Math.max(1, bestTier(kindhearted)) : 0;
+    // Life Among the Dead (3): "Increase the Soak Value of all Allies in your Area of Rule by 1(T)" - the best Tier of those.
+    const rulers = this.parent ? alliesRuling(this.parent, "lifeAmongDead.allySoak") : [];
+    // Bureaucratic Beatdown (2): an Ally's, below Injured, within whose Area of Rule this one stands - 1(T), the best of them.
+    const beaters = this.parent ? alliesRuling(this.parent, "beatdown.allies") : [];
+    const ruled = (rulers.length ? Math.max(1, bestTier(rulers)) : 0) + (beaters.length ? Math.max(1, bestTier(beaters)) : 0);
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel + champion + kind, {
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel + champion + kind
+        + ruled, {
         parts: [
           { label: "Own Soak", value: ownSoak },
           { label: (bulkTimes > 1) ? "Solid Bulk (twice, Adamantine Muscle)" : "Solid Bulk", value: this.superStack.solidBulk * bulkTimes },
@@ -2676,7 +2692,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
           ...(battery ? [{ label: "Power Battery", value: battery }] : []),
           ...(steel ? [{ label: "Steel Muscle", value: steel }] : []),
           ...(champion ? [{ label: "Way of the Champion", value: champion }] : []),
-          ...(kind ? [{ label: "Kindhearted Saiyan", value: kind }] : [])
+          ...(kind ? [{ label: "Kindhearted Saiyan", value: kind }] : []),
+          ...(ruled ? [{ label: [rulers.length ? "Life Among the Dead" : "", beaters.length ? "Bureaucratic Beatdown" : ""].filter(Boolean)
+            .join(", "), value: ruled }] : [])
         ]
       })
         + this.externalModifiers.soak,

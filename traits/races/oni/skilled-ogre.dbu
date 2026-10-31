@@ -1,0 +1,33 @@
+id: skilled-ogre
+name: Skilled Ogre
+order: 3
+category: mind
+importance: secondary
+# (1) "select an Attribute (except Force or Tenacity)" - asked as it is added, `$choice`; changeable on its Options tab.
+choose: list
+choices: Agility, Scholarship, Insight, Magic, Personality
+description: >
+  You’ve trained for bureaucratic service in the afterlife, and have the skill and near-immortality to wrangle even the rowdiest of souls.
+text: >
+  Skilled Ogre (Mind): You’ve trained for bureaucratic service in the afterlife, and have the skill and near-immortality to wrangle even the rowdiest of souls.
+  (1)-[Passive]: At Character Creation, or upon gaining this Racial Trait, select an Attribute (except Force or Tenacity). Increase the Skill Bonus of all Skills that use that Attribute by 1.
+  (2)-[Passive]: Increase your Surgency by 1(T) while you have an Ally in your Area of Rule.
+  (3)-[Triggered, 1/Round]: If an Ally within your Area of Rule makes a Skill Clash, they may use your Skill Bonus for the relevant Skill instead of their own.
+  (4)-[Triggered/Undying, 1/Encounter]: Use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Every Skill that Attribute governs (actor-character.mjs).
+skills.of.$choice += 1;
+# (2) An Ally - a Minion too - within your Area of Rule.
+if (allyRuled) {
+    surgency += 1(T);
+}
+# (3) A box in the Skill Clash's window of an Ally within your Area of Rule, where your Skill Bonus is the higher - once a Round yours (chat.mjs
+# ogreLendOpen).
+allow skilledOgre.lend;
+
+# (4) Entering the Undying State: a Healing Surge out of sequence - chosen as it happens, never Automatic.
+[triggered/state/undying, 1/encounter, outOfSequence, effect 4]
+surge(healing);

@@ -5678,6 +5678,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       declared = { ...declared, ...asked };
       // Flexible Technique (1)'s Efficiency: "-4(T) per rank" off the Technique's own Ki, never below the Profile's.
       if (declared.flexibleEfficiency) maneuver = { ...maneuver, kiCostPerTier: Math.max(0, (Number(maneuver.kiCostPerTier) || 0) - 4) };
+      // Employed for Skill: Advantages off for Wound, or Disadvantages off for Ki - for this use alone.
+      const trimmed = await (await import("./maneuvers.mjs")).askEmployedSkill(actor, declared);
+      if (trimmed) {
+        declared = trimmed.declared;
+        if (trimmed.kiPerTier) maneuver = { ...maneuver, kiCostPerTier: (Number(maneuver.kiCostPerTier) || 0) + trimmed.kiPerTier };
+      }
     }
 
     // Majin See, Majin Do: "For Copied Techniques, you may use either your Force or Magic Modifier as the Damage

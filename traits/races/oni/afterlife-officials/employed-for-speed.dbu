@@ -1,0 +1,20 @@
+id: employed-for-speed
+name: Employed for Speed
+order: 2
+optionOf: afterlife-officials
+optionEffect: 3
+description: >
+  Increase your Agility Modifier by 1(T).
+text: >
+  Employed for Speed [Passive]: Increase your Agility Modifier by 1(T).
+  Employed for Speed [Triggered/Start of Turn]: You may move to any unoccupied Square within your Area of Rule. This movement does not trigger the Exploit Maneuver.
+
+---
+
+[passive]
+agility.mod += 1(T);
+
+# (4) Your turn begins: the move offered on its card - made by hand, nothing offering the Exploit (chat.mjs employedSpeed). Automatic by
+# default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 4]
+employedSpeed();

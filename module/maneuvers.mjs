@@ -1646,6 +1646,53 @@ export async function askApoplecticBeast(actor, declared) {
 }
 
 /**
+ * Employed for Skill (Afterlife Officials (4)): "When you use the Signature Technique Maneuver, you may either: remove up to 2 Advantages (or
+ * ranks of Advantages) from that Signature Technique to increase its Wound Roll by 2(T) for each Advantage removed, or remove up to 2
+ * Disadvantages (or ranks of Disadvantages) with a TP Cost of 6 or less from that Signature Technique but increase its Ki Point Cost by 1(T)
+ * for each Disadvantage removed." Asked as it is declared, for that use alone: what is left of its features, the Wound rows, and the Ki
+ * per Tier to add to its price - or null where nothing was taken off.
+ */
+export async function askEmployedSkill(actor, declared) {
+  if (!declared || (actor?.system?.effects?.slots?.["employed.skillTrim"] !== true)) return null;
+  const { featureDef, featureTP } = await import("./technique.mjs");
+  const list = [...(declared.advantages ?? [])];
+  const entries = list.map((id, index) => ({ id, index, def: featureDef(id) })).filter(entry => entry.def);
+  const advantages = entries.filter(entry => entry.def.owner !== "disadvantages");
+  const disadvantages = entries.filter(entry => (entry.def.owner === "disadvantages") && (Math.abs(featureTP(entry.def, 1)) <= 6));
+  if (!advantages.length && !disadvantages.length) return null;
+  const escape = Handlebars.escapeExpression;
+  const box = (entry, side) => `<label class="dbu-respond-option"><input type="checkbox" name="trim" value="${side}:${entry.index}"/>
+    <span class="dbu-respond-name">${escape(entry.def.name)}</span></label>`;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Employed for Skill` },
+    content: `<p class="dbu-respond-hint">Up to 2, of one side: an Advantage (or rank) off for +2(T) Wound each, or a Disadvantage of 6 TP or less
+      off for +1(T) Ki each. For this use alone.</p>
+      ${advantages.length ? `<p><strong>Advantages</strong></p>${advantages.map(entry => box(entry, "a")).join("")}` : ""}
+      ${disadvantages.length ? `<p><strong>Disadvantages</strong></p>${disadvantages.map(entry => box(entry, "d")).join("")}` : ""}`,
+    buttons: [{ action: "take", label: "Take them off", default: true,
+      callback: (event, button, dialog) => Array.from(dialog.element.querySelectorAll('[name="trim"]:checked')).map(each => each.value) },
+      { action: "none", label: "None" }],
+    rejectClose: false
+  });
+  if (!Array.isArray(picked) || !picked.length) return null;
+  const sides = new Set(picked.map(value => value.split(":")[0]));
+  if ((picked.length > 2) || (sides.size > 1)) {
+    ui.notifications.warn(`${actor.name}: Employed for Skill - up to 2, all Advantages or all Disadvantages. Nothing taken off.`);
+    return null;
+  }
+  const gone = new Set(picked.map(value => Number(value.split(":")[1])));
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const advantagesOff = sides.has("a");
+  const names = entries.filter(entry => gone.has(entry.index)).map(entry => entry.def.name).join(", ");
+  return {
+    declared: { ...declared, advantages: list.filter((id, index) => !gone.has(index)),
+      ...(advantagesOff ? { woundExtra: [...(declared.woundExtra ?? []), { label: `Employed for Skill (${names} off)`,
+        written: `+${2 * gone.size}(T)`, value: 2 * gone.size * tier }] } : {}) },
+    kiPerTier: advantagesOff ? 0 : gone.size
+  };
+}
+
+/**
  * Caste Combat's King: "[Triggered, 1/Round]: If one of your adjacent Minions makes an Attacking Maneuver, you may increase the Damage
  * Attribute of that Attacking Maneuver by your Apparel Bonus for your Insect Shell." Asked of its Master as a Minion of theirs on an adjacent
  * Square declares one, once a Round - the Damage Attribute that much higher wherever it is applied (chat.mjs woundBase).

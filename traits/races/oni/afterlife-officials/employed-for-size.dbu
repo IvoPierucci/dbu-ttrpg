@@ -1,0 +1,19 @@
+id: employed-for-size
+name: Employed for Size
+order: 4
+optionOf: afterlife-officials
+optionEffect: 3
+description: >
+  Your Size Category is Gigantic.
+text: >
+  Employed for Size [Passive]: Your Size Category is Gigantic.
+  Employed for Size [Passive]: For calculating the bonus/penalty to your Defense Value from your Size Category, and for the effects of Punching Up, you are considered to be of the Large Size Category if your Size Category is Enormous or larger. Additionally, increase the Magnitude of your Area of Rule by 1 Magnitude.
+
+---
+
+[passive]
+allow size.base.gigantic;
+# (4) Large for the Defense Value and Punching Up, Enormous or larger (actor-character.mjs, chat.mjs punchingUp), as Giant Gene (2); the Area
+# of Rule a Large Sphere.
+allow employed.sizeAsLarge;
+areaOfRule.magnitude += 1;
