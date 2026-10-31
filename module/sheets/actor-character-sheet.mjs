@@ -1628,7 +1628,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const windowIs = this.#combatWindow;
     context.combatWindow = { open: Boolean(windowIs), turn: windowIs === "turn", states: windowIs === "states",
-      resources: windowIs === "resources", conditions: windowIs === "conditions" };
+      // One of the Combat tab's own - drawn there, and nowhere else.
+      combat: ["turn", "states", "resources", "conditions"].includes(windowIs),
+      resources: windowIs === "resources", conditions: windowIs === "conditions",
+      // The Settings tab's States' Triggered / Automatic, in the same window over the sheet (the user's).
+      stateTriggers: windowIs === "stateTriggers" };
 
     // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
     // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together.

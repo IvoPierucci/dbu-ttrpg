@@ -4714,6 +4714,10 @@
 }
 
 /* --- Settings: the States' Triggered / Automatic (the user's) ------------------------------------------------------ */
+.dbu-ttrpg .panel-title .edit-toggle[data-window] {
+  margin-left: auto;
+}
+
 .dbu-ttrpg .dbu-state-triggers {
   display: grid;
   gap: 4px;

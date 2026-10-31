@@ -297,7 +297,7 @@
   </section>
 
   {{! The window over the sheet - moved out of the tab when drawn (the sheet's _onRender), as the Benefits windows are. }}
-  {{#if combatWindow.open}}
+  {{#if combatWindow.combat}}
   <div class="dbu-combat-overlay">
     <div class="dbu-combat-window{{#if combatWindow.turn}} turn{{/if}}" role="dialog" aria-modal="true">
       {{#if combatWindow.turn}}
