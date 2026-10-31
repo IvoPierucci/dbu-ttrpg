@@ -1,0 +1,17 @@
+id: pack-animal
+name: Pack Animal
+order: 2
+optionOf: beast-of-a-kind
+optionEffect: 2
+# "You gain the Flexible Flanker Talent" - given as it is chosen, kept as a Racial Trait's Talent is.
+grantsTalent: flexible-flanker
+description: >
+  You gain the Flexible Flanker Talent and if 2+ Allies are within the Melee Range of an Opponent, increase your Wound Rolls against them by an additional 1(T).
+text: >
+  Pack Animal [Passive]: You gain the Flexible Flanker Talent and if 2+ Allies are within the Melee Range of an Opponent, increase your Wound Rolls against them by an additional 1(T).
+
+---
+
+[passive]
+# Against that Opponent alone - 2 of your Allies, not Defeated, within their own Melee Range (chat.mjs packFlankParts).
+wound.packFlank += 1(T);

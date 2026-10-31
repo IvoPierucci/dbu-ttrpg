@@ -1,0 +1,28 @@
+id: fight-or-flight
+name: Fight or Flight
+order: 2
+category: mind
+importance: primary
+description: >
+  Reacting on pure instinct, when adrenaline flows, animals do not think about their next move, but simply act.
+text: >
+  Fight or Flight (Mind): Reacting on pure instinct, when adrenaline flows, animals do not think about their next move, but simply act.
+  (1)-[Passive]: While you are below the Injured Health Threshold, increase your Speed, Soak Value, and Defense Value by 1(T).
+  (2)-[Automatic/Threshold]: If you succeed at your Steadfast Check for this Health Threshold, enter the Superior State until the end of your next turn. If you fail, you gain the Shaken Combat Condition against the nearest Opponent until the end of your next turn. If an Opponent’s Attacking Maneuver was what knocked you through this Health Threshold, you instead gain the Shaken Combat Condition against them.
+
+---
+
+[passive]
+# (1)
+if (belowThreshold("injured")) {
+    speed.all += 1(T);
+    soakValue += 1(T);
+    defenseValue += 1(T);
+}
+# (2) Failed: Shaken till the end of your next turn - against whoever's Attacking Maneuver knocked you through it, else the nearest
+# Opponent, said on its note (chat.mjs fightOrFlightShaken).
+allow fightOrFlight.steadfast;
+
+# (2) Passed: Superior till the end of your next turn.
+[automatic/steadfast-passed, effect 2]
+enterState(superior, 1, next-turn);

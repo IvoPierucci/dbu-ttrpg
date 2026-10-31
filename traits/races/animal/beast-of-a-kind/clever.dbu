@@ -1,0 +1,18 @@
+id: clever
+name: Clever
+order: 3
+optionOf: beast-of-a-kind
+optionEffect: 2
+# "Gain an additional Skill Improvement at Character Creation" - a Character Perk at Power Level 1 on the Progression tab, its Technique
+# Points written on it, gone with the Trait (racial.mjs).
+grantsPerk: Skill Improvement
+description: >
+  Gain an additional Skill Improvement at Character Creation and increase the amount of Technique Points gained from each Skill Improvement by 5.
+text: >
+  Clever [Passive]: Gain an additional Skill Improvement at Character Creation and increase the amount of Technique Points gained from each Skill Improvement by 5.
+
+---
+
+[passive]
+# Each Skill Improvement's row on the Progression table; the Perk's own Technique Points are written on it.
+techniquePoints.perSkillImprovement += 5;

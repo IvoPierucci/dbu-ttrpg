@@ -567,6 +567,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "bondOpen",
   // An Ally on the scene, and none of them Defeated (Conduit of Spirit's); and every one of them Defeated (From the Stars').
   "alliesStanding", "alliesAllDefeated",
+  // The Attacking Maneuver that hit made through the Basic Attack Maneuver (Ferocious Assault's).
+  "hitThroughBasicAttack",
   // On a Square adjacent to your Partner, an Ally (Synchronized Combatants').
   "besidePartner",
   // Two Weapons wielded or more of one Weapon Category (Twin Weapon Specialist's).

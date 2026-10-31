@@ -33,6 +33,10 @@
  *   grantsOtherChoices: a=b         with its `choose:` answered b (Plant Monster's Elemental (Plantlife))
  *   grantsTalentChoiceFrom: <ids>   a Talent of those Talent Categories, chosen as it is added - or none (Protector of the Dragon Ball's);
  *                                   `any` for a Talent of any of them (From the Stars')
+ *   grantsPerk: Skill Improvement   (an Option's) a Character Perk of that Choice at Power Level 1 on the Progression tab, named for
+ *                                   it and gone with it - Clever's "Gain an additional Skill Improvement at Character Creation"
+ *   grantedLifeCost: 1              the Racial Life Modifier that much lower for each Trait it gave still had (Bestial Presence's)
+ *   holdsState / zeroScore          (a Trait's or an Option's) a State it keeps you in; an Attribute Score it holds at 0 (Savage's)
  *   grantsTechniques: full-power    Nameless Horde (4)'s 'Full Power' Signature Techniques, made as it is added (full-power.mjs) -
  *                                   gone with it
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
@@ -1306,6 +1310,18 @@ export function chosenOptions(item) {
  * Weapon Quality" - their Categories asked, made on the Gear tab, marked as that Option's and never damaged or destroyed.
  */
 async function madeByOption(actor, item, option) {
+  // Clever's: "Gain an additional Skill Improvement at Character Creation" - a Character Perk at Power Level 1, its Technique Points
+  // a Skill Improvement's, written on it as every Perk's are.
+  if (option?.grantsPerk) {
+    const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
+    const choice = String(option.grantsPerk);
+    const perks = foundry.utils.deepClone(actor._source?.system?.characterPerks ?? []);
+    perks.push({ source: perkSource(option, item), lvl: 1, choice, talent: "",
+      attributes: Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS).map(key => [key, 0])),
+      technique: (choice === "Skill Improvement") ? DBUCharacterData.SKILL_IMPROVEMENT_TP : 0,
+      skillRanks: Array(DBUCharacterData.SKILL_RANK_SLOTS).fill("") });
+    await actor.update({ "system.characterPerks": perks });
+  }
   if (option?.platingQuality) await platingQuality(actor, item, String(option.platingQuality), true);
   // An Other Trait it gives - Extension Feature's "You possess the Extension Attack Monstrous Trait".
   for (const group of listOf(option?.grantsOther)) await grantOtherTrait(actor, item, group, listOf(option.grantsOtherFrom));
@@ -1508,6 +1524,20 @@ export async function dropGrantedOptions(actor, trait) {
   return true;
 }
 
+/** What a Character Perk an Option gives is named on the Progression tab: "Clever (Beast of a Kind)". */
+function perkSource(option, item) {
+  return `${option.name} (${item.name})`;
+}
+
+/** The Character Perks a Trait's Options gave, gone with it - by the name each was given. */
+async function dropGrantedPerks(actor, item) {
+  const named = new Set(chosenOptions(item).filter(option => option.grantsPerk).map(option => perkSource(option, item)));
+  if (!named.size || !actor) return;
+  const perks = Array.from(actor._source?.system?.characterPerks ?? []);
+  const kept = perks.filter(perk => !named.has(perk.source));
+  if (kept.length !== perks.length) await actor.update({ "system.characterPerks": kept });
+}
+
 /**
  * A Racial Trait taken off: "If you lose a Racial Trait, through any means, you no longer benefit from its effects" -
  * the Unique Abilities it gave go with it; "if those effects grant you a Talent ... you do not lose that Talent".
@@ -1549,5 +1579,6 @@ export function registerRacialHooks() {
     const given = Array.from(item.parent.items).filter(each => each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
       .map(each => each.id);
     if (given.length) await item.parent.deleteEmbeddedDocuments("Item", given);
+    await dropGrantedPerks(item.parent, item);
   });
 }

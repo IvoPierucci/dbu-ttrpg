@@ -490,6 +490,15 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
   },
+  ferociousBreak: {
+    args: [0, 0],
+    doc: "Ferocious Assault (2): every Opponent the attack hit a stack of Broken till the start of your next turn (chat.mjs ferociousBreak)."
+  },
+  bestialPresence: {
+    args: [0, 0],
+    doc: "Bestial Presence (2): a Clash (Intimidation vs Intuition/Intimidation) against every Opponent within a Destructive Sphere; "
+       + "won, Broken and Shaken till the start of your next turn (chat.mjs bestialPresence)."
+  },
   namelessStrike: {
     args: [0, 0],
     doc: "Nameless Horde (5): the Basic Attack out of sequence - or a 'Full Power' Signature Technique (chat.mjs namelessStrike)."

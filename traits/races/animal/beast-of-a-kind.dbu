@@ -1,0 +1,23 @@
+id: beast-of-a-kind
+name: Beast of a Kind
+order: 1
+category: body
+importance: primary
+# (1) Two Bestial Traits, each chosen as it is added - gone with it.
+grantsOther: bestial
+grantsOtherCount: 2
+description: >
+  Some animals in the Dragon Ball Universe are able to talk and even use special abilities, but most are mindless beasts.
+text: >
+  Beast of a Kind (Body): Some animals in the Dragon Ball Universe are able to talk and even use special abilities, but most are mindless beasts.
+  (1)-[Passive]: Select and gain two Bestial Traits.
+  (2)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Savage [Passive]: Increase the Wound Rolls of any Attacking Maneuvers used through the Basic Attack Maneuver by 2(T), but you are always in the Feral State and your Scholarship Score is 0. You cannot spend any Attribute Points to increase your Scholarship Score.
+  * Pack Animal [Passive]: You gain the Flexible Flanker Talent and if 2+ Allies are within the Melee Range of an Opponent, increase your Wound Rolls against them by an additional 1(T).
+  * Clever [Passive]: Gain an additional Skill Improvement at Character Creation and increase the amount of Technique Points gained from each Skill Improvement by 5.
+  * Mystical [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+
+---
+
+# (1) Its header's `grantsOther`. (2) Its Option, chosen as it is added - each a file beside it.

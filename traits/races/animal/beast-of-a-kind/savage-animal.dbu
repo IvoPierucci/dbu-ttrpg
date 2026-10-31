@@ -1,0 +1,19 @@
+id: savage-animal
+name: Savage
+order: 1
+optionOf: beast-of-a-kind
+optionEffect: 2
+# "you are always in the Feral State" - held in it while this is chosen; "your Scholarship Score is 0. You cannot spend any Attribute
+# Points to increase your Scholarship Score" - held at 0, whatever was spent on it (actor-character.mjs).
+holdsState: feral
+zeroScore: scholarship
+description: >
+  Increase the Wound Rolls of any Attacking Maneuvers used through the Basic Attack Maneuver by 2(T), but you are always in the Feral State and your Scholarship Score is 0.
+text: >
+  Savage [Passive]: Increase the Wound Rolls of any Attacking Maneuvers used through the Basic Attack Maneuver by 2(T), but you are always in the Feral State and your Scholarship Score is 0. You cannot spend any Attribute Points to increase your Scholarship Score.
+
+---
+
+[passive]
+# On the Wound Roll of a Basic Attack (chat.mjs twoWorldsWoundParts).
+wound.basicAttack += 2(T);

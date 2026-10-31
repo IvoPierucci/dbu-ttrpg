@@ -1484,6 +1484,10 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
   // The Moment says it "fires after the Maneuver that pushed you through finishes",
   // and this is that: Life Points are written when the Damage is applied, which is the
   // last step of the Maneuver and a deliberate one.
+  // Fight or Flight (2): who knocked them through this one - "you instead gain the Shaken Combat Condition against them".
+  if (actor.system.effects?.slots?.["fightOrFlight.steadfast"] === true) {
+    await actor.setFlag("dbu-ttrpg", "fightOrFlightKnock", { threshold: now, by: knockedBy ?? "" });
+  }
   // And where from - "[Triggered/Injured]" asks for the Injured one crossed (From the Stars', knockedThrough).
   await fireMoment(actor, "threshold", { threshold: now, from: before, knockerUuid: knockedBy });
   // And for whoever knocked them through - an Opponent's Attacking Maneuver's Damage: Inherited Aggression's Battle Born.

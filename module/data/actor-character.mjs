@@ -33,6 +33,24 @@ import {
 } from "../races.mjs";
 
 /**
+ * The definitions of the Racial Traits and Talents a character holds - the Bestial Limit's set aside left out - and of the Options
+ * chosen on them: what their headers say is read as the character is prepared (`holdsState`, `zeroScore`).
+ */
+function heldDefinitions(parent) {
+  const items = Array.from(parent?.items ?? []);
+  const defs = [];
+  for (const item of items.filter(each => ["racial", "talent"].includes(each.type) && !traitAside(each, items, parent))) {
+    const own = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    if (own) defs.push(own);
+    for (const entry of (item.system?.chosen ?? []).filter(each => each?.key === "option")) {
+      const option = getTrait(entry.value);
+      if (option) defs.push(option);
+    }
+  }
+  return defs;
+}
+
+/**
  * Fold one phase of passive effects into the character's derived data.
  *
  * Called three times during the pass, because amounts are themselves derived: the
@@ -1968,6 +1986,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Racial Life Modifier, from whichever race is selected. An unknown or unset race
     // contributes nothing rather than breaking the Life calculation.
     this.racialLifeModifier = racialLifeModifier(this.race);
+    // Bestial Presence (1): "For every Bestial Trait gained through this effect, reduce your Racial Life Modifier by 1" - those it
+    // gave, still had (`grantedLifeCost`).
+    for (const item of Array.from(this.parent?.items ?? []).filter(each => each.type === "racial")) {
+      const cost = Number(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.grantedLifeCost) || 0;
+      if (cost) this.racialLifeModifier -= cost * Array.from(this.parent.items).filter(each => each.flags?.["dbu-ttrpg"]?.grantedBy === item.id).length;
+    }
 
     // The Critical Target can be lowered by effects, but never past 7, and never
     // raised above its starting value of 10.
@@ -1990,6 +2014,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         + DBUCharacterData.perksOf(this.characterPerks, "Attribute Addition", this.powerLevel)
           .reduce((total, perk) => total + (Number(perk.attributes?.[key]) || 0), 0);
     }
+    // A Score a Trait or its Option holds at 0 - Savage's "your Scholarship Score is 0. You cannot spend any Attribute Points to
+    // increase your Scholarship Score" (`zeroScore`): whatever was spent on it counts for nothing.
+    const zeroScores = new Set(heldDefinitions(this.parent).flatMap(def => String(def.zeroScore ?? "").split(",")
+      .map(each => each.trim()).filter(each => each in atts)));
+    for (const key of zeroScores) atts[key].score = 0;
 
     // --- What the Attributes themselves grant ---
     // Two of the seven carry a rule of their own, and both turn on at a Score of 4 and
@@ -2019,6 +2048,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       for (const item of items.filter(each => ["racial", "talent"].includes(each.type) && !aside(each))) {
         const held = String(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.holdsState ?? "");
         if (held) this.states = { ...(this.states ?? {}), [held]: Math.max(1, Number(this.states?.[held]) || 0) };
+      }
+      // Or an Option chosen on one - Savage's "you are always in the Feral State".
+      for (const def of heldDefinitions(this.parent).filter(each => each.optionOf && each.holdsState)) {
+        const held = String(def.holdsState);
+        this.states = { ...(this.states ?? {}), [held]: Math.max(1, Number(this.states?.[held]) || 0) };
       }
     }
 
@@ -2111,6 +2145,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The earliest phase: conditions may read Scores, but amounts may only use (bT),
     // which follows from Power Level alone. (T) is not settled yet.
     runPhase(this, "tier");
+    // And held at 0 past what an effect adds to it.
+    for (const key of zeroScores) atts[key].score = 0;
 
     // Base Tier of Power follows from Power Level alone: 1 for Levels 1-4, then one
     // more per five Levels, reaching 7 at Level 30.

@@ -566,6 +566,9 @@ const PREDICATES = {
     return (allies.length > 0) && allies.every(other => other.system?.defeated);
   },
 
+  /** The Attacking Maneuver that answered `hit-opponent` made through the Basic Attack Maneuver (Ferocious Assault's). */
+  hitThroughBasicAttack: scope => Boolean(scope.context?.basicAttack),
+
   alliesStanding: scope => {
     const self = scope.data?.parent;
     if (!self) return false;

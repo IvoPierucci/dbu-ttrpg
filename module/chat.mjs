@@ -16441,6 +16441,41 @@ async function offerPowerOrTransform(actor, reason) {
 }
 
 /**
+ * Ferocious Assault (2): "If you hit an Opponent with an Attacking Maneuver made through the Basic Attack Maneuver while below the Bruised
+ * Health Threshold, they gain 1 stack of the Broken Combat Condition until the start of your next turn" - every Opponent that attack hit.
+ */
+export async function ferociousBreak(actor, context = {}) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const hit = (context?.struck ?? []).map(uuid => fromUuidSync(uuid)).filter(other => other && (other.uuid !== actor.uuid)
+    && areOpponents(other, actor));
+  if (!hit.length) return UNSPENT;
+  for (const other of hit) await markUntilNextTurn(actor, other, "broken", 1, "start", "Ferocious Assault");
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">Ferocious Assault:
+    ${Handlebars.escapeExpression(hit.map(other => other.name).join(", "))} Broken until the start of ${Handlebars.escapeExpression(actor.name)}'s
+    next turn.</div>` });
+}
+
+/**
+ * Bestial Presence (2): "Make a Clash (Intimidate vs Intuition/Intimidate) against all Opponents within a Destructive Sphere AoE (centered
+ * on you). If you win, they gain a stack of the Broken Combat Condition and the Shaken Combat Condition until the start of your next turn."
+ * A Destructive Sphere: 5 Squares between. Unspent where nobody is in it.
+ */
+export async function bestialPresence(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const near = opponentsWithin(actor, SPHERE_RADIUS.destructive - 1);
+  if (!near.length) {
+    ui.notifications.info(`${actor.name}: Bestial Presence - no Opponent within a Destructive Sphere.`);
+    return UNSPENT;
+  }
+  for (const other of near) {
+    await postSkillClash(actor, other, { name: "Bestial Presence", type: "outOfSequence",
+      clash: { skill: "intimidation", defenderSkills: ["intuition", "intimidation"] } },
+      { impede: { applied: false, conditions: ["broken", "shaken"], edge: "start", next: true, source: "Bestial Presence" } });
+  }
+  return true;
+}
+
+/**
  * Nameless Horde (5): "[Triggered/Power, 1/Round]: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver" - or a 'Full Power'
  * Signature Technique instead (use-maneuver.mjs useManeuver). Unspent where none is made.
  */
@@ -20428,9 +20463,11 @@ async function settleImpede(message, clash) {
     edge = (picked === "shaken") ? "start" : "end";
     next = true;
   }
-  await markUntilNextTurn(actor, target, condition, 1, edge, source, next);
+  // Or several - Bestial Presence's Broken and Shaken.
+  const conditions = Array.isArray(clash.impede.conditions) && clash.impede.conditions.length ? clash.impede.conditions : [condition];
+  for (const each of conditions) await markUntilNextTurn(actor, target, each, 1, edge, source, next);
   const { allConditions } = await import("./conditions.mjs");
-  const named = allConditions().find(each => each.key === condition)?.label ?? condition;
+  const named = conditions.map(key => allConditions().find(each => each.key === key)?.label ?? key).join(" and ");
   return settledNote(message, `${source}: ${target.name} - ${named} till the ${edge === "end" ? "end" : "start"} of ${actor.name}'s ${next ? "next " : ""}turn.`);
 }
 
@@ -24962,6 +24999,22 @@ function flankerParts(attacker, target, roll) {
   const slot = attacker?.system?.effects?.slots?.[`${roll}.flanking`];
   if (!(Number(slot?.add) || 0) || !target || (attacker.uuid === target.uuid) || !brigandAllyBeside(attacker, target)) return [];
   return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Flanking", value: Number(slot.add) }];
+}
+
+/**
+ * Pack Animal: "if 2+ Allies are within the Melee Range of an Opponent, increase your Wound Rolls against them by an additional 1(T)" -
+ * your Allies, not Defeated, within that Opponent's own Melee Range.
+ */
+function packFlankParts(attacker, target) {
+  const slot = attacker?.system?.effects?.slots?.["wound.packFlank"];
+  if (!(Number(slot?.add) || 0) || !target || (attacker.uuid === target.uuid) || !areOpponents(attacker, target)) return [];
+  const at = target.getActiveTokens?.(false, true)?.[0];
+  if (!at) return [];
+  const reach = Math.max(0, Number(target.system?.size?.meleeRange) || 0);
+  const near = alliesOnScene(attacker).filter(ally => !ally.system?.defeated && (ally.getActiveTokens?.(false, true) ?? [])
+    .some(token => (squaresBetween(token, at) ?? 99) <= reach));
+  if (near.length < 2) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Pack Animal", value: Number(slot.add) }];
 }
 
 /** Hidden: "Increase your Combat Rolls against Characters who are Oblivious of you by 2(bT)." */
@@ -29678,10 +29731,12 @@ async function answerHit(message, attack, attacker, struck) {
   if (flexed) Object.assign(answer.marks, { furiousWound: flexed.value, furiousName: flexed.name });
   // Variable Fighter (2): whether it was an Armed Attack.
   const armedHit = Boolean(attack.weapon && !attack.weapon.unarmed);
-  await offerTriggers(attacker, "hit-opponent", { armed: armedHit });
+  // Ferocious Assault (2): whether it was made through the Basic Attack Maneuver, and whom it hit.
+  const basicAttack = throughBasicAttack(attack);
+  await offerTriggers(attacker, "hit-opponent", { armed: armedHit, basicAttack, struck: struck.map(entry => entry.uuid) });
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
-    armed: armedHit,
+    armed: armedHit, basicAttack,
     area: Boolean(attackArea(attack)), oblivious: struck.some(({ own }) => own.oblivious),
     // Glass Shards (1): of the Glass Profile, and whom it hit.
     glass: [attack.profile, ...extraProfilesOf(attack)].includes("glass"), struck: struck.map(entry => entry.uuid),
@@ -30773,7 +30828,7 @@ async function rollAttackWoundWork(message, attack) {
       ...lockOnParts(attacker, target),
       ...enemyParts(attacker, target),
       ...inferiorParts(attacker, target, "wound"),
-      ...brigandParts(attacker, target, "wound"), ...flankerParts(attacker, target, "wound"),
+      ...brigandParts(attacker, target, "wound"), ...flankerParts(attacker, target, "wound"), ...packFlankParts(attacker, target),
       ...tacticianParts(attacker, target),
       ...rangeParts(attacker, attack, target, "wound"),
       ...heelParts(attacker, target),
@@ -34750,6 +34805,19 @@ export async function rollSteadfastCheck(actor) {
     }
   }
 
+  // Ferocious Assault (3): "you automatically succeed the Steadfast Check for the Critical Health Threshold" - the mark used up by it.
+  const passMark = actor.getFlag?.(SCOPE, "steadfastAutoPass");
+  if (passMark?.threshold && (passMark.threshold === rolled)) {
+    await actor.unsetFlag(SCOPE, "steadfastAutoPass");
+    for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
+    await actor.update({ ...updates, [`system.thresholdChecks.${rolled}`]: "pass" });
+    if (automatic.length) await steadfastFailed(actor, automatic);
+    await steadfastPassed(actor, rolled);
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+      flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - passed automatically (${passMark.by})` });
+    return true;
+  }
+
   // Critical Wound (2): this Threshold's Check failed without rolling - the mark used up by it.
   const marked = actor.getFlag?.(SCOPE, "steadfastAutoFail");
   if (marked?.threshold && pending.includes(marked.threshold)) {
@@ -34926,6 +34994,9 @@ async function heartOfGlassFail(actor) {
  * whose Checks these were, where known.
  */
 async function steadfastFailed(actor, failed = []) {
+  // Fight or Flight (2): "If you fail, you gain the Shaken Combat Condition against the nearest Opponent until the end of your next turn" -
+  // a Health Threshold's Check.
+  if ((actor.system.effects?.slots?.["fightOrFlight.steadfast"] === true) && failed.length) await fightOrFlightShaken(actor, failed);
   // Whoever answers anybody's failing - Wrath of the Dragon's (5).
   for (const other of new Map((canvas?.tokens?.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()) {
     if (!other || (other.uuid === actor.uuid) || other.system?.defeated
@@ -34954,6 +35025,29 @@ async function steadfastFailed(actor, failed = []) {
   }
   // Shapeshift: "If you ... fail a Steadfast Check, immediately stop applying the effects".
   await endShapeshift(actor, "a Steadfast Check failed");
+}
+
+/**
+ * Fight or Flight (2): "If you fail, you gain the Shaken Combat Condition against the nearest Opponent until the end of your next turn. If
+ * an Opponent's Attacking Maneuver was what knocked you through this Health Threshold, you instead gain the Shaken Combat Condition
+ * against them." Whom - kept as they were knocked through (combat.mjs), else the nearest, asked among ties - said on its note: the
+ * system does not keep whom a Shaken is against.
+ */
+async function fightOrFlightShaken(actor, failed) {
+  const knock = actor.getFlag?.(SCOPE, "fightOrFlightKnock");
+  const knocker = (knock?.by && failed.includes(knock.threshold)) ? fromUuidSync(knock.by) : null;
+  let against = (knocker && (knocker.uuid !== actor.uuid) && areOpponents(knocker, actor)) ? knocker : null;
+  if (!against) {
+    const { nearestOpponents } = await import("./guidance.mjs");
+    const nearest = nearestOpponents(actor);
+    const picked = (nearest.length > 1) ? await askPlayerChoice(actor, `${actor.name}: Fight or Flight - the nearest Opponent`,
+      nearest.map(each => ({ value: each.uuid, label: each.name }))) : nearest[0]?.uuid;
+    against = nearest.find(each => each.uuid === picked) ?? null;
+  }
+  await markUntilNextTurn(actor, actor, "shaken", 1, "end", "Fight or Flight");
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">Fight or Flight:
+    ${Handlebars.escapeExpression(actor.name)} is Shaken${against ? ` against ${Handlebars.escapeExpression(against.name)}` : ""} until the
+    end of their next turn.</div>` });
 }
 
 /** The Steadfast Check for a Health Threshold passed: what answers it, asked first where it is the player's. */

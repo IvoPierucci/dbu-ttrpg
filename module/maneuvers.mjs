@@ -1646,6 +1646,30 @@ export async function askApoplecticBeast(actor, declared) {
 }
 
 /**
+ * Ferocious Assault (3): "[Triggered, 1/Encounter]: When making an Attacking Maneuver while below the Injured Health Threshold, reduce your
+ * Life Points to 1 (you automatically succeed the Steadfast Check for the Critical Health Threshold). Increase the Wound Roll of this
+ * Attacking Maneuver by the reduction to your Life Points." Asked as it is declared; the Life Points taken then, a row on its Wound, and
+ * the Critical Check marked passed (chat.mjs rollSteadfastCheck).
+ */
+export async function askFerociousAssault(actor, declared) {
+  if (!declared || (actor?.system?.effects?.slots?.["ferociousAssault.lifeToOne"] !== true)) return declared;
+  if (!["injured", "critical"].includes(actor.system.threshold?.key ?? "healthy")) return declared;
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.("dbu-ttrpg", "ferociousAssaultEncounter") === encounter) return declared;
+  const reduction = (Number(actor.system.life?.value) || 0) - 1;
+  if (reduction <= 0) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Ferocious Assault` },
+    content: `<p data-tooltip="Once a Combat Encounter. The Steadfast Check for the Critical Health Threshold passed automatically.">Your Life Points
+      to 1 - ${reduction} for +${reduction} on this Wound Roll?</p>`, rejectClose: false });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "ferociousAssaultEncounter", encounter);
+  await actor.setFlag("dbu-ttrpg", "steadfastAutoPass", { threshold: "critical", by: "Ferocious Assault" });
+  const { reduceLifePoints } = await import("./chat.mjs");
+  await reduceLifePoints(actor, reduction, { reason: "Ferocious Assault", own: true });
+  return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: "Ferocious Assault", value: reduction }] };
+}
+
+/**
  * Injuring Wound (2): "When making an Attacking Maneuver, you can reduce your Strike Roll by 1(bT) to increase your Wound Roll
  * by 2(bT)." Asked as one is declared, once a Round; carried on the attack as a row on its Strike and one on its Wound.
  */

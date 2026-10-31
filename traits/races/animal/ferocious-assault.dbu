@@ -1,0 +1,29 @@
+id: ferocious-assault
+name: Ferocious Assault
+order: 3
+category: mind
+importance: secondary
+description: >
+  Single-minded in their need for survival, even prey animals become fierce opponents when they feel the need to fight.
+text: >
+  Ferocious Assault (Mind): Single-minded in their need for survival, even prey animals become fierce opponents when they feel the need to fight.
+  (1)-[Passive]: While you are below the Injured Health Threshold, increase your Wound Rolls by 2(T).
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver made through the Basic Attack Maneuver while below the Bruised Health Threshold, they gain 1 stack of the Broken Combat Condition until the start of your next turn.
+  (3)-[Triggered, 1/Encounter]: When making an Attacking Maneuver while below the Injured Health Threshold, reduce your Life Points to 1 (you automatically succeed the Steadfast Check for the Critical Health Threshold). Increase the Wound Roll of this Attacking Maneuver by the reduction to your Life Points.
+
+---
+
+[passive]
+# (1)
+if (belowThreshold("injured")) {
+    wound += 2(T);
+}
+# (3) Asked as an Attacking Maneuver is declared, once an Encounter: your Life Points to 1, as much on its Wound Roll, the Critical
+# Health Threshold's Steadfast Check passed (maneuvers.mjs askFerociousAssault).
+allow ferociousAssault.lifeToOne;
+
+# (2) A Basic Attack hit an Opponent, Bruised or worse: every Opponent it hit Broken till the start of your next turn (chat.mjs
+# ferociousBreak). Automatic by default, its Triggered/Automatic button.
+[triggered/hit-opponent, 1/round, effect 2]
+requires belowThreshold("bruised") && hitThroughBasicAttack;
+ferociousBreak();

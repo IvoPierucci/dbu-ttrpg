@@ -1,0 +1,23 @@
+id: bestial-presence
+name: Bestial Presence
+order: 4
+category: body
+importance: secondary
+# (1) Up to two Bestial Traits, each chosen as it is added - "Later, by hand" for none - and the Racial Life Modifier 1 lower for each it
+# gave, while it is had (actor-character.mjs).
+grantsOther: bestial
+grantsOtherCount: 2
+grantedLifeCost: 1
+description: >
+  Animals always create a tense atmosphere around them with their unpredictability and their deadly defense mechanisms.
+text: >
+  Bestial Presence (Body): Animals always create a tense atmosphere around them with their unpredictability and their deadly defense mechanisms.
+  (1)-[Passive]: Select and gain up to 2 Bestial Traits. For every Bestial Trait gained through this effect, reduce your Racial Life Modifier by 1.
+  (2)-[Triggered/Power, 1/Round]: Make a Clash (Intimidate vs Intuition/Intimidate) against all Opponents within a Destructive Sphere AoE (centered on you). If you win, they gain a stack of the Broken Combat Condition and the Shaken Combat Condition until the start of your next turn.
+
+---
+
+# (2) The Power Up used: the Clash against every Opponent within a Destructive Sphere - won, Broken and Shaken till the start of your
+# next turn (chat.mjs bestialPresence). Ticked in its window.
+[triggered/power, 1/round, effect 2]
+bestialPresence();
