@@ -1,0 +1,22 @@
+{
+  "id": "animal",
+  "name": "Animal",
+  "minionRace": true,
+  "lifeModifier": 2,
+  "attributeIncrease": {
+    "force": 1,
+    "insight": 1
+  },
+  "attributeChoices": [
+    {
+      "amount": 1,
+      "options": [
+        "tenacity",
+        "agility"
+      ]
+    }
+  ],
+  "savingThrow": "impulsive",
+  "skillRanks": 0,
+  "sizes": "any"
+}

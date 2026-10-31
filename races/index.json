@@ -1,10 +1,14 @@
 {
   "races": [
+    "alien.json",
     "android.json",
     "angel.json",
+    "animal.json",
     "arcosian.json",
+    "arlian.json",
     "bio-android.json",
     "cerealian.json",
+    "creature.json",
     "demon.json",
     "earthling.json",
     "glass-tribe.json",
@@ -14,9 +18,14 @@
     "namekian.json",
     "neko-majin.json",
     "neo-tuffle.json",
+    "oni.json",
+    "robot.json",
+    "saibaman.json",
     "saiyan.json",
     "shadow-dragon.json",
     "shinjin.json",
-    "yardrat.json"
+    "tuffle.json",
+    "yardrat.json",
+    "zooner.json"
   ]
 }

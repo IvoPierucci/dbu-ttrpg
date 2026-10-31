@@ -1,0 +1,27 @@
+{
+  "id": "oni",
+  "name": "Oni",
+  "minionRace": true,
+  "lifeModifier": 2,
+  "attributeIncrease": {
+    "agility": 1,
+    "tenacity": 1
+  },
+  "attributeChoices": [
+    {
+      "amount": 1,
+      "options": [
+        "force",
+        "magic"
+      ]
+    }
+  ],
+  "savingThrow": "corporeal",
+  "skillRanks": 3,
+  "sizes": [
+    "small",
+    "medium",
+    "large",
+    "enormous"
+  ]
+}

@@ -29,10 +29,44 @@ export function racialAttributeIncrease(id, attribute) {
  * The Saving Throws a race focuses. Always an array: most races name one, but a few
  * name two, and the file may write either a string or a list.
  */
-export function racialSavingThrows(id) {
+export function racialSavingThrows(id, chosen = "") {
   const save = races.get(id)?.savingThrow;
   if (!save) return [];
+  // "Saving Throw: Any (select one)" - the Aliens': the one picked, none until it is.
+  if (save === "any") return chosen ? [chosen] : [];
   return Array.isArray(save) ? save : [save];
+}
+
+/** Whether the race leaves its focused Saving Throw to the player: "Any (select one)". */
+export function racialSavingThrowChosen(id) {
+  return races.get(id)?.savingThrow === "any";
+}
+
+/**
+ * Whether the race is a Minion Race (Minion Races): "A Minion Race sets their Life Points to 1/2 rather than 1/4 when made as a
+ * Minion", and "maintains all of their Race's Racial Traits, instead of having to choose between them".
+ */
+export function isMinionRace(id) {
+  return races.get(id)?.minionRace === true;
+}
+
+/**
+ * The Size Categories the race may be built as, from the ones in `order` (smallest first): a Minion Race's own - "Minion Races
+ * are not bound by the usual selection of Size Categories (Small to Large) and each possess their own selection" - as a list,
+ * or "any"; null for the usual.
+ */
+export function racialSizes(id, order) {
+  const own = races.get(id)?.sizes;
+  if (own === "any") return [...order];
+  return Array.isArray(own) ? order.filter(key => own.includes(key)) : null;
+}
+
+/** The Size the race lets a character be built as: the one chosen where it may, else the nearest of its own - the smaller on a tie. */
+export function sizeForRace(id, size, order) {
+  const own = racialSizes(id, order);
+  if (!own?.length || own.includes(size)) return size;
+  const at = order.indexOf(size);
+  return own.reduce((best, key) => (Math.abs(order.indexOf(key) - at) < Math.abs(order.indexOf(best) - at)) ? key : best);
 }
 
 /**

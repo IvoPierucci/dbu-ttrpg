@@ -43,7 +43,7 @@
   </section>
 
 
-  {{#if racialSkillRanks.length}}
+  {{#if racialGrants}}
   <!-- What the race grants. Kept apart from the Power Level table because none of it
        is earned by levelling, though the Skill Ranks do count toward the same cap. -->
   <section class="panel racial-grants">
@@ -72,6 +72,23 @@
     </div>
     {{/if}}
 
+    {{#if racialSavingThrow}}
+    <div class="racial-row">
+      <span class="racial-row-label">Saving Throw</span>
+      <div class="racial-slots">
+        <label class="racial-choice">
+          <select name="system.racialSavingThrow">
+            <option value=""></option>
+            {{#each racialSavingThrow as |save|}}
+            <option value="{{save.value}}" {{#if save.selected}}selected{{/if}}>{{save.label}}</option>
+            {{/each}}
+          </select>
+        </label>
+      </div>
+    </div>
+    {{/if}}
+
+    {{#if racialSkillRanks.length}}
     <div class="racial-row">
       <span class="racial-row-label">Skill Ranks</span>
       {{! The Skill Improvement's window, for the race's Ranks: the slots hidden, written as it closes. }}
@@ -83,6 +100,7 @@
                 data-benefit-data="{{racialSkillBenefit.data}}" {{#if racialSkillBenefit.label}}data-tooltip="{{racialSkillBenefit.label}}"{{/if}}><span class="benefit-text">{{#if racialSkillBenefit.label}}{{racialSkillBenefit.label}}{{else}}Choose&hellip;{{/if}}</span>{{#if racialSkillBenefit.left}}<span class="benefit-left">({{racialSkillBenefit.left}} left)</span>{{/if}}{{#if racialSkillBenefit.over}}<span class="benefit-over">(over the cap)</span>{{/if}}</button>
       </div>
     </div>
+    {{/if}}
   </section>
   {{/if}}
 

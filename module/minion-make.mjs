@@ -18,7 +18,7 @@ const SCOPE = "dbu-ttrpg";
 
 /** What makes a character who they are, copied onto a Duplicate - nothing of how this Encounter has gone for them. */
 export const DUPLICATED_FIELDS = Object.freeze([
-  "attributes", "transformationBonuses", "racialSkillRanks", "racialAttributeChoices", "basicAttackProfiles", "trainingBonuses",
+  "attributes", "transformationBonuses", "racialSkillRanks", "racialAttributeChoices", "racialSavingThrow", "basicAttackProfiles", "trainingBonuses",
   "rollModifiers", "diceModifiers", "capacityModifiers", "actionModifiers", "tierOfPowerModifier", "criticalTarget",
   "skillSpecializations", "externalModifiers", "powerLevel", "race", "size", "subrace", "alignment", "progression",
   "characterPerks", "combatPins", "combatUnpins", "debug"

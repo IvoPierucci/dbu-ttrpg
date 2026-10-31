@@ -49,7 +49,7 @@
 
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { isCharacter } from "./actor-types.mjs";
-import { getRace, subraceName } from "./races.mjs";
+import { getRace, isMinionRace, subraceName } from "./races.mjs";
 import { traitAside } from "./aside.mjs";
 
 /** The Item type a Racial Trait is. */
@@ -331,10 +331,11 @@ export function racialTraitUnfit(trait, race, subrace = "", slots = null) {
  * Minion Creation, Step 2: "they only possess the Primary Racial Traits (ignoring Subrace Traits) for that Race and either two
  * Secondary Racial Traits or one Secondary Racial Trait and one Subrace Trait." A Minion's own race's (not a Duplicate's - a copy of
  * its Master's): why one more Secondary or Subrace Trait is past that, or "". `held` the Trait files it has. Said, and dimmed on the
- * Add Racial Trait list; taken all the same if picked.
+ * Add Racial Trait list; taken all the same if picked. None for a Minion Race (Minion Races): it "maintains all of their Race's Racial
+ * Traits, instead of having to choose between them".
  */
 export function minionRacialUnfit(trait, actor, held = []) {
-  if ((actor?.type !== "minion") || actor.system?.duplicate || factorOf(trait)) return "";
+  if ((actor?.type !== "minion") || actor.system?.duplicate || factorOf(trait) || isMinionRace(actor.system?.race)) return "";
   const race = actor.system?.race ?? "";
   const kindOf = each => (each?.subrace ? "subrace" : ((each?.importance === "secondary") ? "secondary" : "primary"));
   const kind = kindOf(trait);

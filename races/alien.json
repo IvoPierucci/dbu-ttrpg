@@ -1,0 +1,27 @@
+{
+  "id": "alien",
+  "name": "Alien",
+  "minionRace": true,
+  "lifeModifier": 1,
+  "attributeChoices": [
+    {
+      "amount": 1,
+      "options": "any"
+    },
+    {
+      "amount": 1,
+      "options": "any"
+    },
+    {
+      "amount": 1,
+      "options": "any"
+    }
+  ],
+  "savingThrow": "any",
+  "skillRanks": 2,
+  "sizes": [
+    "small",
+    "medium",
+    "large"
+  ]
+}

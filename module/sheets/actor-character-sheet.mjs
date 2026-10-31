@@ -109,6 +109,8 @@ import {
   raceOptions,
   raceSubraces,
   racialAttributeChoices,
+  racialSavingThrowChosen,
+  racialSizes,
   racialSkillRankCount,
   subraceName
 } from "../races.mjs";
@@ -1497,6 +1499,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.racialSkillBenefit = this.#racialSkillBenefit();
     context.racialAttributeChoices = this._prepareRacialAttributeChoices();
     const { race, subrace } = this.actor.system;
+    // The Aliens' "Saving Throw: Any (select one)".
+    context.racialSavingThrow = racialSavingThrowChosen(race) ? Object.keys(DBUCharacterData.SAVING_THROWS).map(key => ({
+      value: key, label: key.charAt(0).toUpperCase() + key.slice(1), selected: key === this.actor.system.racialSavingThrow })) : null;
+    context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow);
     context.raceOptions = raceOptions().map(option => ({
       ...option,
       selected: option.value === race
@@ -1515,8 +1521,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const read = ((typeof size === "string") ? size : (size?.chosen ?? size?.key)) || DBUCharacterData.DEFAULT_SIZE;
     // Nor a value that is no Size at all: that too would leave the picker on its first option.
     const built = (read in DBUCharacterData.SIZES) ? read : DBUCharacterData.DEFAULT_SIZE;
+    // A Minion Race's own Sizes instead (Minion Size) - "Creatures can have any Size Category".
+    const own = racialSizes(race, Object.keys(DBUCharacterData.SIZES));
     context.sizeOptions = Object.entries(DBUCharacterData.SIZES)
-      .filter(([key, definition]) => definition.selectable || (key === built))
+      .filter(([key, definition]) => (own ? own.includes(key) : definition.selectable) || (key === built))
       .map(([key, definition]) => ({
         value: key,
         label: definition.label,

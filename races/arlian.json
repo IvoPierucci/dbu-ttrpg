@@ -1,0 +1,18 @@
+{
+  "id": "arlian",
+  "name": "Arlian",
+  "minionRace": true,
+  "lifeModifier": 2,
+  "attributeIncrease": {
+    "tenacity": 1,
+    "force": 1,
+    "personality": 1
+  },
+  "savingThrow": "corporeal",
+  "skillRanks": 2,
+  "sizes": [
+    "small",
+    "medium",
+    "large"
+  ]
+}

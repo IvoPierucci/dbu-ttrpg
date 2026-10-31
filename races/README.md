@@ -31,10 +31,12 @@ directory - it can only fetch files it is told about by name.
 | `attributeIncrease` | no | Attribute Score increases that are fixed for the race. |
 | `attributeChoices` | no | Increases the player picks. See below. |
 | `exclusiveAttributes` | no | Groups of Attributes from which at most one may be picked across all choices. |
-| `savingThrow` | no | The race's focused Saving Throw, or a list of them. It gains +1(T) and its Critical Target drops by 1. |
+| `savingThrow` | no | The race's focused Saving Throw, or a list of them. It gains +1(T) and its Critical Target drops by 1. `"any"` lets the player pick one in the Progression tab. |
 | `skillRanks` | no | How many Skill Ranks the race grants. Picked in the Progression tab, counted toward the Tier of Power rank cap, and treated as earned at Power Level 1. |
 | `subraces` | no | Variants of the race, as `{ "id", "name" }` entries. A race with none offers no subrace choice at all. |
 | `description` | no | Free text, shown as a tooltip. |
+| `minionRace` | no | `true` for a Minion Race: as a Minion its Maximum Life Points are 1/2 rather than 1/4, and it keeps all its Racial Traits. |
+| `sizes` | no | A Minion Race's own Size Categories at Character Creation, as a list of keys, or `"any"`. Without it, the usual Small to Large. |
 
 Attribute keys: `agility`, `force`, `tenacity`, `scholarship`, `insight`, `magic`,
 `personality`. Saving Throw keys: `impulsive`, `corporeal`, `cognitive`, `morale`.

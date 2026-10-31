@@ -1,0 +1,18 @@
+{
+  "id": "zooner",
+  "name": "Zooner",
+  "minionRace": true,
+  "lifeModifier": 0,
+  "attributeIncrease": {
+    "agility": 1,
+    "force": 1,
+    "insight": 1
+  },
+  "savingThrow": "impulsive",
+  "skillRanks": 2,
+  "sizes": [
+    "small",
+    "medium",
+    "large"
+  ]
+}

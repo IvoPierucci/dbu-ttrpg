@@ -1,0 +1,16 @@
+{
+  "id": "saibaman",
+  "name": "Saibaman",
+  "minionRace": true,
+  "lifeModifier": 1,
+  "attributeIncrease": {
+    "agility": 1,
+    "force": 1,
+    "insight": 1
+  },
+  "savingThrow": "impulsive",
+  "skillRanks": 0,
+  "sizes": [
+    "small"
+  ]
+}

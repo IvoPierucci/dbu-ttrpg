@@ -1,0 +1,23 @@
+{
+  "id": "tuffle",
+  "name": "Tuffle",
+  "minionRace": true,
+  "lifeModifier": -2,
+  "attributeIncrease": {
+    "agility": 1
+  },
+  "attributeChoices": [
+    {
+      "amount": 2,
+      "options": [
+        "scholarship",
+        "insight"
+      ]
+    }
+  ],
+  "savingThrow": "cognitive",
+  "skillRanks": 3,
+  "sizes": [
+    "small"
+  ]
+}

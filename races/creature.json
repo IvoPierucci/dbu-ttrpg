@@ -1,0 +1,13 @@
+{
+  "id": "creature",
+  "name": "Creature",
+  "minionRace": true,
+  "lifeModifier": 3,
+  "attributeIncrease": {
+    "tenacity": 2,
+    "insight": 1
+  },
+  "savingThrow": "corporeal",
+  "skillRanks": 0,
+  "sizes": "any"
+}

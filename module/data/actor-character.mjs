@@ -23,11 +23,13 @@ import {
   tierExtraDiceCategory
 } from "../dice.mjs";
 import {
+  isMinionRace,
   racialAttributeChoices,
   racialAttributeIncrease,
   racialLifeModifier,
   racialSavingThrows,
-  racialSkillRankCount
+  racialSkillRankCount,
+  sizeForRace
 } from "../races.mjs";
 
 /**
@@ -1029,6 +1031,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       new fields.StringField({ required: true, blank: true, initial: "" }),
       { required: true, initial: [] }
     );
+    // And the focused Saving Throw a race leaves up to them - the Aliens' "Any (select one)".
+    schema.racialSavingThrow = new fields.StringField({ required: true, blank: true, initial: "" });
 
     // --- Capacity ---
     // The most Ki a character may spend in a single Combat Round. Only what has been
@@ -2186,8 +2190,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const sizeKeys = Object.keys(DBUCharacterData.SIZES);
     // Or one an effect makes their base - Alternate Scale Structure's Tiny or Enormous.
     // Two named - Gigantic Demon's Gigantic, Colossal Demon's Colossal "from Gigantic" - the larger.
+    // Else the one chosen - within a Minion Race's own Sizes: "Saibamen are of the Small Size Category".
     const chosenSize = Object.keys(DBUCharacterData.SIZES).filter(key => this.effects?.slots?.[`size.base.${key}`] === true).pop()
-      ?? this.size;
+      ?? sizeForRace(this.race, this.size, sizeKeys);
     const builtAt = sizeKeys.indexOf(chosenSize);
     // Or a Size named outright by something worn - the Micro Band's "reduce your Size
     // Category to the Tiny or Nano Size Category" - where it is smaller than the one they
@@ -2402,7 +2407,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     });
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
     // Life Points (Minion Rules): "set their Maximum Life Points to 1/4 (rounded up) of what it would usually be."
-    if (this.minion) this.life.max = Math.ceil(this.life.max / 4);
+    // Minion Races: "A Minion Race sets their Life Points to 1/2 rather than 1/4 when made as a Minion."
+    if (this.minion) this.life.max = Math.ceil(this.life.max / (isMinionRace(this.race) ? 2 : 4));
     // Super Ghost Kamikaze Attack: "The Kamikaze Ghosts are Duplicate Minions with their Life Points reduced by 1/2" - down.
     if (this.minion && (this.parent?.getFlag?.("dbu-ttrpg", "minionKind") === "kamikaze")) this.life.max = Math.floor(this.life.max / 2);
     // A Master's to their Minions, "after all other calculations": Leader's, and so many for each Power Level reached.
@@ -3073,7 +3079,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // Saving Throws: tied to Attribute Score (not Modifier) per the rules. The race's
     // focused Saving Throw: "Increase the listed Saving Throw by 1(T) and reduce its Critical Target by 1."
-    const racialSaves = racialSavingThrows(this.race);
+    const racialSaves = racialSavingThrows(this.race, this.racialSavingThrow);
 
     // What moves the die of every Saving Throw - Legacy's 2. Rolled with it wherever one is.
     this.saveNatural = slot(this, "saves.natural");

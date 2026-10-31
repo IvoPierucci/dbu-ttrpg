@@ -1,0 +1,20 @@
+{
+  "id": "robot",
+  "name": "Robot",
+  "minionRace": true,
+  "lifeModifier": 3,
+  "attributeIncrease": {
+    "force": 1,
+    "insight": 1,
+    "tenacity": 1
+  },
+  "savingThrow": "corporeal",
+  "skillRanks": 1,
+  "sizes": [
+    "tiny",
+    "small",
+    "medium",
+    "large",
+    "enormous"
+  ]
+}
