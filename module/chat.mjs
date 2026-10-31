@@ -32903,10 +32903,24 @@ async function playMirror(message, actor, itemId) {
 }
 
 /**
+ * Mirrored Attack's Initiating Attack: the attack it is answering, mirrored (the user's ruling) - the same Signature Technique,
+ * its own copy of it (a Duplicate's Items keep their ids), or else its Basic Attack with the same Profile, Foundation, Advantages
+ * and Energy Charges. Nothing paid for it.
+ */
+function mirroredInitiating(attack, duplicate) {
+  const mirrored = { name: attack.maneuverName, cost: 0, profile: attack.profile, foundation: attack.foundation,
+    advantages: attack.advantages ?? [], charges: Number(attack.energyCharges) || 0,
+    powerShotRanks: Number(attack.powerShotRanks) || 0, woundCriticalTarget: profileFor(attack)?.woundCriticalTarget ?? null };
+  const itemId = attack.technique?.itemId ?? "";
+  return (itemId && duplicate.items?.get?.(itemId)) ? { kind: "technique", itemId, ...mirrored } : { kind: "profile", ...mirrored };
+}
+
+/**
  * Mirrored Attack's Duplicate, made (on the GM's client): "The created Minion becomes the target for that Attacking Maneuver and
  * must respond with the Duel Maneuver (if possible)." Its user's place among the targets its own - they are not hit, whoever wins -
- * and the Duel begun with it as the Initiator, a Power Duel (the user's ruling); not possible, it answers as any target does. Its
- * Clashes, its wagers and its Wound its own: a copy of the attacker's. The attack gone on without it by now, it ceases to be.
+ * and the Duel begun with it as the Initiator, its Initiating Attack the one it answers (mirroredInitiating). The user's ruling: a
+ * Duel always, whatever the Duel Maneuver asks of the attack. Its Clashes, its wagers and its Wound its own: a copy of the
+ * attacker's. The attack gone on without it by now, it ceases to be.
  */
 export async function mirrorTakesAttack(mirror, duplicate) {
   const message = game.messages?.get(mirror?.messageId ?? "");
@@ -32922,16 +32936,11 @@ export async function mirrorTakesAttack(mirror, duplicate) {
     ...((from.targetUuid === mirror.userUuid) ? { targetUuid: duplicate.uuid, targetName: duplicate.name } : {}),
     defences: (from.defences ?? []).filter(entry => entry.uuid !== mirror.userUuid),
     ready: (from.ready ?? []).filter(uuid => uuid !== mirror.userUuid) });
-  const why = whyNotDuel(duplicate, moved(attack), { counterLeft: 1 });
-  if (why) {
-    await settledNote(message, `${duplicate.name} takes ${attack.maneuverName} in ${userName}'s place - no Duel: ${why}.`);
-    return requestEdit(message, { type: "attack", attack: moved(message.getFlag(SCOPE, ATTACK_FLAG) ?? attack) });
-  }
   const returned = await returnInitialWagers(attack, fromUuidSync(attack.attackerUuid));
   const duel = {
     initiatorUuid: duplicate.uuid,
     initiatorName: duplicate.name,
-    initiating: { kind: "power", name: "Power Duel", cost: 0, charges: 0, powerShotRanks: 0, woundCriticalTarget: null },
+    initiating: mirroredInitiating(attack, duplicate),
     originalWager: Number(attack.kiWager) || 0,
     joined: [],
     united: [],
@@ -32945,7 +32954,7 @@ export async function mirrorTakesAttack(mirror, duplicate) {
     // Whose Duplicate it is, and which: gone as the Duel ends the attack (mirrorGone).
     mirror: { userUuid: mirror.userUuid, itemId: mirror.itemId, duplicateUuid: duplicate.uuid }
   };
-  await settledNote(message, `${duplicate.name} takes ${attack.maneuverName} in ${userName}'s place, and Duels.`);
+  await settledNote(message, `${duplicate.name} takes ${attack.maneuverName} in ${userName}'s place, and Duels with its mirror.`);
   const fresh = moved(message.getFlag(SCOPE, ATTACK_FLAG) ?? attack);
   return requestEdit(message, { type: "attack", attack: { ...fresh, kiWager: 0,
     united: (fresh.united ?? []).map(entry => ({ ...entry, wager: 0 })), duel } });

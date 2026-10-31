@@ -5,9 +5,9 @@ prerequisite: N/A
 tpCost: 10
 # Copy Clone answers an attack aimed at you, from Respond (1 Counter Action, its KP, Copy Clone's limits on the attacker):
 # a Duplicate Minion of the attacker, yours, made beside you, takes your place among the targets - you are not hit, whoever
-# wins - and Duels them with a Power Duel if a Duel is possible, its Clashes, wagers and Wound its own (a copy of the
-# attacker's); if not, it answers as any target does. Gone once the attack is concluded (chat.mjs playMirror,
-# mirrorTakesAttack, mirrorEnds).
+# wins - and Duels them always, whatever the Duel Maneuver asks of the attack (the user's ruling), its Initiating Attack
+# the very attack it answers, mirrored: the same Signature Technique, or the same Profile; its Clashes, wagers and Wound
+# its own (a copy of the attacker's). Gone once the attack is concluded (chat.mjs playMirror, mirrorTakesAttack, mirrorEnds).
 mirroredAttack: true
 source: Core Rule
 description: >
