@@ -270,11 +270,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * No Skill may appear more than twice, and only the Level 1 grant allows a Skill to
    * appear twice at all - and only one Skill within it.
    */
-  static canRepeatSkillRank(entry, key, otherSlots) {
+  static canRepeatSkillRank(entry, key, otherSlots, minion = false) {
     const taken = otherSlots.filter(slot => slot === key).length;
     if (taken === 0) return true;
     if (taken > 1) return false;
-    if (!DBUCharacterData.isLevel1SkillImprovement(entry)) return false;
+    if (!DBUCharacterData.isLevel1SkillImprovement(entry, minion)) return false;
 
     const pairs = new Set(
       otherSlots.filter(slot => slot && (otherSlots.filter(other => other === slot).length > 1))
@@ -879,7 +879,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * every other one. A Skill Improvement picked in a Character Perk slot is never
    * this row, even at Level 1, because Character Perk rows are not locked.
    */
-  static isLevel1SkillImprovement(entry) {
+  static isLevel1SkillImprovement(entry, minion = false) {
+    // A Minion made through Minion Creation (`minion`) has none: "a Skill Improvement" at Power Level 1 is like any other (the
+    // user's). A Duplicate's, its Master's copied, is its Master's.
+    if (minion) return false;
     return (entry.choice === "Skill Improvement") && entry.locked && (entry.lvl === 1);
   }
 
@@ -920,9 +923,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * TP granted by a progression row. Only a Skill Improvement grants any, and the
    * fixed Level 1 slot is worth 25 rather than the usual 15.
    */
-  static techniquePointsFor(entry) {
+  static techniquePointsFor(entry, minion = false) {
     if (entry.choice !== "Skill Improvement") return 0;
-    return DBUCharacterData.isLevel1SkillImprovement(entry)
+    return DBUCharacterData.isLevel1SkillImprovement(entry, minion)
       ? DBUCharacterData.SKILL_IMPROVEMENT_TP_LEVEL_1
       : DBUCharacterData.SKILL_IMPROVEMENT_TP;
   }
@@ -946,8 +949,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   }
 
   /** Skill rank slots a progression row offers: 6 for the Level 1 slot, 4 otherwise. */
-  static skillRankSlotsFor(entry) {
-    return DBUCharacterData.isLevel1SkillImprovement(entry)
+  static skillRankSlotsFor(entry, minion = false) {
+    return DBUCharacterData.isLevel1SkillImprovement(entry, minion)
       ? DBUCharacterData.SKILL_RANK_SLOTS_LEVEL_1
       : DBUCharacterData.SKILL_RANK_SLOTS;
   }
@@ -1886,7 +1889,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
           technique: 0, // Recomputed in prepareDerivedData; never entered by hand.
           skillRanks: Array(DBUCharacterData.skillRankSlotsFor({
             choice: stepType, locked: stepType !== "Character Perk", lvl
-          })).fill("")
+          }, minion)).fill("")
         });
       }
     }
@@ -1920,8 +1923,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * copy of its Master, all of them.
    */
   racialRanksHad() {
-    const minion = (this.parent?.type === "minion") && !this.duplicate;
-    return (this.racialSkillRanks ?? []).slice(0, racialSkillRankCount(this.race, minion));
+    return (this.racialSkillRanks ?? []).slice(0, racialSkillRankCount(this.race, this.minionMade()));
+  }
+
+  /** A Minion made through Minion Creation - not a Duplicate, whose every choice is its Master's. */
+  minionMade() {
+    return (this.parent?.type === "minion") && !this.duplicate;
+  }
+
+  /** A Skill Improvement row's Ranks, as many as it has slots - a Minion's Level 1 one 4, whatever was kept past them. */
+  rowSkillRanks(entry) {
+    return (entry.skillRanks ?? []).slice(0, DBUCharacterData.skillRankSlotsFor(entry, this.minionMade()));
   }
 
   /**
@@ -2024,7 +2036,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // are counted here for them to read.
     const ranks = [...this.racialRanksHad(), ...(this.progression ?? [])
       .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
-      .flatMap(entry => entry.skillRanks),
+      .flatMap(entry => this.rowSkillRanks(entry)),
       ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? [])];
     const early = {
       attributes: this.attributes,
@@ -2243,7 +2255,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // TP is never entered by hand - each row's grant is derived from its option.
     for (const entry of this.progression) {
-      entry.technique = DBUCharacterData.techniquePointsFor(entry);
+      entry.technique = DBUCharacterData.techniquePointsFor(entry, this.minionMade());
 
       // Gifted Student: "increase ... the amount of Technique Points you gain from Skill
       // Improvements by 3". Added to the row rather than to the total, because that is
@@ -2310,7 +2322,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       ...this.racialRanksHad(),
       ...this.progression
         .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
-        .flatMap(entry => entry.skillRanks),
+        .flatMap(entry => this.rowSkillRanks(entry)),
       // And every Character Perk's Skill Improvement.
       ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? [])
     ];

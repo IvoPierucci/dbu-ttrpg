@@ -2770,7 +2770,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     for (const entry of progression) {
       ranksBeforeRow.push({ ...tally });
       if (entry.choice !== "Skill Improvement") continue;
-      for (const key of entry.skillRanks) {
+      for (const key of this.actor.system.rowSkillRanks?.(entry) ?? entry.skillRanks) {
         if (key) tally[key] = (tally[key] ?? 0) + 1;
       }
     }
@@ -2806,13 +2806,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // carried as hidden fields; the windows write them.
         attributeFields: attributeKeys.map(key => ({ key, name: `system.progression.${index}.attributes.${key}`,
           value: Number(entry.attributes?.[key]) || 0 })),
-        skillRanks: Array.from({ length: DBUCharacterData.skillRankSlotsFor(entry) }, (unused, slot) => ({
+        skillRanks: Array.from({ length: DBUCharacterData.skillRankSlotsFor(entry, this.#minionMade()) }, (unused, slot) => ({
           name: `system.progression.${index}.skillRanks.${slot}`,
           value: entry.skillRanks[slot] ?? ""
         })),
         // The Benefits cell's button: what was chosen, said - and what its window needs.
         benefit: isAttributeAddition ? DBUCharacterSheet.#attributeBenefit(entry, scoresBeforeRow[index])
-          : isSkillImprovement ? DBUCharacterSheet.#skillBenefit(entry, ranksBeforeRow[index], SKILLS) : null
+          : isSkillImprovement ? DBUCharacterSheet.#skillBenefit(entry, ranksBeforeRow[index], SKILLS, false, this.#minionMade()) : null
       };
     });
   }
@@ -3080,14 +3080,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * A Skill Improvement row's Benefits: its Skills by name - "+2 Perception" where the Level 1 one doubled one up - the Ranks
    * still unchosen, whether any passes this row's Rank cap, and for its window the picks, the slots and the Ranks going in.
    */
-  static #skillBenefit(entry, before, SKILLS, perk = false) {
+  static #skillBenefit(entry, before, SKILLS, perk = false, minion = false) {
     const cap = DBUCharacterData.skillRankCap(DBUCharacterData.tierOfPowerFor(entry.lvl));
-    const slots = DBUCharacterData.skillRankSlotsFor(entry);
+    const slots = DBUCharacterData.skillRankSlotsFor(entry, minion);
     const picks = (entry.skillRanks ?? []).filter(key => key && SKILLS[key]).slice(0, slots);
     const counts = picks.reduce((map, key) => ({ ...map, [key]: (map[key] ?? 0) + 1 }), {});
     const label = Object.entries(SKILLS).filter(([key]) => counts[key])
       .map(([key, skill]) => ((counts[key] > 1) ? `+${counts[key]} ${skill.label}` : skill.label)).join(", ");
-    const pairs = DBUCharacterData.isLevel1SkillImprovement(entry) ? DBUCharacterData.PAIRED_SKILL_RANKS_LEVEL_1 : 0;
+    const pairs = DBUCharacterData.isLevel1SkillImprovement(entry, minion) ? DBUCharacterData.PAIRED_SKILL_RANKS_LEVEL_1 : 0;
     return { kind: "skills", label, left: label ? Math.max(0, slots - picks.length) : 0,
       over: Object.entries(counts).some(([key, n]) => (before[key] ?? 0) + n > cap),
       data: JSON.stringify({ lvl: entry.lvl, cap, slots, pairs, before, picks, perk }) };
