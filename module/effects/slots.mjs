@@ -96,6 +96,28 @@ const TABLE = [
   { key: "life.allowNegative", phase: PHASES.TIER, kind: F, ops: ["set"],
     doc: "Lets damage take Life Points below zero, as the Undying State does." },
 
+  // --- Your Minions -------------------------------------------------------------
+  // The Master's, given to each of their Minions as it is prepared (allies.mjs minionGifts) - at the Master's Tiers.
+  { key: "minions.combatRolls", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Your Minions' Combat Rolls (Leader, Leader's Insignia, God of Many)." },
+  { key: "minions.soakValue", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Your Minions' Soak Value (Marauding Captain (2))." },
+  { key: "minions.lifeMax", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Your Minions' Maximum Life Points, after their quarter (Leader)." },
+  { key: "minions.lifePerLevel", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Your Minions' Maximum Life Points for each Power Level reached, after all calculations (Spiritual Leadership (3))." },
+  { key: "goops.lifePerLevel", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Your Goops' Life Points for each Power Level reached, after all other calculations (Battle Goo (2))." },
+  // Limited Control: "You can only possess a single Minion during a Combat Encounter (Minion Talents increase this number)".
+  { key: "minions.combat", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "How many Minions you may possess in a Combat Encounter - 1, and what Battle Goo (1), Tuffle Parasite (1) add." },
+  { key: "minions.ruler", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Ruler (1): no limit on your Minions, up to 10 of them not Defeated in a Combat Encounter." },
+  { key: "battleGoo.maneuvers", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Battle Goo (3): your Goops may use the Basic Attack and Intervene Maneuvers - destroyed after an Intervene." },
+  { key: "leadership.minionActs", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Spiritual Leadership (2): a Minion of yours you are Bonded to does not skip its Act Phase." },
+
   // --- Attributes --------------------------------------------------------------
   { key: "attributeScoreCap", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "The Attribute Score Limit for the current Tier of Power." },

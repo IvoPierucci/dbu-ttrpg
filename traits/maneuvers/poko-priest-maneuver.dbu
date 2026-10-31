@@ -16,5 +16,7 @@ text: >
 
 ---
 
-# Owned by every character, listed while the Poko Priest Option is had. Its Actions and Ki paid and its card posted; the
-# Minion is the table's - Minions, and the Dark Vassal Factor, are not in this system yet.
+# Owned by every character, listed while the Poko Priest Option is had. Its Actions and Ki paid; the Minion made beside you, a
+# Namekian - the Dark Vassal Factor, not in this system yet, and its Attribute Points the GM's (chat.mjs pokoMinion).
+[on used]
+pokoMinion();

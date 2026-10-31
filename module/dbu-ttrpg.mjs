@@ -1,6 +1,6 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import { isCharacter } from "./actor-types.mjs";
-import { initiativeOrder } from "./allies.mjs";
+import { initiativeOrder, minionsOf } from "./allies.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
 import DBURacialData from "./data/item-racial.mjs";
@@ -368,7 +368,27 @@ Hooks.once("setup", async () => {
   await loadTraits();
   await Promise.all([loadRaces(), loadManeuvers()]);
   for (const actor of game.actors ?? []) actor.prepareData();
+  // A Minion reads its Master's effects (allies.mjs minionGifts): again, now every Master's are prepared.
+  for (const actor of game.actors ?? []) if (actor.type === "minion") actor.prepareData();
 });
+
+/**
+ * "Your Minions": a Minion reads its Master's effects as it is prepared (allies.mjs minionGifts), so whatever changes the Master -
+ * their own data, an Item gained, changed or lost - prepares their Minions again, and shows it.
+ */
+function minionsRefresh(master) {
+  if (!master || (master.type === "minion")) return;
+  for (const id of minionsOf(master)) {
+    const minion = game.actors?.get(id);
+    if (!minion) continue;
+    minion.reset();
+    if (minion.sheet?.rendered) minion.sheet.render();
+  }
+}
+Hooks.on("updateActor", actor => minionsRefresh(actor));
+Hooks.on("createItem", item => minionsRefresh(item.parent));
+Hooks.on("updateItem", item => minionsRefresh(item.parent));
+Hooks.on("deleteItem", item => minionsRefresh(item.parent));
 
 // Seed a new character with its progression table and a full Life/Ki pool.
 // This runs on the document source before creation, because both depend on data the

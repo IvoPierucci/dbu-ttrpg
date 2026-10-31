@@ -10,5 +10,7 @@ text: >
 
 ---
 
-# A character's Minions are other characters, and nothing ties them to you yet - the table adds it to theirs, as God of
-# Many's.
+# Given to each of your Minions as it is prepared (allies.mjs minionGifts) - the Life after its quarter.
+[passive]
+minions.combatRolls += 1(T);
+minions.lifeMax += 5(bT);

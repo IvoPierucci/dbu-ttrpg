@@ -27,5 +27,6 @@ text: >
 
 ---
 
-# The entry only, by the table's ruling: it can be put on a piece and read there, and its
-# effects are the table's to apply - the Minions', and the team's.
+# Worn: given to each of your Minions as it is prepared (allies.mjs minionGifts). The Team Outfit's Wound Roll is the table's.
+[passive]
+minions.combatRolls += 1(bT);

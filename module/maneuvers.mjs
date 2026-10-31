@@ -1,4 +1,4 @@
-import { areAllies, masterOf, minionsOf } from "./allies.mjs";
+import { actsFreely, areAllies, masterOf, minionsOf } from "./allies.mjs";
 import { commandedNow } from "./actor-types.mjs";
 import { guidanceRangeGap } from "./guidance.mjs";
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
@@ -3925,7 +3925,7 @@ function profileOptionCost(maneuver, profileId, actor) {
  */
 export function whyNotMinionAttack(actor, maneuver) {
   if ((actor?.type !== "minion") || !maneuver?.attacking || !globalThis.game?.combat?.started) return null;
-  if (!commandedNow(actor)) return `${actor.name} is a Minion: no Attacking Maneuver without its Act Phase - its Master's Command.`;
+  if (!commandedNow(actor) && !actsFreely(actor)) return `${actor.name} is a Minion: no Attacking Maneuver without its Act Phase - its Master's Command.`;
   // Special Minions ignore the Single Attack rule.
   if (actor.system?.specialMinion || actor.system?.duplicate) return null;
   if ((Number(actor.system?.attacksThisRound) || 0) >= 1) return `${actor.name} is a Minion: one Attacking Maneuver a Combat Round.`;
@@ -3956,8 +3956,20 @@ export function whyNotMinionManeuver(actor, maneuver) {
   if ((actor?.type !== "minion") || !maneuver) return null;
   if (minionLine(actor, maneuver) === "non-minion") return `${actor.name} is a Minion: ${maneuver.name} is Non-Minion.`;
   if (actor.system?.duplicate && (maneuver.id === "empower")) return `${actor.name} is a Duplicate: no Empower Maneuver.`;
+  // From Goop (5): "A Goop cannot use any Maneuvers except the Movement Maneuver" - Battle Goo (3): "Your Goops gain access to
+  // (and can use) the Basic Attack Maneuver and Intervene Maneuver".
+  if (actor.getFlag?.("dbu-ttrpg", "minionKind") === "goop") {
+    const battle = globalThis.game?.actors?.get?.(masterOf(actor))?.system?.effects?.slots?.["battleGoo.maneuvers"] === true;
+    if (![...GOOP_MANEUVERS, ...(battle ? BATTLE_GOO_MANEUVERS : [])].includes(maneuver.id)) {
+      return `${actor.name} is a Goop: no Maneuver but the Movement Maneuver${battle ? ", the Basic Attack and the Intervene" : ""}.`;
+    }
+  }
   return null;
 }
+
+/** A Goop's one Maneuver, and Battle Goo's two more. */
+const GOOP_MANEUVERS = Object.freeze(["movement"]);
+const BATTLE_GOO_MANEUVERS = Object.freeze(["basic-attack", "intervene"]);
 
 /** A Duplicate: "Duplicate Minions also cannot ... target their Master with any Unique Ability or Special Maneuver". */
 export function whyNotAtMaster(actor, maneuver, targets = []) {
@@ -3974,6 +3986,9 @@ export function whyNotAtMaster(actor, maneuver, targets = []) {
  * inside of a Combat Encounter plus your base Tier of Power." What a Talent adds to the first: the `minions.combat` Slot.
  */
 export function minionCaps(actor) {
+  // Ruler (1): "There is no limit to the number of Minions you may possess, but only up to 10 of your Minions may be in a Combat
+  // Encounter at any one time (Defeated Minions do not count towards this limit)."
+  if (actor?.system?.effects?.slots?.["minions.ruler"] === true) return { combat: 10, outside: Infinity, notDefeated: true };
   const combat = Math.max(0, applySlot(actor?.system?.effects?.slots, "minions.combat", 1));
   return { combat, outside: combat + Math.max(1, Number(actor?.system?.baseTierOfPower) || 1) };
 }

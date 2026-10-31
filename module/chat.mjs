@@ -78,7 +78,8 @@ import {
   maneuverUsesLeft,
   secondSightOn,
   favoredElement,
-  favoredDamage
+  favoredDamage,
+  whyNotMinionManeuver
 } from "./maneuvers.mjs";
 import { appliedTraits, boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
 
@@ -245,10 +246,13 @@ function applyRequest(request) {
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
+    case "makeMinion": return import("./minion-make.mjs").then(made => made.makeMinion(fromUuidSync(request.masterUuid ?? ""), request.options ?? {}));
     case "createItem": return fromUuidSync(request.actorUuid)
       ?.createEmbeddedDocuments("Item", [request.data]);
     case "deleteItem": return fromUuidSync(request.actorUuid)?.items.get(request.itemId)?.delete();
     case "removeFromEncounter": return removeFromEncounter(fromUuidSync(request.actorUuid));
+    case "dismissDuplicates": return import("./combat.mjs").then(combat => combat.dismissDuplicates((request.ids ?? [])
+      .map(id => game.actors?.get(id)).filter(Boolean)));
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
     case "jumpStart": return applyJumpStart(request.combatId, request.combatantId);
     case "eternalSurge": return eternalSurge(request.actorUuid, request.focus);
@@ -435,6 +439,21 @@ async function applyForesee(combatId, combatantId, initiative) {
     const { keepTurnWith } = await import("./combat.mjs");
     await keepTurnWith(combat, currentId);
   }
+}
+
+/**
+ * Make Minions of a Master (minion-make.mjs makeMinion) - on the GM's client, the one that may create an Actor: asked of it from a
+ * player's. Nothing made with no GM here; said.
+ */
+export async function requestMakeMinion(master, options = {}) {
+  if (!master) return [];
+  if (game.user.isGM) return (await import("./minion-make.mjs")).makeMinion(master, options);
+  if (!game.users.activeGM) {
+    ui.notifications.warn("No GM is here to make the Minion - the table makes it.");
+    return [];
+  }
+  game.socket.emit(CHANNEL, { type: "makeMinion", masterUuid: master.uuid, options });
+  return [];
 }
 
 /** Give a character an Item, whoever owns them - the handcuff put on somebody else. */
@@ -20546,14 +20565,23 @@ export async function bloodlustStarve(actor) {
   await setResource(actor, "bloodlust", Math.max(0, (Number(actor.system.resources?.bloodlust?.stacks) || 0) - 1));
 }
 
-/** Brood Parent (1): "create a Duplicate Minion. Your Duplicate Minion's base Size Category is 1 Size Category smaller than yours." */
+/**
+ * Brood Parent (1): "create a Duplicate Minion. Your Duplicate Minion's base Size Category is 1 Size Category smaller than yours."
+ * Mini Minions: "you may choose to reduce their Size Category by up to 2 more Categories. If you do, for each reduction, reduce
+ * their Soak Value by an additional 1(T) and increase their Defense Value by 1(T)" - asked, kept on the Minion (registry.mjs).
+ * Made beside them (minion-make.mjs) and said.
+ */
 export async function broodMinion(actor) {
   if (!actor) return;
   const sizes = Object.keys(DBUCharacterData.SIZES);
   const own = actor.system.size?.trueKey ?? actor.system.size?.key ?? "";
-  const smaller = sizes[Math.max(0, sizes.indexOf(own) - 1)];
-  const label = DBUCharacterData.SIZES[smaller]?.label ?? smaller ?? "one smaller";
   const mini = Array.from(actor.items ?? []).some(item => (item.system?.chosen ?? []).some(entry => entry.value === "mini-minions"));
+  const more = mini ? (Number(await askPlayerChoice(actor, `${actor.name}: Mini Minions`, [{ value: "0", label: "No smaller" },
+    { value: "1", label: "1 Category smaller" }, { value: "2", label: "2 Categories smaller" }])) || 0) : 0;
+  const smaller = sizes[Math.max(0, sizes.indexOf(own) - 1 - more)];
+  const label = DBUCharacterData.SIZES[smaller]?.label ?? smaller ?? "one smaller";
+  await requestMakeMinion(actor, { name: `${actor.name}'s Brood`, duplicate: true, sizeSteps: 1 + more, kind: "brood",
+    extra: more ? { miniMinions: more } : {} });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
     data-tooltip="A Duplicate Minion of ${Handlebars.escapeExpression(actor.name)}, its base Size Category one smaller than theirs${mini
       ? " - up to 2 more with Mini Minions, each 1(T) off its Soak Value and 1(T) on its Defense Value" : ""}.">
@@ -23444,6 +23472,8 @@ export async function yakiSwarm(actor) {
   if (!count) return UNSPENT;
   const { spendManeuverCost } = await import("./maneuvers.mjs");
   if (!await spendManeuverCost(actor, { name: "Yaki Swarm" }, count * each)) return UNSPENT;
+  // Made beside them, its name alone: the Custom Species Race the GM's to fill in.
+  await requestMakeMinion(actor, { name: "Yaki", count, kind: "yaki" });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
     data-tooltip="Each on an unoccupied Square within a Large Sphere: a Minion of the Custom Species Race - Squadron Species, Combative Organism, Blazing Speed, the Beast-Man Factor (Claws, Burrowing Beast), Minion Species.">
     Yaki Swarm: ${count} Yaki - ${count * each} Ki.</div>` });
@@ -23707,7 +23737,7 @@ export async function progenitor(actor) {
 
 /**
  * Mini Majin: "create a Duplicate Minion. If you do, that Duplicate Minion's base Size Category is a Size Category smaller than
- * yours" - (1) for 8(bT) Ki, (2) free. Paid and said; the Minion itself is the table's (Minions wait on the user's design).
+ * yours" - (1) for 8(bT) Ki, (2) free. Paid, made beside them (minion-make.mjs) and said.
  */
 export async function miniMajin(actor, perBaseTier = 0) {
   if (!actor) return;
@@ -23720,6 +23750,7 @@ export async function miniMajin(actor, perBaseTier = 0) {
   const own = actor.system.size?.trueKey ?? actor.system.size?.key ?? "";
   const smaller = sizes[Math.max(0, sizes.indexOf(own) - 1)];
   const label = DBUCharacterData.SIZES[smaller]?.label ?? smaller ?? "one smaller";
+  await requestMakeMinion(actor, { name: `Mini ${actor.name}`, duplicate: true, sizeSteps: 1, kind: "mini-majin" });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
     data-tooltip="A Duplicate Minion of ${Handlebars.escapeExpression(actor.name)}, its base Size Category one smaller than theirs.">
     Mini Majin: a Duplicate Minion, ${Handlebars.escapeExpression(String(label))}${cost ? ` - ${cost} Ki` : ""}.</div>` });
@@ -23762,6 +23793,9 @@ export async function glassKnights(actor) {
   const knights = many - copies;
   const said = [knights ? `${knights} Glass Knight${(knights === 1) ? "" : "s"}` : "", copies ? `${copies} Glass Cop${(copies === 1) ? "y" : "ies"}` : ""]
     .filter(Boolean).join(" and ");
+  // Made beside them: a Glass Knight with its name alone - the Custom Species Race the GM's to fill in - a Glass Copy a Duplicate.
+  if (knights) await requestMakeMinion(actor, { name: "Glass Knight", count: knights, kind: "glass-knight" });
+  if (copies) await requestMakeMinion(actor, { name: "Glass Copy", count: copies, duplicate: true, kind: "glass-copy" });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
     data-tooltip="Each on an unoccupied Square with Glass, which loses it. A Glass Knight: a Minion of the Custom Species Race - Abnormal Anatomy (Primary), Armored Exoskeleton (Primary), Combative Organism, Squadron Species, Minion Species. A Glass Copy: a Duplicate Minion of ${Handlebars.escapeExpression(actor.name)}.">
     ${said} - ${(many + copies) * step} Ki.</div>` });
@@ -26883,6 +26917,8 @@ function possibleInterveners(attack) {
     if (actor.uuid === attack.attackerUuid) continue;
     if (aimedAt.has(actor.uuid)) continue;
     if (!actor.items.some(item => (item.type === "maneuver") && item.system.intervene)) continue;
+    // A Goop's Intervene is Battle Goo's to give (maneuvers.mjs whyNotMinionManeuver).
+    if (whyNotMinionManeuver(actor, { id: "intervene", name: "Intervene" })) continue;
     seen.set(actor.uuid, actor);
   }
 
@@ -27060,6 +27096,8 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   // that can be short, and a refused Maneuver must cost nothing.
   if (!protector && !refinedFree && !pacifistFree && !syncFree && !furyFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
+  // Battle Goo (3): "if a Goop uses the Intervene Maneuver, they are destroyed after using the Maneuver" (combat.mjs).
+  if (actor.getFlag?.(SCOPE, "minionKind") === "goop") await requestActorUpdate(actor, { [`flags.${SCOPE}.goopIntervened`]: true });
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
   await recordManeuverType(actor, "counter");
@@ -34370,6 +34408,8 @@ async function settleDefeat(message, card) {
   // Settled: every State left; Will to Survive from here on (combat.mjs registerDefeatHooks).
   await (await import("./conditions.mjs")).leaveStatesOnDefeat(actor);
   await actor.setFlag(SCOPE, "defeatSettled", true);
+  // Duplicated Items: a Duplicate's Apparel, Accessories and Weapons destroyed with its Defeat.
+  await (await import("./minion-make.mjs")).destroyDuplicatedItems(actor);
   await fireMoment(actor, "defeat-resolved");
   await petrifierDefeated(actor);
   await endShapeshift(actor, "Defeated");
@@ -34870,7 +34910,66 @@ async function goopSplit(actor) {
   if ((await askPlayerChoice(actor, `${actor.name}: From Goop (${count}/3 this Round)`,
     [{ value: "goop", label: "Halve it for a Goop (out of sequence)" }, { value: "keep", label: "Keep it all" }])) !== "goop") return false;
   await actor.setFlag(SCOPE, "goopRound", { round: roundKey(), count: count + 1 });
+  // "A Goop is a Duplicate Minion, but does not possess the Apparel, Accessories, or Weapons of their creator" - made beside them.
+  await requestMakeMinion(actor, { name: "Goop", duplicate: true, gear: false, kind: "goop",
+    extra: { madeTurn: `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}:${game.combat?.turn ?? 0}` } });
   return true;
+}
+
+/**
+ * From Goop (6): "for each Action spent, Defeat one of your Goops (they cannot trigger a [Triggered/Defeated] effect in response to
+ * this effect). If you do, regain Life Points equal to 1/2 of the total amount of Life Points they had remaining. You cannot target a
+ * Goop you created this Turn with this effect." (7): "You may Defeat any number of your Goops, and regain Life Points equal to 1/2
+ * of the total amount of Life Points amongst all of the Goops Defeated by this effect." Which, ticked - up to `most`, or any
+ * number; Defeated as taken back into you, so gone (minion-make.mjs), nothing to answer it.
+ */
+export async function reabsorbGoops(actor, most = Infinity, { newOnes = false } = {}) {
+  if (!actor) return;
+  const turn = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}:${game.combat?.turn ?? 0}`;
+  const goops = minionsOf(actor).map(id => game.actors?.get(id))
+    .filter(goop => goop && (goop.getFlag?.(SCOPE, "minionKind") === "goop") && !goop.system?.defeated
+      && (newOnes || (goop.getFlag?.(SCOPE, "madeTurn") !== turn)));
+  if (!goops.length) {
+    ui.notifications.info(`${actor.name} has no Goop to take back${newOnes ? "" : " (not one made this Turn)"}.`);
+    return;
+  }
+  const escape = Handlebars.escapeExpression;
+  const limit = Number.isFinite(most) ? `Up to ${most}` : "Any number";
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - From Goop` },
+    content: `<p class="dbu-respond-hint">${limit}: half their Life Points back.</p>
+      <div class="dbu-ally-pick">${goops.map(goop => `<div class="dbu-ally-pick-row">
+        <label class="dbu-respond-option"><input type="checkbox" name="${escape(goop.id)}"/><img src="${escape(goop.img ?? "")}" alt=""/>
+          <span class="dbu-respond-name">${escape(goop.name)} - ${Number(goop.system.life?.value) || 0} Life</span></label></div>`).join("")}</div>`,
+    buttons: [{ action: "take", label: "Defeat them", default: true, callback: (event, button, dialog) =>
+      goops.filter(goop => dialog.element.querySelector(`input[name="${CSS.escape(goop.id)}"]`)?.checked) },
+    { action: "cancel", label: "None" }],
+    rejectClose: false
+  });
+  if (!Array.isArray(picked) || !picked.length) return;
+  if (picked.length > most) {
+    ui.notifications.warn(`${actor.name}: ${most} Goop${(most === 1) ? "" : "s"} at most - one for each Action spent.`);
+    return;
+  }
+  const back = Math.floor(picked.reduce((sum, goop) => sum + Math.max(0, Number(goop.system.life?.value) || 0), 0) / 2);
+  const life = actor.system.life ?? {};
+  if (back) await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + back) });
+  if (game.user.isGM) await (await import("./combat.mjs")).dismissDuplicates(picked);
+  else game.socket.emit(CHANNEL, { type: "dismissDuplicates", ids: picked.map(goop => goop.id) });
+  ui.notifications.info(`${actor.name}: From Goop - ${picked.length} Goop${(picked.length === 1) ? "" : "s"} Defeated, ${back} Life Points back.`);
+}
+
+/**
+ * Poko Priest: "create a Minion. This Minion is of the Namekian Race and must possess the Dark Vassal Factor. In addition, that
+ * Minion gains 2(bT) Attribute Points to spend at Character Creation." Made beside them, a Namekian; the Factor and the points the
+ * GM's to give as its sheet is filled in - said.
+ */
+export async function pokoMinion(actor) {
+  if (!actor) return;
+  await requestMakeMinion(actor, { name: `${actor.name}'s Dark Vassal`, kind: "poko", system: { race: "namekian" } });
+  const points = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  ui.notifications.info(`${actor.name}: Poko Priest - a Namekian Minion, the Dark Vassal Factor and ${points} Attribute Points more `
+    + "to spend at Character Creation the GM's to give.");
 }
 
 export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0, lifeMultiplier = 1,

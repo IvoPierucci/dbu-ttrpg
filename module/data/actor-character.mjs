@@ -1,4 +1,5 @@
 import { traitAside } from "../aside.mjs";
+import { minionGifts } from "../allies.mjs";
 const { fields } = foundry.data;
 
 import { alliesHolding, alliesInMelee, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
@@ -1913,6 +1914,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Special Minions: "Special Minions ignore the Weakness, Single Attack, Thresholds, and Ki Points & Capacity rules for
     // Minions" - a Duplicate one of them. What those four ask: a Minion that is neither.
     this.typicalMinion = this.minion && !this.specialMinion && !this.duplicate;
+    // "Your Minions": what its Master's effects give it (allies.mjs minionGifts).
+    this.minionGifts = this.minion ? minionGifts(this.parent) : null;
     // "Karma: Minions do not possess Karma Points."
     if (this.minion) this.karma = 0;
 
@@ -2031,6 +2034,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       baseTier: DBUCharacterData.tierOfPowerFor(this.powerLevel),
       // A Minion's Weakness at base Tier 1 is an effect of its own (registry.mjs) - not a Special Minion's.
       minion: this.typicalMinion,
+      // What its Master's effects give it, and Brood Parent's Mini Minions.
+      gifts: this.minionGifts,
+      miniMinions: this.minion ? (Number(this.parent?.getFlag?.("dbu-ttrpg", "miniMinions")) || 0) : 0,
       skills: DBUCharacterData.SKILLS
     });
 
@@ -2363,6 +2369,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
     // Life Points (Minion Rules): "set their Maximum Life Points to 1/4 (rounded up) of what it would usually be."
     if (this.minion) this.life.max = Math.ceil(this.life.max / 4);
+    // A Master's to their Minions, "after all other calculations": Leader's, and so many for each Power Level reached.
+    if (this.minionGifts) this.life.max += this.minionGifts.lifeMax + (this.minionGifts.lifePerLevel * (Number(this.powerLevel) || 0));
     // Kept for the next preparation's early Threshold.
     if (this.parent) this.parent._dbuLifeMax = this.life.max;
 

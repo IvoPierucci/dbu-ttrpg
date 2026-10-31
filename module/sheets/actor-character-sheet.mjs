@@ -865,7 +865,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // A Duplicate is a Special Minion: the box shown ticked, and left to the Duplicate box.
     context.specialMinionShown = Boolean(this.actor.system.specialMinion || this.actor.system.duplicate);
     // Limited Control: how many Minions are theirs to have, out of a Combat Encounter and in one.
-    context.minionCaps = context.isMinion ? null : minionCaps(this.actor);
+    context.minionCaps = context.isMinion ? null : { ...minionCaps(this.actor), unlimited: !Number.isFinite(minionCaps(this.actor).outside) };
     // Handlebars has no literal-array helper, so the Attribute columns are supplied
     // here. The progression table's headings and cells both read from this, so they
     // cannot drift apart.

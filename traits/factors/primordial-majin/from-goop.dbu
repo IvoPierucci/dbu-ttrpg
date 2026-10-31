@@ -21,7 +21,9 @@ text: >
 
 ---
 
-# (6), (7)'s Goops and (8): the table's - a Goop is a Minion, and Minions wait (the user's).
+# (5) A Goop: a Duplicate Minion without your Apparel, Accessories or Weapons, made beside you (chat.mjs goopSplit); the Movement
+# Maneuver its only one (maneuvers.mjs whyNotMinionManeuver); its Act Phase always (allies.mjs actsFreely).
+# (6) A Maneuver of its own - maneuvers/from-goop-sixth-effect.dbu. (8) As the Combat Encounter ends (combat.mjs).
 [passive]
 # (1) The higher of the two, as Majin Regeneration's.
 allow surgency.magic;
@@ -34,6 +36,8 @@ allow fromGoop.goop;
 [triggered/threshold, outOfSequence, effect 4]
 surge(healing, 1, 0, 2);
 
-# (7) Reduced to your minimum Life Points: chosen on the Defeated card - the Goops Defeated first, the table's; then the Surge.
+# (7) Reduced to your minimum Life Points: chosen on the Defeated card - the Goops ticked and Defeated, half their Life back
+# (chat.mjs reabsorbGoops); then the Surge.
 [triggered/defeated, outOfSequence, effect 7]
+reabsorbGoops(1);
 surge(healing);

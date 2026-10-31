@@ -17,4 +17,7 @@ text: >
 [passive]
 # (1) Power of the Weak (4) on an Ally marked a Minion (conditions.mjs bondOpen).
 allow leadership.bondMinion;
-# Not built: (2), (3) - Minions, their Act Phase and whose they are, wait on the user's design.
+# (2) Bonded to a Minion of yours (Power of the Weak's): its Act Phase had, Commanded or not (allies.mjs actsFreely).
+allow leadership.minionActs;
+# (3) Given to each of your Minions as it is prepared, after all calculations (allies.mjs minionGifts).
+minions.lifePerLevel += 2;

@@ -15,5 +15,9 @@ text: >
 
 ---
 
-# Not built: (1), (3) Minions wait on the user's design; (2), (3), (4) are a Possessing Character's - the Possess Maneuver (its text
+[passive]
+# (1) "Your maximum number of Minions": how many you may possess in a Combat Encounter - and so outside of one (maneuvers.mjs
+# minionCaps).
+minions.combat += 2;
+# Not built: (2), (3), (4) are a Possessing Character's - the Possess Maneuver (its text
 # waited on) and the Overtaken Awakening (Awakenings are not built) are not in this system yet.

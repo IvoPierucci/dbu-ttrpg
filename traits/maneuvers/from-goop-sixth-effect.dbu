@@ -1,0 +1,23 @@
+id: from-goop-sixth-effect
+name: 6th effect of From Goop
+type: standard
+actionCost: 1
+actionCostMax: 3
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: from-goop
+fromEffect: 6
+source: Core Rule
+description: >
+  For each Action spent, Defeat one of your Goops and regain half of the Life Points they had left.
+text: >
+  (6)-[1/Round]: As a Standard Maneuver with a Variable Action Cost (1~3 Actions), for each Action spent, Defeat one of your Goops (they cannot trigger a [Triggered/Defeated] effect in response to this effect). If you do, regain Life Points equal to 1/2 of the total amount of Life Points they had remaining. You cannot target a Goop you created this Turn with this effect.
+
+---
+
+# Owned by every character, in the list only while From Goop is had (`fromTrait`), as its 3rd effect's. The Goops ticked - one for
+# each Action spent, none made this Turn - Defeated and half their Life back (chat.mjs reabsorbGoops).
+[on used]
+reabsorbGoops(0);

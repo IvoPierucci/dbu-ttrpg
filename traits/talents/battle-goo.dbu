@@ -14,5 +14,12 @@ text: >
 
 ---
 
-# Not built: From Goop (the Primordial Majin Factor's) and its Goops are not in this system yet - their texts are waited on.
-# (1) Minions wait on the user's design.
+[passive]
+# (1) "Your maximum number of Minions": how many you may possess in a Combat Encounter - and so outside of one (maneuvers.mjs
+# minionCaps).
+minions.combat += 2;
+# (2) Given to each of your Goops as it is prepared, after all other calculations (allies.mjs minionGifts).
+goops.lifePerLevel += 2;
+# (3) Their Basic Attack and Intervene (maneuvers.mjs whyNotMinionManeuver); a Goop that Intervened destroyed as the turn moves on
+# (combat.mjs).
+allow battleGoo.maneuvers;

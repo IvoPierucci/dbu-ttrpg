@@ -10,7 +10,7 @@
  * Actions away. None of them have anywhere to happen without it.
  */
 
-import { areAllies, masterOf, minionsOf } from "./allies.mjs";
+import { actsFreely, areAllies, masterOf, minionsOf } from "./allies.mjs";
 import { commandedNow, isCharacter } from "./actor-types.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
@@ -709,6 +709,10 @@ export function registerCombatHooks() {
     // awaiting its Encounter and Round when this arrives - and that handler begins the first turn itself,
     // after them. Answered here too, it came before both and then a second time.
     if (!(Number(previous?.round) > 0)) return;
+    // Battle Goo (3): a Goop that used the Intervene Maneuver is "destroyed after using the Maneuver even if they have any Life
+    // Points remaining" - its attack over by the time the turn moves on.
+    const spent = combatants(combat).filter(actor => actor.getFlag?.("dbu-ttrpg", "goopIntervened"));
+    if (spent.length) await dismissDuplicates(spent);
 
     // A turn handed on by its own Initiative moving - Patient Sniper's, at the Round's start: begun, and not ended here.
     const handedOn = combat.getFlag?.("dbu-ttrpg", "turnHandedOn");
@@ -836,9 +840,11 @@ export function registerCombatHooks() {
     const master = game.actors?.get(masterOf(combatant.actor));
     if (!master) return;
     const ids = new Set(minionsOf(master));
-    const here = new Set((combatant.parent?.combatants?.contents ?? []).map(each => each.actor?.id).filter(id => ids.has(id)));
     const { minionCaps } = await import("./maneuvers.mjs");
-    const most = minionCaps(master).combat;
+    const caps = minionCaps(master);
+    const here = new Set((combatant.parent?.combatants?.contents ?? []).map(each => each.actor)
+      .filter(each => each && ids.has(each.id) && (!caps.notDefeated || !each.system?.defeated)).map(each => each.id));
+    const most = caps.combat;
     if (here.size > most) {
       ui.notifications.warn(`${master.name} may possess ${most} Minion${(most === 1) ? "" : "s"} in a Combat Encounter: `
         + `${here.size} of theirs are in this one.`);
@@ -856,8 +862,19 @@ export function registerCombatHooks() {
 
     // Leaving an Encounter clears what only lasted for it.
     for (const actor of combatants(combat)) await endEncounterFor(actor);
-    // And every Duplicate in it, or of a Master in it, ceases to exist.
+    // And every Duplicate in it, or of a Master in it, ceases to exist - From Goop (8) first: "All of your Goops die at the end
+    // of the Combat Encounter. Regain Life Points equal to 1/2 of the total Life Points amongst those Goops before they died."
     const here = combatants(combat);
+    for (const master of here.filter(actor => (actor.type !== "minion") && (actor.system.effects?.slots?.["fromGoop.goop"] === true))) {
+      const goops = duplicatesOf(master).filter(minion => minion.getFlag?.("dbu-ttrpg", "minionKind") === "goop");
+      const left = goops.reduce((sum, goop) => sum + Math.max(0, Number(goop.system.life?.value) || 0), 0);
+      const back = Math.floor(left / 2);
+      if (back) {
+        const life = master.system.life ?? {};
+        await master.update({ "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + back) });
+        ui.notifications?.info(`${master.name}: From Goop - ${goops.length} Goop${(goops.length === 1) ? "" : "s"} die, ${back} Life Points back.`);
+      }
+    }
     await dismissDuplicates([...here.filter(actor => actor.system?.duplicate),
       ...here.filter(actor => actor.type !== "minion").flatMap(duplicatesOf)]);
 
@@ -871,7 +888,7 @@ export function registerCombatHooks() {
  * Round, ended there: the End Phase is the next turn's coming. Said to the table.
  */
 function followerSkips(actor) {
-  if ((actor?.type !== "minion") || commandedNow(actor)) return false;
+  if ((actor?.type !== "minion") || commandedNow(actor) || actsFreely(actor)) return false;
   ui.notifications?.info(`${actor.name} is a Minion not Commanded this Round: its Act Phase is skipped.`);
   return true;
 }
@@ -1379,6 +1396,8 @@ export async function beginDefeat(actor, { silenced = false, knockedBy = "" } = 
       // Settled: every State left; Will to Survive from here on (registerDefeatHooks).
       await (await import("./conditions.mjs")).leaveStatesOnDefeat(actor);
       await actor.setFlag("dbu-ttrpg", "defeatSettled", true);
+      // Duplicated Items: a Duplicate's Apparel, Accessories and Weapons destroyed with its Defeat.
+      await (await import("./minion-make.mjs")).destroyDuplicatedItems(actor);
       await fireMoment(actor, "defeat-resolved");
       // Petrification's Slowed, from this character's uses of it, gone with their Defeat.
       const { petrifierDefeated, endShapeshift } = await import("./chat.mjs");

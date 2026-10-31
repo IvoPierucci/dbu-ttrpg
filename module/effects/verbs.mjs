@@ -132,6 +132,15 @@ export const VERBS = Object.freeze({
     doc: "Intelligent Fighter (2): a Character who attacked this Round picked - Studied till the end of the next (chat.mjs "
        + "studyCharacter)."
   },
+  reabsorbGoops: {
+    args: [1, 1],
+    doc: "From Goop: your Goops ticked and Defeated, half their Life Points back - 0 one for each Action spent and none made this "
+       + "Turn (6), 1 any number (7) (chat.mjs reabsorbGoops)."
+  },
+  pokoMinion: {
+    args: [0, 0],
+    doc: "Poko Priest: a Namekian Minion made beside you, the Dark Vassal Factor and its 2(bT) Attribute Points said (chat.mjs pokoMinion)."
+  },
   commandMinions: {
     args: [0, 0],
     doc: "Command: Minions of yours picked, up to the Standard Actions left - those Actions lost, each Minion its Act Phase "

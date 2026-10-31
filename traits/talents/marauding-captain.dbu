@@ -16,4 +16,5 @@ text: >
 [passive]
 # (1) Cutthroat Teamwork (3), (4): an Ally dealt Damage counts, Minion or not (chat.mjs).
 allow marauding.minions;
-# (2) Whose Minions they are is not kept - the table's (Minions wait on the user's design).
+# (2) Given to each of your Minions as it is prepared (allies.mjs minionGifts).
+minions.soakValue += 1(T);

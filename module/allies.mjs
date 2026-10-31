@@ -59,6 +59,37 @@ export function minionsOf(who) {
 }
 
 /**
+ * What a Master's effects give their Minions ("your Minions"), read off the Master's Slots: Combat Rolls (Leader's 1(T), Leader's
+ * Insignia's 1(bT), God of Many's 1(T) in the Spectator State), Soak Value (Marauding Captain (2)'s 1(T)), Maximum Life Points
+ * (Leader's 5(bT)) and Maximum Life Points for each Power Level reached (Spiritual Leadership (3)'s 2, Battle Goo (2)'s 2 for a
+ * Goop) - the last two "after all other calculations". Each at the Master's own Tiers, their effects being theirs.
+ */
+export function minionGifts(who) {
+  const actor = actorOf(who);
+  const master = globalThis.game?.actors?.get?.(masterOf(actor));
+  const slots = master?.system?.effects?.slots;
+  const add = key => Number(slots?.[key]?.add) || 0;
+  const goop = actor?.getFlag?.("dbu-ttrpg", "minionKind") === "goop";
+  return { combatRolls: add("minions.combatRolls"), soakValue: add("minions.soakValue"), lifeMax: add("minions.lifeMax"),
+    lifePerLevel: add("minions.lifePerLevel") + (goop ? add("goops.lifePerLevel") : 0) };
+}
+
+/**
+ * A Minion with its Act Phase whether Commanded or not: a Goop - From Goop (5): "they may always take their Act Phase, even if you
+ * do not use the Command Maneuver" - and one its Master is Bonded to with Spiritual Leadership (2): "While you are Bonded to one of
+ * your Minions, they do not skip their Act Phase."
+ */
+export function actsFreely(who) {
+  const actor = actorOf(who);
+  if (actor?.type !== "minion") return false;
+  if (actor.getFlag?.("dbu-ttrpg", "minionKind") === "goop") return true;
+  const master = globalThis.game?.actors?.get?.(masterOf(actor));
+  if (master?.system?.effects?.slots?.["leadership.minionActs"] !== true) return false;
+  const bonded = master.getFlag?.("dbu-ttrpg", "bonded")?.uuid ?? "";
+  return Boolean(bonded) && ((bonded === actor.uuid) || (globalThis.fromUuidSync?.(bonded)?.id === actor.id));
+}
+
+/**
  * The Combat Tracker's order (the rulebook's Minion Rules): highest Initiative first - but a Minion "directly after their
  * Master, in the order among Initiative, of their Initiative Value", where its Master is in the same Combat and has rolled.
  */

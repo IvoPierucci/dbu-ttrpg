@@ -11,5 +11,8 @@ text: >
 
 ---
 
-# "Your Minions have their Combat Rolls increased by 1(T) while you are in the Spectator State" - a character's Minions
-# are other characters, and nothing ties them to you yet: the table adds it to theirs.
+# "Your Minions have their Combat Rolls increased by 1(T) while you are in the Spectator State" - given to each of them as it is
+# prepared (allies.mjs minionGifts).
+[passive]
+requires inState("spectator");
+minions.combatRolls += 1(T);

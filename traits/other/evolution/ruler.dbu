@@ -11,7 +11,9 @@ text: >
 
 ---
 
-# (1) The table's: which Minions are whose, and how many stand, is not tracked.
+# (1) No limit on your Minions; 10 not Defeated in a Combat Encounter (maneuvers.mjs minionCaps, combat.mjs).
+[passive]
+allow minions.ruler;
 
 # (3) The Power Up Maneuver used, 2 stacks of Overwhelm held: offered in a window then and there (chat.mjs answerPower).
 # Who is within the Sphere ticked, the stacks spent, and each of them Ruled - 1(T), your Tier - until the start of your

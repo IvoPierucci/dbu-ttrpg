@@ -99,8 +99,24 @@ function activeOptionsOnly(item, program) {
  * The Priority comes from the kind of source, exactly as the rulebook's ladder orders
  * them - which is also what the folder a Trait lives in will say once Traits are files.
  */
-export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {}, minion = false } = {}) {
+export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {}, minion = false, gifts = null, miniMinions = 0 } = {}) {
   const entries = [];
+
+  // What a Master's effects give their Minions (allies.mjs minionGifts) - Combat Rolls and Soak Value; the Life after the quarter.
+  // And Mini Minions (Brood Parent): "for each reduction, reduce their Soak Value by an additional 1(T) and increase their
+  // Defense Value by 1(T)".
+  const lines = [
+    gifts?.combatRolls ? `combatRolls += ${gifts.combatRolls};` : "",
+    gifts?.soakValue ? `soakValue += ${gifts.soakValue};` : "",
+    miniMinions ? `soakValue -= ${miniMinions}(T);\ndefenseValue += ${miniMinions}(T);` : ""
+  ].filter(Boolean);
+  if (lines.length) {
+    const { program, errors } = compile("minion-gifts", { script: `[passive]\n${lines.join("\n")}` }, report);
+    if (!errors.length) {
+      entries.push({ program, priority: PRIORITY.base, sourceId: "minion-gifts", sourceUuid: null,
+        sourceName: miniMinions && !gifts?.combatRolls && !gifts?.soakValue ? "Mini Minions" : "Master's effects", level: 0, stacks: 1 });
+    }
+  }
 
   // Weakness (Minion Rules): "if their base Tier of Power is already 1, reduce their Saving Throws and Combat Rolls by 1."
   if (minion && (Number(baseTier) === 1)) {
