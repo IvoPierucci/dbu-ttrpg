@@ -59,6 +59,8 @@ export function minionData(master, { name = "", duplicate = false, gear = true, 
     }
     if (sizeSteps) system.size = smallerSize(system.size, sizeSteps);
   }
+  // Minion Creation: "Minions created through Minion Creation have the same Power Level as their Master."
+  else system.powerLevel = Number(source.system?.powerLevel) || 1;
   const items = duplicate ? (source.items ?? []).filter(item => isDuplicatedItem(item, gear)).map(item => {
     const copy = foundry.utils.deepClone(item);
     delete copy._id;

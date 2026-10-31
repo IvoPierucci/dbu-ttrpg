@@ -7,7 +7,7 @@ import DBUCharacterData from "../data/actor-character.mjs";
 import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
-import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stateTriggerBlocks } from "../effects/registry.mjs";
@@ -864,6 +864,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.masterEntry = context.isMinion ? this.#prepareMaster() : null;
     // A Duplicate is a Special Minion: the box shown ticked, and left to the Duplicate box.
     context.specialMinionShown = Boolean(this.actor.system.specialMinion || this.actor.system.duplicate);
+    // Growing Minions: a Minion with a Master at its Master's Power Level (dbu-ttrpg.mjs) - not set here.
+    context.powerLevelFromMaster = context.isMinion && Boolean(masterOf(this.actor));
     // Limited Control: how many Minions are theirs to have, out of a Combat Encounter and in one.
     context.minionCaps = context.isMinion ? null : { ...minionCaps(this.actor), unlimited: !Number.isFinite(minionCaps(this.actor).outside) };
     // Handlebars has no literal-array helper, so the Attribute columns are supplied
@@ -1576,10 +1578,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   _prepareRacialSkillRanks() {
     const chosen = this.actor.system.racialSkillRanks;
-    return Array.from({ length: racialSkillRankCount(this.actor.system.race) }, (unused, slot) => ({
+    return Array.from({ length: racialSkillRankCount(this.actor.system.race, this.#minionMade()) }, (unused, slot) => ({
       name: `system.racialSkillRanks.${slot}`,
       value: chosen[slot] ?? ""
     }));
+  }
+
+  /** A Minion made through Minion Creation - not a Duplicate, a copy of its Master. */
+  #minionMade() {
+    return (this.actor.type === "minion") && !this.actor.system.duplicate;
   }
 
   /**
@@ -1589,7 +1596,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   #racialSkillBenefit() {
     const { SKILLS } = DBUCharacterData;
-    const slots = racialSkillRankCount(this.actor.system.race);
+    const slots = racialSkillRankCount(this.actor.system.race, this.#minionMade());
     const picks = (this.actor.system.racialSkillRanks ?? []).filter(key => key && SKILLS[key]).slice(0, slots);
     const progression = this.actor.system.progression;
     const cap = DBUCharacterData.skillRankCap(DBUCharacterData.tierOfPowerFor(1));
@@ -3813,13 +3820,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Gear Kit, it records a value equal to the Score Limit for your starting Tier of Power." Which
     // of the two is asked, and the starting Tier with it (the user's ruling) - unless it was made.
     if ((data.system.records === "ingenuity") && !made) {
+      // Minion Creation, Step 12: "Create a Gear Kit ... using your Master's base Tier of Power" - offered first for a Minion.
+      const kitMaster = (this.actor.type === "minion") ? game.actors?.get(masterOf(this.actor)) : null;
+      const kitTier = Math.max(1, Number(kitMaster?.system?.baseTierOfPower) || 1);
       const kit = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"],
         window: { title: `${definition.name} - Recorded Ingenuity` },
         content: `<p class="dbu-respond-hint">Made by ${escape(this.actor.name)}, it records their Ingenuity
             (${Number(this.actor.system.ingenuity) || 0}). From a Gear Kit, the Score Limit of their starting Tier of Power.</p>
           <label class="dbu-wager"><span>Starting Tier of Power</span>
-            <input type="number" name="tier" value="1" min="1" step="1"/>
+            <input type="number" name="tier" value="${kitTier}" min="1" step="1"/>
             <em>Score Limit 8 at Tier 1, +3 a Tier</em></label>`,
         buttons: [
           { action: "made", label: "Made by them" },
@@ -6075,6 +6085,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!this.isEditable) return;
     const had = new Set(this.actor.system.racialTraits ?? []);
     const traits = racialTraitsInOrder(this.actor.system.race, undefined, this.actor.system.effects?.slots);
+    // A Minion's: its race's Secondary and Subrace Traits, two at most (Minion Creation, Step 2).
+    const held = [...had].map(id => getTrait(id)).filter(Boolean);
     if (!traits.length) {
       ui.notifications.info("There are no Racial Traits to add yet.");
       return;
@@ -6091,7 +6103,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         <ol class="gear-quality-list" data-feature-list>
           ${traits.map(trait => {
             // Not this character's to take - dimmed, and why on hover; still taken if picked (the user's).
-            const unfit = racialTraitUnfit(trait, this.actor.system.race, this.actor.system.subrace, this.actor.system.effects?.slots);
+            const unfit = racialTraitUnfit(trait, this.actor.system.race, this.actor.system.subrace, this.actor.system.effects?.slots)
+              || minionRacialUnfit(trait, this.actor, held);
             return `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : (unfit ? " unfit" : "")}"
             data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
             data-tooltip="${escape(had.has(trait.id) ? "Already had"
@@ -6121,6 +6134,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       ui.notifications.warn(`${this.actor.name} already has ${trait.name}.`);
       return;
     }
+    const past = minionRacialUnfit(trait, this.actor, held);
+    if (past) ui.notifications.warn(`${this.actor.name}: ${past} (Minion Creation) - ${trait.name} added all the same.`);
     return addRacialTrait(this.actor, trait);
   }
 

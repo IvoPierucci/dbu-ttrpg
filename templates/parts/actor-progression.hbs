@@ -34,7 +34,8 @@
       </label>
 
       <label>Power Level
-        <input type="number" name="system.powerLevel" value="{{system.powerLevel}}" min="1" max="30"/>
+        <input type="number" name="system.powerLevel" value="{{system.powerLevel}}" min="1" max="30"
+               {{#if powerLevelFromMaster}}disabled data-tooltip="Growing Minions: a Power Level each time its Master gains one - its Master's"{{/if}}/>
       </label>
 
       {{! ToP Mod and Crit Target are on the Settings tab (the user's); the Technique Points in the table below. }}

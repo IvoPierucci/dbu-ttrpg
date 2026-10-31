@@ -327,6 +327,26 @@ export function racialTraitUnfit(trait, race, subrace = "", slots = null) {
   return "";
 }
 
+/**
+ * Minion Creation, Step 2: "they only possess the Primary Racial Traits (ignoring Subrace Traits) for that Race and either two
+ * Secondary Racial Traits or one Secondary Racial Trait and one Subrace Trait." A Minion's own race's (not a Duplicate's - a copy of
+ * its Master's): why one more Secondary or Subrace Trait is past that, or "". `held` the Trait files it has. Said, and dimmed on the
+ * Add Racial Trait list; taken all the same if picked.
+ */
+export function minionRacialUnfit(trait, actor, held = []) {
+  if ((actor?.type !== "minion") || actor.system?.duplicate || factorOf(trait)) return "";
+  const race = actor.system?.race ?? "";
+  const kindOf = each => (each?.subrace ? "subrace" : ((each?.importance === "secondary") ? "secondary" : "primary"));
+  const kind = kindOf(trait);
+  if ((kind === "primary") || ((trait?.owner ?? "") !== race)) return "";
+  const others = held.filter(each => each && (each.id !== trait.id) && !factorOf(each) && ((each.owner ?? "") === race)).map(kindOf);
+  if (others.filter(each => each !== "primary").length >= 2) {
+    return "A Minion has two Secondary Racial Traits, or one and a Subrace Trait, at most";
+  }
+  if ((kind === "subrace") && others.includes("subrace")) return "A Minion has one Subrace Trait at most";
+  return "";
+}
+
 /** The same for an Other Trait: Evolution Traits are the Arcosians' alone (the user's). */
 export function otherTraitUnfit(trait, race) {
   return ((trait?.owner === "evolution") && (race !== "arcosian")) ? "Arcosians' alone" : "";

@@ -1,6 +1,6 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import { isCharacter } from "./actor-types.mjs";
-import { initiativeOrder, minionsOf } from "./allies.mjs";
+import { initiativeOrder, masterOf, minionsOf } from "./allies.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
 import DBURacialData from "./data/item-racial.mjs";
@@ -386,6 +386,23 @@ function minionsRefresh(master) {
   }
 }
 Hooks.on("updateActor", actor => minionsRefresh(actor));
+
+/**
+ * Growing Minions (Minion Creation): "Minions gain a Power Level each time their Master does" - a Minion's Power Level its Master's,
+ * set as the two are tied (either Settings list) and as the Master's changes; one set by hand on the Minion put back. The GM's.
+ */
+Hooks.on("updateActor", async (actor, changes) => {
+  if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
+  const system = changes.system ?? {};
+  if (!("powerLevel" in system) && !("minions" in system) && !("master" in system)) return;
+  const pairs = (actor.type === "minion") ? [[game.actors?.get(masterOf(actor)), actor]]
+    : minionsOf(actor).map(id => [actor, game.actors?.get(id)]);
+  for (const [master, minion] of pairs) {
+    if (!master || !minion) continue;
+    const level = Number(master.system.powerLevel) || 1;
+    if ((Number(minion.system.powerLevel) || 1) !== level) await minion.update({ "system.powerLevel": level });
+  }
+});
 Hooks.on("createItem", item => minionsRefresh(item.parent));
 Hooks.on("updateItem", item => minionsRefresh(item.parent));
 Hooks.on("deleteItem", item => minionsRefresh(item.parent));
@@ -400,7 +417,8 @@ Hooks.on("preCreateActor", (actor, data, options, userId) => {
   const updates = {};
 
   const submitted = data.system?.progression;
-  const progression = (submitted?.length) ? submitted : DBUCharacterData.buildDefaultProgression();
+  // A Minion's own (Minion Creation's Minion PL) - a Duplicate's comes copied from its Master.
+  const progression = (submitted?.length) ? submitted : DBUCharacterData.buildDefaultProgression({ minion: actor.type === "minion" });
   if (!submitted?.length) updates["system.progression"] = progression;
 
   const powerLevel = data.system?.powerLevel ?? 1;

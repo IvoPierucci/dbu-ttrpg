@@ -64,9 +64,13 @@ export function subraceName(raceId, subraceId) {
   return raceSubraces(raceId).find(subrace => subrace.id === subraceId)?.name ?? "";
 }
 
-/** How many Skill Ranks a race grants. */
-export function racialSkillRankCount(id) {
-  return races.get(id)?.skillRanks ?? 0;
+/**
+ * How many Skill Ranks a race grants. A Minion made through Minion Creation (Step 2): "Minions only receive 1/2 (rounded up) as many
+ * Skill Ranks from their Race."
+ */
+export function racialSkillRankCount(id, minion = false) {
+  const ranks = races.get(id)?.skillRanks ?? 0;
+  return minion ? Math.ceil(ranks / 2) : ranks;
 }
 
 /**

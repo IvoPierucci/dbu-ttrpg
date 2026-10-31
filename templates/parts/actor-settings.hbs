@@ -83,6 +83,14 @@
       <input type="checkbox" name="system.duplicate" {{#if system.duplicate}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
       Duplicate
     </label>
+    {{#unless system.duplicate}}
+    <label class="debug-toggle"
+           data-tooltip="Minion Creation, Step 11: Gain a Minion Trait or increase your Life Points by 2 for every Power Level you reach (this bonus to your Life Points is applied after all calculation). Ticked: the Life Points.">
+      <input type="checkbox" name="system.minionLifeStep" {{#if system.minionLifeStep}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
+      Step 11: Life Points instead of a Minion Trait
+      {{#if system.minionLifeStep}}<em>+2 a Power Level</em>{{/if}}
+    </label>
+    {{/unless}}
   </section>
   {{else}}
   <section class="panel ally-panel">

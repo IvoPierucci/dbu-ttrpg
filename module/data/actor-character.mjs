@@ -857,6 +857,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     30: Array(5).fill("Character Perk")
   });
 
+  /**
+   * Minion PL (Minion Creation): "At Power Level 1, Minions gain 1 Character Perk, 2 Attribute Additions, 2 Talent Additions and a
+   * Skill Improvement. Each Power Level after the first, a Minion gains a Character Perk. If that Power Level would increase their
+   * Base Tier of Power (5, 10, 15, etc), they gain a Character Perk and an Attribute Addition."
+   */
+  static minionGrantsForLevel(level) {
+    if (level === 1) return ["Character Perk", "Talent Addition", "Talent Addition", "Attribute Addition", "Attribute Addition", "Skill Improvement"];
+    return (DBUCharacterData.tierOfPowerFor(level) > DBUCharacterData.tierOfPowerFor(level - 1))
+      ? ["Character Perk", "Attribute Addition"] : ["Character Perk"];
+  }
+
   /** The slots granted when a character reaches the given Power Level. */
   static grantsForLevel(level) {
     return DBUCharacterData.POWER_LEVEL_EXCEPTIONS[level]
@@ -1513,6 +1524,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // A Minion's kind (the user's, on its Settings tab): a Special Minion, and a Duplicate - "Duplicates ... are Special Minions".
     schema.specialMinion = new fields.BooleanField({ required: true, initial: false });
     schema.duplicate = new fields.BooleanField({ required: true, initial: false });
+    // Minion Creation, Step 11: "Gain a Minion Trait or increase your Life Points by 2 for every Power Level you reach" - the second.
+    schema.minionLifeStep = new fields.BooleanField({ required: true, initial: false });
 
     // Whether this character is Adventuring - what a Buddy's Adventure Effect waits on. A switch
     // on the Biography tab, by the table's ruling: off when a Combat Encounter starts, on again
@@ -1855,14 +1868,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * Level table awards becomes one row; only "Character Perk" rows are a free
    * pick, every other grant is fixed to the option it was awarded as.
    */
-  static buildDefaultProgression() {
+  static buildDefaultProgression({ minion = false } = {}) {
     const zeroAtts = () => Object.fromEntries(
       ["agility", "force", "tenacity", "scholarship", "insight", "magic", "personality"].map(k => [k, 0])
     );
 
     const entries = [];
     for (let lvl = 1; lvl <= DBUCharacterData.MAX_POWER_LEVEL; lvl++) {
-      for (const stepType of DBUCharacterData.grantsForLevel(lvl)) {
+      for (const stepType of (minion ? DBUCharacterData.minionGrantsForLevel(lvl) : DBUCharacterData.grantsForLevel(lvl))) {
         entries.push({
           lvl,
           stepType,
@@ -1900,6 +1913,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    */
   perBaseTier(multiplier) {
     return multiplier * this.baseTierOfPower;
+  }
+
+  /**
+   * The Racial Skill Ranks counted: as many as the race grants - a Minion made through Minion Creation half (up); a Duplicate, a
+   * copy of its Master, all of them.
+   */
+  racialRanksHad() {
+    const minion = (this.parent?.type === "minion") && !this.duplicate;
+    return (this.racialSkillRanks ?? []).slice(0, racialSkillRankCount(this.race, minion));
   }
 
   /**
@@ -2000,7 +2022,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Asked by the piece's own Effects - Weather Resistant's `if (survival.ranks >= 2)` - and
     // by Brace's `if (survival.ranks >= 4)`, before the Skills are worked out, so their Ranks
     // are counted here for them to read.
-    const ranks = [...(this.racialSkillRanks ?? []), ...(this.progression ?? [])
+    const ranks = [...this.racialRanksHad(), ...(this.progression ?? [])
       .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
       .flatMap(entry => entry.skillRanks),
       ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? [])];
@@ -2285,7 +2307,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // other option keep their slots hidden, so they must not be counted.
     // Racial Ranks are granted at Power Level 1, so they always count.
     const rankSlots = [
-      ...this.racialSkillRanks,
+      ...this.racialRanksHad(),
       ...this.progression
         .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
         .flatMap(entry => entry.skillRanks),
@@ -2371,6 +2393,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     if (this.minion) this.life.max = Math.ceil(this.life.max / 4);
     // A Master's to their Minions, "after all other calculations": Leader's, and so many for each Power Level reached.
     if (this.minionGifts) this.life.max += this.minionGifts.lifeMax + (this.minionGifts.lifePerLevel * (Number(this.powerLevel) || 0));
+    // Minion Creation, Step 11: "this bonus to your Life Points is applied after all calculation".
+    if (this.minion && this.minionLifeStep) this.life.max += 2 * (Number(this.powerLevel) || 0);
     // Kept for the next preparation's early Threshold.
     if (this.parent) this.parent._dbuLifeMax = this.life.max;
 
