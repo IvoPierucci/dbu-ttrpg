@@ -443,6 +443,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollSkill: DBUCharacterSheet._onSkillRoll,
       toggleSpecialty: DBUCharacterSheet._onToggleSpecialty,
       rollSave: DBUCharacterSheet._onSaveRoll,
+      rollMight: DBUCharacterSheet._onMightRoll,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
       bestialApply: DBUCharacterSheet._onBestialApply,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
@@ -2943,6 +2944,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * it takes the character's own Critical Extra Dice and the Botch penalty that goes
    * with everything that is not a Skill.
    */
+  /**
+   * A Might Check from the sheet (the user's) - rolled as a Might Clash rolls its side: the Base Die and Might, with the
+   * character's own Critical Dice, Might being no Skill.
+   */
+  static async _onMightRoll() {
+    const might = Number(this.actor.system.might) || 0;
+    const ready = await prepareRoll(this.actor, [], "Might Check", "", { formula: {
+      base: DBUCharacterData.BASE_DIE,
+      parts: [{ label: "Might", value: might, workings: workingsTable(this.actor.system, "might") }] } });
+    if (!ready) return;
+    return this.#rollCheck({
+      parts: [{ label: "Might", value: might }],
+      flavor: "Might Check",
+      criticalDice: this.actor.system.dice.critical.formula
+    });
+  }
+
   static async _onSaveRoll(event, target) {
     const key = target.dataset.save;
     const save = this.actor.system.savingThrows[key];

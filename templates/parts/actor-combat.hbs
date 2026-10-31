@@ -155,7 +155,12 @@
         <div class="stat" data-tooltip="{{aptitudes.dimDefense.tip}}">
           <em>Dim. Defense</em><span>{{aptitudes.dimDefense.value}}{{#if aptitudes.dimDefense.note}}<i class="dbu-inline-note">{{aptitudes.dimDefense.note}}</i>{{/if}}</span>
         </div>
-        <div class="stat"><em>Might</em><span data-tooltip-html="{{workings.might}}">{{system.might}}</span></div>
+        {{! Rolled from its name, as the Saving Throws and Initiative are (the user's). }}
+        <div class="stat">
+          <button type="button" class="stat-roll" data-action="rollMight"
+                  data-tooltip="Roll a Might Check: 1d10 + Might"><em>Might</em></button>
+          <span data-tooltip-html="{{workings.might}}">{{system.might}}</span>
+        </div>
         <div class="stat">
           <button type="button" class="stat-roll" data-action="rollInitiative"
                   data-tooltip="Roll Initiative, and place yourself in the Combat Tracker if you are in one"><em>Initiative</em></button>
