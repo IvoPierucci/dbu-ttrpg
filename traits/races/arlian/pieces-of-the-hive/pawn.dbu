@@ -1,0 +1,17 @@
+id: pawn
+name: Pawn
+order: 6
+optionOf: pieces-of-the-hive
+optionEffect: 2
+description: >
+  You may choose to break your Insect Shell (reducing its Break Value to 0) to use a Ki Surge.
+text: >
+  Pawn [Triggered/Injured, 1/Round]: You may choose to break your Insect Shell (reducing its Break Value to 0) to use a Ki Surge.
+
+---
+
+# Knocked through the Injured Health Threshold: the Shell broken, then a Ki Surge (chat.mjs pawnSurge) - chosen on the Threshold's card,
+# never Automatic.
+[triggered/threshold, 1/round, outOfSequence, effect 2]
+requires knockedThrough("injured");
+pawnSurge();

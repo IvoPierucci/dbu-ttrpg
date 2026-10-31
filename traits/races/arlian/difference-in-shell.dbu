@@ -1,0 +1,29 @@
+id: difference-in-shell
+name: Difference in Shell
+order: 3
+category: body
+importance: secondary
+# (2) Its Choice, a file beside it for each - the one following Pieces of the Hive's Option, not asked; asked where it has none.
+optionEffect: 2
+optionsFollow: pieces-of-the-hive
+description: >
+  Your physical form is adapted for the role you’ve been assigned at birth.
+text: >
+  Difference in Shell (Body): Your physical form is adapted for the role you’ve been assigned at birth.
+  (1)-[Passive]: If you are below the Injured Health Threshold while you have at least 1 adjacent Ally, you may ignore any Health Threshold Penalties from the Injured Health Threshold.
+  (2)-[Choice]: Depending on your choice for the Option effect of Pieces of the Hive, apply the following effects:
+
+  * King [Passive]: Your Insect Shell gains the Leader’s Insignia Apparel Quality without occupying any Quality Slots. Additionally, increase your Apparel Bonus by 1(bT) while you have an adjacent Ally.
+  * Queen [Passive]: Your Insect Shell gains the Beautiful Attire Apparel Quality without occupying any Quality Slots. Additionally, increase your Apparel Bonus by 1(bT) while you have an adjacent Ally.
+  * Rook [Passive]: Your base Size Category is Gigantic and your Insect Shell gains the Spiked Apparel Quality without occupying any Quality Slots.
+  * Bishop [Passive]: Your Insect Shell gains the Parrying Armor Apparel Quality without occupying any Quality Slots. Additionally, while you have an adjacent Ally, reduce the Critical Target of your Strike Rolls by 1.
+  * Knight [Passive]: Your Insect Shell gains the Armed Apparel Quality without occupying any Quality Slots. Additionally, while you have an adjacent Ally, reduce the Critical Target of your Dodge Rolls by 1.
+  * Pawn [Triggered, 1/Encounter]: If your Insect Shell is broken, increase your Combat rolls by 1/2 of its Apparel Bonus (rounded up) until the end of your next turn.
+
+---
+
+[passive]
+# (1) Injured or worse, an Ally adjacent: a Steadfast Check failed at the Injured Health Threshold costs nothing.
+if (belowThreshold("injured") && allyBeside) {
+    threshold.ignore.injured = true;
+}

@@ -1,0 +1,18 @@
+id: rook-shell
+name: Rook
+order: 3
+optionOf: difference-in-shell
+optionEffect: 2
+# Pieces of the Hive's Rook chosen: this one.
+follows: rook
+# On the Insect Shell, in no Quality Slot (racial.mjs platingQuality).
+platingQuality: spiked
+description: >
+  Your base Size Category is Gigantic and your Insect Shell gains the Spiked Apparel Quality without occupying any Quality Slots.
+text: >
+  Rook [Passive]: Your base Size Category is Gigantic and your Insect Shell gains the Spiked Apparel Quality without occupying any Quality Slots.
+
+---
+
+[passive]
+allow size.base.gigantic;

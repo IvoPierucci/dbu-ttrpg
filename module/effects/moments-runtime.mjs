@@ -776,6 +776,11 @@ async function runVerb(actor, call, context) {
     case "onboardFocus": return (await import("../chat.mjs")).onboardFocus(actor);
     case "lingeringPower": return (await import("../chat.mjs")).lingeringPower(actor);
     case "namelessStrike": return (await import("../chat.mjs")).namelessStrike(actor);
+    case "casteKnightStrike": return (await import("../chat.mjs")).casteKnightStrike(actor);
+    case "castePawnStrike": return (await import("../chat.mjs")).castePawnStrike(actor);
+    case "basicStrike": return (await import("../chat.mjs")).basicStrike(actor);
+    case "pawnSurge": return (await import("../chat.mjs")).pawnSurge(actor);
+    case "insectShellDouble": return (await import("../chat.mjs")).insectShellDouble(actor);
     case "ferociousBreak": return (await import("../chat.mjs")).ferociousBreak(actor, context);
     case "bestialPresence": return (await import("../chat.mjs")).bestialPresence(actor);
     case "starsAnswer": return (await import("../chat.mjs")).starsAnswer(actor, context);

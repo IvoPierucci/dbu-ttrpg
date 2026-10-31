@@ -1,0 +1,15 @@
+id: rook-caste
+name: Rook
+order: 3
+optionOf: caste-combat
+optionEffect: 3
+# Pieces of the Hive's Rook chosen: this one.
+follows: rook
+description: >
+  You can treat your Opponents as if they were your Allies for the effects of any Arlian Racial Traits.
+text: >
+  Rook [Passive]: You can treat your Opponents as if they were your Allies for the effects of any Arlian Racial Traits.
+
+---
+
+# Read off this Option where the Arlians' Traits ask for an Ally - one adjacent (allies.mjs besideAnAlly), one knocked through (combat.mjs).

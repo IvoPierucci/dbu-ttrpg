@@ -35,6 +35,10 @@
  *                                   `any` for a Talent of any of them (From the Stars')
  *   grantsPerk: Skill Improvement   (an Option's) a Character Perk of that Choice at Power Level 1 on the Progression tab, named for
  *                                   it and gone with it - Clever's "Gain an additional Skill Improvement at Character Creation"
+ *   optionsFollow: <trait id>       its Options chosen by another Trait's: the one whose `follows:` names the Option that Trait had
+ *                                   chosen, not asked (Difference in Shell's Choice, by Pieces of the Hive's) - asked where it has none
+ *   platingBonusPerBaseTier: 1      (an Option's) its Natural Armor's Apparel Bonus that many (bT) higher - `platingBonusWhile:
+ *                                   allyBeside` with an Ally adjacent alone (Difference in Shell's King and Queen)
  *   grantedLifeCost: 1              the Racial Life Modifier that much lower for each Trait it gave still had (Bestial Presence's)
  *   holdsState / zeroScore          (a Trait's or an Option's) a State it keeps you in; an Attribute Score it holds at 0 (Savage's)
  *   grantsTechniques: full-power    Nameless Horde (4)'s 'Full Power' Signature Techniques, made as it is added (full-power.mjs) -
@@ -772,6 +776,12 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
   let uniqueChoiceType = String(trait.grantsUniqueChoiceType ?? "");
 
   // Each Option effect in turn - Technological Being's (2) one, then (3) two.
+  // Difference in Shell's Choice: "Depending on your choice for the Option effect of Pieces of the Hive" - that one's, not asked.
+  if (!presetOption && trait.optionsFollow) {
+    const followed = Array.from(actor?.items ?? []).find(each => each.flags?.["dbu-ttrpg"]?.sourceId === String(trait.optionsFollow));
+    const held = (followed?.system?.chosen ?? []).find(entry => entry?.key === "option")?.value ?? "";
+    presetOption = racialOptionsOf(trait.id).find(option => held && (String(option.follows ?? "") === held))?.id ?? "";
+  }
   for (const group of optionGroupsOf(trait)) {
     const options = group.options;
     // Named by what gives it - Troll's "you must select Thick Hide for its Option effect" - not asked.
@@ -1381,8 +1391,10 @@ async function madeByOption(actor, item, option) {
  * put on with its Free ticked, the player's to change - or takes back as another Option is chosen (`granted`).
  */
 async function platingQuality(actor, item, id, on) {
+  // Its own Natural Armor - or, where it gave none, theirs: Difference in Shell's Qualities on the Insect Shell.
   const plating = Array.from(actor?.items ?? []).find(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
-    && (each.flags?.["dbu-ttrpg"]?.naturalArmor === true));
+    && (each.flags?.["dbu-ttrpg"]?.naturalArmor === true))
+    ?? Array.from(actor?.items ?? []).find(each => (each.id !== item.id) && (each.flags?.["dbu-ttrpg"]?.naturalArmor === true));
   if (!plating) return;
   const had = (plating.system.crafted?.qualities ?? []).map(entry => ((typeof entry === "string") ? { id: entry } : entry));
   const without = had.filter(entry => !((entry.id === id) && entry.granted));
@@ -1580,5 +1592,11 @@ export function registerRacialHooks() {
       .map(each => each.id);
     if (given.length) await item.parent.deleteEmbeddedDocuments("Item", given);
     await dropGrantedPerks(item.parent, item);
+    // And the Qualities its Options put on another's Natural Armor - Difference in Shell's on the Insect Shell.
+    if (item.type === RACIAL_TYPE) {
+      for (const option of chosenOptions(item).filter(each => each.platingQuality)) {
+        await platingQuality(item.parent, item, String(option.platingQuality), false);
+      }
+    }
   });
 }

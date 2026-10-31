@@ -490,6 +490,27 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
   },
+  casteKnightStrike: {
+    args: [0, 0],
+    doc: "Caste Combat's Knight: the Basic Attack offered out of sequence, no Single Attack asked (chat.mjs casteKnightStrike)."
+  },
+  castePawnStrike: {
+    args: [0, 0],
+    doc: "Caste Combat's Pawn: the Basic Attack offered on the Defeated card - Full Wager, and Power Shot (2) but for a Minion "
+       + "(chat.mjs castePawnStrike)."
+  },
+  basicStrike: {
+    args: [0, 0],
+    doc: "The Basic Attack out of sequence - Pieces of the Hive (1)'s (chat.mjs basicStrike)."
+  },
+  pawnSurge: {
+    args: [0, 0],
+    doc: "Pawn (Pieces of the Hive): the Natural Armor broken, then a Ki Surge (chat.mjs pawnSurge)."
+  },
+  insectShellDouble: {
+    args: [0, 0],
+    doc: "Insect Shell (4): the Natural Armor's Apparel Bonus doubled till the start of your next turn (chat.mjs insectShellDouble)."
+  },
   ferociousBreak: {
     args: [0, 0],
     doc: "Ferocious Assault (2): every Opponent the attack hit a stack of Broken till the start of your next turn (chat.mjs ferociousBreak)."

@@ -1,0 +1,19 @@
+id: king
+name: King
+order: 1
+optionOf: pieces-of-the-hive
+optionEffect: 2
+# "You gain the Master of Minions Talent" - given as it is chosen (named where its file is not written yet). "You can only select this
+# Option effect if you have the Minion No More Factor" - said, the table's.
+grantsTalent: master-of-minions
+description: >
+  You gain the Master of Minions Talent, and your Minions have their Combat Rolls increased by 1(T) while you are in the Spectator State. You can only select this Option effect if you have the Minion No More Factor.
+text: >
+  King [Passive, Prerequisite]: You gain the Master of Minions Talent, and your Minions have their Combat Rolls increased by 1(T) while you are in the Spectator State. You can only select this Option effect if you have the Minion No More Factor.
+
+---
+
+# Given to each of your Minions as it is prepared (allies.mjs minionGifts), as God of Many's.
+[passive]
+requires inState("spectator");
+minions.combatRolls += 1(T);

@@ -16441,6 +16441,49 @@ async function offerPowerOrTransform(actor, reason) {
 }
 
 /**
+ * Caste Combat's Knight: "If you successfully dodge an Opponent's Attacking Maneuver, you may use the Basic Attack Maneuver as an
+ * Out-of-Sequence Maneuver. If you are a Minion, ignore the Single Attack rule for this Attacking Maneuver." Offered on your latest card -
+ * taken from an offer, no Single Attack is asked.
+ */
+export async function casteKnightStrike(actor) {
+  if (!actor) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    reason: "Caste Combat - Knight", grants: {} };
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
+/**
+ * Caste Combat's Pawn: "[Triggered/Defeat]: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. This Attacking Maneuver gains the
+ * Full Wager Advantage. If you are a Minion, ignore the Single Attack rule for this Attacking Maneuver. If you are not a Minion, this
+ * Attacking Maneuver also gains 2 ranks of the Power Shot Advantage." Offered on the Defeated card, as Adamantine Muscle's - the Advantages
+ * carried as a Technique's would be (postAttack, `borrowedAdvantages`).
+ */
+export async function castePawnStrike(actor) {
+  if (!actor) return;
+  const borrowedAdvantages = ["full-wager", ...((actor.type === "minion") ? [] : ["power-shot", "power-shot"])];
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    reason: `Caste Combat - Pawn: Full Wager${(actor.type === "minion") ? "" : ", Power Shot (2)"}`, grants: { borrowedAdvantages } };
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
+/**
+ * Insect Shell (4): "[Triggered/Power, 1/Encounter]: Double the Apparel Bonus of your Insect Shell until the start of your next turn." Its
+ * mark, read wherever the Apparel Bonus is (gear.mjs naturalArmorFactor). Unspent with no Natural Armor Active.
+ */
+export async function insectShellDouble(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!actor?.system?.naturalArmor?.active) {
+    ui.notifications.info(`${actor?.name}: Insect Shell - no Natural Armor Active to double.`);
+    return UNSPENT;
+  }
+  await markUntilNextTurn(actor, actor, "insect-shell-doubled", 1, "start", "Insect Shell");
+}
+
+/**
  * Ferocious Assault (2): "If you hit an Opponent with an Attacking Maneuver made through the Basic Attack Maneuver while below the Bruised
  * Health Threshold, they gain 1 stack of the Broken Combat Condition until the start of your next turn" - every Opponent that attack hit.
  */
@@ -16480,8 +16523,27 @@ export async function bestialPresence(actor) {
  * Signature Technique instead (use-maneuver.mjs useManeuver). Unspent where none is made.
  */
 export async function namelessStrike(actor) {
+  return basicStrike(actor);
+}
+
+/** The Basic Attack Maneuver as an Out-of-Sequence Maneuver - Pieces of the Hive (1)'s, Nameless Horde (5)'s. Unspent where none is made. */
+export async function basicStrike(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   return (await ownOutOfSequence(actor, "basic-attack")) ? undefined : UNSPENT;
+}
+
+/**
+ * Pawn (Pieces of the Hive): "[Triggered/Injured, 1/Round]: You may choose to break your Insect Shell (reducing its Break Value to 0) to
+ * use a Ki Surge." Its Natural Armor broken (natural-armor.mjs breakNaturalArmor), then the Ki Surge. Unspent with none unbroken.
+ */
+export async function pawnSurge(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { breakNaturalArmor } = await import("./natural-armor.mjs");
+  if (!await breakNaturalArmor(actor)) {
+    ui.notifications.info(`${actor?.name}: Pawn - no unbroken Natural Armor to break.`);
+    return UNSPENT;
+  }
+  return takeSurge(actor, { source: "Pawn", kind: "ki" });
 }
 
 /**
@@ -18346,7 +18408,7 @@ async function angelicRedodge(message, target) {
   const hit = !(answer && (answer.total > (Number(branch.against) || 0)));
   await rewriteBranch(message, target.uuid, () => ({ answer, hit, angelic: "done" }));
   // Dodged after all: "If you dodge an Attacking Maneuver" - Aerodynamic's.
-  if (!hit) await answerFor(target, "dodged-attack");
+  if (!hit) await answerFor(target, "dodged-attack", { attackerUuid: attack?.attackerUuid ?? "" });
 }
 
 /** Angelic Defense (2)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
@@ -18407,7 +18469,7 @@ async function altWarriorRoll(message, target, kind) {
     criticalDice: target.system.dice.critical.formula, combatRoll: true, slot: kind, urgent: Boolean(attack.urgentRolls) });
   const hit = !(answer && (answer.total > (Number(branch.against) || 0)));
   await rewriteBranch(message, target.uuid, () => ({ ...(hit ? {} : { answer }), hit, altWarrior: "done" }));
-  if (!hit && (kind === "dodge")) await answerFor(target, "dodged-attack");
+  if (!hit && (kind === "dodge")) await answerFor(target, "dodged-attack", { attackerUuid: attack?.attackerUuid ?? "" });
 }
 
 /** Alternative Warrior Race (4)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
@@ -21534,7 +21596,9 @@ async function exoskeletonSoak(target, own) {
   if (target.getFlag?.(SCOPE, "exoskeletonRound") === roundKey()) return 0;
   const bonus = Number(target.system.naturalArmor?.apparelBonus) || 0;
   if (!bonus) return 0;
-  if ((await askPlayerChoice(target, `${target.name}: Metallic Exoskeleton`,
+  // Its Natural Armor by name - Metallic Exoskeleton's Metal Exoskeleton, Insect Shell's (3) Insect Shell.
+  const armor = Array.from(target.items ?? []).find(item => item.flags?.[SCOPE]?.naturalArmor === true && item.system?.equipped);
+  if ((await askPlayerChoice(target, `${target.name}: ${armor?.name ?? "Natural Armor"}`,
     [{ value: "yes", label: `Soak Value ${bonus} higher for this attack (once a Round)` }, { value: "no", label: "No" }])) !== "yes") return 0;
   await requestActorUpdate(target, { [`flags.${SCOPE}.exoskeletonRound`]: roundKey() });
   return bonus;
@@ -22108,7 +22172,7 @@ async function cunningDodge(message, target) {
   const hit = (Number(branch.against) || 0) > total;
   await rewriteBranch(message, target.uuid, () => ({ answer, hit }));
   // Dodged after all: "If you dodge an Attacking Maneuver".
-  if (!hit && branch.hit) await answerFor(target, "dodged-attack");
+  if (!hit && branch.hit) await answerFor(target, "dodged-attack", { attackerUuid: attack?.attackerUuid ?? "" });
   await answerFor(target, "critical-scored", {});
 }
 
@@ -22150,7 +22214,7 @@ async function instinctualRedodge(message, target) {
   const hit = !(answer && (answer.total > (Number(branch.against) || 0)));
   await rewriteBranch(message, target.uuid, () => ({ answer, hit }));
   // Dodged after all: "If you dodge an Attacking Maneuver".
-  if (!hit) await answerFor(target, "dodged-attack");
+  if (!hit) await answerFor(target, "dodged-attack", { attackerUuid: attack?.attackerUuid ?? "" });
 }
 
 /**
@@ -26011,6 +26075,8 @@ async function takeOutOfSequence(message, actor, offer) {
     // A Kamikaze Ghost's: Small Scale Blast's Minor Sphere, and "may use the Magic Modifier as its Damage Attribute".
     if (granted?.area) declared = { ...declared, area: granted.area };
     if (granted?.damageAttribute) declared = { ...declared, damageAttribute: granted.damageAttribute };
+    // Caste Combat's Pawn: the Advantages it gains, carried as Angelic Technique's is.
+    if (granted?.borrowedAdvantages?.length) declared = { ...declared, borrowedAdvantages: [...granted.borrowedAdvantages] };
     // Violent Punishment: "apply an Energy Charge to that Attacking Maneuver".
     if (granted?.charges) declared = { ...declared, charges: (Number(declared.charges) || 0) + Number(granted.charges) };
     // Glass Shards (5): the Shard Carrier whose shards this attack spends.
@@ -26349,7 +26415,7 @@ export async function postAttack(actor, target, maneuver,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    concentratedEnds = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false, twinCharge = false,
-                                   integrationCharge = false, angelicAdvantage = "", angelicAbove = false,
+                                   integrationCharge = false, angelicAdvantage = "", angelicAbove = false, borrowedAdvantages = [],
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
@@ -26577,10 +26643,12 @@ export async function postAttack(actor, target, maneuver,
         { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) })
       // Angelic Technique (2): the Basic Attack's one Advantage, carried as a Technique's would be - borrowed, it is no Signature
       // Technique for anything asking that.
-      : (angelicAdvantage
-        ? { ...techniqueAttack(actor, { name: maneuver.name, level: "", ultimate: false, advantages: [angelicAdvantage] },
-            { profile, foundation, advantages: [...new Set([...(advantages ?? []), angelicAdvantage])], weapon, thrown, charges,
-              squaresCharged },
+      // And Caste Combat's Pawn's - Full Wager, Power Shot's two ranks - the same way.
+      : ((angelicAdvantage || borrowedAdvantages.length)
+        ? { ...techniqueAttack(actor, { name: maneuver.name, level: "", ultimate: false,
+              advantages: [...(angelicAdvantage ? [angelicAdvantage] : []), ...borrowedAdvantages] },
+            { profile, foundation, advantages: [...new Set([...(advantages ?? []), ...(angelicAdvantage ? [angelicAdvantage] : [])]),
+              ...borrowedAdvantages], weapon, thrown, charges, squaresCharged },
             { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) }),
           borrowed: true }
         : null));
@@ -28862,7 +28930,7 @@ async function resolveAttackWork(message, attack) {
   // "If you dodge an Attacking Maneuver" - a Dodge Roll that beat it: Aerodynamic's.
   for (const entry of branches) {
     if (!entry.hit && (entry.defense === "dodge") && entry.answer && (entry.uuid !== attack.attackerUuid)) {
-      await answerFor(fromUuidSync(entry.uuid), "dodged-attack");
+      await answerFor(fromUuidSync(entry.uuid), "dodged-attack", { attackerUuid: attack.attackerUuid ?? "" });
       // Watchful Gaze (4): an Angel's Counter Action, for their Basic Attack.
       offerWatchfulGaze(message, fromUuidSync(entry.uuid), attacker);
     }

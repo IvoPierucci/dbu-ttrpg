@@ -221,7 +221,8 @@ async function shellBroken(item) {
   const actor = item.parent;
   if (!actor || (actor.system.effects?.slots?.["shell.burst"] !== true)) return;
   const giver = actor.items.get(item.flags?.["dbu-ttrpg"]?.grantedBy ?? "");
-  if (giver?.flags?.["dbu-ttrpg"]?.sourceId !== "sturdy-shell") return;
+  // Sturdy Shell's Shell; the Insect Shell, Difference in Shell's Pawn (the same words).
+  if (!["sturdy-shell", "insect-shell"].includes(giver?.flags?.["dbu-ttrpg"]?.sourceId)) return;
   const { craftedReading } = await import("./gear.mjs");
   const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier: actor.system.baseTierOfPower });
   if (!item.system.crafted.destroyed && !((Number(reading?.breakValue) || 0) > 0 && (reading.breakLeft === 0))) return;
@@ -229,7 +230,7 @@ async function shellBroken(item) {
   const half = Math.ceil((Number(reading?.bonus) || 0) / 2);
   if (!half) return;
   const { askPlayerChoice } = await import("./chat.mjs");
-  if ((await askPlayerChoice(actor, `${actor.name}: Sturdy Shell - ${item.name} broken`,
+  if ((await askPlayerChoice(actor, `${actor.name}: ${item.name} broken`,
     [{ value: "yes", label: `Combat Rolls +${half} till the end of your next turn (once an Encounter)` }, { value: "no", label: "No" }])) !== "yes") return;
   await actor.setFlag("dbu-ttrpg", "shellBurstEncounter", game.combat.id);
   const { setCondition } = await import("./conditions.mjs");
@@ -250,7 +251,8 @@ Hooks.on("updateActor", async (actor, changes, options, userId) => {
 // Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - read off the others, so read
 // again as one of them is hurt or healed, or a token comes, goes or changes side.
 // Synchronized Combatants (2): beside your Partner - read again as a token moves, too, or a choice of it changes.
-const READ_OFF_OTHERS = new Set(["conduit-of-spirit", "synchronized-combatants", "chosen-rival", "bio-berserker", "from-the-stars"]);
+const READ_OFF_OTHERS = new Set(["conduit-of-spirit", "synchronized-combatants", "chosen-rival", "bio-berserker", "from-the-stars",
+  "difference-in-shell", "caste-combat"]);
 // Attendant's Focus (2): what it gives is read by everyone else - so with one on the scene, everyone is read again.
 const READ_BY_OTHERS = new Set(["attendants-focus", "way-of-the-champion", "feline-rally", "kindhearted-saiyan"]);
 function conduitRefresh() {

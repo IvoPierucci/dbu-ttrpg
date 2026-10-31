@@ -1,0 +1,18 @@
+id: pawn-shell
+name: Pawn
+order: 6
+optionOf: difference-in-shell
+optionEffect: 2
+# Pieces of the Hive's Pawn chosen: this one.
+follows: pawn
+description: >
+  If your Insect Shell is broken, increase your Combat rolls by 1/2 of its Apparel Bonus (rounded up) until the end of your next turn.
+text: >
+  Pawn [Triggered, 1/Encounter]: If your Insect Shell is broken, increase your Combat rolls by 1/2 of its Apparel Bonus (rounded up) until the end of your next turn.
+
+---
+
+# Broken in a Combat Encounter: asked, once an Encounter - half its Apparel Bonus (rounded up) on your Combat Rolls till the end of your
+# next turn, as Sturdy Shell's (5) (dbu-ttrpg.mjs shellBroken; Shell Burst, its mark).
+[passive]
+allow shell.burst;

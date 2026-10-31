@@ -68,6 +68,49 @@ export function areOpponents(one, other) {
 }
 
 /**
+ * Whether an Ally of theirs, not Defeated, stands on a Square adjacent to them - by their tokens on the scene (Difference in Shell's "while
+ * you have an adjacent Ally"). Nobody off a scene.
+ */
+export function besideAnAlly(who) {
+  const actor = actorOf(who);
+  if (!actor) return false;
+  // Caste Combat's Rook: "You can treat your Opponents as if they were your Allies for the effects of any Arlian Racial Traits" - every
+  // reader of this is one.
+  const anyone = opponentsCountAsAllies(actor);
+  return (globalThis.canvas?.tokens?.placeables ?? []).some(token => {
+    const other = token.actor;
+    if (!other || (other.uuid === actor.uuid) || other.system?.defeated || (!anyone && !areAllies(other, actor))) return false;
+    return adjacent(actor, token);
+  });
+}
+
+/** Whether two stand on adjacent Squares - by their tokens on one scene (an Actor's first, or the token given). */
+export function adjacent(one, other) {
+  const tokenOf = who => (who?.documentName === "Actor") ? (who.getActiveTokens?.(false, true)?.[0] ?? null) : who;
+  const a = tokenOf(one);
+  const b = tokenOf(other);
+  const docA = a?.document ?? a;
+  const docB = b?.document ?? b;
+  const grid = globalThis.canvas?.grid?.size;
+  if (!docA || !docB || !grid || (docA === docB) || (docA.parent?.id !== docB.parent?.id)) return false;
+  const box = t => ({ x: t.x / grid, y: t.y / grid, w: t.width ?? 1, h: t.height ?? 1 });
+  const gap = (p, q, pSize, qSize) => Math.max(0, Math.max(p - (q + qSize), q - (p + pSize)));
+  const one_ = box(docA);
+  const two = box(docB);
+  return Math.max(Math.ceil(gap(one_.x, two.x, one_.w, two.w)), Math.ceil(gap(one_.y, two.y, one_.h, two.h))) === 0;
+}
+
+/**
+ * Caste Combat's Rook chosen: "You can treat your Opponents as if they were your Allies for the effects of any Arlian Racial Traits" - read
+ * off the Item, so a character's own preparation may ask it.
+ */
+export function opponentsCountAsAllies(who) {
+  return Array.from(actorOf(who)?.items ?? []).some(item => (item.type === "racial")
+    && (item.flags?.["dbu-ttrpg"]?.sourceId === "caste-combat")
+    && (item.system?.chosen ?? []).some(entry => (entry?.key === "option") && (entry.value === "rook-caste")));
+}
+
+/**
  * A Minion's Master, by the world Actor's id (the user's): the one its own Settings name, or the Character whose Minions list
  * names it - either is enough, as with Allies. "" for no Master, and for anybody who is not a Minion.
  */

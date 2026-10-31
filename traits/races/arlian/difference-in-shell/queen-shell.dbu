@@ -1,0 +1,20 @@
+id: queen-shell
+name: Queen
+order: 2
+optionOf: difference-in-shell
+optionEffect: 2
+# Pieces of the Hive's Queen chosen: this one.
+follows: queen
+# On the Insect Shell, in no Quality Slot (racial.mjs platingQuality).
+platingQuality: beautiful-attire
+# "increase your Apparel Bonus by 1(bT) while you have an adjacent Ally" - its Apparel Bonus (gear.mjs platingBonusPerBaseTier).
+platingBonusPerBaseTier: 1
+platingBonusWhile: allyBeside
+description: >
+  Your Insect Shell gains the Beautiful Attire Apparel Quality without occupying any Quality Slots. Additionally, increase your Apparel Bonus by 1(bT) while you have an adjacent Ally.
+text: >
+  Queen [Passive]: Your Insect Shell gains the Beautiful Attire Apparel Quality without occupying any Quality Slots. Additionally, increase your Apparel Bonus by 1(bT) while you have an adjacent Ally.
+
+---
+
+# Its header's.

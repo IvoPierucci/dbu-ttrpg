@@ -1,0 +1,20 @@
+id: queen-caste
+name: Queen
+order: 2
+optionOf: caste-combat
+optionEffect: 3
+# Pieces of the Hive's Queen chosen: this one.
+follows: queen
+description: >
+  If Personality has the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
+text: >
+  Queen [Passive]: If Personality has the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
+
+---
+
+# The highest - another as high included.
+[passive]
+if (highestScore("personality")) {
+    combatRolls += 1(bT);
+    initiative += 1(bT);
+}

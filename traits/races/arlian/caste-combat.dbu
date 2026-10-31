@@ -1,0 +1,36 @@
+id: caste-combat
+name: Caste Combat
+order: 4
+category: mind
+importance: secondary
+# (3) Its Choice, a file beside it for each - the one following Pieces of the Hive's Option, not asked; asked where it has none.
+optionEffect: 3
+optionsFollow: pieces-of-the-hive
+description: >
+  Thanks to your specialized role and the Arlian emphasis on teamwork tactics, when you work together with a group, you’re nearly unstoppable.
+text: >
+  Caste Combat (Mind): Thanks to your specialized role and the Arlian emphasis on teamwork tactics, when you work together with a group, you’re nearly unstoppable.
+  (1)-[Passive]: Increase your Combat Rolls by 1(bT) while you have at least 1 adjacent Ally.
+  (2)-[Triggered/Start of Turn]: Regain Ki Points equal to your Insect Shell’s Apparel Bonus if you have at least 1 adjacent Ally.
+  (3)-[Choice]: Depending on your choice for the Option effect of Pieces of the Hive, apply the following effects:
+
+  * King [Triggered, 1/Round]: If one of your adjacent Minions makes an Attacking Maneuver, you may increase the Damage Attribute of that Attacking Maneuver by your Apparel Bonus for your Insect Shell.
+  * Queen [Passive]: If Personality has the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
+  * Rook [Passive]: You can treat your Opponents as if they were your Allies for the effects of any Arlian Racial Traits.
+  * Bishop [Passive]: Reduce the Ki Point Cost of all Attacking Maneuvers and Unique Abilities by 2(T).
+  * Knight [Triggered, 1/Round]: If you successfully dodge an Opponent’s Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you are a Minion, ignore the Single Attack rule for this Attacking Maneuver.
+  * Pawn [Triggered/Defeat]: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. This Attacking Maneuver gains the Full Wager Advantage. If you are a Minion, ignore the Single Attack rule for this Attacking Maneuver. If you are not a Minion, this Attacking Maneuver also gains 2 ranks of the Power Shot Advantage.
+
+---
+
+[passive]
+# (1) An Ally adjacent - an Opponent too, with the Rook.
+if (allyBeside) {
+    combatRolls += 1(bT);
+}
+
+# (2) Your turn begins with an Ally adjacent: Ki Points as much as your Natural Armor's Apparel Bonus. Automatic by default, its
+# Triggered/Automatic button.
+[triggered/start-of-turn, effect 2]
+requires allyBeside;
+ki.value += naturalArmor.apparelBonus;

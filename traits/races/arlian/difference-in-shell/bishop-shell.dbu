@@ -1,0 +1,20 @@
+id: bishop-shell
+name: Bishop
+order: 4
+optionOf: difference-in-shell
+optionEffect: 2
+# Pieces of the Hive's Bishop chosen: this one.
+follows: bishop
+# On the Insect Shell, in no Quality Slot (racial.mjs platingQuality).
+platingQuality: parrying-armor
+description: >
+  Your Insect Shell gains the Parrying Armor Apparel Quality without occupying any Quality Slots. Additionally, while you have an adjacent Ally, reduce the Critical Target of your Strike Rolls by 1.
+text: >
+  Bishop [Passive]: Your Insect Shell gains the Parrying Armor Apparel Quality without occupying any Quality Slots. Additionally, while you have an adjacent Ally, reduce the Critical Target of your Strike Rolls by 1.
+
+---
+
+[passive]
+if (allyBeside) {
+    criticalTarget.strike -= 1;
+}

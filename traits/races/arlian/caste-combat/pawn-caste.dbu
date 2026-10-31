@@ -1,0 +1,17 @@
+id: pawn-caste
+name: Pawn
+order: 6
+optionOf: caste-combat
+optionEffect: 3
+# Pieces of the Hive's Pawn chosen: this one.
+follows: pawn
+description: >
+  Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. This Attacking Maneuver gains the Full Wager Advantage. If you are a Minion, ignore the Single Attack rule for this Attacking Maneuver. If you are not a Minion, this Attacking Maneuver also gains 2 ranks of the Power Shot Advantage.
+text: >
+  Pawn [Triggered/Defeat]: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. This Attacking Maneuver gains the Full Wager Advantage. If you are a Minion, ignore the Single Attack rule for this Attacking Maneuver. If you are not a Minion, this Attacking Maneuver also gains 2 ranks of the Power Shot Advantage.
+
+---
+
+# Chosen on the Defeated card: the Basic Attack offered there - Full Wager, and Power Shot (2) but for a Minion (chat.mjs castePawnStrike).
+[triggered/defeated, outOfSequence, effect 3]
+castePawnStrike();

@@ -1,0 +1,17 @@
+id: king-caste
+name: King
+order: 1
+optionOf: caste-combat
+optionEffect: 3
+# Pieces of the Hive's King chosen: this one.
+follows: king
+description: >
+  If one of your adjacent Minions makes an Attacking Maneuver, you may increase the Damage Attribute of that Attacking Maneuver by your Apparel Bonus for your Insect Shell.
+text: >
+  King [Triggered, 1/Round]: If one of your adjacent Minions makes an Attacking Maneuver, you may increase the Damage Attribute of that Attacking Maneuver by your Apparel Bonus for your Insect Shell.
+
+---
+
+# Asked of you as a Minion of yours on an adjacent Square declares an Attacking Maneuver, once a Round (maneuvers.mjs askCasteKing).
+[passive]
+allow casteCombat.kingMinions;

@@ -1,0 +1,17 @@
+id: bishop-caste
+name: Bishop
+order: 4
+optionOf: caste-combat
+optionEffect: 3
+# Pieces of the Hive's Bishop chosen: this one.
+follows: bishop
+description: >
+  Reduce the Ki Point Cost of all Attacking Maneuvers and Unique Abilities by 2(T).
+text: >
+  Bishop [Passive]: Reduce the Ki Point Cost of all Attacking Maneuvers and Unique Abilities by 2(T).
+
+---
+
+[passive]
+attack.kiCost -= 2(T);
+unique.kiCost -= 2(T);

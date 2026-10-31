@@ -8,7 +8,7 @@
  * it is reported.
  */
 
-import { areAllies, areOpponents } from "../allies.mjs";
+import { areAllies, areOpponents, besideAnAlly } from "../allies.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { traitAside } from "../aside.mjs";
@@ -565,6 +565,26 @@ const PREDICATES = {
       .map(token => [token.actor.uuid, token.actor])).values()];
     return (allies.length > 0) && allies.every(other => other.system?.defeated);
   },
+
+  /** That Attribute's Score the highest of yours - a tie included (Caste Combat's Queen: "If Personality has the highest Attribute Score"). */
+  highestScore: (scope, name) => {
+    const atts = scope.data?.attributes ?? {};
+    const mine = Number(atts[String(name).toLowerCase()]?.score);
+    return Number.isFinite(mine) && Object.values(atts).every(each => (Number(each?.score) || 0) <= mine);
+  },
+
+  /** The Attacking Maneuver dodged (`attackerUuid`, dodged-attack) an Opponent's (Caste Combat's Knight). */
+  dodgedOpponent: scope => {
+    const self = scope.data?.parent;
+    const uuid = scope.context?.attackerUuid ?? "";
+    return Boolean(self && uuid && (uuid !== self.uuid)) && areOpponents(self, globalThis.fromUuidSync?.(uuid));
+  },
+
+  /** An Ally of yours, not Defeated, on a Square adjacent to you - Difference in Shell's "while you have an adjacent Ally". */
+  allyBeside: scope => besideAnAlly(scope.data?.parent),
+
+  /** Pieces of the Hive (1): the Ally knocked through (`knockedUuid`) on a Square adjacent to you. */
+  knockedBeside: scope => besideChosen(scope.data?.parent, globalThis.fromUuidSync?.(scope.context?.knockedUuid ?? "")),
 
   /** The Attacking Maneuver that answered `hit-opponent` made through the Basic Attack Maneuver (Ferocious Assault's). */
   hitThroughBasicAttack: scope => Boolean(scope.context?.basicAttack),

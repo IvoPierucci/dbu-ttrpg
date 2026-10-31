@@ -1,0 +1,14 @@
+id: queen
+name: Queen
+order: 2
+optionOf: pieces-of-the-hive
+optionEffect: 2
+description: >
+  Increase your Personality Modifier by your Apparel Bonus for your Insect Shell.
+text: >
+  Queen [Passive]: Increase your Personality Modifier by your Apparel Bonus for your Insect Shell.
+
+---
+
+[passive]
+personality.mod += naturalArmor.apparelBonus;

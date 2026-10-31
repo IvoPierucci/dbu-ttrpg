@@ -494,6 +494,8 @@ const PREDICATE_NAMES = new Set([
   "using",
   // Resources' stacks between them, and a Health Threshold reached - Blood of the Warrior's.
   "stacksAtLeast", "belowThreshold",
+  // That Attribute's Score the highest (Caste Combat's Queen).
+  "highestScore",
   // The Health Threshold the Moment answers crossed - "[Triggered/Injured]" (From the Stars').
   "knockedThrough",
   // The attack defended against has that many Energy Charges - Legacy of the Scholars'.
@@ -569,6 +571,10 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "alliesStanding", "alliesAllDefeated",
   // The Attacking Maneuver that hit made through the Basic Attack Maneuver (Ferocious Assault's).
   "hitThroughBasicAttack",
+  // The Ally knocked through adjacent to you (Pieces of the Hive's); an Ally adjacent to you (Difference in Shell's).
+  "knockedBeside", "allyBeside",
+  // The Attacking Maneuver dodged an Opponent's (Caste Combat's Knight).
+  "dodgedOpponent",
   // On a Square adjacent to your Partner, an Ally (Synchronized Combatants').
   "besidePartner",
   // Two Weapons wielded or more of one Weapon Category (Twin Weapon Specialist's).

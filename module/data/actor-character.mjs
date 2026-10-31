@@ -11,7 +11,7 @@ import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
-import { craftedReading, groundIgnored, isNaturalArmor, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable,
+import { craftedReading, groundIgnored, isNaturalArmor, naturalArmorFactor, platingBonusPerBaseTier, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable,
   topLayerPiece } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
   qualitiesOf }
@@ -2201,7 +2201,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       const active = Boolean(reading) && (reading.breakLeft !== 0);
       // And what its owner's Traits add per Tier of Power - Bio-Suit's 1(T).
       const perTier = active ? platingBonusPerTier(this.parent, getTrait) * this.tierOfPower : 0;
-      this.naturalArmor = { active, apparelBonus: active ? ((Number(reading.bonus) || 0) + perTier) : 0 };
+      // Doubled while Insect Shell (4)'s mark is had.
+      // And per base Tier - Difference in Shell's King and Queen.
+      const perBase = active ? platingBonusPerBaseTier(this.parent, getTrait) * this.baseTierOfPower : 0;
+      this.naturalArmor = { active, apparelBonus: active ? ((Number(reading.bonus) || 0) + perTier + perBase) * naturalArmorFactor(this.parent) : 0 };
     }
     // Majin Style (5)'s Default Costume, as its `requires` reads it: worn or broken, with Break Value to get back.
     this.defaultCostume = { mendable: costumeMendable(this.parent?.items, getTrait) };

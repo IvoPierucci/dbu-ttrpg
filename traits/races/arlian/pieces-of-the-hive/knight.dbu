@@ -1,0 +1,14 @@
+id: knight
+name: Knight
+order: 5
+optionOf: pieces-of-the-hive
+optionEffect: 2
+description: >
+  Increase your Dodge Rolls by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+text: >
+  Knight [Passive]: Increase your Dodge Rolls by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+
+---
+
+[passive]
+dodge += ceil(naturalArmor.apparelBonus / 2);

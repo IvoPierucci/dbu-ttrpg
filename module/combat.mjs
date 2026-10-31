@@ -10,7 +10,7 @@
  * Actions away. None of them have anywhere to happen without it.
  */
 
-import { actsFreely, areAllies, areOpponents, masterOf, minionsOf } from "./allies.mjs";
+import { actsFreely, areAllies, areOpponents, masterOf, minionsOf, opponentsCountAsAllies } from "./allies.mjs";
 import { commandedNow, isCharacter } from "./actor-types.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
@@ -1484,6 +1484,19 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
   // The Moment says it "fires after the Maneuver that pushed you through finishes",
   // and this is that: Life Points are written when the Damage is applied, which is the
   // last step of the Maneuver and a deliberate one.
+  // An Ally of theirs knocked through: for each of their Allies on the scene, what answers it (Pieces of the Hive's).
+  {
+    const { offerTriggers } = await import("./chat.mjs");
+    const allies = new Map((canvas?.tokens?.placeables ?? [])
+      .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
+        // Or anyone, for one whose Opponents count as Allies for the Arlians' Traits (Caste Combat's Rook).
+        && (areAllies(token.actor, actor) || opponentsCountAsAllies(token.actor)))
+      .map(token => [token.actor.uuid, token.actor]));
+    for (const ally of allies.values()) {
+      await offerTriggers(ally, "ally-knocked", { knockedUuid: actor.uuid });
+      await fireMoment(ally, "ally-knocked", { knockedUuid: actor.uuid });
+    }
+  }
   // Fight or Flight (2): who knocked them through this one - "you instead gain the Shaken Combat Condition against them".
   if (actor.system.effects?.slots?.["fightOrFlight.steadfast"] === true) {
     await actor.setFlag("dbu-ttrpg", "fightOrFlightKnock", { threshold: now, by: knockedBy ?? "" });

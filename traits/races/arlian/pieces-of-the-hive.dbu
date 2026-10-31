@@ -1,0 +1,29 @@
+id: pieces-of-the-hive
+name: Pieces of the Hive
+order: 2
+category: mind
+importance: primary
+description: >
+  Each Arlian has their role, and you are no different. By playing your role to perfection, you become a part of a larger whole.
+text: >
+  Pieces of the Hive (Mind): Each Arlian has their role, and you are no different. By playing your role to perfection, you become a part of a larger whole.
+  (1)-[Triggered, 1/Round]: If an adjacent Ally is knocked through a Health Threshold, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+  (2)-[Option]: Upon gaining this Racial Trait, choose one of the following effects:
+
+  * King [Passive, Prerequisite]: You gain the Master of Minions Talent, and your Minions have their Combat Rolls increased by 1(T) while you are in the Spectator State. You can only select this Option effect if you have the Minion No More Factor.
+  * Queen [Passive]: Increase your Personality Modifier by your Apparel Bonus for your Insect Shell.
+  * Rook [Passive]: Increase your Wound Rolls and Soak Value by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+  * Bishop [Passive]: Increase your Strike Rolls by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+  * Knight [Passive]: Increase your Dodge Rolls by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+  * Pawn [Triggered/Injured, 1/Round]: You may choose to break your Insect Shell (reducing its Break Value to 0) to use a Ki Surge.
+
+---
+
+# (1) An Ally adjacent to you knocked through a Health Threshold, by anything: the Basic Attack out of sequence (chat.mjs basicStrike) -
+# chosen on its card, never Automatic.
+[triggered/ally-knocked, 1/round, outOfSequence, effect 1]
+requires knockedBeside;
+basicStrike();
+
+# (2) Its Option, chosen as it is added - each a file beside it. "Your Insect Shell" read as your Natural Armor (`naturalArmor.apparelBonus`:
+# nothing while it is Inactive or broken).

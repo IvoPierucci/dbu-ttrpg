@@ -1,0 +1,15 @@
+id: rook
+name: Rook
+order: 3
+optionOf: pieces-of-the-hive
+optionEffect: 2
+description: >
+  Increase your Wound Rolls and Soak Value by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+text: >
+  Rook [Passive]: Increase your Wound Rolls and Soak Value by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+
+---
+
+[passive]
+wound += ceil(naturalArmor.apparelBonus / 2);
+soakValue += ceil(naturalArmor.apparelBonus / 2);

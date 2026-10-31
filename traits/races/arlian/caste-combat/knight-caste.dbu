@@ -1,0 +1,19 @@
+id: knight-caste
+name: Knight
+order: 5
+optionOf: caste-combat
+optionEffect: 3
+# Pieces of the Hive's Knight chosen: this one.
+follows: knight
+description: >
+  If you successfully dodge an Opponent’s Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you are a Minion, ignore the Single Attack rule for this Attacking Maneuver.
+text: >
+  Knight [Triggered, 1/Round]: If you successfully dodge an Opponent’s Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you are a Minion, ignore the Single Attack rule for this Attacking Maneuver.
+
+---
+
+# An Opponent's Attacking Maneuver dodged: the Basic Attack offered out of sequence, no Single Attack asked (chat.mjs casteKnightStrike) -
+# chosen as it happens, never Automatic.
+[triggered/dodged-attack, 1/round, outOfSequence, effect 3]
+requires dodgedOpponent;
+casteKnightStrike();

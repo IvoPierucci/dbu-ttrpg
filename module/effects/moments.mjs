@@ -177,6 +177,9 @@ const TABLE = [
     doc: "Fired for each Ally on the scene of whoever is Defeated, with them as `defeatedUuid`, whose Attacking Maneuver did it as "
        + "`knockerUuid` - a Minion's too, told by `defeatedMinion` (combat.mjs) - Battle Tension's, From the Stars'. What is the "
        + "player's is asked in a window first." },
+  { key: "ally-knocked", label: "An Ally is knocked through a Health Threshold", provides: [],
+    doc: "Fired for each Ally on the scene of whoever is knocked through a Health Threshold, by anything, with them as `knockedUuid` "
+       + "(combat.mjs announceThreshold) - Pieces of the Hive's (knockedBeside). What is the player's is asked in a window first." },
   { key: "opponent-knocked", label: "Someone is knocked through a Health Threshold by an Attacking Maneuver", provides: [],
     doc: "Fired for whoever has an effect answering it as anybody is knocked through a Health Threshold by an Attacking "
        + "Maneuver, with `knockedUuid` and `knockerUuid` (combat.mjs) - Wrath of the Dragon's (you or an Ally: knockedNear), "

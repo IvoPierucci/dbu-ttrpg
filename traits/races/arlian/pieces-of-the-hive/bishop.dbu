@@ -1,0 +1,14 @@
+id: bishop
+name: Bishop
+order: 4
+optionOf: pieces-of-the-hive
+optionEffect: 2
+description: >
+  Increase your Strike Rolls by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+text: >
+  Bishop [Passive]: Increase your Strike Rolls by 1/2 (rounded up) of the Apparel Bonus for your Insect Shell.
+
+---
+
+[passive]
+strike += ceil(naturalArmor.apparelBonus / 2);

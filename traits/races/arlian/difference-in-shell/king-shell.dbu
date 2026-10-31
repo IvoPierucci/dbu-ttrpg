@@ -1,0 +1,20 @@
+id: king-shell
+name: King
+order: 1
+optionOf: difference-in-shell
+optionEffect: 2
+# Pieces of the Hive's King chosen: this one.
+follows: king
+# On the Insect Shell, in no Quality Slot (racial.mjs platingQuality).
+platingQuality: leaders-insignia
+# "increase your Apparel Bonus by 1(bT) while you have an adjacent Ally" - its Apparel Bonus (gear.mjs platingBonusPerBaseTier).
+platingBonusPerBaseTier: 1
+platingBonusWhile: allyBeside
+description: >
+  Your Insect Shell gains the Leader’s Insignia Apparel Quality without occupying any Quality Slots. Additionally, increase your Apparel Bonus by 1(bT) while you have an adjacent Ally.
+text: >
+  King [Passive]: Your Insect Shell gains the Leader’s Insignia Apparel Quality without occupying any Quality Slots. Additionally, increase your Apparel Bonus by 1(bT) while you have an adjacent Ally.
+
+---
+
+# Its header's.

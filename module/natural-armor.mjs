@@ -87,6 +87,19 @@ export async function repairNaturalArmor(actor, amount = Infinity) {
   }
 }
 
+/**
+ * Natural Armor broken by its owner's choice - Pawn's "break your Insect Shell (reducing its Break Value to 0)": every Break Value it has
+ * left lost. Whether there was one to break.
+ */
+export async function breakNaturalArmor(actor) {
+  const { craftedReading } = await import("./gear.mjs");
+  const item = Array.from(actor?.items ?? []).find(each => isNaturalArmor(each) && each.system?.equipped);
+  const left = item ? (Number(craftedReading(item.system.crafted, { getTrait, difficulties: {} })?.breakLeft) || 0) : 0;
+  if (!item || (left <= 0)) return false;
+  await item.update({ "system.crafted.breakLost": (Number(item.system.crafted?.breakLost) || 0) + left });
+  return true;
+}
+
 /** Natural Armor its owner can mend: some Break Value lost, or broken. */
 export function naturalArmorMendable(actor) {
   return Array.from(actor?.items ?? []).some(item => isNaturalArmor(item)

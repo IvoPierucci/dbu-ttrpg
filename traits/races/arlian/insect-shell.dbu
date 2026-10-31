@@ -1,0 +1,34 @@
+id: insect-shell
+name: Insect Shell
+order: 1
+category: body
+importance: primary
+# (1) "At Character Creation, create an 'Insect Shell'. Your Insect Shell is Natural Armor" - made with the Trait, gone with it.
+naturalArmor: Insect Shell
+description: >
+  Thanks to your nearly indestructible exoskeleton, you are nearly impervious to damage.
+text: >
+  Insect Shell (Body): Thanks to your nearly indestructible exoskeleton, you are nearly impervious to damage.
+  (1)-[Passive, Ruling]: At Character Creation, create an ‘Insect Shell’. Your Insect Shell is Natural Armor (see — Natural Armor).
+  (2)-[Triggered, 1/Round]: If you use a Healing Surge, your Insect Shell regains 1 Break Value. If your Insect Shell was broken, it stops being broken (Break Value goes from 0 to 1).
+  (3)-[Triggered, 1/Round]: If you use the Direct Hit or Guard options of the Defend Maneuver, you may increase your Soak Value (before any calculations) by your Insect Shell’s Apparel Bonus for the duration of that Maneuver.
+  (4)-[Triggered/Power, 1/Encounter]: Double the Apparel Bonus of your Insect Shell until the start of your next turn.
+
+---
+
+[passive]
+# (3) The Direct Hit or the Guard: asked as its Damage is worked out, once a Round - the Shell's Apparel Bonus on your Soak Value before
+# anything else (chat.mjs exoskeletonSoak, Metallic Exoskeleton's own).
+allow exoskeleton.soak;
+
+# (2) A Healing Surge about to be used - asked in its window while the Shell has Break Value to get back: 1 of it, and broken no more
+# (chat.mjs takeSurge, natural-armor.mjs repairNaturalArmor), as Survivor's Plating's. Its Triggered/Automatic button all the same (the
+# user's): Automatic by default; set Triggered, ticked in the Healing Surge's window.
+[triggered/healing-surge, toggle, 1/round, effect 2]
+requires platingMendable;
+plating.mend = true;
+
+# (4) The Power Up used: the Shell's Apparel Bonus doubled till the start of your next turn - wherever it is read (gear.mjs
+# naturalArmorFactor). Ticked in its window.
+[triggered/power, 1/encounter, effect 4]
+insectShellDouble();

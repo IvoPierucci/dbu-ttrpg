@@ -17,6 +17,7 @@ import { compile as compileScript } from "./effects/parser.mjs";
 import { applyPassives, applySlot, PRIORITY } from "./effects/interpreter.mjs";
 import { PHASES } from "./effects/slots.mjs";
 import { traitAside } from "./aside.mjs";
+import { besideAnAlly } from "./allies.mjs";
 import { greedyDama, integratedProblem, integratedRoom, isIntegrated } from "./integrated.mjs";
 
 /**
@@ -515,9 +516,15 @@ export function scriptWithChoice(script, choice) {
 export function scriptWithPiece(script, reading, tokens = {}) {
   // What is added to it per Tier of Power rather than per base Tier - Bio-Suit's 1(T) on the Plating - beside it.
   const perTier = Number(tokens?.apparelBonusPerTier) || 0;
-  let text = perTier ? String(script ?? "").replaceAll("$apparelBonus(bT)", `($apparelBonus(bT) + ${perTier}(T))`)
-    : String(script ?? "");
-  text = text.replaceAll("$apparelBonus", String(Number(reading?.perBaseTier) || 0));
+  // And what it is multiplied by - Insect Shell (4)'s double - the whole of it.
+  const factor = Math.max(1, Number(tokens?.apparelBonusFactor) || 1);
+  const perBase = Number(tokens?.apparelBonusPerBaseTier) || 0;
+  // The piece's own per base Tier written in here, so the doubling is applied once - to the whole of it.
+  const own = Number(reading?.perBaseTier) || 0;
+  const more = [perTier ? `${perTier}(T)` : "", perBase ? `${perBase}(bT)` : ""].filter(Boolean);
+  const bonus = more.length ? `(${own}(bT) + ${more.join(" + ")})` : `${own}(bT)`;
+  let text = String(script ?? "").replaceAll("$apparelBonus(bT)", (factor === 1) ? bonus : `(${bonus} * ${factor})`);
+  text = text.replaceAll("$apparelBonus", String(own * factor));
   // The rest of what a piece's Effects may name about the piece, longest first so none is read
   // as the start of another - and each at its default where nobody said: nothing narrowed,
   // nothing waived, nothing multiplied.
@@ -557,8 +564,30 @@ export function pieceTokens(item, wearer, reading, getTrait) {
     reachesWound: reaches("wound"),
     waived: (wearer && weightsPenaltyWaived(item, wearer, getTrait)) ? 1 : 0,
     // Natural Armor's Apparel Bonus raised per Tier of Power - Bio-Suit's.
-    apparelBonusPerTier: isNaturalArmor(item) ? platingBonusPerTier(wearer, getTrait) : 0
+    apparelBonusPerTier: isNaturalArmor(item) ? platingBonusPerTier(wearer, getTrait) : 0,
+    // And per base Tier, by an Option chosen - Difference in Shell's King and Queen, with an Ally adjacent.
+    apparelBonusPerBaseTier: isNaturalArmor(item) ? platingBonusPerBaseTier(wearer, getTrait) : 0,
+    // And doubled - Insect Shell (4)'s, while its mark is had.
+    apparelBonusFactor: isNaturalArmor(item) ? naturalArmorFactor(wearer) : 1
   };
+}
+
+/**
+ * What a character's chosen Options add to their Natural Armor's Apparel Bonus per base Tier of Power - Difference in Shell's King and
+ * Queen: "increase your Apparel Bonus by 1(bT) while you have an adjacent Ally" (`platingBonusPerBaseTier:`, `platingBonusWhile: allyBeside`).
+ */
+export function platingBonusPerBaseTier(actor, getTrait) {
+  return Array.from(actor?.items ?? []).filter(item => item.type === "racial").flatMap(item => (item.system?.chosen ?? [])
+    .filter(entry => entry?.key === "option").map(entry => getTrait?.(entry.value)).filter(Boolean))
+    .reduce((sum, option) => {
+      if ((String(option.platingBonusWhile ?? "") === "allyBeside") && !besideAnAlly(actor)) return sum;
+      return sum + (Number(option.platingBonusPerBaseTier) || 0);
+    }, 0);
+}
+
+/** What Natural Armor's Apparel Bonus is multiplied by: Insect Shell (4)'s "Double the Apparel Bonus of your Insect Shell" while marked. */
+export function naturalArmorFactor(wearer) {
+  return ((Number(wearer?.system?.conditions?.["insect-shell-doubled"]) || 0) > 0) ? 2 : 1;
 }
 
 /**

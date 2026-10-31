@@ -1,0 +1,20 @@
+id: knight-shell
+name: Knight
+order: 5
+optionOf: difference-in-shell
+optionEffect: 2
+# Pieces of the Hive's Knight chosen: this one.
+follows: knight
+# On the Insect Shell, in no Quality Slot (racial.mjs platingQuality).
+platingQuality: armed
+description: >
+  Your Insect Shell gains the Armed Apparel Quality without occupying any Quality Slots. Additionally, while you have an adjacent Ally, reduce the Critical Target of your Dodge Rolls by 1.
+text: >
+  Knight [Passive]: Your Insect Shell gains the Armed Apparel Quality without occupying any Quality Slots. Additionally, while you have an adjacent Ally, reduce the Critical Target of your Dodge Rolls by 1.
+
+---
+
+[passive]
+if (allyBeside) {
+    criticalTarget.dodge -= 1;
+}

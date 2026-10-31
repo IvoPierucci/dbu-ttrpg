@@ -1,0 +1,13 @@
+id: insect-shell-doubled
+name: Insect Shell (Doubled)
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Insect Shell (4)'s - the Natural Armor's Apparel Bonus doubled while it is had (gear.mjs naturalArmorFactor).
+combatCondition: no
+source: Core Rule
+description: >
+  Insect Shell: your Natural Armor's Apparel Bonus doubled, till the start of your next turn.
+text: >
+  Insect Shell (4): Double the Apparel Bonus of your Insect Shell until the start of your next turn.
+
+---

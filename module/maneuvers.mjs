@@ -1646,6 +1646,33 @@ export async function askApoplecticBeast(actor, declared) {
 }
 
 /**
+ * Caste Combat's King: "[Triggered, 1/Round]: If one of your adjacent Minions makes an Attacking Maneuver, you may increase the Damage
+ * Attribute of that Attacking Maneuver by your Apparel Bonus for your Insect Shell." Asked of its Master as a Minion of theirs on an adjacent
+ * Square declares one, once a Round - the Damage Attribute that much higher wherever it is applied (chat.mjs woundBase).
+ */
+export async function askCasteKing(actor, declared) {
+  if (!declared || (actor?.type !== "minion")) return declared;
+  const master = globalThis.game?.actors?.get?.(masterOf(actor));
+  if (!master || (master.system?.effects?.slots?.["casteCombat.kingMinions"] !== true)) return declared;
+  const { adjacent } = await import("./allies.mjs");
+  if (!adjacent(actor, master)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (master.getFlag?.("dbu-ttrpg", "casteKingRound") === round) return declared;
+  const bonus = Number(master.system.naturalArmor?.apparelBonus) || 0;
+  if (!bonus) return declared;
+  const { askPlayerChoice, requestActorUpdate } = await import("./chat.mjs");
+  if ((await askPlayerChoice(master, `${master.name}: Caste Combat (King) - ${actor.name}'s attack`,
+    [{ value: "yes", label: `Its Damage Attribute ${bonus} higher (once a Round)` }, { value: "no", label: "No" }])) !== "yes") return declared;
+  await requestActorUpdate(master, { "flags.dbu-ttrpg.casteKingRound": round });
+  const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
+  const attribute = DBUCharacterData.FOUNDATIONS[declared.foundation]?.attribute;
+  const own = declared.damageAttribute;
+  const value = own ? (Number(own.value) || 0) : (Number(actor.system.attributes?.[attribute]?.mod) || 0);
+  const label = own ? own.label : (DBUCharacterData.FOUNDATIONS[declared.foundation]?.label ?? "Damage Attribute");
+  return { ...declared, damageAttribute: { label: `${label} + Caste Combat`, value: value + bonus } };
+}
+
+/**
  * Ferocious Assault (3): "[Triggered, 1/Encounter]: When making an Attacking Maneuver while below the Injured Health Threshold, reduce your
  * Life Points to 1 (you automatically succeed the Steadfast Check for the Critical Health Threshold). Increase the Wound Roll of this
  * Attacking Maneuver by the reduction to your Life Points." Asked as it is declared; the Life Points taken then, a row on its Wound, and
