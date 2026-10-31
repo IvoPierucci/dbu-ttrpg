@@ -7,7 +7,7 @@
  * and this system has already been bitten by that once.
  */
 
-import { areAllies } from "./allies.mjs";
+import { areAllies, areOpponents } from "./allies.mjs";
 import { isCharacter } from "./actor-types.mjs";
 import { favoredChoiceOf } from "./data/item-maneuver.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
@@ -981,7 +981,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   if (has("splitting") && target) {
     const most = (ranks("splitting") >= 2) ? 4 : 2;
     const others = [...new Set(Array.from(game.user.targets ?? []).map(token => token.actor)
-      .filter(other => other && (other.uuid !== target.uuid) && (other.uuid !== actor.uuid) && !areAllies(other, actor)))];
+      .filter(other => other && (other.uuid !== target.uuid) && (other.uuid !== actor.uuid) && areOpponents(other, actor)))];
     if ((others.length + 1) > most) {
       ui.notifications.warn(`${technique.name}: Splitting reaches up to ${most} Opponents; ${others.length + 1} are targeted.`);
       return null;
@@ -1406,7 +1406,7 @@ async function techniqueTableQuestions(actor, technique) {
     // An Opponent - not on either Allies list - with you in their Melee Range: not usable.
     const near = [...new Map((canvas?.tokens?.placeables ?? [])
       .map(token => token.actor)
-      .filter(other => other && (other.uuid !== actor.uuid) && (isCharacter(other)) && !areAllies(other, actor)
+      .filter(other => other && (other.uuid !== actor.uuid) && (isCharacter(other)) && areOpponents(other, actor)
         && (squaresAway(other, actor) !== null) && !whyNotWithinMelee(other, actor, ""))
       .map(other => [other.uuid, other])).values()];
     if (near.length) {
@@ -2038,7 +2038,7 @@ function magicTrickRanks(actor, maneuver) {
 function trickOpponents(actor, aimed) {
   return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
     .filter(token => token.actor && (isCharacter(token.actor)) && (token.actor.uuid !== actor.uuid)
-      && (token.actor.uuid !== aimed?.uuid) && !areAllies(token.actor, actor) && !token.actor.system?.defeated
+      && (token.actor.uuid !== aimed?.uuid) && areOpponents(token.actor, actor) && !token.actor.system?.defeated
       && !atLongRange(actor, token.actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
 }
@@ -2112,7 +2112,7 @@ async function askMagicTrick(actor, maneuver, target) {
   // Whimsical Magic (8): aimed at an Opponent, once an Encounter - asked with the effect.
   const allOffered = Boolean(target) && (actor.system.effects?.slots?.["whimsical.trickAll"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "trickAllEncounter") !== (game.combat?.id ?? "none"))
-    && !areAllies(target, actor) && (trickOpponents(actor, target).length > 0);
+    && areOpponents(target, actor) && (trickOpponents(actor, target).length > 0);
   // Trickster Magician (2): "you may apply up to 3 of its effects at once" - boxes rather than one choice, once an Encounter.
   const multi = (actor.system.effects?.slots?.["trickster.multi"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "tricksterEncounter") !== (game.combat?.id ?? "none"));
@@ -3490,7 +3490,7 @@ async function askMaterialize(actor, maneuver) {
   // Weights' Opponent is the one targeted.
   const accessory = basic && (typeOf(basic) === "accessory");
   const recipient = ((kind === "weights") || (chosen.projectile && (accessory || ["weapon", "apparel"].includes(kind)))) ? target : null;
-  if (recipient && (kind === "weights") && areAllies(recipient, actor)) {
+  if (recipient && (kind === "weights") && !areOpponents(recipient, actor)) {
     ui.notifications.warn(`${maneuver.name}: ${recipient.name} is your Ally - the Weights go on an Opponent.`);
     return null;
   }
@@ -3529,7 +3529,7 @@ async function askPrecognition(actor, maneuver) {
   }
   const later = combat.turns.slice((combat.turn ?? 0) + 1)
     .filter(combatant => combatant.actor && (combatant.actor.uuid !== actor.uuid) && !combatant.defeated
-      && !areAllies(combatant.actor, actor));
+      && areOpponents(combatant.actor, actor));
   if (!later.length) {
     ui.notifications.warn("Nobody is left to act this Combat Round.");
     return null;
@@ -3842,7 +3842,7 @@ async function askIllusion(actor, maneuver) {
     : Array.from(game.user.targets ?? []).map(token => token.actor);
   // "Your Opponents in" it: your Allies left out.
   const others = [...new Map(pool.filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid)
-    && !areAllies(other, actor)).map(other => [other.uuid, other])).values()];
+    && areOpponents(other, actor)).map(other => [other.uuid, other])).values()];
   if (!others.length) {
     ui.notifications.warn(`${maneuver.name}: nobody to deceive${game.combat?.started ? "" : " - target them first"}.`);
     return null;
@@ -4160,7 +4160,7 @@ async function askHide(actor, maneuver, { burst = false, area = "Minor Sphere", 
     : Array.from(game.user.targets ?? []).map(token => token.actor);
   // "Your Opponents" - but a burst's area, whoever is in it.
   const others = [...new Map(pool.filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid)
-    && (burst || !areAllies(other, actor))).map(other => [other.uuid, other])).values()];
+    && (burst || areOpponents(other, actor))).map(other => [other.uuid, other])).values()];
   if (!others.length) {
     ui.notifications.warn(`${maneuver.name}: nobody to hide from${game.combat?.started ? "" : " - target them first"}.`);
     return null;
@@ -5130,7 +5130,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (maneuver.id === "disarm") {
     const { wieldedWeapons } = await import("./gear.mjs");
     const refused = !targetActor ? "Target an Opponent first."
-      : areAllies(targetActor, actor) ? `${targetActor.name} is not an Opponent.`
+      : !areOpponents(targetActor, actor) ? `${targetActor.name} is not an Opponent.`
       : !wieldedWeapons(Array.from(targetActor.items ?? [])).length ? `${targetActor.name} wields no Weapon.`
       : whyNotWithinMelee(actor, targetActor, maneuver.name);
     if (refused) {
@@ -5292,8 +5292,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // A Unique Ability's by its file.
     const side = TARGET_SIDE[maneuver.id] ?? TARGET_SIDE[actor.items?.get(maneuver.itemId ?? "")?.system?.unique?.libraryId ?? ""];
     const allied = areAllies(targetActor, actor);
-    if ((side === "opponent") && allied) {
-      ui.notifications.warn(`${targetActor.name} is your Ally: ${maneuver.name} targets an Opponent.`);
+    if ((side === "opponent") && !areOpponents(targetActor, actor)) {
+      ui.notifications.warn(`${targetActor.name} is not an Opponent: ${maneuver.name} targets an Opponent.`);
       return false;
     }
     if ((side === "ally") && !allied && (targetActor.uuid !== actor.uuid)) {
@@ -6933,7 +6933,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // An Opponent: not an Ally of yours, as Whimsical Magic's are told apart.
     const others = [...new Map(Array.from(game.user.targets ?? [])
       .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.uuid !== targetActor.uuid)
-        && !areAllies(token.actor, actor))
+        && areOpponents(token.actor, actor))
       .map(token => [token.actor.uuid, token.actor])).values()];
     const { postSkillClash } = await import("./chat.mjs");
     for (const other of others) await postSkillClash(actor, other, maneuver, { terrify: { applied: false } });
@@ -6943,7 +6943,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && maneuver.insult && targetActor && (actor.system.effects?.slots?.["insult.sphere"] === true)) {
     const others = [...new Map(Array.from(game.user.targets ?? [])
       .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.uuid !== targetActor.uuid)
-        && !areAllies(token.actor, actor))
+        && areOpponents(token.actor, actor))
       .map(token => [token.actor.uuid, token.actor])).values()];
     for (const other of others) {
       await postSaveClash(actor, other, { maneuverName: maneuver.name, saves: maneuver.clashSaves,
@@ -7046,7 +7046,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
           { techniqueClash: { kind: "fake-out", attackMessageId: card.id, applied: false } });
       }
       // Trick Attack: "When you target an Opponent with this Attacking Maneuver" - an Ally aimed at is not fooled (allies.mjs).
-      if (features.includes("trick-attack") && !areAllies(target, actor)) {
+      if (features.includes("trick-attack") && areOpponents(target, actor)) {
         await postSkillClash(actor, target, { name: `${maneuver.name} (Trick Attack)`, type: "instant",
           clash: { skill: trickSkill, defenderSkills: ["intuition", "perception"] } },
           { techniqueClash: { kind: "trick-attack", attackMessageId: card.id, applied: false } });

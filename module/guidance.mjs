@@ -11,7 +11,7 @@
  * (Attendant's Focus (2)).
  */
 
-import { areAllies } from "./allies.mjs";
+import { areAllies, areOpponents } from "./allies.mjs";
 
 export const SPHERE_RADIUS = Object.freeze({ minor: 1, standard: 3, large: 4, huge: 5, destructive: 6 });
 
@@ -40,7 +40,7 @@ export function opponentsWithin(actor, gap) {
   if (!from) return [];
   return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
     .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
-      && !areAllies(token.actor, actor) && ((gapBetween(from.document ?? from, token.document ?? token) ?? 99) <= gap))
+      && areOpponents(token.actor, actor) && ((gapBetween(from.document ?? from, token.document ?? token) ?? 99) <= gap))
     .map(token => [token.actor.uuid, token.actor])).values()];
 }
 

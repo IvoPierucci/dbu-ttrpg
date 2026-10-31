@@ -15,7 +15,7 @@
  * Kept on the Hidden one, as `system.hiddenFrom`: whom from, and how many attacks were aimed at them this Combat Round.
  */
 
-import { areAllies } from "./allies.mjs";
+import { areAllies, areOpponents } from "./allies.mjs";
 import { isCharacter } from "./actor-types.mjs";
 import { squaresBetween, MAGNITUDES, magnitudeIndex } from "./maneuvers.mjs";
 
@@ -150,7 +150,7 @@ export async function hideFromOpponents(actor) {
   for (const token of globalThis.canvas?.tokens?.placeables ?? []) {
     const other = token.actor;
     if (!other || (other.uuid === actor.uuid) || (!isCharacter(other))) continue;
-    if (areAllies(other, actor)) continue;
+    if (!areOpponents(other, actor)) continue;
     others.set(other.uuid, other);
   }
   for (const other of others.values()) await hideFrom(actor, other, { quiet: true });

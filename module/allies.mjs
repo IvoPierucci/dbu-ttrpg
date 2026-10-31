@@ -1,6 +1,7 @@
 /**
  * Who is whose Ally (the user's ruling): the Allies list on each character's Settings tab - either one's list is enough, both
- * ways; nobody else, whatever their token's disposition. Every other Character is an Opponent. No imports, so it is read from
+ * ways; nobody else, whatever their token's disposition. Every other Character is an Opponent - but a Minion's side
+ * (areOpponents). No imports, so it is read from
  * anywhere - the effects' own conditions among them.
  */
 
@@ -32,6 +33,20 @@ export function areAllies(one, other) {
   if ((duplicate(one) && (masterOf(one) === b)) || (duplicate(other) && (masterOf(other) === a))) return false;
   return listedAllies(one).includes(b) || listedAllies(other).includes(a)
     || (masterOf(one) === b) || (masterOf(other) === a);
+}
+
+/**
+ * Whether the two are Opponents: "Every other Character is an Opponent" - but a Minion stands on its Master's side (the user's: a
+ * Duplicate is no Ally of theirs for any effect, yet on their side all the same). So a Master and their Minions, Duplicates
+ * included, and the Minions of one Master, are never each other's Opponents - nor each other's Allies where no rule makes them so.
+ * Anybody with themselves, or with nobody, is read as before: not an Ally.
+ */
+export function areOpponents(one, other) {
+  if (areAllies(one, other)) return false;
+  const a = allyKey(one);
+  const b = allyKey(other);
+  if (!a || !b || (a === b)) return true;
+  return (masterOf(one) || a) !== (masterOf(other) || b);
 }
 
 /**

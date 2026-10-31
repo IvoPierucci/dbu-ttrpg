@@ -10,7 +10,7 @@
  * Actions away. None of them have anywhere to happen without it.
  */
 
-import { actsFreely, areAllies, masterOf, minionsOf } from "./allies.mjs";
+import { actsFreely, areAllies, areOpponents, masterOf, minionsOf } from "./allies.mjs";
 import { commandedNow, isCharacter } from "./actor-types.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
@@ -1349,7 +1349,7 @@ export function registerDefeatHooks() {
     if (now && options.dbuKnockedBy) {
       const knocker = fromUuidSync(options.dbuKnockedBy);
       // An Opponent's - an Ally Defeated is not "an Opponent" Defeated (allies.mjs).
-      if (knocker && (knocker.uuid !== actor.uuid) && !areAllies(knocker, actor)) {
+      if (knocker && (knocker.uuid !== actor.uuid) && areOpponents(knocker, actor)) {
         const { offerTriggers } = await import("./chat.mjs");
         const critical = Boolean(options.dbuKnockedCritical);
         await offerTriggers(knocker, "defeat-opponent", { defeatedUuid: actor.uuid, critical });
@@ -1486,7 +1486,7 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
     // Pain Resistant (2): "they cannot trigger any of their effects that trigger when you are knocked through" - the knocker's
     // own skipped, every other's asked as ever.
     // And "an Opponent" knocked through, not an Ally (allies.mjs).
-    const theirs = !knockerDenied && !areAllies(knocker, actor);
+    const theirs = !knockerDenied && areOpponents(knocker, actor);
     // Who was knocked through - Burning Hatred's Enemy.
     // And whether a Called Shot or an attack through the Exploit did it - Scarlet Spotter's.
     // And whether its Strike was a Critical Result - Critical Point's.

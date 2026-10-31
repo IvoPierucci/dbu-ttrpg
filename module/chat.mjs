@@ -16,7 +16,7 @@ import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spen
 import { activeBuddy, activeBuddies, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
-import { areAllies, masterOf, minionsOf } from "./allies.mjs";
+import { areAllies, areOpponents, masterOf, minionsOf } from "./allies.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
@@ -754,7 +754,7 @@ async function expertOffers(message, attacker) {
   const on = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()].filter(Boolean);
   for (const watcher of on) {
     if ((watcher.uuid === attacker.uuid) || watcher.system?.defeated || (watcher.system?.effects?.slots?.["exploit.byAllies"] !== true)
-      || areAllies(watcher, attacker) || (watcher.getFlag?.(SCOPE, "expertRound") === roundKey())
+      || !areOpponents(watcher, attacker) || (watcher.getFlag?.(SCOPE, "expertRound") === roundKey())
       || !watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
     const near = on.filter(each => !each.system?.defeated && ((each.uuid === watcher.uuid) || areAllies(each, watcher)) && (each.uuid !== attacker.uuid)
       && !whyNotWithinMelee(each, attacker, ""));
@@ -774,7 +774,7 @@ export async function openingsOffers(message, user) {
   if (!message || !user || !canvas?.tokens) return;
   const watchers = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
     .filter(watcher => watcher && (watcher.uuid !== user.uuid) && !watcher.system?.defeated
-      && (watcher.system?.effects?.slots?.["exploit.onPowerUp"] === true) && !areAllies(watcher, user)
+      && (watcher.system?.effects?.slots?.["exploit.onPowerUp"] === true) && areOpponents(watcher, user)
       && (watcher.getFlag?.(SCOPE, "openingsRound") !== roundKey())
       && watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)
       && !atLongRange(watcher, user));
@@ -825,7 +825,7 @@ async function tacticsOffers(actor, key, message) {
   const { squaresAway } = await import("./maneuvers.mjs");
   const watchers = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
     .filter(watcher => watcher && (watcher.uuid !== actor.uuid) && !watcher.system?.defeated
-      && (watcher.system?.effects?.slots?.["exploit.onConditioned"] === true) && !areAllies(watcher, actor)
+      && (watcher.system?.effects?.slots?.["exploit.onConditioned"] === true) && areOpponents(watcher, actor)
       && (watcher.getFlag?.(SCOPE, "tacticsRound") !== roundKey())
       && watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)
       && ((squaresAway(watcher, actor) ?? Infinity) <= 4));
@@ -1454,7 +1454,7 @@ async function uniqueClashWon(message) {
   const loser = won === "challenger" ? clash.defenderUuid : clash.challengerUuid;
   if (!winner || (winner.uuid === loser)) return;
   // "against an Opponent" - every effect answering it says so (Psychic (5), Bag of Tricks): an Ally beaten answers nothing.
-  if (areAllies(winner, fromUuidSync(loser))) return;
+  if (!areOpponents(winner, fromUuidSync(loser))) return;
   if (!winner.isOwner || !(message.isAuthor || game.user.isGM)) {
     if (!game.user.isGM && game.users.activeGM) game.socket.emit(CHANNEL, { type: "uniqueClashWon", messageId: message.id });
     return;
@@ -3803,7 +3803,7 @@ async function beginGrapple(grappler, grappled) {
   // Extension Attack (2): "While you are Grappling an Opponent who is 3 or more Squares away from you, you do not suffer the Guard Down
   // Condition."
   const { squaresAway } = await import("./maneuvers.mjs");
-  const extended = (grappler.system?.effects?.slots?.["extension.noGuardDown"] === true) && !areAllies(grappler, grappled)
+  const extended = (grappler.system?.effects?.slots?.["extension.noGuardDown"] === true) && areOpponents(grappler, grappled)
     && ((Number(squaresAway(grappler, grappled)) || 0) >= 3);
   for (const actor of [grappler, grappled]) {
     if ((actor === grappler) && ((gripDifference(grappler, grappled) >= 3) || extended)) continue;
@@ -7511,7 +7511,7 @@ function offerExploits(card, actor, maneuver) {
     if (other.uuid === actor.uuid) continue;
     if (!other.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
     // "All adjacent Opponents", "any Opponent whose Melee Range you left": never an Ally (allies.mjs).
-    if (areAllies(other, actor)) continue;
+    if (!areOpponents(other, actor)) continue;
     // Hidden: "You do not trigger the Exploit Maneuver from any Oblivious Characters."
     if ((actor.system?.hiddenFrom ?? []).some(entry => entry?.uuid === other.uuid)) continue;
     if (outpaces && Number.isFinite(initiativeOf(other)) && Number.isFinite(initiativeOf(actor))
@@ -9708,7 +9708,7 @@ function beatdownClashBonus(actor, clash, uuid) {
   const slot = actor?.system?.effects?.slots?.["clash.mightVsConditioned"];
   if ((clash?.category !== "might") || !(Number(slot?.add) || 0)) return [];
   const other = fromUuidSync((uuid === clash.challengerUuid) ? (clash.defenderUuid ?? "") : (clash.challengerUuid ?? ""));
-  if (!other || (other.uuid === actor.uuid) || areAllies(other, actor) || !conditioned(other)) return [];
+  if (!other || (other.uuid === actor.uuid) || !areOpponents(other, actor) || !conditioned(other)) return [];
   return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: Number(slot.add) }];
 }
 
@@ -11999,7 +11999,7 @@ export async function tinyTarget(actor) {
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor);
-  const larger = [...new Map(pool.filter(other => other && (other.uuid !== actor.uuid) && !areAllies(other, actor)
+  const larger = [...new Map(pool.filter(other => other && (other.uuid !== actor.uuid) && areOpponents(other, actor)
     && (sizeDifference(other, actor) >= 2))
     .map(other => [other.uuid, other])).values()];
   if (!larger.length) return;
@@ -12737,7 +12737,7 @@ async function dance(message, dancer) {
   const para = message.getFlag(SCOPE, PARA_FLAG);
   if (!para || para.danced || para.failed) return;
   const targets = Array.from(game.user.targets ?? []).map(token => token.actor)
-    .filter(other => other && (other.uuid !== dancer.uuid) && !areAllies(other, dancer)).slice(0, para.actions);
+    .filter(other => other && (other.uuid !== dancer.uuid) && areOpponents(other, dancer)).slice(0, para.actions);
   if (!targets.length) return ui.notifications.warn("Target who dances with you first.");
   requestEdit(message, { type: "paraPara", para: { ...para, danced: true } });
   for (const target of targets) {
@@ -13004,7 +13004,7 @@ async function dimensionalHole(message, holder) {
   const into = Array.from(game.user.targets ?? []).map(token => token.actor)
     .find(other => other && (other.uuid !== holder.uuid) && !(attack.targets ?? []).some(entry => entry.uuid === other.uuid));
   if (!into) return ui.notifications.warn("Target the Opponent it goes to first.");
-  if (areAllies(into, holder)) return ui.notifications.warn(`${into.name} is your Ally: Dimensional Hole sends it to an Opponent.`);
+  if (!areOpponents(into, holder)) return ui.notifications.warn(`${into.name} is not an Opponent: Dimensional Hole sends it to an Opponent.`);
   if (!await spendActions(holder, 1, "counter")) return;
   await recordManeuverType(holder, "counter");
   await requestActorUpdate(holder, { "system.usedManeuvers": [...(holder.system.usedManeuvers ?? []), "encounter:dimensional-hole"] });
@@ -14308,7 +14308,7 @@ export async function webStrike(actor, item) {
   if (!item?.system?.unique?.applied) return;
   const target = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
   if (!target) return ui.notifications.warn("Target who moved through the Explosive Web first.");
-  if (areAllies(target, actor)) return ui.notifications.warn(`${target.name} is your Ally: the Explosive Web strikes an Opponent.`);
+  if (!areOpponents(target, actor)) return ui.notifications.warn(`${target.name} is not an Opponent: the Explosive Web strikes an Opponent.`);
   const mark = `round:web.${target.uuid}`;
   if ((actor.system.usedManeuvers ?? []).includes(mark)) {
     return ui.notifications.warn(`${target.name} has met the Explosive Web already this Combat Round.`);
@@ -16955,7 +16955,7 @@ export async function postTornado(actor, maneuver) {
 function offerTornadoStrike(message, attack, spinner, why) {
   if (!spinningOf(spinner) || (attack.attackerUuid === spinner.uuid)) return;
   // "If an Opponent misses you".
-  if (areAllies(spinner, fromUuidSync(attack.attackerUuid ?? ""))) return;
+  if (!areOpponents(spinner, fromUuidSync(attack.attackerUuid ?? ""))) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: spinner.uuid, actorName: spinner.name, maneuverId: "basic-attack",
     maneuverName: "Basic Attack", targetUuid: attack.attackerUuid, reason: `${spinningOf(spinner).name} - ${why}`,
     grants: { profileChoices: ["launching", "sweeping", "elementalWind"] } } });
@@ -16971,7 +16971,7 @@ export async function tornadoTurnStart(actor) {
   if (!spin) return;
   const near = (canvas?.tokens?.placeables ?? []).map(token => token.actor)
     .filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid) && !other.system.defeated
-      && !areAllies(other, actor) && !whyNotWithinMelee(actor, other, ""));
+      && areOpponents(other, actor) && !whyNotWithinMelee(actor, other, ""));
   const within = [...new Map(near.map(other => [other.uuid, other])).values()];
   if (!within.length) return stopSpinning(actor);
   await actor.setFlag(SCOPE, "spinning", { ...spin, ending: true });
@@ -17032,7 +17032,7 @@ export async function spinToWin(actor) {
   if (!spinningOf(actor)?.spinToWin) return;
   const target = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
   if (!target) return ui.notifications.warn("Target the adjacent Opponent first.");
-  if (areAllies(target, actor)) return ui.notifications.warn(`${target.name} is your Ally: Spin to Win is for an Opponent.`);
+  if (!areOpponents(target, actor)) return ui.notifications.warn(`${target.name} is not an Opponent: Spin to Win is for an Opponent.`);
   return spinThrust(actor, target.uuid);
 }
 
@@ -17089,7 +17089,7 @@ export async function springTrap(actor, item, asInstant) {
   // Everyone it is sprung at - the Sphere around the Trap Square, or the Technique's own AoE from it: the tokens targeted.
   // "Against your Opponent": your Allies among those targeted left out.
   const caught = [...new Map(Array.from(game.user.targets ?? []).map(token => token.actor)
-    .filter(other => other && (other.uuid !== actor.uuid) && !areAllies(other, actor)).map(other => [other.uuid, other])).values()];
+    .filter(other => other && (other.uuid !== actor.uuid) && areOpponents(other, actor)).map(other => [other.uuid, other])).values()];
   const [target, ...rest] = caught;
   if (!target) return ui.notifications.warn("Target the Opponents it is sprung at first.");
   const extraTargets = rest.map(other => ({ uuid: other.uuid, name: other.name }));
@@ -17709,7 +17709,7 @@ const FAKE_DEATH_FLAG = "fakeDeath";
  */
 async function offerFakeDeath(target, attacker, { damaged = false } = {}) {
   // "an Opponent's Attacking Maneuver" - not an Ally's (allies.mjs).
-  if (attacker && areAllies(target, attacker)) return;
+  if (attacker && !areOpponents(target, attacker)) return;
   const item = Array.from(target.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.fakesDeath);
   if (!item) return;
   const { fakeDeathEntries, isHiddenFrom } = await import("./hidden.mjs");
@@ -18123,7 +18123,7 @@ function offerWatcherPowerUp(message, actor, why) {
 function offerRubberyMove(message, mover, moved, { grapple = false, stretched = false } = {}) {
   if (!mover || !moved || (mover.uuid === moved.uuid) || (mover.system?.effects?.slots?.["rubbery.move"] !== true)) return;
   // "Upon hitting an Opponent" - but a Grapple, whoever it holds.
-  if (!grapple && areAllies(mover, moved)) return;
+  if (!grapple && !areOpponents(mover, moved)) return;
   const stretch = stretched ? (Number(mover.system.effects?.slots?.["meleeRange.stretch"]?.add) || 0) : 0;
   const squares = Math.max(0, Number(mover.system.meleeRange) || 0) + stretch + 1;
   // Whose it is - Rubbery Body's, or Namekian Biology's (5), the same words.
@@ -18154,14 +18154,14 @@ function offerBouncyMove(message, actor, attacker) {
  */
 function offerDisarming(message, attacker, target) {
   if (!attacker || !target || (attacker.uuid === target.uuid) || attacker.system?.defeated
-    || (attacker.system?.effects?.slots?.["disarming.onMiss"] !== true) || areAllies(target, attacker)) return;
+    || (attacker.system?.effects?.slots?.["disarming.onMiss"] !== true) || !areOpponents(target, attacker)) return;
   offerMove(message, attacker, { key: `disarming:${target.uuid}`, flag: "disarmingMissed",
     name: `Bluff ${target.name}`, reason: "Disarming Demeanor - Bluff vs Perception/Intuition", clashAt: target.uuid });
 }
 
 /** Disarming Demeanor (2) open to the one hit: theirs, unspent this Round, at an Opponent. */
 function disarmingOpen(target, attacker) {
-  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated && !areAllies(target, attacker)
+  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated && areOpponents(target, attacker)
     && (target.system?.effects?.slots?.["disarming.onHit"] === true)
     && (target.getFlag?.(SCOPE, "disarmingHit") !== roundKey()));
 }
@@ -18223,7 +18223,7 @@ async function redefendWith(message, target, defence, wager = 0, foundation = "e
  * unspent this Round, at an Opponent.
  */
 function angelicOpen(target, attacker) {
-  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated && !areAllies(target, attacker)
+  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated && areOpponents(target, attacker)
     && (target.system?.effects?.slots?.["angelic.redodge"] === true)
     && (!game.combat?.started || (actionsWithin(target, "counter") >= 1))
     && (target.getFlag?.(SCOPE, "angelicRound") !== roundKey()));
@@ -18554,7 +18554,7 @@ export async function mimicryOffers(card, user, maneuver) {
     if (!other || (!isCharacter(other)) || (other.uuid === user.uuid) || seen.has(other.uuid)) continue;
     seen.add(other.uuid);
     if (other.system?.defeated || (other.system?.effects?.slots?.["mimicry.copyManeuver"] !== true)) continue;
-    if (areAllies(other, user) || (other.getFlag?.(SCOPE, "mimicryRound") === roundKey())) continue;
+    if (!areOpponents(other, user) || (other.getFlag?.(SCOPE, "mimicryRound") === roundKey())) continue;
     if (atLongRange(other, user) || whyNotSpecial(other, library)) continue;
     requestEdit(card, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId: library.id,
       maneuverName: library.name, reason: `Neko Mimicry - ${user.name}'s ${library.name}`, grants: { mimicry: true } } });
@@ -19576,7 +19576,7 @@ export async function nobleDragon(actor, context = {}) {
   const target = (typeof aimed === "string") ? fromUuidSync(aimed)
     : (aimed?.uuid ? (fromUuidSync(aimed.uuid) ?? aimed) : (game.user?.targets?.first()?.actor ?? null));
   if (!target || (target.uuid === actor.uuid)) return ui.notifications.warn(`${actor.name}: Noble Dragon needs an Opponent targeted.`);
-  if (areAllies(target, actor)) return ui.notifications.warn(`${actor.name}: ${target.name} is an Ally - Noble Dragon needs an Opponent.`);
+  if (!areOpponents(target, actor)) return ui.notifications.warn(`${actor.name}: ${target.name} is not an Opponent - Noble Dragon needs an Opponent.`);
   return postSaveClash(actor, target, { maneuverName: "Noble Dragon",
     reason: `Win and you are both Compelled against one another until the start of ${actor.name}'s next turn.`,
     saves: ["morale"], defenderSaves: ["morale"], nobleDragon: { applied: false } });
@@ -19971,7 +19971,7 @@ async function spendOverwhelm(attack) {
  * it had, so that is not asked again.
  */
 function offerTailGrapple(message, attacker, target, attack) {
-  if (!attacker || !target || (attack?.maneuverId !== "tail-attack") || areAllies(target, attacker)) return;
+  if (!attacker || !target || (attack?.maneuverId !== "tail-attack") || !areOpponents(target, attacker)) return;
   if (attacker.system?.effects?.slots?.["tail.grapple"] !== true) return;
   if (attacker.getFlag?.(SCOPE, "tailGrappleRound") === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.tailGrapple && (offer.targetUuid === target.uuid))) return;
@@ -20005,7 +20005,7 @@ function angelicOffenseOpen(attacker, attack) {
   if (!attacker || (attacker.system?.effects?.slots?.["angelic.offenseClash"] !== true)) return [];
   if ((game.combat?.started && (actionsWithin(attacker, "counter") < 1)) || (attacker.getFlag?.(SCOPE, "angelicOffenseRound") === roundKey())) return [];
   return (attack.result?.targets ?? []).filter(branch => branch.hit && (branch.uuid !== attacker.uuid))
-    .map(branch => fromUuidSync(branch.uuid)).filter(target => target && !target.system?.defeated && !areAllies(target, attacker));
+    .map(branch => fromUuidSync(branch.uuid)).filter(target => target && !target.system?.defeated && areOpponents(target, attacker));
 }
 
 /** Angelic Offense (2)'s buttons on the attack's card, for the one who hit: a Clash at one of those hit. */
@@ -22412,7 +22412,7 @@ async function endAngelicGuardDown(target) {
 function offerFlowExploit(message, actor, attacker) {
   if (!actor || !attacker || (actor.system?.effects?.slots?.["exploit.onNoDamage"] !== true)) return;
   // "an Opponent's Attacking Maneuver".
-  if (areAllies(actor, attacker)) return;
+  if (!areOpponents(actor, attacker)) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.maneuverId === "exploit")
     && (offer.actorUuid === actor.uuid))) return;
   if (!actor.items?.some(item => (item.type === "maneuver") && item.system.exploit)) return;
@@ -22856,7 +22856,7 @@ function conduitClashButtons(message, clash, container) {
   const ally = fromUuidSync(clash.defenderUuid ?? "");
   const challenger = fromUuidSync(clash.challengerUuid ?? "");
   if (!ally || !challenger) return;
-  if (areAllies(challenger, ally)) return;
+  if (!areOpponents(challenger, ally)) return;
   const seen = new Set();
   for (const token of canvas?.tokens?.placeables ?? []) {
     const yardrat = token.actor;
@@ -22985,7 +22985,7 @@ function spiritualStrikeButtons(message, attack, container) {
   const ally = fromUuidSync(attack.attackerUuid ?? "");
   if (!ally) return;
   const opponents = attackTargets(attack).map(entry => fromUuidSync(entry.uuid ?? ""))
-    .filter(each => each && (each.uuid !== ally.uuid) && !areAllies(each, ally) && !each.system?.defeated);
+    .filter(each => each && (each.uuid !== ally.uuid) && areOpponents(each, ally) && !each.system?.defeated);
   if (!opponents.length) return;
   const seen = new Set();
   for (const token of canvas?.tokens?.placeables ?? []) {
@@ -23135,7 +23135,7 @@ function bondButtons(message, attack, container) {
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   const hits = (result.targets ?? []).filter(entry => entry.hit).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
   if (!attacker || !hits.length) return;
-  const opposed = (one, other) => (one.uuid !== other.uuid) && !areAllies(one, other);
+  const opposed = (one, other) => (one.uuid !== other.uuid) && areOpponents(one, other);
   const seen = new Set();
   for (const token of canvas?.tokens?.placeables ?? []) {
     const yardrat = token.actor;
@@ -23470,7 +23470,7 @@ function clawsButtons(message, attack, container) {
   const entry = targetResults(attack).find(each => (each.uuid === attack.claws) && each.own?.hit);
   const target = entry ? fromUuidSync(entry.uuid) : null;
   // "hit an Opponent" - not an Ally (allies.mjs).
-  if (!target || areAllies(target, attacker)) return;
+  if (!target || !areOpponents(target, attacker)) return;
   const button = document.createElement("button");
   button.type = "button";
   button.className = "dbu-clash-button";
@@ -23922,7 +23922,7 @@ export async function aiiieee(actor) {
   if (!actor) return;
   await requestActorUpdate(actor, { "system.life.value": 1 });
   const others = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
-    && (isCharacter(token.actor)) && !areAllies(token.actor, actor))
+    && (isCharacter(token.actor)) && areOpponents(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   for (const other of others) {
     await postSkillClash(actor, other, { name: "AIIIEEEEEEE", type: "outOfSequence",
@@ -24230,7 +24230,7 @@ async function offerConditionHandOff(actor) {
   if ((actor?.system?.effects?.slots?.["pressure.handOff"] !== true) || (actor.getFlag?.(SCOPE, "handOffRound") === roundKey())) return;
   if (!HANDED_ON.some(key => (Number(actor.system.conditions?.[key]) || 0) > 0)) return;
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !areAllies(token.actor, actor)
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areOpponents(token.actor, actor)
       && !token.actor.system?.defeated && !atLongRange(actor, token.actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) return;
@@ -24285,7 +24285,7 @@ function conditioned(actor) {
 function tacticianParts(actor, other) {
   const slot = actor?.system?.effects?.slots?.["combatRolls.vsConditioned"];
   const add = Number(slot?.add) || 0;
-  if (!add || !other || (other.uuid === actor.uuid) || areAllies(other, actor) || !conditioned(other)) return [];
+  if (!add || !other || (other.uuid === actor.uuid) || !areOpponents(other, actor) || !conditioned(other)) return [];
   return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: add }];
 }
 
@@ -24310,7 +24310,7 @@ export async function knockedProneClash(actor, knockedUuid) {
 export async function demonicImpediment(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !areAllies(token.actor, actor)
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areOpponents(token.actor, actor)
       && !token.actor.system?.defeated && !atLongRange(actor, token.actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) {
@@ -24566,7 +24566,7 @@ export async function openForPlayer(actor, document, note = "") {
  */
 export async function askLockOn(actor) {
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !areAllies(token.actor, actor))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areOpponents(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) return;
   const picked = await askPlayerChoice(actor, `${actor.name}: Lock On`,
@@ -24637,7 +24637,7 @@ export async function askInferior(actor) {
   if (!inferior) {
     const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
       .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
-        && !areAllies(token.actor, actor))
+        && areOpponents(token.actor, actor))
       .map(token => [token.actor.uuid, token.actor])).values()];
     if (!opponents.length) return;
     const picked = await askPlayerChoice(actor, `${actor.name}: Tuffle Superiority - your Inferior`,
@@ -24695,7 +24695,7 @@ function superiorityDodge(actor, attack) {
 
 export async function askEnemy(actor) {
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !areAllies(token.actor, actor))
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areOpponents(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) return;
   const picked = await askPlayerChoice(actor, `${actor.name}: Burning Hatred`,
@@ -27178,7 +27178,7 @@ async function openIntervene(message, attack) {
 async function protectorWaives(actor, ally, attacker = null) {
   if (actor?.system?.effects?.slots?.["protector.intervene"] !== true) return false;
   // "If an Opponent hits one of your Allies" - not an Ally's attack (allies.mjs).
-  if (attacker && areAllies(actor, attacker)) return false;
+  if (attacker && !areOpponents(actor, attacker)) return false;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.(SCOPE, "protectorRound") === round) return false;
   const away = squaresBetween(actor.getActiveTokens?.(false, true)?.[0], ally?.getActiveTokens?.(false, true)?.[0]);
@@ -27598,7 +27598,7 @@ async function markArea(message, attack, { others = false } = {}) {
 async function techniqueOnHit(attacker, attack, target) {
   const tech = attack.technique;
   // Both "hit an Opponent" - an Ally caught by it gains no Broken (allies.mjs).
-  if (!tech || areAllies(target, attacker)) return [];
+  if (!tech || !areOpponents(target, attacker)) return [];
   const said = [];
   let broken = featureRanks(tech.features, "penetration");
   const calledShot = isCalledShot(attack);
@@ -27628,7 +27628,7 @@ async function techniqueAfterDamage(message, attack, attacker, target, { damage,
   const has = id => tech.features.includes(id);
   const ranks = id => featureRanks(tech.features, id);
   // Each of these names "an Opponent" (Lead Up's chain too): an Ally caught by it is left out (allies.mjs).
-  const landed = own.hit && !isAbsoluteMiss(own) && !areAllies(target, attacker);
+  const landed = own.hit && !isAbsoluteMiss(own) && areOpponents(target, attacker);
   const said = [];
 
   if (landed && (attacker.system.lastManeuver?.messageId === message.id)) {
@@ -27681,7 +27681,7 @@ async function techniqueAfterDamage(message, attack, attacker, target, { damage,
     });
   }
 
-  if (has("terrain-slam") && !areAllies(target, attacker)) {
+  if (has("terrain-slam") && areOpponents(target, attacker)) {
     await postMightClash(attacker, target, {
       maneuverName: "Terrain Slam",
       reason: `${attack.maneuverName} · win, choose an unoccupied Square or a Feature adjacent to `
@@ -28161,7 +28161,7 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
 
   // Disarming Demeanor (3): answered with the Defend Maneuver - the attack waits on its attacker.
   const attacker = fromUuidSync(attack.attackerUuid);
-  const swap = (defence in DEFEND_OPTIONS) && !areAllies(target, attacker) && disarmingSwapOpen(attacker, attack)
+  const swap = (defence in DEFEND_OPTIONS) && areOpponents(target, attacker) && disarmingSwapOpen(attacker, attack)
     ? { disarmingSwap: { pending: true, uuid: target.uuid, name: target.name, entry } } : {};
 
   return settleAttack(message, {
@@ -28901,7 +28901,7 @@ async function offerShockTornado(message, attack, actor) {
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (!message || !attacker || !actor || (attacker.uuid === actor.uuid) || actor.system?.defeated
     || (actor.system?.effects?.slots?.["counter.shockTornado"] !== true) || (actor.getFlag?.(SCOPE, "shockTornadoRound") === roundKey())
-    || areAllies(actor, attacker)) return;
+    || !areOpponents(actor, attacker)) return;
   const { whyNotWithinMelee } = await import("./maneuvers.mjs");
   if (whyNotWithinMelee(actor, attacker, "")) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "thrust",
@@ -28964,7 +28964,7 @@ export function offerPointBlank(card, actor) {
   if (!card || (actor?.system?.effects?.slots?.["charge.pointBlank"] !== true)
     || (actor.getFlag?.(SCOPE, "pointBlankEncounter") === (game.combat?.id ?? "none")) || !chargedAsEnergy(actor)) return;
   const near = (canvas?.tokens?.placeables ?? []).some(token => token.actor && (token.actor.uuid !== actor.uuid)
-    && !areAllies(token.actor, actor) && !token.actor.system?.defeated
+    && areOpponents(token.actor, actor) && !token.actor.system?.defeated
     && !whyNotWithinMelee(actor, token.actor, ""));
   if (!near) return;
   const item = actor.items.get(actor.system.charging.maneuverId);
@@ -29070,7 +29070,7 @@ export function personalSpaceTurnEnd(leaving) {
   if (!card || !leaving) return;
   for (const token of canvas?.tokens?.placeables ?? []) {
     const other = token.actor;
-    if (!other || (other.uuid === leaving.uuid) || areAllies(other, leaving)) continue;
+    if (!other || (other.uuid === leaving.uuid) || !areOpponents(other, leaving)) continue;
     if (whyNotWithinMelee(other, leaving, "")) continue;
     offerPersonalSpace(card, other);
   }
@@ -30322,7 +30322,7 @@ function focusedButtons(message, container, attack) {
   const used = attacker.getFlag?.(SCOPE, "focusedRound") === roundKey();
   for (const branch of result.targets ?? []) {
     const target = fromUuidSync(branch.uuid ?? "");
-    if (!target || branch.hit || !branch.answer || branch.focused || areAllies(target, attacker)) continue;
+    if (!target || branch.hit || !branch.answer || branch.focused || !areOpponents(target, attacker)) continue;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dbu-clash-button";
@@ -30448,7 +30448,7 @@ async function rollAttackWoundWork(message, attack) {
   // Wound against each one hit - Overwhelming Pressure's - kept for the loop below.
   const struck = targets.filter(({ uuid, own }) => own.hit && (uuid !== attacker.uuid));
   // Of them, the Opponents - what answers hitting "an Opponent" leaves an Ally hit out (allies.mjs).
-  const struckOpponents = struck.filter(({ actor: hit }) => !areAllies(hit, attacker));
+  const struckOpponents = struck.filter(({ actor: hit }) => areOpponents(hit, attacker));
   let pressing = null;
   // Searing Anger (3): the Overwhelm stacks' bonus once more on this Wound Roll (woundParts), and Overwhelm down to 1 once
   // it is made.
@@ -31342,7 +31342,7 @@ async function settleTemperament(message, key) {
     const present = [...new Map([...(game.combat?.combatants ?? []).map(entry => entry.actor),
       ...(canvas?.tokens?.placeables ?? []).map(token => token.actor)].filter(Boolean).map(each => [each.uuid, each])).values()];
     const pool = (coin.total === 1) ? present.filter(each => (each.uuid === owner.uuid) || areAllies(each, owner))
-      : present.filter(each => (each.uuid !== owner.uuid) && !areAllies(each, owner) && (isCharacter(each)));
+      : present.filter(each => (each.uuid !== owner.uuid) && areOpponents(each, owner) && (isCharacter(each)));
     const erased = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     said = `Annoyed. The coin comes up ${(coin.total === 1) ? "heads: a random Character among "
       + `${owner.name} and their Allies` : "tails: a random Character among their Opponents"} is erased `
@@ -31876,7 +31876,7 @@ function lingeringSources(actor, answered, slot, { naturalAdd = 0, minimumNatura
  */
 function respondingParts(actor, attack = null) {
   // "in response to an Opponent's Attacking Maneuver" - not an Ally's (allies.mjs).
-  if (attack?.attackerUuid && areAllies(actor, fromUuidSync(attack.attackerUuid))) return [];
+  if (attack?.attackerUuid && !areOpponents(actor, fromUuidSync(attack.attackerUuid))) return [];
   const value = applySlot(actor?.system?.effects?.slots, "responding.noCounterActions", 0);
   return (value && ((Number(actor.system.actions?.counterLeft) || 0) <= 0))
     ? [{ label: "No Counter Actions", written: "+1(T)", value }] : [];
@@ -33616,7 +33616,7 @@ async function applyAttackDamage(message, target, attack) {
   // Wound Roll and apply a stack of Imminent to the target(s)".
   // Not for an Ally caught by it: "your Opponent".
   if (attack.technique?.features?.includes("delayed") && !attack.detonation && own.hit && !isAbsoluteMiss(own)
-    && !areAllies(target, fromUuidSync(attack.attackerUuid ?? ""))) {
+    && areOpponents(target, fromUuidSync(attack.attackerUuid ?? ""))) {
     return holdDelayed(message, attack, target);
   }
   // A Called Shot at a piece of Apparel that hit: "you still take 1/2 of the Damage you
@@ -33652,7 +33652,7 @@ async function applyAttackDamage(message, target, attack) {
   const arms = Boolean(armsUser) && (armsUser.uuid !== target.uuid) && own.hit && !isAbsoluteMiss(own)
     && (attack.foundation === "physical") && armsHitOpen(armsUser)
     // "If you hit an Opponent with a Physical Attack" - not an Ally (allies.mjs).
-    && !areAllies(target, armsUser);
+    && areOpponents(target, armsUser);
 
   // Floored at zero for everyone except whoever has been granted otherwise - the Undying
   // State being the one thing in the rules that grants it.
@@ -33918,7 +33918,7 @@ async function applyAttackDamage(message, target, attack) {
       : 0;
 
     // "If you successfully Damage an Opponent" - and Staggering Attack's below: not an Ally (allies.mjs).
-    const foe = attacker && !areAllies(target, attacker);
+    const foe = attacker && areOpponents(target, attacker);
     if (foe && (broughtItsOwn || here)) {
       await openKnockback(attack, attacker, target, { extra, from: here ? sky.name : "" });
     }
@@ -33951,7 +33951,7 @@ async function applyAttackDamage(message, target, attack) {
   if (attack.weapon?.staggering && knockedThrough && !isAbsoluteMiss(own)) {
     const striker = fromUuidSync(attack.attackerUuid);
     // "knocks an Opponent through".
-    if (striker && !areAllies(target, striker)) {
+    if (striker && areOpponents(target, striker)) {
       await postMightClash(striker, target, {
         maneuverName: attack.maneuverName,
         clashLabel: `${attack.weapon.name}, Staggering`,
