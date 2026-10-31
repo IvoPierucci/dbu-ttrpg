@@ -4374,10 +4374,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const roll = await new Roll(`${2 * baseTier}d10`).evaluate();
       await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `${item.name}: ${who.name}` });
       const life = who.system.life;
-      const changes = { "system.life.value": Math.min(life.max, life.value + roll.total) };
+      const changes = { "system.life.value": Math.min(life.ceiling ?? life.max, life.value + roll.total) };
       if (who.isOwner) await who.update(changes);
       else await requestActorUpdate(who, changes);
-      await say(`${who.name} regains ${Math.min(roll.total, life.max - life.value)} Life Points.`);
+      await say(`${who.name} regains ${Math.min(roll.total, (life.ceiling ?? life.max) - life.value)} Life Points.`);
       done = true;
     }
     if (action.key === "ride") {

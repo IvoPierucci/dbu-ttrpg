@@ -26,7 +26,7 @@ import { getMoment } from "./moments.mjs";
  */
 const STATEFUL = {
   // Regained never past the most there may be - Skill of the Watcher's 2(bT) a Counter Action.
-  "life.value": { path: "system.life.value", read: a => a.system.life.value, cap: a => a.system.life.max },
+  "life.value": { path: "system.life.value", read: a => a.system.life.value, cap: a => a.system.life.ceiling ?? a.system.life.max },
   "ki.value": { path: "system.ki.value", read: a => a.system.ki.value, cap: a => a.system.ki.max },
   "divineKi.value": { path: "system.divineKi.value", read: a => Number(a.system.divineKi?.value) || 0,
     cap: a => Number(a.system.divineKi?.max) || 0 },
@@ -776,6 +776,7 @@ async function runVerb(actor, call, context) {
     case "onboardFocus": return (await import("../chat.mjs")).onboardFocus(actor);
     case "lingeringPower": return (await import("../chat.mjs")).lingeringPower(actor);
     case "namelessStrike": return (await import("../chat.mjs")).namelessStrike(actor);
+    case "weaponizedPower": return (await import("../chat.mjs")).weaponizedPower(actor);
     case "casteKnightStrike": return (await import("../chat.mjs")).casteKnightStrike(actor);
     case "castePawnStrike": return (await import("../chat.mjs")).castePawnStrike(actor);
     case "basicStrike": return (await import("../chat.mjs")).basicStrike(actor);

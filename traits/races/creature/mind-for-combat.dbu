@@ -1,0 +1,30 @@
+id: mind-for-combat
+name: Mind for Combat
+order: 4
+category: mind
+importance: secondary
+description: >
+  With sharp instincts honed for survival, Creatures possess a natural talent for fighting.
+text: >
+  Mind for Combat (Mind): With sharp instincts honed for survival, Creatures possess a natural talent for fighting.
+  (1)-[Passive]: Reduce the Critical Target for all Combat Rolls by 1 while in the Raging, Surging, or Feral State.
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase your Soak Value and Defense Value by 1(T).
+  (3)-[Triggered/State, 1/Round]: Regain Ki Points equal to 1/2 of your Surgency.
+
+---
+
+[passive]
+# (1)
+if (inState("raging") || inState("surging") || inState("feral")) {
+    criticalTarget.combat -= 1;
+}
+# (2)
+if (belowThreshold("injured")) {
+    soakValue += 1(T);
+    defenseValue += 1(T);
+}
+
+# (3) Entering a State - any of them, a Special State too: half your Surgency back as Ki Points, rounded down. Automatic by default, its
+# Triggered/Automatic button.
+[triggered/state, 1/round, effect 3]
+ki.value += floor(surgency / 2);

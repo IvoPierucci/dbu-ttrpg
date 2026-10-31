@@ -2457,6 +2457,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Nameless Horde (3): "Increase your Maximum Life Points (after all modifications) by 1/2 of your amount of Technique Points" -
     // every one granted up to their Power Level, rounded down.
     if (this.effects?.slots?.["namelessHorde.techniqueLife"] === true) this.life.max += Math.floor((Number(this.techniquePoints) || 0) / 2);
+    // How high Life Points may be regained to: the Maximum - or, Monstrous Vitality (2), "Your Life Points can exceed your Maximum Life
+    // Points by an amount equal to 1/2 of your Maximum Life Points", rounded down. What regains Life reads this (chat.mjs).
+    this.life.ceiling = this.life.max + ((this.effects?.slots?.["monstrousVitality.overflow"] === true) ? Math.floor(this.life.max / 2) : 0);
     // Kept for the next preparation's early Threshold.
     if (this.parent) this.parent._dbuLifeMax = this.life.max;
 

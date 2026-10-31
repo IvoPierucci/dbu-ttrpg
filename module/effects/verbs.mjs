@@ -490,6 +490,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Onboard Computer (3): an Opponent, and the Strike or the Dodge against them 2(T) this Round (chat.mjs onboardFocus)."
   },
+  weaponizedPower: {
+    args: [0, 0],
+    doc: "Weaponized Vitality (3): the Power Up offered out of sequence on the latest card (chat.mjs weaponizedPower)."
+  },
   casteKnightStrike: {
     args: [0, 0],
     doc: "Caste Combat's Knight: the Basic Attack offered out of sequence, no Single Attack asked (chat.mjs casteKnightStrike)."

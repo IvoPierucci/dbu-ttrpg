@@ -1,0 +1,30 @@
+id: monstrous-vitality
+name: Monstrous Vitality
+order: 1
+category: body
+importance: primary
+# (1) A Monstrous Trait and a Bestial Trait, each chosen as it is added - gone with it.
+grantsOther: monstrous, bestial
+description: >
+  Powerful and sturdy, Creatures are hard to put down.
+text: >
+  Monstrous Vitality (Body): Powerful and sturdy, Creatures are hard to put down.
+  (1)-[Passive]: At Character Creation, select and gain access to a Monstrous Trait and a Bestial Trait.
+  (2)-[Passive]: Your Life Points can exceed your Maximum Life Points by an amount equal to 1/2 of your Maximum Life Points.
+  (3)-[Triggered/Injured]: Use a Healing Surge as an Out-of-Sequence Maneuver.
+  (4)-[Triggered/Start of Combat Encounter]: Use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (2) Life Points regained up to half the Maximum past it, rounded down (actor-character.mjs life.ceiling).
+allow monstrousVitality.overflow;
+
+# (3) Knocked through the Injured Health Threshold: a Healing Surge out of sequence - chosen on the Threshold's card, never Automatic.
+[triggered/threshold, outOfSequence, effect 3]
+requires knockedThrough("injured");
+surge(healing);
+
+# (4) The Combat Encounter begins: a Healing Surge out of sequence - chosen on its card, never Automatic.
+[triggered/start-of-encounter, outOfSequence, effect 4]
+surge(healing);

@@ -1,0 +1,29 @@
+id: violent-mental-state
+name: Violent Mental State
+order: 2
+category: mind
+importance: primary
+description: >
+  Savage and nearly feral, Creatures are prone to instinctual or emotional decisions instead of rational ones.
+text: >
+  Violent Mental State (Mind): Savage and nearly feral, Creatures are prone to instinctual or emotional decisions instead of rational ones.
+  (1)-[Passive]: Increase your Wound Rolls by 2(T) while in the Raging, Surging, or Feral State.
+  (2)-[Triggered/Start of Turn, 1/Encounter]: If you are below the Injured Health Threshold, enter the Surging State until the end of your next turn.
+  (3)-[Triggered/Power, 1/Encounter]: Enter the Feral State until the end of the Combat Encounter.
+
+---
+
+[passive]
+# (1)
+if (inState("raging") || inState("surging") || inState("feral")) {
+    wound += 2(T);
+}
+
+# (2) Your turn begins, Injured or worse: Surging till the end of your next turn. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, 1/encounter, effect 2]
+requires belowThreshold("injured");
+enterState(surging, 1, next-turn);
+
+# (3) The Power Up used: Feral till the Combat Encounter ends. Ticked in its window.
+[triggered/power, 1/encounter, effect 3]
+enterState(feral, 1, encounter);

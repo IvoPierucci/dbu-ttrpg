@@ -8028,12 +8028,12 @@ export async function kiForLife(actor) {
   const { ki, capacity, life } = actor?.system ?? {};
   if (!ki || !capacity || !life) return;
   const most = Math.max(0, Math.min(Math.floor((Number(capacity.max) || 0) / 2), Number(ki.value) || 0,
-    Number(capacity.remaining) || 0, (Number(life.max) || 0) - (Number(life.value) || 0)));
+    Number(capacity.remaining) || 0, (Number(life.ceiling ?? life.max) || 0) - (Number(life.value) || 0)));
   if (!most) return;
   const spent = await askPlayerAmount(actor, `${actor.name}: Discarded Divinity`, most, "Ki Points for Life Points");
   if (!spent) return;
   await requestActorUpdate(actor, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent,
-    "system.life.value": Math.min(life.max, life.value + spent) });
+    "system.life.value": Math.min(life.ceiling ?? life.max, life.value + spent) });
 }
 
 /** The query a Botch or Critical window is asked through, of the player's own client. */
@@ -11681,7 +11681,7 @@ export async function postHealing(actor, maneuver, plan) {
       // Spirit of Namek's Healer: your Surgency more.
       + (Number(plan.healerLife) || 0);
     const life = who.system.life;
-    await requestActorUpdate(who, { "system.life.value": Math.min(life.max, life.value + amount) });
+    await requestActorUpdate(who, { "system.life.value": Math.min(life.ceiling ?? life.max, life.value + amount) });
     // Patch-Up: the first worn piece that has lost Break Value - "damaged or broken" - whole again.
     const piece = plan.patch ? Array.from(who.items ?? []).find(item => (item.type === "gear")
       && (item.system?.crafted?.kind === "apparel")
@@ -13351,7 +13351,7 @@ async function punishHeal(actor, name, bonus) {
   const roll = await new Roll(dice).evaluate();
   const amount = Math.max(0, roll.total + bonus);
   await requestActorUpdate(actor, {
-    "system.life.value": Math.min(actor.system.life.max, actor.system.life.value + amount),
+    "system.life.value": Math.min(actor.system.life.ceiling ?? actor.system.life.max, actor.system.life.value + amount),
     "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + amount)
   });
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
@@ -15353,7 +15353,7 @@ async function lightRescue(target, damage) {
       [{ value: "yes", label: `All ${held} Positive Energy: ${regain} Life Points for them (once an Encounter)` }, { value: "no", label: "No" }]);
     if (answer !== "yes") continue;
     await requestActorUpdate(holder, { [`flags.${SCOPE}.lightRescueEncounter`]: encounter, "system.resources.negativeenergy.stacks": 0 });
-    const healed = Math.min(Math.max(0, (Number(target.system.life?.max) || 0) - life), regain);
+    const healed = Math.min(Math.max(0, (Number(target.system.life?.ceiling ?? target.system.life?.max) || 0) - life), regain);
     if (healed > damage) {
       await requestActorUpdate(target, { "system.life.value": life + healed - damage });
       return 0;
@@ -15651,7 +15651,7 @@ export async function unify(actor, aimed, card = null) {
     const life = actor.system.life ?? {};
     const ki = actor.system.ki ?? {};
     await actor.update({
-      "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + amount),
+      "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + amount),
       "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + amount),
       [`flags.${SCOPE}.unifiedWith`]: [...(actor.getFlag?.(SCOPE, "unifiedWith") ?? []), { uuid: other.uuid, name: other.name }]
     });
@@ -16425,10 +16425,18 @@ export async function lightningPower(actor) {
   return offerPowerOrTransform(actor, "Lightning Surge - above a Health Threshold again");
 }
 
+/**
+ * Weaponized Vitality (3): "If you use a Healing Surge, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver" - offered on the
+ * latest card, the Surge's.
+ */
+export async function weaponizedPower(actor) {
+  return offerPowerOrTransform(actor, "Weaponized Vitality - a Healing Surge used", ["power-up"]);
+}
+
 /** The Power Up and the Transformation out of sequence, offered on the latest card - one made for them where there is none. */
-async function offerPowerOrTransform(actor, reason) {
+async function offerPowerOrTransform(actor, reason, which = ["power-up", "transformation"]) {
   if (!actor) return;
-  const offers = [["power-up", "Power Up"], ["transformation", "Transformation"]].map(([id, name]) => ({ actorUuid: actor.uuid,
+  const offers = [["power-up", "Power Up"], ["transformation", "Transformation"]].filter(([id]) => which.includes(id)).map(([id, name]) => ({ actorUuid: actor.uuid,
     actorName: actor.name, maneuverId: id, maneuverName: getManeuver(id)?.name ?? name, reason,
     ownOutOfSequence: id }));
   const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
@@ -20242,7 +20250,7 @@ async function assassinateCategory(attacker, struck) {
 /** Life and Ki Points regained, each to its Maximum - Feast's and the Draining Attack's, kept out of the Damage's own function. */
 async function regainPools(actor, life = 0, ki = 0) {
   const { life: pool, ki: kiPool } = actor.system;
-  return requestActorUpdate(actor, { ...(life ? { "system.life.value": Math.min(Number(pool.max) || 0, (Number(pool.value) || 0) + life) } : {}),
+  return requestActorUpdate(actor, { ...(life ? { "system.life.value": Math.min(Number(pool.ceiling ?? pool.max) || 0, (Number(pool.value) || 0) + life) } : {}),
     ...(ki ? { "system.ki.value": Math.min(Number(kiPool.max) || 0, (Number(kiPool.value) || 0) + ki) } : {}) });
 }
 
@@ -22671,7 +22679,7 @@ async function hedgeYourBets(actor, total, success) {
     await setResource(actor, "riskaversion", held + 1);
     const back = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
     const { life, ki } = actor.system;
-    await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + back),
+    await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + back),
       "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
     return { success: false, said: `failed instead - a stack of Risk Aversion, ${back} Life and Ki Points back` };
   }
@@ -23201,7 +23209,7 @@ export async function warriorEmpower(actor) {
     : await askPlayerAmount(ally, title, cap, `Ki Points - as Life Points for ${actor.name}`);
   if (!sent) return;
   await requestActorUpdate(ally, { "system.ki.value": Math.max(0, (Number(ally.system.ki.value) || 0) - sent) });
-  await requestActorUpdate(actor, { "system.life.value": Math.min(Number(actor.system.life.max) || 0, (Number(actor.system.life.value) || 0) + sent) });
+  await requestActorUpdate(actor, { "system.life.value": Math.min(Number(actor.system.life.ceiling ?? actor.system.life.max) || 0, (Number(actor.system.life.value) || 0) + sent) });
 }
 
 /**
@@ -23269,7 +23277,7 @@ export async function pacifistMend(actor, allyUuid, gained) {
   const ally = fromUuidSync(allyUuid ?? "");
   const life = Math.ceil((Number(gained) || 0) / 4);
   if (!ally || (life <= 0)) return;
-  await requestActorUpdate(ally, { "system.life.value": Math.min(Number(ally.system.life.max) || 0, (Number(ally.system.life.value) || 0) + life) });
+  await requestActorUpdate(ally, { "system.life.value": Math.min(Number(ally.system.life.ceiling ?? ally.system.life.max) || 0, (Number(ally.system.life.value) || 0) + life) });
 }
 
 /**
@@ -24190,7 +24198,7 @@ async function settleGlassSlowed(message, clash) {
   if (clash.glassSlowed.heal) {
     const gain = Math.floor((Number(caster.system.might) || 0) / 2) * stacks;
     await requestActorUpdate(target, {
-      "system.life.value": Math.min(Number(target.system.life?.max) || Infinity, (Number(target.system.life?.value) || 0) + gain),
+      "system.life.value": Math.min(Number(target.system.life?.ceiling ?? target.system.life?.max) || Infinity, (Number(target.system.life?.value) || 0) + gain),
       "system.ki.value": Math.min(Number(target.system.ki?.max) || Infinity, (Number(target.system.ki?.value) || 0) + gain) });
     return settledNote(message, `${target.name} regains ${gain} Life and Ki Points.`);
   }
@@ -33067,7 +33075,7 @@ async function returnInitialWagers(attack, attacker) {
   const giveBack = async (who, amount, life = false) => {
     if (!who || !amount) return;
     await requestActorUpdate(who, life
-      ? { "system.life.value": Math.min(who.system.life.max, who.system.life.value + amount),
+      ? { "system.life.value": Math.min(who.system.life.ceiling ?? who.system.life.max, who.system.life.value + amount),
           "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) }
       : { "system.ki.value": Math.min(who.system.ki.max, who.system.ki.value + amount),
           "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) });
@@ -35260,7 +35268,7 @@ export async function legendRealized(actor) {
   const { life, ki } = actor.system;
   // Shedding Transformation (1): "Double the amount of Life Points you gain from Legend Realized."
   const lifeGain = roll.total * ((actor.system.effects?.slots?.["shedding.legend"] === true) ? 2 : 1);
-  await requestActorUpdate(actor, { "system.life.value": Math.min(life.max, life.value + lifeGain),
+  await requestActorUpdate(actor, { "system.life.value": Math.min(life.ceiling ?? life.max, life.value + lifeGain),
     "system.ki.value": Math.min(ki.max, ki.value + roll.total) });
   await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
     flavor: (lifeGain !== roll.total) ? `Legend Realized - ${lifeGain} Life Points (Shedding Transformation), ${roll.total} Ki Points`
@@ -35373,7 +35381,7 @@ export async function reabsorbGoops(actor, most = Infinity, { newOnes = false } 
   }
   const back = Math.floor(picked.reduce((sum, goop) => sum + Math.max(0, Number(goop.system.life?.value) || 0), 0) / 2);
   const life = actor.system.life ?? {};
-  if (back) await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + back) });
+  if (back) await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + back) });
   await requestDismissDuplicates(picked);
   ui.notifications.info(`${actor.name}: From Goop - ${picked.length} Goop${(picked.length === 1) ? "" : "s"} Defeated, ${back} Life Points back.`);
 }
@@ -35495,8 +35503,9 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
         flavor: `${source} - Healing Surge as Ki (Majin Malice) - ${kiBack} Ki Points, ${amount} Capacity${goop ? GOOP_SAID : ""}` });
       return true;
     }
-    const { value, max } = actor.system.life;
-    const restored = Math.min(max, value + total) - value;
+    // As high as the Life Points may go - Monstrous Vitality's past the Maximum.
+    const { value, max, ceiling } = actor.system.life;
+    const restored = Math.max(0, Math.min(ceiling ?? max, value + total) - value);
     // Through a Surge - what Vampire (5) leaves alone.
     await actor.update({ "system.life.value": value + restored }, { dbuSurge: true });
     // Above a Health Threshold you were under: what answers it - Lightning Surge (3)'s.

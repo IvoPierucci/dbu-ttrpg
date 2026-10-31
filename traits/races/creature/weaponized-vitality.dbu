@@ -1,0 +1,27 @@
+id: weaponized-vitality
+name: Weaponized Vitality
+order: 3
+category: body
+importance: secondary
+description: >
+  As these savage beasts take damage, their adrenaline surges, making them even stronger.
+text: >
+  Weaponized Vitality (Body): As these savage beasts take damage, their adrenaline surges, making them even stronger.
+  (1)-[Passive]: While below the Injured Health Threshold, increase your Surgency by 4(T).
+  (2)-[Passive]: Increase your Wound Rolls by 1/4 (rounded up) of your Surgency.
+  (3)-[Triggered, 1/Round]: If you use a Healing Surge, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+if (belowThreshold("injured")) {
+    surgency += 4(T);
+}
+# (2) The Surgency as it stands - (1)'s included.
+wound += ceil(surgency / 4);
+
+# (3) A Healing Surge used: the Power Up offered out of sequence on its card (chat.mjs weaponizedPower) - ticked in the Surge's window,
+# never Automatic.
+[triggered/healing-surge, 1/round, outOfSequence, effect 3]
+weaponizedPower();

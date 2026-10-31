@@ -191,7 +191,7 @@ async function recoveryPeriods(combat) {
       const life = minion.system.life ?? {};
       const ki = minion.system.ki ?? {};
       await minion.update({
-        "system.life.value": Math.max(Number(life.value) || 0, Math.min(Number(life.max) || 0, (Number(life.value) || 0) + roll.total)),
+        "system.life.value": Math.max(Number(life.value) || 0, Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + roll.total)),
         "system.ki.value": Math.max(Number(ki.value) || 0, Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + roll.total))
       });
     }
@@ -878,7 +878,7 @@ export function registerCombatHooks() {
       const back = Math.floor(left / 2);
       if (back) {
         const life = master.system.life ?? {};
-        await master.update({ "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + back) });
+        await master.update({ "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + back) });
         ui.notifications?.info(`${master.name}: From Goop - ${goops.length} Goop${(goops.length === 1) ? "" : "s"} die, ${back} Life Points back.`);
       }
     }
