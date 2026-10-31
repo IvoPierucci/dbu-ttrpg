@@ -3948,13 +3948,26 @@ function uniqueLibraryOf(actor, maneuver) {
   return String(actor?.items?.get?.(maneuver?.itemId ?? "")?.system?.unique?.libraryId ?? "");
 }
 
+/** The verbs an effect makes Minions with, and the Unique Abilities that make theirs in their own code (chat.mjs). */
+const MINION_VERBS = /\b(miniMajin|broodMinion|glassKnights|yakiSwarm|pokoMinion|copyClone)\s*\(/;
+const MINION_MAKING_UAS = Object.freeze(["multi-form-technique", "super-ghost-kamikaze-attack", "copy-clone"]);
+
+/** Whether a Maneuver makes Minions - a Unique Ability that does, or one whose effects call a verb that does. */
+export function makesMinions(actor, maneuver) {
+  const library = uniqueLibraryOf(actor, maneuver);
+  if (MINION_MAKING_UAS.includes(library)) return true;
+  return MINION_VERBS.test(String(getTrait(library || maneuver?.id || "")?.script ?? ""));
+}
+
 /**
  * Non-Minion: "This Maneuver cannot be used by a Minion (even Special or Duplicate Minions)." And a Duplicate: "Duplicate
- * Minions also cannot ... use the Empower Maneuver".
+ * Minions also cannot ... use the Empower Maneuver". Nor one that makes Minions: "Minions: Minions cannot create or be the Master
+ * of a Minion" - a Duplicate's, copied from its Master, included.
  */
 export function whyNotMinionManeuver(actor, maneuver) {
   if ((actor?.type !== "minion") || !maneuver) return null;
   if (minionLine(actor, maneuver) === "non-minion") return `${actor.name} is a Minion: ${maneuver.name} is Non-Minion.`;
+  if (makesMinions(actor, maneuver)) return `${actor.name} is a Minion: a Minion cannot create a Minion (${maneuver.name}).`;
   if (actor.system?.duplicate && (maneuver.id === "empower")) return `${actor.name} is a Duplicate: no Empower Maneuver.`;
   // From Goop (5): "A Goop cannot use any Maneuvers except the Movement Maneuver" - Battle Goo (3): "Your Goops gain access to
   // (and can use) the Basic Attack Maneuver and Intervene Maneuver".

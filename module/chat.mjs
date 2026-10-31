@@ -448,6 +448,11 @@ async function applyForesee(combatId, combatantId, initiative) {
  */
 export async function requestMakeMinion(master, options = {}) {
   if (!master) return [];
+  // "Minions cannot create or be the Master of a Minion."
+  if (isMinion(master)) {
+    ui.notifications.warn(`${master.name} is a Minion: a Minion cannot create a Minion.`);
+    return [];
+  }
   if (game.user.isGM) return (await import("./minion-make.mjs")).makeMinion(master, options);
   if (!game.users.activeGM) {
     ui.notifications.warn("No GM is here to make the Minion - the table makes it.");
@@ -32858,6 +32863,7 @@ async function returnInitialWagers(attack, attacker) {
  * Clone's own limits on whom it copies with it (maneuvers.mjs whyNotCopyClone). Not once a Duel is on the attack.
  */
 function whyNotMirror(actor, attack, item, counterLeft = 1) {
+  if (isMinion(actor)) return "a Minion cannot create a Minion";
   if (!attack || !attackTargets(attack).some(entry => entry.uuid === actor?.uuid)) return "only a target of this attack";
   if (attack.result) return "only before the attack resolves";
   if (attack.duel) return "a Duel is already on this attack";
@@ -35052,7 +35058,8 @@ const GOOP_SAID = " - halved: a Goop in an unoccupied Square within a Large Sphe
  * 'Goop'" - asked, three times a Combat Round. Whether it was.
  */
 async function goopSplit(actor) {
-  if (actor?.system?.effects?.slots?.["fromGoop.goop"] !== true) return false;
+  // "Minions cannot create or be the Master of a Minion": not asked of one.
+  if ((actor?.system?.effects?.slots?.["fromGoop.goop"] !== true) || isMinion(actor)) return false;
   const used = actor.getFlag?.(SCOPE, "goopRound");
   const count = (used?.round === roundKey()) ? (Number(used.count) || 0) : 0;
   if (count >= 3) return false;

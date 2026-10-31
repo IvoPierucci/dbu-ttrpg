@@ -117,7 +117,8 @@ export function freeSquareBeside(token) {
  * Scene, and in the Combat Encounter its Master is in. The Actors made.
  */
 export async function makeMinion(master, options = {}) {
-  if (!master || !game.user.isGM) return [];
+  // "Minions cannot create or be the Master of a Minion."
+  if (!master || !game.user.isGM || (master.type === "minion")) return [];
   const made = [];
   const token = master.getActiveTokens?.(false, true)?.[0] ?? null;
   const combat = game.combats?.contents?.find(each => each.combatants.some(combatant => combatant.actorId === master.id)) ?? null;
