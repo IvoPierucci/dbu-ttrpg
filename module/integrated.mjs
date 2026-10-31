@@ -22,6 +22,8 @@
  * Item's sheet (the user's). Made Active where it fits (the user's).
  */
 
+import { isCharacter } from "./actor-types.mjs";
+
 /** "No more than 1 Accessory or Apparel Item Active" - each - "no more than 2 Weapons Active". */
 export const INTEGRATED_ACTIVE = Object.freeze({ weapon: 2, apparel: 1, accessory: 1 });
 
@@ -206,7 +208,7 @@ export function registerIntegratedHooks() {
 
   const settle = async (item, userId) => {
     const actor = item?.parent;
-    if (!actor || (actor.type !== "character") || (userId !== game.user.id)) return;
+    if (!actor || (!isCharacter(actor)) || (userId !== game.user.id)) return;
     const weapon = weaponOf(actor, item);
     if (armed(item) && !weapon) {
       const { craftedItemFrom } = await import("./gear.mjs");

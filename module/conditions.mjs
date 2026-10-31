@@ -13,6 +13,7 @@
  */
 
 import { traitAside } from "./aside.mjs";
+import { isCharacter } from "./actor-types.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 
@@ -394,7 +395,7 @@ export async function offerStatesOnEntering(actor, entered) {
 
 export function registerConditionHooks() {
   Hooks.on("preUpdateActor", (actor, changes, options) => {
-    if (actor.type !== "character") return;
+    if (!isCharacter(actor)) return;
     // Stashed before the write, since afterwards there is nothing left to compare with.
     if (foundry.utils.hasProperty(changes, "system.conditions")) {
       options.dbuConditionsBefore = foundry.utils.deepClone(actor.system.conditions ?? {});
@@ -405,7 +406,7 @@ export function registerConditionHooks() {
   });
 
   Hooks.on("updateActor", async (actor, changes, options) => {
-    if (actor.type !== "character") return;
+    if (!isCharacter(actor)) return;
 
     // One client, or every connected player fires the same Moment. The GM is that one,
     // the same way the combat hooks and the relayed chat edits work.
@@ -424,7 +425,7 @@ export function registerConditionHooks() {
   // Asked of whoever entered the State, where they play the character: the GM's client
   // above announces, and this is a question only the player can answer.
   Hooks.on("updateActor", async (actor, changes, options, userId) => {
-    if ((actor.type !== "character") || !options.dbuStatesBefore) return;
+    if ((!isCharacter(actor)) || !options.dbuStatesBefore) return;
     if ((userId !== game.user.id) || !actor.isOwner) return;
     const now = actor.system.states ?? {};
     for (const key of Object.keys(now)) {
@@ -443,7 +444,7 @@ export function registerConditionHooks() {
   });
 
   Hooks.on("updateActor", async (actor, changes, options) => {
-    if (actor.type !== "character") return;
+    if (!isCharacter(actor)) return;
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 
     // A Condition inflicted through an Item - the Net's Pinned - leaves a note of who and

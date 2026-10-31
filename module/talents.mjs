@@ -8,6 +8,7 @@
  */
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
+import { isCharacter } from "./actor-types.mjs";
 import { compareTalents, talentCategoryOf } from "./talent-categories.mjs";
 
 /** Every Talent written - not a Talent's Options, which are files beside it (Show Stopping Performance's). */
@@ -40,7 +41,7 @@ export function progressionTalentIds(system) {
  * Talent's file id, and the Talent is the tab's from then on; so is one added by hand before, once a row names it.
  */
 export async function syncProgressionTalents(actor) {
-  if (!actor?.isOwner || (actor.type !== "character")) return;
+  if (!actor?.isOwner || (!isCharacter(actor))) return;
   const owned = Array.from(actor.items ?? []).filter(item => item.type === "talent");
   const sourceOf = item => item.flags?.["dbu-ttrpg"]?.sourceId ?? "";
   const rows = actor.system.progression ?? [];
@@ -117,7 +118,7 @@ export function orphanTalents(items) {
  * then each Talent left with nowhere to come from named, and taken off once that is confirmed. What was done, said.
  */
 export async function refreshTalents(actor) {
-  if (!actor?.isOwner || (actor.type !== "character")) return;
+  if (!actor?.isOwner || (!isCharacter(actor))) return;
   const before = new Set(Array.from(actor.items ?? []).filter(item => item.type === "talent").map(item => item.id));
   await syncProgressionTalents(actor);
   const orphans = orphanTalents(actor.items);

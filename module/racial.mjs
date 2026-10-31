@@ -48,6 +48,7 @@
  */
 
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
+import { isCharacter } from "./actor-types.mjs";
 import { getRace, subraceName } from "./races.mjs";
 import { traitAside } from "./aside.mjs";
 
@@ -515,7 +516,7 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
   // Synchronized Combatants' "Choose a Character": any in the world but yourself.
   // Chosen Rival's "(except a Minion)".
   if ((kind === "character") || (kind === "characterNotMinion")) {
-    return Array.from(globalThis.game?.actors ?? []).filter(other => (other.type === "character") && (other.id !== actor?.id))
+    return Array.from(globalThis.game?.actors ?? []).filter(other => (isCharacter(other)) && (other.id !== actor?.id))
       .filter(other => (kind === "character") || !other.system?.minion)
       .sort((a, b) => a.name.localeCompare(b.name)).map(other => [other.id, other.name]);
   }
@@ -918,7 +919,7 @@ const PAST_ATTRIBUTES = ["agility", "force", "tenacity", "scholarship", "insight
  */
 export async function askPastLife(actor, trait) {
   const escape = Handlebars.escapeExpression;
-  const others = Array.from(globalThis.game?.actors ?? []).filter(other => (other.type === "character") && (other.id !== actor?.id))
+  const others = Array.from(globalThis.game?.actors ?? []).filter(other => (isCharacter(other)) && (other.id !== actor?.id))
     .sort((a, b) => a.name.localeCompare(b.name));
   const who = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${trait.name} - your Past Life` },

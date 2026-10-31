@@ -37,6 +37,68 @@
     {{/if}}
   </section>
 
+  {{! A Character's Minions, or a Minion's one Master (the user's) - either side is enough, as with Allies, and the two are
+      Allies. A Minion has no Minions; a Minion with a Master is changed by no list, only by an effect that says so. }}
+  {{#if isMinion}}
+  <section class="panel ally-panel">
+    <h3 class="panel-title">Master</h3>
+    {{#if masterEntry}}
+    <ul class="ally-list">
+      <li class="ally{{#if masterEntry.theirs}} theirs{{/if}}">
+        {{#if masterEntry.theirs}}
+        <span class="ally-x-space"></span>
+        {{else}}
+          {{#if editable}}
+          <button type="button" class="ally-x" data-action="clearMaster"
+                  data-tooltip="Take {{masterEntry.name}} off as Master">&#10005;</button>
+          {{else}}
+          <span class="ally-x-space"></span>
+          {{/if}}
+        {{/if}}
+        {{#if masterEntry.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if masterEntry.img}}<img class="ally-img" src="{{masterEntry.img}}" alt=""/>{{/if}}{{/if}}
+        <span class="ally-name">{{masterEntry.name}}</span>
+        {{#if masterEntry.theirs}}<span class="ally-note" data-tooltip="Their Minions list names this Minion - taken off from their sheet">from their list</span>{{/if}}
+      </li>
+    </ul>
+    {{else}}
+    {{#if editable}}
+    <button type="button" class="edit-toggle ally-add" data-action="setMaster">Set Master</button>
+    {{/if}}
+    <p class="tab-placeholder">No Master yet.</p>
+    {{/if}}
+  </section>
+  {{else}}
+  <section class="panel ally-panel">
+    <h3 class="panel-title">Minions</h3>
+    {{#if editable}}
+    <button type="button" class="edit-toggle ally-add" data-action="addMinions">+ Add Minions</button>
+    {{/if}}
+    {{#if minionsList.length}}
+    <ul class="ally-list">
+      {{#each minionsList as |minion|}}
+      <li class="ally{{#if minion.theirs}} theirs{{/if}}{{#if minion.missing}} missing{{/if}}">
+        {{#if minion.theirs}}
+        <span class="ally-x-space"></span>
+        {{else}}
+          {{#if @root.editable}}
+          <button type="button" class="ally-x" data-action="removeMinion" data-minion-id="{{minion.id}}"
+                  data-tooltip="Take {{minion.name}} off the Minions list">&#10005;</button>
+          {{else}}
+          <span class="ally-x-space"></span>
+          {{/if}}
+        {{/if}}
+        {{#if minion.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if minion.img}}<img class="ally-img" src="{{minion.img}}" alt=""/>{{/if}}{{/if}}
+        <span class="ally-name">{{minion.name}}</span>
+        {{#if minion.theirs}}<span class="ally-note" data-tooltip="This Minion's sheet names you as its Master - taken off there">from their sheet</span>{{/if}}
+      </li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="tab-placeholder">No Minions.</p>
+    {{/if}}
+  </section>
+  {{/if}}
+
   {{! Set by hand, for what nothing on the sheet works out yet - from the Progression tab (the user's). }}
   <section class="panel">
     <h3 class="panel-title">Tier of Power and Critical Target</h3>

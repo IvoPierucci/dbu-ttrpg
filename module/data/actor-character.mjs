@@ -114,7 +114,7 @@ function perThreshold(data, key) {
   const per = data.effects?.slots?.[`${key}.perThreshold`];
   if (!per?.add) return { value: 0, parts: [] };
   const keys = Object.keys(DBUCharacterData.THRESHOLDS);
-  const at = keys.indexOf(DBUCharacterData.thresholdKey(data.life.value, data.life.max));
+  const at = keys.indexOf(DBUCharacterData.thresholdKey(data.life.value, data.life.max, data.minion));
   const below = keys.filter((each, index) => (index <= at) && DBUCharacterData.THRESHOLDS[each].counts).length;
   const value = per.add * below;
   const source = (per.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects";
@@ -776,9 +776,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     critical: { label: "Critical", above: -Infinity, counts: true }
   });
 
-  /** The Health Threshold a character sits at, from their Life Points. */
-  static thresholdKey(value, max) {
+  /**
+   * The Health Threshold a character sits at, from their Life Points. A Minion's (Minion Rules): "Minions only possess the
+   * Healthy and Injured Health Thresholds" - Healthy down to the Injured line, Injured below it.
+   */
+  static thresholdKey(value, max, minion = false) {
     const ratio = max ? (value / max) : 0;
+    if (minion) return (ratio > DBUCharacterData.THRESHOLDS.bruised.above) ? "healthy" : "injured";
     return Object.keys(DBUCharacterData.THRESHOLDS)
       .find(key => ratio > DBUCharacterData.THRESHOLDS[key].above);
   }
@@ -810,6 +814,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** Actions a character has each Combat Round before any effect alters them. */
   static BASE_STANDARD_ACTIONS = 3;
   static BASE_COUNTER_ACTIONS = 1;
+  /** Follower (Minion Rules): a Minion's Actions at the start of the Combat Round. */
+  static MINION_STANDARD_ACTIONS = 2;
   /** "You cannot gain more than 6 Counter Actions in a single Combat Round." */
   static MAX_COUNTER_ACTIONS = 6;
 
@@ -1499,8 +1505,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Items of their own (type `racial`), added by hand from the Traits tab - their own race's or any other's (the
     // user's ruling); `racialTraits` is derived from them (prepareDerivedData), the files they came from.
 
-    // Whether this character is a Minion, which a few rules ask about.
-    schema.minion = new fields.BooleanField({ required: true, initial: false });
+    // A Minion is its own Actor type now (the user's), and `minion` is derived from it (prepareDerivedData) - the Biography
+    // checkbox gone. A Character's Minions, by world Actor id, and a Minion's one Master: either side is enough (allies.mjs).
+    schema.minions = new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] });
+    schema.master = new fields.StringField({ required: true, blank: true, initial: "" });
 
     // Whether this character is Adventuring - what a Buddy's Adventure Effect waits on. A switch
     // on the Biography tab, by the table's ruling: off when a Combat Encounter starts, on again
@@ -1897,6 +1905,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   prepareDerivedData() {
     const atts = this.attributes;
 
+    // A Minion (the rulebook's Minion Rules, the user's Actor type): read by every rule that treats one apart.
+    this.minion = this.parent?.type === "minion";
+    // "Karma: Minions do not possess Karma Points."
+    if (this.minion) this.karma = 0;
+
     // The sheet clamps Power Level as it is edited, but a macro or module could still
     // write something out of range; keep everything derived from it sane regardless.
     this.powerLevel = Math.min(Math.max(this.powerLevel, 1), DBUCharacterData.MAX_POWER_LEVEL);
@@ -2010,6 +2023,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       report: message => this.effects.errors.push(message),
       // For a Buddy's Buddy Attribute, and the Skills its script names by the Score they use.
       baseTier: DBUCharacterData.tierOfPowerFor(this.powerLevel),
+      // A Minion's Weakness at base Tier 1 is an effect of its own (registry.mjs).
+      minion: this.minion,
       skills: DBUCharacterData.SKILLS
     });
 
@@ -2035,7 +2050,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // before the Maximum Life Points it is read against are worked out again below: against those of the last time they
     // were, kept on the Actor. Without it the bulk read no Threshold at all - always Healthy. Settled for good further down.
     const lastLifeMax = Number(this.parent?._dbuLifeMax) || 0;
-    this.threshold = { key: lastLifeMax ? DBUCharacterData.thresholdKey(this.life.value, lastLifeMax) : "healthy" };
+    this.threshold = { key: lastLifeMax ? DBUCharacterData.thresholdKey(this.life.value, lastLifeMax, this.minion) : "healthy" };
 
     // Neko Majin-Dama's x: "your number of Integrated Majin-Dama (even if they are Inactive)" - and (5)'s none.
     const damas = Array.from(this.parent?.items ?? []).filter(item => (item.type === "gear")
@@ -2049,7 +2064,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // Base Tier of Power follows from Power Level alone: 1 for Levels 1-4, then one
     // more per five Levels, reaching 7 at Level 30.
-    this.baseTierOfPower = DBUCharacterData.tierOfPowerFor(this.powerLevel);
+    // Weakness (Minion Rules): "all Minions having their base Tier of Power reduced by 1 (if their base Tier of Power is
+    // already 1, reduce their Saving Throws and Combat Rolls by 1)" - the second an effect of its own (registry.mjs).
+    this.baseTierOfPower = this.minion ? Math.max(1, DBUCharacterData.tierOfPowerFor(this.powerLevel) - 1)
+      : DBUCharacterData.tierOfPowerFor(this.powerLevel);
 
 
     // The ground's Hardness Rank as the Square's Qualities leave it. Derived rather than
@@ -2337,6 +2355,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel")
     });
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
+    // Life Points (Minion Rules): "set their Maximum Life Points to 1/4 (rounded up) of what it would usually be."
+    if (this.minion) this.life.max = Math.ceil(this.life.max / 4);
     // Kept for the next preparation's early Threshold.
     if (this.parent) this.parent._dbuLifeMax = this.life.max;
 
@@ -2345,6 +2365,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       kiPerLevelBonus: this.transformationBonuses.kiPerLevel + slot(this, "ki.perLevel")
     });
     this.ki.max = Math.max(0, withEffects(this, "ki.max", this.ki.max));
+    // Ki Points & Capacity (Minion Rules): "the typical Capacity Rate for their Power Level but set their Maximum Ki Points to
+    // 1/2 of what it would usually be" - rounded down.
+    if (this.minion) this.ki.max = Math.floor(this.ki.max / 2);
 
     // God Ki's Divine Ki Points: "an amount equal to 1/2 of their Maximum Ki Points (ignoring any increases from Ki
     // Multiplier)" - read before the Multiplier below.
@@ -2383,7 +2406,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // past zero.
     this.actions = {
       standard: Math.max(0, withEffects(this, "actions.standard",
-        DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard)
+        // Follower (Minion Rules): "Minions only gain 2 Actions and 0 Counter Actions at the start of the Combat Round."
+        (this.minion ? DBUCharacterData.MINION_STANDARD_ACTIONS : DBUCharacterData.BASE_STANDARD_ACTIONS) + this.actionModifiers.standard)
         // Bonus Momentum's Standard Action more, Reduced Momentum's one fewer - this Combat Round's.
         + (Number(this.momentum?.bonus) || 0) - (Number(this.momentum?.reduced) || 0)
         // Celestial Potential's Counter Actions made Actions.
@@ -2394,7 +2418,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         + steadyActionsNow(this)),
       // "You cannot gain more than 6 Counter Actions in a single Combat Round."
       counter: Math.min(DBUCharacterData.MAX_COUNTER_ACTIONS, Math.max(0, withEffects(this, "actions.counter",
-        DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter))
+        (this.minion ? 0 : DBUCharacterData.BASE_COUNTER_ACTIONS) + this.actionModifiers.counter))
         // Precognition: "you gain 1 Counter Action to use during their turn".
         + (this.foresight?.active ? 1 : 0)
         // And every Standard Action converted into one this Round - less those made Actions.
@@ -2751,11 +2775,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // its own. What it costs comes from the Steadfast Checks failed at or below that
     // point; results recorded above it are ignored, since rising back up clears them.
     const keys = Object.keys(DBUCharacterData.THRESHOLDS);
-    const current = DBUCharacterData.thresholdKey(this.life.value, this.life.max);
+    const current = DBUCharacterData.thresholdKey(this.life.value, this.life.max, this.minion);
     const currentIndex = keys.indexOf(current);
 
+    // A Minion's only one is Injured.
     const reached = keys
-      .filter((key, index) => (index <= currentIndex) && DBUCharacterData.THRESHOLDS[key].counts);
+      .filter((key, index) => (index <= currentIndex) && DBUCharacterData.THRESHOLDS[key].counts && (!this.minion || (key === "injured")));
 
     // One an effect passes - Saiyan Heritage's Bruised - is passed, and no failure for it counts.
     const passes = key => this.effects?.slots?.[`steadfast.autoPass.${key}`] === true;

@@ -1,4 +1,5 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
+import { isCharacter, isMinion } from "./actor-types.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
@@ -5025,7 +5026,7 @@ export async function pullAtEndOfTurn(actor, combat) {
     && item.system.unique?.pullsAtEnd && item.system.unique?.applied);
   if (!open.length) return;
   const others = [...new Map((combat?.combatants ?? []).map(combatant => combatant.actor)
-    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid))
     .map(other => [other.uuid, other])).values()];
   const might = Number(actor.system.might) || 0;
   for (const item of open) {
@@ -5256,7 +5257,7 @@ function volleyballReceivers(clash) {
   const binder = fromUuidSync(vb.binderUuid);
   if (!binder?.getFlag?.(SCOPE, "volleyball")?.active) return [];
   return (game.combat?.combatants ?? []).map(combatant => combatant.actor)
-    .filter(actor => actor && (actor.type === "character") && !actor.system.minion && !actor.system.defeated
+    .filter(actor => actor && (isCharacter(actor)) && !actor.system.minion && !actor.system.defeated
       && (actor.uuid !== clash.defenderUuid) && (actor.uuid !== vb.attackerUuid))
     .map(actor => ({ actor, spike: actor.uuid === binder.uuid }))
     .filter(({ actor, spike }) => spike || !volleyedThisEncounter(actor));
@@ -7462,7 +7463,7 @@ function offerExploits(card, actor, maneuver) {
   const seen = new Map();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const other = token.actor;
-    if (!other || (other.type !== "character")) continue;
+    if (!other || (!isCharacter(other))) continue;
     if (other.uuid === actor.uuid) continue;
     if (!other.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
     // "All adjacent Opponents", "any Opponent whose Melee Range you left": never an Ally (allies.mjs).
@@ -7590,7 +7591,7 @@ function ownedCharacters() {
 
   for (const token of canvas.tokens?.placeables ?? []) {
     const actor = token.actor;
-    if (actor?.isOwner && (actor.type === "character")) byUuid.set(actor.uuid, actor);
+    if (actor?.isOwner && (isCharacter(actor))) byUuid.set(actor.uuid, actor);
   }
 
   return [...byUuid.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -15020,7 +15021,7 @@ async function study(actor, who, through, { ending = false } = {}) {
 export async function studyCharacter(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const pool = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.type === "character")
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (isCharacter(token.actor))
       && (attackedLastRound(token.actor) > 0))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!pool.length) return UNSPENT;
@@ -15803,7 +15804,7 @@ export async function highRiskForgo(actor, before) {
   const max = Number(actor.system.life?.max) || 0;
   const gained = (Number(actor.system.life?.value) || 0) - (Number(before) || 0);
   if (gained <= 0) return;
-  if (!["injured", "critical"].includes(DBUCharacterData.thresholdKey(before, max))) return;
+  if (!["injured", "critical"].includes(DBUCharacterData.thresholdKey(before, max, isMinion(actor)))) return;
   if (actor.getFlag?.(SCOPE, "highRiskRound") === roundKey()) return;
   const ki = Math.floor(gained / 2);
   const answer = await askPlayerChoice(actor, `${actor.name}: High Risk Battler - ${gained} Life Points`,
@@ -15972,7 +15973,7 @@ export async function silentFootsteps(actor) {
   const { isHiddenFrom } = await import("./hidden.mjs");
   const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.type === "character")
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (isCharacter(token.actor))
       && !allies.has(token.actor.uuid) && !token.actor.system?.defeated && !isHiddenFrom(actor, token.actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!opponents.length) return UNSPENT;
@@ -16144,7 +16145,7 @@ async function yoinkGuardAttack(card, actor) {
 export async function enhancedMark(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const pool = [...new Map((canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.type === "character") && !token.actor.system?.defeated)
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (isCharacter(token.actor)) && !token.actor.system?.defeated)
     .map(token => [token.actor.uuid, token.actor])).values()];
   if (!pool.length) return UNSPENT;
   const picked = await askPlayerChoice(actor, `${actor.name}: Enhanced Search - a Character`,
@@ -16741,7 +16742,7 @@ export async function tornadoTurnStart(actor) {
   const spin = actor?.getFlag?.(SCOPE, "spinning");
   if (!spin) return;
   const near = (canvas?.tokens?.placeables ?? []).map(token => token.actor)
-    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid) && !other.system.defeated
+    .filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid) && !other.system.defeated
       && !areAllies(other, actor) && !whyNotWithinMelee(actor, other, ""));
   const within = [...new Map(near.map(other => [other.uuid, other])).values()];
   if (!within.length) return stopSpinning(actor);
@@ -17038,7 +17039,7 @@ export async function postWeatherSummon(actor, maneuver, plan) {
   const spared = new Set((actor.system.effects?.slots?.["weather.alliesSpared"] === true)
     ? alliesOnScene(actor).map(ally => ally.uuid) : []);
   const others = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
-    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid) && !spared.has(other.uuid))
+    .filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid) && !spared.has(other.uuid))
     .map(other => [other.uuid, other])).values()];
   const before = others.map(other => ({ uuid: other.uuid, id: other.system.battlefield?.weather?.id ?? "",
     tier: Number(other.system.battlefield?.weather?.tier) || 1 }));
@@ -18263,7 +18264,7 @@ function offerCopies(card, user, maneuver) {
   const seen = new Map();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const other = token.actor;
-    if (!other || (other.type !== "character") || (other.uuid === user.uuid)) continue;
+    if (!other || (!isCharacter(other)) || (other.uuid === user.uuid)) continue;
     if (other.system?.effects?.slots?.["quickLearner.copy"] !== true) continue;
     seen.set(other.uuid, other);
   }
@@ -18284,7 +18285,7 @@ export function offerUniqueCopies(card, user, maneuver) {
   const seen = new Map();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const other = token.actor;
-    if (!other || (other.type !== "character") || (other.uuid === user.uuid)) continue;
+    if (!other || (!isCharacter(other)) || (other.uuid === user.uuid)) continue;
     if (other.system?.effects?.slots?.["advancedLearner.copyUnique"] !== true) continue;
     if (String(other.getFlag?.(SCOPE, "advancedLearnerEncounter") ?? "") === game.combat.id) continue;
     seen.set(other.uuid, other);
@@ -18322,7 +18323,7 @@ export async function mimicryOffers(card, user, maneuver) {
   const seen = new Set();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const other = token.actor;
-    if (!other || (other.type !== "character") || (other.uuid === user.uuid) || seen.has(other.uuid)) continue;
+    if (!other || (!isCharacter(other)) || (other.uuid === user.uuid) || seen.has(other.uuid)) continue;
     seen.add(other.uuid);
     if (other.system?.defeated || (other.system?.effects?.slots?.["mimicry.copyManeuver"] !== true)) continue;
     if (areAllies(other, user) || (other.getFlag?.(SCOPE, "mimicryRound") === roundKey())) continue;
@@ -18809,7 +18810,7 @@ export async function frequentFlyerCheck(mover, before) {
   if (((Number(before) || 0) > 0) || !((Number(mover?.system?.battlefield?.highEnvironment) || 0) > 0) || !game.combat?.started) return;
   const soar = getManeuver("soar");
   const flyers = [...new Map((canvas?.tokens?.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
-    .filter(each => each && (each.uuid !== mover.uuid) && (each.type === "character") && !each.system?.defeated
+    .filter(each => each && (each.uuid !== mover.uuid) && (isCharacter(each)) && !each.system?.defeated
       && (each.system?.effects?.slots?.["frequentFlyer.soarFollow"] === true)
       && (each.getFlag?.(SCOPE, "frequentFlyerRound") !== roundKey()) && !whyNotWithinMelee(each, mover, ""));
   const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === mover.id);
@@ -23058,7 +23059,7 @@ export async function glassification(actor, actions) {
     if (!value.startsWith("square:")) continue;
     const letter = value.slice(7);
     const standing = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
-      .filter(other => other?.type === "character").map(other => [other.uuid, other])).values()];
+      .filter(other => isCharacter(other)).map(other => [other.uuid, other])).values()];
     if (!standing.length) continue;
     const caught = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"], window: { title: `Glassification - Square ${letter}` },
@@ -23675,7 +23676,7 @@ export async function aiiieee(actor) {
   if (!actor) return;
   await requestActorUpdate(actor, { "system.life.value": 1 });
   const others = [...new Map((canvas?.tokens?.placeables ?? []).filter(token => token.actor && (token.actor.uuid !== actor.uuid)
-    && (token.actor.type === "character") && !areAllies(token.actor, actor))
+    && (isCharacter(token.actor)) && !areAllies(token.actor, actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
   for (const other of others) {
     await postSkillClash(actor, other, { name: "AIIIEEEEEEE", type: "outOfSequence",
@@ -23917,7 +23918,7 @@ export async function shardBurst(actor) {
     reason: `Win and ${carrier.name} loses Life Points equal to ${actor.name}'s Might.`,
     saves: ["corporeal"], defenderSaves: ["corporeal", "impulsive"], shardBurst: { applied: false } });
   const standing = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
-    .filter(other => other?.type === "character").map(other => [other.uuid, other])).values()];
+    .filter(other => isCharacter(other)).map(other => [other.uuid, other])).values()];
   if (!standing.length) return;
   const escape = Handlebars.escapeExpression;
   const caught = await foundry.applications.api.DialogV2.wait({
@@ -24470,7 +24471,7 @@ export async function rulerAllies(actor) {
   const pool = [...new Map((game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor))
-    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid) && areAllies(other, actor))
+    .filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid) && areAllies(other, actor))
     .map(other => [other.uuid, other])).values()];
   if (!pool.length) return ui.notifications.warn(`${actor.name}: Ruler - no Allies to target.`);
   const escape = Handlebars.escapeExpression;
@@ -26821,7 +26822,7 @@ function possibleInterveners(attack) {
 
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const actor = token.actor;
-    if (!actor || (actor.type !== "character") || !actor.isOwner) continue;
+    if (!actor || (!isCharacter(actor)) || !actor.isOwner) continue;
     if (actor.uuid === attack.attackerUuid) continue;
     if (aimedAt.has(actor.uuid)) continue;
     if (!actor.items.some(item => (item.type === "maneuver") && item.system.intervene)) continue;
@@ -27282,7 +27283,7 @@ async function markArea(message, attack, { others = false } = {}) {
     const already = new Set([...(attack.areaMarked ? attackTargets(attack).map(entry => entry.uuid) : []),
       ...who.map(entry => entry.uuid), ...(attack.areaOthers ?? [])]);
     const unique = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
-      .filter(other => other && (other.type === "character") && !already.has(other.uuid))
+      .filter(other => other && (isCharacter(other)) && !already.has(other.uuid))
       .map(other => [other.uuid, other])).values()];
     if (unique.length) {
       const rows = unique.map(other => `<label class="dbu-respond-option">
@@ -27564,7 +27565,7 @@ export async function detonateTechnique(actor, itemId, { auto = false } = {}) {
 async function personalBomb(actor, attack, centre, wound) {
   const already = new Set([actor.uuid, centre.uuid]);
   const unique = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
-    .filter(other => other && (other.type === "character") && !already.has(other.uuid))
+    .filter(other => other && (isCharacter(other)) && !already.has(other.uuid))
     .map(other => [other.uuid, other])).values()];
   if (!unique.length) return;
   const rows = unique.map(other => `<label class="dbu-respond-option">
@@ -29230,7 +29231,7 @@ async function addAreaTargets(message, attack, attacker) {
   // unlinked token is its own character and two of them may share a name.
   const candidates = (canvas?.tokens?.placeables ?? [])
     .map(token => token.actor)
-    .filter(actor => actor && (actor.type === "character") && !already.has(actor.uuid));
+    .filter(actor => actor && (isCharacter(actor)) && !already.has(actor.uuid));
 
   // Named once each: two tokens of one linked Actor are one character standing in two
   // places as far as the sheet is concerned, and hitting them twice is not a rule.
@@ -29992,7 +29993,7 @@ async function homingRetry(message, attack, uuid) {
     if (!where || (where === "cancel")) return;
     if (where === "other") {
       const others = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
-        .filter(who => who && (who.type === "character") && (who.uuid !== attacker.uuid)
+        .filter(who => who && (isCharacter(who)) && (who.uuid !== attacker.uuid)
           && !attackTargets(attack).some(entry => entry.uuid === who.uuid))
         .map(who => [who.uuid, who])).values()];
       const pick = await foundry.applications.api.DialogV2.wait({
@@ -31082,7 +31083,7 @@ async function settleTemperament(message, key) {
     const present = [...new Map([...(game.combat?.combatants ?? []).map(entry => entry.actor),
       ...(canvas?.tokens?.placeables ?? []).map(token => token.actor)].filter(Boolean).map(each => [each.uuid, each])).values()];
     const pool = (coin.total === 1) ? present.filter(each => (each.uuid === owner.uuid) || areAllies(each, owner))
-      : present.filter(each => (each.uuid !== owner.uuid) && !areAllies(each, owner) && (each.type === "character"));
+      : present.filter(each => (each.uuid !== owner.uuid) && !areAllies(each, owner) && (isCharacter(each)));
     const erased = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     said = `Annoyed. The coin comes up ${(coin.total === 1) ? "heads: a random Character among "
       + `${owner.name} and their Allies` : "tails: a random Character among their Opponents"} is erased `
@@ -31399,9 +31400,9 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
   // Shock Collar's Prone.
   const thresholds = Object.keys(DBUCharacterData.THRESHOLDS);
   const knockedThrough = thresholds.indexOf(
-    DBUCharacterData.thresholdKey(floor, target.system.life.max))
+    DBUCharacterData.thresholdKey(floor, target.system.life.max, isMinion(target)))
     > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
-      target.system.life.max));
+      target.system.life.max, isMinion(target)));
 
   // Of their own doing, and to 0 or below - Revenge Bomber's "Defeated by one of your effects reducing your Life Points to
   // 0". Written with the Life Points, so the defeat it begins already knows.
@@ -33247,7 +33248,7 @@ function unitedButtons(message, attack, container) {
   // Whoever the user plays, other than the attacker - whether they are an Ally is the table's.
   const mine = (globalThis.canvas?.tokens?.placeables ?? []).map(token => token.actor)
     .concat(game.user?.character ? [game.user.character] : [])
-    .filter((actor, index, all) => actor?.isOwner && (actor.type === "character")
+    .filter((actor, index, all) => actor?.isOwner && (isCharacter(actor))
       && (actor.uuid !== attack.attackerUuid) && (all.findIndex(other => other?.uuid === actor.uuid) === index)
       && !(attack.united ?? []).some(entry => entry.uuid === actor.uuid) && !duelSideOf(attack, actor.uuid));
   if (!mine.length && !(asked?.isOwner)) {
@@ -33384,9 +33385,9 @@ async function applyAttackDamage(message, target, attack) {
   // leaves no record of having been crossed.
   const thresholds = Object.keys(DBUCharacterData.THRESHOLDS);
   const knockedThrough = thresholds.indexOf(
-    DBUCharacterData.thresholdKey(floor, target.system.life.max))
+    DBUCharacterData.thresholdKey(floor, target.system.life.max, isMinion(target)))
     > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
-      target.system.life.max));
+      target.system.life.max, isMinion(target)));
 
   // Pain Resistant (2): an Opponent knocking them through - no Bonus Momentum for them, nothing of theirs answering it.
   const painDenied = knockedThrough && armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)
@@ -34900,8 +34901,8 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     await actor.update({ "system.life.value": value + restored }, { dbuSurge: true });
     // Above a Health Threshold you were under: what answers it - Lightning Surge (3)'s.
     const keys = Object.keys(DBUCharacterData.THRESHOLDS);
-    const crossedUp = Boolean(restored) && (keys.indexOf(DBUCharacterData.thresholdKey(value + restored, max))
-      < keys.indexOf(DBUCharacterData.thresholdKey(value, max)));
+    const crossedUp = Boolean(restored) && (keys.indexOf(DBUCharacterData.thresholdKey(value + restored, max, isMinion(actor)))
+      < keys.indexOf(DBUCharacterData.thresholdKey(value, max, isMinion(actor))));
 
     // The Surge announces itself: a separate message for the Maneuver would say the
     // same thing twice.

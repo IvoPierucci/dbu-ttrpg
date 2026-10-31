@@ -99,8 +99,17 @@ function activeOptionsOnly(item, program) {
  * The Priority comes from the kind of source, exactly as the rulebook's ladder orders
  * them - which is also what the folder a Trait lives in will say once Traits are files.
  */
-export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {} } = {}) {
+export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {}, minion = false } = {}) {
   const entries = [];
+
+  // Weakness (Minion Rules): "if their base Tier of Power is already 1, reduce their Saving Throws and Combat Rolls by 1."
+  if (minion && (Number(baseTier) === 1)) {
+    const { program, errors } = compile("minion-weakness", { script: "[passive]\ncombatRolls -= 1;\nsave.all -= 1;" }, report);
+    if (!errors.length) {
+      entries.push({ program, priority: PRIORITY.base, sourceId: "minion-weakness", sourceUuid: null,
+        sourceName: "Minion Weakness", level: 0, stacks: 1 });
+    }
+  }
 
   for (const item of actor.items ?? []) {
     // Talents and Maneuvers both. A Maneuver's `script` field has existed since the Item

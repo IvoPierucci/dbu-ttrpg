@@ -2,6 +2,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
+import { isCharacter } from "../actor-types.mjs";
 import { compile } from "../effects/parser.mjs";
 import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, WEAPON_SIZES, WEAPON_TYPES, categoryFitsPiece, composeEffects, connectable, craftedReading, effectsOf, namePrefixMatches, qualityChoiceLabel, qualityChoices, qualityEntries, qualityFitsPiece, qualityInactive, qualityName, qualitySlotRange, qualitySummary, pieceTokens, scriptWithPiece, slotsTaken, isNaturalArmor } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
@@ -280,7 +281,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     // Who it is tied to, among the world's characters - never whoever holds it.
     context.assigns = Boolean(system.assignsCharacter);
     context.assignChoices = context.assigns
-      ? game.actors.filter(actor => (actor.type === "character")
+      ? game.actors.filter(actor => (isCharacter(actor))
         && (actor.uuid !== this.item.actor?.uuid))
         .map(actor => ({ value: actor.uuid, label: actor.name,
           chosen: actor.uuid === system.assigned?.uuid }))
@@ -296,7 +297,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     // Who it was made for, among the world's characters - whoever holds it included.
     context.declaresIntended = Boolean(system.declaresIntended);
     context.intendedChoices = context.declaresIntended
-      ? game.actors.filter(actor => actor.type === "character")
+      ? game.actors.filter(actor => isCharacter(actor))
         .map(actor => ({ value: actor.uuid, label: actor.name,
           chosen: actor.uuid === system.intended?.uuid }))
       : [];

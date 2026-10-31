@@ -1,4 +1,6 @@
 import DBUCharacterData from "./data/actor-character.mjs";
+import { isCharacter } from "./actor-types.mjs";
+import { initiativeOrder } from "./allies.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
 import DBURacialData from "./data/item-racial.mjs";
@@ -26,6 +28,15 @@ Hooks.once("init", () => {
 
   // Register the character data model for the "character" Actor type
   CONFIG.Actor.dataModels.character = DBUCharacterData;
+  // A Minion is a Character with its own rules (the rulebook's Minion Rules) - the same model, which reads its type.
+  CONFIG.Actor.dataModels.minion = DBUCharacterData;
+
+  // "Their place in Initiative is directly after their Master, in the order among Initiative, of their Initiative Value."
+  CONFIG.Combat.documentClass = class DBUCombat extends CONFIG.Combat.documentClass {
+    _sortCombatants(a, b) {
+      return initiativeOrder(a, b);
+    }
+  };
   CONFIG.Item.dataModels.talent = DBUTalentData;
   CONFIG.Item.dataModels.racial = DBURacialData;
   CONFIG.Item.dataModels.maneuver = DBUManeuverData;
@@ -74,7 +85,7 @@ Hooks.once("init", () => {
   const DocumentSheetConfig = foundry.applications.apps.DocumentSheetConfig;
   DocumentSheetConfig.unregisterSheet(foundry.documents.Actor, "core", foundry.appv1.sheets.ActorSheet);
   DocumentSheetConfig.registerSheet(foundry.documents.Actor, "dbu-ttrpg", DBUCharacterSheet, {
-    types: ["character"],
+    types: ["character", "minion"],
     makeDefault: true,
     label: "DBU Character Sheet"
   });
@@ -115,7 +126,7 @@ Hooks.once("init", () => {
 // Recovering above a Health Threshold clears the Steadfast Check recorded there, so
 // that dropping back down calls for a fresh one rather than reusing the old result.
 Hooks.on("preUpdateActor", (actor, changes) => {
-  if (actor.type !== "character") return;
+  if (!isCharacter(actor)) return;
 
   const life = foundry.utils.getProperty(changes, "system.life.value");
   if (life === undefined) return;
@@ -146,7 +157,7 @@ Hooks.on("updateItem", item => forget(item.uuid));
 // Micro Band - so asked after either changes, by the client that changed it, once.
 {
   const outgrowing = async (actor, userId) => {
-    if ((userId !== game.user.id) || (actor?.type !== "character")) return;
+    if ((userId !== game.user.id) || (!isCharacter(actor))) return;
     const { destroyOutgrown } = await import("./gear.mjs");
     await destroyOutgrown(actor, Object.keys(DBUCharacterData.SIZES), getTrait);
   };
@@ -255,7 +266,7 @@ Hooks.on("updateActor", (actor, changes) => { if (changes.system?.life || change
 
 // All Sizes Fit Me (2): a Size Category changed - by whatever changed it, by whoever made the change.
 async function sizeWatch(actor, userId) {
-  if ((userId !== game.user.id) || (actor?.type !== "character")) return;
+  if ((userId !== game.user.id) || (!isCharacter(actor))) return;
   const { sizeChangeCheck } = await import("./chat.mjs");
   await sizeChangeCheck(actor);
 }
@@ -298,7 +309,7 @@ Hooks.on("updateActor", async (actor, changes, options, userId) => {
   await answerFor(actor, "holding-back-lost");
 });
 Hooks.on("updateActor", async (actor, changes, options, userId) => {
-  if ((userId !== game.user.id) || !("dbuHighBefore" in options) || (actor.type !== "character")) return;
+  if ((userId !== game.user.id) || !("dbuHighBefore" in options) || (!isCharacter(actor))) return;
   const { frequentFlyerCheck } = await import("./chat.mjs");
   await frequentFlyerCheck(actor, options.dbuHighBefore);
 });
@@ -364,7 +375,7 @@ Hooks.once("setup", async () => {
 // ArrayField's own "initial" option cannot express, and because Life and Ki maximums
 // are derived - there is no prepared data to read from yet at this point.
 Hooks.on("preCreateActor", (actor, data, options, userId) => {
-  if (actor.type !== "character") return;
+  if (!isCharacter(actor)) return;
 
   const updates = {};
 

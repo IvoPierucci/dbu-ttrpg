@@ -16,6 +16,7 @@
  */
 
 import { areAllies } from "./allies.mjs";
+import { isCharacter } from "./actor-types.mjs";
 import { squaresBetween, MAGNITUDES, magnitudeIndex } from "./maneuvers.mjs";
 
 /** The Hide and Search Maneuvers, by their files. */
@@ -148,7 +149,7 @@ export async function hideFromOpponents(actor) {
   const others = new Map();
   for (const token of globalThis.canvas?.tokens?.placeables ?? []) {
     const other = token.actor;
-    if (!other || (other.uuid === actor.uuid) || (other.type !== "character")) continue;
+    if (!other || (other.uuid === actor.uuid) || (!isCharacter(other))) continue;
     if (areAllies(other, actor)) continue;
     others.set(other.uuid, other);
   }

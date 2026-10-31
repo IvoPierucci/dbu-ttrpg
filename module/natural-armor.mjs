@@ -18,6 +18,7 @@
  */
 
 import { getTrait } from "./effects/traits.mjs";
+import { isCharacter } from "./actor-types.mjs";
 import { isNaturalArmor } from "./gear.mjs";
 
 /** Its entry, as the rulebook prints it - under its Category's on the piece's sheet. */
@@ -95,7 +96,7 @@ export function naturalArmorMendable(actor) {
 /** Its Grade kept at the base Tier of Power (max. 5) as that changes - by whoever changed it. */
 export function registerNaturalArmorHooks() {
   Hooks.on("updateActor", async (actor, changes, options, userId) => {
-    if ((actor.type !== "character") || (userId !== game.user.id)) return;
+    if ((!isCharacter(actor)) || (userId !== game.user.id)) return;
     const grade = naturalArmorGrade(actor);
     const off = Array.from(actor.items ?? []).filter(item => isNaturalArmor(item)
       && ((Number(item.system.crafted?.grade) || 1) !== grade));

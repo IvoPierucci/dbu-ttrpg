@@ -11,6 +11,7 @@
  */
 
 import { areAllies } from "./allies.mjs";
+import { isCharacter } from "./actor-types.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
@@ -46,7 +47,7 @@ async function anybodyAnswers(moment, uuids, subjectUuid = "") {
 function combatants(combat) {
   return (combat?.combatants ?? [])
     .map(c => c.actor)
-    .filter(actor => actor?.type === "character");
+    .filter(actor => isCharacter(actor));
 }
 
 /**
@@ -599,7 +600,7 @@ async function burnDot(actor) {
  */
 /** A turn begun out of the turn order's own changing - Jump Start (2)'s: as any turn begins, on to the next if it is lost. */
 export async function beginTurnOf(combat, actor) {
-  if ((actor?.type === "character") && !await beginTurn(actor)) return combat.nextTurn();
+  if ((isCharacter(actor)) && !await beginTurn(actor)) return combat.nextTurn();
 }
 
 export async function keepTurnWith(combat, combatantId) {
@@ -619,7 +620,7 @@ export function registerCombatHooks() {
     // Through the same door as every other turn: a Defeated character standing first in
     // the Initiative Order used to be handed one, because this path checked nothing.
     const first = combat.combatant?.actor;
-    if ((first?.type === "character") && !await beginTurn(first)) return combat.nextTurn();
+    if ((isCharacter(first)) && !await beginTurn(first)) return combat.nextTurn();
   });
 
   // Foundry has a hook of its own for this, and it says which way the round moved.
@@ -659,7 +660,7 @@ export function registerCombatHooks() {
     if (bound && ((Number(leaving.system.conditions?.[bound.condition]) || 0) > 0)) {
       await leaving.setFlag("dbu-ttrpg", "boundBy", { ...bound, turns: (Number(bound.turns) || 0) + 1 });
     }
-    if (leaving?.type === "character") {
+    if (isCharacter(leaving)) {
       await fireMoment(leaving, "end-of-turn");
 
       // Hidden: "if you end your turn in their Melee Range, you stop being Hidden from them".
@@ -750,7 +751,7 @@ export function registerCombatHooks() {
       return;
     }
     if (arriving) await foresee(combat, arriving, true);
-    if ((arriving?.type === "character") && !await beginTurn(arriving)) {
+    if ((isCharacter(arriving)) && !await beginTurn(arriving)) {
       return combat.nextTurn();
     }
   });
@@ -989,7 +990,7 @@ function witnesses(actor) {
  */
 export function registerBreathHooks() {
   Hooks.on("preUpdateActor", (actor, changes, options) => {
-    if (actor.type !== "character") return;
+    if (!isCharacter(actor)) return;
     // The pick changing, or a mark that turns the Square into another Environment coming
     // or going - Elemental (Water) makes Underwater into Bog for a turn, and that is
     // leaving the water as surely as the player saying so.
@@ -1003,7 +1004,7 @@ export function registerBreathHooks() {
   });
 
   Hooks.on("updateActor", async (actor, changes, options) => {
-    if (actor.type !== "character") return;
+    if (!isCharacter(actor)) return;
     if (options.dbuWasUnbreathable === undefined) return;
     if (!actor.isOwner) return;
 
@@ -1023,7 +1024,7 @@ export function registerBreathHooks() {
  */
 export function registerWornBreathHooks() {
   const worn = (item, equipped) => (item?.type === "gear")
-    && (item.parent?.type === "character") && Boolean(equipped);
+    && (isCharacter(item.parent)) && Boolean(equipped);
 
   Hooks.on("preUpdateItem", (item, changes, options) => {
     const equipped = foundry.utils.getProperty(changes, "system.equipped");
@@ -1060,7 +1061,7 @@ export function registerWornBreathHooks() {
  * Modifier is read before and after, and the GM's client settles the difference.
  */
 export function registerRacialLifeHooks() {
-  const before = actor => ((actor?.type === "character") ? Number(actor.system?.racialLifeModifier) || 0 : null);
+  const before = actor => ((isCharacter(actor)) ? Number(actor.system?.racialLifeModifier) || 0 : null);
   Hooks.on("preUpdateActor", (actor, changes, options) => { options.dbuRacialLife = before(actor); });
   for (const kind of ["Create", "Update", "Delete"]) {
     Hooks.on(`pre${kind}Item`, (item, ...rest) => {
@@ -1090,7 +1091,7 @@ export function registerDefeatHooks() {
   // Protector of the Dragon Ball (6): "While you have an Integrated Dragon Ball, increase the amount of Ki Points you regain from all sources
   // by 1/2" - half of what is regained more, rounded down, in the same write.
   Hooks.on("preUpdateActor", (actor, changes, options) => {
-    if ((actor.type !== "character") || options.dbuKiRaw || (actor.system.effects?.slots?.["tamagami.kiHalf"] !== true)) return;
+    if ((!isCharacter(actor)) || options.dbuKiRaw || (actor.system.effects?.slots?.["tamagami.kiHalf"] !== true)) return;
     const written = foundry.utils.getProperty(changes, "system.ki.value");
     if (written === undefined) return;
     const before = Number(actor.system.ki?.value) || 0;
@@ -1101,7 +1102,7 @@ export function registerDefeatHooks() {
   });
 
   Hooks.on("preUpdateActor", (actor, changes, options) => {
-    if (actor.type !== "character") return;
+    if (!isCharacter(actor)) return;
     if (foundry.utils.getProperty(changes, "system.life.value") === undefined) return;
     options.dbuWasDefeated = actor.system.defeated;
     // Will to Survive (Damage & Recovery): "If you are Defeated and one of you or your Ally's effects causes you to regain Life
@@ -1130,7 +1131,7 @@ export function registerDefeatHooks() {
   // Vampire (5): "If you would regain Life Points, except through a Surge, increase the amount of Life Points regained by your
   // Surgency" - asked of whoever plays them, by the client that wrote it, once a Round; taken, as much more.
   Hooks.on("updateActor", async (actor, changes, options, userId) => {
-    if ((actor.type !== "character") || (userId !== game.user.id) || options.dbuSurge || options.dbuVampire) return;
+    if ((!isCharacter(actor)) || (userId !== game.user.id) || options.dbuSurge || options.dbuVampire) return;
     if ((options.dbuLifeBefore === undefined) || !game.combat?.started) return;
     if (actor.system.effects?.slots?.["vampire.feed"] !== true) return;
     const now = Number(actor.system.life?.value) || 0;
@@ -1149,7 +1150,7 @@ export function registerDefeatHooks() {
   // Switch to a Hero's Avatar: "Your Avatar shares the current value of their Life Points, Ki Points, and Capacity with you (and
   // vice-versa)" - each written to the other, by the GM.
   Hooks.on("updateActor", async (actor, changes, options) => {
-    if ((actor.type !== "character") || options.dbuMirror || !game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    if ((!isCharacter(actor)) || options.dbuMirror || !game.users.activeGM || (game.users.activeGM !== game.user)) return;
     const paths = ["system.life.value", "system.ki.value", "system.capacity.spent"].filter(path => foundry.utils.getProperty(changes, path) !== undefined);
     if (!paths.length) return;
     const { heroAvatarOf } = await import("./chat.mjs");
@@ -1163,7 +1164,7 @@ export function registerDefeatHooks() {
   });
 
   Hooks.on("updateActor", async (actor, changes, options) => {
-    if (actor.type !== "character") return;
+    if (!isCharacter(actor)) return;
     if (options.dbuWasDefeated === undefined) return;
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 

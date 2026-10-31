@@ -5,6 +5,8 @@
 
     {{! Karma Points are spent during play and handed back between Encounters, so they
         need to be adjustable without opening anything. }}
+    {{! "Karma: Minions do not possess Karma Points" (Minion Rules). }}
+    {{#unless isMinion}}
     <div class="karma">
       <span class="karma-label" data-tooltip="Spent to change a roll, refuse a defeat, or wake an ally. You start an Encounter with two.">Karma Points</span>
       <button type="button" class="karma-step" data-action="stepKarma" data-step="-1"
@@ -13,6 +15,7 @@
       <button type="button" class="karma-step" data-action="stepKarma" data-step="1"
               data-tooltip="Regain one">+</button>
     </div>
+    {{/unless}}
     {{#if system.defeated}}
     <button type="button" class="dbu-clash-button" data-action="justTakeIt"
             data-tooltip="A Desperation Effect, 1 Karma, once a Combat Encounter: any amount of your Ki Points to an Ally of your choice.">Just Take It, But Finish Them Now!</button>
@@ -27,13 +30,7 @@
       </select>
     </div>
 
-    {{! A Minion is a lesser opponent: fewer Actions are demanded of them by Compelled,
-        and several rules read this rather than the character's numbers. }}
-    <label class="bio-toggle"
-           data-tooltip="A lesser opponent. Several rules ask less of a Minion than of a full Character.">
-      <input type="checkbox" name="system.minion" {{#if system.minion}}checked{{/if}}/>
-      Minion
-    </label>
+    {{! Minion is an Actor type of its own now (the user's) - no checkbox. }}
   </section>
 
   {{editor system.biography target="system.biography" button=true editable=editable engine="prosemirror"}}

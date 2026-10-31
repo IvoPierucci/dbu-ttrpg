@@ -9,6 +9,8 @@
  * (use-maneuver.mjs useManeuver). The Prerequisites of a Unique Ability are the table's, as everywhere.
  */
 
+import { isCharacter } from "./actor-types.mjs";
+
 const SCOPE = "dbu-ttrpg";
 
 /** Whose a copy is, and which kind: `{ from, fromUuid, kind: "unique" | "technique" }` - or null. */
@@ -24,7 +26,7 @@ export function donorsOf(talent) {
 /** Which characters are the Donors: a list of the world's, those already picked ticked - then their copies made again. */
 export async function chooseDonors(actor, talent) {
   const picked = new Set(talent.flags?.[SCOPE]?.donors ?? []);
-  const others = Array.from(game.actors ?? []).filter(other => (other.type === "character") && (other.id !== actor.id))
+  const others = Array.from(game.actors ?? []).filter(other => (isCharacter(other)) && (other.id !== actor.id))
     .sort((a, b) => a.name.localeCompare(b.name));
   if (!others.length) return ui.notifications.warn("There is no other character in the world to be a Genetic Donor.");
   const escape = Handlebars.escapeExpression;

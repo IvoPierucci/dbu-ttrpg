@@ -16,6 +16,7 @@
  */
 
 import { areAllies } from "./allies.mjs";
+import { isCharacter } from "./actor-types.mjs";
 import {
   getManeuver, maneuverKiCost, maneuverUsesLeft, recordManeuverUse, spendManeuverCost, squaresAway,
   whyNotAnotherInstant
@@ -109,7 +110,7 @@ export function unitedPartners(actor, name, pool) {
   const wanted = String(name ?? "").trim().toLowerCase();
   const seen = new Set();
   return pool.filter(other => {
-    if (!other || (other.type !== "character") || (other.uuid === actor.uuid) || seen.has(other.uuid)) return false;
+    if (!other || (!isCharacter(other)) || (other.uuid === actor.uuid) || seen.has(other.uuid)) return false;
     seen.add(other.uuid);
     return Array.from(other.items ?? []).some(item => (item.type === "maneuver")
       && (item.system?.tags ?? []).includes("signature")
@@ -171,7 +172,7 @@ export function unitedJoiners(attack) {
   const already = new Set([attack.attackerUuid, ...(attack.united ?? []).map(entry => entry.uuid)]);
   const seen = new Set();
   return scenePool().filter(actor => {
-    if (!actor?.isOwner || (actor.type !== "character") || already.has(actor.uuid) || seen.has(actor.uuid)) return false;
+    if (!actor?.isOwner || (!isCharacter(actor)) || already.has(actor.uuid) || seen.has(actor.uuid)) return false;
     seen.add(actor.uuid);
     return true;
   });

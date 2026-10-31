@@ -2,8 +2,9 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
+import { isCharacter } from "../actor-types.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
-import { areAllies } from "../allies.mjs";
+import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
 import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
@@ -501,6 +502,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       addPerk: DBUCharacterSheet._onAddPerk,
       removePerk: DBUCharacterSheet._onRemovePerk,
       addAllies: DBUCharacterSheet._onAddAllies,
+      addMinions: DBUCharacterSheet._onAddMinions,
+      removeMinion: DBUCharacterSheet._onRemoveMinion,
+      setMaster: DBUCharacterSheet._onSetMaster,
+      clearMaster: DBUCharacterSheet._onClearMaster,
       removeAlly: DBUCharacterSheet._onRemoveAlly,
       toggleAllyName: DBUCharacterSheet._onToggleAllyName,
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
@@ -853,6 +858,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.progressionRows = this._prepareProgressionRows();
     context.characterPerks = this.#prepareCharacterPerks();
     context.allies = this.#prepareAllies();
+    // A Minion (the user's Actor type): its Master on Settings, no Karma; a Character's Minions under its Allies.
+    context.isMinion = this.actor.type === "minion";
+    context.minionsList = context.isMinion ? [] : this.#prepareMinions();
+    context.masterEntry = context.isMinion ? this.#prepareMaster() : null;
     // Handlebars has no literal-array helper, so the Attribute columns are supplied
     // here. The progression table's headings and cells both read from this, so they
     // cannot drift apart.
@@ -1731,7 +1740,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const lifeMax = Number(system.life?.max) || 0;
     context.steadfastBoxes = keys
       .map((key, index) => ({ key, index }))
-      .filter(({ key }) => DBUCharacterData.THRESHOLDS[key].counts)
+      // A Minion's only one is Injured (Minion Rules).
+      .filter(({ key }) => DBUCharacterData.THRESHOLDS[key].counts && (!system.minion || (key === "injured")))
       .map(({ key, index }) => {
         // Where it begins: at or below this much Life - the line of the Threshold above it.
         const above = DBUCharacterData.THRESHOLDS[keys[index - 1]]?.above ?? 0;
@@ -2865,6 +2875,92 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return [...own, ...theirs].sort((a, b) => (Number(Boolean(a.unknown)) - Number(Boolean(b.unknown))) || a.name.localeCompare(b.name));
   }
 
+  /**
+   * A Character's Minions (the user's): its own list's and every Minion naming it as Master - the second marked, and taken off
+   * from the Minion's sheet. Each by name, or "Unknown Minion" to a player who may not see its sheet.
+   */
+  #prepareMinions() {
+    const gm = game.user.isGM;
+    const own = new Set(this.actor.system.minions ?? []);
+    return minionsOf(this.actor).map(id => {
+      const actor = game.actors?.get(id);
+      const seen = gm || Boolean(actor?.testUserPermission(game.user, "OBSERVER"));
+      return { id, name: actor ? (seen ? actor.name : "Unknown Minion") : "(no longer in this world)", img: seen ? (actor?.img ?? "") : "",
+        unknown: !seen, missing: !actor, theirs: !own.has(id) };
+    }).sort((a, b) => (Number(a.unknown) - Number(b.unknown)) || a.name.localeCompare(b.name));
+  }
+
+  /** A Minion's one Master: named on its own sheet, or by the Character whose Minions list names it - marked, taken off there. */
+  #prepareMaster() {
+    const id = masterOf(this.actor);
+    if (!id) return null;
+    const actor = game.actors?.get(id);
+    const seen = game.user.isGM || Boolean(actor?.testUserPermission(game.user, "OBSERVER"));
+    return { id, name: actor ? (seen ? actor.name : "Unknown Master") : "(no longer in this world)", img: seen ? (actor?.img ?? "") : "",
+      unknown: !seen, theirs: (this.actor.system.master ?? "") !== id };
+  }
+
+  /**
+   * "Add Minions" (the user's): every Minion this user may see the sheet of with no Master but this one - a Minion's Master is
+   * changed by no list, only by an effect that says so - ticked in a window, added together. A Minion has no Minions.
+   */
+  static async _onAddMinions() {
+    if (this.actor.type === "minion") return ui.notifications.warn("A Minion cannot be the Master of a Minion.");
+    const listed = new Set(minionsOf(this.actor));
+    const offered = (game.actors?.contents ?? [])
+      .filter(actor => (actor.type === "minion") && !listed.has(actor.id) && !masterOf(actor)
+        && actor.testUserPermission(game.user, "OBSERVER"))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (!offered.length) return ui.notifications.info("No Minion without a Master whose sheet you can see is left to add.");
+    const escape = Handlebars.escapeExpression;
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Add Minions` },
+      content: `<div class="dbu-ally-pick">${offered.map(actor => `<div class="dbu-ally-pick-row">
+        <label class="dbu-respond-option"><input type="checkbox" name="${escape(actor.id)}"/><img src="${escape(actor.img ?? "")}" alt=""/>
+          <span class="dbu-respond-name">${escape(actor.name)}</span></label></div>`).join("")}</div>`,
+      buttons: [{ action: "add", label: "Add", default: true, callback: (event, button, dialog) =>
+        offered.filter(actor => dialog.element.querySelector(`input[name="${CSS.escape(actor.id)}"]`)?.checked).map(actor => actor.id) },
+      { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if (!Array.isArray(picked) || !picked.length) return;
+    return this.actor.update({ "system.minions": [...new Set([...(this.actor.system.minions ?? []), ...picked])] });
+  }
+
+  /** One taken off this Character's Minions list - one naming it from its own sheet is taken off there. */
+  static async _onRemoveMinion(event, target) {
+    const id = target?.dataset?.minionId ?? "";
+    return this.actor.update({ "system.minions": (this.actor.system.minions ?? []).filter(each => each !== id) });
+  }
+
+  /** A Minion's Master, picked: a Character this user may see the sheet of - none while it has one (an effect's to change). */
+  static async _onSetMaster() {
+    if (this.actor.type !== "minion") return;
+    if (masterOf(this.actor)) return ui.notifications.warn(`${this.actor.name} already has a Master.`);
+    const offered = (game.actors?.contents ?? [])
+      .filter(actor => (actor.type === "character") && actor.testUserPermission(game.user, "OBSERVER"))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (!offered.length) return ui.notifications.info("No Character whose sheet you can see to be the Master.");
+    const escape = Handlebars.escapeExpression;
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Master` },
+      content: `<div class="dbu-ally-pick">${offered.map((actor, at) => `<div class="dbu-ally-pick-row">
+        <label class="dbu-respond-option"><input type="radio" name="master" value="${escape(actor.id)}" ${at ? "" : "checked"}/>
+          <img src="${escape(actor.img ?? "")}" alt=""/><span class="dbu-respond-name">${escape(actor.name)}</span></label></div>`).join("")}</div>`,
+      buttons: [{ action: "set", label: "Set", default: true, callback: (event, button, dialog) =>
+        dialog.element.querySelector('input[name="master"]:checked')?.value ?? "" },
+      { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if ((typeof picked !== "string") || !picked) return;
+    return this.actor.update({ "system.master": picked });
+  }
+
+  /** A Minion's Master named on its own sheet, taken off. */
+  static async _onClearMaster() {
+    return this.actor.update({ "system.master": "" });
+  }
+
   /** Whether every player of this sheet may see a Character's sheet - its name shown to them by default as it is added. */
   #playersSee(other) {
     return game.users.filter(user => !user.isGM && this.actor.testUserPermission(user, "OWNER"))
@@ -2878,7 +2974,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onAddAllies() {
     const listed = new Set(this.actor.system.allies ?? []);
     const offered = (game.actors?.contents ?? [])
-      .filter(actor => (actor.type === "character") && (actor.id !== this.actor.id) && !listed.has(actor.id)
+      .filter(actor => (isCharacter(actor)) && (actor.id !== this.actor.id) && !listed.has(actor.id)
         && actor.testUserPermission(game.user, "OBSERVER"))
       .sort((a, b) => a.name.localeCompare(b.name));
     if (!offered.length) return ui.notifications.info("No other Character whose sheet you can see is left to add.");
@@ -4392,7 +4488,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async #askCharacter(name, holder,
                              { holderToo = false, title = "Assign", confirm = "Assign" } = {}) {
     const escape = Handlebars.escapeExpression;
-    const others = game.actors.filter(actor => (actor.type === "character")
+    const others = game.actors.filter(actor => (isCharacter(actor))
       && (actor.uuid !== holder.uuid));
     // The one holding it may be the one it is meant for - the Eyeglasses' own wearer.
     const offered = holderToo ? [holder, ...others] : others;

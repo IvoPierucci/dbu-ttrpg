@@ -8,6 +8,7 @@
  */
 
 import { areAllies } from "./allies.mjs";
+import { isCharacter } from "./actor-types.mjs";
 import { favoredChoiceOf } from "./data/item-maneuver.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import {
@@ -1403,7 +1404,7 @@ async function techniqueTableQuestions(actor, technique) {
     // An Opponent - not on either Allies list - with you in their Melee Range: not usable.
     const near = [...new Map((canvas?.tokens?.placeables ?? [])
       .map(token => token.actor)
-      .filter(other => other && (other.uuid !== actor.uuid) && (other.type === "character") && !areAllies(other, actor)
+      .filter(other => other && (other.uuid !== actor.uuid) && (isCharacter(other)) && !areAllies(other, actor)
         && (squaresAway(other, actor) !== null) && !whyNotWithinMelee(other, actor, ""))
       .map(other => [other.uuid, other])).values()];
     if (near.length) {
@@ -2034,7 +2035,7 @@ function magicTrickRanks(actor, maneuver) {
  */
 function trickOpponents(actor, aimed) {
   return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
-    .filter(token => token.actor && (token.actor.type === "character") && (token.actor.uuid !== actor.uuid)
+    .filter(token => token.actor && (isCharacter(token.actor)) && (token.actor.uuid !== actor.uuid)
       && (token.actor.uuid !== aimed?.uuid) && !areAllies(token.actor, actor) && !token.actor.system?.defeated
       && !atLongRange(actor, token.actor))
     .map(token => [token.actor.uuid, token.actor])).values()];
@@ -3700,7 +3701,7 @@ async function askHeal(actor, maneuver) {
   const pool = zone ? [...new Map((game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor))
-    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid))
     .map(other => [other.uuid, other])).values()] : [];
   if (!targeted && !pool.length) {
     ui.notifications.warn(`${maneuver.name}: target the Character to heal first.`);
@@ -3838,7 +3839,7 @@ async function askIllusion(actor, maneuver) {
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor);
   // "Your Opponents in" it: your Allies left out.
-  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid)
+  const others = [...new Map(pool.filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid)
     && !areAllies(other, actor)).map(other => [other.uuid, other])).values()];
   if (!others.length) {
     ui.notifications.warn(`${maneuver.name}: nobody to deceive${game.combat?.started ? "" : " - target them first"}.`);
@@ -4090,7 +4091,7 @@ async function askMeteor(actor, maneuver) {
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor);
-  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+  const others = [...new Map(pool.filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid))
     .map(other => [other.uuid, other])).values()];
   if (!others.length) {
     ui.notifications.warn(`${maneuver.name}: nobody for it to fall on${game.combat?.started ? "" : " - target them first"}.`);
@@ -4152,7 +4153,7 @@ async function askHide(actor, maneuver, { burst = false, area = "Minor Sphere", 
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor);
   // "Your Opponents" - but a burst's area, whoever is in it.
-  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid)
+  const others = [...new Map(pool.filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid)
     && (burst || !areAllies(other, actor))).map(other => [other.uuid, other])).values()];
   if (!others.length) {
     ui.notifications.warn(`${maneuver.name}: nobody to hide from${game.combat?.started ? "" : " - target them first"}.`);
@@ -4244,7 +4245,7 @@ async function askTalk(actor, target, maneuver) {
   const pool = game.combat?.started ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : (canvas?.tokens?.placeables ?? []).map(token => token.actor);
   // Whose Ally they were turned into: one of their Allies.
-  const turners = [...new Map(pool.filter(other => other && (other.type === "character")
+  const turners = [...new Map(pool.filter(other => other && (isCharacter(other))
     && (other.uuid !== actor.uuid) && (other.uuid !== target.uuid) && areAllies(other, target)).map(other => [other.uuid, other])).values()];
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
@@ -4322,7 +4323,7 @@ async function askShift(actor, maneuver) {
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
     : Array.from(game.user.targets ?? []).map(token => token.actor);
-  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+  const others = [...new Map(pool.filter(other => other && (isCharacter(other)) && (other.uuid !== actor.uuid))
     .map(other => [other.uuid, other])).values()];
   const rows = others.map(other => {
     const near = (squaresAway(actor, other) !== null) && !whyNotWithinMelee(actor, other, "");
