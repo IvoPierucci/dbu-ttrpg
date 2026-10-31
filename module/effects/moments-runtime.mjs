@@ -422,6 +422,7 @@ async function runVerb(actor, call, context) {
     case "namekianTechnique": return (await import("../chat.mjs")).namekianTechnique(actor);
     case "studyCharacter": return (await import("../chat.mjs")).studyCharacter(actor);
     case "spectatorCheer": return (await import("../chat.mjs")).spectatorCheer(actor);
+    case "commandMinions": return (await import("../chat.mjs")).commandMinions(actor);
     case "spectatorLeft": return (await import("../chat.mjs")).spectatorLeft(actor);
     case "motivatingPerformance": return (await import("../chat.mjs")).motivatingPerformance(actor);
     case "motivatedLeft": return (await import("../chat.mjs")).motivatedLeft(actor);

@@ -1,4 +1,5 @@
 import { areAllies } from "./allies.mjs";
+import { commandedNow } from "./actor-types.mjs";
 import { guidanceRangeGap } from "./guidance.mjs";
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { getTrait, printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
@@ -3915,6 +3916,20 @@ function profileOptionCost(maneuver, profileId, actor) {
  *
  * @returns {null|string} null if one may be made, otherwise why not
  */
+/**
+ * Why a Minion may not make this Attacking Maneuver (the rulebook's Minion Rules), in a Combat Encounter: Minion Acts - "cannot
+ * use Attacking Maneuvers unless they have access to the Act Phase of their Turn" - and Single Attack - "cannot use more than
+ * one Attacking Maneuver during each Combat Round".
+ *
+ * @returns {null|string} null if it may, otherwise why not
+ */
+export function whyNotMinionAttack(actor, maneuver) {
+  if ((actor?.type !== "minion") || !maneuver?.attacking || !globalThis.game?.combat?.started) return null;
+  if (!commandedNow(actor)) return `${actor.name} is a Minion: no Attacking Maneuver without its Act Phase - its Master's Command.`;
+  if ((Number(actor.system?.attacksThisRound) || 0) >= 1) return `${actor.name} is a Minion: one Attacking Maneuver a Combat Round.`;
+  return null;
+}
+
 export function whyNotAnotherAbsolute(actor, maneuver) {
   if (!maneuver?.absolute || !maneuver?.attacking) return null;
 

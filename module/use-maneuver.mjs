@@ -37,7 +37,7 @@ import {
   paidSince,
   godStrikeCost,
   squaresAway,
-  whyNotAnotherAbsolute,
+  whyNotAnotherAbsolute, whyNotMinionAttack,
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
@@ -396,7 +396,9 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
 
   const cap = Math.max(0, Math.min(
     actionsSpent * 2 * might * (close ? 2 : 1),
-    actor.system.ki.value
+    actor.system.ki.value,
+    // Empower (Minion Rules): "Minions cannot transfer more than 1/5 of their Ki Points through the Empower Maneuver."
+    actor.system.minion ? Math.floor((Number(actor.system.ki.value) || 0) / 5) : Infinity
   ));
 
   // Full Empowerment: "if you are not a Minion, you can choose to reduce your Capacity to 0 and gain a stack of the Fatigued
@@ -6206,6 +6208,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const noMoreAbsolute = whyNotAnotherAbsolute(actor, maneuver);
     if (noMoreAbsolute) {
       ui.notifications.warn(noMoreAbsolute);
+      return false;
+    }
+
+    // Minion Acts and Single Attack (Minion Rules): its Master's Command first, and one a Round.
+    const minionHeld = whyNotMinionAttack(actor, maneuver);
+    if (minionHeld) {
+      ui.notifications.warn(minionHeld);
       return false;
     }
 

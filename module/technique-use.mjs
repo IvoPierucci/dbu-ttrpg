@@ -57,6 +57,9 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
   const delayed = actor.items?.get?.(technique.itemId)?.system?.signature?.delayed;
   if (delayed?.messageId) return `${name}'s Imminent has not gone off yet.`;
 
+  // Ultimates (Minion Rules): "Minions cannot use Ultimate Signature Techniques."
+  if ((technique.ultimate || ascended) && actor.system?.minion) return `${actor.name} is a Minion: no Ultimate Signature Technique.`;
+
   // Ultimates: "once per each Combat Encounter ... and only up to 3 ... during the entire Combat
   // Encounter". An Ascended Super counts as one.
   if (technique.ultimate || ascended) {

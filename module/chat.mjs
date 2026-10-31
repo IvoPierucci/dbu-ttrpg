@@ -16,7 +16,7 @@ import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spen
 import { activeBuddy, activeBuddies, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
-import { areAllies } from "./allies.mjs";
+import { areAllies, minionsOf } from "./allies.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
@@ -15905,6 +15905,52 @@ export async function desperateRally(actor) {
  * the Spectator State (whichever occurs first)." Which Ally asked; Cheered on them - its stacks your base Tier - on your
  * clock, and taken off with the State (spectatorLeft).
  */
+/**
+ * Command: "Target a number of your Minions up to the number of Standard Actions you possess. You lose those Actions, but those
+ * Minions gain access to their Act Phase (see: Follower, Minions) and 1 Counter Action." Your Minions not Defeated, ticked; as
+ * many Actions lost; each its Act Phase this Combat Round (maneuvers.mjs commandedNow) and a Counter Action more - held as a
+ * gained one is, gone as the Round turns over.
+ */
+export async function commandMinions(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (isMinion(actor)) {
+    ui.notifications.warn(`${actor.name} is a Minion: it has no Minions to Command.`);
+    return UNSPENT;
+  }
+  const yours = minionsOf(actor).map(id => game.actors?.get(id)).filter(minion => minion && !minion.system?.defeated);
+  if (!yours.length) {
+    ui.notifications.warn(`${actor.name} has no Minions to Command.`);
+    return UNSPENT;
+  }
+  const most = actionsLeft(actor, "standard");
+  if (most <= 0) {
+    ui.notifications.warn(`${actor.name} has no Standard Action left to Command with.`);
+    return UNSPENT;
+  }
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Command` },
+    content: `<p class="dbu-respond-hint">Up to ${most}: a Standard Action of yours each.</p>
+      <div class="dbu-ally-pick">${yours.map(minion => `<div class="dbu-ally-pick-row">
+        <label class="dbu-respond-option"><input type="checkbox" name="${escape(minion.id)}"/><img src="${escape(minion.img ?? "")}" alt=""/>
+          <span class="dbu-respond-name">${escape(minion.name)}</span></label></div>`).join("")}</div>`,
+    buttons: [{ action: "command", label: "Command", default: true, callback: (event, button, dialog) =>
+      yours.filter(minion => dialog.element.querySelector(`input[name="${CSS.escape(minion.id)}"]`)?.checked) },
+    { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!Array.isArray(picked) || !picked.length) return UNSPENT;
+  if (picked.length > most) {
+    ui.notifications.warn(`${actor.name} has ${most} Standard Action${(most === 1) ? "" : "s"} left: Command that many Minions at most.`);
+    return UNSPENT;
+  }
+  if (!await spendActions(actor, picked.length, "standard")) return UNSPENT;
+  for (const minion of picked) {
+    await requestActorUpdate(minion, { [`flags.${SCOPE}.commanded`]: roundKey(),
+      "system.actionsSpent.converted": (Number(minion.system?.actionsSpent?.converted) || 0) + 1 });
+  }
+}
+
 export async function spectatorCheer(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated);

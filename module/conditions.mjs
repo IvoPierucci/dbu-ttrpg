@@ -157,6 +157,13 @@ export function traitActive(actor, id) {
   }
 }
 
+/** Readied Minions (Minion Rules): "Minions cannot enter the Spectator Special State through any means." Said, and refused. */
+function neverEnters(actor, key) {
+  if (!actor?.system?.minion || (key !== "spectator")) return false;
+  ui.notifications?.warn(`${actor.name} is a Minion: it never enters the Spectator State.`);
+  return true;
+}
+
 /** Enter a State at a level, or leave it. */
 export async function setState(actor, key, level) {
   const definition = statesFor(actor).find(s => s.key === key);
@@ -166,6 +173,7 @@ export async function setState(actor, key, level) {
   }
 
   const wanted = Math.min(definition.levels, Math.max(0, Math.round(Number(level) || 0)));
+  if ((wanted > 0) && neverEnters(actor, key)) return false;
   const states = { ...actor.system.states };
 
   if (wanted <= 0) delete states[key];
@@ -205,6 +213,7 @@ export async function raiseState(actor, key, level = 1) {
     ui.notifications?.warn(`"${key}" is not a State this system knows.`);
     return 0;
   }
+  if (neverEnters(actor, key)) return 0;
   const inIt = (Number(actor.system.states?.[key]) || 0) > 0;
   const added = inIt ? 1 : Math.max(1, Math.round(Number(level) || 1));
   const sum = (inIt ? stateSumOf(actor, key) : 0) + added;

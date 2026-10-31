@@ -1,0 +1,28 @@
+id: command
+name: Command
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+source: Core Rule
+description: >
+  Control your Minions: as many as your Standard Actions, each one an Action of yours,
+  gain their Act Phase and a Counter Action.
+text: >
+  Command: Control your Minions!
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target a number of your Minions up to the number of Standard Actions you
+  possess. You lose those Actions, but those Minions gain access to their Act Phase
+  (see: Follower, Minions) and 1 Counter Action.
+
+---
+
+# Your Minions: your Settings tab's Minions list, and every Minion naming you its Master (allies.mjs minionsOf). Picked up to
+# the Standard Actions left; those Actions lost, and each picked Minion has its Act Phase this Combat Round - its Attacking
+# Maneuvers open, its turn not skipped (Follower) - and a Counter Action more (chat.mjs commandMinions).
+[on used]
+commandMinions();

@@ -132,6 +132,11 @@ export const VERBS = Object.freeze({
     doc: "Intelligent Fighter (2): a Character who attacked this Round picked - Studied till the end of the next (chat.mjs "
        + "studyCharacter)."
   },
+  commandMinions: {
+    args: [0, 0],
+    doc: "Command: Minions of yours picked, up to the Standard Actions left - those Actions lost, each Minion its Act Phase "
+       + "this Combat Round and a Counter Action more (chat.mjs commandMinions)."
+  },
   spectatorCheer: {
     args: [0, 0],
     doc: "Spectator (1): an Ally picked, their Combat Rolls 1(bT) till the start of your next turn (chat.mjs spectatorCheer)."

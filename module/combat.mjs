@@ -11,7 +11,7 @@
  */
 
 import { areAllies } from "./allies.mjs";
-import { isCharacter } from "./actor-types.mjs";
+import { commandedNow, isCharacter } from "./actor-types.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
@@ -621,6 +621,7 @@ export function registerCombatHooks() {
     // the Initiative Order used to be handed one, because this path checked nothing.
     const first = combat.combatant?.actor;
     if ((isCharacter(first)) && !await beginTurn(first)) return combat.nextTurn();
+    if (followerSkips(first)) return combat.nextTurn();
   });
 
   // Foundry has a hook of its own for this, and it says which way the round moved.
@@ -754,6 +755,7 @@ export function registerCombatHooks() {
     if ((isCharacter(arriving)) && !await beginTurn(arriving)) {
       return combat.nextTurn();
     }
+    if (followerSkips(arriving)) return combat.nextTurn();
   });
 
   Hooks.on("deleteCombat", async combat => {
@@ -770,6 +772,17 @@ export function registerCombatHooks() {
 
     await announceEncounterEnd(rounds);
   });
+}
+
+/**
+ * Follower (the rulebook's Minion Rules): "Minions skip the Act Phase of their Turn ... unless they have been targeted by the
+ * Command Maneuver by their Master." Its turn begun - the Effect Phase, what happens at its start - and, not Commanded this
+ * Round, ended there: the End Phase is the next turn's coming. Said to the table.
+ */
+function followerSkips(actor) {
+  if ((actor?.type !== "minion") || commandedNow(actor)) return false;
+  ui.notifications?.info(`${actor.name} is a Minion not Commanded this Round: its Act Phase is skipped.`);
+  return true;
 }
 
 /**

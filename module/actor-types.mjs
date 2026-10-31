@@ -17,3 +17,12 @@ export function isCharacter(actor) {
 export function isMinion(actor) {
   return actor?.type === "minion";
 }
+
+/**
+ * Whether a Minion has its Act Phase this Combat Round: "Minions skip the Act Phase of their Turn ... unless they have been
+ * targeted by the Command Maneuver by their Master" - the Round its Master's Command was for (chat.mjs commandMinions).
+ */
+export function commandedNow(actor) {
+  const now = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+  return actor?.getFlag?.("dbu-ttrpg", "commanded") === now;
+}
