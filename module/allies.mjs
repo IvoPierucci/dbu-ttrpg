@@ -23,14 +23,32 @@ export function listedAllies(who) {
 /**
  * Whether the two are Allies: two Characters, not one, either named on the other's list - or a Minion and its Master. But a
  * Duplicate (Minion Rules): "While Minions are usually treated as Allies, a Duplicate is not considered their Master's Ally nor
- * vice-versa" - whatever a list says.
+ * vice-versa" - whatever a list says. And a Minion has its Master's Allies for its own (the user's default), read as they stand:
+ * their Master's listed Allies and other Minions, and those Allies' Minions - never, for a Duplicate, that Master.
  */
 export function areAllies(one, other) {
+  if (directAllies(one, other)) return true;
   const a = allyKey(one);
   const b = allyKey(other);
-  if (!a || !b || (a === b)) return false;
+  if (!a || !b || (a === b) || masterPair(one, other)) return false;
+  const masterFor = who => (masterOf(who) ? (globalThis.game?.actors?.get?.(masterOf(who)) ?? null) : null);
+  const mine = masterFor(one);
+  const theirs = masterFor(other);
+  return Boolean((mine && directAllies(mine, other)) || (theirs && directAllies(one, theirs))
+    || (mine && theirs && directAllies(mine, theirs)));
+}
+
+/** A Duplicate and its own Master, either way round - never Allies. */
+function masterPair(one, other) {
   const duplicate = who => (actorOf(who)?.type === "minion") && Boolean(actorOf(who)?.system?.duplicate);
-  if ((duplicate(one) && (masterOf(one) === b)) || (duplicate(other) && (masterOf(other) === a))) return false;
+  return (duplicate(one) && (masterOf(one) === allyKey(other))) || (duplicate(other) && (masterOf(other) === allyKey(one)));
+}
+
+/** Allies by themselves: either named on the other's list, or a Minion and its Master - a Duplicate and its own not. */
+function directAllies(one, other) {
+  const a = allyKey(one);
+  const b = allyKey(other);
+  if (!a || !b || (a === b) || masterPair(one, other)) return false;
   return listedAllies(one).includes(b) || listedAllies(other).includes(a)
     || (masterOf(one) === b) || (masterOf(other) === a);
 }
