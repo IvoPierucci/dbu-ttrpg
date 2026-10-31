@@ -2882,8 +2882,28 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const theirs = (game.actors?.contents ?? [])
       .filter(actor => (actor.id !== this.actor.id) && !listed.has(actor.id) && (actor.system?.allies ?? []).includes(this.actor.id))
       .map(actor => ({ id: actor.id, ...shown(actor, !actor.testUserPermission(game.user, "OBSERVER")), missing: false, theirs: true }));
+    // And the Allies no list names (allies.mjs): a Minion's from its Master, and an Ally's Minions - shown, not taken off here.
+    // Its own Master and its own Minions are on their own panel.
+    const named = new Set([...listed, ...theirs.map(entry => entry.id)]);
+    const master = masterOf(this.actor);
+    const ownMinions = new Set(minionsOf(this.actor));
+    const inherited = (game.actors?.contents ?? [])
+      .filter(actor => (actor.id !== this.actor.id) && !named.has(actor.id) && (actor.id !== master) && !ownMinions.has(actor.id)
+        && areAllies(this.actor, actor))
+      .map(actor => ({ id: actor.id, ...shown(actor, !actor.testUserPermission(game.user, "OBSERVER")), missing: false, theirs: true,
+        inherited: true, ...DBUCharacterSheet.#inheritedNote(actor, master) }));
     // The unknown last, each alike.
-    return [...own, ...theirs].sort((a, b) => (Number(Boolean(a.unknown)) - Number(Boolean(b.unknown))) || a.name.localeCompare(b.name));
+    return [...own, ...theirs, ...inherited].sort((a, b) => (Number(Boolean(a.unknown)) - Number(Boolean(b.unknown))) || a.name.localeCompare(b.name));
+  }
+
+  /** Why an Ally no list names is one: their Master's Minion, their Master's Ally, or an Ally's Minion - with what changes it. */
+  static #inheritedNote(actor, master) {
+    const theirMaster = masterOf(actor);
+    if (master && (theirMaster === master)) {
+      return { note: "Master's Minion", why: "A Minion of the same Master - an Ally while both are theirs" };
+    }
+    if (theirMaster) return { note: "an Ally's Minion", why: "A Minion of an Ally - their Allies are its own" };
+    return { note: "Master's Ally", why: "Its Master's Ally - its own while it is theirs" };
   }
 
   /**
