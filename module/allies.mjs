@@ -71,12 +71,12 @@ export function areOpponents(one, other) {
  * Whether an Ally of theirs, not Defeated, stands on a Square adjacent to them - by their tokens on the scene (Difference in Shell's "while
  * you have an adjacent Ally"). Nobody off a scene.
  */
-export function besideAnAlly(who) {
+export function besideAnAlly(who, rook = true) {
   const actor = actorOf(who);
   if (!actor) return false;
   // Caste Combat's Rook: "You can treat your Opponents as if they were your Allies for the effects of any Arlian Racial Traits" - every
-  // reader of this is one.
-  const anyone = opponentsCountAsAllies(actor);
+  // Arlian reader of this is one; the others (Petite Genius's) pass `rook` false.
+  const anyone = rook && opponentsCountAsAllies(actor);
   return (globalThis.canvas?.tokens?.placeables ?? []).some(token => {
     const other = token.actor;
     if (!other || (other.uuid === actor.uuid) || other.system?.defeated || (!anyone && !areAllies(other, actor))) return false;

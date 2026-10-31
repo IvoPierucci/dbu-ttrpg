@@ -571,8 +571,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "alliesStanding", "alliesAllDefeated",
   // The Attacking Maneuver that hit made through the Basic Attack Maneuver (Ferocious Assault's).
   "hitThroughBasicAttack",
-  // The Ally knocked through adjacent to you (Pieces of the Hive's); an Ally adjacent to you (Difference in Shell's).
-  "knockedBeside", "allyBeside",
+  // The Ally knocked through adjacent to you (Pieces of the Hive's); an Ally adjacent to you (Difference in Shell's); the same with
+  // no Rook (Petite Genius's).
+  "knockedBeside", "allyBeside", "allyAdjacent",
   // The Attacking Maneuver dodged an Opponent's (Caste Combat's Knight).
   "dodgedOpponent",
   // An Ally, not a Minion, within your Area of Rule (Afterlife Officials'); any Ally (Skilled Ogre's).

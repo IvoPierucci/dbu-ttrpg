@@ -778,6 +778,7 @@ async function runVerb(actor, call, context) {
     case "namelessStrike": return (await import("../chat.mjs")).namelessStrike(actor);
     case "recoloredSurge": return (await import("../chat.mjs")).recoloredSurge(actor, String(args[0] ?? "healing"));
     case "gripBomb": return (await import("../chat.mjs")).gripBomb(actor);
+    case "maneuverOutOfSequence": return (await import("../chat.mjs")).maneuverOutOfSequence(actor, String(args[0] ?? ""));
     case "grappleStrike": return (await import("../chat.mjs")).grappleStrike(actor);
     case "nearestStrike": return (await import("../chat.mjs")).nearestStrike(actor);
     case "guardRobot": return (await import("../chat.mjs")).guardRobot(actor);

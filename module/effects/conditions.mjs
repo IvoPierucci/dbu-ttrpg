@@ -596,6 +596,9 @@ const PREDICATES = {
   /** An Ally of yours, not Defeated, on a Square adjacent to you - Difference in Shell's "while you have an adjacent Ally". */
   allyBeside: scope => besideAnAlly(scope.data?.parent),
 
+  /** The same, an Ally only - Petite Genius's "While an Ally is on an adjacent Square", not an Arlian Racial Trait's, so no Rook. */
+  allyAdjacent: scope => besideAnAlly(scope.data?.parent, false),
+
   /** Pieces of the Hive (1): the Ally knocked through (`knockedUuid`) on a Square adjacent to you. */
   knockedBeside: scope => besideChosen(scope.data?.parent, globalThis.fromUuidSync?.(scope.context?.knockedUuid ?? "")),
 

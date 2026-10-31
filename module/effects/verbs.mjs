@@ -495,6 +495,11 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "Gold Kinkanman (healing), Silver Ginnanman (ki): an Ally's Surge out of sequence, 2x(bT) more (chat.mjs recoloredSurge)."
   },
+  maneuverOutOfSequence: {
+    args: [1, 1],
+    names: [0],
+    doc: "A Maneuver of yours out of sequence, by its id - Petite Genius (3)'s Movement (chat.mjs maneuverOutOfSequence)."
+  },
   gripBomb: {
     args: [0, 0],
     doc: "Desperate Grip (3): the Signature Technique Maneuver out of sequence - the Saibaman Bomb (chat.mjs gripBomb)."

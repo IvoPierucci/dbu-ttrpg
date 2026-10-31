@@ -16,7 +16,7 @@ import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spen
 import { activeBuddy, activeBuddies, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
-import { areAllies, areOpponents, masterOf, minionsOf } from "./allies.mjs";
+import { adjacent, areAllies, areOpponents, masterOf, minionsOf } from "./allies.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
@@ -16879,6 +16879,12 @@ export async function starsFall(actor) {
 }
 
 /** One of the character's own Maneuvers, by its file's id, used out of sequence - Warm Up (2)'s. */
+/** A Maneuver of theirs out of sequence, by its id - Petite Genius (3)'s Movement. Unspent where none is made. */
+export async function maneuverOutOfSequence(actor, id) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  return (await ownOutOfSequence(actor, id)) ? undefined : UNSPENT;
+}
+
 async function ownOutOfSequence(actor, id) {
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
   const own = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === id));
@@ -22641,6 +22647,55 @@ function humanShieldButtons(message, container, attack) {
       await postGrappleCheck(actor, held, { maneuverName: "Human Shield", kind: "shield",
         reason: `${actor.name} pulls ${held.name} into the way of ${attack.maneuverName}`,
         shield: { messageId: message.id } });
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Petite Genius (2): "If you are targeted by an Attacking Maneuver that does not possess an AoE, you may swap places with an adjacent
+ * willing Ally. That Ally becomes the target for that Attacking Maneuver instead." A button for each such target, before they have
+ * answered it and before it is rolled; the Ally - which, asked where several - asked whether willing; once a Round, spent on a yes.
+ */
+function petiteSwapButtons(message, container, attack) {
+  if (!attack || attack.result || attackArea(attack)) return;
+  for (const entry of attackTargets(attack)) {
+    const actor = fromUuidSync(entry.uuid);
+    if (!actor?.isOwner || (actor.system?.effects?.slots?.["petite.swap"] !== true) || defenceFor(attack, actor.uuid)
+      || (attack.ready ?? []).includes(actor.uuid)) continue;
+    const near = () => alliesOnScene(actor).filter(ally => !ally.system?.defeated && (ally.uuid !== attack.attackerUuid)
+      && !attackTargets(attack).some(other => other.uuid === ally.uuid) && adjacent(actor, ally));
+    if (!near().length) continue;
+    const used = actor.getFlag?.(SCOPE, "petiteSwapRound") === roundKey();
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = "Petite Genius - swap";
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Round." : "Swap places with an adjacent willing Ally: they are its target instead (1/Round)";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const allies = near();
+      const chosen = (allies.length === 1) ? allies[0].uuid
+        : await pick("Petite Genius", "Swap places with whom?", allies.map(ally => ({ action: ally.uuid, label: ally.name })));
+      const ally = chosen ? fromUuidSync(chosen) : null;
+      if (!ally) return void (button.disabled = false);
+      const willing = await askPlayerChoice(ally, `${ally.name}: swap places with ${actor.name} and take ${attack.maneuverName}?`,
+        [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]);
+      if (willing !== "yes") {
+        button.disabled = false;
+        return settledNote(message, `${ally.name} does not take ${actor.name}'s place.`);
+      }
+      const now = message.getFlag(SCOPE, ATTACK_FLAG);
+      if (!now || now.result || (actor.getFlag?.(SCOPE, "petiteSwapRound") === roundKey())) return;
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.petiteSwapRound`]: roundKey() });
+      await requestSwap(actor.uuid, ally.uuid);
+      const swap = own => (own.uuid === actor.uuid) ? { ...own, uuid: ally.uuid, name: ally.name } : own;
+      requestEdit(message, { type: "attack", attack: { ...now, targets: attackTargets(now).map(swap),
+        ...((now.targetUuid === actor.uuid) ? { targetUuid: ally.uuid, targetName: ally.name } : {}),
+        defences: (now.defences ?? []).filter(own => own.uuid !== actor.uuid),
+        ready: (now.ready ?? []).filter(uuid => uuid !== actor.uuid) } });
+      await settledNote(message, `${ally.name} swaps places with ${actor.name} and takes ${now.maneuverName} instead.`);
     });
     container.append(button);
   }
@@ -36727,6 +36782,7 @@ function renderAttack(message, html) {
   suplexButton(message, container, attack);
   // Human Shield (2): targeted while holding someone - them in your place, a Grapple Check first.
   humanShieldButtons(message, container, attack);
+  petiteSwapButtons(message, container, attack);
   // Tremendous Warrior (2): a miss at one Punching Down would have reached - its dice anyway.
   tremendousButtons(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.

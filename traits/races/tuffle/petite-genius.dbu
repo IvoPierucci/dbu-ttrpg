@@ -1,0 +1,28 @@
+id: petite-genius
+name: Petite Genius
+order: 1
+category: body
+importance: primary
+description: >
+  Size doesn’t matter when it comes to the evolutionary arms race, and Tuffles use their vast intellect to survive instead of brute force.
+text: >
+  Petite Genius (Body): Size doesn’t matter when it comes to the evolutionary arms race, and Tuffles use their vast intellect to survive instead of brute force.
+  (1)-[Passive]: While an Ally is on an adjacent Square, increase your Defense Value by 1(bT) and your Grapple Checks as the Grappled by 2(bT).
+  (2)-[Triggered, 1/Round]: If you are targeted by an Attacking Maneuver that does not possess an AoE, you may swap places with an adjacent willing Ally. That Ally becomes the target for that Attacking Maneuver instead.
+  (3)-[Triggered/Start of Combat Round]: Use the Movement Maneuver as an Out-of-Sequence Maneuver.
+---
+
+[passive]
+# (1) An Ally adjacent - only an Ally, Caste Combat's Rook being for Arlian Racial Traits.
+if (allyAdjacent) {
+    defenseValue += 1(bT);
+    grapple.defending += 2(bT);
+}
+# (2) Targeted by an attack with no AoE: a button on its card before you answer it, once a Round - an adjacent Ally, asked
+# whether willing; yes, your places swapped and they its target instead (chat.mjs petiteSwapButtons).
+allow petite.swap;
+
+# (3) On the Round's card, never Automatic (it hands over an Out-of-Sequence Maneuver): the Movement out of sequence (chat.mjs
+# maneuverOutOfSequence).
+[triggered/start-of-round, outOfSequence, effect 3]
+maneuverOutOfSequence(movement);
