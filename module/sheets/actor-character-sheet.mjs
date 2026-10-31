@@ -111,6 +111,7 @@ import {
   racialAttributeChoices,
   racialSavingThrowChosen,
   racialSizes,
+  creationSizesOf,
   racialSkillRankCount,
   subraceName
 } from "../races.mjs";
@@ -1522,7 +1523,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Nor a value that is no Size at all: that too would leave the picker on its first option.
     const built = (read in DBUCharacterData.SIZES) ? read : DBUCharacterData.DEFAULT_SIZE;
     // A Minion Race's own Sizes instead (Minion Size) - "Creatures can have any Size Category".
-    const own = racialSizes(race, Object.keys(DBUCharacterData.SIZES));
+    // Or a Trait's - Adapted Saibaman's Tiny to Large.
+    const own = racialSizes(race, Object.keys(DBUCharacterData.SIZES), creationSizesOf(this.actor, getTrait));
     context.sizeOptions = Object.entries(DBUCharacterData.SIZES)
       .filter(([key, definition]) => (own ? own.includes(key) : definition.selectable) || (key === built))
       .map(([key, definition]) => ({

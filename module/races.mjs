@@ -37,6 +37,16 @@ export function racialSavingThrows(id, chosen = "") {
   return Array.isArray(save) ? save : [save];
 }
 
+/** The Size Categories a Trait an Actor holds lets them be built as - Adapted Saibaman's `creationSizes` - or null. */
+export function creationSizesOf(actor, getTrait) {
+  for (const item of Array.from(actor?.items ?? []).filter(each => each.type === "racial")) {
+    const listed = String(getTrait?.(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.creationSizes ?? "").split(",").map(each => each.trim().toLowerCase())
+      .filter(Boolean);
+    if (listed.length) return listed;
+  }
+  return null;
+}
+
 /** Whether the race leaves its focused Saving Throw to the player: "Any (select one)". */
 export function racialSavingThrowChosen(id) {
   return races.get(id)?.savingThrow === "any";
@@ -55,15 +65,17 @@ export function isMinionRace(id) {
  * are not bound by the usual selection of Size Categories (Small to Large) and each possess their own selection" - as a list,
  * or "any"; null for the usual.
  */
-export function racialSizes(id, order) {
+export function racialSizes(id, order, widened = null) {
+  // Or what a Trait held lets them be built as instead - Adapted Saibaman's "between Tiny and Large" (`creationSizes`).
+  if (Array.isArray(widened) && widened.length) return order.filter(key => widened.includes(key));
   const own = races.get(id)?.sizes;
   if (own === "any") return [...order];
   return Array.isArray(own) ? order.filter(key => own.includes(key)) : null;
 }
 
 /** The Size the race lets a character be built as: the one chosen where it may, else the nearest of its own - the smaller on a tie. */
-export function sizeForRace(id, size, order) {
-  const own = racialSizes(id, order);
+export function sizeForRace(id, size, order, widened = null) {
+  const own = racialSizes(id, order, widened);
   if (!own?.length || own.includes(size)) return size;
   const at = order.indexOf(size);
   return own.reduce((best, key) => (Math.abs(order.indexOf(key) - at) < Math.abs(order.indexOf(best) - at)) ? key : best);

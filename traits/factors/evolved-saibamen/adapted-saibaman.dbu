@@ -1,0 +1,30 @@
+id: adapted-saibaman
+name: Adapted Saibaman
+order: 1
+category: body
+# "[Seedling Biology]": it replaces that Primary Racial Trait - which, the table's.
+importance: primary
+race: saibaman
+# (1) Built as any Size from Tiny to Large instead of the Saibamen's Small - offered on the Progression tab (races.mjs creationSizesOf).
+creationSizes: tiny, small, medium, large
+# (2) Two Bestial Traits, each chosen as it is added - gone with it.
+grantsOther: bestial
+grantsOtherCount: 2
+description: >
+  Able to thrive in any environment, you’ve adapted to your new home, becoming something nearly unrecognizable.
+text: >
+  Adapted Saibaman (Body) [Seedling Biology]: Able to thrive in any environment, you’ve adapted to your new home, becoming something nearly unrecognizable.
+  (1)-[Passive]: At Character Creation, your Size Category can be anything between Tiny and Large.
+  (2)-[Passive]: Select and gain 2 Bestial Traits.
+  (3)-[Passive]: Increase your Racial Life Modifier by 2.
+  (4)-[Triggered/Start of Turn]: Regain Ki Points equal to x(bT) – where x is equal to your Racial Life Modifier (max. 7(bT)).
+
+---
+
+[passive]
+# (3)
+racialLifeModifier += 2;
+
+# (4) Your turn begins: Ki Points by your Racial Life Modifier, 7 at most, each (bT). Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 4]
+ki.value += min(max(racialLifeModifier, 0), 7) * 1(bT);

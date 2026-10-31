@@ -29,7 +29,8 @@ import {
   racialLifeModifier,
   racialSavingThrows,
   racialSkillRankCount,
-  sizeForRace
+  sizeForRace,
+  creationSizesOf
 } from "../races.mjs";
 
 /**
@@ -2244,7 +2245,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Two named - Gigantic Demon's Gigantic, Colossal Demon's Colossal "from Gigantic" - the larger.
     // Else the one chosen - within a Minion Race's own Sizes: "Saibamen are of the Small Size Category".
     const chosenSize = Object.keys(DBUCharacterData.SIZES).filter(key => this.effects?.slots?.[`size.base.${key}`] === true).pop()
-      ?? sizeForRace(this.race, this.size, sizeKeys);
+      ?? sizeForRace(this.race, this.size, sizeKeys, creationSizesOf(this.parent, getTrait));
     const builtAt = sizeKeys.indexOf(chosenSize);
     // Or a Size named outright by something worn - the Micro Band's "reduce your Size
     // Category to the Tiny or Nano Size Category" - where it is smaller than the one they

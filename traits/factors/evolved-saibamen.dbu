@@ -1,0 +1,9 @@
+id: evolved-saibamen
+name: Evolved Saibamen
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Trait: Adapted Saibaman 1.
+requirement: >
+  Saibamen
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Adapted to new and unusual environments with varying soil quality, you’ve sprouted as something new and wholly unusual.
