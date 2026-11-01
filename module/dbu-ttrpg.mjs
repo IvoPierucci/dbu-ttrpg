@@ -7,6 +7,7 @@ import DBURacialData from "./data/item-racial.mjs";
 import { registerRacialHooks } from "./racial.mjs";
 import { registerIntegratedHooks } from "./integrated.mjs";
 import { registerNaturalArmorHooks } from "./natural-armor.mjs";
+import { registerTokenMarks } from "./token-marks.mjs";
 import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
 import DBUManeuverData from "./data/item-maneuver.mjs";
 import DBUManeuverSheet from "./sheets/item-maneuver-sheet.mjs";
@@ -118,6 +119,8 @@ Hooks.once("init", () => {
   registerRacialHooks();
   registerIntegratedHooks();
   registerNaturalArmorHooks();
+  // A Duplicate Minion's token crossed by its gray "DUPLICATE" band.
+  registerTokenMarks();
   registerBreathHooks();
   registerWornBreathHooks();
   registerConditionHooks();
