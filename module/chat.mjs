@@ -1039,6 +1039,9 @@ async function settleClashEffects(messageId, clash) {
   if (clash.negativeImpair && clash.result && !clash.negativeImpair.applied) {
     await settleNegativeImpair(message, clash);
   }
+  if (clash.sacrificialShaken && clash.result && !clash.sacrificialShaken.applied) {
+    await settleSacrificialShaken(message, clash);
+  }
   if (clash.nobleDragon && clash.result && !clash.nobleDragon.applied) {
     await settleNobleDragon(message, clash);
   }
@@ -16948,6 +16951,62 @@ export async function mindsetShed(actor) {
 }
 
 /**
+ * Sacrificial Minion (2): "target one of your Minions (except Special Minions). That Minion has their Life Points reduced to 0 and they are
+ * Defeated. Apply an effect of your choice" - a Morale Clash at each of your Opponents, Shaken for those lost; half its Life Points as they
+ * were back; or Combat Rolls 2(T) till the end of your turn, set, not added ("cannot stack"). Unspent where no Minion is picked.
+ */
+export async function sacrificeMinion(actor) {
+  const { UNSPENT, expiresAt } = await import("./effects/moments-runtime.mjs");
+  const yours = minionsOf(actor).map(id => game.actors?.get(id)).filter(minion => minion && typicalMinion(minion) && !minion.system?.defeated);
+  if (!yours.length) {
+    ui.notifications.warn(`${actor?.name} has no Minion to sacrifice - none that is not Special.`);
+    return UNSPENT;
+  }
+  const id = (yours.length === 1) ? yours[0].id
+    : await askPlayerChoice(actor, `${actor.name}: Sacrificial Minion`, yours.map(minion => ({ value: minion.id, label: minion.name })));
+  const minion = yours.find(each => each.id === id);
+  if (!minion) return UNSPENT;
+  const before = Math.max(0, Number(minion.system.life?.value) || 0);
+  const how = await askPlayerChoice(actor, `${actor.name}: Sacrificial Minion - ${minion.name}`, [
+    { value: "morale", label: "A Morale Clash against all of your Opponents - Shaken if you win" },
+    { value: "life", label: `${Math.floor(before / 2)} Life Points back (1/2 of its)` },
+    { value: "rolls", label: "Combat Rolls 2(T) until the end of your turn" }]);
+  if (!["morale", "life", "rolls"].includes(how)) return UNSPENT;
+  // "Reduced to 0 and they are Defeated" - at its least where that is below 0, so the Defeat holds.
+  await requestActorUpdate(minion, { "system.life.value": Math.min(0, Number(minion.system.life?.min) || 0) });
+  if (how === "life") {
+    const life = actor.system.life ?? {};
+    await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + Math.floor(before / 2)) });
+  }
+  if (how === "rolls") {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "sacrificial-mark", 2 * Math.max(1, Number(actor.system.tierOfPower) || 1));
+    await expiresAt(actor, "sacrificial-mark", "turn");
+  }
+  if (how === "morale") {
+    const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+      .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated && areOpponents(actor, token.actor))
+      .map(token => [token.actor.uuid, token.actor])).values()];
+    for (const other of opponents) {
+      await postSaveClash(actor, other, { maneuverName: "Sacrificial Minion", reason: `Win and ${other.name} is Shaken.`,
+        saves: ["morale"], defenderSaves: ["morale"], sacrificialShaken: { applied: false } });
+    }
+  }
+}
+
+/** Sacrificial Minion (2)'s Morale Clash, settled: won, the Shaken Combat Condition on them. */
+async function settleSacrificialShaken(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, sacrificialShaken: { ...clash.sacrificialShaken, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} is not shaken.`);
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(target, "shaken", 1) === false) return;
+  return settledNote(message, `${target.name} is Shaken.`);
+}
+
+/**
  * Minion Mark (1): "select one of your Minions that is not a Special Minion. That Minion becomes a 'Marked Minion'. A Marked Minion loses
  * 4(bT) Life Points at the start of each Combat Round, but their Combat Rolls are increased by 1(bT) - both use your Tier of Power for
  * calculation." Which, asked; its mark (marked-minion) with your base Tier as stacks - the Round's loss in combat.mjs. Unspent where none.
@@ -27201,6 +27260,13 @@ export async function postAttack(actor, target, maneuver,
       strikeExtra = [...strikeExtra, { label: "Mimicry of Bestial Movement", written: "+2(T)", value: 2 * mimicTier }];
     }
     await requestActorUpdate(actor, { [`flags.${SCOPE}.pseudoBeside`]: null });
+  }
+  // Sacrificial Minion (1): "If one of your Attacking Maneuvers includes one of your Minions in the list of targets, increase the Strike and
+  // Wound Rolls for that Attacking Maneuver by 1(T)."
+  if (!reflecting && (actor.system.effects?.slots?.["sacrificial.ownMinion"] === true)
+    && everyone.some(who => who && isMinion(who) && (masterOf(who) === actor.id))) {
+    strikeExtra = [...strikeExtra, { label: "Sacrificial Minion", written: "+1(T)", value: mimicTier }];
+    woundExtra = [...woundExtra, { label: "Sacrificial Minion", written: "+1(T)", value: mimicTier }];
   }
   // Raised Gravity (3): claimed this Round - your next attack, Strike 1(T); spent.
   if (!reflecting && (actor.getFlag?.(SCOPE, "gravityStrike") === roundKey())) {

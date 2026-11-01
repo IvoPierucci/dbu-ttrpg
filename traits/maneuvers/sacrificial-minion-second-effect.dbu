@@ -1,0 +1,24 @@
+id: sacrificial-minion-second-effect
+name: Sacrificial Minion
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: sacrificial-minion
+fromEffect: 2
+source: Core Rule
+description: >
+  Sacrificial Minion's second effect, as a Maneuver: one of your Minions, not Special, Defeated - a Morale Clash at your Opponents, half its Life Points, or 2(T) on your Combat Rolls.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver, target one of your Minions (except Special Minions). That Minion has their Life Points reduced to 0 and they are Defeated. Apply an effect of your choice from the list below:
+  * Make a Morale Clash against all of your Opponents. If you win, they gain the Shaken Combat Condition.
+  * Regain Life Points equal to 1/2 of that Minion’s Life Points immediately before you applied this effect.
+  * Increase your Combat Rolls by 2(T) until the end of your turn. This effect cannot stack.
+
+---
+
+# Which of your Minions, not Special, asked; its Life Points to 0, Defeated; then which effect, asked (chat.mjs sacrificeMinion).
+[on used]
+sacrificeMinion();

@@ -1,0 +1,16 @@
+id: sacrificial-mark
+name: Sacrificial Minion
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: Sacrificial Minion (2)'s third choice - its 2(T) as stacks, set (it cannot stack), till the end of your turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Sacrificial Minion: Combat Rolls higher by a point a stack, till the end of your turn.
+text: >
+  Sacrificial Minion (2): Increase your Combat Rolls by 2(T) until the end of your turn. This effect cannot stack.
+
+---
+
+[passive per stack]
+combatRolls += 1;

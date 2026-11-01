@@ -1,0 +1,22 @@
+id: sacrificial-minion
+name: Sacrificial Minion
+talentCategory: minion
+prerequisites: Minion Mark
+description: >
+  You are able to draw power from killing your Minions, either by draining their life essence, terrifying your opponents, or just generally making yourself feel big.
+text: >
+  Sacrificial Minion: You are able to draw power from killing your Minions, either by draining their life essence, terrifying your opponents, or just generally making yourself feel big.
+  –Prerequisites: Minion Mark
+  (1)-[Passive]: If one of your Attacking Maneuvers includes one of your Minions in the list of targets, increase the Strike and Wound Rolls for that Attacking Maneuver by 1(T).
+  (2)-[1/Round]: As an Instant Maneuver, target one of your Minions (except Special Minions). That Minion has their Life Points reduced to 0 and they are Defeated. Apply an effect of your choice from the list below:
+
+  * Make a Morale Clash against all of your Opponents. If you win, they gain the Shaken Combat Condition.
+  * Regain Life Points equal to 1/2 of that Minion’s Life Points immediately before you applied this effect.
+  * Increase your Combat Rolls by 2(T) until the end of your turn. This effect cannot stack.
+
+---
+
+[passive]
+# (1) One of your Minions among its targets: Strike and Wound 1(T) on it (chat.mjs postAttack).
+allow sacrificial.ownMinion;
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/sacrificial-minion-second-effect.dbu).
