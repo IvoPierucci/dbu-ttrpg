@@ -97,7 +97,7 @@
   <section class="panel ally-panel">
     <h3 class="panel-title">
       Minions
-      {{#if minionCaps}}<span class="panel-note" data-tooltip="Limited Control: one in a Combat Encounter (Minion Talents increase this number); outside of one, that plus your base Tier of Power">{{minionCaps.combat}} in combat &middot; {{#if minionCaps.unlimited}}no limit{{else}}{{minionCaps.outside}} at most{{/if}}</span>{{/if}}
+      {{#if minionCaps}}<span class="panel-note" data-tooltip="Limited Control: one in a Combat Encounter (Minion Talents increase this number); outside of one, that plus your base Tier of Power">Up to {{minionCaps.combat}} in combat &middot; {{#if minionCaps.unlimited}}no limit in all{{else}}{{minionCaps.outside}} in all{{/if}}</span>{{/if}}
     </h3>
     {{#if editable}}
     <button type="button" class="edit-toggle ally-add" data-action="addMinions">+ Add Minions</button>
