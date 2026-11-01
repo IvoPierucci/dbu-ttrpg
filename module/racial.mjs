@@ -20,6 +20,7 @@
  *   uniqueRestrictions: <ids>       Restrictions those come with - God of Time's Straining and Difficult Time Freeze
  *   grantsUniqueInstead: 20         one already had, another of that TP Cost or less chosen instead - Psychic's
  *   grantsTalent: <ids>             Talents it gives - kept if the Trait is lost ("you do not lose that Talent")
+ *   talentsGoWithIt: true           ...unless its text keeps them only "while you possess" it (From Goop (2)): gone with the Trait
  *   grantsOther: bestial            an Other Trait of that group chosen as it is added - `grantsOtherCount` of them, of
  *                                   `grantsOtherFrom` alone where it names some (Feline Build's two of four)
  *   dragonBall: true                Personified Dragon Ball's set - its name, Size Category (Nano to Small) and stars - asked
@@ -1715,6 +1716,14 @@ export function registerRacialHooks() {
     if (((item.type !== RACIAL_TYPE) && (item.type !== "talent")) || !item.parent || (userId !== game.user.id)) return;
     const given = Array.from(item.parent.items).filter(each => each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
       .map(each => each.id);
+    // A Talent kept only "while you possess this Factor Trait" (From Goop (2)'s, its `talentsGoWithIt`) - not the Racial Traits' usual
+    // "you do not lose that Talent": gone with it, unless another Item of that Trait is still had.
+    const sourceId = item.flags?.["dbu-ttrpg"]?.sourceId ?? "";
+    if ((item.type === RACIAL_TYPE) && (getTrait(sourceId)?.talentsGoWithIt === true)
+      && !Array.from(item.parent.items).some(each => (each.id !== item.id) && (each.flags?.["dbu-ttrpg"]?.sourceId === sourceId))) {
+      given.push(...Array.from(item.parent.items).filter(each => (each.type === "talent") && (each.flags?.["dbu-ttrpg"]?.fromTrait === sourceId))
+        .map(each => each.id));
+    }
     if (given.length) await item.parent.deleteEmbeddedDocuments("Item", given);
     await dropGrantedPerks(item.parent, item);
     // And the Qualities its Options put on another's Natural Armor - Difference in Shell's on the Insect Shell.

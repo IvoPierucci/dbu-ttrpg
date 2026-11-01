@@ -4,8 +4,10 @@ order: 1
 category: body
 # "[Majin Regeneration]": it replaces that Primary Racial Trait - which, the table's.
 importance: primary
-# (2) A Talent of the Minion Category, asked as it is gained - none offered while that Category has none built (Minions wait).
+# (2) A Talent of the Minion Category, asked as it is gained - shown and changeable on its Options tab.
 grantsTalentChoiceFrom: minion
+# "...while you possess this Factor Trait": that Talent goes with it, not kept as a Racial Trait's would be (the user's).
+talentsGoWithIt: true
 description: >
   Made entirely out of a magical, chewing gum-esque substance, you can heal and split yourself into multiple pieces with ease.
 text: >
