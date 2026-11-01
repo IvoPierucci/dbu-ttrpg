@@ -926,8 +926,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   if (techniques.length) await actor.createEmbeddedDocuments("Item", techniques);
   // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
-  // And a Quality on it in no Slot - Sturdy Shell's Dense Armor, Treacherous Spikes' Spiked.
-  if (trait.naturalArmor && trait.naturalArmorQuality) await platingQuality(actor, item, String(trait.naturalArmorQuality), true);
+  // And a Quality on it in no Slot - Sturdy Shell's Dense Armor, Treacherous Spikes' Spiked; Reinforced Suit's two.
+  if (trait.naturalArmor) for (const quality of listOf(trait.naturalArmorQuality)) await platingQuality(actor, item, quality, true);
   for (const option of chosenOptions(item)) await madeByOption(actor, item, option);
   if (trait.defaultCostume) await askDefaultCostume(actor);
   // An Other Trait it gives, chosen now - Bestial Evolution's "Select and gain a Bestial Trait of your choice".

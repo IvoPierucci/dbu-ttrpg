@@ -100,6 +100,23 @@ export async function breakNaturalArmor(actor) {
   return true;
 }
 
+/** Reinforced Suit (4): 1 of the equipped Natural Armor's Break Value spent - false where it has none left. */
+export async function spendNaturalArmorBreak(actor) {
+  const { craftedReading } = await import("./gear.mjs");
+  const item = Array.from(actor?.items ?? []).find(each => isNaturalArmor(each) && each.system?.equipped);
+  const left = item ? (Number(craftedReading(item.system.crafted, { getTrait, difficulties: {} })?.breakLeft) || 0) : 0;
+  if (!item || (left <= 0)) return false;
+  await item.update({ "system.crafted.breakLost": (Number(item.system.crafted?.breakLost) || 0) + 1 });
+  return true;
+}
+
+/** The equipped Natural Armor's Break Value left - 0 broken, or with none. */
+export async function naturalArmorBreakLeft(actor) {
+  const { craftedReading } = await import("./gear.mjs");
+  const item = Array.from(actor?.items ?? []).find(each => isNaturalArmor(each) && each.system?.equipped);
+  return item ? (Number(craftedReading(item.system.crafted, { getTrait, difficulties: {} })?.breakLeft) || 0) : 0;
+}
+
 /** Natural Armor its owner can mend: some Break Value lost, or broken. */
 export function naturalArmorMendable(actor) {
   return Array.from(actor?.items ?? []).some(item => isNaturalArmor(item)

@@ -4482,6 +4482,9 @@ export function maneuverUsesLeft(actor, maneuver) {
   // Mimicry Program (3): "You may use the Copy Being Unique Ability any number of times per Combat Encounter".
   if ((actor?.system?.effects?.slots?.["mimicry.copyAny"] === true)
     && (actor.items?.get?.(maneuver.itemId ?? "")?.system?.unique?.libraryId === "copy-being")) return Infinity;
+  // Nice Shooting (4): "You may use the Signature Technique Maneuver any number of times per Combat Round" - the Maneuver; each Technique's
+  // own limit still holds.
+  if ((maneuver.id === "signature-technique") && (actor?.system?.effects?.slots?.["niceShooting.unlimited"] === true)) return Infinity;
 
   const spent = (actor.system.usedManeuvers ?? []).filter(entry => usedIs(entry, maneuver)).length
     // And a Master's or a Minion's of theirs, where the Minion Rules share the limit.

@@ -20731,6 +20731,10 @@ async function attackDurationEnds(attack) {
   if ((Number(attack.zoonerExposed) || 0) > 0) {
     await markUntilNextTurn(attacker, attacker, "zooner-raised-mark", Number(attack.zoonerExposed), "start", "Zooner-Raised");
   }
+  // Nice Shooting (1): "gain a stack of Focus Fatigue after you conclude that Attacking Maneuver".
+  if ((Number(attack.niceFatigue) || 0) > 0) {
+    await setResource(attacker, "focusfatigue", (Number(attacker.system.resources?.focusfatigue?.stacks) || 0) + Number(attack.niceFatigue));
+  }
   // Saiyan-Raised (4): Superior "for the duration of this Attacking Maneuver" - Combat Cat (5)'s as well.
   for (const flag of ["saiyanSuperiorAttack", "combatCatSuperiorAttack"]) {
     if (!attacker.getFlag?.(SCOPE, flag)) continue;
@@ -26844,7 +26848,7 @@ export async function postAttack(actor, target, maneuver,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
                                    rapidFist = false, angryNatural = 0, profileCritical = false, adamantineHeal = false,
-                                   energyHoming = false, zoonerExposed = 0 },
+                                   energyHoming = false, zoonerExposed = 0, niceFatigue = 0 },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -26888,6 +26892,18 @@ export async function postAttack(actor, target, maneuver,
     await setResource(actor, "power", 0);
     const { gainCondition } = await import("./effects/moments-runtime.mjs");
     await gainCondition(actor, "fatigued", powerHeld);
+  }
+  // Reinforced Suit (4): "If you use an Attacking Maneuver, you may reduce your Suit's Break Value by 1 to apply an Energy Charge to that
+  // Attacking Maneuver" - asked while it has any, once a Round.
+  if (!reflecting && (actor.system.effects?.slots?.["suit.charge"] === true) && (actor.getFlag?.(SCOPE, "suitChargeRound") !== roundKey())) {
+    const natural = await import("./natural-armor.mjs");
+    if (((await natural.naturalArmorBreakLeft(actor)) > 0)
+      && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Reinforced Suit` },
+        content: "<p data-tooltip=\"Once a Round.\">An Energy Charge on it - 1 of your Suit's Break Value?</p>", rejectClose: false })
+      && await natural.spendNaturalArmorBreak(actor)) {
+      await actor.setFlag(SCOPE, "suitChargeRound", roundKey());
+      charges = (Number(charges) || 0) + 1;
+    }
   }
   // Fight against Power (3): an Energy Charge for every 2 stacks of Tension.
   if (tensionCharges && !reflecting) charges = (Number(charges) || 0) + (Number(tensionCharges) || 0);
@@ -27229,6 +27245,8 @@ export async function postAttack(actor, target, maneuver,
           // Zooner-Raised (3)'s Called Shot; the price of it and of (4), paid as it is done.
           ...(zoonerCalled ? { zoonerCalled: true } : {}),
           ...(zoonerPrice ? { zoonerExposed: zoonerPrice } : {}),
+          // Nice Shooting (1)'s Focus Fatigue, gained as it is done.
+          ...((!reflecting && (Number(niceFatigue) || 0)) ? { niceFatigue: Number(niceFatigue) } : {}),
           // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),

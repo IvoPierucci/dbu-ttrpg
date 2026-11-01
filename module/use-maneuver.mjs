@@ -1203,6 +1203,15 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Zooner-Raised");
     answers.zoonerExposed = (Number(declared.zoonerExposed) || 0) + 1;
   }
+  // Nice Shooting (1): "When you use a Signature Technique, you may gain a stack of Focus Fatigue after you conclude that Attacking
+  // Maneuver to apply an Energy Charge to that Attacking Maneuver" - asked each time; the stack as the attack is done (chat.mjs
+  // attackDurationEnds).
+  if ((actor.system.effects?.slots?.["niceShooting.charge"] === true)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Nice Shooting` },
+      content: "<p data-tooltip=\"Done, a stack of Focus Fatigue.\">An Energy Charge on it?</p>", rejectClose: false })) {
+    answers.earthlingCharge = [].concat(answers.earthlingCharge || [], "Nice Shooting");
+    answers.niceFatigue = (Number(declared.niceFatigue) || 0) + 1;
+  }
   // Technician (5): once an Encounter, while (4) is open this Round - "ignore the effects of all Disadvantages applied to that Signature
   // Technique ... you must trigger the 4th effect"; (4): "it gains an Energy Charge", asked, once a Round.
   const technicianCharge = (actor.system.effects?.slots?.["technician.charge"] === true)

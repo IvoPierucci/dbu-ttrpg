@@ -1,0 +1,31 @@
+id: reinforced-suit
+name: Reinforced Suit
+order: 1
+category: body
+importance: primary
+# (1) "At Character Creation, gain a 'Suit'. Your Suit is Natural Armor" - made with the Trait, gone with it.
+naturalArmor: Suit
+# (2) On it in no Quality Slot.
+naturalArmorQuality: joint-protection, spiked
+description: >
+  A sturdy exoskeletal armor encompasses your body, protecting you from damage.
+text: >
+  Reinforced Suit (Body): A sturdy exoskeletal armor encompasses your body, protecting you from damage.
+  (1)-[Passive, Ruling]: At Character Creation, gain a ‘Suit’. Your Suit is Natural Armor (see — Natural Armor).
+  (2)-[Passive]: Your Suit gains the Joint Protection and Spiked Qualities. These Qualities do not occupy any Quality Slots.
+  (3)-[Triggered, 1/Round]: If you use a Healing Surge, your Suit regains 1 Break Value. If your Suit was broken, it stops being broken (Break Value goes from 0 to 1).
+  (4)-[Triggered, 1/Round]: If you use an Attacking Maneuver, you may reduce your Suit’s Break Value by 1 to apply an Energy Charge to that Attacking Maneuver.
+---
+
+[passive]
+# (1), (2) Its header's `naturalArmor` and `naturalArmorQuality`: the Suit made on the Gear tab, Joint Protection and Spiked on it in no Slot.
+# (4) An Attacking Maneuver made with the Suit not broken: asked, once a Round - 1 of its Break Value for an Energy Charge (chat.mjs
+# postAttack, suitCharge).
+allow suit.charge;
+
+# (3) A Healing Surge about to be used - asked in its window while the Suit has Break Value to get back: 1 of it, and broken no more
+# (chat.mjs takeSurge, natural-armor.mjs repairNaturalArmor), as Insect Shell's. Automatic by default; set Triggered, ticked in the
+# Healing Surge's window.
+[triggered/healing-surge, toggle, 1/round, effect 3]
+requires platingMendable;
+plating.mend = true;

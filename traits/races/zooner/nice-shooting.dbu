@@ -1,0 +1,36 @@
+id: nice-shooting
+name: Nice Shooting
+order: 2
+category: mind
+importance: primary
+# (1) Focus Fatigue, its Resource - lost with the Encounter as every Resource is.
+resource: focusfatigue
+resourceLabel: Focus Fatigue
+resourceMax: 99
+description: >
+  With single-minded dedication, you unleash powerful blow after powerful blow, relying on speed and power to finish off opponents before they finish you.
+text: >
+  Nice Shooting (Mind): With single-minded dedication, you unleash powerful blow after powerful blow, relying on speed and power to finish off opponents before they finish you.
+  (1)-[Triggered, Resource]: When you use a Signature Technique, you may gain a stack of Focus Fatigue after you conclude that Attacking Maneuver to apply an Energy Charge to that Attacking Maneuver.
+  (2)-[Triggered, 1/Round]: If you Defeat an Opponent, remove all of your Focus Fatigue stacks.
+  (3)-[Passive]: Reduce your Awareness, Defense Value, and Soak Value by 1(bT) for every stack of Focus Fatigue you possess.
+  (4)-[Passive]: You may use the Signature Technique Maneuver any number of times per Combat Round.
+---
+
+[passive]
+# (1) A Signature Technique declared: asked - an Energy Charge on it, beside any other free one; the stack as the attack is done
+# (use-maneuver.mjs askTechniqueDeclaration, chat.mjs attackDurationEnds).
+allow niceShooting.charge;
+# (3)
+if (hasResource("focusfatigue")) {
+    awareness -= focusfatigue.stacks * 1(bT);
+    defenseValue -= focusfatigue.stacks * 1(bT);
+    soakValue -= focusfatigue.stacks * 1(bT);
+}
+# (4) No limit on the Signature Technique Maneuver (maneuvers.mjs maneuverUsesLeft) - each Technique's own still holds.
+allow niceShooting.unlimited;
+
+# (2) An Opponent Defeated, with Focus Fatigue. Automatic by default, its Triggered/Automatic button.
+[triggered/defeat-opponent, 1/round, effect 2]
+requires hasResource("focusfatigue");
+focusfatigue.stacks = 0;
