@@ -1,0 +1,21 @@
+id: minion-mark-first-effect
+name: Minion Mark
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: minion-mark
+fromEffect: 1
+source: Core Rule
+description: >
+  Minion Mark's first effect, as a Maneuver: one of your Minions, not Special, becomes a Marked Minion.
+text: >
+  (1)-[1/Round, Ruling]: As an Instant Maneuver, select one of your Minions that is not a Special Minion. That Minion becomes a ‘Marked Minion’. A Marked Minion loses 4(bT) Life Points at the start of each Combat Round, but their Combat Rolls are increased by 1(bT) – both use your Tier of Power for calculation.
+
+---
+
+# Which of your Minions, not Special and not Marked, asked - the mark with your base Tier as its stacks (chat.mjs markMinion).
+[on used]
+markMinion();

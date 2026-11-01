@@ -1,0 +1,17 @@
+id: marked-minion
+name: Marked Minion
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: Minion Mark (1)'s - its (bT), the Master's base Tier, as stacks. 4 Life Points a stack at the start of each Combat
+# Round (combat.mjs markedMinionsBleed); gone as the Combat Encounter ends.
+combatCondition: no
+source: Core Rule
+description: >
+  Marked Minion: Combat Rolls higher by a point a stack; 4 Life Points a stack lost as each Combat Round starts.
+text: >
+  Minion Mark (1): A Marked Minion loses 4(bT) Life Points at the start of each Combat Round, but their Combat Rolls are increased by 1(bT) – both use your Tier of Power for calculation.
+
+---
+
+[passive per stack]
+combatRolls += 1;

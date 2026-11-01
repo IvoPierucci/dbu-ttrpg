@@ -154,8 +154,8 @@ async function startRound(combat) {
     }
   }
 
-  // Recovery Periods, for the Round that ended - said on the Round's card.
-  const recovered = ((combat.round ?? 0) > 1) ? await recoveryPeriods(combat) : [];
+  // Recovery Periods, for the Round that ended - said on the Round's card; and Minion Mark's loss as this one starts.
+  const recovered = [...(((combat.round ?? 0) > 1) ? await recoveryPeriods(combat) : []), ...await markedMinionsBleed(combat)];
   const roundCard = await announce("start-of-round", {
     title: `Start of Combat Round ${combat.round}`,
     subjects: combatants(combat).map(actor => actor.uuid),
@@ -176,6 +176,20 @@ async function startRound(combat) {
  * regain those Life and Ki Points)." The Round that ended: each Master in it who did not Command (chat.mjs commandMinions), their
  * Minions in it not Defeated - one roll of the Master's Tier of Power in d8s. What happened, for the Round's card.
  */
+async function markedMinionsBleed(combat) {
+  // Minion Mark (1): "A Marked Minion loses 4(bT) Life Points at the start of each Combat Round" - the Master's base Tier, kept as the mark's
+  // stacks.
+  const told = [];
+  for (const minion of combatants(combat).filter(actor => !actor.system?.defeated)) {
+    const stacks = Number(minion.system?.conditions?.["marked-minion"]) || 0;
+    if (stacks <= 0) continue;
+    const { reduceLifePoints } = await import("./chat.mjs");
+    const { taken } = await reduceLifePoints(minion, 4 * stacks, { reason: "Minion Mark", own: true });
+    if (taken) told.push(`Minion Mark: ${minion.name} loses ${taken} Life Points.`);
+  }
+  return told;
+}
+
 async function recoveryPeriods(combat) {
   const ended = `${combat.id}:${(Number(combat.round) || 0) - 1}`;
   const here = combatants(combat);
@@ -969,6 +983,8 @@ export async function endEncounterFor(actor) {
   await (await import("./natural-armor.mjs")).repairNaturalArmor(actor);
   // Copy Being: "you stop being a Copy if ... the Combat Encounter ends".
   if ((Number(actor.system.conditions?.["being-a-copy"]) || 0) > 0) await (await import("./conditions.mjs")).setCondition(actor, "being-a-copy", 0);
+  // Minion Mark (1): a Marked Minion's mark, gone with the Encounter.
+  if ((Number(actor.system.conditions?.["marked-minion"]) || 0) > 0) await setCondition(actor, "marked-minion", 0);
   // A Frozen Turn still open - its last attack never finished: time runs again with the Encounter's end.
   if (actor.getFlag?.("dbu-ttrpg", "frozenTurn")) await (await import("./chat.mjs")).endFrozenTurn(actor);
   // Quick Learner: "At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access

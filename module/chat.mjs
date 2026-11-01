@@ -16948,6 +16948,28 @@ export async function mindsetShed(actor) {
 }
 
 /**
+ * Minion Mark (1): "select one of your Minions that is not a Special Minion. That Minion becomes a 'Marked Minion'. A Marked Minion loses
+ * 4(bT) Life Points at the start of each Combat Round, but their Combat Rolls are increased by 1(bT) - both use your Tier of Power for
+ * calculation." Which, asked; its mark (marked-minion) with your base Tier as stacks - the Round's loss in combat.mjs. Unspent where none.
+ */
+export async function markMinion(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const yours = minionsOf(actor).map(id => game.actors?.get(id))
+    .filter(minion => minion && typicalMinion(minion) && !minion.system?.defeated && !((Number(minion.system?.conditions?.["marked-minion"]) || 0) > 0));
+  if (!yours.length) {
+    ui.notifications.warn(`${actor?.name} has no Minion to Mark - none that is not Special and not Marked already.`);
+    return UNSPENT;
+  }
+  const id = (yours.length === 1) ? yours[0].id
+    : await askPlayerChoice(actor, `${actor.name}: Minion Mark`, yours.map(minion => ({ value: minion.id, label: minion.name })));
+  const minion = yours.find(each => each.id === id);
+  if (!minion) return UNSPENT;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(minion, "marked-minion", Math.max(1, Number(actor.system.baseTierOfPower) || 1));
+  ui.notifications.info(`${actor.name}: ${minion.name} is a Marked Minion.`);
+}
+
+/**
  * Minion Coordinator (2): "As an Instant Maneuver, select one of your Minions. That Minion enters the Superior State until the end of their
  * turn." Which, asked - its turn's end on its own clock: this one in its turn, the coming one otherwise. Unspent where none is picked.
  */
@@ -28044,6 +28066,16 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     && ((await askPlayerChoice(actor, `${actor.name}: Synchronized Combatants - ${allyActor.name}, your Partner`,
       [{ value: "yes", label: "Intervene without a Counter Action (1/Encounter)" }, { value: "no", label: "No" }])) === "yes");
   if (syncFree) await actor.setFlag(SCOPE, "syncInterveneEncounter", game.combat?.id ?? "none");
+  // Minion Mark (2): "Minions (except Special Minions) without any Counter Actions can use the Defense Wall option of the Intervene Maneuver
+  // if you are targeted by an Attacking Maneuver by spending 1/2 of their Life Points" - for their Master, its Defense Wall.
+  const markMaster = typicalMinion(actor) ? game.actors?.get(masterOf(actor)) : null;
+  const markWall = !protector && !refinedFree && !pacifistFree && !syncFree && (effect === "defenseWall") && Boolean(markMaster)
+    && (markMaster.uuid === allyActor.uuid) && (markMaster.system?.effects?.slots?.["minionMark.wall"] === true)
+    && ((Number(actor.system.actions?.counterLeft) || 0) <= 0);
+  if (markWall) {
+    const half = Math.floor((Number(actor.system.life?.value) || 0) / 2);
+    await reduceLifePoints(actor, half, { reason: "Minion Mark - a Defense Wall for its Master", own: true });
+  }
   // Dragon Lord's Fury: "If an Ally is hit by an Attacking Maneuver from a Studied Opponent, you may use the Intervene Maneuver
   // without spending a Counter Action" - asked, once a Round.
   const furyFree = !protector && !refinedFree && !pacifistFree && !syncFree && (actor.system?.effects?.slots?.["dragonLord.fury"] === true)
@@ -28054,7 +28086,7 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   if (furyFree) await actor.setFlag(SCOPE, "dragonFuryRound", roundKey());
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
-  if (!protector && !refinedFree && !pacifistFree && !syncFree && !furyFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!protector && !refinedFree && !pacifistFree && !syncFree && !furyFree && !markWall && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
   // Battle Goo (3): "if a Goop uses the Intervene Maneuver, they are destroyed after using the Maneuver" (combat.mjs).
   if (actor.getFlag?.(SCOPE, "minionKind") === "goop") await requestActorUpdate(actor, { [`flags.${SCOPE}.goopIntervened`]: true });

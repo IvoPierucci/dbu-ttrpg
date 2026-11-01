@@ -1,0 +1,22 @@
+id: minion-mark
+name: Minion Mark
+talentCategory: minion
+prerequisites: Master of Minions
+description: >
+  You have the ability to turn your subordinates’ very life essence into greater power, and they know to defend you in battle.
+text: >
+  Minion Mark: You have the ability to turn your subordinates’ very life essence into greater power, and they know to defend you in battle.
+  –Prerequisites: Master of Minions
+  (1)-[1/Round, Ruling]: As an Instant Maneuver, select one of your Minions that is not a Special Minion. That Minion becomes a ‘Marked Minion’. A Marked Minion loses 4(bT) Life Points at the start of each Combat Round, but their Combat Rolls are increased by 1(bT) – both use your Tier of Power for calculation.
+  (2)-[Passive]: Minions (except Special Minions) without any Counter Actions can use the Defense Wall option of the Intervene Maneuver if you are targeted by an Attacking Maneuver by spending 1/2 of their Life Points.
+  (3)-[Passive]: Increase your maximum number of Minions by 2.
+
+---
+
+[passive]
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/minion-mark-first-effect.dbu): the Marked Minion's mark, your base Tier as its stacks.
+# (2) One of your Minions, not Special, with no Counter Action: its Intervene for you as a Defense Wall, half its Life Points paid instead
+# (chat.mjs playIntervene).
+allow minionMark.wall;
+# (3)
+minions.combat += 2;

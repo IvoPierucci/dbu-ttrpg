@@ -500,6 +500,10 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "A Maneuver of yours out of sequence, by its id - Petite Genius (3)'s Movement (chat.mjs maneuverOutOfSequence)."
   },
+  markMinion: {
+    args: [0, 0],
+    doc: "Minion Mark (1): one of your Minions, not Special, asked - a Marked Minion, your base Tier its stacks (chat.mjs markMinion)."
+  },
   coordinateMinion: {
     args: [0, 0],
     doc: "Minion Coordinator (2): one of your Minions, asked - Superior till the end of its turn (chat.mjs coordinateMinion)."
