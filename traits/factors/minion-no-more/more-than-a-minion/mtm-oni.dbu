@@ -1,0 +1,18 @@
+id: mtm-oni
+name: Oni
+order: 5
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: oni
+description: >
+  While you have a stack of Power, increase the Strike and Dodge Rolls of all Allies within your Area of Rule by 1(T).
+text: >
+  Oni [Passive]: While you have a stack of Power, increase the Strike and Dodge Rolls of all Allies within your Area of Rule by 1(T).
+
+---
+
+[passive]
+# Read by each Ally within your Area of Rule while you have a stack of Power - your Tier, the best of those giving it (actor-character.mjs
+# allyStrikeDodge).
+allow moreThanMinion.oniRule;

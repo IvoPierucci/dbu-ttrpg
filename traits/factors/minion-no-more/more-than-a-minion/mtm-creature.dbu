@@ -1,0 +1,17 @@
+id: mtm-creature
+name: Creature
+order: 4
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: creature
+description: >
+  Increase your Surgency by 1/2 of your Agility Modifier or Tenacity Modifier (whichever is higher).
+text: >
+  Creature [Passive]: Increase your Surgency by 1/2 of your Agility Modifier or Tenacity Modifier (whichever is higher).
+
+---
+
+[passive]
+# Half, rounded down.
+surgency += floor(max(agility.mod, tenacity.mod) / 2);

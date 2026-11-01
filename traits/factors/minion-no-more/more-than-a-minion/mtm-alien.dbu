@@ -1,0 +1,17 @@
+id: mtm-alien
+name: Alien
+order: 1
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: alien
+description: >
+  Increase the amount of Technique Points you gain from Skill Improvement by 3, and increase the Strike Rolls of your Signature Techniques by 1(T).
+text: >
+  Alien [Passive]: Increase the amount of Technique Points you gain from Skill Improvement by 3, and increase the Strike Rolls of your Signature Techniques by 1(T).
+
+---
+
+[passive]
+techniquePoints.perSkillImprovement += 3;
+strike.signature += 1(T);

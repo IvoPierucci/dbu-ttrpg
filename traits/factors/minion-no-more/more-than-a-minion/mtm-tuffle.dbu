@@ -1,0 +1,18 @@
+id: mtm-tuffle
+name: Tuffle
+order: 8
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: tuffle
+description: >
+  Each time you gain a Skill Improvement by converting a Character Perk gained from your Power Levels, you gain 1 Attribute Point to spend on one of the following Attributes: Insight, Personality, or Scholarship.
+text: >
+  Tuffle [Passive]: Each time you gain a Skill Improvement by converting a Character Perk gained from your Power Levels, you gain 1 Attribute Point to spend on one of the following Attributes: Insight, Personality, or Scholarship.
+
+---
+
+[passive]
+# A Character Perk row of the Progression tab taken as a Skill Improvement: its point, Insight, Personality or Scholarship, chosen in the row
+# (actor-character-sheet.mjs) - counted in the Score while this is had (actor-character.mjs).
+allow moreThanMinion.tufflePoint;

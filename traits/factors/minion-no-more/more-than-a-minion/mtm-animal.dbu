@@ -1,0 +1,21 @@
+id: mtm-animal
+name: Animal
+order: 3
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: animal
+description: >
+  While you are below the Bruised Health Threshold, increase your Damage Reduction, Initiative Value, and Awareness by 1(T).
+text: >
+  Animal [Passive]: While you are below the Bruised Health Threshold, increase your Damage Reduction, Initiative Value, and Awareness by 1(T).
+
+---
+
+[passive]
+# Below Bruised: Injured or Critical.
+if (belowThreshold("bruised")) {
+    damageReduction += 1(T);
+    initiative += 1(T);
+    awareness += 1(T);
+}

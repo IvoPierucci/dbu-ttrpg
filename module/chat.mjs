@@ -16897,6 +16897,22 @@ export async function gravityMove(actor) {
   return (await useManeuver(actor, { ...movement, gravityMove: true }, { outOfSequence: true })) ? undefined : UNSPENT;
 }
 
+/**
+ * More than a Minion's Zooners: "If you knock an Opponent through a Health Threshold with one of your Attacking Maneuvers, you may remove a stack of
+ * Focus Fatigue and then use a Ki Surge as an Out-of-Sequence Maneuver." Unspent where it has none, or the Surge is not made.
+ */
+export async function zoonerKiSurge(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const stacks = Number(actor?.system?.resources?.focusfatigue?.stacks) || 0;
+  if (stacks <= 0) return UNSPENT;
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "surge"));
+  const surge = own ? definitionOf(own) : getManeuver("surge");
+  if (!surge) return UNSPENT;
+  await setResource(actor, "focusfatigue", stacks - 1);
+  return (await useManeuver(actor, { ...surge, surgeKind: "ki" }, { outOfSequence: true })) ? undefined : UNSPENT;
+}
+
 /** Raised Gravity (3)'s claim: an Opponent on a Square adjacent to you - your next attack this Round, Strike 1(T). */
 async function gravityBeside(actor) {
   const near = (canvas?.tokens?.placeables ?? []).some(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated

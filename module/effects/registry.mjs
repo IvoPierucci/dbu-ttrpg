@@ -100,7 +100,7 @@ function activeOptionsOnly(item, program) {
  * them - which is also what the folder a Trait lives in will say once Traits are files.
  */
 export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {}, minion = false, gifts = null, miniMinions = 0,
-  allyRolls = 0 } = {}) {
+  allyRolls = 0, allyStrikeDodge = 0 } = {}) {
   const entries = [];
 
   // What an Ally's effect gives this one's Combat Rolls, read off them (actor-character.mjs) - Friend Robot's 1(T) within a Large Sphere.
@@ -108,6 +108,15 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     const { program, errors } = compile("ally-rolls", { script: `[passive]\ncombatRolls += ${Number(allyRolls) || 0};` }, report);
     if (!errors.length) {
       entries.push({ program, priority: PRIORITY.base, sourceId: "ally-rolls", sourceUuid: null, sourceName: "An Ally's effects", level: 0, stacks: 1 });
+    }
+  }
+  // And their Strike and Dodge alone - More than a Minion's Oni, an Ally ruling them.
+  if (allyStrikeDodge) {
+    const value = Number(allyStrikeDodge) || 0;
+    const { program, errors } = compile("ally-strike-dodge", { script: `[passive]\nstrike += ${value};\ndodge += ${value};` }, report);
+    if (!errors.length) {
+      entries.push({ program, priority: PRIORITY.base, sourceId: "ally-strike-dodge", sourceUuid: null, sourceName: "An Ally's effects", level: 0,
+        stacks: 1 });
     }
   }
 

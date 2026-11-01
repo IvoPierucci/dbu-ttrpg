@@ -1,0 +1,16 @@
+id: mtm-saibaman
+name: Saibaman
+order: 7
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: saibaman
+description: >
+  Increase your Surgency by x(T), where x is equal to 1/2 (rounded up) of your Racial Life Modifier.
+text: >
+  Saibaman [Passive]: Increase your Surgency by x(T), where x is equal to 1/2 (rounded up) of your Racial Life Modifier.
+
+---
+
+[passive]
+surgency += ceil(max(racialLifeModifier, 0) / 2) * 1(T);

@@ -1,0 +1,13 @@
+id: minion-no-more
+name: Minion No More
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's). Its Factor Trait: More than a Minion 1.
+# "When a Character of a Minion Race is made, but not as a Minion, add this Factor to them. Minion No More is a special Factor that merely
+# adds its Factor Trait to the Race without replacing a Racial Trait."
+requirement: >
+  Any Minion Race
+maximumFactor: 1
+prerequisites: You are not a Minion.
+note: >
+  When a Character of a Minion Race is made, but not as a Minion, add this Factor to them. Minion No More is a special Factor that merely adds its Factor Trait to the Race without replacing a Racial Trait.
+description: >
+  Though most people of your race follow someone else, there’s always the odd member that strikes out on their own and manages to accomplish something of note, and you are one of those individuals.

@@ -2015,6 +2015,20 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         + DBUCharacterData.perksOf(this.characterPerks, "Attribute Addition", this.powerLevel)
           .reduce((total, perk) => total + (Number(perk.attributes?.[key]) || 0), 0);
     }
+    // More than a Minion's Tuffle: "Each time you gain a Skill Improvement by converting a Character Perk gained from your Power Levels, you gain 1
+    // Attribute Point to spend on one of the following Attributes: Insight, Personality, or Scholarship" - written in that row's own cells
+    // (actor-character-sheet.mjs), counted while it is had; any other Skill Improvement row's points count for nothing.
+    const tufflePoint = Array.from(this.parent?.items ?? []).some(item => (item.type === "racial")
+      && (item.flags?.["dbu-ttrpg"]?.sourceId === "more-than-a-minion")
+      && (item.system?.chosen ?? []).some(entry => (entry?.key === "option") && (entry.value === "mtm-tuffle")));
+    for (const entry of (this.progression ?? []).filter(row => (row.lvl <= this.powerLevel) && (row.choice === "Skill Improvement"))) {
+      const open = tufflePoint && (entry.stepType === "Character Perk");
+      for (const key of Object.keys(atts)) {
+        const points = Number(entry.attributes?.[key]) || 0;
+        const kept = (open && ["insight", "personality", "scholarship"].includes(key)) ? Math.min(1, points) : 0;
+        atts[key].score -= points - kept;
+      }
+    }
     // A Score a Trait or its Option holds at 0 - Savage's "your Scholarship Score is 0. You cannot spend any Attribute Points to
     // increase your Scholarship Score" (`zeroScore`): whatever was spent on it counts for nothing.
     const zeroScores = new Set(heldDefinitions(this.parent).flatMap(def => String(def.zeroScore ?? "").split(",")
@@ -2121,6 +2135,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         const reliance = (this.parent ? alliesWithin(this.parent, "teamReliance.aura", 0) : []).reduce((top, holder) => Math.max(top,
           Math.ceil(Math.max(0, ...["insight", "personality", "scholarship"].map(key => Number(holder.system?.attributes?.[key]?.mod) || 0)) / 4)), 0);
         return (friends.length ? Math.max(1, bestTier(friends)) : 0) + (pinks.length ? Math.max(1, bestTier(pinks)) : 0) + reliance;
+      })(),
+      // More than a Minion's Oni: "While you have a stack of Power, increase the Strike and Dodge Rolls of all Allies within your Area of Rule
+      // by 1(T)" - an Ally ruling them with Power; the best Tier of those.
+      allyStrikeDodge: (() => {
+        const rulers = (this.parent ? alliesRuling(this.parent, "moreThanMinion.oniRule") : [])
+          .filter(holder => (Number(holder.system?.resources?.power?.stacks) || 0) > 0);
+        return rulers.length ? Math.max(1, bestTier(rulers)) : 0;
       })(),
       skills: DBUCharacterData.SKILLS
     });

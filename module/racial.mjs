@@ -33,8 +33,10 @@
  *   grantsOtherChoices: a=b         with its `choose:` answered b (Plant Monster's Elemental (Plantlife))
  *   grantsTalentChoiceFrom: <ids>   a Talent of those Talent Categories, chosen as it is added - or none (Protector of the Dragon Ball's);
  *                                   `any` for a Talent of any of them (From the Stars')
- *   grantsPerk: Skill Improvement   (an Option's) a Character Perk of that Choice at Power Level 1 on the Progression tab, named for
- *                                   it and gone with it - Clever's "Gain an additional Skill Improvement at Character Creation"
+ *   grantsPerk: Skill Improvement   (a Trait's or an Option's) a Character Perk of each Choice named at Power Level 1 on the Progression
+ *                                   tab, named for it and gone with it - More than a Minion's three; Clever's "Gain an additional Skill Improvement at Character Creation"
+ *   optionsByRace: true             its Options chosen by the character's race: the one whose `forRace:` names it, not asked (More than a
+ *                                   Minion's) - asked where none does
  *   optionsFollow: <trait id>       its Options chosen by another Trait's: the one whose `follows:` names the Option that Trait had
  *                                   chosen, not asked (Difference in Shell's Choice, by Pieces of the Hive's) - asked where it has none
  *   platingBonusPerBaseTier: 1      (an Option's) its Natural Armor's Apparel Bonus that many (bT) higher - `platingBonusWhile:
@@ -792,6 +794,11 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
 
   // Each Option effect in turn - Technological Being's (2) one, then (3) two.
   // Difference in Shell's Choice: "Depending on your choice for the Option effect of Pieces of the Hive" - that one's, not asked.
+  // More than a Minion (3): "Depending on your Race" - the race's, not asked.
+  if (!presetOption && trait.optionsByRace) {
+    const race = String(actor?.system?.race ?? "");
+    presetOption = racialOptionsOf(trait.id).find(option => race && (String(option.forRace ?? "") === race))?.id ?? "";
+  }
   if (!presetOption && trait.optionsFollow) {
     const followed = Array.from(actor?.items ?? []).find(each => each.flags?.["dbu-ttrpg"]?.sourceId === String(trait.optionsFollow));
     const held = (followed?.system?.chosen ?? []).find(entry => entry?.key === "option")?.value ?? "";
@@ -924,6 +931,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   // Seedling Biology (1): the Saibamen's Signature Techniques, the same way.
   const techniques = grantedTechniqueItems(String(trait.grantsTechniques ?? ""), item.id);
   if (techniques.length) await actor.createEmbeddedDocuments("Item", techniques);
+  // Character Perks it gives - More than a Minion (2)'s "an Attribute Addition, a Skill Improvement, and a Talent".
+  if (trait.grantsPerk) await grantPerks(actor, item.name, listOf(trait.grantsPerk));
   // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
   // And a Quality on it in no Slot - Sturdy Shell's Dense Armor, Treacherous Spikes' Spiked; Reinforced Suit's two.
@@ -1361,16 +1370,7 @@ export function chosenOptions(item) {
 async function madeByOption(actor, item, option) {
   // Clever's: "Gain an additional Skill Improvement at Character Creation" - a Character Perk at Power Level 1, its Technique Points
   // a Skill Improvement's, written on it as every Perk's are.
-  if (option?.grantsPerk) {
-    const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
-    const choice = String(option.grantsPerk);
-    const perks = foundry.utils.deepClone(actor._source?.system?.characterPerks ?? []);
-    perks.push({ source: perkSource(option, item), lvl: 1, choice, talent: "",
-      attributes: Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS).map(key => [key, 0])),
-      technique: (choice === "Skill Improvement") ? DBUCharacterData.SKILL_IMPROVEMENT_TP : 0,
-      skillRanks: Array(DBUCharacterData.SKILL_RANK_SLOTS).fill("") });
-    await actor.update({ "system.characterPerks": perks });
-  }
+  if (option?.grantsPerk) await grantPerks(actor, perkSource(option, item), listOf(option.grantsPerk));
   if (option?.platingQuality) await platingQuality(actor, item, String(option.platingQuality), true);
   // An Other Trait it gives - Extension Feature's "You possess the Extension Attack Monstrous Trait".
   for (const group of listOf(option?.grantsOther)) await grantOtherTrait(actor, item, group, listOf(option.grantsOtherFrom));
@@ -1575,6 +1575,20 @@ export async function dropGrantedOptions(actor, trait) {
   return true;
 }
 
+/** Character Perks at Power Level 1, one of each Choice named, under that name - its Technique Points a Skill Improvement's. */
+async function grantPerks(actor, source, choices) {
+  if (!actor || !choices.length) return;
+  const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
+  const perks = foundry.utils.deepClone(actor._source?.system?.characterPerks ?? []);
+  for (const choice of choices) {
+    perks.push({ source, lvl: 1, choice, talent: "",
+      attributes: Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS).map(key => [key, 0])),
+      technique: (choice === "Skill Improvement") ? DBUCharacterData.SKILL_IMPROVEMENT_TP : 0,
+      skillRanks: Array(DBUCharacterData.SKILL_RANK_SLOTS).fill("") });
+  }
+  await actor.update({ "system.characterPerks": perks });
+}
+
 /** What a Character Perk an Option gives is named on the Progression tab: "Clever (Beast of a Kind)". */
 function perkSource(option, item) {
   return `${option.name} (${item.name})`;
@@ -1583,6 +1597,8 @@ function perkSource(option, item) {
 /** The Character Perks a Trait's Options gave, gone with it - by the name each was given. */
 async function dropGrantedPerks(actor, item) {
   const named = new Set(chosenOptions(item).filter(option => option.grantsPerk).map(option => perkSource(option, item)));
+  // And the Trait's own, under its name - More than a Minion's.
+  if (getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.grantsPerk) named.add(item.name);
   if (!named.size || !actor) return;
   const perks = Array.from(actor._source?.system?.characterPerks ?? []);
   const kept = perks.filter(perk => !named.has(perk.source));

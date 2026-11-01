@@ -206,6 +206,13 @@
             <button type="button" class="benefit-pick{{#unless row.benefit.label}} empty{{/unless}}" data-benefit="{{row.benefit.kind}}"
                     data-benefit-data="{{row.benefit.data}}" {{#if row.benefit.label}}data-tooltip="{{row.benefit.label}}"{{/if}}><span class="benefit-text">{{#if row.benefit.label}}{{row.benefit.label}}{{else}}Choose&hellip;{{/if}}</span>{{#if row.benefit.left}}<span class="benefit-left">({{row.benefit.left}} left)</span>{{/if}}{{#if row.benefit.over}}<span class="benefit-over">(over the cap)</span>{{/if}}</button>
           {{/if}}
+          {{#if row.tufflePoint}}
+            {{! More than a Minion's Tuffle: this Character Perk's Attribute Point - never submitted itself; it writes the cells above. }}
+            <select class="tuffle-point" data-tuffle-point data-tooltip="More than a Minion (Tuffle): 1 Attribute Point">
+              <option value="">+1 Attribute&hellip;</option>
+              {{#each row.tufflePoint as |opt|}}<option value="{{opt.key}}" {{#if opt.selected}}selected{{/if}}>+1 {{opt.label}}</option>{{/each}}
+            </select>
+          {{/if}}
           {{#if row.isTalentAddition}}
             {{! A list typed into: the box shows the Talent chosen, letters narrow the list under it (by name or Category), a
                 pick writes the hidden field the row submits. The box itself is never submitted. }}

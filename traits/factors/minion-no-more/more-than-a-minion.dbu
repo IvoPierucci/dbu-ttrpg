@@ -1,0 +1,34 @@
+id: more-than-a-minion
+name: More than a Minion
+order: 1
+category: body
+# Added to the Race's Racial Traits, replacing none (the Factor's own rule).
+importance: secondary
+# (2) "Upon gaining this Factor Trait, gain an Attribute Addition, a Skill Improvement, and a Talent" - three Character Perks at Power Level 1
+# on the Progression tab, named for it and gone with it.
+grantsPerk: Attribute Addition, Skill Improvement, Talent Addition
+# (3) "Depending on your Race": the Option of the character's race, not asked (each Option's `forRace:`) - asked where none is.
+optionEffect: 3
+optionsByRace: true
+description: >
+  You are a powerful member of your species, capable of more than the average citizen.
+text: >
+  More than a Minion (Body): You are a powerful member of your species, capable of more than the average citizen.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: Upon gaining this Factor Trait, gain an Attribute Addition, a Skill Improvement, and a Talent.
+  (3)-[Passive]: Depending on your Race, gain access to one of the following effects:
+
+  * Alien [Passive]: Increase the amount of Technique Points you gain from Skill Improvement by 3, and increase the Strike Rolls of your Signature Techniques by 1(T).
+  * Arlians [Passive]: Upon gaining this effect, select and gain access to a Bestial Trait of your choice.
+  * Animal [Passive]: While you are below the Bruised Health Threshold, increase your Damage Reduction, Initiative Value, and Awareness by 1(T).
+  * Creature [Passive]: Increase your Surgency by 1/2 of your Agility Modifier or Tenacity Modifier (whichever is higher).
+  * Oni [Passive]: While you have a stack of Power, increase the Strike and Dodge Rolls of all Allies within your Area of Rule by 1(T).
+  * Robot [Passive]: While in the Healthy Health Threshold, increase your Wound Rolls and Damage Reduction by 1(T).
+  * Saibaman [Passive]: Increase your Surgency by x(T), where x is equal to 1/2 (rounded up) of your Racial Life Modifier.
+  * Tuffle [Passive]: Each time you gain a Skill Improvement by converting a Character Perk gained from your Power Levels, you gain 1 Attribute Point to spend on one of the following Attributes: Insight, Personality, or Scholarship.
+  * Zooners [Triggered, 1/Round]:If you knock an Opponent through a Health Threshold with one of your Attacking Maneuvers, you may remove a stack of Focus Fatigue and then use a Ki Surge as an Out-of-Sequence Maneuver.
+---
+
+[passive]
+# (1)
+racialLifeModifier += 2;

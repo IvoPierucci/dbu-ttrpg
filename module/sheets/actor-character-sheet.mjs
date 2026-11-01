@@ -2804,6 +2804,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       for (const key of attributeKeys) scores[key] += Number(entry.attributes?.[key]) || 0;
     }
 
+    // More than a Minion's Tuffle: a Character Perk row taken as a Skill Improvement carries 1 Attribute Point - Insight, Personality or
+    // Scholarship - picked in the row, written in its own cells.
+    const tufflePoint = this.actor.system.effects?.slots?.["moreThanMinion.tufflePoint"] === true;
     return progression.map((entry, index, rows) => {
       const isAttributeAddition = entry.choice === "Attribute Addition";
       const isSkillImprovement = entry.choice === "Skill Improvement";
@@ -2821,6 +2824,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // not count toward the TP total.
         reached: entry.lvl <= powerLevel,
         talentGroups: isTalentAddition ? talentChoicesFor(this.actor, entry) : [],
+        tufflePoint: (tufflePoint && isSkillImprovement && (entry.stepType === "Character Perk"))
+          ? ["insight", "personality", "scholarship"].map(key => ({ key, label: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+            selected: (Number(entry.attributes?.[key]) || 0) > 0 })) : null,
         // Every row's seven Attribute points and its Skill Rank slots - 6 for the Level 1 Skill Improvement, 4 otherwise -
         // carried as hidden fields; the windows write them.
         attributeFields: attributeKeys.map(key => ({ key, name: `system.progression.${index}.attributes.${key}`,
@@ -3388,6 +3394,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           document.addEventListener("keydown", this.#combatKey, true);
         }
       }
+    }
+
+    // More than a Minion's Tuffle point: the row's Insight, Personality and Scholarship cells - 1 on the one picked - submitted.
+    for (const select of this.element.querySelectorAll("[data-tuffle-point]")) {
+      select.addEventListener("change", () => {
+        const cell = select.closest("[data-benefit-scope]");
+        const fields = ["insight", "personality", "scholarship"].map(key => cell?.querySelector(`[data-benefit-attribute="${key}"]`)).filter(Boolean);
+        for (const field of fields) field.value = (field.dataset.benefitAttribute === select.value) ? "1" : "0";
+        fields[0]?.dispatchEvent(new Event("change", { bubbles: true }));
+      });
     }
 
     // An Attribute Addition's or a Skill Improvement's Benefits: its window of toggles.

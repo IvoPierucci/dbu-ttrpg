@@ -1,0 +1,19 @@
+id: mtm-robot
+name: Robot
+order: 6
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: robot
+description: >
+  While in the Healthy Health Threshold, increase your Wound Rolls and Damage Reduction by 1(T).
+text: >
+  Robot [Passive]: While in the Healthy Health Threshold, increase your Wound Rolls and Damage Reduction by 1(T).
+
+---
+
+[passive]
+if (!belowThreshold("bruised")) {
+    wound += 1(T);
+    damageReduction += 1(T);
+}

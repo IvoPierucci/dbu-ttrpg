@@ -1,0 +1,18 @@
+id: mtm-arlians
+name: Arlians
+order: 2
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: arlian
+# A Bestial Trait chosen as it is gained - gone with it.
+grantsOther: bestial
+description: >
+  Upon gaining this effect, select and gain access to a Bestial Trait of your choice.
+text: >
+  Arlians [Passive]: Upon gaining this effect, select and gain access to a Bestial Trait of your choice.
+
+---
+
+[passive]
+# Its header's `grantsOther`: the Bestial Trait, on the Traits tab's Other Traits.

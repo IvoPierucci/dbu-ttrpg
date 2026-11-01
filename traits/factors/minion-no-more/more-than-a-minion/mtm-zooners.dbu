@@ -1,0 +1,19 @@
+id: mtm-zooners
+name: Zooners
+order: 9
+optionOf: more-than-a-minion
+optionEffect: 3
+# Chosen for a character of that race, not asked (More than a Minion's `optionsByRace`).
+forRace: zooner
+description: >
+  If you knock an Opponent through a Health Threshold with one of your Attacking Maneuvers, you may remove a stack of Focus Fatigue and then use a Ki Surge as an Out-of-Sequence Maneuver.
+text: >
+  Zooners [Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with one of your Attacking Maneuvers, you may remove a stack of Focus Fatigue and then use a Ki Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# An Opponent knocked through by your attack, with Focus Fatigue (Nice Shooting's): a stack off, then a Ki Surge out of sequence - chosen on
+# the attack's card, never Automatic (chat.mjs zoonerKiSurge).
+[triggered/knock-through, 1/round, outOfSequence]
+requires hasResource("focusfatigue");
+zoonerKiSurge();
