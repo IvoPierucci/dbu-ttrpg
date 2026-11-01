@@ -265,6 +265,8 @@ function raceWords(race) {
 function requirementOf(factor) {
   const text = [].concat(factor?.requirement ?? []).join(", ").trim();
   const names = list => list.split(/,|\bor\b|\band\b/i).map(each => each.trim().toLowerCase()).filter(Boolean);
+  // "Any Minion Race" (Minion No More's): a Minion Race, whichever - not any race.
+  if (/^any minion races?$/i.test(text)) return { any: false, races: [], except: [], minionRaces: true };
   const any = /^any\b/i.exec(text);
   if (any) return { any: true, races: [], except: names((/\(except([^)]*)\)/i.exec(text) ?? [])[1] ?? "") };
   return { any: false, races: names(text), except: [] };
@@ -280,9 +282,10 @@ function factorTraitFits(factorId, onlyRace, name, race, slots = null) {
   const words = raceWords(race);
   if (!factor || !words.length) return false;
   if (onlyRace && !words.includes(String(onlyRace).toLowerCase())) return false;
-  const { any, races, except } = requirementOf(factor);
+  const { any, races, except, minionRaces } = requirementOf(factor);
   // "Gain the Alternate Upbringing Factor, ignoring its Racial Requirements" (Enhanced Organism's).
   const ignored = slots?.[`factor.ignoreRequirement.${factorId}`] === true;
+  if (minionRaces) return ignored || isMinionRace(race);
   if (!ignored && (any ? except.some(each => words.includes(each)) : !races.some(each => words.includes(each)))) return false;
   if (factor.nameExcludesRace && words.includes(String(name ?? "").replace(/-Raised$/i, "").trim().toLowerCase())) return false;
   return true;
@@ -351,6 +354,8 @@ export function racialTraitUnfit(trait, race, subrace = "", slots = null) {
  * Traits, instead of having to choose between them".
  */
 export function minionRacialUnfit(trait, actor, held = []) {
+  // A Racial Factor for no Minion - Minion No More's "Prerequisite(s): You are not a Minion." (its `notMinion`): dimmed on a Minion's list.
+  if ((actor?.type === "minion") && (racialFactor(factorOf(trait))?.notMinion === true)) return "Its Racial Factor's Prerequisite is not met: you are a Minion";
   if ((actor?.type !== "minion") || actor.system?.duplicate || factorOf(trait) || isMinionRace(actor.system?.race)) return "";
   const race = actor.system?.race ?? "";
   const kindOf = each => (each?.subrace ? "subrace" : ((each?.importance === "secondary") ? "secondary" : "primary"));

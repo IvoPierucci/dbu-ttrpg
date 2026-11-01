@@ -7,6 +7,8 @@ requirement: >
   Any Minion Race
 maximumFactor: 1
 prerequisites: You are not a Minion.
+# Its Prerequisite, as the Add Racial Trait list reads it: dimmed on a Minion's sheet, taken all the same (racial.mjs minionRacialUnfit).
+notMinion: true
 note: >
   When a Character of a Minion Race is made, but not as a Minion, add this Factor to them. Minion No More is a special Factor that merely adds its Factor Trait to the Race without replacing a Racial Trait.
 description: >
