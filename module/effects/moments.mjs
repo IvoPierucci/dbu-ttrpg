@@ -173,6 +173,9 @@ const TABLE = [
   { key: "opponent-damage", label: "An Opponent's Attacking Maneuver deals you Damage", provides: [],
     doc: "Fired for whoever an Opponent's Attacking Maneuver dealt Damage to, once it is applied (chat.mjs applyAttackDamage) - "
        + "Energy of Revenge's. What is the player's is asked in a window first." },
+  { key: "minion-damage", label: "One of your Minions deals an Opponent Damage", provides: [],
+    doc: "Fired for a Minion's Master as the Minion's Attacking Maneuver hits an Opponent of it for Damage, once it is applied (chat.mjs "
+       + "applyAttackDamage), with the Minion as `minionUuid` - Ruler's." },
   { key: "ally-defeated", label: "An Ally is Defeated", provides: [],
     doc: "Fired for each Ally on the scene of whoever is Defeated, with them as `defeatedUuid`, whose Attacking Maneuver did it as "
        + "`knockerUuid` - a Minion's too, told by `defeatedMinion` (combat.mjs) - Battle Tension's, From the Stars'. What is the "

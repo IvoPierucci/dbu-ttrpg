@@ -13,8 +13,8 @@ text: >
 
 ---
 
-# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/mini-majin-first-effect.dbu): 8(bT) Ki paid, the Duplicate Minion and its Size
-# said on its card - the Minion itself the table's (Minions wait on the user's design).
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/mini-majin-first-effect.dbu): 8(bT) Ki paid, the Duplicate Minion made a Size
+# Category smaller (chat.mjs miniMajin, minion-make.mjs).
 # (2) Knocked through a Health Threshold: the same, free, said - once an Encounter. Automatic by default, its Triggered/Automatic
 # button.
 [triggered/threshold, 1/encounter, effect 2]

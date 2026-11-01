@@ -500,6 +500,10 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "A Maneuver of yours out of sequence, by its id - Petite Genius (3)'s Movement (chat.mjs maneuverOutOfSequence)."
   },
+  broodClearing: {
+    args: [0, 0],
+    doc: "Exploiting Minions: the Basic Attack of the Clearing Profile out of sequence (chat.mjs broodClearing)."
+  },
   zoonerKiSurge: {
     args: [0, 0],
     doc: "More than a Minion's Zooners: a stack of Focus Fatigue off, then a Ki Surge out of sequence (chat.mjs zoonerKiSurge)."

@@ -15,6 +15,6 @@ text: >
 
 [passive]
 # (1) Asked as Autonomous Glass Soldiers (1) creates them: how many are Glass Copies instead, 4(bT) Ki more each (chat.mjs
-# glassKnights). The Duplicate Minion itself the table's.
+# glassKnights) - each made a Duplicate Minion (minion-make.mjs).
 allow glass.copies;
 # (2) The table's, as the Glass Knights are.

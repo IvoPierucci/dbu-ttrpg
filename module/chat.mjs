@@ -16945,6 +16945,20 @@ export async function mindsetShed(actor) {
   await setResource(actor, "focusfatigue", stacks - off);
 }
 
+/**
+ * Exploiting Minions (Brood Parent): "When one of your Minions created through the first effect of Brood Parent are Defeated, you may target a
+ * Square they occupied with an Attacking Maneuver of the Clearing Profile as an Out-of-Sequence Maneuver." The Basic Attack, its Profile the
+ * Clearing one; its targets the table's, at that Square. Unspent where none is made.
+ */
+export async function broodClearing(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor?.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "basic-attack"));
+  const basic = own ? definitionOf(own) : getManeuver("basic-attack");
+  if (!basic) return UNSPENT;
+  return (await useManeuver(actor, { ...basic, profile: "clearing" }, { outOfSequence: true })) ? undefined : UNSPENT;
+}
+
 /** A Maneuver of theirs out of sequence, by its id - Petite Genius (3)'s Movement. Unspent where none is made. */
 export async function maneuverOutOfSequence(actor, id) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
@@ -34603,6 +34617,9 @@ async function applyAttackDamage(message, target, attack) {
     && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)) {
     const revengeBefore = Number(target.system.resources?.revengepoints?.stacks) || 0;
     await answerFor(target, "opponent-damage", { attackerUuid: armsUser.uuid });
+    // Ruler (2): "If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm" - for its Master.
+    const ruler = isMinion(armsUser) ? game.actors?.get(masterOf(armsUser)) : null;
+    if (ruler && areOpponents(armsUser, target)) await answerFor(ruler, "minion-damage", { minionUuid: armsUser.uuid });
     // Parasitic Biology (4): "regain 3(bT) Ki Points for each Revenge Point you gained as a result of that Attacking Maneuver".
     const revengeGained = (Number(target.system.resources?.revengepoints?.stacks) || 0) - revengeBefore;
     if ((revengeGained > 0) && target.isOwner && (target.system.effects?.slots?.["parasite.kiPerRevenge"] === true)) {

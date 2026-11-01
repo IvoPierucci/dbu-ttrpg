@@ -14,6 +14,6 @@ text: >
 
 ---
 
-# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/autonomous-glass-soldiers-first-effect.dbu): how many asked, 4(bT) Ki each, paid
-# and said - the Squares and the Minions themselves the table's (Minions wait on the user's design).
-# (2), (3) Of the Glass Knights, Minions - the table's.
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/autonomous-glass-soldiers-first-effect.dbu): how many asked, 4(bT) Ki each, paid,
+# the Glass Knights made as Minions (chat.mjs glassKnights, minion-make.mjs) - the Squares with the Glass Environmental Quality the table's.
+# (2), (3) The table's: Glass Soldiers and Glass Squares are said, not kept on the map.

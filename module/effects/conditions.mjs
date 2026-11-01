@@ -8,7 +8,7 @@
  * it is reported.
  */
 
-import { areAllies, areOpponents, besideAnAlly } from "../allies.mjs";
+import { areAllies, areOpponents, besideAnAlly, masterOf } from "../allies.mjs";
 import { withinAreaOfRule } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
@@ -482,6 +482,14 @@ const PREDICATES = {
 
   /** The one Defeated by your attack (moment defeat-opponent) is a Minion - its Minion box (Bloodlust's). */
   defeatedMinion: scope => Boolean(globalThis.fromUuidSync?.(scope.context?.defeatedUuid ?? "")?.system?.minion),
+
+  /** The one Defeated a Minion of yours made by Brood Parent (1) - Exploiting Minions'. */
+  defeatedBrood: scope => {
+    const defeated = globalThis.fromUuidSync?.(scope.context?.defeatedUuid ?? "");
+    const self = scope.data?.parent;
+    return Boolean(defeated && self) && (defeated.getFlag?.("dbu-ttrpg", "minionKind") === "brood")
+      && Boolean(self.id) && (masterOf(defeated) === self.id);
+  },
 
   /** In the Low Sky or High Sky Environment - Winged Beast's. */
   inSky: scope => [1, 2].includes(Number(scope.data?.battlefield?.highEnvironment) || 0),

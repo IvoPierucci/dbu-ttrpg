@@ -576,6 +576,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "knockedBeside", "allyBeside", "allyAdjacent",
   // The Clash won with a Skill of yours, any (Skills of a Genius's).
   "wonWithAnySkill",
+  // The Ally Defeated a Minion of yours made by Brood Parent (Exploiting Minions').
+  "defeatedBrood",
   // The Attacking Maneuver dodged an Opponent's (Caste Combat's Knight).
   "dodgedOpponent",
   // An Ally, not a Minion, within your Area of Rule (Afterlife Officials'); any Ally (Skilled Ogre's).
