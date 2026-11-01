@@ -126,6 +126,7 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
   const lines = [
     gifts?.combatRolls ? `combatRolls += ${gifts.combatRolls};` : "",
     gifts?.soakValue ? `soakValue += ${gifts.soakValue};` : "",
+    gifts?.wound ? `wound += ${gifts.wound};` : "",
     miniMinions ? `soakValue -= ${miniMinions}(T);\ndefenseValue += ${miniMinions}(T);` : "",
     ...(gifts?.allows ?? []).map(key => `allow ${key};`)
   ].filter(Boolean);

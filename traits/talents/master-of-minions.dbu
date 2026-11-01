@@ -1,0 +1,24 @@
+id: master-of-minions
+name: Master of Minions
+talentCategory: minion
+prerequisites: N/A
+description: >
+  You are accustomed to command, and rule over your Minions with great ease.
+text: >
+  Master of Minions: You are accustomed to command, and rule over your Minions with great ease.
+  –Prerequisites: N/A
+  (1)-[Passive]: Increase your maximum number of Minions by 2.
+  (2)-[Passive]: Increase the Wound Rolls of your Minions by 1/4 (rounded up) of your Personality or Scholarship Modifier (whichever is higher).
+  (3)-[Triggered, 1/Round]: After using the Command Maneuver in which you targeted at least 1 Minion, regain 1 Action.
+
+---
+
+[passive]
+# (1) "Your maximum number of Minions": how many you may possess in a Combat Encounter - and so outside of one (maneuvers.mjs minionCaps).
+minions.combat += 2;
+# (2) Given to each of your Minions as it is prepared (allies.mjs minionGifts).
+minions.wound += ceil(max(personality.mod, scholarship.mod, 0) / 4);
+
+# (3) The Command used on at least 1 Minion (command-used). Automatic by default, its Triggered/Automatic button.
+[triggered/command-used, 1/round, effect 3]
+actions.remaining += 1;

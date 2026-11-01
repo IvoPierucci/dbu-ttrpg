@@ -173,6 +173,9 @@ const TABLE = [
   { key: "opponent-damage", label: "An Opponent's Attacking Maneuver deals you Damage", provides: [],
     doc: "Fired for whoever an Opponent's Attacking Maneuver dealt Damage to, once it is applied (chat.mjs applyAttackDamage) - "
        + "Energy of Revenge's. What is the player's is asked in a window first." },
+  { key: "command-used", label: "You use the Command Maneuver on at least 1 Minion", provides: [],
+    doc: "Fired for whoever used the Command Maneuver, once the Minions it targeted are Commanded (chat.mjs commandMinions), with how many "
+       + "as `minions` - Master of Minions'." },
   { key: "minion-damage", label: "One of your Minions deals an Opponent Damage", provides: [],
     doc: "Fired for a Minion's Master as the Minion's Attacking Maneuver hits an Opponent of it for Damage, once it is applied (chat.mjs "
        + "applyAttackDamage), with the Minion as `minionUuid` - Ruler's." },

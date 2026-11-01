@@ -100,6 +100,8 @@ const TABLE = [
   // The Master's, given to each of their Minions as it is prepared (allies.mjs minionGifts) - at the Master's Tiers.
   { key: "minions.combatRolls", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Your Minions' Combat Rolls (Leader, Leader's Insignia, God of Many)." },
+  { key: "minions.wound", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Your Minions' Wound Rolls (Master of Minions)." },
   { key: "minions.soakValue", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Your Minions' Soak Value (Marauding Captain (2))." },
   { key: "minions.lifeMax", phase: PHASES.CORE, kind: N, ops: NUMERIC,

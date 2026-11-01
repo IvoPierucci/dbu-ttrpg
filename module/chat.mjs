@@ -16136,6 +16136,8 @@ export async function commandMinions(actor) {
       await markUntilNextTurn(minion, minion, "supercomputer-command-mark", tier, "end", "Mental Supercomputer");
     }
   }
+  // Master of Minions (3): "After using the Command Maneuver in which you targeted at least 1 Minion, regain 1 Action."
+  await answerFor(actor, "command-used", { minions: picked.length });
 }
 
 /**

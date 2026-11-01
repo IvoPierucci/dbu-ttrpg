@@ -152,6 +152,8 @@ export function minionGifts(who) {
   const yakiBonded = (kind === "yaki") && (bonded ? ((bonded === actor?.uuid) || (globalThis.fromUuidSync?.(bonded)?.id === actor?.id))
     : (slots?.["yakiMaster.allBonded"] === true));
   return { combatRolls: add("minions.combatRolls") + (yakiBonded ? add("yaki.bondedRolls") : 0), soakValue: add("minions.soakValue"),
+    // Master of Minions (2): their Wound Rolls.
+    wound: add("minions.wound"),
     lifeMax: add("minions.lifeMax"), lifePerLevel: add("minions.lifePerLevel") + ((kind === "goop") ? add("goops.lifePerLevel") : 0),
     // Draining Minions: "Your Minions created through the first effect of Brood Parent gain access to the Power Drain Maneuver."
     allows: ((kind === "brood") && (slots?.["brood.drain"] === true)) ? ["maneuver.power-drain"] : [] };
