@@ -10,6 +10,15 @@
 
 import { namePrefixMatches } from "./gear.mjs";
 
+/**
+ * Whether an option answers what was typed: its name, or another it may be found by - `data-also`, "|"-separated (a Factor Trait by its
+ * Racial Factor's name: "Minion No More" finds More than a Minion).
+ */
+function optionMatches(option, typed) {
+  return namePrefixMatches(option.dataset.name, typed)
+    || String(option.dataset.also ?? "").split("|").some(name => name && namePrefixMatches(name, typed));
+}
+
 export function wireNameSearch(input, list, { onSubmit = null, alwaysOpen = false } = {}) {
   if (!input || !list) return;
   const options = [...list.querySelectorAll("[data-feature-option]")];
@@ -26,7 +35,7 @@ export function wireNameSearch(input, list, { onSubmit = null, alwaysOpen = fals
     else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
   };
   const filter = () => {
-    for (const option of options) option.hidden = !namePrefixMatches(option.dataset.name, input.value);
+    for (const option of options) option.hidden = !optionMatches(option, input.value);
     for (const group of groups) {
       group.hidden = !options.some(option => !option.hidden
         && (option.dataset.group === group.dataset.featureGroup));
@@ -90,5 +99,5 @@ export function pickedName(input, list) {
   if (input.dataset.picked) return input.dataset.picked;
   if (!input.value.trim()) return "";
   return [...(list?.querySelectorAll("[data-feature-option]") ?? [])]
-    .find(option => namePrefixMatches(option.dataset.name, input.value))?.dataset.featureOption ?? "";
+    .find(option => optionMatches(option, input.value))?.dataset.featureOption ?? "";
 }

@@ -7,7 +7,7 @@ import DBUCharacterData from "../data/actor-character.mjs";
 import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
-import { addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { factorName, addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stateTriggerBlocks } from "../effects/registry.mjs";
@@ -6165,6 +6165,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               || minionRacialUnfit(trait, this.actor, held);
             return `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : (unfit ? " unfit" : "")}"
             data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
+            ${(trait.kind === "factors") ? `data-also="${escape(factorName(trait.owner))}"` : ""}
             data-tooltip="${escape(had.has(trait.id) ? "Already had"
               : [unfit, racialTraitKind(trait), trait.description ?? "",
                 (trait.kind === "factors") ? factorSummary(trait.owner) : ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
