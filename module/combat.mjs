@@ -1029,27 +1029,22 @@ export async function endEncounterFor(actor) {
 }
 
 /**
- * The Turn State's Reset (the user's): everything that happened to this character undone, as if nothing had - for a Hype used
- * outside of combat whose clock never runs out, and the like. Its States (but Dead), Conditions and marks, clocks, Actions and
- * uses spent, Resources as an Encounter's end leaves them, Momentum and a charge held. Not undone: Life and Ki Points, Karma,
- * Items - and what an Opponent left on them: Delayed's Imminent (the user's), and a Grapple, which is two characters'.
+ * The Turn State's Reset (the user's): what this character cannot take off by hand, undone - a Hype used outside of combat whose
+ * clock never runs out, and the like. Its marks (the Conditions that are no Combat Condition - Manage's checklist leaves them out),
+ * its clocks, and the uses spent (1/Round, 1/Encounter, the Talents armed). What is changed by hand stays as it is - States,
+ * Combat Conditions, Actions, Resources (the user's) - and so does what an Opponent left on them: Delayed's Imminent.
  */
 export async function resetTurnState(actor) {
   if (!actor) return;
-  const dead = Number(actor.system.states?.dead) || 0;
+  const { allConditions } = await import("./conditions.mjs");
+  const marks = new Set(allConditions().filter(condition => !condition.combatCondition).map(condition => condition.key));
+  const conditions = Object.fromEntries(Object.entries(actor.system.conditions ?? {}).filter(([key]) => !marks.has(key)));
   await actor.update({
-    "system.states": replaceObject(dead ? { dead } : {}),
-    "system.conditions": replaceObject({}),
-    "system.actionsSpent": { standard: 0, counter: 0, converted: 0, fromCounter: 0 },
-    "system.attacksThisRound": 0,
+    "system.conditions": replaceObject(conditions),
     "system.usedManeuvers": [],
     "system.talentUses.encounter": [],
-    "system.armedTalents": [],
-    "system.resources": replaceObject(keptResources(actor.system.resources)),
-    "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
-    ...NOT_CHARGING
+    "system.armedTalents": []
   });
-  await stopCharging(actor);
   // Every clock of theirs stopped - one that would never have run out outside of a Combat is why this exists.
   await encounterEnded(actor);
 }
