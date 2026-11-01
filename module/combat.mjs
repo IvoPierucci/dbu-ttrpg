@@ -1030,21 +1030,16 @@ export async function endEncounterFor(actor) {
 
 /**
  * The Turn State's Reset (the user's): what this character cannot take off by hand, undone - a Hype used outside of combat whose
- * clock never runs out, and the like. Its marks (the Conditions that are no Combat Condition - Manage's checklist leaves them out),
- * its clocks, and the uses spent (1/Round, 1/Encounter, the Talents armed). What is changed by hand stays as it is - States,
- * Combat Conditions, Actions, Resources (the user's) - and so does what an Opponent left on them: Delayed's Imminent.
+ * clock never runs out, and the like. Its marks (the Conditions that are no Combat Condition - Manage's checklist leaves them out)
+ * and its clocks, no more. Untouched (the user's): States, Combat Conditions, Actions, Resources - changed by hand - the uses spent
+ * (1/Round, 1/Encounter), the Triggered/Automatic buttons, and what an Opponent left on them: Delayed's Imminent.
  */
 export async function resetTurnState(actor) {
   if (!actor) return;
   const { allConditions } = await import("./conditions.mjs");
   const marks = new Set(allConditions().filter(condition => !condition.combatCondition).map(condition => condition.key));
   const conditions = Object.fromEntries(Object.entries(actor.system.conditions ?? {}).filter(([key]) => !marks.has(key)));
-  await actor.update({
-    "system.conditions": replaceObject(conditions),
-    "system.usedManeuvers": [],
-    "system.talentUses.encounter": [],
-    "system.armedTalents": []
-  });
+  await actor.update({ "system.conditions": replaceObject(conditions) });
   // Every clock of theirs stopped - one that would never have run out outside of a Combat is why this exists.
   await encounterEnded(actor);
 }
