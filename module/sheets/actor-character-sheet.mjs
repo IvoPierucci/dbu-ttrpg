@@ -1504,10 +1504,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.racialSavingThrow = racialSavingThrowChosen(race) ? Object.keys(DBUCharacterData.SAVING_THROWS).map(key => ({
       value: key, label: key.charAt(0).toUpperCase() + key.slice(1), selected: key === this.actor.system.racialSavingThrow })) : null;
     context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow);
-    context.raceOptions = raceOptions().map(option => ({
+    // The Minion Races under a "Minion Races" divider after every other race (the user's).
+    const races = raceOptions().map(option => ({
       ...option,
       selected: option.value === race
     }));
+    context.raceOptions = races.filter(option => !option.minionRace);
+    context.minionRaceOptions = races.filter(option => option.minionRace);
     // Only the Character Creation Sizes are offered, plus whatever the character is
     // already set to - an effect may have moved them somewhere not on that list, and
     // rendering it as absent would silently drop it on the next save.

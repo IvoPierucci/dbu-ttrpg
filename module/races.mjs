@@ -8,11 +8,11 @@ export function getRace(id) {
   return races.get(id);
 }
 
-/** Every loaded race, sorted by name, ready for a select element. */
+/** Every loaded race, sorted by name, ready for a select element - a Minion Race marked so, for its own group after the rest. */
 export function raceOptions() {
   return [...races.values()]
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map(race => ({ value: race.id, label: race.name, description: race.description ?? "" }));
+    .map(race => ({ value: race.id, label: race.name, description: race.description ?? "", minionRace: race.minionRace === true }));
 }
 
 /** The Racial Life Modifier for a race id; 0 when the race is unknown. */
