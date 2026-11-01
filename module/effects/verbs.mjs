@@ -500,6 +500,10 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "A Maneuver of yours out of sequence, by its id - Petite Genius (3)'s Movement (chat.mjs maneuverOutOfSequence)."
   },
+  supporterEmpower: {
+    args: [0, 0],
+    doc: "Minion Supporter (2): the Empower as if 1 Action at one of your Minions, asked - its Combat Rolls 1(T) (chat.mjs supporterEmpower)."
+  },
   sacrificeMinion: {
     args: [0, 0],
     doc: "Sacrificial Minion (2): one of your Minions, not Special, Defeated - then one of three effects, asked (chat.mjs sacrificeMinion)."

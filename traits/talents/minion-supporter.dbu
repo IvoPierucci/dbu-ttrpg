@@ -1,0 +1,19 @@
+id: minion-supporter
+name: Minion Supporter
+talentCategory: minion
+prerequisites: Minion Coordinator, ToP 2+
+description: >
+  You are content to stand in the back, giving orders to your Minions.
+text: >
+  Minion Supporter: You are content to stand in the back, giving orders to your Minions.
+  –Prerequisites: Minion Coordinator, ToP 2+
+  (1)-[Passive]: If you target a Minion with the effects of the Spectator State, apply your Tier of Power Extra Dice as Extra Dice to your Minion’s Combat Rolls.
+  (2)-[1/Round]: You can use the Empower Maneuver (as if you spent 1 Action) as an Instant Maneuver. If you do, you must target one of your Minions and that Minion has its Combat Rolls increased by 1(T) until the start of your next turn.
+
+---
+
+[passive]
+# (1) One of your Minions Cheered by your Spectator State: your Tier of Power Extra Dice on its Combat Rolls while it is Cheered - Extra Dice
+# of their own, beside its own Tier of Power Extra Dice and their further instances (the user's; chat.mjs spectatorCheer, supporterDice).
+allow minionSupporter.dice;
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/minion-supporter-second-effect.dbu).

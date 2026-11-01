@@ -1,0 +1,21 @@
+id: minion-supporter-second-effect
+name: Minion Supporter
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: minion-supporter
+fromEffect: 2
+source: Core Rule
+description: >
+  Minion Supporter's second effect, as a Maneuver: the Empower as if 1 Action, at one of your Minions - its Combat Rolls 1(T) till the start of your next turn.
+text: >
+  (2)-[1/Round]: You can use the Empower Maneuver (as if you spent 1 Action) as an Instant Maneuver. If you do, you must target one of your Minions and that Minion has its Combat Rolls increased by 1(T) until the start of your next turn.
+
+---
+
+# Which of your Minions, asked; the Empower at it as if 1 Action was spent, then its mark on your clock (chat.mjs supporterEmpower).
+[on used]
+supporterEmpower();

@@ -1,0 +1,16 @@
+id: supporter-mark
+name: Minion Supporter
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: Minion Supporter (2)'s - its 1(T), the Master's Tier, as stacks, till the start of the Master's next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Minion Supporter: Combat Rolls higher by a point a stack, till the start of your Master's next turn.
+text: >
+  Minion Supporter (2): That Minion has its Combat Rolls increased by 1(T) until the start of your next turn.
+
+---
+
+[passive per stack]
+combatRolls += 1;

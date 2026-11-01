@@ -784,6 +784,7 @@ async function runVerb(actor, call, context) {
     case "coordinateMinion": return (await import("../chat.mjs")).coordinateMinion(actor);
     case "markMinion": return (await import("../chat.mjs")).markMinion(actor);
     case "sacrificeMinion": return (await import("../chat.mjs")).sacrificeMinion(actor);
+    case "supporterEmpower": return (await import("../chat.mjs")).supporterEmpower(actor);
     case "mindsetShed": return (await import("../chat.mjs")).mindsetShed(actor);
     case "maneuverOutOfSequence": return (await import("../chat.mjs")).maneuverOutOfSequence(actor, String(args[0] ?? ""));
     case "grappleStrike": return (await import("../chat.mjs")).grappleStrike(actor);

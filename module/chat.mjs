@@ -9426,7 +9426,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // so they are read off the sheet rather than collected again here. The Slot was
   // declared and read by nobody, which made that half of Superior do nothing at all.
   const standing = combatRoll
-    ? (actor.system.effects?.slots?.["combatRolls.dice"] ?? [])
+    ? [...(actor.system.effects?.slots?.["combatRolls.dice"] ?? []), ...supporterDice(actor)]
     : [];
 
   // Every Extra Die with the name of whatever granted it, kept apart all the way to
@@ -16213,6 +16213,11 @@ export async function spectatorCheer(actor) {
   for (const ally of chosen) {
     if (!await setCondition(ally, "cheered", Math.max(1, Number(actor.system.baseTierOfPower) || 1))) continue;
     await lasting(actor, { kind: KINDS.CONDITION, key: "cheered", edge: EDGES.START, on: ally.uuid, source: "Spectator" });
+    // Minion Supporter (1): one of your own Minions Cheered by you - your Extra Dice on its Combat Rolls while it is (supporterDice).
+    const supported = (actor.system?.effects?.slots?.["minionSupporter.dice"] === true) && isMinion(ally) && (masterOf(ally) === actor.id);
+    if (supported || ally.getFlag?.(SCOPE, "supportedBy")) {
+      await requestActorUpdate(ally, { [`flags.${SCOPE}.supportedBy`]: supported ? actor.uuid : "" });
+    }
   }
   const cheered = Array.from(actor.getFlag?.(SCOPE, "cheered") ?? []);
   return requestActorUpdate(actor, { [`flags.${SCOPE}.cheered`]: [...new Set([...cheered, ...chosen.map(ally => ally.uuid)])] });
@@ -16948,6 +16953,43 @@ export async function mindsetShed(actor) {
   const { ki, capacity } = actor.system;
   await requestActorUpdate(actor, { "system.ki.value": ki.value - off * each, "system.capacity.spent": capacity.spent + off * each });
   await setResource(actor, "focusfatigue", stacks - off);
+}
+
+/**
+ * Minion Supporter (2): "You can use the Empower Maneuver (as if you spent 1 Action) as an Instant Maneuver. If you do, you must target one of
+ * your Minions and that Minion has its Combat Rolls increased by 1(T) until the start of your next turn." Which, asked; the Empower's own
+ * once a Round not spent by it (as Desperate Support's). Unspent where none is Empowered.
+ */
+export async function supporterEmpower(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const yours = minionsOf(actor).map(id => game.actors?.get(id)).filter(minion => minion && !minion.system?.defeated);
+  if (!yours.length) {
+    ui.notifications.warn(`${actor?.name} has no Minion to Empower.`);
+    return UNSPENT;
+  }
+  const id = (yours.length === 1) ? yours[0].id
+    : await askPlayerChoice(actor, `${actor.name}: Minion Supporter - Empower`, yours.map(minion => ({ value: minion.id, label: minion.name })));
+  const minion = yours.find(each => each.id === id);
+  if (!minion) return UNSPENT;
+  const { empowerAs } = await import("./use-maneuver.mjs");
+  if (!await empowerAs(actor, minion, 1)) return UNSPENT;
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(minion, "supporter-mark", Math.max(1, Number(actor.system.tierOfPower) || 1))) {
+    await lasting(actor, { kind: KINDS.CONDITION, key: "supporter-mark", edge: EDGES.START, on: minion.uuid, source: "Minion Supporter" });
+  }
+}
+
+/**
+ * Minion Supporter (1): "If you target a Minion with the effects of the Spectator State, apply your Tier of Power Extra Dice as Extra Dice to
+ * your Minion's Combat Rolls" - while it is Cheered by its Master holding it: Extra Dice of their own, beside its own (the user's).
+ */
+function supporterDice(actor) {
+  if (!isMinion(actor) || !((Number(actor?.system?.conditions?.cheered) || 0) > 0)) return [];
+  const by = actor.getFlag?.(SCOPE, "supportedBy") ?? "";
+  const master = by ? game.actors?.get(masterOf(actor)) : null;
+  if (!master || (master.uuid !== by) || (master.system?.effects?.slots?.["minionSupporter.dice"] !== true)) return [];
+  const formula = master.system?.dice?.extra?.formula ?? "";
+  return formula ? [{ source: "Minion Supporter", formula }] : [];
 }
 
 /**
@@ -29251,7 +29293,7 @@ function strikeParts(attacker, attack) {
 function combatDiceGroups(actor, groups = null) {
   return [
     ...(groups ?? [{ label: "Extra Dice (Tier of Power)", formula: actor.system.dice?.extra?.formula ?? "" }]),
-    ...(actor.system.effects?.slots?.["combatRolls.dice"] ?? [])
+    ...[...(actor.system.effects?.slots?.["combatRolls.dice"] ?? []), ...supporterDice(actor)]
       .map(die => ({ label: die.source || "Greater Dice", formula: die.formula }))
   ].filter(group => group.formula);
 }
