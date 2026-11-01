@@ -401,12 +401,27 @@ export function racialTraitRace(race, subrace = "", factor = "") {
 /** The Racial Trait Items a character has, in the picker's order: own race's first, then by race name, then as printed. */
 export function ownedRacialTraits(actor) {
   const race = actor?.system?.race;
+  const slots = actor?.system?.effects?.slots;
   const fileOf = item => getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
-  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && !isOtherTrait(item)).sort((a, b) =>
-    (groupRank(a, race, actor?.system?.effects?.slots) - groupRank(b, race, actor?.system?.effects?.slots))
-    || groupName(a).localeCompare(groupName(b))
-    || (orderOf(fileOf(a)) - orderOf(fileOf(b)))
-    || a.name.localeCompare(b.name));
+  // A Factor Trait that replaces a Racial Trait of theirs by name - From Goop's "[Majin Regeneration]" - stands where that one would (the
+  // user's): its race's group, its order.
+  const place = item => {
+    const replaced = replacedTraitOf(fileOf(item), race);
+    return replaced ? { rank: 0, group: groupName(replaced), order: orderOf(replaced) + 0.5 }
+      : { rank: groupRank(item, race, slots), group: groupName(item), order: orderOf(fileOf(item)) };
+  };
+  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && !isOtherTrait(item)).sort((a, b) => {
+    const [one, two] = [place(a), place(b)];
+    return (one.rank - two.rank) || one.group.localeCompare(two.group) || (one.order - two.order) || a.name.localeCompare(b.name);
+  });
+}
+
+/** The Racial Trait of this race a Factor Trait names in brackets to replace - "From Goop (Body) [Majin Regeneration]:" - or null. */
+function replacedTraitOf(file, race) {
+  if (!file || !factorOf(file) || !race) return null;
+  const named = /^[^:\n]*\)\s*\[([^\]]+)\]\s*:/.exec(String(file.text ?? "").trim())?.[1]?.trim().toLowerCase();
+  if (!named) return null;
+  return racialTraitFiles().find(each => !factorOf(each) && (each.owner === race) && (String(each.name).toLowerCase() === named)) ?? null;
 }
 
 /**
@@ -659,7 +674,8 @@ export async function answeredTalent(data, trait, actor) {
  */
 export async function choiceRowsOf(item) {
   const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
-  if (!file?.choose) return [];
+  const talentRow = await talentChoiceRow(item, file);
+  if (!file?.choose) return talentRow ? [talentRow] : [];
   const actor = item.actor ?? null;
   const chosen = item.system.chosen ?? [];
   const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
@@ -674,7 +690,27 @@ export async function choiceRowsOf(item) {
       .map(([value, label]) => ({ value, label, selected: value === current })) });
   return [await row(1, file.choose, first, [second, third].filter(Boolean)),
     ...(file.choose2 ? [await row(2, file.choose2, second, [first, third].filter(Boolean))] : []),
-    ...(file.choose3 ? [await row(3, file.choose3, third, [first, second].filter(Boolean))] : [])];
+    ...(file.choose3 ? [await row(3, file.choose3, third, [first, second].filter(Boolean))] : []),
+    ...(talentRow ? [talentRow] : [])];
+}
+
+/** The Talents a `grantsTalentChoiceFrom` offers this character - those not had, but the one it gave - by name. */
+async function talentChoices(file, actor, keep = "") {
+  const fromCategories = listOf(file?.grantsTalentChoiceFrom);
+  if (!fromCategories.length) return [];
+  const { talentCategoryOf } = await import("./talent-categories.mjs");
+  const had = new Set(Array.from(actor?.items ?? []).filter(each => each.type === "talent").map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
+  return traitsOfKind("talents").filter(talent => (fromCategories.includes("any") || fromCategories.includes(talentCategoryOf(talent)?.id))
+    && ((talent.id === keep) || !had.has(talent.id))).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** From Goop (2)'s and every `grantsTalentChoiceFrom`'s: the Talent it gave, as a row of its Options tab - changeable. */
+async function talentChoiceRow(item, file) {
+  if (!listOf(file?.grantsTalentChoiceFrom).length) return null;
+  const current = (item.system.chosen ?? []).find(entry => entry.key === `${file.id}#talent`)?.value ?? "";
+  const offered = await talentChoices(file, item.actor ?? null, current);
+  return { which: "talent", current, label: "Talent",
+    options: offered.map(talent => ({ value: talent.id, label: talent.name, selected: talent.id === current })) };
 }
 
 /**
@@ -683,6 +719,8 @@ export async function choiceRowsOf(item) {
  */
 export async function changeChoice(item, which, value) {
   const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  // The Talent a `grantsTalentChoiceFrom` gave: the old one off, the new one on, as it was given (marked the Trait's).
+  if (which === "talent") return changeTalentChoice(item, file, value);
   if (!file?.choose || !value) return false;
   const key = (which === 3) ? `${file.id}#3` : (which === 2) ? `${file.id}#2` : file.id;
   const kind = (which === 3) ? file.choose3 : (which === 2) ? file.choose2 : file.choose;
@@ -712,6 +750,28 @@ export async function changeChoice(item, which, value) {
 
 ${script.slice(at).trim()}` : "";
   await item.update({ "system.script": `${own}${tail}`, "system.chosen": chosen });
+  return true;
+}
+
+async function changeTalentChoice(item, file, value) {
+  const actor = item.actor;
+  if (!actor || !value) return false;
+  const key = `${file.id}#talent`;
+  const old = (item.system.chosen ?? []).find(entry => entry.key === key)?.value ?? "";
+  if (old === value) return false;
+  const talent = (await talentChoices(file, actor, old)).find(each => each.id === value);
+  if (!talent) return false;
+  const gone = Array.from(actor.items).filter(each => (each.type === "talent") && old && (each.flags?.["dbu-ttrpg"]?.sourceId === old)
+    && (each.flags?.["dbu-ttrpg"]?.fromTrait === file.id)).map(each => each.id);
+  if (gone.length) await actor.deleteEmbeddedDocuments("Item", gone);
+  const { talentItemFrom } = await import("./talents.mjs");
+  const data = await answeredTalent(talentItemFrom(talent), talent, actor);
+  if (!data) return false;
+  data.flags["dbu-ttrpg"].fromTrait = file.id;
+  const [made] = (await actor.createEmbeddedDocuments("Item", [data])) ?? [];
+  if (made) await automateAll(actor, made);
+  await item.update({ "system.chosen": [...(item.system.chosen ?? []).filter(entry => entry.key !== key),
+    { key, value, label: `${file.name}: ${talent.name}` }] });
   return true;
 }
 
@@ -904,7 +964,12 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
           { action: "none", label: "None" }],
         rejectClose: false
       });
-      if (offered.some(talent => talent.id === picked)) made.grants.talents = [...(made.grants.talents ?? []), picked];
+      if (offered.some(talent => talent.id === picked)) {
+        made.grants.talents = [...(made.grants.talents ?? []), picked];
+        // Kept as one of its choices, so its Options tab shows it and may change it (choiceRowsOf, changeChoice).
+        made.data.system.chosen = [...(made.data.system.chosen ?? []),
+          { key: `${trait.id}#talent`, value: picked, label: `${trait.name}: ${offered.find(talent => talent.id === picked)?.name ?? picked}` }];
+      }
     }
   }
   // Ghost (2): "If you already have access to the Soar Maneuver, gain access to the Frequent Flyer Talent" - read before it is gained.

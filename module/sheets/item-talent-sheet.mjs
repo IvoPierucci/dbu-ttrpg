@@ -158,7 +158,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       select.addEventListener("change", async event => {
         event.stopPropagation();
         const { changeChoice } = await import("../racial.mjs");
-        const changed = await changeChoice(this.item, Number(event.target.dataset.choice), event.target.value);
+        // A numbered choice, or the Talent a `grantsTalentChoiceFrom` gave ("talent").
+        const which = Number(event.target.dataset.choice) || event.target.dataset.choice;
+        const changed = await changeChoice(this.item, which, event.target.value);
         if (!changed) this.render();
       });
     }
