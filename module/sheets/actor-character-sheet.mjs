@@ -283,6 +283,9 @@ function ownWords(actor) {
     // Duel's Super Stacks are lost in it, never given - the one everybody's Maneuver that names them.
     if (id === "duel") continue;
     const file = id ? getTrait(id) : null;
+    // A Maneuver every character carries but that is not theirs to use - a Trait's own effect while that Trait is not on them (Minion
+    // Coordinator's on a Majin), a Special Maneuver nothing opened - names nothing they have: left out, as the Maneuvers tab leaves it.
+    if ((item.type === "maneuver") && file && ((file.fromTrait && !traitActive(actor, file.fromTrait)) || whyNotSpecial(actor, { ...file, id }))) continue;
     // A Racial Trait's effect kept as a Maneuver of its own - "3rd effect of Majin Regeneration" - is named by the Trait it
     // is an effect of (the user's: that name said nothing).
     const name = (file?.fromTrait && getTrait(file.fromTrait)?.name) || item.name;
