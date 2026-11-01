@@ -1,0 +1,30 @@
+id: shooting-mindset
+name: Shooting Mindset
+order: 4
+category: mind
+importance: secondary
+description: >
+  Pinpoint precision for maximum damage is all that matters now, as you eschew all forms of defense in order to dismantle your enemies piece by piece.
+text: >
+  Shooting Mindset (Mind): Pinpoint precision for maximum damage is all that matters now, as you eschew all forms of defense in order to dismantle your enemies piece by piece.
+  (1)-[Passive]: Increase the Dice Category of your Extra Dice gained from Energy Charges by 1 Dice Category if you are in the Healthy Health Threshold.
+  (2)-[Passive]: Increase the Wound Rolls of your Signature Techniques by 2(T) while you are in the Healthy Health Threshold.
+  (3)-[Triggered, 1/Round]: If your Signature Technique becomes a Called Shot, you may gain a stack of Focus Fatigue after completing that Attacking Maneuver to ignore the Strike Roll penalty from that Attacking Maneuver being a Called Shot.
+  (4)-[Triggered/Injured]: You may spend any number of Ki Points (up to your Capacity, as usual). For every 4(bT) Ki Points spent, remove a stack of Focus Fatigue.
+---
+
+[passive]
+# (1), (2) Healthy. The Energy Charges' dice a Category up (chat.mjs postAttack, `charges.category`).
+if (!belowThreshold("bruised")) {
+    charges.category += 1;
+    wound.signature += 2(T);
+}
+# (3) A Signature Technique made a Called Shot: asked as it is declared, once a Round - no Strike penalty for it; a stack of Focus Fatigue
+# (Nice Shooting's) once it is done (chat.mjs postAttack, attackDurationEnds).
+allow shootingMindset.calledShot;
+
+# (4) Knocked through the Injured Health Threshold, with Focus Fatigue: how many stacks, asked - 4(bT) Ki Points each, out of the Capacity as
+# well (chat.mjs mindsetShed). Automatic by default, its Triggered/Automatic button.
+[triggered/threshold, effect 4]
+requires knockedThrough("injured") && hasResource("focusfatigue");
+mindsetShed();

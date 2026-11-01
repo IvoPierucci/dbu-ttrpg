@@ -7372,6 +7372,11 @@ export async function postManeuver(actor, maneuver,
     offerMove(card, actor, { key: `pseudoBeside:${actor.uuid}`, flag: "pseudoBesideRound", name: "Mimicry of Bestial Movement",
       reason: "an Opponent on a Square adjacent to you - your next attack this Round, Strike 2(T) at them", pseudoBeside: true });
   }
+  // Raised Gravity (3): its Movement ended beside an Opponent - your next attack this Round, Strike 1(T).
+  if (maneuver?.movement && card && maneuver.gravityMove) {
+    offerMove(card, actor, { key: `gravity:${actor.uuid}`, flag: "gravityBesideRound", name: "Raised Gravity",
+      reason: "an Opponent on a Square adjacent to you - your next attack this Round, Strike 1(T)", gravity: true });
+  }
   // Ranger (3): the movement ended beside a Character - a stack of Tension for an Ally or an Opponent there.
   if (maneuver?.movement && card && (actor.system?.effects?.slots?.["ranger.afterMove"] === true) && (vocationTension(actor) > 0)) {
     offerMove(card, actor, { key: `ranger:${actor.uuid}`, flag: "rangerRound", name: "Ranger",
@@ -16879,6 +16884,51 @@ export async function starsFall(actor) {
 }
 
 /** One of the character's own Maneuvers, by its file's id, used out of sequence - Warm Up (2)'s. */
+/**
+ * Raised Gravity (3): "Use the Movement Maneuver as an Out-of-Sequence Maneuver. If you end your movement on a Square adjacent to an Opponent,
+ * increase the Strike Roll of your next Attacking Maneuver this Combat Round by 1(T)." The Movement marked, so its card offers the claim.
+ */
+export async function gravityMove(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor?.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "movement"));
+  const movement = own ? definitionOf(own) : getManeuver("movement");
+  if (!movement) return UNSPENT;
+  return (await useManeuver(actor, { ...movement, gravityMove: true }, { outOfSequence: true })) ? undefined : UNSPENT;
+}
+
+/** Raised Gravity (3)'s claim: an Opponent on a Square adjacent to you - your next attack this Round, Strike 1(T). */
+async function gravityBeside(actor) {
+  const near = (canvas?.tokens?.placeables ?? []).some(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
+    && areOpponents(actor, token.actor) && besideAny(actor, [token.actor]));
+  if (!near) {
+    ui.notifications.info(`${actor.name}: no Opponent on a Square adjacent to you.`);
+    return false;
+  }
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.gravityStrike`]: roundKey() });
+  return true;
+}
+
+/**
+ * Shooting Mindset (4): "You may spend any number of Ki Points (up to your Capacity, as usual). For every 4(bT) Ki Points spent, remove a stack
+ * of Focus Fatigue." How many stacks, asked - their Ki out of the Capacity too. Unspent where none are.
+ */
+export async function mindsetShed(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const stacks = Number(actor?.system?.resources?.focusfatigue?.stacks) || 0;
+  const each = 4 * Math.max(1, Number(actor?.system?.baseTierOfPower) || 1);
+  const most = Math.min(stacks, Math.floor(Math.min(Number(actor?.system?.ki?.value) || 0, Number(actor?.system?.capacity?.remaining) || 0) / each));
+  if (most <= 0) {
+    if (stacks) ui.notifications.info(`${actor.name}: Shooting Mindset - not ${each} Ki Points to spend.`);
+    return UNSPENT;
+  }
+  const off = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Shooting Mindset`, most, `stacks of Focus Fatigue off - ${each} Ki Points each`));
+  if (off <= 0) return UNSPENT;
+  const { ki, capacity } = actor.system;
+  await requestActorUpdate(actor, { "system.ki.value": ki.value - off * each, "system.capacity.spent": capacity.spent + off * each });
+  await setResource(actor, "focusfatigue", stacks - off);
+}
+
 /** A Maneuver of theirs out of sequence, by its id - Petite Genius (3)'s Movement. Unspent where none is made. */
 export async function maneuverOutOfSequence(actor, id) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
@@ -19123,6 +19173,8 @@ async function takeMoveOffer(message, actor, offer) {
   if (offer.move.claws && !await clawsTarget(message, actor)) return;
   // Mimicry of Bestial Movement (3)'s, the same.
   if (offer.move.pseudoBeside && !await pseudoBesideTarget(actor)) return;
+  // Raised Gravity (3)'s: an Opponent beside you.
+  if (offer.move.gravity && !await gravityBeside(actor)) return;
   // Burrowing Beast (1)'s: Underground.
   if (offer.move.underground) await goUnderground(actor);
   // High Speed Ace (2)'s: its mark, till the Round ends.
@@ -20440,6 +20492,20 @@ function offerAngelicCounter(message, actor, attacker) {
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
     maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Angelic Offense - no Damage, no Counter Actions",
     grants: { angelicCounter: true } } });
+}
+
+/**
+ * Raised Gravity (2): "If you receive no Damage (either by dodging or reducing the Damage to 0) from an Opponent's Attacking Maneuver that
+ * targeted you, you may use the Signature Technique Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card, once a Round,
+ * counted when taken.
+ */
+function offerGravityTechnique(message, actor, attacker) {
+  if (!actor || !attacker || actor.system?.defeated || (actor.system?.effects?.slots?.["raisedGravity.technique"] !== true)) return;
+  if (!areOpponents(actor, attacker) || (actor.getFlag?.(SCOPE, "gravityTechniqueRound") === roundKey())) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.grants?.roundFlag === "gravityTechniqueRound") && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique",
+    maneuverName: "Signature Technique", reason: "Raised Gravity - no Damage, once a Round", technique: { via: "", any: true },
+    grants: { roundFlag: "gravityTechniqueRound" } } });
 }
 
 /**
@@ -25884,6 +25950,11 @@ async function takeTechniqueOffer(message, actor, offer) {
     ui.notifications.warn("Feline Build has been used this Combat Round.");
     return;
   }
+  // Raised Gravity (2)'s, and any other once a Round by its flag (`grants.roundFlag`) - counted when taken.
+  if (offer.grants?.roundFlag && (actor.getFlag?.(SCOPE, offer.grants.roundFlag) === roundKey())) {
+    ui.notifications.warn(`${actor.name}: already used this Combat Round.`);
+    return;
+  }
   // Cat's Paw (3)'s, once an Encounter.
   if (offer.grants?.catsPawTechnique && (actor.getFlag?.(SCOPE, "catsPawTechniqueEncounter") === (game.combat?.id ?? "none"))) {
     ui.notifications.warn(`${actor.name}: Cat's Paw - already used this Combat Encounter.`);
@@ -25925,6 +25996,7 @@ async function takeTechniqueOffer(message, actor, offer) {
     extraCharges: Number(offer.grants?.charges) || 0 });
   if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   if (used && offer.grants?.feline) await requestActorUpdate(actor, { [`flags.${SCOPE}.felineRound`]: roundKey() });
+  if (used && offer.grants?.roundFlag) await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.grants.roundFlag}`]: roundKey() });
   if (used && offer.grants?.perfectMimicry) await actor.setFlag(SCOPE, "perfectMimicryEncounter", game.combat?.id ?? "none");
   if (used && offer.grants?.catsPawTechnique) await actor.setFlag(SCOPE, "catsPawTechniqueEncounter", game.combat?.id ?? "none");
   return used;
@@ -27057,6 +27129,11 @@ export async function postAttack(actor, target, maneuver,
     }
     await requestActorUpdate(actor, { [`flags.${SCOPE}.pseudoBeside`]: null });
   }
+  // Raised Gravity (3): claimed this Round - your next attack, Strike 1(T); spent.
+  if (!reflecting && (actor.getFlag?.(SCOPE, "gravityStrike") === roundKey())) {
+    strikeExtra = [...strikeExtra, { label: "Raised Gravity", written: "+1(T)", value: mimicTier }];
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.gravityStrike`]: null });
+  }
   // Mimicry of Bestial Senses (4): their Search or Sense Clash won this turn - Strike 2(T) at them till it ends.
   const sensed = reflecting ? null : actor.getFlag?.(SCOPE, "pseudoSensed");
   if (sensed?.turn && (sensed.turn === turnKey()) && everyone.some(who => who?.uuid === sensed.uuid)) {
@@ -27091,6 +27168,14 @@ export async function postAttack(actor, target, maneuver,
       rejectClose: false });
   if (zoonerCalled) await actor.setFlag(SCOPE, "zoonerCalledRound", roundKey());
   const zoonerPrice = (reflecting ? 0 : (Number(zoonerExposed) || 0)) + (zoonerCalled ? 1 : 0);
+  // Shooting Mindset (3): the same - "you may gain a stack of Focus Fatigue after completing that Attacking Maneuver to ignore the Strike Roll
+  // penalty" - asked, once a Round, where Zooner-Raised's did not already.
+  const mindsetCalled = !reflecting && !zoonerCalled && maneuver.signature && !maneuver.signatureTechnique && isCalledShot({ modifiers })
+    && (actor.system.effects?.slots?.["shootingMindset.calledShot"] === true) && (actor.getFlag?.(SCOPE, "mindsetCalledRound") !== roundKey())
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Shooting Mindset` },
+      content: "<p data-tooltip=\"Once a Round. Done, a stack of Focus Fatigue.\">No Strike penalty for the Called Shot?</p>", rejectClose: false });
+  if (mindsetCalled) await actor.setFlag(SCOPE, "mindsetCalledRound", roundKey());
+  const fatigue = (reflecting ? 0 : (Number(niceFatigue) || 0)) + (mindsetCalled ? 1 : 0);
   // Claws (2): your first Physical Attack at the one whose Melee Range you moved into this Round - carried by it; spent either way.
   const clawed = reflecting ? null : actor.getFlag?.(SCOPE, "clawsTarget");
   const clawsAt = (clawed && (clawed.round === roundKey()) && (foundation === "physical") && everyone.some(who => who?.uuid === clawed.uuid))
@@ -27243,10 +27328,10 @@ export async function postAttack(actor, target, maneuver,
           ...(pierceQuarter ? { pierceQuarter: true } : {}),
           ...(diminishingEarly ? { diminishingEarly: true } : {}),
           // Zooner-Raised (3)'s Called Shot; the price of it and of (4), paid as it is done.
-          ...(zoonerCalled ? { zoonerCalled: true } : {}),
+          ...((zoonerCalled || mindsetCalled) ? { zoonerCalled: true } : {}),
           ...(zoonerPrice ? { zoonerExposed: zoonerPrice } : {}),
-          // Nice Shooting (1)'s Focus Fatigue, gained as it is done.
-          ...((!reflecting && (Number(niceFatigue) || 0)) ? { niceFatigue: Number(niceFatigue) } : {}),
+          // Nice Shooting (1)'s Focus Fatigue, and Shooting Mindset (3)'s, gained as it is done.
+          ...(fatigue ? { niceFatigue: fatigue } : {}),
           // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
@@ -27425,6 +27510,8 @@ export async function postAttack(actor, target, maneuver,
             : ((technique?.chargeCategories ?? 0) + blaster.dice + gambitDice(actor)
               // Technician (1): "Increase the Dice Category of your Energy Charges by 1."
               + ((actor.system.effects?.slots?.["technician.chargeDie"] === true) ? 1 : 0)
+              // Shooting Mindset (1): Healthy, a Category more.
+              + (Number(actor.system.effects?.slots?.["charges.category"]?.add) || 0)
               // Weapon Master (1): an Armed Attack's.
               + ((weapon && !weapon.unarmed) ? (Number(actor.system.effects?.slots?.["charges.armedCategory"]?.add) || 0) : 0)),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
@@ -29412,6 +29499,8 @@ async function resolveAttackWork(message, attack) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerUnscathedExploit(message, fromUuidSync(entry.uuid), attacker);
     // Angelic Offense (3): the same, and the Basic Attack.
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerAngelicCounter(message, fromUuidSync(entry.uuid), attacker);
+    // Raised Gravity (2): dodged - the Signature Technique Maneuver.
+    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerGravityTechnique(message, fromUuidSync(entry.uuid), attacker);
     // Feline Build (4): no Damage from it - a Copied Technique; Violent Rebuke (3): the Basic Attack back, hit or not.
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFelineTechnique(message, fromUuidSync(entry.uuid));
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerRebuke(message, fromUuidSync(entry.uuid), attacker);
@@ -34466,6 +34555,8 @@ async function applyAttackDamage(message, target, attack) {
     && (attack.maneuverId === "bite-attack")) await venomousBite(armsUser, target);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerUnscathedExploit(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
+  // Raised Gravity (2): hit, the Damage brought to 0.
+  if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerGravityTechnique(message, target, armsUser);
   // Death: "If you are the target of an Attacking Maneuver while Defeated, treat the intent as if it was Death."
   if (wasDefeated && armsUser && (armsUser.uuid !== target.uuid)) await deathByAttack(target);
   // "If you are hit by an Attacking Maneuver and take no Damage" - Bio-Suit's.

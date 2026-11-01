@@ -500,6 +500,14 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "A Maneuver of yours out of sequence, by its id - Petite Genius (3)'s Movement (chat.mjs maneuverOutOfSequence)."
   },
+  gravityMove: {
+    args: [0, 0],
+    doc: "Raised Gravity (3): the Movement out of sequence - ended beside an Opponent, claimed on its card (chat.mjs gravityMove)."
+  },
+  mindsetShed: {
+    args: [0, 0],
+    doc: "Shooting Mindset (4): stacks of Focus Fatigue off, 4(bT) Ki Points each, how many asked (chat.mjs mindsetShed)."
+  },
   gripBomb: {
     args: [0, 0],
     doc: "Desperate Grip (3): the Signature Technique Maneuver out of sequence - the Saibaman Bomb (chat.mjs gripBomb)."

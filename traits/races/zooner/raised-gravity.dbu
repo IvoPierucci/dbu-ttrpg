@@ -1,0 +1,29 @@
+id: raised-gravity
+name: Raised Gravity
+order: 3
+category: body
+importance: secondary
+description: >
+  The Zooner’s home planet has a gravity ten times that of Earth! That grants them incredible speed and power compared to a lowly Earthling.
+text: >
+  Raised Gravity (Body): The Zooner’s home planet has a gravity ten times that of Earth! That grants them incredible speed and power compared to a lowly Earthling.
+  (1)-[Passive]: While in the Healthy Health Threshold, increase your Speed, Defense Value, and Awareness by 1(T).
+  (2)-[Triggered, 1/Round]: If you receive no Damage (either by dodging or reducing the Damage to 0) from an Opponent’s Attacking Maneuver that targeted you, you may use the Signature Technique Maneuver as an Out-of-Sequence Maneuver.
+  (3)-[Triggered/Power, 1/Round]: Use the Movement Maneuver as an Out-of-Sequence Maneuver. If you end your movement on a Square adjacent to an Opponent, increase the Strike Roll of your next Attacking Maneuver this Combat Round by 1(T).
+---
+
+[passive]
+# (1) Healthy.
+if (!belowThreshold("bruised")) {
+    speed.normal += 1(T);
+    defenseValue += 1(T);
+    awareness += 1(T);
+}
+# (2) An Opponent's attack aimed at you that left you without Damage - dodged, or brought to 0: the Signature Technique Maneuver offered
+# on its card out of sequence, once a Round, counted when taken (chat.mjs offerGravityTechnique).
+allow raisedGravity.technique;
+
+# (3) The Power Up used: the Movement out of sequence - ticked in its window, never Automatic. Ended beside an Opponent, claimed on the
+# Movement's card: your next Attacking Maneuver this Round, Strike 1(T) (chat.mjs gravityMove, gravityBeside).
+[triggered/power, 1/round, outOfSequence, effect 3]
+gravityMove();
