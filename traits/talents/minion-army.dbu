@@ -1,0 +1,22 @@
+id: minion-army
+name: Minion Army
+talentCategory: minion
+prerequisites: Minion Coordinator or Minion Mark Talents
+description: >
+  You lead an entire army of Minions, able to call upon them at any time.
+text: >
+  Minion Army: You lead an entire army of Minions, able to call upon them at any time.
+  –Prerequisites: Minion Coordinator or Minion Mark Talents
+  (1)-[Passive]: There is no limit to the number of Minions you may possess, but only up to 10 of your Minions may be in a Combat Encounter at any one time (Defeated Minions do not count towards this limit).
+  (2)-[Triggered, 1/Round]: If one of your Minions makes an Attacking Maneuver, increase the Wound Roll for that Attacking Maneuver by 1(T) for every one of your Minions in the Combat Encounter who has not yet made an Attacking Maneuver this Combat Round (max. 4(T)).
+  (3)-[Triggered]: If any number of your Minions are Defeated, you may have any number of Minions that are not currently in the Combat Encounter immediately join the Combat Encounter. This cannot allow your total number of Minions in the Combat Encounter to exceed 10.
+
+---
+
+[passive]
+# (1) No limit on your Minions; 10 not Defeated in a Combat Encounter - Ruler (1)'s (maneuvers.mjs minionCaps, combat.mjs).
+allow minions.ruler;
+# (2) One of your Minions attacking: asked of you once a Round - 1(T), your Tier, on its Wound for each other Minion of yours in the Combat
+# Encounter not Defeated that has made no Attacking Maneuver this Round, 4 at most (chat.mjs postAttack).
+allow minionArmy.wound;
+# (3) The table's (the user's): Minions brought into the Combat Encounter by hand, as any are - the 10 still counted (combat.mjs).

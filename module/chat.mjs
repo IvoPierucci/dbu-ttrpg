@@ -27268,6 +27268,22 @@ export async function postAttack(actor, target, maneuver,
     strikeExtra = [...strikeExtra, { label: "Sacrificial Minion", written: "+1(T)", value: mimicTier }];
     woundExtra = [...woundExtra, { label: "Sacrificial Minion", written: "+1(T)", value: mimicTier }];
   }
+  // Minion Army (2): "If one of your Minions makes an Attacking Maneuver, increase the Wound Roll for that Attacking Maneuver by 1(T) for every
+  // one of your Minions in the Combat Encounter who has not yet made an Attacking Maneuver this Combat Round (max. 4(T))" - the Master's,
+  // asked of them once a Round; their Tier.
+  const army = (!reflecting && isMinion(actor)) ? game.actors?.get(masterOf(actor)) : null;
+  if (army && (army.system?.effects?.slots?.["minionArmy.wound"] === true) && (army.getFlag?.(SCOPE, "minionArmyRound") !== roundKey())) {
+    const fighting = new Set((game.combat?.combatants?.contents ?? []).map(each => each.actor?.id));
+    const idle = minionsOf(army).map(id => game.actors?.get(id)).filter(minion => minion && (minion.id !== actor.id) && fighting.has(minion.id)
+      && !minion.system?.defeated && !((Number(minion.system?.attacksThisRound) || 0) > 0)).length;
+    const count = Math.min(4, idle);
+    const armyTier = Math.max(1, Number(army.system?.tierOfPower) || 1);
+    if (count && ((await askPlayerChoice(army, `${army.name}: Minion Army - ${actor.name}'s attack`,
+      [{ value: "yes", label: `Wound +${count}(T) - ${count} of your Minions yet to attack (1/Round)` }, { value: "no", label: "No" }])) === "yes")) {
+      await requestActorUpdate(army, { [`flags.${SCOPE}.minionArmyRound`]: roundKey() });
+      woundExtra = [...woundExtra, { label: "Minion Army", written: `+${count}(T)`, value: count * armyTier }];
+    }
+  }
   // Raised Gravity (3): claimed this Round - your next attack, Strike 1(T); spent.
   if (!reflecting && (actor.getFlag?.(SCOPE, "gravityStrike") === roundKey())) {
     strikeExtra = [...strikeExtra, { label: "Raised Gravity", written: "+1(T)", value: mimicTier }];
