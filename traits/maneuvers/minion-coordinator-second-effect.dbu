@@ -1,0 +1,21 @@
+id: minion-coordinator-second-effect
+name: Minion Coordinator
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: minion-coordinator
+fromEffect: 2
+source: Core Rule
+description: >
+  Minion Coordinator's second effect, as a Maneuver: one of your Minions Superior until the end of their turn.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver, select one of your Minions. That Minion enters the Superior State until the end of their turn.
+
+---
+
+# Which of your Minions, asked - Superior till the end of its turn, on its own clock (chat.mjs coordinateMinion).
+[on used]
+coordinateMinion();

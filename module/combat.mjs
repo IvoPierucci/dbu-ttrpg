@@ -186,7 +186,9 @@ async function recoveryPeriods(combat) {
     const theirs = here.filter(actor => ids.has(actor.id) && !actor.system?.defeated);
     if (!theirs.length) continue;
     const tier = Math.max(1, Number(master.system?.tierOfPower) || 1);
-    const roll = await new Roll(`${tier}d8`).evaluate();
+    // Minion Coordinator (1): "Increase the amount ... regained through the Recovery Period rule for Minions by 1d8(T)" - on the one roll.
+    const times = 1 + Math.max(0, Number(master.system?.effects?.slots?.["minions.recoveryDice"]?.add) || 0);
+    const roll = await new Roll(`${tier * times}d8`).evaluate();
     for (const minion of theirs) {
       const life = minion.system.life ?? {};
       const ki = minion.system.ki ?? {};
@@ -196,7 +198,7 @@ async function recoveryPeriods(combat) {
       });
     }
     told.push(`Recovery Period: ${master.name}'s Minions (${theirs.map(minion => minion.name).join(", ")}) regain `
-      + `${roll.total} Life and Ki Points (${tier}d8).`);
+      + `${roll.total} Life and Ki Points (${tier * times}d8).`);
   }
   return told;
 }

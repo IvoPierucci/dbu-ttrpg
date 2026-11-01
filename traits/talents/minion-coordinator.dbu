@@ -1,0 +1,21 @@
+id: minion-coordinator
+name: Minion Coordinator
+talentCategory: minion
+prerequisites: Master of Minions
+description: >
+  You are a master tactician, able to give extremely efficient orders to your subordinates.
+text: >
+  Minion Coordinator: You are a master tactician, able to give extremely efficient orders to your subordinates.
+  –Prerequisites: Master of Minions
+  (1)-[Passive]: Increase the amount of Life and Ki Points regained through the Recovery Period rule for Minions by 1d8(T).
+  (2)-[1/Round]: As an Instant Maneuver, select one of your Minions. That Minion enters the Superior State until the end of their turn.
+  (3)-[Passive]: Increase your maximum number of Minions by 2.
+
+---
+
+[passive]
+# (1) Your Minions' Recovery Period: 1d8(T) more on its one roll (combat.mjs recoveryPeriods).
+minions.recoveryDice += 1;
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/minion-coordinator-second-effect.dbu).
+# (3)
+minions.combat += 2;

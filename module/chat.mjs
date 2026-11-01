@@ -16948,6 +16948,25 @@ export async function mindsetShed(actor) {
 }
 
 /**
+ * Minion Coordinator (2): "As an Instant Maneuver, select one of your Minions. That Minion enters the Superior State until the end of their
+ * turn." Which, asked - its turn's end on its own clock: this one in its turn, the coming one otherwise. Unspent where none is picked.
+ */
+export async function coordinateMinion(actor) {
+  const { UNSPENT, enterState } = await import("./effects/moments-runtime.mjs");
+  const yours = minionsOf(actor).map(id => game.actors?.get(id)).filter(minion => minion && !minion.system?.defeated);
+  if (!yours.length) {
+    ui.notifications.warn(`${actor?.name} has no Minion to coordinate.`);
+    return UNSPENT;
+  }
+  const id = (yours.length === 1) ? yours[0].id
+    : await askPlayerChoice(actor, `${actor.name}: Minion Coordinator - Superior`, yours.map(minion => ({ value: minion.id, label: minion.name })));
+  const minion = yours.find(each => each.id === id);
+  if (!minion) return UNSPENT;
+  if (!await enterState(minion, "superior", 1, "turn", "Minion Coordinator")) return UNSPENT;
+  ui.notifications.info(`${actor.name}: ${minion.name} is Superior until the end of its turn.`);
+}
+
+/**
  * Exploiting Minions (Brood Parent): "When one of your Minions created through the first effect of Brood Parent are Defeated, you may target a
  * Square they occupied with an Attacking Maneuver of the Clearing Profile as an Out-of-Sequence Maneuver." The Basic Attack, its Profile the
  * Clearing one; its targets the table's, at that Square. Unspent where none is made.
