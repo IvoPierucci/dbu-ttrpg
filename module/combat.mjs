@@ -1029,6 +1029,32 @@ export async function endEncounterFor(actor) {
 }
 
 /**
+ * The Turn State's Reset (the user's): everything that happened to this character undone, as if nothing had - for a Hype used
+ * outside of combat whose clock never runs out, and the like. Its States (but Dead), Conditions and marks, clocks, Actions and
+ * uses spent, Resources as an Encounter's end leaves them, Momentum and a charge held. Not undone: Life and Ki Points, Karma,
+ * Items - and what an Opponent left on them: Delayed's Imminent (the user's), and a Grapple, which is two characters'.
+ */
+export async function resetTurnState(actor) {
+  if (!actor) return;
+  const dead = Number(actor.system.states?.dead) || 0;
+  await actor.update({
+    "system.states": replaceObject(dead ? { dead } : {}),
+    "system.conditions": replaceObject({}),
+    "system.actionsSpent": { standard: 0, counter: 0, converted: 0, fromCounter: 0 },
+    "system.attacksThisRound": 0,
+    "system.usedManeuvers": [],
+    "system.talentUses.encounter": [],
+    "system.armedTalents": [],
+    "system.resources": replaceObject(keptResources(actor.system.resources)),
+    "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
+    ...NOT_CHARGING
+  });
+  await stopCharging(actor);
+  // Every clock of theirs stopped - one that would never have run out outside of a Combat is why this exists.
+  await encounterEnded(actor);
+}
+
+/**
  * Regenerating: "At the end of each Combat Encounter, this Weapon's Life Points are completely
  * recovered. If it was destroyed during the Combat Encounter, it is completely repaired."
  */

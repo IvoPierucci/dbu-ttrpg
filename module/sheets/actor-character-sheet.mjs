@@ -568,6 +568,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       escapeGrapple: DBUCharacterSheet._onEscapeGrapple,
       deleteItem: DBUCharacterSheet._onDeleteItem,
       toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
+      resetTurnState: DBUCharacterSheet._onResetTurnState,
       openCombatWindow: DBUCharacterSheet._onOpenCombatWindow,
       closeCombatWindow: DBUCharacterSheet._onCloseCombatWindow,
       pinCombat: DBUCharacterSheet._onPinCombat,
@@ -7079,6 +7080,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Unlock or re-lock the Combat tab's tracking values. */
+  /** The Turn State's Reset (the user's): everything that happened to them undone - asked first, it cannot be taken back. */
+  static async _onResetTurnState() {
+    const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Reset` },
+      content: "<p>Undo everything that happened to this character - States, Conditions, clocks, Actions and uses spent, Resources?</p>"
+        + "<p>Life, Ki, Karma, Items and an Opponent's Imminent stay.</p>", rejectClose: false });
+    if (!yes) return;
+    const { resetTurnState } = await import("../combat.mjs");
+    await resetTurnState(this.actor);
+    ui.notifications.info(`${this.actor.name}: reset.`);
+  }
+
   static _onToggleCombatEdit() {
     this.#combatEditMode = !this.#combatEditMode;
     this.render();

@@ -335,6 +335,10 @@
                 data-tooltip="Unlock the turn state and action counts for editing">
           {{#if combatEditMode}}Done{{else}}Edit{{/if}}
         </button>
+        <button type="button" class="edit-toggle" data-action="resetTurnState"
+                data-tooltip="Undo everything that happened to this character: States, Conditions, clocks, Actions and uses spent, Resources. Life, Ki, Karma, Items and an Opponent's Imminent stay">
+          Reset
+        </button>
       </header>
       <div class="dbu-combat-window-body">
         {{! Dice that ride alongside the Base Die - at the top of the Turn State (the user's). }}
