@@ -4879,3 +4879,8 @@
   background: #f0f0f0;
   border-color: #f0f0f0;
 }
+
+/* A Trait's Addendum box - Roomy Biology's "Inner Room" - folded under its effects, opened by its title. */
+.dbu-ttrpg .dbu-addendum { margin-top: 4px; }
+.dbu-ttrpg .dbu-addendum > summary { cursor: pointer; font-weight: bold; }
+.dbu-ttrpg .dbu-addendum[open] > summary { margin-bottom: 2px; }

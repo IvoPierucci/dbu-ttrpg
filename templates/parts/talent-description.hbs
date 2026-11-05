@@ -7,21 +7,10 @@
   {{! Its text as printed - edited on the Effect tab's Wording. }}
   <section class="panel">
     {{#each textLines as |line|}}
-    {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
+    {{#if line.addendum}}<details class="dbu-addendum"><summary>{{line.addendum.title}}</summary>{{#each line.addendum.lines as |part|}}{{#if part.gap}}<div class="dbu-entry-break"></div>{{else}}<div class="dbu-profile-line{{#if part.bullet}} dbu-profile-bullet{{/if}}">{{{part.html}}}</div>{{/if}}{{/each}}</details>
+    {{else if line.gap}}<div class="dbu-entry-break"></div>{{else}}
     <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}
     {{/each}}
-  </section>
-  {{/if}}
-  {{#if racial.addendumOnDescription}}
-  {{! Its Addendum effect's text box, as written - folded (the user's). }}
-  <section class="panel racial-addendum">
-    <details class="condition-group">
-      <summary class="panel-title">{{racial.addendumTitle}}</summary>
-      {{#each racial.addendum as |line|}}
-      {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
-      <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>{{/if}}
-      {{/each}}
-    </details>
   </section>
   {{/if}}
 </div>

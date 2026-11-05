@@ -6,6 +6,11 @@ category: body
 importance: secondary
 # (2) Copy Being, given with it.
 grantsUnique: copy-being
+addendumTitle: Cyber Copy
+addendum: >
+  A Cyber Copy is a perfect copy of a Character, though that copy doesn't exist as a Character but rather as something that can be used as a target for the Copy Being Unique Ability. A Cyber Copy is a perfect copy of the Character, possessing everything that Character has; their Power Level, Race, any Subraces or Factors, Talents, Transformations, Signature Techniques, Unique Abilities, etc. Unlike a typical Character when targeted by Copy Being, a Cyber Copy does not copy any Apparel, Weapons, or Accessories possessed from the copied Character, and thus does not change your Apparel, Weapons, or Accessories when used through the Copy Being Unique Ability.
+
+  When you obtain a Cyber Copy, make note of any Form or Enhancements that Character was in at the time. The Cyber Copy is treated as if they are in those for the effects of the Copy Being Unique Ability.
 description: >
   You are able to perfectly replicate an enemy's abilities.
 text: >
@@ -14,11 +19,6 @@ text: >
   (2)-[Passive]: Gain access to the Copy Being Unique Ability, but you cannot gain access to the Copy Clone Unique Ability, and rather than select a Character, you must select a Cyber Copy you possess for its effects.
   (3)-[Passive]: You may use the Copy Being Unique Ability any number of times per Combat Encounter (though, if it is used, you stop being a Copy of the last Cyber Copy you were), and when Copying a Cyber Copy, you maintain access to this Factor Trait ignoring all Prerequisites.
   (4)-[Addendum]: Please refer to the ‘Cyber Copy’ text box below.
-
-  Cyber Copy: A Cyber Copy is a perfect copy of a Character, though that copy doesn't exist as a Character but rather as something that can be used as a target for the Copy Being Unique Ability. A Cyber Copy is a perfect copy of the Character, possessing everything that Character has; their Power Level, Race, any Subraces or Factors, Talents, Transformations, Signature Techniques, Unique Abilities, etc. Unlike a typical Character when targeted by Copy Being, a Cyber Copy does not copy any Apparel, Weapons, or Accessories possessed from the copied Character, and thus does not change your Apparel, Weapons, or Accessories when used through the Copy Being Unique Ability.
-
-  When you obtain a Cyber Copy, make note of any Form or Enhancements that Character was in at the time. The Cyber Copy is treated as if they are in those for the effects of the Copy Being Unique Ability.
-
 ---
 
 # (2) Copy Being, its header's; Copy Clone not to be taken, and the copy of a Cyber Copy's sheet - not their Apparel, Weapons or

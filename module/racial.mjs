@@ -133,7 +133,18 @@ export function racialTraitLines(item) {
   const picked = (item?.system?.chosen ?? []).filter(entry => entry.key === "option")
     .map(entry => getTrait(entry.value)).filter(Boolean);
   const choices = choicePicked(item);
-  const lines = printedLines(item?.system?.text || "");
+  const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  const addendum = String(file?.addendum ?? "").trim();
+  // The box's own text, where an Item made before it had a place of its own still carries it after its Addendum effect - left out,
+  // shown folded below instead.
+  const printed = printedLines(item?.system?.text || "");
+  const lines = [];
+  for (let at = 0, inBox = false; at < printed.length; at++) {
+    if (/^\(\d+\)-/.test(printed[at])) inBox = false;
+    const own = (addendum && /^\(\d+\)-\[Addendum\]/.test(printed[at])) ? printed[at].replace(/(box below\.).*$/, "$1") : printed[at];
+    if (!inBox) lines.push(own);
+    if (addendum && /^\(\d+\)-\[Addendum\]/.test(printed[at])) inBox = true;
+  }
   const out = [];
   for (let at = 0; at < lines.length; at++) {
     const line = lines[at];
@@ -163,6 +174,11 @@ export function racialTraitLines(item) {
       }
     }
     if (list.length && !list[list.length - 1]) out.push({ html: "", bullet: false, gap: true });
+  }
+  // Its Addendum effect's text box - Roomy Biology's "Inner Room" - after its effects, folded: opened by its title (the user's).
+  if (addendum) {
+    out.push({ addendum: { title: String(file.addendumTitle ?? "Addendum"),
+      lines: printedLines(addendum).map(line => ({ html: lineHtml(line), bullet: /^[*\u2022]/.test(line), gap: !line })) } });
   }
   return out;
 }

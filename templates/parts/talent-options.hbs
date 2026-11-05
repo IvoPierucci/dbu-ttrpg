@@ -53,14 +53,4 @@
     </label>
   </section>
   {{/if}}
-  {{#if racial.addendum}}{{#unless racial.addendumOnDescription}}
-  {{! Its Addendum effect's text box, as written - beside the Options it is for. }}
-  <section class="panel racial-addendum">
-    <h3 class="panel-title">{{racial.addendumTitle}}</h3>
-    {{#each racial.addendum as |line|}}
-    {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
-    <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>{{/if}}
-    {{/each}}
-  </section>
-  {{/unless}}{{/if}}
 </div>
