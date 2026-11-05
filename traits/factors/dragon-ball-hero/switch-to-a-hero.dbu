@@ -6,6 +6,13 @@ category: body
 importance: secondary
 # (1) The Avatar: a Character of this world, made for it by the player and the ARC, chosen as it is gained.
 choose: character
+addendumTitle: Avatar
+addendum: >
+  Upon gaining this Factor, create an additional Character of the same Power Level as you – this Character is not a real entity, but a Character you can become through the 2nd effect of Switch to a Hero. This Character’s Race must be either: Android, Arcosian, Bio-Android, Demon, Majin, Namekian, Saiyan, or Shinjin. This Character is known as your ‘Avatar’. Whenever you gain a Power Level, so does your Avatar. Your Avatar gains Transformations completely independently from you, decided by the ARC as with any other Character, but upon Character Creation, your Avatar will gain the Class Avatar Greater Awakening.
+
+  Your Avatar shares the current value of their Life Points, Ki Points, and Capacity with you (and vice-versa).
+
+  If you would regain this Factor after losing it, you maintain the same Avatar you possessed before but it gains Power Levels until it matches your current Power Level.
 description: >
   You have the ability to change into your Avatar form, temporarily changing your race.
 text: >

@@ -4,6 +4,13 @@ order: 1
 category: body
 # "You must exchange a Secondary Racial Trait of the Mind Category for this Factor's Factor Trait" - which, the table's.
 importance: secondary
+addendumTitle: Cloned Character
+addendum: >
+  A Character with the Unstable Clone Factor is a clone of an existing Character. As such, they should have any Factors with Body-Category Factor Traits that the original Character had and should gain access to any Body-Category Awakenings that Character had (once they meet any prerequisites and have space amongst their Awakening Limit to obtain them). They may even have access to any Forms they possessed depending on the exact manner of cloning.
+
+  Ultimately, however, discuss this with your ARC and properly deduce what Transformations and Factors you possess due to your circumstances and where you differ from the original Character that you were cloned from. Your ARC may even allow you to gain access to some of their Signature Techniques and Unique Abilities, if you meet the requirements for them and it fits the exact circumstances of your creation.
+
+  Whatever you gain should be considered with the balance of your particular game in mind.
 description: >
   Driven by a rage that comes from the instability of your cloning process, you attack anything that moves.
 text: >
