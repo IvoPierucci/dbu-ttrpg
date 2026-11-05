@@ -1,0 +1,21 @@
+id: genetic-agility
+name: Genetic Agility
+order: 3
+optionOf: artificial-warrior
+description: >
+  Increase your Dodge Rolls and Speeds by 1(T).
+text: >
+  Genetic Agility [Passive]: Increase your Dodge Rolls and Speeds by 1(T).
+  Genetic Agility [Triggered, 1/Round]: If you successfully Dodge an Attacking Maneuver, gain an Adaptation Point.
+
+---
+
+[passive]
+# (4) Both Speeds.
+dodge += 1(T);
+speed.normal += 1(T);
+speed.boosted += 1(T);
+
+# (5) An Attacking Maneuver dodged. Automatic by default, its Triggered/Automatic button.
+[triggered/dodged-attack, 1/round, effect 5]
+adaptation.stacks += 1;

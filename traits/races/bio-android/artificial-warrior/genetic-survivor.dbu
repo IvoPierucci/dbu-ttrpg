@@ -1,0 +1,20 @@
+id: genetic-survivor
+name: Genetic Survivor
+order: 1
+optionOf: artificial-warrior
+description: >
+  Increase your Racial Life Modifier by 2 and your Soak Value by 1(T).
+text: >
+  Genetic Survivor [Passive]: Increase your Racial Life Modifier by 2 and your Soak Value by 1(T).
+  Genetic Survivor [Triggered, 1/Round]: If you are hit by an Attacking Maneuver and the Damage from that Attacking Maneuver (if any) does not knock you through a Health Threshold, gain an Adaptation Point.
+
+---
+
+[passive]
+# (4)
+racialLifeModifier += 2;
+soakValue += 1(T);
+
+# (5) Hit, and not knocked through a Health Threshold by it (hit-not-knocked). Automatic by default, its Triggered/Automatic button.
+[triggered/hit-not-knocked, 1/round, effect 5]
+adaptation.stacks += 1;

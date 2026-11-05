@@ -173,6 +173,12 @@ const TABLE = [
   { key: "opponent-damage", label: "An Opponent's Attacking Maneuver deals you Damage", provides: [],
     doc: "Fired for whoever an Opponent's Attacking Maneuver dealt Damage to, once it is applied (chat.mjs applyAttackDamage) - "
        + "Energy of Revenge's. What is the player's is asked in a window first." },
+  { key: "hit-not-knocked", label: "You are hit by an Attacking Maneuver and not knocked through a Health Threshold by it", provides: [],
+    doc: "Fired for whoever an Attacking Maneuver hit, once its Damage (if any) is applied, where it knocked them through no Health Threshold "
+       + "(chat.mjs applyAttackDamage) - Genetic Survivor's." },
+  { key: "damaged-opponent", label: "Your Attacking Maneuver deals an Opponent Damage", provides: [],
+    doc: "Fired for whoever made the Attacking Maneuver, once it dealt an Opponent of theirs Damage (chat.mjs applyAttackDamage), with them as "
+       + "`targetUuid` - Genetic Aggressor's." },
   { key: "command-used", label: "You use the Command Maneuver on at least 1 Minion", provides: [],
     doc: "Fired for whoever used the Command Maneuver, once the Minions it targeted are Commanded (chat.mjs commandMinions), with how many "
        + "as `minions` - Master of Minions'." },

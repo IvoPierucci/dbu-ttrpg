@@ -1,0 +1,20 @@
+id: genetic-aggressor
+name: Genetic Aggressor
+order: 2
+optionOf: artificial-warrior
+description: >
+  Increase your Strike and Wound Rolls by 1(T).
+text: >
+  Genetic Aggressor [Passive]: Increase your Strike and Wound Rolls by 1(T).
+  Genetic Aggressor [Triggered, 1/Round]: If you deal Damage to an Opponent with an Attacking Maneuver, gain an Adaptation Point.
+
+---
+
+[passive]
+# (4)
+strike += 1(T);
+wound += 1(T);
+
+# (5) An Opponent dealt Damage by your Attacking Maneuver (damaged-opponent). Automatic by default, its Triggered/Automatic button.
+[triggered/damaged-opponent, 1/round, effect 5]
+adaptation.stacks += 1;

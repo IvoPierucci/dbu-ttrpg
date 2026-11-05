@@ -1,0 +1,18 @@
+id: pursuit-of-perfection
+name: Pursuit of Perfection
+order: 4
+optionOf: artificial-warrior
+description: >
+  Gain access to the Absorb Special Maneuver and increase your maximum number of Adaptation Points by 1.
+text: >
+  Pursuit of Perfection [Passive]: Gain access to the Absorb Special Maneuver and increase your maximum number of Adaptation Points by 1.
+  Pursuit of Perfection [Addendum]: Please refer to the ‘Absorbed Perfection’ text box below.
+
+---
+
+[passive]
+# (4)
+allow maneuver.absorb;
+adaptation.max += 1;
+# (5) Its Addendum, Absorbed Perfection, on the Trait's Options tab - the Perfection Target the ARC's, the Absorption and Perfection
+# Awakenings not built yet.

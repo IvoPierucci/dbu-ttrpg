@@ -1327,6 +1327,30 @@ async function greedReductionFor(target, attack, uuid) {
   return spent * 2 * tier;
 }
 
+/** Artificial Warrior: how many Adaptation Points to spend, asked of whoever plays them; spent. How many. */
+async function spendAdaptation(actor, what) {
+  const held = Number(actor?.system?.resources?.adaptation?.stacks) || 0;
+  if (held <= 0) return 0;
+  const spent = Math.min(held, await askPlayerAmount(actor, `${actor.name}: Artificial Warrior - ${what}`, held,
+    `Adaptation Points (1(T) each)`));
+  if (spent <= 0) return 0;
+  await setResource(actor, "adaptation", held - spent);
+  return spent;
+}
+
+/**
+ * Artificial Warrior (3): "When you are hit by an Attacking Maneuver, you may spend any number of Adaptation Points. For each spent,
+ * increase your Damage Reduction by 1(T) for the duration of that Attacking Maneuver." Asked as the hit is settled; settled again, what
+ * was spent stands and nothing is asked twice.
+ */
+async function adaptationReductionFor(target, attack, uuid) {
+  const before = (attack.result?.targets ?? []).find(entry => entry.uuid === uuid);
+  if (before?.hit) return Number(before.adaptationReduction) || 0;
+  if (target?.system?.effects?.slots?.["adaptationSpend.hit"] !== true) return 0;
+  const spent = await spendAdaptation(target, `hit by ${attack.maneuverName ?? "an attack"}`);
+  return spent * Math.max(1, Number(target.system.tierOfPower) || 1);
+}
+
 /**
  * Tough Warrior (2): "If you are hit by an Attacking Maneuver, spend up to 4(bT) Ki Points. Increase your Damage Reduction by an
  * equal amount for the duration of that Attacking Maneuver." Asked as the hit is settled, once a Round; settled again, what was
@@ -9392,6 +9416,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Natural Result of 9, no Critical and no Botch.
   const lingering = (answered?.slots?.["lingering.nine"] === true) && ["strike", "dodge"].includes(slot)
     && await spendActions(actor, 1, "counter");
+  // Artificial Warrior (2): ticked in the window - how many Adaptation Points, asked; 1(T) on this Combat Roll's Dice Score each.
+  const adapted = (answered?.slots?.["adaptationSpend.roll"] === true) ? await spendAdaptation(actor, "this Combat Roll") : 0;
+  if (adapted) parts.push({ label: `Adaptation Points (${adapted})`, value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) });
   const baseDie = lingering ? { ...(answered.slots.baseDie ?? {}), add: 0, multiply: 1, set: 9, min: null, max: null }
     : (answered?.slots?.baseDie ?? null);
   const forcedNatural = baseDie?.set ?? null;
@@ -29639,6 +29666,8 @@ async function resolveAttackWork(message, attack) {
       ...((incoming?.slots?.["miniature.noPunchingDown"] === true) ? { noPunchingDown: true } : {}),
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
+      // Artificial Warrior (3): Adaptation Points spent as the hit is, 1(T) of Damage Reduction each for this attack.
+      adaptationReduction: hit ? await adaptationReductionFor(target, attack, uuid) : 0,
       toughReduction: tough.value,
       toughStep: tough.step,
       ...(defender ? { refinedSoak: defender.soak, unstudy: [{ by: target.uuid, uuid: attacker.uuid }] } : {}),
@@ -31757,7 +31786,7 @@ async function rollAttackWoundWork(message, attack) {
     if (wiseReduction) spendWriting(target, defending, "damageReduction");
     const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic + taunted
       + fullCounter + wiseReduction + (Number(own.taiChiReduction) || 0)
-      + (Number(own.greedReduction) || 0) + (Number(own.toughReduction) || 0)
+      + (Number(own.greedReduction) || 0) + (Number(own.adaptationReduction) || 0) + (Number(own.toughReduction) || 0)
       // Party Tactics (3): a stack of an Ally's Tension, for this attack.
       + (attack.partyReduction ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
       // Super Elastic Body (1): "Increase your Damage Reduction against Physical and Energy Attacks by 2(T)."
@@ -34768,6 +34797,9 @@ async function applyAttackDamage(message, target, attack) {
   if (wasDefeated && armsUser && (armsUser.uuid !== target.uuid)) await deathByAttack(target);
   // "If you are hit by an Attacking Maneuver and take no Damage" - Bio-Suit's.
   if (own.hit && (damage <= 0) && !isAbsoluteMiss(own)) await answerFor(target, "hit-unharmed");
+  // Genetic Survivor (Artificial Warrior): hit, and "the Damage from that Attacking Maneuver (if any) does not knock you through a Health
+  // Threshold".
+  if (own.hit && !isAbsoluteMiss(own) && !knockedThrough) await answerFor(target, "hit-not-knocked");
   // Unflinching Resilience (2): by an Armed Attack with a Physical Weapon - that Weapon's Life Points, by their Soak Value.
   if (own.hit && (damage <= 0) && !isAbsoluteMiss(own)) await unflinchingWeapon(message, attack, armsUser, target);
   // Rubbery Body: hit with a Physical Attack, the one hit moved.
@@ -34794,6 +34826,8 @@ async function applyAttackDamage(message, target, attack) {
     && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)) {
     const revengeBefore = Number(target.system.resources?.revengepoints?.stacks) || 0;
     await answerFor(target, "opponent-damage", { attackerUuid: armsUser.uuid });
+    // Genetic Aggressor (Artificial Warrior): "If you deal Damage to an Opponent with an Attacking Maneuver" - for its maker.
+    if (areOpponents(armsUser, target)) await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid });
     // Ruler (2): "If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm" - for its Master.
     const ruler = isMinion(armsUser) ? game.actors?.get(masterOf(armsUser)) : null;
     if (ruler && areOpponents(armsUser, target)) await answerFor(ruler, "minion-damage", { minionUuid: armsUser.uuid });

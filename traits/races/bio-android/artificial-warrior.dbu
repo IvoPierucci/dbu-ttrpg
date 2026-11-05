@@ -1,0 +1,51 @@
+id: artificial-warrior
+name: Artificial Warrior
+order: 1
+category: body
+importance: primary
+# (1) Adaptation Points, its Resource - 3 at most, 4 with Pursuit of Perfection (`adaptation.max`).
+resource: adaptation
+resourceLabel: Adaptation Points
+resourceMax: 3
+# (4) Its Option: Genetic Survivor, Genetic Aggressor, Genetic Agility or Pursuit of Perfection - each file holding its (4) and its (5).
+optionEffect: 4
+addendumTitle: Absorbed Perfection (Pursuit of Perfection)
+addendum: >
+  Upon gaining the Pursuit of Perfection effect for Bio-Android, work with your ARC to create a ‘Perfection Target’. A Perfection Target is a collection of characteristics that can be possessed by a particular Character (for example, Cell’s Perfection Targets would be Androids with the Enhanced Organism effect of Technological Being, the Infinite Energy effect of Energy Core, a Power Level above 10, and the Super Android Awakening). These characteristics can be anything and you can select as many features as you want, but it is recommended to have 3+ so that your targets are very specific, so that your ARC doesn’t have to be too careful when introducing Characters in the campaign.
+
+  If you have a stack of Absorption with your Perfection Target(s) as the Absorbed Characters, you gain the Perfection Awakening as a Level 1 Temporary Awakening while you have that stack of Absorption (ignoring the usual limit of a Temporary Awakening where it would be lost at the end of the current Combat Encounter). If that stack of Perfection stops being a Temporary Awakening, then even if you lose that stack of Absorption, you do not lose that stack of Perfection.
+description: >
+  Through the power of science and genetic engineering, you have been created to be the perfect warrior.
+text: >
+  Artificial Warrior (Body): Through the power of science and genetic engineering, you have been created to be the perfect warrior.
+  (1)-[Triggered/Power, Resource]: Gain an Adaptation Point (max. 3).
+  (2)-[Triggered]: When making a Combat Roll, you may spend any number of Adaptation Points. For each spent, increase the Dice Score of that Combat Roll by 1(T).
+  (3)-[Triggered]: When you are hit by an Attacking Maneuver, you may spend any number of Adaptation Points. For each spent, increase your Damage Reduction by 1(T) for the duration of that Attacking Maneuver.
+  (4)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Genetic Survivor [Passive]: Increase your Racial Life Modifier by 2 and your Soak Value by 1(T).
+  * Genetic Aggressor [Passive]: Increase your Strike and Wound Rolls by 1(T).
+  * Genetic Agility [Passive]: Increase your Dodge Rolls and Speeds by 1(T).
+  * Pursuit of Perfection [Passive]: Gain access to the Absorb Special Maneuver and increase your maximum number of Adaptation Points by 1.
+
+  (5)-[Choice]: Depending on your choice for the 4th effect of Artificial Warrior, gain access to the following effects:
+
+  * Genetic Survivor [Triggered, 1/Round]: If you are hit by an Attacking Maneuver and the Damage from that Attacking Maneuver (if any) does not knock you through a Health Threshold, gain an Adaptation Point.
+  * Genetic Aggressor [Triggered, 1/Round]: If you deal Damage to an Opponent with an Attacking Maneuver, gain an Adaptation Point.
+  * Genetic Agility [Triggered, 1/Round]: If you successfully Dodge an Attacking Maneuver, gain an Adaptation Point.
+  * Pursuit of Perfection [Addendum]: Please refer to the ‘Absorbed Perfection’ text box below.
+---
+
+[passive]
+# (3) Hit: how many Adaptation Points, asked as the hit is settled - 1(T) of Damage Reduction each for that attack (chat.mjs
+# adaptationReductionFor).
+allow adaptationSpend.hit;
+
+# (1) The Power Up used: ticked in its window.
+[triggered/power, effect 1]
+adaptation.stacks += 1;
+
+# (2) Ticked in the window before a Combat Roll, with Adaptation Points: how many, asked - 1(T) on its Dice Score each (chat.mjs rollSide).
+[triggered/combat-roll, effect 2]
+requires hasResource("adaptation");
+adaptationSpend.roll = true;
