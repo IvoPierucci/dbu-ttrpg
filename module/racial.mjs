@@ -1460,7 +1460,13 @@ async function madeByOption(actor, item, option) {
   if (option?.grantsPerk) await grantPerks(actor, perkSource(option, item), listOf(option.grantsPerk));
   if (option?.platingQuality) await platingQuality(actor, item, String(option.platingQuality), true);
   // An Other Trait it gives - Extension Feature's "You possess the Extension Attack Monstrous Trait".
-  for (const group of listOf(option?.grantsOther)) await grantOtherTrait(actor, item, group, listOf(option.grantsOtherFrom));
+  // `grantsOtherCount` of them (Uncanny Monster's two Bestial Traits) - each marked its Option's, so another Option chosen takes it away.
+  for (const group of listOf(option?.grantsOther)) {
+    for (let n = 0; n < Math.max(1, Number(option.grantsOtherCount) || 1); n++) {
+      const given = await grantOtherTrait(actor, item, group, listOf(option.grantsOtherFrom));
+      if (given) await given.setFlag("dbu-ttrpg", "grantedByOption", option.id);
+    }
+  }
   const count = Number(option?.installsWeapons) || 0;
   if (!count) return;
   const { craftedItemFrom, WEAPON_TYPES } = await import("./gear.mjs");

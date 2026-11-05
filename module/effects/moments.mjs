@@ -173,6 +173,9 @@ const TABLE = [
   { key: "opponent-damage", label: "An Opponent's Attacking Maneuver deals you Damage", provides: [],
     doc: "Fired for whoever an Opponent's Attacking Maneuver dealt Damage to, once it is applied (chat.mjs applyAttackDamage) - "
        + "Energy of Revenge's. What is the player's is asked in a window first." },
+  { key: "draining-ki", label: "Your Draining Attack gives back more than 5(bT) Ki Points from one of your Tier of Power or higher", provides: [],
+    doc: "Fired for whoever made a Draining Attack that gave them back more than 5(bT) Ki Points - their base Tier - from an Opponent of their "
+       + "Tier of Power or higher (chat.mjs applyAttackDamage) - Uncanny Monster's." },
   { key: "hit-not-knocked", label: "You are hit by an Attacking Maneuver and not knocked through a Health Threshold by it", provides: [],
     doc: "Fired for whoever an Attacking Maneuver hit, once its Damage (if any) is applied, where it knocked them through no Health Threshold "
        + "(chat.mjs applyAttackDamage) - Genetic Survivor's." },

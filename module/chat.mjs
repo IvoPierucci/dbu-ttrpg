@@ -34753,7 +34753,14 @@ async function applyAttackDamage(message, target, attack) {
     const life = feast + (drained ? damage : 0);
     const ki = drained ? Math.floor(damage / 2) : 0;
     if (life || ki) {
+      // Uncanny Monster (4): "If you recovered more than 5(bT) Ki Points through the Draining Attack Maneuver on an Opponent that is of an
+      // equal or higher ToP than you" - what it truly gave back, below the Maximum.
+      const kiPool = armsUser.system.ki ?? {};
+      const recovered = Math.min(ki, Math.max(0, (Number(kiPool.max) || 0) - (Number(kiPool.value) || 0)));
+      const strong = drained && (recovered > 5 * Math.max(1, Number(armsUser.system.baseTierOfPower) || 1)) && areOpponents(armsUser, target)
+        && ((Number(target.system?.tierOfPower) || 1) >= (Number(armsUser.system.tierOfPower) || 1));
       await regainPools(armsUser, life, ki);
+      if (strong) await answerFor(armsUser, "draining-ki", { targetUuid: target.uuid });
       ui.notifications.info(`${armsUser.name}: ${[feast ? `Feast ${feast}` : "", drained ? `Draining Attack ${damage}` : ""].filter(Boolean).join(", ")} Life`
         + `${ki ? `, ${ki} Ki` : ""} back.`);
     }

@@ -1,0 +1,16 @@
+id: two-bestial-traits
+name: Two Bestial Traits
+order: 1
+optionOf: uncanny-monster
+# Chosen as it is gained - gone with this Option.
+grantsOther: bestial
+grantsOtherCount: 2
+description: >
+  Gain 2 Bestial Traits.
+text: >
+  Two Bestial Traits: Gain 2 Bestial Traits.
+
+---
+
+[passive]
+# Its header's `grantsOther`: on the Traits tab's Other Traits.

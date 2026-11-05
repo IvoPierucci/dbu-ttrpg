@@ -1,0 +1,16 @@
+id: a-monstrous-trait
+name: A Monstrous Trait
+order: 2
+optionOf: uncanny-monster
+# Chosen as it is gained - gone with this Option.
+grantsOther: monstrous
+grantsOtherCount: 1
+description: >
+  Gain a Monstrous Trait.
+text: >
+  A Monstrous Trait: Gain a Monstrous Trait.
+
+---
+
+[passive]
+# Its header's `grantsOther`: on the Traits tab's Other Traits.

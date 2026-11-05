@@ -1,0 +1,28 @@
+id: uncanny-monster
+name: Uncanny Monster
+order: 2
+category: body
+importance: primary
+# (2) Its choice, an Option: two Bestial Traits, or a Monstrous Trait - chosen as it is added, changeable on its Options tab (what the
+# other gave goes with it). "If you would gain a stack of Perfection, you may redo your choice" - Perfection is not built: change it there.
+optionEffect: 2
+description: >
+  An artificially created monster, you are able to consume the life force of other beings, allowing you to recover yourself.
+text: >
+  Uncanny Monster (Body): An artificially created monster, you are able to consume the life force of other beings, allowing you to recover yourself.
+  (1)-[Passive]: Increase the Dice Score of your Intimidation Skill Checks by 2.
+  (2)-[Passive]: Gain 2 Bestial Traits or a Monstrous Trait. If you would gain a stack of Perfection, you may redo your choice for this effect.
+  (3)-[Passive]: You gain access to the Draining Attack Maneuver and the Drain Life Advantage.
+  (4)-[Triggered]: If you recovered more than 5(bT) Ki Points through the Draining Attack Maneuver on an Opponent that is of an equal or higher ToP than you, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+---
+
+[passive]
+# (1)
+skill.intimidation += 2;
+# (3) The Draining Attack Special Maneuver - and so the Drain Life Advantage, whose requirement is access to it.
+allow maneuver.draining-attack;
+
+# (4) The Draining Attack gave more than 5(bT) Ki Points back, its target of your Tier of Power or higher (draining-ki): the Power Up out of
+# sequence - chosen on the attack's card, never Automatic.
+[triggered/draining-ki, outOfSequence, effect 4]
+maneuverOutOfSequence(power-up);
