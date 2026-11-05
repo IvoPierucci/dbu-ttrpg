@@ -56,7 +56,8 @@ export function minionData(master, { name = "", duplicate = false, gear = true, 
   // Copy Clone's: "instead of a Duplicate Minion of yourself, it is a Duplicate Minion of that Character (you are still their Master)".
   const source = (copy ?? master).toObject();
   const ownership = foundry.utils.deepClone((copy ? master.toObject() : source).ownership ?? {});
-  const system = { ...own, master: master.id, duplicate: Boolean(duplicate), specialMinion: false };
+  const system = { ...own, master: master.id, duplicate: Boolean(duplicate), specialMinion: false,
+    ...(duplicate ? { duplicateOf: (copy ?? master).id } : {}) };
   if (duplicate) {
     for (const key of DUPLICATED_FIELDS) {
       if (key in (source.system ?? {})) system[key] = foundry.utils.deepClone(source.system[key]);
@@ -83,6 +84,33 @@ export function minionData(master, { name = "", duplicate = false, gear = true, 
       // Copy Clone's: a Duplicate of another, at their Power Level - not grown with its Master's (dbu-ttrpg.mjs).
       ...(copy ? { copied: true } : {}), ...extra } }
   };
+}
+
+/**
+ * A Minion made by hand made a Duplicate of another (the user's: chosen beside its Duplicate box) - what an effect's Duplicate is made with:
+ * their defining fields, and their Traits, Talents, Maneuvers and gear (marked Duplicated Items), in place of its own of those kinds; their
+ * Triggered/Automatic choices. One not its Master's is not grown with its Master (Copy Clone's `copied`).
+ */
+export async function copyOntoDuplicate(actor, original) {
+  if (!actor || !original || (actor.id === original.id)) return false;
+  const source = original.toObject();
+  const system = { duplicate: true, duplicateOf: original.id };
+  for (const key of DUPLICATED_FIELDS) {
+    if (key in (source.system ?? {})) system[key] = foundry.utils.deepClone(source.system[key]);
+  }
+  const gone = Array.from(actor.items ?? []).filter(item => isDuplicatedItem(item.toObject())).map(item => item.id);
+  if (gone.length) await actor.deleteEmbeddedDocuments("Item", gone);
+  const items = (source.items ?? []).filter(item => isDuplicatedItem(item)).map(item => {
+    const copied = foundry.utils.deepClone(item);
+    if (isDuplicatedGear(copied)) foundry.utils.setProperty(copied, `flags.${SCOPE}.duplicated`, true);
+    return copied;
+  });
+  const chosen = chosenFlags(source);
+  await actor.update({ system, ...Object.fromEntries(Object.entries(chosen).map(([key, value]) => [`flags.${SCOPE}.${key}`, value])),
+    [`flags.${SCOPE}.copied`]: original.id !== masterOf(actor) });
+  // Their ids kept, so the Triggered/Automatic choices copied still name them.
+  if (items.length) await actor.createEmbeddedDocuments("Item", items, { keepId: true });
+  return true;
 }
 
 /** What a Duplicate's original chose of how their Triggered effects go - Automatic, or asked - by the Items' ids. */

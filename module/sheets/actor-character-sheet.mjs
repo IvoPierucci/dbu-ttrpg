@@ -869,6 +869,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.isMinion = this.actor.type === "minion";
     context.minionsList = context.isMinion ? [] : this.#prepareMinions();
     context.masterEntry = context.isMinion ? this.#prepareMaster() : null;
+    // Whom a Duplicate may be a copy of (the user's): its Master first, then every other Character and Minion by name.
+    if (context.isMinion && this.actor.system.duplicate) {
+      const master = masterOf(this.actor);
+      context.duplicateCandidates = (game.actors?.contents ?? []).filter(other => (other.id !== this.actor.id) && isCharacter(other))
+        .map(other => ({ id: other.id, name: other.name, master: other.id === master, selected: other.id === this.actor.system.duplicateOf }))
+        .sort((a, b) => (Number(b.master) - Number(a.master)) || a.name.localeCompare(b.name));
+    }
     // A Duplicate is a Special Minion: the box shown ticked, and left to the Duplicate box.
     context.specialMinionShown = Boolean(this.actor.system.specialMinion || this.actor.system.duplicate);
     // Growing Minions: a Minion with a Master at its Master's Power Level (dbu-ttrpg.mjs) - not set here.
@@ -3346,6 +3353,31 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   _onRender(context, options) {
     super._onRender(context, options);
+
+    // A Duplicate's original, chosen (the user's): asked first, then copied onto it - its own Traits and the rest replaced.
+    for (const select of this.element.querySelectorAll("[data-duplicate-of]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        const original = game.actors?.get(select.value);
+        if (!original) return this.render();
+        const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Duplicate` },
+          content: `<p>Make ${Handlebars.escapeExpression(this.actor.name)} a copy of ${Handlebars.escapeExpression(original.name)}?</p>`
+            + "<p>Its Attributes, Race, Progression, Traits, Talents, Maneuvers and gear are replaced with theirs.</p>", rejectClose: false });
+        if (!yes) return this.render();
+        const { copyOntoDuplicate } = await import("../minion-make.mjs");
+        await copyOntoDuplicate(this.actor, original);
+      });
+    }
+    // A Duplicate of someone: its Progression is theirs - the tab locked, and said why.
+    const original = (this.actor.type === "minion") && this.actor.system.duplicate ? game.actors?.get(this.actor.system.duplicateOf ?? "") : null;
+    const progression = this.element.querySelector('.tab[data-tab="progression"]');
+    if (original && progression) {
+      for (const control of progression.querySelectorAll("input, select, textarea, button")) control.disabled = true;
+      const note = document.createElement("p");
+      note.className = "panel-note duplicate-lock";
+      note.textContent = `A Duplicate of ${original.name}: its Progression is theirs. Change it on ${original.name} and choose them again on Settings.`;
+      progression.prepend(note);
+    }
 
     // Technique Block's Signature Technique, by name: written onto its Item.
     for (const input of this.element.querySelectorAll("[data-unique-text]")) {

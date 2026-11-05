@@ -1550,6 +1550,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // A Minion's kind (the user's, on its Settings tab): a Special Minion, and a Duplicate - "Duplicates ... are Special Minions".
     schema.specialMinion = new fields.BooleanField({ required: true, initial: false });
     schema.duplicate = new fields.BooleanField({ required: true, initial: false });
+    // Whom a Duplicate is a copy of, by the world Actor's id - its Master, or another (Copy Clone's) - chosen on Settings for one made by
+    // hand (the user's); its Progression tab locked while it is set, being that one's.
+    schema.duplicateOf = new fields.StringField({ required: true, blank: true, initial: "" });
     // Minion Creation, Step 11: "Gain a Minion Trait or increase your Life Points by 2 for every Power Level you reach" - the second.
     schema.minionLifeStep = new fields.BooleanField({ required: true, initial: false });
 

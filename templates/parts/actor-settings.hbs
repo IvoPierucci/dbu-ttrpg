@@ -84,6 +84,19 @@
       <input type="checkbox" name="system.duplicate" {{#if system.duplicate}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
       Duplicate
     </label>
+    {{#if system.duplicate}}
+    {{! Whom it is a copy of (the user's): chosen, its Traits, Talents, Maneuvers, gear and Progression copied from them; its Progression
+        tab locked while it is set. }}
+    <label class="debug-toggle duplicate-of" data-tooltip="Whom this Duplicate is a copy of: choosing copies their Attributes, Race, Progression, Traits, Talents, Maneuvers and gear, and locks the Progression tab">
+      of
+      <select data-duplicate-of {{#unless editable}}disabled{{/unless}}>
+        <option value="" {{#unless system.duplicateOf}}selected{{/unless}}>- choose -</option>
+        {{#each duplicateCandidates as |who|}}
+        <option value="{{who.id}}" {{#if who.selected}}selected{{/if}}>{{who.name}}{{#if who.master}} (Master){{/if}}</option>
+        {{/each}}
+      </select>
+    </label>
+    {{/if}}
     {{#unless system.duplicate}}
     <label class="debug-toggle"
            data-tooltip="Minion Creation, Step 11: Gain a Minion Trait or increase your Life Points by 2 for every Power Level you reach (this bonus to your Life Points is applied after all calculation). Ticked: the Life Points.">
