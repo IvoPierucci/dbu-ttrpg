@@ -1,0 +1,25 @@
+id: genetic-focus-shadow-dragon
+name: Genetic Focus: Shadow Dragon
+order: 16
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Shadow Dragon Genes Factor
+# Trait, shown and never enforced.
+importance: primary
+# (2) A Bestial Trait, chosen as it is gained - in the Other Traits list, gone with it.
+grantsOther: bestial
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Shadow Dragon (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Shadow Dragon Genes Factor Trait
+  (2)-[Passive]: Gain 1 Bestial Trait.
+  (3)-[Passive]: Increase your Soak Value and Defense Value by 1(T) against Attacking Maneuvers made by Opponents with the Impaired Combat Condition.
+  (4)-[Passive]: You gain access to the Unify Maneuver, but your Race is considered to be Shadow Dragon for the effects of the Unify Maneuver. If a target is in their Ball Form and is Defeated, they do not need to be willing for the effects of the Unify Maneuver.
+---
+
+[passive]
+# (3) Draconic Physique (2)'s words: an Impaired Opponent's attack - your Soak, and the Defense Value under your Dodge (chat.mjs draconicParts).
+allow draconic.vsImpaired;
+# (4) The Unify Special Maneuver, your Race a Shadow Dragon's for it; a Defeated target - in their Ball Form - not asked whether willing
+# (chat.mjs unifyRefusal, unifyWilling).
+allow maneuver.unify;
+allow unify.asShadowDragon;

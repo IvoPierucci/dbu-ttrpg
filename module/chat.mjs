@@ -16036,6 +16036,8 @@ function ballSetOf(actor) {
  */
 export function unifyRefusal(actor, aimed) {
   const slots = actor.system.effects?.slots ?? {};
+  // Genetic Focus: Shadow Dragon (4): "your Race is considered to be Shadow Dragon for the effects of the Unify Maneuver".
+  const raceOf = who => (who?.system?.effects?.slots?.["unify.asShadowDragon"] === true) ? "shadow-dragon" : String(who?.system?.race ?? "");
   if (!aimed.length) return "Target the one to Unify with first.";
   const androids = (slots["unify.androids"] === true) && (String(actor.system.race ?? "") === "android");
   const wide = androids && aimed.every(other => (String(other.system?.race ?? "") === "android")
@@ -16043,7 +16045,7 @@ export function unifyRefusal(actor, aimed) {
   if (aimed.length > (wide ? 2 : 1)) return wide ? "Up to 2 Androids." : "Only one to Unify with - target one.";
   for (const other of aimed) {
     if (other.uuid === actor.uuid) return `${actor.name} cannot Unify with themselves.`;
-    if (String(other.system?.race ?? "") !== String(actor.system.race ?? "")) return `${other.name} is not of ${actor.name}'s Race.`;
+    if (raceOf(other) !== raceOf(actor)) return `${other.name} is not of ${actor.name}'s Race.`;
     if (other.system?.minion) return `${other.name} is a Minion.`;
     if ((slots["unify.sameSet"] === true) && (ballSetOf(other) !== ballSetOf(actor))) {
       return `${other.name} is not of ${actor.name}'s set of Dragon Balls.`;
@@ -16060,7 +16062,9 @@ export function unifyRefusal(actor, aimed) {
 export async function unifyWilling(actor, aimed) {
   for (const other of aimed) {
     // Defeated is Ball Form for them (Personified Dragon Ball (1)).
-    const ball = (actor.system.effects?.slots?.["unify.sameSet"] === true) && Boolean(other.system?.defeated);
+    // And Genetic Focus: Shadow Dragon (4)'s: "If a target is in their Ball Form and is Defeated, they do not need to be willing".
+    const ball = ((actor.system.effects?.slots?.["unify.sameSet"] === true) || (actor.system.effects?.slots?.["unify.asShadowDragon"] === true))
+      && Boolean(other.system?.defeated);
     if (ball) continue;
     const yes = (await askPlayerChoice(other, `${other.name}: Unify with ${actor.name}?`,
       [{ value: "yes", label: "Willing" }, { value: "no", label: "No" }])) === "yes";
