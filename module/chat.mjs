@@ -4,7 +4,7 @@ import { desperationCost, desperationEffect, desperationHolders, payDesperation 
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
-  duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
+  duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, duelWagerRows, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
   woundResourceStacks, woundResources } from "./duel.mjs";
 import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
@@ -35121,7 +35121,10 @@ async function submitDuelWager(message, actor) {
   // Teamwork (1): joined through the United Attack, twice the 1/10th.
   const teamworked = !primary && (actor.system?.effects?.slots?.["united.doubleWager"] === true)
     && [...(attack.duel.united ?? []), ...(attack.united ?? [])].some(entry => entry.uuid === actor.uuid);
-  const cap = duelWagerCap(actor, { primary, doubled: teamworked });
+  // Duel Wager: the two who roll may wager more.
+  const raised = primary ? duelSideWager(attack, side) : [];
+  const cap = duelWagerCap(actor, { primary, doubled: teamworked, bonus: raised.reduce((sum, row) => sum + row.value, 0) });
+  const raisedBy = raised.map(row => `${row.label} ${row.written}`).join(", ");
   // The side's roll, before the wagers: whose dice they are - the attacker's or the Initiator's.
   const roller = fromUuidSync((side === "attacker") ? attack.attackerUuid : attack.duel.initiatorUuid);
   const formula = roller ? formulaHtml({ base: DBUCharacterData.BASE_DIE,
@@ -35130,7 +35133,7 @@ async function submitDuelWager(message, actor) {
   const amount = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - Duel Clash ${(attack.duel.clashes?.length ?? 0) + 1}` },
-    content: `${formula ? `<p class="dbu-formula">${formula}</p>` : ""}<label class="dbu-wager"><span>Ki Wager (max ${cap})</span>
+    content: `${formula ? `<p class="dbu-formula">${formula}</p>` : ""}<label class="dbu-wager"><span${raisedBy ? ` data-tooltip="Duel Wager: ${Handlebars.escapeExpression(raisedBy)}"` : ""}>Ki Wager (max ${cap})</span>
         <input type="number" name="wager" value="0" min="0" max="${cap}"/></label>
       <p class="dbu-respond-hint">Nobody sees it until the Clash is rolled. It does not touch your Capacity.</p>`,
     buttons: [
@@ -35156,16 +35159,22 @@ async function submitDuelWager(message, actor) {
  * The attacker's own; the defending side's the Initiator's - Mirrored Attack's Duplicate's its own, a copy of the attacker's.
  */
 function duelSideRows(attack, side) {
+  const roller = fromUuidSync((side === "attacker") ? attack.attackerUuid : attack.duel.initiatorUuid);
+  return roller ? duelClashRows(roller) : [];
+}
+
+/** Duel Wager: what one side's primary may wager on top of 1/3 of their Max Capacity - the attack's Charges and Power Shot, its allies. */
+function duelSideWager(attack, side) {
   const duel = attack.duel;
   const attacker = fromUuidSync(attack.attackerUuid);
   const initiator = fromUuidSync(duel.initiatorUuid);
   const names = woundResources();
   const sides = duelSides(attack);
   if (side === "attacker") {
-    return attacker ? duelClashRows(attacker, { charges: attack.energyCharges, powerShotRanks: attack.powerShotRanks,
+    return attacker ? duelWagerRows(attacker, { charges: attack.energyCharges, powerShotRanks: attack.powerShotRanks,
       allies: sides.attacker.length - 1, resourceStacks: woundResourceStacks(attacker, names) }) : [];
   }
-  return initiator ? duelClashRows(initiator, { charges: duel.initiating?.charges, powerShotRanks:
+  return initiator ? duelWagerRows(initiator, { charges: duel.initiating?.charges, powerShotRanks:
     duel.initiating?.powerShotRanks, allies: sides.defender.length - 1,
     resourceStacks: woundResourceStacks(initiator, names) }) : [];
 }

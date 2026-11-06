@@ -140,14 +140,14 @@ export function whyNotDuel(actor, attack, { counterLeft = 1 } = {}) {
 }
 
 /**
- * The most one character may wager on one Duel Clash: "up to 1/2 of their Max Capacity (ignoring
+ * The most one character may wager on one Duel Clash: "up to 1/3 of their Max Capacity (ignoring
  * their current Capacity)" for a primary, "up to 1/10th of their Max Capacity" for everyone else -
- * and never Ki they have not got.
+ * the Duel Wager's `bonus` on top - and never Ki they have not got.
  */
-export function duelWagerCap(actor, { primary = false, doubled = false } = {}) {
+export function duelWagerCap(actor, { primary = false, doubled = false, bonus = 0 } = {}) {
   const max = Number(actor?.system?.capacity?.max) || 0;
   // Teamwork (1)'s, a United Attack's joiner: twice the 1/10th.
-  const cap = Math.floor(max / (primary ? 2 : 10)) * (doubled ? 2 : 1);
+  const cap = Math.floor(max / (primary ? 3 : 10)) * (doubled ? 2 : 1) + Math.max(0, Number(bonus) || 0);
   return Math.max(0, Math.min(cap, Number(actor?.system?.ki?.value) || 0));
 }
 
@@ -203,29 +203,33 @@ export function woundResourceStacks(actor, names = woundResources()) {
   return names.reduce((sum, name) => sum + Math.max(0, Number(held[name]?.stacks) || 0), 0);
 }
 
-/**
- * A primary's Duel Clash rows, before any wager.
- *
- * "2(T) for every Energy Charge applied to their Initiating Attack", and 1(T) for every "Allied
- * Character participating as part of a United Duel ..., Power Shot applied to the attack, Super
- * Stack they possess, every State (Raging or Mindful) they are currently in, and every stack of a
- * resource" that raises their Wound. T is the roller's.
- */
-export function duelClashRows(actor, { charges = 0, powerShotRanks = 0, allies = 0, resourceStacks = 0 } = {}) {
-  const tier = Math.max(1, Number(actor?.system?.tierOfPower) || 1);
+/** A primary's Duel Clash rows, before any wager: "the higher of each Character's Force or Magic Modifier". */
+export function duelClashRows(actor) {
   const attribute = duelAttribute(actor);
-  const rows = [{ label: `${attribute.label} Modifier`, value: attribute.value }];
-  const add = (count, per, label) => {
-    if (count > 0) rows.push({ label, written: `+${count * per}(T)`, value: count * per * tier });
+  return [{ label: `${attribute.label} Modifier`, value: attribute.value }];
+}
+
+/**
+ * Duel Wager: "Increase the amount of Ki Points that a character can Ki Wager on each Duel Clash by 1(T) for every: Allied Character
+ * participating as part of a United Duel, Power Shot applied to the attack, Energy Charge applied to the attack, Super Stack they possess,
+ * every Level of the Raging or Mindful State they are in, and every stack of a resource" that raises their Wound. The two who roll - the
+ * attack's are theirs; T is theirs. Rows, each in Ki.
+ */
+export function duelWagerRows(actor, { charges = 0, powerShotRanks = 0, allies = 0, resourceStacks = 0 } = {}) {
+  const tier = Math.max(1, Number(actor?.system?.tierOfPower) || 1);
+  const rows = [];
+  const add = (count, label) => {
+    if (count > 0) rows.push({ label, written: `+${count}(T)`, value: count * tier });
   };
-  add(Number(charges) || 0, 2, `Energy Charges ${charges}`);
-  add(Number(allies) || 0, 1, `United Duel allies ${allies}`);
-  add(Number(powerShotRanks) || 0, 1, `Power Shot ${powerShotRanks}`);
+  add(Number(allies) || 0, `United Duel allies ${allies}`);
+  add(Number(powerShotRanks) || 0, `Power Shot ${powerShotRanks}`);
+  add(Number(charges) || 0, `Energy Charges ${charges}`);
   const stacks = Math.max(0, Number(actor?.system?.superStacks) || 0);
-  add(stacks, 1, `Super Stacks ${stacks}`);
-  const states = ["raging", "mindful"].filter(key => (Number(actor?.system?.states?.[key]) || 0) > 0);
-  add(states.length, 1, states.map(key => key.charAt(0).toUpperCase() + key.slice(1)).join(", "));
-  add(Number(resourceStacks) || 0, 1, `Wound stacks ${resourceStacks}`);
+  add(stacks, `Super Stacks ${stacks}`);
+  const levels = ["raging", "mindful"].map(key => [key, Math.max(0, Number(actor?.system?.states?.[key]) || 0)]).filter(([, level]) => level);
+  add(levels.reduce((sum, [, level]) => sum + level, 0),
+    levels.map(([key, level]) => `${key.charAt(0).toUpperCase()}${key.slice(1)} ${level}`).join(", "));
+  add(Number(resourceStacks) || 0, `Wound stacks ${resourceStacks}`);
   return rows;
 }
 
