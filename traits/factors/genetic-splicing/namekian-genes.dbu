@@ -1,0 +1,32 @@
+id: namekian-genes
+name: Namekian Genes
+order: 3
+category: body
+importance: secondary
+# [Any - you choose]: the Saving Throw its Racial Saving Throw Bonus goes to, chosen as it is gained.
+choose: savingThrow
+# (4) Its Option, chosen as it is gained: a file beside it for each.
+optionEffect: 4
+description: >
+  With the regenerative powers of the Namekians, you are able to recover from damage easily and effectively.
+text: >
+  Namekian Genes [Any – you choose] (Body): With the regenerative powers of the Namekians, you are able to recover from damage easily and effectively.
+  (1)-[Passive]: Increase your Surgency by 1(T).
+  (2)-[1/Round]: As a Standard Action with an Action Cost of 1 and a Ki Point Cost of 4(bT) Ki Points, use a Healing Surge.
+  (3)-[Triggered/Start of Combat Round]: Regain 3(bT) Life Points and 1 Adaptation Point.
+  (4)-[Option]: Upon gaining this Factor Trait, choose one of the following effects to have access to while you possess this Trait:
+  * Genes of a Warrior Clan [Triggered, 1/Round]: If you spend 2+ Adaptation Points on the Wound Roll of an Attacking Maneuver, increase the Wound Roll by 1/2 of your Surgency.
+  * Genes of a Dragon Clan [Passive]: Gain access to the Healing Hands Unique Ability while you have this effect. You may spend Adaptation Points when using the Healing Hands Unique Ability to increase the amount of Life Points regained by your target(s) by 4(bT) for every Adaptation Point spent.
+---
+
+[passive]
+# The Saving Throw named after its name - its Racial Saving Throw Bonus.
+allow save.racial.$choice;
+# (1)
+surgency += 1(T);
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/namekian-genes-second-effect.dbu).
+
+# (3) The Combat Round begins. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-round, effect 3]
+life.value += 3(bT);
+adaptation.stacks += 1;

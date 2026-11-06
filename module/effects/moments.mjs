@@ -152,6 +152,9 @@ const TABLE = [
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },
   { key: "sunlight-gained", label: "You gain a stack of Sunlight", provides: [],
     doc: "Fired as Arboreal's Sunlight is gained (moments-runtime.mjs stacksGained) - its (6)." },
+  { key: "targeted-by-attack", label: "You are targeted by an Attacking Maneuver", provides: [],
+    doc: "Fired for each one an attack is aimed at as it is declared, its maker aside (chat.mjs postAttack) - Majin Genes'. What is "
+       + "the player's is asked in a window first." },
   { key: "plating-reduced", label: "Your Natural Armor has its Break Value reduced", provides: [],
     doc: "Fired as a piece of Natural Armor of yours loses Break Value or is destroyed, by whoever lowered it (natural-armor.mjs) - "
        + "Arcosian Genes' Genetic Survivor. What is the player's is asked in a window first." },

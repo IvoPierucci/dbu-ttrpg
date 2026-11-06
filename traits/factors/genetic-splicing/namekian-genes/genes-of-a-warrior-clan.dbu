@@ -1,0 +1,15 @@
+id: genes-of-a-warrior-clan
+name: Genes of a Warrior Clan
+order: 1
+optionOf: namekian-genes
+optionEffect: 4
+description: >
+  If you spend 2+ Adaptation Points on the Wound Roll of an Attacking Maneuver, increase the Wound Roll by 1/2 of your Surgency.
+text: >
+  Genes of a Warrior Clan [Triggered, 1/Round]: If you spend 2+ Adaptation Points on the Wound Roll of an Attacking Maneuver, increase the Wound Roll by 1/2 of your Surgency.
+
+---
+
+# Asked on an attack's Wound Roll with 2+ Adaptation Points spent on it - half your Surgency on it, once a Round (chat.mjs rollSide).
+[passive]
+allow namekianGenes.warrior;

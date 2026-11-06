@@ -1,0 +1,18 @@
+id: genes-of-a-dragon-clan
+name: Genes of a Dragon Clan
+order: 2
+optionOf: namekian-genes
+optionEffect: 4
+# Healing Hands, free and without its Requirements, gone with this (racial.mjs).
+grantsUnique: healing-hands
+description: >
+  Gain access to the Healing Hands Unique Ability while you have this effect. You may spend Adaptation Points when using the Healing Hands Unique Ability to increase the amount of Life Points regained by your target(s) by 4(bT) for every Adaptation Point spent.
+text: >
+  Genes of a Dragon Clan [Passive]: Gain access to the Healing Hands Unique Ability while you have this effect. You may spend Adaptation Points when using the Healing Hands Unique Ability to increase the amount of Life Points regained by your target(s) by 4(bT) for every Adaptation Point spent.
+
+---
+
+# Healing Hands through the header's `grantsUnique`. Using it, Adaptation Points asked - 4(bT) more Life Points each (use-maneuver.mjs
+# askHeal).
+[passive]
+allow namekianGenes.dragon;

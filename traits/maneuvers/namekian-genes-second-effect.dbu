@@ -1,0 +1,22 @@
+id: namekian-genes-second-effect
+name: 2nd effect of Namekian Genes
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 4
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+surge: true
+surgeKind: healing
+fromTrait: namekian-genes
+fromEffect: 2
+source: Core Rule
+description: >
+  Namekian Genes' second effect, as a Maneuver: a Healing Surge for 1 Action and 4(bT) Ki.
+text: >
+  (2)-[1/Round]: As a Standard Action with an Action Cost of 1 and a Ki Point Cost of 4(bT) Ki Points, use a Healing Surge.
+
+---
+
+# Namekian Biology's third effect's shape, its price not growing: owned by every character, in the list only while Namekian Genes is had
+# (`fromTrait`).

@@ -4430,6 +4430,19 @@ function collisionHalved(target) {
   return (slots["collision.halved"] === true) || ((slots["shell.collision"] === true) && Boolean(target.system.naturalArmor?.active));
 }
 
+/**
+ * Majin Genes (3): "If you take Collision Damage, you may spend an Adaptation Point to ignore that Collision Damage" - asked as it is
+ * about to be taken; whether it was.
+ */
+async function majinCollision(target, amount) {
+  const held = Number(target?.system?.resources?.adaptation?.stacks) || 0;
+  if ((amount <= 0) || (held <= 0) || (target.system.effects?.slots?.["majinGenes.collision"] !== true)) return false;
+  const yes = (await askPlayerChoice(target, `${target.name}: Majin Genes - ${amount} Collision Damage`,
+    [{ value: "yes", label: "Spend an Adaptation Point - none of it" }, { value: "no", label: "Take it" }])) === "yes";
+  if (yes) await setResource(target, "adaptation", held - 1);
+  return yes;
+}
+
 /** What of a Collision's Damage they take: none in the Incorporeal State ("You cannot suffer from Collision Damage"), halved, or all. */
 function collisionAmount(target, amount) {
   if ((Number(target?.system?.states?.incorporeal) || 0) > 0) return 0;
@@ -4462,8 +4475,11 @@ async function landThrown(attack, thrower, target) {
   const escape = Handlebars.escapeExpression;
   // Rubbery Body: "Halve any Collision Damage you receive." Sturdy Shell (3) too.
   const rubbery = collisionHalved(target);
-  await reduceLifePoints(target, collisionAmount(target, value),
-    { reason: `${thrown.name} (Collision Damage${rubbery ? ", halved" : ""})` });
+  const taken = collisionAmount(target, value);
+  // Majin Genes (3): an Adaptation Point for none of it.
+  const ignored = await majinCollision(target, taken);
+  await reduceLifePoints(target, ignored ? 0 : taken,
+    { reason: `${thrown.name} (Collision Damage${rubbery ? ", halved" : ""}${ignored ? ", ignored - Majin Genes" : ""})` });
   // Bouncy Physique: Collision Damage received - the Movement, out of sequence, on this note.
   const bounce = bouncyMovementOffer(target);
   await ChatMessage.create({
@@ -9494,6 +9510,15 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     for (let index = parts.length - 1; index >= 0; index--) if (String(parts[index].label).startsWith("Dim. Defense")) parts.splice(index, 1);
   }
   const blueprintCharge = blueprintTaken && (blueprint === "aggressor");
+  // Namekian Genes' Genes of a Warrior Clan: 2+ spent on an attack's Wound Roll - "increase the Wound Roll by 1/2 of your Surgency", asked,
+  // once a Round.
+  const clanAdd = ((slot === "wound") && attackingManeuver && (adapted >= 2) && (actor.system.effects?.slots?.["namekianGenes.warrior"] === true)
+    && (actor.getFlag?.(SCOPE, "warriorClanRound") !== roundKey())) ? Math.floor((Number(actor.system.surgency) || 0) / 2) : 0;
+  if (clanAdd && ((await askPlayerChoice(actor, `${actor.name}: Genes of a Warrior Clan`, [
+    { value: "yes", label: `Wound Roll +${clanAdd} (1/2 your Surgency, 1/Round)` }, { value: "no", label: "No" }])) === "yes")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.warriorClanRound`]: roundKey() });
+    parts.push({ label: "Genes of a Warrior Clan", value: clanAdd });
+  }
   // Arcosian Genes (4), with 2+ Adaptation Points spent - asked. Genetic Aggressor, on an attack's Wound Roll, spent on it or on its Strike
   // Roll: "increase the Wound Roll by the Apparel Bonus of your Plating". Genetic Agility, on a Dodge Roll: "increase the Dice Score by 1/2
   // of your Plating's Apparel Bonus".
@@ -11844,7 +11869,9 @@ export async function postHealing(actor, maneuver, plan) {
       // Priest (4): half your Surgency more.
       + (Number(plan.priestLife) || 0)
       // Spirit of Namek's Healer: your Surgency more.
-      + (Number(plan.healerLife) || 0);
+      + (Number(plan.healerLife) || 0)
+      // Namekian Genes' Genes of a Dragon Clan: 4(bT) for each Adaptation Point spent.
+      + (Number(plan.clanLife) || 0);
     const life = who.system.life;
     await requestActorUpdate(who, { "system.life.value": Math.min(life.ceiling ?? life.max, life.value + amount) });
     // Patch-Up: the first worn piece that has lost Break Value - "damaged or broken" - whole again.
@@ -27899,6 +27926,13 @@ export async function postAttack(actor, target, maneuver,
     }
   });
 
+  // "If you are targeted by an Attacking Maneuver" - Majin Genes (4)'s: each one it is aimed at, its maker aside.
+  for (const entry of (card ? attackTargets(card.getFlag(SCOPE, ATTACK_FLAG) ?? {}) : [])) {
+    const other = fromUuidSync(entry.uuid);
+    if (other && (other.uuid !== actor.uuid) && triggersFor(other, ["targeted-by-attack"]).length) {
+      await answerFor(other, "targeted-by-attack", { attackerUuid: actor.uuid });
+    }
+  }
   // Majin See, Majin Do: the Morale Clash against each it is aimed at; Neko Mimicry (5): against the Opponent whose Copied
   // Technique it is. The attack held till they are settled - the Trap Attack's arrangement, Guard Down for this attack on a win.
   const guardClashes = [];
@@ -33652,7 +33686,9 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
     + (changed ? `, ${changed}` : "")
     + (extra ? `, +${extra} ${extraLabel}` : "");
 
-  await reduceLifePoints(target, received, { reason });
+  // Majin Genes (3): an Adaptation Point for none of it.
+  const ignored = await majinCollision(target, received);
+  await reduceLifePoints(target, ignored ? 0 : received, { reason: ignored ? `${reason}, ignored - Majin Genes` : reason });
 
   // What this Environment does to whoever lands on it. "If a Character collides with a
   // Square of this Battle Environment, they are knocked Prone" - a Square of it, which is

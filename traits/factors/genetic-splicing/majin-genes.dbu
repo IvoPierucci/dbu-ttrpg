@@ -1,0 +1,28 @@
+id: majin-genes
+name: Majin Genes
+order: 2
+category: body
+importance: secondary
+description: >
+  Partially made of chewing gum-like goop, you embody the whimsical chaos of the Majin race.
+text: >
+  Majin Genes [Morale] (Body): Partially made of chewing gum-like goop, you embody the whimsical chaos of the Majin race.
+  (1)-[Passive]: You are Unnatural.
+  (2)-[Passive]: Gain access to a Majin Secondary Trait of your choice. That Trait cannot be traded out for Factor Traits.
+  (3)-[Triggered]: If you take Collision Damage, you may spend an Adaptation Point to ignore that Collision Damage.
+  (4)-[Triggered, 1/Round]: If you are targeted by an Attacking Maneuver, gain an Adaptation Point.
+---
+
+[passive]
+# [Morale]: its Racial Saving Throw Bonus.
+allow save.racial.morale;
+# (1)
+allow unnatural;
+# (2) The Majin Secondary Trait is added by hand from the Traits tab, as any Racial Trait is (the user's: the system does not control
+# which Racial Traits a character has) - and that it cannot be traded for a Factor Trait, the table's.
+# (3) Collision Damage about to be taken, an Adaptation Point to spend: asked - spent, none of it (chat.mjs majinCollision).
+allow majinGenes.collision;
+
+# (4) An Attacking Maneuver aimed at you (targeted-by-attack). Automatic by default, its Triggered/Automatic button.
+[triggered/targeted-by-attack, 1/round, effect 4]
+adaptation.stacks += 1;

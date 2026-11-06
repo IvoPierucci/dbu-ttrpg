@@ -3817,6 +3817,19 @@ async function askHeal(actor, maneuver) {
     return null;
   }
   const desperateFor = chosen.desperate ? ((chosen.mode === "zone") ? chosen.desperateFor : uuids[0]) : "";
+  // Namekian Genes' Genes of a Dragon Clan: "You may spend Adaptation Points when using the Healing Hands Unique Ability to increase the
+  // amount of Life Points regained by your target(s) by 4(bT) for every Adaptation Point spent" - how many, asked.
+  const adaptation = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  let clanLife = 0;
+  if ((actor.system.effects?.slots?.["namekianGenes.dragon"] === true) && (adaptation > 0)) {
+    const { askPlayerAmount, setResource } = await import("./chat.mjs");
+    const spent = Math.min(adaptation, await askPlayerAmount(actor, `${actor.name}: Genes of a Dragon Clan`, adaptation,
+      "Adaptation Points - 4(bT) Life Points more each"));
+    if (spent > 0) {
+      await setResource(actor, "adaptation", adaptation - spent);
+      clanLife = spent * 4 * baseTier;
+    }
+  }
 
   // The roll, from its window.
   const modifier = noModifier ? 0 : (Number(actor.system.attributes?.magic?.mod) || 0);
@@ -3829,11 +3842,12 @@ async function askHeal(actor, maneuver) {
       parts: [...(modifier ? [{ label: "Magic Modifier", value: modifier }] : []),
         ...(desperateKi ? [{ label: desperate.name, value: desperateKi }] : []),
         ...(priestLife ? [{ label: "Priest (1/2 Surgency)", value: priestLife }] : []),
-        ...(healerLife ? [{ label: "Healer (Surgency)", value: healerLife }] : [])] } });
+        ...(healerLife ? [{ label: "Healer (Surgency)", value: healerLife }] : []),
+        ...(clanLife ? [{ label: "Genes of a Dragon Clan", value: clanLife }] : [])] } });
   if (!ready) return null;
 
   return { uuids, dice: [dice, moreDice].filter(Boolean).join(" + "), modifier,
-    mightKi: chosen.might ? mightKi : 0, desperateKi, desperateFor, patch: chosen.patch, priestKi, priestLife, healerLife };
+    mightKi: chosen.might ? mightKi : 0, desperateKi, desperateFor, patch: chosen.patch, priestKi, priestLife, healerLife, clanLife };
 }
 
 /**
