@@ -166,6 +166,10 @@ const TABLE = [
        + "its attack's Strike, where this is its Wound; `rollKind`, `attackRoll`; chat.mjs rollSide) - and on an attack's Wound Roll where "
        + "only its Strike had them - Genetic Focus: Angel's (5), Arcosian Genes', Konatsian Genes' (1). What is the player's is asked in a "
        + "window first." },
+  { key: "adaptation-wound-damage", label: "Your Wound Roll with Adaptation Points spent on it deals Damage", provides: [],
+    doc: "Fired once an attack's Damage is worked out, where Adaptation Points were spent on its Wound Roll and a target of it takes "
+       + "Damage - once an attack (`spent`; chat.mjs rollAttackWoundWork) - Genetic Focus: Arcosian's (4). What is the player's is "
+       + "asked in a window first." },
   { key: "adaptation-on-hit", label: "You spend Adaptation Points as you are hit", provides: [],
     doc: "Fired as Adaptation Points are spent on Damage Reduction as a hit is settled (`spent`; chat.mjs adaptationReductionFor) - "
        + "Konatsian Genes' (2). What is the player's is asked in a window first." },

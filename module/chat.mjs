@@ -1403,9 +1403,8 @@ async function cerealianWoundFor(attacker, attack) {
 
 /** Your Plating's Apparel Bonus - the Active Natural Armor's, nothing broken (Arcosian Genes'). */
 function platingBonus(actor) {
-  const item = Array.from(actor?.items ?? []).find(each => (each.flags?.["dbu-ttrpg"]?.naturalArmor === true) && each.system?.equipped);
-  const reading = item ? craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier: actor.system?.baseTierOfPower ?? 1 }) : null;
-  return (reading && (reading.breakLeft !== 0)) ? (Number(reading.bonus) || 0) : 0;
+  // As its owner's effects read it - what Traits add per Tier (Bio-Suit's, Genetic Focus: Arcosian's) in it; nothing while broken.
+  return Number(actor?.system?.naturalArmor?.apparelBonus) || 0;
 }
 
 /**
@@ -9511,6 +9510,7 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
  */
 async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
                                            slot = null, collect = true, strikeAdapted = 0, oneCharge = "", signatureRoll = false,
+                                           tailRoll = false,
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
@@ -9539,6 +9539,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
     const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted, oneCharge, signatureRoll,
+      tailRoll,
       criticalTarget, botchUnlessCritical, naturalAdd };
     const clone = () => ((typeof modifiers === "number") ? modifiers : modifiers.map(part => ({ ...part })));
     const first = await rollSide(actor, clone(), { ...again, collect });
@@ -9573,8 +9574,12 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Artificial Warrior (2): ticked in the window - how many Adaptation Points, asked; 1(T) on this Combat Roll's Dice Score each.
   const adapted = (answered?.slots?.["adaptationSpend.roll"] === true) ? await spendAdaptation(actor, "this Combat Roll") : 0;
   // Earthling Genes (3): "Double the bonus to the Wound Rolls of your Signature Techniques from your Adaptation Points."
-  const adaptDoubled = (slot === "wound") && signatureRoll && (actor.system.effects?.slots?.["earthlingGenes.signatureWound"] === true);
-  if (adapted) parts.push({ label: `Adaptation Points (${adapted})${adaptDoubled ? " x2 (Earthling Genes)" : ""}`,
+  // And Genetic Focus: Arcosian (3)'s: "Double the bonus to your Wound Rolls of your Tail Attack from your Adaptation Points."
+  const doubledBy = (slot !== "wound") ? ""
+    : (signatureRoll && (actor.system.effects?.slots?.["earthlingGenes.signatureWound"] === true)) ? "Earthling Genes"
+    : (tailRoll && (actor.system.effects?.slots?.["focusArcosian.tailWound"] === true)) ? "Genetic Focus: Arcosian" : "";
+  const adaptDoubled = Boolean(doubledBy);
+  if (adapted) parts.push({ label: `Adaptation Points (${adapted})${adaptDoubled ? ` x2 (${doubledBy})` : ""}`,
     value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) * (adaptDoubled ? 2 : 1) });
   // Adaptation Points spent on this roll - or, an attack's Wound Roll, on its Strike: their Moment, each effect answering it Automatic or
   // asked in its window as its button says.
@@ -22479,6 +22484,29 @@ async function shinjinFreeCounter(actor, what) {
 }
 
 /**
+ * Genetic Focus: Arcosian (5): "If you knock an Opponent through a Health Threshold or Defeat them with an Attacking Maneuver, maximize your
+ * Adaptation Points. If you already had a number of Adaptation Points equal to or exceeding 1/2 of your maximum number of Adaptation Points,
+ * you may use the Energy Charge Maneuver as an Out-of-Sequence Maneuver." Once an Encounter between the two Moments; the Energy Charge
+ * asked.
+ */
+export async function focusArcosianSurge(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const encounter = game.combat?.id ?? "none";
+  if (!actor || (actor.getFlag?.(SCOPE, "focusArcosianEncounter") === encounter)) return UNSPENT;
+  const { resourceLimits } = await import("./effects/traits.mjs");
+  const most = Number(resourceLimits(actor).adaptation) || 0;
+  if (most <= 0) return UNSPENT;
+  const had = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.focusArcosianEncounter`]: encounter });
+  await setResource(actor, "adaptation", most);
+  if (most > had) await (await import("./effects/moments-runtime.mjs")).stacksGained(actor, ["adaptation"], { adaptation: most - had });
+  if ((had * 2 >= most) && ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Arcosian`,
+    [{ value: "yes", label: "The Energy Charge Maneuver, out of sequence" }, { value: "no", label: "No" }])) === "yes")) {
+    await ownOutOfSequence(actor, "energy-charge");
+  }
+}
+
+/**
  * Heran Genes (5): "Lose up to 2 stacks of Power. For every stack of Power lost, gain an Adaptation Point." How many, asked.
  */
 export async function heranGenesTrade(actor) {
@@ -31950,8 +31978,9 @@ async function rollAttackWoundWork(message, attack) {
     strikeAdapted: Number(attack.result?.strike?.adapted) || 0,
     // Android Cybernetics (5): one Energy Charge's dice, for a Signature Technique's.
     oneCharge: attack.signature ? energyChargeDice(attacker, { ...attack, energyCharges: 1 }) : "",
-    // Earthling Genes (3): a Signature Technique's.
+    // Earthling Genes (3): a Signature Technique's. Genetic Focus: Arcosian (3): the Tail Attack's.
     signatureRoll: Boolean(attack.signature),
+    tailRoll: attack.maneuverId === "tail-attack",
     extraDice: woundDice(attacker, attack),
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
@@ -32386,6 +32415,13 @@ async function rollAttackWoundWork(message, attack) {
         [`flags.${SCOPE}.adamantineHealedFor`]: message.id });
       await settledNote(message, `Adamantine Muscle: ${healer.name} regains ${healed} Life Points.`);
     }
+  }
+
+  // Genetic Focus: Arcosian (4): Adaptation Points spent on this Wound Roll, and Damage on a target of it - once an attack.
+  const woundSpent = Number(wound?.adapted) || 0;
+  const woundMaker = woundSpent ? fromUuidSync(attack.attackerUuid ?? "") : null;
+  if (woundMaker && settledTargets.some(line => line.hit && ((Number(line.damage) || 0) > 0))) {
+    await answerFor(woundMaker, "adaptation-wound-damage", { spent: woundSpent });
   }
 
   // Hit for no Damage - there is nothing to apply, so it is said now: Feline Build (4)'s Copied Technique, Violent Rebuke

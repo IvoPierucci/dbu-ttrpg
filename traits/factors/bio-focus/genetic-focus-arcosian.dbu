@@ -1,0 +1,38 @@
+id: genetic-focus-arcosian
+name: Genetic Focus: Arcosian
+order: 3
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Arcosian Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# (2) Read off the Trait itself, as Bio-Suit's: the Plating's Apparel Bonus is worked out before any effect has run (gear.mjs
+# platingBonusPerTier).
+platingBonusPerTier: 1
+description: >
+  Your Arcosian genes give you an overwhelmingly intimidating visage.
+text: >
+  Genetic Focus: Arcosian (Body) [Uncanny Monster]: Your Arcosian genes give you an overwhelmingly intimidating visage.
+  (1)-[Prerequisite]: Arcosian Genes Factor Trait.
+  (2)-[Passive]: Increase the Apparel Bonus of your Plating by 1(T).
+  (3)-[Passive]: Double the bonus to your Wound Rolls of your Tail Attack from your Adaptation Points.
+  (4)-[Triggered]: If you spend Adaptation Points on the Wound Roll of an Attacking Maneuver, and a target of that Attacking Maneuver receives Damage, gain an Adaptation Point.
+  (5)-[Triggered, 1/Encounter]: If you knock an Opponent through a Health Threshold or Defeat them with an Attacking Maneuver, maximize your Adaptation Points. If you already had a number of Adaptation Points equal to or exceeding 1/2 of your maximum number of Adaptation Points, you may use the Energy Charge Maneuver as an Out-of-Sequence Maneuver.
+---
+
+[passive]
+# (3) The Tail Attack's Wound Roll: the Adaptation Points spent on it 2(T) each (chat.mjs rollSide).
+allow focusArcosian.tailWound;
+
+# (4) Adaptation Points spent on an attack's Wound Roll, and Damage worked out on a target of it - once an attack
+# (adaptation-wound-damage). Automatic by default, its Triggered/Automatic button.
+[triggered/adaptation-wound-damage, effect 4]
+adaptation.stacks += 1;
+
+# (5) An Opponent knocked through a Health Threshold, or Defeated, by your attack - once an Encounter between the two: your Adaptation
+# Points to their Maximum; had you half of it or more, the Energy Charge out of sequence, asked (chat.mjs focusArcosianSurge).
+# Automatic by default, its Triggered/Automatic button.
+[triggered/knock-through, effect 5]
+focusArcosianSurge();
+
+[triggered/defeat-opponent, effect 5]
+focusArcosianSurge();
