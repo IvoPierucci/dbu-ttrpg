@@ -722,6 +722,28 @@ async function heartOfEvilKnock(attacker, target) {
 }
 
 /**
+ * Genetic Focus: Majins (6): "If you use a Healing Surge, maximize your Adaptation Points. Then, you may use any Standard Maneuver with an
+ * Action Cost of 1 Action as an Out-of-Sequence Maneuver." Asked, once an Encounter; the Maneuver an "Out of Sequence" button on the
+ * Maneuvers tab this Round (`focusMajinOOS`), Winged Beast's way.
+ */
+async function focusMajinSurge(actor) {
+  const encounter = game.combat?.id ?? "none";
+  if ((actor?.system?.effects?.slots?.["focusMajins.surge"] !== true) || (actor.getFlag?.(SCOPE, "focusMajinEncounter") === encounter)) return;
+  const { resourceLimits } = await import("./effects/traits.mjs");
+  const most = Number(resourceLimits(actor).adaptation) || 0;
+  if ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Majins - a Healing Surge`, [
+    { value: "yes", label: `Adaptation Points to their Maximum (${most}), then a Standard Maneuver of 1 Action out of sequence (1/Encounter)` },
+    { value: "no", label: "Not now" }])) !== "yes") return;
+  const had = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.focusMajinEncounter`]: encounter, [`flags.${SCOPE}.focusMajinOOS`]: roundKey() });
+  if (most) {
+    await setResource(actor, "adaptation", most);
+    if (most > had) await (await import("./effects/moments-runtime.mjs")).stacksGained(actor, ["adaptation"], { adaptation: most - had });
+  }
+  ui.notifications.info(`${actor.name}: Genetic Focus: Majins - a Standard Maneuver of 1 Action out of sequence, from the Maneuvers tab.`);
+}
+
+/**
  * Genetic Focus: Herans (5): "If you deal Damage to an Opponent with an Attacking Maneuver, you may spend an Adaptation Point to target an
  * Ally adjacent to that Opponent. That Ally can use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but they must target that
  * Opponent with that Attacking Maneuver." Asked, once an Encounter; which Ally, asked where there are several; their Basic Attack offered on
@@ -37044,6 +37066,8 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
       flavor: `${source} - Healing Surge${(multiplier > 1) ? ` x${multiplier}` : ""} - ${restored} Life Points restored${goop ? GOOP_SAID : ""}`
     });
     if (crossedUp) await answerFor(actor, "surge-threshold");
+    // Genetic Focus: Majins (6): asked, once an Encounter.
+    await focusMajinSurge(actor);
     // Feline Rally (3).
     await felineRallySurge(actor);
     await emergencyPowerUp(actor);

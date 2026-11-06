@@ -1,0 +1,35 @@
+id: genetic-focus-majins
+name: Genetic Focus: Majins
+order: 10
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Majin Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Majins (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Majins Genes Factor Trait
+  (2)-[Passive]: Gain access to a Majin Secondary Trait of your choice. That Trait cannot be traded out for Factor Traits.
+  (3)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (4)-[Passive]: Increase your Soak Value and Defense Value by 1(T).
+  (5)-[Triggered/Threshold]: Spend an Adaptation Point to use a Healing Surge as an Out-of-Sequence Maneuver.
+  (6)-[Triggered, 1/Encounter]: If you use a Healing Surge, maximize your Adaptation Points. Then, you may use any Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+---
+
+[passive]
+# (2) The Majin Secondary Trait added by hand from the Traits tab, as any Racial Trait is; that it cannot be traded, the table's.
+# (3) Where the Magic Modifier is the higher (actor-character.mjs) - Priest's.
+allow surgency.magic;
+# (4)
+soakValue += 1(T);
+defenseValue += 1(T);
+# (6) A Healing Surge used: asked, once an Encounter - your Adaptation Points to their Maximum, then an "Out of Sequence" button on your
+# Standard Maneuvers of 1 Action this Round, for one (chat.mjs focusMajinSurge). The Encounter's one, and an Out-of-Sequence Maneuver: no
+# button (the user's).
+allow focusMajins.surge;
+
+# (5) Knocked through a Health Threshold, with an Adaptation Point: a Healing Surge out of sequence for it - chosen, never Automatic.
+[triggered/threshold, outOfSequence, effect 5]
+requires hasResource("adaptation");
+adaptation.stacks -= 1;
+surge(healing);

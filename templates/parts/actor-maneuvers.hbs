@@ -94,6 +94,11 @@
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="As an Instant Maneuver - Burrowing Beast in Cover, Underwater Beast Underwater (1/Round each)">Instant</button>
             {{/if}}
+            {{#if maneuver.majinOutOfSequence}}
+            <button type="button" class="maneuver-control" data-action="majinOutOfSequence"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Genetic Focus: Majins: out of sequence, after its Healing Surge">Out of Sequence</button>
+            {{/if}}
             {{#if maneuver.wingedOutOfSequence}}
             <button type="button" class="maneuver-control" data-action="wingedOutOfSequence"
                     data-item-id="{{maneuver.itemId}}"

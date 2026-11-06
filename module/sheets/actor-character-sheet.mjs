@@ -466,6 +466,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       glassInstant: DBUCharacterSheet._onGlassInstant,
       burrowInstant: DBUCharacterSheet._onBurrowInstant,
       wingedOutOfSequence: DBUCharacterSheet._onWingedOutOfSequence,
+      majinOutOfSequence: DBUCharacterSheet._onMajinOutOfSequence,
       spiritInstant: DBUCharacterSheet._onSpiritInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
       flipInstant: DBUCharacterSheet._onFlipInstant,
@@ -2096,6 +2097,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               // Mimicry of Bestial Movement (3): "You may use the Movement Maneuver as an Instant Maneuver" - once a Round.
               || (this.actor.system.effects?.slots?.["movement.pseudoInstant"] === true)),
             // Winged Beast (4): the Soar just used - a Standard Maneuver of 1 Action, out of sequence.
+            // Genetic Focus: Majins (6): after its Healing Surge, a Standard Maneuver of 1 Action out of sequence - this Round.
+            majinOutOfSequence: (maneuver.type === "standard") && (Number(maneuver.actionCost) === 1) && !maneuver.actionCostOpen
+              && !(maneuver.actionCostMax > 1)
+              && (this.actor.getFlag("dbu-ttrpg", "focusMajinOOS") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`),
             wingedOutOfSequence: (this.actor.system.effects?.slots?.["winged.afterSoar"] === true) && (maneuver.type === "standard")
               && (Number(maneuver.actionCost) === 1) && !maneuver.actionCostOpen && !(maneuver.actionCostMax > 1)
               && (this.actor.getFlag("dbu-ttrpg", "wingedSoared") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`),
@@ -7344,6 +7349,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant", ...((flag === "pseudoMoveRound") ? { pseudoInstant: true } : {}) })) return;
     return this.actor.setFlag("dbu-ttrpg", flag, round);
+  }
+
+  /** Genetic Focus: Majins (6): a Standard Maneuver of 1 Action out of sequence, after its Healing Surge - one. */
+  static async _onMajinOutOfSequence(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (!item || (this.actor.getFlag("dbu-ttrpg", "focusMajinOOS") !== round)) return;
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, definitionOf(item), { outOfSequence: true })) return;
+    return this.actor.unsetFlag("dbu-ttrpg", "focusMajinOOS");
   }
 
   /** Winged Beast (4): a Standard Maneuver of 1 Action right after the Soar, out of sequence - once a Round. */
