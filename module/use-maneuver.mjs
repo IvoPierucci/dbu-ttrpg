@@ -4925,6 +4925,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ui.notifications.warn(notAsWeapon);
     return false;
   }
+  // Angel's Unique Rule: no Duplicate of an Angel.
+  const { whyNoAngelDuplicate } = await import("./maneuvers.mjs");
+  const { cannotBeMinion } = await import("./races.mjs");
+  const angelDuplicate = whyNoAngelDuplicate(actor, maneuver, targetActor, cannotBeMinion);
+  if (angelDuplicate) {
+    ui.notifications.warn(angelDuplicate);
+    return false;
+  }
   // Limited Control: one that makes Minions, with no room for another.
   const noRoom = whyNoMinionRoom(actor, maneuver);
   if (noRoom) {

@@ -4201,6 +4201,16 @@ export function goopAbsorbs(actor) {
 const GOOP_MANEUVERS = Object.freeze(["movement"]);
 const BATTLE_GOO_MANEUVERS = Object.freeze(["basic-attack", "intervene"]);
 
+/** The Unique Abilities that make Duplicates of their user. */
+const SELF_DUPLICATING_UAS = Object.freeze(["multi-form-technique", "super-ghost-kamikaze-attack"]);
+
+/** Angel's Unique Rule: "Angels cannot be Minions" - no Duplicate of an Angel made: refused before it is paid. */
+export function whyNoAngelDuplicate(actor, maneuver, target = null, cannot = () => false) {
+  const library = uniqueLibraryOf(actor, maneuver);
+  const of = SELF_DUPLICATING_UAS.includes(library) ? actor : (library === "copy-clone") ? target : null;
+  return (of && cannot(of.system?.race)) ? `${of.name} is an Angel: Angels cannot be Minions (${maneuver.name}).` : null;
+}
+
 /**
  * Copy Clone: "Target a Character (except a Fusion) on the Battlefield who is not at Long Range ... You cannot target a Character
  * whose Tier of Power is higher than yours." Why not this one, or null. A Fusion is not in this system yet - the table's.

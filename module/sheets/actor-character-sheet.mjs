@@ -1525,7 +1525,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       ...option,
       selected: option.value === race
     }));
-    context.raceOptions = races.filter(option => !option.minionRace);
+    // Angel's Unique Rule: "Angels cannot be Minions" - not offered on a Minion's sheet.
+    const onMinion = this.actor.type === "minion";
+    context.raceOptions = races.filter(option => !option.minionRace && !(onMinion && option.noMinion && !option.selected));
     context.minionRaceOptions = races.filter(option => option.minionRace);
     // Only the Character Creation Sizes are offered, plus whatever the character is
     // already set to - an effect may have moved them somewhere not on that list, and

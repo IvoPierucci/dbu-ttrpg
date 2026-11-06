@@ -8,5 +8,7 @@
     "tenacity": 1
   },
   "savingThrow": "impulsive",
-  "skillRanks": 6
+  "skillRanks": 6,
+  "uniqueRule": "Angels cannot be Minions.",
+  "noMinion": true
 }

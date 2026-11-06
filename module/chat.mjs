@@ -3,6 +3,7 @@ import { commandedNow, isCharacter, isMinion, typicalMinion } from "./actor-type
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
+import { getRace } from "./races.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, duelWagerRows, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
   woundResourceStacks, woundResources } from "./duel.mjs";
@@ -34828,6 +34829,8 @@ function whyNotMirror(actor, attack, item, counterLeft = 1) {
   if (counterLeft < 1) return "no Counter Actions left";
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   if (!attacker) return "the attacker is not here to copy";
+  // Angel's Unique Rule: "Angels cannot be Minions".
+  if (getRace(attacker.system?.race ?? "")?.noMinion === true) return `${attacker.name} is an Angel: Angels cannot be Minions`;
   return whyNotCopyClone(actor, { itemId: item?.id, name: item?.name ?? "Copy Clone" }, attacker) ?? "";
 }
 

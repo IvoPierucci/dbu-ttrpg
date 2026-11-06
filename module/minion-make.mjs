@@ -152,6 +152,12 @@ export async function makeMinion(master, options = {}) {
   const combat = game.combats?.contents?.find(each => each.combatants.some(combatant => combatant.actorId === master.id)) ?? null;
   const roundKey = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   const copy = options.copyOf ? (globalThis.fromUuidSync?.(options.copyOf) ?? null) : null;
+  // Angel's Unique Rule: "Angels cannot be Minions" - no Duplicate of one.
+  const { cannotBeMinion } = await import("./races.mjs");
+  if (options.duplicate && cannotBeMinion((copy ?? master).system?.race)) {
+    ui.notifications.warn(`${(copy ?? master).name} is an Angel: Angels cannot be Minions, so no Duplicate of them.`);
+    return [];
+  }
   for (let n = 0; n < Math.max(1, Number(options.count) || 1); n++) {
     const actor = await Actor.create(minionData(master, { ...options, copy, made: roundKey }));
     if (!actor) continue;

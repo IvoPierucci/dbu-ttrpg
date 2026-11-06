@@ -12,7 +12,13 @@ export function getRace(id) {
 export function raceOptions() {
   return [...races.values()]
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map(race => ({ value: race.id, label: race.name, description: race.description ?? "", minionRace: race.minionRace === true }));
+    .map(race => ({ value: race.id, label: race.name, description: race.description ?? "", minionRace: race.minionRace === true,
+      noMinion: race.noMinion === true }));
+}
+
+/** A race's Unique Rule that keeps it from being a Minion - the Angels': "Angels cannot be Minions." */
+export function cannotBeMinion(id) {
+  return races.get(String(id ?? ""))?.noMinion === true;
 }
 
 /** The Racial Life Modifier for a race id; 0 when the race is unknown. */
