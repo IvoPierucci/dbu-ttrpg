@@ -21385,7 +21385,20 @@ function namekianFocusParts(actor, otherUuid) {
 
 /** Tension a Vocation's effects may spend: Tension, and Konatsian-Raised's Inherited Tension "as if it was Tension". */
 export function vocationTension(actor) {
-  return (Number(actor?.system?.resources?.tension?.stacks) || 0) + (Number(actor?.system?.resources?.inheritedtension?.stacks) || 0);
+  return (Number(actor?.system?.resources?.tension?.stacks) || 0) + (Number(actor?.system?.resources?.inheritedtension?.stacks) || 0)
+    + focusKonatsianTension(actor);
+}
+
+/**
+ * Genetic Focus: Konatsians (3): "While you are below the Injured Health Threshold, you may spend 3 Adaptation Points and 3(bT) Ki Points as
+ * if they were 1 Tension." How many Tension they come to now.
+ */
+function focusKonatsianTension(actor) {
+  if ((actor?.system?.effects?.slots?.["focusKonatsians.tension"] !== true) || !["injured", "critical"].includes(actor.system.threshold?.key ?? "")) {
+    return 0;
+  }
+  const ki = 3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  return Math.min(Math.floor((Number(actor.system.resources?.adaptation?.stacks) || 0) / 3), Math.floor((Number(actor.system.ki?.value) || 0) / ki));
 }
 
 /** That much spent by a Vocation's effect: Tension first, then Inherited Tension. */
@@ -21396,7 +21409,15 @@ export async function spendVocationTension(actor, amount = 1) {
   const rest = Math.max(0, amount - fromOwn);
   if (!rest) return;
   const inherited = Number(actor.system.resources?.inheritedtension?.stacks) || 0;
-  await setResource(actor, "inheritedtension", Math.max(0, inherited - rest));
+  const fromInherited = Math.min(inherited, rest);
+  if (fromInherited) await setResource(actor, "inheritedtension", inherited - fromInherited);
+  // Then Genetic Focus: Konatsians (3)'s: 3 Adaptation Points and 3(bT) Ki Points each.
+  const converted = Math.min(rest - fromInherited, focusKonatsianTension(actor));
+  if (converted > 0) {
+    const ki = 3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+    await setResource(actor, "adaptation", (Number(actor.system.resources?.adaptation?.stacks) || 0) - (3 * converted));
+    await requestActorUpdate(actor, { "system.ki.value": Math.max(0, (Number(actor.system.ki?.value) || 0) - (ki * converted)) });
+  }
 }
 
 /** Cerealian-Raised (2): a Called Shot's Damage on an Opponent - a stack of Broken on them till the start of your next turn, once a Round. */

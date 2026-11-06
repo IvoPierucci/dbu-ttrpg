@@ -1,0 +1,22 @@
+id: genetic-focus-konatsians
+name: Genetic Focus: Konatsians
+order: 9
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Konatsian Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Konatsians (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Konatsian Genes Factor Trait
+  (2)-[Passive]: Gain access to the Konatsian-Raised Factor Trait.
+  (3)-[Passive]: While you are below the Injured Health Threshold, you may spend 3 Adaptation Points and 3(bT) Ki Points as if they were 1 Tension.
+---
+
+[passive]
+# (2) Konatsian-Raised added by hand from the Traits tab, as any Racial Trait is (the user's: the system does not control which Racial
+# Traits a character has).
+# (3) Injured or Critical: where a Vocation's effect spends Tension, after Tension and Inherited Tension, 3 Adaptation Points and 3(bT) Ki
+# Points for each (chat.mjs vocationTension, spendVocationTension). A Vocation's effect written as a script, spending `tension.stacks`
+# itself, does not reach it.
+allow focusKonatsians.tension;
