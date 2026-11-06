@@ -722,6 +722,30 @@ async function heartOfEvilKnock(attacker, target) {
 }
 
 /**
+ * Genetic Focus: Herans (5): "If you deal Damage to an Opponent with an Attacking Maneuver, you may spend an Adaptation Point to target an
+ * Ally adjacent to that Opponent. That Ally can use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but they must target that
+ * Opponent with that Attacking Maneuver." Asked, once an Encounter; which Ally, asked where there are several; their Basic Attack offered on
+ * this card.
+ */
+async function focusHeranStrike(message, attacker, target) {
+  const held = Number(attacker?.system?.resources?.adaptation?.stacks) || 0;
+  const encounter = game.combat?.id ?? "none";
+  if ((held <= 0) || (attacker.system?.effects?.slots?.["focusHerans.allyStrike"] !== true)
+    || (attacker.getFlag?.(SCOPE, "focusHeransEncounter") === encounter)) return;
+  const beside = alliesOnScene(attacker).filter(ally => !ally.system?.defeated && (ally.uuid !== attacker.uuid) && adjacent(ally, target));
+  if (!beside.length) return;
+  const picked = await askPlayerChoice(attacker, `${attacker.name}: Genetic Focus: Herans - ${target.name} damaged`, [
+    ...beside.map(ally => ({ value: ally.uuid, label: `An Adaptation Point - ${ally.name}'s Basic Attack at them (1/Encounter)` })),
+    { value: "no", label: "Not now" }]);
+  const ally = beside.find(each => each.uuid === picked);
+  if (!ally) return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.focusHeransEncounter`]: encounter });
+  await setResource(attacker, "adaptation", held - 1);
+  requestEdit(message, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: target.uuid, reason: `Genetic Focus: Herans - ${attacker.name}'s` } });
+}
+
+/**
  * Genetic Focus: Demon (5): "If you deal Damage to an Opponent with an Attacking Maneuver, spend an Adaptation Point to make a Clash
  * (Impulsive/Corporeal/Cognitive/Morale) against that Opponent. If you win, they suffer from either the: Drained, Broken, or Impaired Combat
  * Condition (you decide) until the start of your next turn." Asked, once a Round; which, asked of the winner (settleImpede).
@@ -35477,6 +35501,8 @@ async function applyAttackDamage(message, target, attack) {
     }
     // Genetic Focus: Demon (5): an Adaptation Point for a Clash at them, asked, once a Round.
     if (areOpponents(armsUser, target)) await focusDemonClash(armsUser, target);
+    // Genetic Focus: Herans (5): an Adaptation Point for an adjacent Ally's Basic Attack at them, asked, once an Encounter.
+    if (areOpponents(armsUser, target)) await focusHeranStrike(message, armsUser, target);
     // Neo-Tuffle Genes (2): the Basic Attack back at them, offered on this card.
     if (areOpponents(target, armsUser)) offerNeoTuffleStrike(message, target, armsUser);
     // Ruler (2): "If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm" - for its Master.

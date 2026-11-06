@@ -1,0 +1,35 @@
+id: genetic-focus-herans
+name: Genetic Focus: Herans
+order: 8
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Heran Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Herans (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Heran Genes Factor Trait
+  (2)-[Passive]: For every stack of Power you possess, increase your Wound Rolls by 1(T).
+  (3)-[Passive]: Increase your maximum number of Power stacks by 1.
+  (4)-[Triggered/Power, 1/Round]: Instead of gaining an Adaptation Point, you may spend an Adaptation Point to gain an additional stack of Power.
+  (5)-[Triggered, 1/Encounter]: If you deal Damage to an Opponent with an Attacking Maneuver, you may spend an Adaptation Point to target an Ally adjacent to that Opponent. That Ally can use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but they must target that Opponent with that Attacking Maneuver.
+---
+
+[passive]
+# (2), (3)
+if (hasResource("power")) {
+    wound += power.stacks * 1(T);
+}
+power.max += 1;
+# (5) Damage dealt to an Opponent by your attack, an Ally of yours beside them: an Adaptation Point for that Ally's Basic Attack at them, out
+# of sequence - which Ally asked where there are several, offered on the attack's card. Asked, once an Encounter: no button (the user's)
+# (chat.mjs focusHeranStrike).
+allow focusHerans.allyStrike;
+
+# (4) Ticked in the Power Up's window, an Adaptation Point to spend and room for a stack: a stack more - in place of Artificial Warrior (1)'s
+# point, which is left unticked (the player's). It spends: no button.
+[triggered/power, 1/round, effect 4]
+requires hasResource("adaptation") && roomFor("power");
+adaptation.stacks -= 1;
+power.stacks += 1;
+expires(power, next-turn);
