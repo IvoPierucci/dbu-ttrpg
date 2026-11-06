@@ -1396,6 +1396,8 @@ export function registerDefeatHooks() {
         const critical = Boolean(options.dbuKnockedCritical);
         await offerTriggers(knocker, "defeat-opponent", { defeatedUuid: actor.uuid, critical });
         await fireMoment(knocker, "defeat-opponent", { defeatedUuid: actor.uuid, critical });
+        // Genetic Focus: Arcosian (5): asked, once an Encounter.
+        await (await import("./chat.mjs")).focusArcosianSurge(knocker);
       }
     }
 
@@ -1561,6 +1563,8 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
       await actor.setFlag("dbu-ttrpg", "parasiteKnock", { by: knocker.uuid, threshold: now, round });
     }
     if (theirs) await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint, critical, profiles, woundCritical, threshold: now });
+    // Genetic Focus: Arcosian (5): asked, once an Encounter.
+    if (theirs) await (await import("./chat.mjs")).focusArcosianSurge(knocker);
     // Whoever answers anybody's knocking through - Wrath of the Dragon's "you or an Ally", Mental Warfare's "by an Attacking
     // Maneuver".
     const { answerFor } = await import("./chat.mjs");

@@ -22,17 +22,12 @@ text: >
 [passive]
 # (3) The Tail Attack's Wound Roll: the Adaptation Points spent on it 2(T) each (chat.mjs rollSide).
 allow focusArcosian.tailWound;
+# (5) An Opponent knocked through a Health Threshold, or Defeated, by your attack: always asked, once an Encounter - no Triggered/Automatic
+# button, the use being the Encounter's one (the user's). Your Adaptation Points to their Maximum; had you half of it or more, the Energy
+# Charge out of sequence, asked (combat.mjs, chat.mjs focusArcosianSurge).
+allow focusArcosian.surge;
 
 # (4) Adaptation Points spent on an attack's Wound Roll, and Damage worked out on a target of it - once an attack
 # (adaptation-wound-damage). Automatic by default, its Triggered/Automatic button.
 [triggered/adaptation-wound-damage, effect 4]
 adaptation.stacks += 1;
-
-# (5) An Opponent knocked through a Health Threshold, or Defeated, by your attack - once an Encounter between the two: your Adaptation
-# Points to their Maximum; had you half of it or more, the Energy Charge out of sequence, asked (chat.mjs focusArcosianSurge).
-# Automatic by default, its Triggered/Automatic button.
-[triggered/knock-through, effect 5]
-focusArcosianSurge();
-
-[triggered/defeat-opponent, effect 5]
-focusArcosianSurge();

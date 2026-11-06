@@ -22492,11 +22492,15 @@ async function shinjinFreeCounter(actor, what) {
 export async function focusArcosianSurge(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const encounter = game.combat?.id ?? "none";
-  if (!actor || (actor.getFlag?.(SCOPE, "focusArcosianEncounter") === encounter)) return UNSPENT;
+  if (!actor || (actor.system?.effects?.slots?.["focusArcosian.surge"] !== true)
+    || (actor.getFlag?.(SCOPE, "focusArcosianEncounter") === encounter)) return UNSPENT;
   const { resourceLimits } = await import("./effects/traits.mjs");
   const most = Number(resourceLimits(actor).adaptation) || 0;
   if (most <= 0) return UNSPENT;
   const had = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  // Always asked: its one use this Encounter is the player's to spend.
+  if ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Arcosian`,
+    [{ value: "yes", label: `Adaptation Points to their Maximum (${most}) - 1/Encounter` }, { value: "no", label: "Not now" }])) !== "yes") return UNSPENT;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.focusArcosianEncounter`]: encounter });
   await setResource(actor, "adaptation", most);
   if (most > had) await (await import("./effects/moments-runtime.mjs")).stacksGained(actor, ["adaptation"], { adaptation: most - had });
