@@ -1,0 +1,36 @@
+id: angel-genes
+name: Angel Genes
+order: 5
+category: body
+importance: secondary
+description: >
+  A fraction of the divine power of the Angels flows through you, granting you powerful instincts.
+text: >
+  Angel Genes [Impulsive] (Body): A fraction of the divine power of the Angels flows through you, granting you powerful instincts.
+  (1)-[Passive]: You can sense God Ki.
+  (2)-[Passive]: While you are above the Injured Health Threshold, increase your Combat Rolls by 1(T).
+  (3)-[Triggered/Power, 1/Round]: Spend an Adaptation Point to remove a stack of any Combat Condition you are suffering from (except Pinned, Suffocating, Stress Exhaustion, and Transfigured).
+  (4)-[Triggered/Start of Round]: If you are above the Injured Health Threshold, gain an Adaptation Point.
+---
+
+[passive]
+# [Impulsive]: its Racial Saving Throw Bonus.
+allow save.racial.impulsive;
+# (1)
+allow sense.godKi;
+# (2) Healthy or Bruised.
+if (!belowThreshold("injured")) {
+    combatRolls += 1(T);
+}
+
+# (3) The Power Up, with an Adaptation Point and a Combat Condition but those four: ticked in its window - which, asked where there are
+# several; a stack of it off, the point spent (moments-runtime.mjs shedCondition).
+[triggered/power, 1/round, effect 3]
+requires hasResource("adaptation") && conditionedBesides("pinned", "suffocating", "stress-exhaustion", "transfigured");
+shedCondition(pinned, suffocating, stress-exhaustion, transfigured);
+adaptation.stacks -= 1;
+
+# (4) The Combat Round begins, Healthy or Bruised. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-round, effect 4]
+requires !belowThreshold("injured");
+adaptation.stacks += 1;
