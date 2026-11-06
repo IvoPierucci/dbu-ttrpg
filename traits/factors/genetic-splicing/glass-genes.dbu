@@ -39,6 +39,6 @@ adaptation.stacks += 1;
 # (5) An Attacking Maneuver of the Glass Profile declared - its own, or applied - with 2 Adaptation Points: offered in its window, once a
 # Round; the Energy Charge within the Profile's ceiling, as any (use-maneuver.mjs, `glassAttack`).
 [triggered/declare-maneuver, 1/round, effect 5]
-requires glassAttack && stacksAtLeast(2, "adaptation");
+requires glassAttack && !glassForcedCharge && stacksAtLeast(2, "adaptation");
 adaptation.stacks -= 2;
 attack.energyCharges += 1;

@@ -706,6 +706,9 @@ const PREDICATES = {
   ofFoundation: (scope, name) => Boolean(scope.context?.foundation)
     && (String(scope.context.foundation).toLowerCase() === String(name?.value ?? name ?? "").toLowerCase()),
 
+  /** Glass Genes (5) made on this declaration already, by Genetic Focus: Glass (4) - `glassForced`. */
+  glassForcedCharge: scope => Boolean(scope.context?.glassForced),
+
   /** The roll that answered `critical-scored` was a Strike or a Wound Roll - its `rollKind` (Offensive Design's). */
   strikeOrWound: scope => ["strike", "wound"].includes(String(scope.context?.rollKind ?? "")),
   /** The Life Points a trade lost were that many base Tiers' worth or more - life-for-ki's `lostBT` (Shadow Dragon Genes'). */

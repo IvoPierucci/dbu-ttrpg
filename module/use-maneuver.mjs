@@ -3038,6 +3038,54 @@ export async function uniqueTechniqueMulti(actor, maneuver, declared) {
 }
 
 /**
+ * Genetic Focus: Glass (4): "If you use a Signature Technique, you may apply the Multi-Profile Super Profile to that Attacking Maneuver. If
+ * you do, you must select the Glass Profile for the effects of Multi-Profile, and you must trigger the 5th effect of Glass Genes on this
+ * Attacking Maneuver (if you have 2+ Adaptation Points)." Asked, once a Round - Unique Technique's way; with 2+ Adaptation Points, the 2
+ * spent and Glass Genes' Energy Charge carried (`glassForced`).
+ *
+ * @returns {Promise<?{maneuver: object, declared: object}>} null when the question was put away
+ */
+export async function glassFocusMulti(actor, maneuver, declared) {
+  const unchanged = { maneuver, declared };
+  if (!declared || !maneuver.signature || maneuver.signatureTechnique) return unchanged;
+  if (actor.system.effects?.slots?.["focusGlass.multi"] !== true) return unchanged;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "focusGlassRound") === round) return unchanged;
+  if (!PROFILES.glass || [declared.profile].includes("glass") || ((maneuver.superProfile === "multi-profile") && (maneuver.secondProfile === "glass"))) {
+    return unchanged;
+  }
+  const escape = Handlebars.escapeExpression;
+  const had = maneuver.superProfile ?? "";
+  const held = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - Genetic Focus: Glass` },
+    content: `<p class="dbu-respond-hint" data-tooltip="${escape(getTrait("genetic-focus-glass")?.text ?? "")}">Multi-Profile with the Glass
+        Profile, once a Round.${had ? ` It replaces ${escape(SUPER_PROFILES[had]?.label ?? had)}.` : ""}${(held >= 2)
+        ? " Glass Genes' 5th effect with it: 2 Adaptation Points for an Energy Charge." : ""}</p>`,
+    buttons: [
+      { action: "apply", label: "Apply", default: true },
+      { action: "skip", label: "No" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!answer || (answer === "cancel")) return null;
+  if (answer !== "apply") return unchanged;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const was = had ? superProfileKiPerTier(had, maneuver.secondProfile ?? "") : 0;
+  const next = { ...maneuver, superProfile: "multi-profile", secondProfile: "glass" };
+  const forced = held >= 2;
+  if (forced) await (await import("./chat.mjs")).setResource(actor, "adaptation", held - 2);
+  const out = { ...declared,
+    superProfileKi: (Number(declared.superProfileKi) || 0) + ((superProfileKiPerTier("multi-profile", "glass") - was) * tier),
+    advantages: withGranted(declared.advantages ?? [], PROFILES.glass.grantsAdvantage),
+    ...(forced ? { glassForced: true } : {}) };
+  await actor.setFlag("dbu-ttrpg", "focusGlassRound", round);
+  return { maneuver: next, declared: await wagerAgain(actor, next, declared, out, "glass") };
+}
+
+/**
  * Karmic Assault (2 Karma): "If you use an Ultimate Signature Technique, you may apply a Super
  * Profile of your choice to that Attacking Maneuver."
  *
@@ -5713,6 +5761,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const uniqued = await uniqueTechniqueMulti(actor, maneuver, declared);
     if (!uniqued) return false;
     ({ maneuver, declared } = uniqued);
+    // Genetic Focus: Glass (4): Multi-Profile with the Glass Profile on a Signature Technique, once a Round.
+    const glassed = await glassFocusMulti(actor, maneuver, declared);
+    if (!glassed) return false;
+    ({ maneuver, declared } = glassed);
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.
@@ -6720,19 +6772,21 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   const glassDeclared = Boolean(declared) && [declared.profile, declared.secondProfile, maneuver.secondProfile,
     ...(declared.appliedProfiles ?? [])].includes("glass");
   await (await import("./chat.mjs")).answerDeclare(actor, { maneuver, targets: targetActor ? [targetActor] : [],
-    ...(glassDeclared ? { glass: true } : {}) });
+    ...(glassDeclared ? { glass: true } : {}), ...(declared?.glassForced ? { glassForced: true } : {}) });
   // What its effects give back is said on its own card, each source on hover (chat.mjs gainsHtml) - not on cards of their own.
   const poolsBefore = { life: Number(actor.system.life?.value) || 0, ki: Number(actor.system.ki?.value) || 0 };
   const declaring = await fireMoment(actor, "declare-maneuver", {
     maneuver,
     targets: targetActor ? [targetActor] : [],
-    ...(glassDeclared ? { glass: true } : {})
+    ...(glassDeclared ? { glass: true } : {}), ...(declared?.glassForced ? { glassForced: true } : {})
   }, { quiet: true });
   // What answering it put on the attack - God of Judgment's Energy Charge - within the Profile's ceiling, as any Charge.
   // Biological Weapon (4): ticked - Adaptation Points spent, asked; half as many Energy Charges.
   const bioCharges = (declared && (declaring?.slots?.["bioWeapon.charges"] === true))
     ? await (await import("./chat.mjs")).bioWeaponCharges(actor) : 0;
-  const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) + bioCharges : 0;
+  // Genetic Focus: Glass (4): Glass Genes (5)'s Energy Charge, its 2 Adaptation Points paid as it was applied.
+  const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) + bioCharges
+    + (declared.glassForced ? 1 : 0) : 0;
 
   // And what this Maneuver itself does, which is a different question: `declare-maneuver`
   // is heard by everything the character holds, and this is heard only by the Maneuver

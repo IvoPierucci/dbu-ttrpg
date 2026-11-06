@@ -1,0 +1,31 @@
+id: genetic-focus-glass
+name: Genetic Focus: Glass
+order: 7
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Glass Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Glass (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Glass Genes Factor Trait.
+  (2)-[Passive]: Halve your Soak Value.
+  (3)-[Passive]: Gain Damage Reduction equal to your Soak Value.
+  (4)-[Triggered, 1/Round]: If you use a Signature Technique, you may apply the Multi-Profile Super Profile to that Attacking Maneuver. If you do, you must select the Glass Profile for the effects of Multi-Profile, and you must trigger the 5th effect of Glass Genes on this Attacking Maneuver (if you have 2+ Adaptation Points).
+  (5)-[Triggered/Start of Turn]: Spend 3 Adaptation Points to enter the Surging State until the end of your turn.
+---
+
+[passive]
+# (2), (3) Body of Glass's words: the Soak Value halved, and as much Damage Reduction (actor-character.mjs).
+soakValue *= 0.5;
+allow damageReduction.soak;
+# (4) A Signature Technique declared: Multi-Profile with the Glass Profile, asked, once a Round - Unique Technique's way; with 2+ Adaptation
+# Points, Glass Genes (5) with it, the 2 spent for its Energy Charge (use-maneuver.mjs glassFocusMulti). Its attack's alone: no button.
+allow focusGlass.multi;
+
+# (5) Your turn begins with 3 Adaptation Points: Surging till the end of it. It spends: no Triggered/Automatic button, ticked on the turn's
+# card (the user's).
+[triggered/start-of-turn, chosen, effect 5]
+requires stacksAtLeast(3, "adaptation");
+adaptation.stacks -= 3;
+enterState(surging, 1, turn);
