@@ -1,0 +1,44 @@
+id: glass-genes
+name: Glass Genes
+order: 9
+category: body
+importance: secondary
+# [Any - you decide]: the Saving Throw its Racial Saving Throw Bonus goes to, chosen as it is gained.
+choose: savingThrow
+description: >
+  The power to manipulate glass infuses your genetics, clearly marking your Glass Tribe inheritance.
+text: >
+  Glass Genes [Any – you decide] (Body): The power to manipulate glass infuses your genetics, clearly marking your Glass Tribe inheritance.
+  (1)-[Passive]: You gain access to the Glassification Special Maneuver and the Glass Profile.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T).
+  (3)-[Passive]: Increase your Combat Rolls by 1(T) and your Surgency by 2(T) while occupying a Square with the Glass Environmental Quality, or while adjacent to a Feature with the Glass Feature Quality.
+  (4)-[Triggered/Start of Turn]: If you are occupying a Square with the Glass Environmental Quality and all adjacent Squares possess the Glass Environmental Quality or are occupied by a Feature with the Glass Feature Quality, gain an Adaptation Point.
+  (5)-[Triggered, 1/Round]: If you use an Attacking Maneuver of the Glass Profile, you may spend 2 Adaptation Points to apply an Energy Charge to that Attacking Maneuver.
+---
+
+[passive]
+# The Saving Throw named after its name - its Racial Saving Throw Bonus.
+allow save.racial.$choice;
+# (1), (2)
+allow maneuver.glassification;
+allow profile.glass;
+damageReduction += 1(T);
+# (3) A Square with the Glass Environmental Quality - ticked, or given by Glassification. Beside a Glass Feature: the table's, as Body of
+# Glass's (the user's).
+if (onSquare("glass")) {
+    combatRolls += 1(T);
+    surgency += 2(T);
+}
+
+# (4) Your turn begins on a Glass Square: ticked on the turn's card when every adjacent Square is Glass too - the table's to say, as Glass
+# Mastery's.
+[triggered/start-of-turn, chosen, effect 4]
+requires onSquare("glass");
+adaptation.stacks += 1;
+
+# (5) An Attacking Maneuver of the Glass Profile declared - its own, or applied - with 2 Adaptation Points: offered in its window, once a
+# Round; the Energy Charge within the Profile's ceiling, as any (use-maneuver.mjs, `glassAttack`).
+[triggered/declare-maneuver, 1/round, effect 5]
+requires glassAttack && stacksAtLeast(2, "adaptation");
+adaptation.stacks -= 2;
+attack.energyCharges += 1;

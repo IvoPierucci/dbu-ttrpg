@@ -6707,12 +6707,17 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Declared, now that it is certain to happen. An effect answering this reads the
   // Maneuver and who it is aimed at.
   // What answers it offered in a window first - God of Judgment's (chat.mjs answerDeclare).
-  await (await import("./chat.mjs")).answerDeclare(actor, { maneuver, targets: targetActor ? [targetActor] : [] });
+  // Whether it is of the Glass Profile, its own or applied (askGlassApply) - Glass Genes' (`glassAttack`).
+  const glassDeclared = Boolean(declared) && [declared.profile, declared.secondProfile, maneuver.secondProfile,
+    ...(declared.appliedProfiles ?? [])].includes("glass");
+  await (await import("./chat.mjs")).answerDeclare(actor, { maneuver, targets: targetActor ? [targetActor] : [],
+    ...(glassDeclared ? { glass: true } : {}) });
   // What its effects give back is said on its own card, each source on hover (chat.mjs gainsHtml) - not on cards of their own.
   const poolsBefore = { life: Number(actor.system.life?.value) || 0, ki: Number(actor.system.ki?.value) || 0 };
   const declaring = await fireMoment(actor, "declare-maneuver", {
     maneuver,
-    targets: targetActor ? [targetActor] : []
+    targets: targetActor ? [targetActor] : [],
+    ...(glassDeclared ? { glass: true } : {})
   }, { quiet: true });
   // What answering it put on the attack - God of Judgment's Energy Charge - within the Profile's ceiling, as any Charge.
   // Biological Weapon (4): ticked - Adaptation Points spent, asked; half as many Energy Charges.
