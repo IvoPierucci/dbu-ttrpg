@@ -1,0 +1,12 @@
+id: genetic-splicing
+name: Genetic Splicing
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Traits are the files in the
+# folder of its name - each with its Saving Throw after its name: its Racial Saving Throw Bonus (`allow save.racial.<save>`; "Any", or
+# one of two, chosen as it is gained).
+requirement: Bio-Android
+maximumFactor: 3
+prerequisites: N/A
+note: >
+  Genetic Splicing has a unique element to it: each Factor Trait has a Saving Throw listed after its name. If you gain that Factor Trait, you apply your Racial Saving Throw Bonus to that Saving Throw.
+description: >
+  Created from an assortment of DNA from multiple races, you possess a unique combination of abilities.
