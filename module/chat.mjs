@@ -1391,9 +1391,15 @@ async function parasiteGenesFor(attacker, attack, struck) {
  */
 async function cerealianWoundFor(attacker, attack) {
   const held = Number(attacker?.system?.resources?.adaptation?.stacks) || 0;
-  if ((attack.result?.strike?.outcome !== "critical") || (held <= 0)
-    || (attacker.system.effects?.slots?.["cerealianGenes.wound"] !== true)) return 0;
+  if ((attack.result?.strike?.outcome !== "critical") || (attacker?.system?.effects?.slots?.["cerealianGenes.wound"] !== true)) return 0;
   const value = 3 * Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  // Genetic Focus: Cerealian (2): "You do not have to spend an Adaptation Point to trigger the 3rd effect of Cerealian Genes" - its Moment,
+  // Automatic or asked in its window as its button says.
+  if (attacker.items?.some?.(item => item.flags?.["dbu-ttrpg"]?.sourceId === "genetic-focus-cerealian")) {
+    const free = await answerFor(attacker, "cerealian-critical", {});
+    return (free?.slots?.["cerealianWound.free"] === true) ? value : 0;
+  }
+  if (held <= 0) return 0;
   const yes = (await askPlayerChoice(attacker, `${attacker.name}: Cerealian Genes`,
     [{ value: "yes", label: `An Adaptation Point - Wound Roll +${value}` }, { value: "no", label: "No" }])) === "yes";
   if (!yes) return 0;
@@ -9633,6 +9639,15 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     for (let index = parts.length - 1; index >= 0; index--) if (String(parts[index].label).startsWith("Dim. Defense")) parts.splice(index, 1);
   }
   const blueprintCharge = blueprintTaken && (blueprint === "aggressor");
+  // Genetic Focus: Cerealian (5): 2+ spent on an attack's Strike Roll - "you score a Critical Result on that Strike Roll regardless of the
+  // Natural Result", asked, once an Encounter.
+  if ((slot === "strike") && attackingManeuver && (adapted >= 2) && (actor.system.effects?.slots?.["focusCerealian.critical"] === true)
+    && (actor.getFlag?.(SCOPE, "focusCerealianCriticalEncounter") !== (game.combat?.id ?? "none"))
+    && ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Cerealian`, [
+      { value: "yes", label: "A Critical Result on this Strike Roll (1/Encounter)" }, { value: "no", label: "Not now" }])) === "yes")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.focusCerealianCriticalEncounter`]: game.combat?.id ?? "none" });
+    forceCritical = true;
+  }
   // Neo-Tuffle Genes' Genes of Hatred: 3+ spent on the attack's Strike Roll - "increase the Wound Roll of that Attacking Maneuver by an equal
   // amount", asked, once a Round.
   if (collect && (slot === "wound") && attackingManeuver && (strikeAdapted >= 3) && (actor.system.effects?.slots?.["neoTuffleGenes.hatred"] === true)
@@ -27105,6 +27120,20 @@ async function takeOutOfSequence(message, actor, offer) {
       if (!pay) return;
       if ((pay === "ki") && await spendManeuverCost(actor, { name: "Cerealian-Raised" }, cerealianCost)) {
         await actor.setFlag(SCOPE, "cerealianExploitRound", roundKey());
+        offer = { ...offer, counterPaid: true };
+      }
+    }
+    // Genetic Focus: Cerealian (4): "If an Opponent triggers your Exploit Maneuver, you may spend 2 Adaptation Points to use the Exploit
+    // Maneuver without paying the Action Cost" - asked, once a Round.
+    const adaptationHeld = Number(actor.system.resources?.adaptation?.stacks) || 0;
+    if (!offer.counterPaid && (actor.system?.effects?.slots?.["focusCerealian.exploit"] === true) && (adaptationHeld >= 2)
+      && (actor.getFlag?.(SCOPE, "focusCerealianExploitRound") !== roundKey())) {
+      const pay = await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Cerealian`,
+        [{ value: "counter", label: "A Counter Action" }, { value: "adaptation", label: "2 Adaptation Points (1/Round)" }]);
+      if (!pay) return;
+      if (pay === "adaptation") {
+        await setResource(actor, "adaptation", adaptationHeld - 2);
+        await actor.setFlag(SCOPE, "focusCerealianExploitRound", roundKey());
         offer = { ...offer, counterPaid: true };
       }
     }

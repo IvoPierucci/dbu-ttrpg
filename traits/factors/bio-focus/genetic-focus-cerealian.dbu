@@ -1,0 +1,32 @@
+id: genetic-focus-cerealian
+name: Genetic Focus: Cerealian
+order: 4
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Cerealian Genes Factor
+# Trait, shown and never enforced.
+importance: primary
+description: >
+  Your crimson right eye is the most prominent feature of your genetically-engineered appearance.
+text: >
+  Genetic Focus: Cerealian (Body) [Uncanny Monster]: Your crimson right eye is the most prominent feature of your genetically-engineered appearance.
+  (1)-[Prerequisite]: Cerealian Genes Factor Trait.
+  (2)-[Passive]: You do not have to spend an Adaptation Point to trigger the 3rd effect of Cerealian Genes.
+  (3)-[Passive]: Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 2(T).
+  (4)-[Triggered, 1/Round]: If an Opponent triggers your Exploit Maneuver, you may spend 2 Adaptation Points to use the Exploit Maneuver without paying the Action Cost.
+  (5)-[Triggered, 1/Encounter]: If you spend 2+ Adaptation Points on the Strike Roll of an Attacking Maneuver, you score a Critical Result on that Strike Roll regardless of the Natural Result.
+---
+
+[passive]
+# (3) An attack made with the Called Shot, or through the Exploit Maneuver: 2(T) on its Wound Roll - Pinpoint Combat (1)'s words (chat.mjs
+# woundParts).
+wound.calledOrExploit += 2(T);
+# (4) The Exploit taken, with 2 Adaptation Points: asked, once a Round - them instead of its Counter Action (chat.mjs takeOutOfSequence).
+# (5) 2+ Adaptation Points on an attack's Strike Roll: asked, once an Encounter - a Critical Result on it (chat.mjs rollSide). Both spend or
+# are the Encounter's one: always asked, no button (the user's).
+allow focusCerealian.exploit;
+allow focusCerealian.critical;
+
+# (2) Cerealian Genes (3) for free: a Critical Strike that hit (cerealian-critical) - 3(T) on its Wound Roll, no Adaptation Point. Free and
+# unlimited: Automatic by default, its Triggered/Automatic button (the user's criteria).
+[triggered/cerealian-critical, effect 2]
+cerealianWound.free = true;

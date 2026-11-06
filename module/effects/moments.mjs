@@ -155,6 +155,9 @@ const TABLE = [
   { key: "life-for-ki", label: "You trade Life Points for Ki through Shadow Dragon Genes", provides: [],
     doc: "Fired once Shadow Dragon Genes (2) has traded, `lostBT` the Life Points lost in base Tiers (chat.mjs shadowGenesTrade) - its "
        + "(5) and (6). What is the player's is asked in a window first." },
+  { key: "cerealian-critical", label: "Your Critical Strike hits, Cerealian Genes' 3rd effect free", provides: [],
+    doc: "Fired as an attack whose Strike Roll was a Critical Result hits, for one with Cerealian Genes' 3rd effect and Genetic Focus: "
+       + "Cerealian's 2nd (chat.mjs cerealianWoundFor). What is the player's is asked in a window first." },
   { key: "demon-genes-superior", label: "You enter the Superior State through Demon Genes' 1d10", provides: [],
     doc: "Fired as its roll puts you in Superior (chat.mjs demonGenesRoll) - Phantom Genes'. What is the player's is asked in a window "
        + "first." },
