@@ -1,0 +1,47 @@
+id: genetic-focus-saiyan
+name: Genetic Focus: Saiyan
+order: 15
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Saiyan Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# (5)'s count of (3) this Combat Encounter - bookkeeping, not a Resource the rules name; lost as the Encounter ends, as every Resource is.
+resource: evenrounds
+resourceInternal: true
+resourceLabel: Genetic Focus: Saiyan (3)
+# Counted to 2 - all (5) asks after.
+resourceMax: 2
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Saiyan (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Saiyan Genes Factor Trait
+  (2)-[Passive]: For each stack of Battle Creation, increase your Soak Value by 1(T).
+  (3)-[Triggered/Start of Combat Round]: At the start of every even-numbered Combat Round, you gain 1 Adaptation Point.
+  (4)-[Triggered, 1/Round]: If you would gain a stack of Battle Creation while at your maximum, you may instead use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+  (5)-[Triggered/Start of Turn, 1/Encounter]: If you have triggered the 3rd effect of Genetic Focus: Saiyan at least 2 times previously during this Combat Encounter, you may gain a stack of Battle Creation.
+---
+
+[passive]
+# (2)
+if (hasResource("battlecreation")) {
+    soakValue += battlecreation.stacks * 1(T);
+}
+
+# (3) An even-numbered Combat Round begins: an Adaptation Point - and counted, for (5). Free: Automatic by default, its Triggered/Automatic
+# button.
+[triggered/start-of-round, effect 3]
+requires evenRound;
+adaptation.stacks += 1;
+evenrounds.stacks += 1;
+
+# (4) Knocked through a Health Threshold - Saiyan Genes (1)'s stack - while Battle Creation is at its Maximum: the Power Up out of sequence
+# instead, once a Round. It gives an Out-of-Sequence Maneuver: chosen, never Automatic.
+[triggered/threshold, 1/round, outOfSequence, effect 4]
+requires hasResource("battlecreation") && !roomFor("battlecreation");
+maneuverOutOfSequence(power-up);
+
+# (5) Your turn begins, (3) made twice this Encounter, once an Encounter: a stack of Battle Creation. Free, and it lasts the Encounter:
+# Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, 1/encounter, effect 5]
+requires stacksAtLeast(2, "evenrounds");
+battlecreation.stacks += 1;

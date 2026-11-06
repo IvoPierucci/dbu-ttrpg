@@ -690,6 +690,9 @@ const PREDICATES = {
   /** Brought to 0 by their own effect - Revenge Bomber's. */
   ownDefeat: scope => Boolean(scope.data?.parent?.getFlag?.("dbu-ttrpg", "ownDefeat")),
 
+  /** An even-numbered Combat Round - Genetic Focus: Saiyan (3)'s. In a Combat alone. */
+  evenRound: () => Boolean(globalThis.game?.combat?.started) && (((Number(globalThis.game?.combat?.round) || 0) % 2) === 0),
+
   /** The Movement Maneuver used this Combat Round - Terrifying Speed (1)'s. In a Combat alone: no Round, none. */
   movedThisRound: scope => Boolean(globalThis.game?.combat?.started)
     && ((scope.data?.parent?.getFlag?.("dbu-ttrpg", "movedRound") ?? "")
