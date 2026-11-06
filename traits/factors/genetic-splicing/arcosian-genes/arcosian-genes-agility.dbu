@@ -1,0 +1,18 @@
+id: arcosian-genes-agility
+name: Genetic Agility
+order: 3
+optionOf: arcosian-genes
+optionEffect: 4
+# Artificial Warrior's Option chosen: this one.
+follows: genetic-agility
+description: >
+  If you spend 2+ Adaptation Points on a Dodge Roll, increase the Dice Score by 1/2 of your Plating’s Apparel Bonus.
+text: >
+  Genetic Agility [Triggered]: If you spend 2+ Adaptation Points on a Dodge Roll, increase the Dice Score by 1/2 of your Plating’s Apparel Bonus.
+
+---
+
+# Asked on a Dodge Roll with 2+ Adaptation Points spent on it - half your Plating's Apparel Bonus on it, rounded down (chat.mjs
+# rollSide, platingBonus).
+[passive]
+allow arcosianGenes.agility;

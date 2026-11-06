@@ -1,0 +1,17 @@
+id: arcosian-genes-survivor
+name: Genetic Survivor
+order: 1
+optionOf: arcosian-genes
+optionEffect: 4
+# Artificial Warrior's Option chosen: this one.
+follows: genetic-survivor
+description: >
+  If your Plating has its Break Value reduced, gain an Adaptation Point.
+text: >
+  Genetic Survivor [Triggered]: If your Plating has its Break Value reduced, gain an Adaptation Point.
+
+---
+
+# Your Natural Armor's Break Value lowered, however (plating-reduced). Automatic by default, its Triggered/Automatic button.
+[triggered/plating-reduced, effect 4]
+adaptation.stacks += 1;

@@ -1,0 +1,40 @@
+id: arcosian-genes
+name: Arcosian Genes
+order: 1
+category: body
+importance: secondary
+# [Any - you decide]: the Saving Throw its Racial Saving Throw Bonus goes to, chosen as it is gained.
+choose: savingThrow
+# (3) Its Plating: a piece of Natural Armor made as the Trait is gained, gone with it (natural-armor.mjs).
+naturalArmor: Plating
+# (4) Its Choice, a file beside it for each - the one following Artificial Warrior's Option, not asked; asked where it has none.
+optionEffect: 4
+optionsFollow: artificial-warrior
+description: >
+  Your body is made tougher by the inclusion of the Arcosians' extraordinary biology.
+text: >
+  Arcosian Genes [Any – you decide] (Body): Your body is made tougher by the inclusion of the Arcosians’ extraordinary biology.
+  (1)-[Passive]: Gain access to the Tail Attack Special Maneuver.
+  (2)-[Passive]: You cannot gain the Suffocating Combat Condition.
+  (3)-[Passive, Ruling]: Upon gaining this Trait, gain a ‘Plating’ while you have this Trait. Your Plating is Natural Armor (see — Natural Armor).
+  (4)-[Choice]: Depending on your choice for the 4th effect of Artificial Warrior, gain one of the following effects:
+  * Genetic Survivor [Triggered]: If your Plating has its Break Value reduced, gain an Adaptation Point.
+  * Genetic Aggressor [Triggered]: If you spend 2+ Adaptation Points on the Strike or Wound Roll of an Attacking Maneuver, increase the Wound Roll by the Apparel Bonus of your Plating.
+  * Genetic Agility [Triggered]: If you spend 2+ Adaptation Points on a Dodge Roll, increase the Dice Score by 1/2 of your Plating’s Apparel Bonus.
+  * Pursuit of Perfection [Triggered/Start of Turn]: Gain 1 Adaptation Point.
+  (5)-[Triggered, 1/Round]: If you use a Healing Surge, your Plating regains 1 Break Value. If the piece of Apparel was broken, it stops being broken (Break Value goes from 0 to 1).
+---
+
+[passive]
+# The Saving Throw named after its name - its Racial Saving Throw Bonus.
+allow save.racial.$choice;
+# (1), (2)
+allow maneuver.tail-attack;
+forbid condition.suffocating;
+# (3) The Plating, made with the Trait (the header's `naturalArmor`).
+
+# (5) A Healing Surge about to be used - asked in its window while the Plating has Break Value to get back: 1 of it, and broken no more
+# (chat.mjs takeSurge, natural-armor.mjs repairNaturalArmor). Automatic by default, its Triggered/Automatic button.
+[triggered/healing-surge, 1/round, effect 5]
+requires platingMendable;
+plating.mend = true;

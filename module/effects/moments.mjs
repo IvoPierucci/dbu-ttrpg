@@ -152,6 +152,9 @@ const TABLE = [
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },
   { key: "sunlight-gained", label: "You gain a stack of Sunlight", provides: [],
     doc: "Fired as Arboreal's Sunlight is gained (moments-runtime.mjs stacksGained) - its (6)." },
+  { key: "plating-reduced", label: "Your Natural Armor has its Break Value reduced", provides: [],
+    doc: "Fired as a piece of Natural Armor of yours loses Break Value or is destroyed, by whoever lowered it (natural-armor.mjs) - "
+       + "Arcosian Genes' Genetic Survivor. What is the player's is asked in a window first." },
   { key: "adaptation-gained", label: "You gain an Adaptation Point", provides: [],
     doc: "Fired as Artificial Warrior's Adaptation Points are gained, by an effect or by Combat Blueprint (1) (moments-runtime.mjs "
        + "stacksGained) - Offensive Design's. What is the player's is asked in a window first." },

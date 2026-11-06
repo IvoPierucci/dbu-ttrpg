@@ -125,6 +125,18 @@ export function naturalArmorMendable(actor) {
 
 /** Its Grade kept at the base Tier of Power (max. 5) as that changes - by whoever changed it. */
 export function registerNaturalArmorHooks() {
+  // "If your Plating has its Break Value reduced" (Arcosian Genes' Genetic Survivor): Break Value lost, or the piece destroyed - by
+  // whoever lowered it, the Break Value it had before kept for the comparison.
+  Hooks.on("preUpdateItem", (item, changes, options) => {
+    if (!isNaturalArmor(item)) return;
+    options.dbuBreakBefore = { lost: Number(item.system.crafted?.breakLost) || 0, destroyed: Boolean(item.system.crafted?.destroyed) };
+  });
+  Hooks.on("updateItem", async (item, changes, options, userId) => {
+    if ((userId !== game.user.id) || !options.dbuBreakBefore || !item.parent) return;
+    const lost = Number(item.system.crafted?.breakLost) || 0;
+    const reduced = (lost > options.dbuBreakBefore.lost) || (Boolean(item.system.crafted?.destroyed) && !options.dbuBreakBefore.destroyed);
+    if (reduced) await (await import("./chat.mjs")).answerFor(item.parent, "plating-reduced", {});
+  });
   Hooks.on("updateActor", async (actor, changes, options, userId) => {
     if ((!isCharacter(actor)) || (userId !== game.user.id)) return;
     const grade = naturalArmorGrade(actor);

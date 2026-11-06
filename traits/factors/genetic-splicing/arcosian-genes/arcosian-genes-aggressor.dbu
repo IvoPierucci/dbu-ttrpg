@@ -1,0 +1,18 @@
+id: arcosian-genes-aggressor
+name: Genetic Aggressor
+order: 2
+optionOf: arcosian-genes
+optionEffect: 4
+# Artificial Warrior's Option chosen: this one.
+follows: genetic-aggressor
+description: >
+  If you spend 2+ Adaptation Points on the Strike or Wound Roll of an Attacking Maneuver, increase the Wound Roll by the Apparel Bonus of your Plating.
+text: >
+  Genetic Aggressor [Triggered]: If you spend 2+ Adaptation Points on the Strike or Wound Roll of an Attacking Maneuver, increase the Wound Roll by the Apparel Bonus of your Plating.
+
+---
+
+# Asked on its Wound Roll, 2+ Adaptation Points spent on it or on its Strike Roll - your Plating's Apparel Bonus on it (chat.mjs
+# rollSide, platingBonus).
+[passive]
+allow arcosianGenes.aggressor;

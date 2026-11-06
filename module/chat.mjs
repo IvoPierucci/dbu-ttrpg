@@ -1359,6 +1359,13 @@ async function adaptationReductionFor(target, attack, uuid) {
   return { value: spent * Math.max(1, Number(target.system.tierOfPower) || 1), step: step ? 1 : 0 };
 }
 
+/** Your Plating's Apparel Bonus - the Active Natural Armor's, nothing broken (Arcosian Genes'). */
+function platingBonus(actor) {
+  const item = Array.from(actor?.items ?? []).find(each => (each.flags?.["dbu-ttrpg"]?.naturalArmor === true) && each.system?.equipped);
+  const reading = item ? craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier: actor.system?.baseTierOfPower ?? 1 }) : null;
+  return (reading && (reading.breakLeft !== 0)) ? (Number(reading.bonus) || 0) : 0;
+}
+
 /**
  * Biological Weapon (4): "If you use a Signature Technique, you may spend any number of Adaptation Points to gain a number of Energy
  * Charges on that Attacking Maneuver equal to 1/2 of the Adaptation Points spent. For each Adaptation Point spent through this effect,
@@ -9409,7 +9416,7 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
  * grow is not yet a result. Both outcomes are therefore applied here and now.
  */
 async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
-                                           slot = null, collect = true,
+                                           slot = null, collect = true, strikeAdapted = 0,
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
@@ -9437,7 +9444,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Twin-Linked keeps the higher of two, Dead-Link the lower. The second is made without offering
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
-    const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural,
+    const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted,
       criticalTarget, botchUnlessCritical, naturalAdd };
     const clone = () => ((typeof modifiers === "number") ? modifiers : modifiers.map(part => ({ ...part })));
     const first = await rollSide(actor, clone(), { ...again, collect });
@@ -9487,6 +9494,16 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     for (let index = parts.length - 1; index >= 0; index--) if (String(parts[index].label).startsWith("Dim. Defense")) parts.splice(index, 1);
   }
   const blueprintCharge = blueprintTaken && (blueprint === "aggressor");
+  // Arcosian Genes (4), with 2+ Adaptation Points spent - asked. Genetic Aggressor, on an attack's Wound Roll, spent on it or on its Strike
+  // Roll: "increase the Wound Roll by the Apparel Bonus of your Plating". Genetic Agility, on a Dodge Roll: "increase the Dice Score by 1/2
+  // of your Plating's Apparel Bonus".
+  const genes = !collect ? "" : (((slot === "wound") && attackingManeuver && ((adapted >= 2) || (strikeAdapted >= 2))) ? "aggressor"
+    : (((slot === "dodge") && (adapted >= 2)) ? "agility" : ""));
+  const plating = (genes && (actor.system.effects?.slots?.[`arcosianGenes.${genes}`] === true)) ? platingBonus(actor) : 0;
+  const platingAdd = (genes === "aggressor") ? plating : Math.floor(plating / 2);
+  if (platingAdd && ((await askPlayerChoice(actor, `${actor.name}: Arcosian Genes`, [
+    { value: "yes", label: `${(genes === "aggressor") ? "Wound" : "Dodge"} Roll +${platingAdd} (your Plating)` },
+    { value: "no", label: "No" }])) === "yes")) parts.push({ label: "Arcosian Genes (Plating)", value: platingAdd });
   const baseDie = lingering ? { ...(answered.slots.baseDie ?? {}), add: 0, multiply: 1, set: 9, min: null, max: null }
     : (answered?.slots?.baseDie ?? null);
   const forcedNatural = baseDie?.set ?? null;
@@ -31589,6 +31606,8 @@ async function rollAttackWoundWork(message, attack) {
   // people it reached is what each of them did about it - their Soak, their Damage
   // Reduction, and a Power Flare that answers it for them alone.
   let wound = await rollSide(attacker, woundParts(attacker, attack), {
+    // Arcosian Genes' Genetic Aggressor: what was spent on its Strike Roll.
+    strikeAdapted: Number(attack.result?.strike?.adapted) || 0,
     extraDice: woundDice(attacker, attack),
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,

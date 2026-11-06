@@ -1,0 +1,17 @@
+id: arcosian-genes-perfection
+name: Pursuit of Perfection
+order: 4
+optionOf: arcosian-genes
+optionEffect: 4
+# Artificial Warrior's Option chosen: this one.
+follows: pursuit-of-perfection
+description: >
+  Gain 1 Adaptation Point.
+text: >
+  Pursuit of Perfection [Triggered/Start of Turn]: Gain 1 Adaptation Point.
+
+---
+
+# Your turn begins. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 4]
+adaptation.stacks += 1;
