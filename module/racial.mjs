@@ -314,7 +314,11 @@ function factorTraitFits(factorId, onlyRace, name, race, slots = null) {
  */
 function groupRank(trait, race, slots = null) {
   const factor = factorOf(trait);
-  if (!factor) return (((trait?.system ? trait.system.race : trait?.owner) ?? "") === race) ? 0 : 3;
+  // Another race's: the common races first, then the Minion Races - each by name (the user's).
+  if (!factor) {
+    const owner = (trait?.system ? trait.system.race : trait?.owner) ?? "";
+    return (owner === race) ? 0 : isMinionRace(owner) ? 3.5 : 3;
+  }
   const onlyRace = trait?.system ? trait.system.race : trait?.race;
   if (!factorTraitFits(factor, onlyRace, trait?.name, race, slots)) return 4;
   return requirementOf(racialFactor(factor)).any ? 2 : 1;
