@@ -1,0 +1,39 @@
+id: genetic-focus-namekians
+name: Genetic Focus: Namekians
+order: 11
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Namekian Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Namekians (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Namekian Genes Factor Trait
+  (2)-[Passive]: Increase your Surgency by 1(T).
+  (3)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (4)-[Triggered]: When making any type of Physical Attacking Maneuver or Grapple Maneuver, you may increase your Melee Range by 3 Squares for the duration of that Maneuver.
+  (5)-[Triggered, 1/Round]: Upon hitting an Opponent with a Physical Attacking Maneuver or initiating a Grapple, you may move that Character any number of Squares up to your current Melee Range in any direction – ignoring the usual rules for Movement in a Grapple if you initiated a Grapple.
+  (6)-[Triggered, 1/Round]: If you use a Healing Surge, you may spend any number of Adaptation Points. For each Adaptation Point spent, increase the amount of Life Points regained by 2(bT).
+  (7)-[Triggered, 1/Encounter]: If you use a Healing Surge to increase your Life Points above a Health Threshold, maximize your Adaptation Points.
+---
+
+[passive]
+# (2), (3) - Priest's: where the Magic Modifier is the higher (actor-character.mjs).
+surgency += 1(T);
+allow surgency.magic;
+# (4) Namekian Biology (4)'s - Rubbery Body's stretch - the same words: only where it matters, a Physical Attack or a Grapple aimed past your
+# Melee Range and within 3 more. Triggered, asked; Automatic - the toggle below - taken without asking (maneuvers.mjs stretchReach).
+meleeRange.stretch += 3;
+# (5) Namekian Biology (5)'s - Rubbery Body's move - the same words: on the card, once a Round (chat.mjs offerRubberyMove).
+allow rubbery.move;
+# (6) A Healing Surge: how many Adaptation Points, asked, once a Round - 2(bT) more Life Points each (chat.mjs takeSurge). It spends: no
+# button.
+allow focusNamekians.surge;
+
+# (4)'s Triggered/Automatic toggle: nothing of its own to do - the stretch above reads whether it is set Automatic.
+[triggered/stretch, effect 4]
+
+# (7) A Healing Surge that brings you above a Health Threshold (surge-threshold), once an Encounter: your Adaptation Points to their Maximum
+# - as many as there is room for. What it gives lasts the Encounter: Automatic by default, its Triggered/Automatic button (the user's).
+[triggered/surge-threshold, 1/encounter, effect 7]
+adaptation.stacks += 99;

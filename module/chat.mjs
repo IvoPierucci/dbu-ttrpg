@@ -37005,6 +37005,20 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
       }
     }
 
+    // Genetic Focus: Namekians (6): "you may spend any number of Adaptation Points. For each Adaptation Point spent, increase the amount of
+    // Life Points regained by 2(bT)" - how many, asked, once a Round.
+    let adaptedLife = 0;
+    const adaptationHeld = Number(actor.system.resources?.adaptation?.stacks) || 0;
+    if ((actor.system.effects?.slots?.["focusNamekians.surge"] === true) && (adaptationHeld > 0)
+      && (actor.getFlag?.(SCOPE, "focusNamekianSurgeRound") !== roundKey())) {
+      const spent = Math.min(adaptationHeld, await askPlayerAmount(actor, `${actor.name}: Genetic Focus: Namekians`, adaptationHeld,
+        "Adaptation Points - 2(bT) more Life Points each (1/Round)"));
+      if (spent > 0) {
+        await setResource(actor, "adaptation", adaptationHeld - spent);
+        await requestActorUpdate(actor, { [`flags.${SCOPE}.focusNamekianSurgeRound`]: roundKey() });
+        adaptedLife = spent * 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+      }
+    }
     // A Healing Surge of its own size where an effect names one - Divine Breathing's "5d10(bT)", still "a Healing Surge
     // for effects" with Surgency, so what adds to one adds to it.
     const dice = (dicePerBaseTier > 0)
@@ -37023,8 +37037,8 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     // Revenge Bomber's "increase the Dice Score by 1d6(T)".
     const tierDie = extraDie ? `${Math.max(1, Number(actor.system.tierOfPower) || 1)}d${extraDie}` : "";
     const formula = [`${dice}d10`, ...extra.map(d => d.formula), ...(tierDie ? [tierDie] : []), "@surgency",
-      ...(regen ? ["@regen[Health Thresholds]"] : [])].join(" + ");
-    const roll = new Roll(formula, { surgency, regen });
+      ...(regen ? ["@regen[Health Thresholds]"] : []), ...(adaptedLife ? ["@adapted[Genetic Focus: Namekians]"] : [])].join(" + ");
+    const roll = new Roll(formula, { surgency, regen, adapted: adaptedLife });
     await roll.evaluate();
 
     // "Double the amount of Life Points you regain from this Healing Surge" - Majin Regeneration's at Defeated.
