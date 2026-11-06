@@ -1,0 +1,9 @@
+id: bio-focus
+name: Bio-Focus
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Traits - Genetic Focus, one
+# for each race, all replacing Uncanny Monster - are the files in the folder of its name.
+requirement: Bio-Android
+maximumFactor: 1
+prerequisites: Genetic Splicing Factor
+description: >
+  Though you were artificially created from the genetics of many other species, you most closely resemble one of those species, and might even be able to reasonably pass for a member of that race at a glance.
