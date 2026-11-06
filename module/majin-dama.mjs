@@ -21,6 +21,9 @@ export const MAJIN_DAMA = "majin-dama";
 /** The Trait's two Maneuvers, by id. */
 export const INTEGRATE_DAMA = "neko-majin-dama-third-effect";
 export const EXPEL_DAMA = "neko-majin-dama-fourth-effect";
+// Genetic Focus: Neko Majins' (4), (5): the same words, Maneuvers of their own.
+const INTEGRATE_IDS = [INTEGRATE_DAMA, "genetic-focus-neko-majins-fourth-effect"];
+const EXPEL_IDS = [EXPEL_DAMA, "genetic-focus-neko-majins-fifth-effect"];
 
 /** The Karma Points a new one costs - (5). */
 export const RENEW_KARMA = 2;
@@ -65,10 +68,10 @@ export async function damaItemData(actor, extraFlags = {}) {
  * Why the Trait's (3) or (4) cannot be used now, or null: nothing to Integrate or to expel; (4)'s Action not left.
  */
 export function whyNotMajinDama(actor, maneuver) {
-  if (maneuver?.id === INTEGRATE_DAMA) {
+  if (INTEGRATE_IDS.includes(maneuver?.id)) {
     return looseDama(actor?.items).length ? null : `${actor.name} has no Majin-Dama to Integrate.`;
   }
-  if (maneuver?.id !== EXPEL_DAMA) return null;
+  if (!EXPEL_IDS.includes(maneuver?.id)) return null;
   if (!integratedDama(actor?.items).length) return `${actor.name} has no Integrated Majin-Dama.`;
   if (!game.combat?.started) return null;
   const left = expelKind(actor);

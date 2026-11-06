@@ -1,0 +1,22 @@
+id: genetic-focus-neko-majins-fourth-effect
+name: 4th effect of Genetic Focus: Neko Majins
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: genetic-focus-neko-majins
+fromEffect: 4
+source: Core Rule
+description: >
+  Genetic Focus: Neko Majins' fourth effect, as a Maneuver: 1 Action to Integrate a Majin-Dama you possess.
+text: >
+  (4)-[1/Round]: You can spend 1 Action to Integrate a Majin-Dama you possess.
+
+---
+
+# Owned by every character, listed while Genetic Focus: Neko Majins is had (`fromTrait`). Refused with none to Integrate
+# (majin-dama.mjs whyNotMajinDama); which, where several - Active where it fits (majin-dama.mjs integrateMajinDama).
+[on used]
+integrateMajinDama();

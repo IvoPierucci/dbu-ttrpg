@@ -31,3 +31,9 @@ allow nekoMajinGenes.reroll;
 [triggered/start-of-turn, effect 4]
 ki.value += 2(bT);
 adaptation.stacks += 1;
+# Genetic Focus: Neko Majins (7): "While you have an Integrated Majin-Dama, double the amount of Ki Points and Adaptation Points gained through
+# the 4th effect of Neko Majin Genes."
+if (holdsTrait("genetic-focus-neko-majins") && (majinDama.integrated >= 1)) {
+    ki.value += 2(bT);
+    adaptation.stacks += 1;
+}

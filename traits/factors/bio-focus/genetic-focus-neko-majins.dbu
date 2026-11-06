@@ -1,0 +1,38 @@
+id: genetic-focus-neko-majins
+name: Genetic Focus: Neko Majins
+order: 12
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Neko Majin Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# (3) "Upon gaining this Factor Trait, create a Majin-Dama Special Accessory ... which is Integrated into your Character" - made as this is
+# added, Active where it fits; gone with this while it is still on the sheet (racial.mjs `grantsGear`), Neko Majin-Dama's way.
+grantsGear: majin-dama
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Neko Majins (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Neko Majins Genes Factor Trait
+  (2)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (3)-[Passive]: Upon gaining this Factor Trait, create a Majin-Dama Special Accessory (see — Neko Majins) while you possess this Trait, which is Integrated into your Character. Another Character may take an Integrated Majin-Dama from you using the Snatch Special Maneuver if you are Defeated or Sleeping. That Character automatically wins the Clash if you are Defeated; if they lose the Clash while you are Sleeping, you lose the Sleeping Combat Condition. A stolen Majin-Dama stops being Integrated.
+  (4)-[1/Round]: You can spend 1 Action to Integrate a Majin-Dama you possess.
+  (5)-[1/Round]: As an Instant Maneuver, you can spend 1 Action to expel an Integrated Majin-Dama from your body. When you do, it stops being Integrated and is dropped or Equipped (your choice).
+  (6)-[Passive]: If you have no Integrated Majin-Dama, reduce your Combat Rolls and Soak Value by 2(T).
+  (7)-[Passive]: While you have an Integrated Majin-Dama, double the amount of Ki Points and Adaptation Points gained through the 4th effect of Neko Majin Genes.
+  (8)-[1/Encounter]: If you have an Integrated Majin Dama, use a Surge of your choice as an Instant Maneuver.
+---
+
+# (3) Snatch on a Defeated or Sleeping owner names an Integrated Majin-Dama too - whoever has one Integrated (majin-dama.mjs).
+# (4), (5) Their own Maneuvers, listed while this is had - Neko Majin-Dama's (3), (4), the same words (genetic-focus-neko-majins-fourth-effect,
+# -fifth-effect). (7) In Neko Majin Genes' own (4), its Ki and point once more where this is held and a Majin-Dama Integrated.
+[passive]
+# (2) Where the Magic Modifier is the higher (actor-character.mjs) - Priest's.
+allow surgency.magic;
+# (6)
+if (majinDama.integrated == 0) {
+  combatRolls -= 2(T);
+  soakValue -= 2(T);
+}
+# (8) A Surge of your choice as an Instant Maneuver - the Surge Maneuver is one: a use more on it, once an Encounter, with one Integrated.
+if (majinDama.integrated >= 1) {
+  surge.uses += 1;
+}
