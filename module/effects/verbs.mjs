@@ -471,6 +471,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Heran Genes (5): up to 2 stacks of Power lost, how many asked - an Adaptation Point each (chat.mjs heranGenesTrade)."
   },
+  shadowGenesTrade: {
+    args: [0, 0],
+    doc: "Shadow Dragon Genes (2): up to 8(bT) Life Points lost, how many asked - as many Ki Points (chat.mjs shadowGenesTrade)."
+  },
   bioBerserk: {
     args: [0, 0],
     doc: "Bio-Berserker (3): a 1d10 - at a 1, Compelled at a random Opponent in your Field of Aggression (chat.mjs bioBerserk)."

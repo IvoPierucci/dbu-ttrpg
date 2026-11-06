@@ -708,6 +708,8 @@ const PREDICATES = {
 
   /** The roll that answered `critical-scored` was a Strike or a Wound Roll - its `rollKind` (Offensive Design's). */
   strikeOrWound: scope => ["strike", "wound"].includes(String(scope.context?.rollKind ?? "")),
+  /** The Life Points a trade lost were that many base Tiers' worth or more - life-for-ki's `lostBT` (Shadow Dragon Genes'). */
+  lostAtLeastBT: (scope, amount) => (Number(scope.context?.lostBT) || 0) >= (Number(amount?.value ?? amount) || 0),
   /** The Natural Result the Moment carries is that or more - Demon Genes' 1d10 (demon-genes-rolled). */
   naturalAtLeast: (scope, amount) => (Number(scope.context?.natural) || 0) >= (Number(amount?.value ?? amount) || 0),
   /** The attack that dealt the Damage was a Signature Technique - damaged-opponent's `bySignature` (Earthling Genes'). */

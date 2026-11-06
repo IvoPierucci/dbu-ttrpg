@@ -152,6 +152,9 @@ const TABLE = [
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },
   { key: "sunlight-gained", label: "You gain a stack of Sunlight", provides: [],
     doc: "Fired as Arboreal's Sunlight is gained (moments-runtime.mjs stacksGained) - its (6)." },
+  { key: "life-for-ki", label: "You trade Life Points for Ki through Shadow Dragon Genes", provides: [],
+    doc: "Fired once Shadow Dragon Genes (2) has traded, `lostBT` the Life Points lost in base Tiers (chat.mjs shadowGenesTrade) - its "
+       + "(5) and (6). What is the player's is asked in a window first." },
   { key: "demon-genes-rolled", label: "Your Demon Genes 1d10 is rolled", provides: [],
     doc: "Fired once Demon Genes' 1d10 is read, its Natural Result as changed by its Option in `natural` (chat.mjs demonGenesRoll) - "
        + "its (2). What is the player's is asked in a window first." },

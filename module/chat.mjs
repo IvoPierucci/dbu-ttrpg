@@ -20584,6 +20584,8 @@ function offerSinisterAll(message, botcher) {
     seen.add(dragon.uuid);
     offerSinister(message, dragon, botcher);
     offerShadowRaised(message, dragon, botcher);
+    // Shadow Dragon Genes (4): asked of whoever has it.
+    shadowGenesImpair(dragon, botcher);
   }
 }
 
@@ -22408,6 +22410,38 @@ export async function saiyanGenesPassed(actor) {
   await setCondition(actor, "battle-creation-mark", 1);
   await (await import("./effects/moments-runtime.mjs")).expiresAt(actor, "battle-creation-mark", "encounter");
   await setResource(actor, "battlecreation", 3);
+}
+
+/**
+ * Shadow Dragon Genes (2): "You may reduce your Life Points by up to 8(bT) to regain an equal amount of Ki Points." How much, asked; then
+ * life-for-ki with it in base Tiers, for its (5) and (6).
+ */
+export async function shadowGenesTrade(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const bT = Math.max(1, Number(actor?.system?.baseTierOfPower) || 1);
+  const most = Math.min(8 * bT, Math.max(0, Number(actor?.system?.life?.value) || 0));
+  if (most <= 0) return UNSPENT;
+  const lost = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Shadow Dragon Genes`, most, "Life Points - as many Ki Points"));
+  if (lost <= 0) return UNSPENT;
+  const { life, ki } = actor.system;
+  await requestActorUpdate(actor, { "system.life.value": (Number(life.value) || 0) - lost,
+    "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + lost) });
+  await answerFor(actor, "life-for-ki", { lostBT: lost / bT });
+}
+
+/**
+ * Shadow Dragon Genes (4): "If an Opponent who is not at Long Range scores a Botch Result, you may spend an Adaptation Point to inflict the
+ * Impaired Combat Condition on that Opponent until the start of their next turn." Asked of whoever has it; the clock theirs.
+ */
+async function shadowGenesImpair(holder, opponent) {
+  if (!holder || !opponent || (holder.uuid === opponent.uuid) || holder.system?.defeated) return;
+  if (holder.system?.effects?.slots?.["shadowDragonGenes.impair"] !== true) return;
+  const held = Number(holder.system.resources?.adaptation?.stacks) || 0;
+  if ((held <= 0) || !areOpponents(holder, opponent) || atLongRange(holder, opponent)) return;
+  if ((await askPlayerChoice(holder, `${holder.name}: Shadow Dragon Genes - ${opponent.name}'s Botch`,
+    [{ value: "yes", label: "An Adaptation Point - Impaired till the start of their next turn" }, { value: "no", label: "No" }])) !== "yes") return;
+  await setResource(holder, "adaptation", held - 1);
+  await markUntilNextTurn(opponent, opponent, "impaired", 1, "start", "Shadow Dragon Genes");
 }
 
 /**

@@ -488,7 +488,7 @@ const PREDICATE_NAMES = new Set([
   // Defense's).
   "ofFoundation", "focusedOn",
   // The Natural Result a Moment carries (Demon Genes').
-  "naturalAtLeast",
+  "naturalAtLeast", "lostAtLeastBT",
   "wearing", "inEnvironment",
   // Elemental Adaptation's: a Profile some Battle Weather is connected to.
   "weatherConnected", "holdsTrait", "inWeather",

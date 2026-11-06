@@ -1,0 +1,43 @@
+id: shadow-dragon-genes
+name: Shadow Dragon Genes
+order: 16
+category: body
+importance: secondary
+description: >
+  Comprised of the negative energy of the Shadow Dragons, you share some of their ability to warp reality.
+text: >
+  Shadow Dragon Genes [Morale] (Body): Comprised of the negative energy of the Shadow Dragons, you share some of their ability to warp reality.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Triggered/Start of Turn]: You may reduce your Life Points by up to 8(bT) to regain an equal amount of Ki Points.
+  (3)-[Triggered]: If you gain an Adaptation Point, regain 1(bT) Ki Points.
+  (4)-[Triggered]: If an Opponent who is not at Long Range scores a Botch Result, you may spend an Adaptation Point to inflict the Impaired Combat Condition on that Opponent until the start of their next turn.
+  (5)-[Triggered, 1/Round]: If you reduce your Life Points by 4(bT) or more through the second effects of Dragon Genes, gain an Adaptation Point.
+  (6)-[Triggered, 1/Encounter]: If you reduce your Life Points by 8(bT) or more through the second effects of Dragon Genes, gain 2 Adaptation Points.
+---
+
+[passive]
+# [Morale]: its Racial Saving Throw Bonus.
+allow save.racial.morale;
+# (1)
+racialLifeModifier += 2;
+# (4) An Opponent not at Long Range scoring a Botch on an attack's card, with an Adaptation Point: asked - Impaired till the start of
+# their next turn (chat.mjs shadowGenesImpair).
+allow shadowDragonGenes.impair;
+
+# (2) Your turn begins: how much Life, up to 8(bT), asked - as much Ki (chat.mjs shadowGenesTrade); then its Moment, what was traded
+# (life-for-ki). Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 2]
+shadowGenesTrade();
+
+# (3) An Adaptation Point gained. Automatic by default, its Triggered/Automatic button.
+[triggered/adaptation-gained, effect 3]
+ki.value += 1(bT);
+
+# (5), (6) What (2) traded. Automatic by default, their Triggered/Automatic buttons.
+[triggered/life-for-ki, 1/round, effect 5]
+requires lostAtLeastBT(4);
+adaptation.stacks += 1;
+
+[triggered/life-for-ki, 1/encounter, effect 6]
+requires lostAtLeastBT(8);
+adaptation.stacks += 2;
