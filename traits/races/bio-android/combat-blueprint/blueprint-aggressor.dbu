@@ -1,0 +1,18 @@
+id: blueprint-aggressor
+name: Genetic Aggressor
+order: 2
+optionOf: combat-blueprint
+optionEffect: 2
+# Artificial Warrior's Option chosen: this one.
+follows: genetic-aggressor
+description: >
+  If you spend 2+ Adaptation Points on the Strike Roll of an Attacking Maneuver, you may apply an Energy Charge to that Attacking Maneuver.
+text: >
+  Genetic Aggressor [Triggered, 1/Round]: If you spend 2+ Adaptation Points on the Strike Roll of an Attacking Maneuver, you may apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# Asked on a Strike Roll with 2+ Adaptation Points spent on it - an Energy Charge on that attack, once a Round (chat.mjs rollSide,
+# resolveAttackWork).
+[passive]
+allow blueprint.aggressor;

@@ -1345,10 +1345,39 @@ async function spendAdaptation(actor, what) {
  */
 async function adaptationReductionFor(target, attack, uuid) {
   const before = (attack.result?.targets ?? []).find(entry => entry.uuid === uuid);
-  if (before?.hit) return Number(before.adaptationReduction) || 0;
-  if (target?.system?.effects?.slots?.["adaptationSpend.hit"] !== true) return 0;
+  if (before?.hit) return { value: Number(before.adaptationReduction) || 0, step: Number(before.adaptationStep) || 0 };
+  const none = { value: 0, step: 0 };
+  if (target?.system?.effects?.slots?.["adaptationSpend.hit"] !== true) return none;
   const spent = await spendAdaptation(target, `hit by ${attack.maneuverName ?? "an attack"}`);
-  return spent * Math.max(1, Number(target.system.tierOfPower) || 1);
+  // Combat Blueprint (2), Genetic Survivor: "If you spend 2+ Adaptation Points through the 3rd effect of Artificial Warrior, you may reduce
+  // the Damage Category of that Attacking Maneuver by 1 Category for the sake of your Damage Calculation" - asked, once a Round.
+  const step = (spent >= 2) && (target.system.effects?.slots?.["blueprint.survivor"] === true)
+    && (target.getFlag?.(SCOPE, "blueprintSurvivorRound") !== roundKey())
+    && ((await askPlayerChoice(target, `${target.name}: Combat Blueprint`,
+      [{ value: "down", label: "This attack's Damage Category one down" }, { value: "no", label: "No" }])) === "down");
+  if (step) await requestActorUpdate(target, { [`flags.${SCOPE}.blueprintSurvivorRound`]: roundKey() });
+  return { value: spent * Math.max(1, Number(target.system.tierOfPower) || 1), step: step ? 1 : 0 };
+}
+
+/**
+ * Combat Blueprint (1): "As an Instant Maneuver during your turn, you may spend any number of Power stacks. For each spent Power stack,
+ * regain 2(bT) Life and Ki Points. If you spend 2+ stacks through this effect, gain an Adaptation Point." Your turn and a stack to spend
+ * are asked before the use is counted (use-maneuver.mjs).
+ */
+export async function blueprintPower(actor) {
+  const held = Number(actor?.system?.resources?.power?.stacks) || 0;
+  if (held <= 0) return false;
+  const spent = Math.min(held, await askPlayerAmount(actor, `${actor.name}: Combat Blueprint`, held, "Power stacks - 2(bT) Life and Ki Points each"));
+  if (spent <= 0) return false;
+  await setResource(actor, "power", held - spent);
+  const each = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  await regainPools(actor, spent * each, spent * each);
+  // An Adaptation Point - Artificial Warrior's Resource, so only where it is held at all.
+  const { resourceLimits } = await import("./effects/traits.mjs");
+  if ((spent >= 2) && resourceLimits(actor).adaptation) {
+    await setResource(actor, "adaptation", (Number(actor.system.resources?.adaptation?.stacks) || 0) + 1);
+  }
+  return true;
 }
 
 /**
@@ -9393,6 +9422,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     const first = await rollSide(actor, clone(), { ...again, collect });
     const second = await rollSide(actor, clone(), { ...again, collect: false });
     const { kept, dropped } = linkedPick(first, second, linked);
+    // Asked on the first alone: Combat Blueprint's Energy Charge stands whichever is kept.
+    if (first.blueprintCharge) kept.blueprintCharge = true;
     kept.linked = { mode: linked, dropped: dropped?.total ?? null,
       label: (linked === "high") ? "Twin-Linked" : "Dead-Link" };
     return kept;
@@ -9419,6 +9450,21 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Artificial Warrior (2): ticked in the window - how many Adaptation Points, asked; 1(T) on this Combat Roll's Dice Score each.
   const adapted = (answered?.slots?.["adaptationSpend.roll"] === true) ? await spendAdaptation(actor, "this Combat Roll") : 0;
   if (adapted) parts.push({ label: `Adaptation Points (${adapted})`, value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) });
+  // Combat Blueprint (2), with 2+ of them spent - asked, once a Round each. Genetic Aggressor, on a Strike Roll: "you may apply an Energy
+  // Charge to that Attacking Maneuver" (resolveAttackWork). Genetic Agility, on a Dodge Roll: "you may ignore all Diminishing Defense you
+  // are suffering from for the duration of that Maneuver" - its rows taken off.
+  const blueprint = (adapted >= 2) && attackingManeuver
+    && ((slot === "strike") ? "aggressor" : ((slot === "dodge") && parts.some(part => String(part.label).startsWith("Dim. Defense")) ? "agility" : ""));
+  const blueprintTaken = Boolean(blueprint) && (actor.system.effects?.slots?.[`blueprint.${blueprint}`] === true)
+    && (actor.getFlag?.(SCOPE, `blueprint${blueprint}Round`) !== roundKey())
+    && ((await askPlayerChoice(actor, `${actor.name}: Combat Blueprint`, [
+      { value: "yes", label: (blueprint === "aggressor") ? "An Energy Charge on this attack" : "Ignore your Diminishing Defense for this attack" },
+      { value: "no", label: "No" }])) === "yes");
+  if (blueprintTaken) await requestActorUpdate(actor, { [`flags.${SCOPE}.blueprint${blueprint}Round`]: roundKey() });
+  if (blueprintTaken && (blueprint === "agility")) {
+    for (let index = parts.length - 1; index >= 0; index--) if (String(parts[index].label).startsWith("Dim. Defense")) parts.splice(index, 1);
+  }
+  const blueprintCharge = blueprintTaken && (blueprint === "aggressor");
   const baseDie = lingering ? { ...(answered.slots.baseDie ?? {}), add: 0, multiply: 1, set: 9, min: null, max: null }
     : (answered?.slots?.baseDie ?? null);
   const forcedNatural = baseDie?.set ?? null;
@@ -9677,8 +9723,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     "A Botch takes what it takes, and stops at nothing"));
   if (floored) lines.push(floored);
   total = Math.max(0, total);
+  if (blueprintCharge) lines.push(noteLine("Combat Blueprint: +1 Energy Charge on this attack"));
 
   return {
+    // Combat Blueprint's Genetic Aggressor: an Energy Charge for the attack this Strike Roll is made for (resolveAttackWork).
+    ...(blueprintCharge ? { blueprintCharge: true } : {}),
     actorUuid: actor.uuid,
     actorName: actor.name,
     natural,
@@ -29624,6 +29673,9 @@ async function resolveAttackWork(message, attack) {
 
     // Tough Warrior (2): Ki spent as the hit is, as much Damage Reduction - and Superior Durability (3)'s Category down.
     const tough = hit ? await toughReductionFor(target, attack, uuid) : { value: 0, step: 0 };
+    // Artificial Warrior (3): Adaptation Points spent as the hit is, 1(T) of Damage Reduction each for this attack - and with 2+, Combat
+    // Blueprint's Genetic Survivor, its Category one down.
+    const adapt = hit ? await adaptationReductionFor(target, attack, uuid) : { value: 0, step: 0 };
 
     branches.push({
       uuid,
@@ -29652,9 +29704,9 @@ async function resolveAttackWork(message, attack) {
       // Said on the card, since a defence that was never rolled needs a reason beside
       // it or it looks like it was simply forgotten.
       forced,
-      damageCategory: resolveDamageCategory(attack.damageCategory, shift - tough.step),
+      damageCategory: resolveDamageCategory(attack.damageCategory, shift - tough.step - adapt.step),
       // The steps the Category took here, kept so a defence made again can be put in place of this one.
-      categoryShift: shift - tough.step,
+      categoryShift: shift - tough.step - adapt.step,
       // Carried on the attack so the Wound Roll can apply it: the defender's client
       // worked it out, and the attacker's is as likely to be the one settling this.
       incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
@@ -29666,8 +29718,8 @@ async function resolveAttackWork(message, attack) {
       ...((incoming?.slots?.["miniature.noPunchingDown"] === true) ? { noPunchingDown: true } : {}),
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
-      // Artificial Warrior (3): Adaptation Points spent as the hit is, 1(T) of Damage Reduction each for this attack.
-      adaptationReduction: hit ? await adaptationReductionFor(target, attack, uuid) : 0,
+      adaptationReduction: adapt.value,
+      adaptationStep: adapt.step,
       toughReduction: tough.value,
       toughStep: tough.step,
       ...(defender ? { refinedSoak: defender.soak, unstudy: [{ by: target.uuid, uuid: attacker.uuid }] } : {}),
@@ -29694,6 +29746,8 @@ async function resolveAttackWork(message, attack) {
   requestEdit(message, {
     type: "attack",
     attack: { ...attack, ...(chased ? { hostileChased: true } : {}),
+      // Combat Blueprint's Genetic Aggressor: "apply an Energy Charge to that Attacking Maneuver" - one more, as Ki Deception's.
+      ...(strike.blueprintCharge ? { energyCharges: (Number(attack.energyCharges) || 0) + 1 } : {}),
       result: { strike, targets: branches, wound: null, ...(critSpecialist ? { critSpecialist } : {}) } }
   });
   if (chased) await postHostileChase(attack, attacker);

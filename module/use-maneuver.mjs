@@ -4839,6 +4839,18 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ui.notifications.warn(noRoom);
     return false;
   }
+  // Combat Blueprint (1): "As an Instant Maneuver during your turn, you may spend any number of Power stacks" - not in another's turn,
+  // and not with none to spend; refused before the use is counted.
+  if (maneuver.id === "combat-blueprint-first-effect") {
+    if (game.combat?.started && !isTheirTurn(actor)) {
+      ui.notifications.warn(`${actor.name} can only use ${maneuver.name} during their turn.`);
+      return false;
+    }
+    if ((Number(actor.system.resources?.power?.stacks) || 0) <= 0) {
+      ui.notifications.warn(`${actor.name} has no Power stacks to spend.`);
+      return false;
+    }
+  }
 
   if (!permitted(actor, maneuver)) return false;
 

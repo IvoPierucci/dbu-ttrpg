@@ -1,0 +1,22 @@
+id: combat-blueprint
+name: Combat Blueprint
+order: 3
+category: mind
+importance: secondary
+# (2) Its Choice, a file beside it for each - the one following Artificial Warrior's Option, not asked; asked where it has none. Changed
+# there later, change it here by hand on its Options tab.
+optionEffect: 2
+optionsFollow: artificial-warrior
+description: >
+  Designed as a weapon of war, you are able to adapt to any combat scenario.
+text: >
+  Combat Blueprint (Mind): Designed as a weapon of war, you are able to adapt to any combat scenario.
+  (1)-[1/Round]: As an Instant Maneuver during your turn, you may spend any number of Power stacks. For each spent Power stack, regain 2(bT) Life and Ki Points. If you spend 2+ stacks through this effect, gain an Adaptation Point.
+  (2)-[Choice]: Depending on your choice for the Option effect of Artificial Warrior, gain access to the corresponding effect:
+  * Genetic Survivor [Triggered, 1/Round]: If you spend 2+ Adaptation Points through the 3rd effect of Artificial Warrior, you may reduce the Damage Category of that Attacking Maneuver by 1 Category for the sake of your Damage Calculation.
+  * Genetic Aggressor [Triggered, 1/Round]: If you spend 2+ Adaptation Points on the Strike Roll of an Attacking Maneuver, you may apply an Energy Charge to that Attacking Maneuver.
+  * Genetic Agility [Triggered, 1/Round]: If you spend 2+ Adaptation Points on the Dodge Roll of an Attacking Maneuver, you may ignore all Diminishing Defense you are suffering from for the duration of that Maneuver.
+  * Pursuit of Perfection [Triggered/Start of Combat Round]: Gain 1 Adaptation Point.
+---
+
+# (1) The Combat Blueprint Maneuver (traits/maneuvers/combat-blueprint-first-effect.dbu) - its own file, given by this Trait.

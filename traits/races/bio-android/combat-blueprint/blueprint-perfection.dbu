@@ -1,0 +1,17 @@
+id: blueprint-perfection
+name: Pursuit of Perfection
+order: 4
+optionOf: combat-blueprint
+optionEffect: 2
+# Artificial Warrior's Option chosen: this one.
+follows: pursuit-of-perfection
+description: >
+  Gain 1 Adaptation Point.
+text: >
+  Pursuit of Perfection [Triggered/Start of Combat Round]: Gain 1 Adaptation Point.
+
+---
+
+# The Combat Round begins. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-round, effect 2]
+adaptation.stacks += 1;

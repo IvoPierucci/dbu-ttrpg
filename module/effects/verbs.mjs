@@ -500,6 +500,10 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "A Maneuver of yours out of sequence, by its id - Petite Genius (3)'s Movement (chat.mjs maneuverOutOfSequence)."
   },
+  blueprintPower: {
+    args: [0, 0],
+    doc: "Combat Blueprint (1): Power stacks spent, asked - 2(bT) Life and Ki Points each; 2 or more, an Adaptation Point (chat.mjs blueprintPower)."
+  },
   supporterEmpower: {
     args: [0, 0],
     doc: "Minion Supporter (2): the Empower as if 1 Action at one of your Minions, asked - its Combat Rolls 1(T) (chat.mjs supporterEmpower)."

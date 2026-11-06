@@ -1,0 +1,18 @@
+id: blueprint-survivor
+name: Genetic Survivor
+order: 1
+optionOf: combat-blueprint
+optionEffect: 2
+# Artificial Warrior's Option chosen: this one.
+follows: genetic-survivor
+description: >
+  If you spend 2+ Adaptation Points through the 3rd effect of Artificial Warrior, you may reduce the Damage Category of that Attacking Maneuver by 1 Category for the sake of your Damage Calculation.
+text: >
+  Genetic Survivor [Triggered, 1/Round]: If you spend 2+ Adaptation Points through the 3rd effect of Artificial Warrior, you may reduce the Damage Category of that Attacking Maneuver by 1 Category for the sake of your Damage Calculation.
+
+---
+
+# Asked as the hit is settled, with 2+ Adaptation Points spent on it - its Damage Category 1 lower, once a Round (chat.mjs
+# adaptationReductionFor).
+[passive]
+allow blueprint.survivor;

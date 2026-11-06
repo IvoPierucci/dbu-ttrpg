@@ -1,0 +1,18 @@
+id: blueprint-agility
+name: Genetic Agility
+order: 3
+optionOf: combat-blueprint
+optionEffect: 2
+# Artificial Warrior's Option chosen: this one.
+follows: genetic-agility
+description: >
+  If you spend 2+ Adaptation Points on the Dodge Roll of an Attacking Maneuver, you may ignore all Diminishing Defense you are suffering from for the duration of that Maneuver.
+text: >
+  Genetic Agility [Triggered, 1/Round]: If you spend 2+ Adaptation Points on the Dodge Roll of an Attacking Maneuver, you may ignore all Diminishing Defense you are suffering from for the duration of that Maneuver.
+
+---
+
+# Asked on a Dodge Roll with 2+ Adaptation Points spent on it - its Diminishing Defense rows taken off, once a Round (chat.mjs
+# rollSide).
+[passive]
+allow blueprint.agility;

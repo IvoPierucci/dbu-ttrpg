@@ -1,0 +1,22 @@
+id: combat-blueprint-first-effect
+name: Combat Blueprint
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: combat-blueprint
+fromEffect: 1
+source: Core Rule
+description: >
+  Combat Blueprint's first effect, as a Maneuver: during your turn, Power stacks spent - 2(bT) Life and Ki each; 2+, an Adaptation Point.
+text: >
+  (1)-[1/Round]: As an Instant Maneuver during your turn, you may spend any number of Power stacks. For each spent Power stack, regain 2(bT) Life and Ki Points. If you spend 2+ stacks through this effect, gain an Adaptation Point.
+
+---
+
+# Only during your turn, and with a Power stack to spend - both asked before the use is counted (use-maneuver.mjs). How many, asked; 2(bT)
+# Life and Ki Points each; 2 or more, an Adaptation Point (chat.mjs blueprintPower).
+[on used]
+blueprintPower();
