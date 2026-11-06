@@ -169,20 +169,6 @@
         Refresh talents
       </button>
       {{/if}}
-      {{#if isGM}}
-      <button type="button" class="edit-toggle" data-action="importTalents"
-              data-tooltip="Fill the DBU Talents compendium with the published talents, ready to drag onto a character">
-        Import core talents
-      </button>
-      <button type="button" class="edit-toggle" data-action="reloadTalents"
-              data-tooltip="Read every core talent back from its file, overwriting what is in the compendium">
-        Reload from files
-      </button>
-      <button type="button" class="edit-toggle" data-action="importManeuvers"
-              data-tooltip="Fill the DBU Maneuvers compendium from the files">
-        Import core maneuvers
-      </button>
-      {{/if}}
     </summary>
 
     {{#if talents.length}}
