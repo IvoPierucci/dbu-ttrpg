@@ -1,0 +1,19 @@
+id: focus-genes-of-hatred
+name: Genes of Hatred
+order: 1
+optionOf: genetic-focus-neo-tuffle
+optionEffect: 6
+# Neo-Tuffle Genes' Option chosen: this one.
+follows: genes-of-hatred
+description: >
+  If you use the Energy Charge Maneuver, gain an Adaptation Point.
+text: >
+  Genes of Hatred [Triggered]: If you use the Energy Charge Maneuver, gain an Adaptation Point.
+
+---
+
+# The Energy Charge Maneuver declared: an Adaptation Point. Free and unlimited: Automatic by default, its Triggered/Automatic button, though
+# offered in the declaration's window (`toggle`).
+[triggered/declare-maneuver, toggle, effect 6]
+requires using("energy-charge");
+adaptation.stacks += 1;

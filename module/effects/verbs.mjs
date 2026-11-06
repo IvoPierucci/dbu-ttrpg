@@ -986,6 +986,12 @@ export const VERBS = Object.freeze({
     doc: "Parasitic Biology (3): this Round's Inferior, hit - 2(bT) off their Ki Points, 1(bT) more for each Revenge Point spent on "
        + "the attack (chat.mjs parasiteDrain)."
   },
+  chooseSpecimen: {
+    args: [0, 0],
+    names: [],
+    doc: "Genetic Focus: Neo-Tuffle (2): an Opponent on the scene, asked, your Inferior Specimen till the Combat Round ends (chat.mjs "
+       + "askSpecimen)."
+  },
   chooseInferior: {
     args: [0, 0],
     names: [],

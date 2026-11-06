@@ -718,6 +718,7 @@ async function runVerb(actor, call, context) {
       const { parasiteDrain } = await import("../chat.mjs");
       return parasiteDrain(actor, context);
     }
+    case "chooseSpecimen": return (await import("../chat.mjs")).askSpecimen(actor);
     case "chooseInferior": {
       const { askInferior } = await import("../chat.mjs");
       return askInferior(actor);

@@ -1,0 +1,32 @@
+id: genetic-focus-neo-tuffle
+name: Genetic Focus: Neo-Tuffle
+order: 13
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Neo-Tuffle Genes Factor
+# Trait, shown and never enforced.
+importance: primary
+# (6) Its Choice, a file beside it for each - the one following Neo-Tuffle Genes' Option, not asked; asked where it has none.
+optionEffect: 6
+optionsFollow: neo-tuffle-genes
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Neo-Tuffle (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Neo-Tuffle Genes Factor Trait
+  (2)-[Triggered/Start of Combat Round, Ruling]: Target an Opponent. That Opponent becomes an ‘Inferior Specimen’ until the end of the Combat Round.
+  (3)-[Passive]: Increase your Combat Rolls by 1(T) against an Inferior Specimen.
+  (4)-[Passive]: Halve the amount of Adaptation Points required for the 2nd effect of Neo-Tuffle Genes if the attacking Character is an Inferior Specimen.
+  (6)-[Choice]: Depending on your choice for the Option effect of Neo-Tuffle Genes, choose one of the following effects:
+  * Genes of Hatred [Triggered]: If you use the Energy Charge Maneuver, gain an Adaptation Point.
+  * Genes of a Parasite [Passive]: You gain access to the Liquid Form Maneuver (see — Special Maneuvers). While in Liquid Form, you have access to the Possess Maneuver (see — Special Maneuvers).
+---
+
+[passive]
+# (3) Strike and Wound against your Inferior Specimen, your Dodge against their attacks (chat.mjs specimenParts) - Tuffle Superiority (2)'s
+# way, its own mark beside the Inferior.
+allow focusNeoTuffle.specimen;
+# (4) Neo-Tuffle Genes (2)'s Basic Attack back at your Inferior Specimen: 1 Adaptation Point, not 2 (chat.mjs offerNeoTuffleStrike).
+
+# (2) As each Combat Round starts: which Opponent on the scene, asked, or none - your Inferior Specimen till the Round ends (chat.mjs
+# askSpecimen). Free, and for the Round: Automatic by default, its Triggered/Automatic button (the user's criteria).
+[triggered/start-of-round, effect 2]
+chooseSpecimen();

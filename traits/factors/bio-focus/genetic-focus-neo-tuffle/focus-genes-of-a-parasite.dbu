@@ -1,0 +1,17 @@
+id: focus-genes-of-a-parasite
+name: Genes of a Parasite
+order: 2
+optionOf: genetic-focus-neo-tuffle
+optionEffect: 6
+# Neo-Tuffle Genes' Option chosen: this one.
+follows: genes-of-a-parasite
+description: >
+  You gain access to the Liquid Form Maneuver (see — Special Maneuvers). While in Liquid Form, you have access to the Possess Maneuver (see — Special Maneuvers).
+text: >
+  Genes of a Parasite [Passive]: You gain access to the Liquid Form Maneuver (see — Special Maneuvers). While in Liquid Form, you have access to the Possess Maneuver (see — Special Maneuvers).
+
+---
+
+# The Liquid Form Special Maneuver. The Possess Maneuver waits, with Possession, for the Transformations (its text saved).
+[passive]
+allow maneuver.liquid-form;

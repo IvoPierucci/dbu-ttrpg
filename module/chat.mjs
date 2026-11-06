@@ -21198,12 +21198,14 @@ function offerTeamReliance(message, attack, target) {
  * once a Round; the 2 paid as it is taken (takeOutOfSequence, `adaptationCost`).
  */
 function offerNeoTuffleStrike(message, target, attacker) {
+  // Genetic Focus: Neo-Tuffle (4): "Halve the amount of Adaptation Points required ... if the attacking Character is an Inferior Specimen."
+  const cost = isSpecimenOf(target, attacker?.uuid) ? 1 : 2;
   if (!target || !attacker || (target.system?.effects?.slots?.["neoTuffleGenes.strike"] !== true)
-    || ((Number(target.system?.resources?.adaptation?.stacks) || 0) < 2) || (target.getFlag?.(SCOPE, "neoTuffleStrikeRound") === roundKey())) return;
+    || ((Number(target.system?.resources?.adaptation?.stacks) || 0) < cost) || (target.getFlag?.(SCOPE, "neoTuffleStrikeRound") === roundKey())) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.grants?.roundFlag === "neoTuffleStrikeRound") && (offer.actorUuid === target.uuid))) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "basic-attack",
-    maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Neo-Tuffle Genes - 2 Adaptation Points, once a Round",
-    grants: { roundFlag: "neoTuffleStrikeRound", adaptationCost: 2 } } });
+    maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: `Neo-Tuffle Genes - ${cost} Adaptation Point${(cost > 1) ? "s" : ""}, once a Round`,
+    grants: { roundFlag: "neoTuffleStrikeRound", adaptationCost: cost } } });
 }
 
 /**
@@ -26128,6 +26130,34 @@ export async function followAlly(actor) {
  * asked, once an Encounter; the Focus set to them (surgingFocus reads `surgingFocusPreset`). Left as they are Defeated
  * (combat.mjs).
  */
+/**
+ * Genetic Focus: Neo-Tuffle (2): "Target an Opponent. That Opponent becomes an 'Inferior Specimen' until the end of the Combat Round." Which,
+ * asked, or none - kept beside Tuffle Superiority's Inferior (`inferiorSpecimen`).
+ */
+export async function askSpecimen(actor) {
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated && areOpponents(token.actor, actor))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Neo-Tuffle - your Inferior Specimen`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const specimen = opponents.find(each => each.uuid === picked) ?? null;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.inferiorSpecimen`]: specimen
+    ? { uuid: specimen.uuid, name: specimen.name, round: roundKey() } : null });
+}
+
+/** This Round's Inferior Specimen of theirs is that one (Genetic Focus: Neo-Tuffle). */
+function isSpecimenOf(actor, uuid) {
+  const specimen = actor?.getFlag?.(SCOPE, "inferiorSpecimen");
+  return Boolean(specimen && uuid && (specimen.uuid === uuid) && (specimen.round === roundKey()));
+}
+
+/** Genetic Focus: Neo-Tuffle (3): "Increase your Combat Rolls by 1(T) against an Inferior Specimen." */
+function specimenParts(actor, otherUuid) {
+  if ((actor?.system?.effects?.slots?.["focusNeoTuffle.specimen"] !== true) || !isSpecimenOf(actor, otherUuid)) return [];
+  return [{ label: "Genetic Focus: Neo-Tuffle (Inferior Specimen)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
 export async function askInferior(actor) {
   const surging = (Number(actor.system?.states?.surging) || 0) > 0;
   const held = surging ? fromUuidSync(actor.getFlag?.(SCOPE, "inferiorSurging") ?? "") : null;
@@ -26161,7 +26191,7 @@ export async function askInferior(actor) {
 /** Tuffle Superiority (2), (3): Strike and Wound 1(T) against your Inferior this Round - the Wound 1(T) more without Energy of Revenge. */
 function inferiorParts(attacker, target, roll) {
   // And Namekian-Raised (4)'s - one Opponent chosen this Round, 1(T) at them. Onboard Computer (3)'s Strike.
-  return [...superiorityParts(attacker, target, roll), ...namekianFocusParts(attacker, target?.uuid),
+  return [...superiorityParts(attacker, target, roll), ...namekianFocusParts(attacker, target?.uuid), ...specimenParts(attacker, target?.uuid),
     ...onboardParts(attacker, target?.uuid, (roll === "strike") ? "strike" : "")];
 }
 
@@ -26179,7 +26209,7 @@ function superiorityParts(attacker, target, roll) {
 /** Tuffle Superiority (2): your Dodge against your Inferior's attack, 1(T). */
 function inferiorDodge(actor, attack) {
   // And Namekian-Raised (4)'s - against the one chosen this Round.
-  return [...superiorityDodge(actor, attack), ...namekianFocusParts(actor, attack?.attackerUuid),
+  return [...superiorityDodge(actor, attack), ...namekianFocusParts(actor, attack?.attackerUuid), ...specimenParts(actor, attack?.attackerUuid),
     // Onboard Computer (3)'s Dodge.
     ...onboardParts(actor, attack?.attackerUuid, "dodge")];
 }
