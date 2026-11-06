@@ -37,9 +37,13 @@ battlecreation.stacks += 1;
 adaptation.stacks += 1;
 
 # (4) Chosen on the Defeated card, with 3 Adaptation Points: a Steadfast Check, 2 off it - made, your Life Points 1 under the Critical
-# Health Threshold, your Adaptation Points to their Maximum; and (5), asked once an Encounter, Battle Creation to 3 (chat.mjs
-# saiyanGenesPassed).
+# Health Threshold, your Adaptation Points to their Maximum (chat.mjs saiyanGenesPassed).
 [triggered/defeated, effect 4]
 requires stacksAtLeast(3, "adaptation");
 adaptation.stacks -= 3;
 steadfastEnter(-2, saiyan-genes);
+
+# (5) That Steadfast Check made (saiyan-genes-passed), once an Encounter: Battle Creation to 3 - its mark letting 3 stand till the Encounter
+# ends (chat.mjs saiyanGenesPassed). What it gives lasts the Encounter: Automatic by default, its Triggered/Automatic button (the user's).
+[triggered/saiyan-genes-passed, 1/encounter, effect 5]
+battleCreation.three = true;

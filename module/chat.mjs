@@ -22424,11 +22424,9 @@ export async function saiyanGenesPassed(actor) {
   const { resourceLimits } = await import("./effects/traits.mjs");
   const most = Number(resourceLimits(actor).adaptation) || 0;
   if (most) await setResource(actor, "adaptation", most);
-  const encounter = game.combat?.id ?? "none";
-  if ((actor.getFlag?.(SCOPE, "battleCreationEncounter") === encounter)
-    || ((await askPlayerChoice(actor, `${actor.name}: Saiyan Genes`,
-      [{ value: "yes", label: "Battle Creation to 3 (1/Encounter)" }, { value: "no", label: "No" }])) !== "yes")) return;
-  await requestActorUpdate(actor, { [`flags.${SCOPE}.battleCreationEncounter`]: encounter });
+  // (5): its Moment - Automatic, or asked in its window, as its button says; once an Encounter by its own budget.
+  const passed = await answerFor(actor, "saiyan-genes-passed", {});
+  if (passed?.slots?.["battleCreation.three"] !== true) return;
   const { setCondition } = await import("./conditions.mjs");
   await setCondition(actor, "battle-creation-mark", 1);
   await (await import("./effects/moments-runtime.mjs")).expiresAt(actor, "battle-creation-mark", "encounter");

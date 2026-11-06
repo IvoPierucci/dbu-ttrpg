@@ -361,6 +361,8 @@ const TABLE = [
     doc: "Konatsian Genes (1): 1(T) on this Wound Roll for each Health Threshold below (chat.mjs rollSide)." },
   { key: "konatsianSoak.depth", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "Konatsian Genes (2): Soak 1(T) for each Health Threshold below, for this attack (chat.mjs adaptationReductionFor)." },
+  { key: "battleCreation.three", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
+    doc: "Saiyan Genes (5): Battle Creation to 3, its mark letting 3 stand till the Encounter ends (chat.mjs saiyanGenesPassed)." },
   { key: "focusAngel.natural", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "Genetic Focus: Angel (5): Adaptation Points spent on a Combat Roll - its Natural Result 1 more each, 2 at most (chat.mjs rollSide)." },
   { key: "bioWeapon.charges", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
