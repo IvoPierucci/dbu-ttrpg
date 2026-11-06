@@ -4929,3 +4929,36 @@
   color: var(--dbu-text-dim);
   white-space: nowrap;
 }
+
+/* The Allies', Minions' and Master's Manage windows: a portrait on each row, and the GM's eye at its end. */
+.dbu-ttrpg .ally-picks .ally-img {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  border: none;
+}
+
+.dbu-ttrpg .ally-picks .ally-unknown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dbu-panel-raised);
+  font-size: 11px;
+}
+
+.dbu-ttrpg .ally-picks .ally-eye {
+  flex: 0 0 auto;
+  width: auto;
+  margin-left: 4px;
+  padding: 0 4px;
+  line-height: 18px;
+  border: none;
+  background: none;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .ally-picks .ally-eye.off {
+  opacity: 0.5;
+}

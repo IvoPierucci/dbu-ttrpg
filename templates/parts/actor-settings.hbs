@@ -71,39 +71,24 @@
   <div class="dbu-combat-overlay">
     <div class="dbu-combat-window" role="dialog" aria-modal="true">
       <header><h3>Allies</h3></header>
-      <div class="dbu-combat-window-body ally-panel">
-      {{#if editable}}
-      <button type="button" class="edit-toggle ally-add" data-action="addAllies">+ Add Allies</button>
-      {{/if}}
-      {{#if allies.length}}
-      <ul class="ally-list">
-        {{#each allies as |ally|}}
-        <li class="ally{{#if ally.theirs}} theirs{{/if}}{{#if ally.missing}} missing{{/if}}">
-          {{#if ally.theirs}}
-          <span class="ally-x-space"></span>
-          {{else}}
-            {{#if @root.editable}}
-            <button type="button" class="ally-x" data-action="removeAlly" data-ally-id="{{ally.id}}"
-                    data-tooltip="Take {{ally.name}} off the Allies list">&#10005;</button>
-            {{else}}
-            <span class="ally-x-space"></span>
-            {{/if}}
+      <p class="dbu-manage-note">Ticked: on your Allies list. Greyed: an Ally through someone else - taken off there.</p>
+      <div class="dbu-combat-window-body dbu-picks ally-picks">
+        {{#each allyPicks as |who|}}
+        <label class="dbu-pick{{#if who.on}} on{{/if}}{{#if who.locked}} greyed{{/if}}"{{#if who.tip}} data-tooltip="{{who.tip}}"{{/if}}>
+          <input type="checkbox" data-action="pickAlly" data-id="{{who.id}}" {{#if who.on}}checked{{/if}}
+                 {{#if who.locked}}disabled{{/if}} {{#unless @root.editable}}disabled{{/unless}}/>
+          {{#if who.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if who.img}}<img class="ally-img" src="{{who.img}}" alt=""/>{{/if}}{{/if}}
+          {{who.name}}
+          {{#if who.note}}<span class="dbu-pick-from">{{who.note}}</span>{{/if}}
+          {{#if who.eye}}
+          <button type="button" class="ally-eye{{#if who.nameHidden}} off{{/if}}" data-action="toggleAllyName" data-ally-id="{{who.id}}"
+                  data-tooltip="{{#if who.nameHidden}}Hidden: this sheet's players see &quot;Unknown Ally&quot;{{else}}Shown to this sheet's players{{/if}}">
+            <i class="fa-solid {{#if who.nameHidden}}fa-eye-slash{{else}}fa-eye{{/if}}"></i></button>
           {{/if}}
-          {{#if ally.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if ally.img}}<img class="ally-img" src="{{ally.img}}" alt=""/>{{/if}}{{/if}}
-          <span class="ally-name">{{ally.name}}</span>
-          {{#if ally.inherited}}<span class="ally-note" data-tooltip="{{ally.why}}">{{ally.note}}</span>
-          {{else if ally.theirs}}<span class="ally-note" data-tooltip="Their Allies list names this character - taken off from their sheet">from their list</span>{{/if}}
-          {{#if @root.isGM}}{{#unless ally.theirs}}
-          <button type="button" class="ally-eye{{#if ally.nameHidden}} off{{/if}}" data-action="toggleAllyName" data-ally-id="{{ally.id}}"
-                  data-tooltip="{{#if ally.nameHidden}}Hidden: this sheet's players see &quot;Unknown Ally&quot;{{else}}Shown to this sheet's players{{/if}}">
-            <i class="fa-solid {{#if ally.nameHidden}}fa-eye-slash{{else}}fa-eye{{/if}}"></i></button>
-          {{/unless}}{{/if}}
-        </li>
+        </label>
+        {{else}}
+        <p class="dbu-clist-empty">No other Character whose sheet you can see.</p>
         {{/each}}
-      </ul>
-      {{else}}
-      <p class="tab-placeholder">No Allies yet. Every other Character counts as an Opponent.</p>
-      {{/if}}
       </div>
       <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
     </div>
@@ -115,31 +100,19 @@
   <div class="dbu-combat-overlay">
     <div class="dbu-combat-window" role="dialog" aria-modal="true">
       <header><h3>Master</h3></header>
-      <div class="dbu-combat-window-body ally-panel">
-      {{#if masterEntry}}
-      <ul class="ally-list">
-        <li class="ally{{#if masterEntry.theirs}} theirs{{/if}}">
-          {{#if masterEntry.theirs}}
-          <span class="ally-x-space"></span>
-          {{else}}
-            {{#if editable}}
-            <button type="button" class="ally-x" data-action="clearMaster"
-                    data-tooltip="Take {{masterEntry.name}} off as Master">&#10005;</button>
-            {{else}}
-            <span class="ally-x-space"></span>
-            {{/if}}
-          {{/if}}
-          {{#if masterEntry.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if masterEntry.img}}<img class="ally-img" src="{{masterEntry.img}}" alt=""/>{{/if}}{{/if}}
-          <span class="ally-name">{{masterEntry.name}}</span>
-          {{#if masterEntry.theirs}}<span class="ally-note" data-tooltip="Their Minions list names this Minion - taken off from their sheet">from their list</span>{{/if}}
-        </li>
-      </ul>
-      {{else}}
-      {{#if editable}}
-      <button type="button" class="edit-toggle ally-add" data-action="setMaster">Set Master</button>
-      {{/if}}
-      <p class="tab-placeholder">No Master yet.</p>
-      {{/if}}
+      <p class="dbu-manage-note">Tick its one Master. Greyed: named by their Minions list - taken off there.</p>
+      <div class="dbu-combat-window-body dbu-picks ally-picks">
+        {{#each masterPicks as |who|}}
+        <label class="dbu-pick{{#if who.on}} on{{/if}}{{#if who.locked}} greyed{{/if}}"{{#if who.tip}} data-tooltip="{{who.tip}}"{{/if}}>
+          <input type="checkbox" data-action="pickMaster" data-id="{{who.id}}" {{#if who.on}}checked{{/if}}
+                 {{#if who.locked}}disabled{{/if}} {{#unless @root.editable}}disabled{{/unless}}/>
+          {{#if who.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if who.img}}<img class="ally-img" src="{{who.img}}" alt=""/>{{/if}}{{/if}}
+          {{who.name}}
+          {{#if who.note}}<span class="dbu-pick-from">{{who.note}}</span>{{/if}}
+        </label>
+        {{else}}
+        <p class="dbu-clist-empty">No Character whose sheet you can see with room for a Minion.</p>
+        {{/each}}
       </div>
       <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
     </div>
@@ -187,34 +160,19 @@
   <div class="dbu-combat-overlay">
     <div class="dbu-combat-window" role="dialog" aria-modal="true">
       <header><h3>Minions</h3></header>
-      <div class="dbu-combat-window-body ally-panel">
-      {{#if editable}}
-      <button type="button" class="edit-toggle ally-add" data-action="addMinions">+ Add Minions</button>
-      {{/if}}
-      {{#if minionsList.length}}
-      <ul class="ally-list">
-        {{#each minionsList as |minion|}}
-        <li class="ally{{#if minion.theirs}} theirs{{/if}}{{#if minion.missing}} missing{{/if}}">
-          {{#if minion.theirs}}
-          <span class="ally-x-space"></span>
-          {{else}}
-            {{#if @root.editable}}
-            <button type="button" class="ally-x" data-action="removeMinion" data-minion-id="{{minion.id}}"
-                    data-tooltip="Take {{minion.name}} off the Minions list">&#10005;</button>
-            {{else}}
-            <span class="ally-x-space"></span>
-            {{/if}}
-          {{/if}}
-          {{#if minion.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if minion.img}}<img class="ally-img" src="{{minion.img}}" alt=""/>{{/if}}{{/if}}
-          <span class="ally-name">{{minion.name}}</span>
-          {{#if minion.kind}}<span class="ally-note">{{minion.kind}}</span>{{/if}}
-          {{#if minion.theirs}}<span class="ally-note" data-tooltip="This Minion's sheet names you as its Master - taken off there">from their sheet</span>{{/if}}
-        </li>
+      <p class="dbu-manage-note">Ticked: on your Minions list. Only Minions with no other Master are offered.</p>
+      <div class="dbu-combat-window-body dbu-picks ally-picks">
+        {{#each minionPicks as |who|}}
+        <label class="dbu-pick{{#if who.on}} on{{/if}}{{#if who.locked}} greyed{{/if}}"{{#if who.tip}} data-tooltip="{{who.tip}}"{{/if}}>
+          <input type="checkbox" data-action="pickMinion" data-id="{{who.id}}" {{#if who.on}}checked{{/if}}
+                 {{#if who.locked}}disabled{{/if}} {{#unless @root.editable}}disabled{{/unless}}/>
+          {{#if who.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if who.img}}<img class="ally-img" src="{{who.img}}" alt=""/>{{/if}}{{/if}}
+          {{who.name}}
+          {{#if who.note}}<span class="dbu-pick-from">{{who.note}}</span>{{/if}}
+        </label>
+        {{else}}
+        <p class="dbu-clist-empty">No Minion without a Master whose sheet you can see.</p>
         {{/each}}
-      </ul>
-      {{else}}
-      <p class="tab-placeholder">No Minions.</p>
-      {{/if}}
       </div>
       <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
     </div>

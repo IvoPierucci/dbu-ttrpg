@@ -519,6 +519,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       clearMaster: DBUCharacterSheet._onClearMaster,
       removeAlly: DBUCharacterSheet._onRemoveAlly,
       toggleAllyName: DBUCharacterSheet._onToggleAllyName,
+      pickAlly: DBUCharacterSheet._onPickAlly,
+      pickMinion: DBUCharacterSheet._onPickMinion,
+      pickMaster: DBUCharacterSheet._onPickMaster,
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
       attackFeature: DBUCharacterSheet._onAttackFeature,
       takeCollision: DBUCharacterSheet._onTakeCollision,
@@ -874,6 +877,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.isMinion = this.actor.type === "minion";
     context.minionsList = context.isMinion ? [] : this.#prepareMinions();
     context.masterEntry = context.isMinion ? this.#prepareMaster() : null;
+    // Each Manage window's rows (the user's): every one there could be, ticked where on the list - only for the window open.
+    context.allyPicks = (this.#combatWindow === "allies") ? this.#allyPicks(context.allies) : [];
+    context.minionPicks = (this.#combatWindow === "minions") ? this.#minionPicks(context.minionsList) : [];
+    context.masterPicks = (this.#combatWindow === "master") ? this.#masterPicks(context.masterEntry) : [];
     // Whom a Duplicate may be a copy of (the user's): its Master first, then every other Character and Minion by name.
     if (context.isMinion && this.actor.system.duplicate) {
       const master = masterOf(this.actor);
@@ -3039,6 +3046,88 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!Array.isArray(picked) || !picked.length) return;
     if (picked.length > room) return ui.notifications.warn(`${this.actor.name} has room for ${room} more Minion${(room === 1) ? "" : "s"}.`);
     return this.actor.update({ "system.minions": [...new Set([...(this.actor.system.minions ?? []), ...picked])] });
+  }
+
+  /**
+   * The Allies' Manage window: everyone already an Ally - their own list's ticked, another's or one through someone greyed - and every
+   * other Character this user may see the sheet of, unticked. The GM's eye beside their own.
+   */
+  #allyPicks(allies) {
+    const gm = game.user.isGM;
+    const named = new Set(allies.map(entry => entry.id));
+    const rows = allies.map(entry => ({ id: entry.id, name: entry.name, img: entry.img, unknown: entry.unknown, on: true,
+      locked: Boolean(entry.theirs), note: entry.inherited ? entry.note : (entry.theirs ? "from their list" : (entry.missing ? "gone" : "")),
+      tip: entry.inherited ? entry.why : "", eye: gm && !entry.theirs, nameHidden: entry.nameHidden }));
+    const others = (game.actors?.contents ?? [])
+      .filter(actor => isCharacter(actor) && (actor.id !== this.actor.id) && !named.has(actor.id) && actor.testUserPermission(game.user, "OBSERVER"))
+      .map(actor => ({ id: actor.id, name: actor.name, img: actor.img ?? "", on: false }));
+    return [...rows, ...others].sort((a, b) => (Number(Boolean(a.unknown)) - Number(Boolean(b.unknown))) || a.name.localeCompare(b.name));
+  }
+
+  /** The Minions' Manage window: its Minions ticked (one named from its own sheet greyed), and every Minion with no Master it may see. */
+  #minionPicks(minions) {
+    const listed = new Set(minionsOf(this.actor));
+    const rows = minions.map(entry => ({ id: entry.id, name: entry.name, img: entry.img, unknown: entry.unknown, on: true,
+      locked: Boolean(entry.theirs), note: entry.theirs ? "from their sheet" : (entry.kind || "") }));
+    const others = (game.actors?.contents ?? [])
+      .filter(actor => (actor.type === "minion") && !listed.has(actor.id) && !masterOf(actor) && actor.testUserPermission(game.user, "OBSERVER"))
+      .map(actor => ({ id: actor.id, name: actor.name, img: actor.img ?? "", on: false,
+        note: actor.system?.duplicate ? "Duplicate" : (actor.system?.specialMinion ? "Special" : "") }));
+    return [...rows, ...others].sort((a, b) => (Number(Boolean(a.unknown)) - Number(Boolean(b.unknown))) || a.name.localeCompare(b.name));
+  }
+
+  /** The Master's Manage window: its Master ticked (greyed where their list names it), and every Character with room it may see. */
+  #masterPicks(master) {
+    const rows = master ? [{ id: master.id, name: master.name, img: master.img, unknown: master.unknown, on: true, locked: Boolean(master.theirs),
+      note: master.theirs ? "from their list" : "" }] : [];
+    const others = (game.actors?.contents ?? [])
+      .filter(actor => (actor.type === "character") && (actor.id !== master?.id) && actor.testUserPermission(game.user, "OBSERVER")
+        && (minionsOf(actor).length < minionCaps(actor).outside))
+      .map(actor => ({ id: actor.id, name: actor.name, img: actor.img ?? "", on: false }));
+    return [...rows, ...others.sort((a, b) => a.name.localeCompare(b.name))];
+  }
+
+  /** Ticked in the Allies' window: on the list - its name hidden from this sheet's players where they may not see its sheet; unticked, off. */
+  static async _onPickAlly(event, target) {
+    const id = target?.dataset?.id ?? "";
+    if (!id || (id === this.actor.id)) return;
+    const allies = new Set(this.actor.system.allies ?? []);
+    const hidden = new Set(this.actor.system.alliesHidden ?? []);
+    if (target.checked) {
+      const other = game.actors?.get(id);
+      allies.add(id);
+      if (other && !this.#playersSee(other)) hidden.add(id);
+    } else {
+      allies.delete(id);
+      hidden.delete(id);
+    }
+    return this.actor.update({ "system.allies": [...allies], "system.alliesHidden": [...hidden] });
+  }
+
+  /** Ticked in the Minions' window: on the list, if Limited Control leaves room; unticked, off. */
+  static async _onPickMinion(event, target) {
+    const id = target?.dataset?.id ?? "";
+    if (!id || (this.actor.type === "minion")) return;
+    const own = this.actor.system.minions ?? [];
+    if (!target.checked) return this.actor.update({ "system.minions": own.filter(each => each !== id) });
+    const listed = minionsOf(this.actor);
+    if (listed.length >= minionCaps(this.actor).outside) {
+      target.checked = false;
+      return ui.notifications.warn(`${this.actor.name} may possess ${listed.length} Minions at most.`);
+    }
+    return this.actor.update({ "system.minions": [...new Set([...own, id])] });
+  }
+
+  /** Ticked in the Master's window: its one Master - none while another list already names it; unticked, taken off. */
+  static async _onPickMaster(event, target) {
+    const id = target?.dataset?.id ?? "";
+    if (!id || (this.actor.type !== "minion")) return;
+    if (!target.checked) return this.actor.update({ "system.master": "" });
+    if (masterOf(this.actor) && (masterOf(this.actor) !== (this.actor.system.master ?? ""))) {
+      target.checked = false;
+      return ui.notifications.warn(`${this.actor.name} already has a Master.`);
+    }
+    return this.actor.update({ "system.master": id });
   }
 
   /** One taken off this Character's Minions list - one naming it from its own sheet is taken off there. */
