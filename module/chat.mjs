@@ -6232,7 +6232,7 @@ function offerableTo(situation, message) {
       if (effect.blocked) return effect;
       const reason = whyNot(effect, situation);
       return reason ? { ...effect, blocked: reason, available: false } : effect;
-    }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor),
+    }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor), ...nekoGenesRerollOption(situation),
     ...luckyRerollOptions(situation.actor), ...lightOptions(situation),
     ...taiChiRerollOptions(situation, message), ...nudgeOptions(situation), ...cantLoseOptions(situation, message),
     ...guidanceOptions(situation)];
@@ -6583,6 +6583,37 @@ function damaRerollOption(actor) {
     available: left > 0, ...((left > 0) ? {} : { blocked: `${most}/Combat Encounter` }) }];
 }
 
+/** Neko Majin Genes (3)'s reroll, by the key it is picked with in the window, and what it does - the Base Die again, the second taken. */
+const NEKO_GENES_REROLL = "neko-majin-genes";
+const NEKO_GENES_CALL = Object.freeze({ verb: "reroll", forced: true, label: "Neko Majin Genes" });
+
+/**
+ * Neko Majin Genes (3): "After seeing your result for a Combat Roll, you may spend 1 Adaptation Point to reroll. You must take the second
+ * result." Offered beside the Karmic Effects on an attack's Strike, Dodge or Wound Roll - not a Clash's - 3 a Round.
+ */
+function nekoGenesRerollOption(situation) {
+  const actor = situation?.actor;
+  if ((situation?.kind === "clash") || (actor?.system?.effects?.slots?.["nekoMajinGenes.reroll"] !== true)) return [];
+  const used = actor.getFlag?.(SCOPE, "nekoGenesReroll");
+  const left = 3 - ((used?.round === roundKey()) ? (Number(used.count) || 0) : 0);
+  const held = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  const available = (left > 0) && (held > 0);
+  return [{ key: NEKO_GENES_REROLL, trait: true, when: "after", name: "Neko Majin Genes",
+    text: "An Adaptation Point to reroll; the second result taken.", costLabel: `Reroll - 1 Adaptation Point (${Math.max(0, left)}/3 left)`,
+    available, ...(available ? {} : { blocked: (left > 0) ? "No Adaptation Point" : "3/Round" }) }];
+}
+
+/** Taken: the Adaptation Point and a use spent, the side worked out again. */
+async function takeNekoGenesReroll(message, situation) {
+  const { actor } = situation;
+  if (!nekoGenesRerollOption(situation).some(effect => effect.available)) return;
+  const used = actor.getFlag?.(SCOPE, "nekoGenesReroll");
+  const count = (used?.round === roundKey()) ? (Number(used.count) || 0) : 0;
+  await setResource(actor, "adaptation", (Number(actor.system.resources?.adaptation?.stacks) || 0) - 1);
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.nekoGenesReroll`]: { round: roundKey(), count: count + 1 } });
+  return resettleAttack(message, situation, { spent: [], slots: {}, queue: [NEKO_GENES_CALL] });
+}
+
 /** One of its x spent. */
 function spendDamaReroll(actor) {
   return requestActorUpdate(actor, { "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), DAMA_USE] });
@@ -6812,6 +6843,7 @@ function answersAfterTheFact(effect) {
 export async function takeAfterTheFact(message, situation, key) {
   if (key === RESOLVE_REROLL) return takeResolveReroll(message, situation);
   if (key === DAMA_REROLL) return takeDamaReroll(message, situation);
+  if (key === NEKO_GENES_REROLL) return takeNekoGenesReroll(message, situation);
   if (String(key).startsWith(`${LUCKY_REROLL}:`)) return takeLuckyReroll(message, situation, key);
   if (String(key).startsWith(`${NUDGE}:`)) return takeNudge(message, situation, key);
   if (String(key).startsWith(`${LIGHT}:`)) return takeLight(message, situation, key);

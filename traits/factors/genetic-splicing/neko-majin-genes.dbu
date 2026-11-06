@@ -1,0 +1,33 @@
+id: neko-majin-genes
+name: Neko Majin Genes
+order: 12
+category: body
+importance: secondary
+# [Cognitive or Morale]: which one its Racial Saving Throw Bonus goes to, chosen as it is gained.
+choose: list
+choices: Cognitive, Morale
+# (1) Illusion and Shapeshift, free and without their Requirements, gone with this (racial.mjs).
+grantsUnique: illusion, shapeshift
+description: >
+  Whimisical and magical, the Neko Majin genetics within you allow you to confound and astound your enemies.
+text: >
+  Neko Majin Genes [Cognitive or Morale] (Body): Whimisical and magical, the Neko Majin genetics within you allow you to confound and astound your enemies.
+  (1)-[Passive]: You gain access to the Illusion and Shapeshift Unique Abilities.
+  (2)-[Passive]: Reduce the Ki Point Cost of all Unique Abilities by 2(T).
+  (3)-[Triggered, 3/Round]: After seeing your result for a Combat Roll, you may spend 1 Adaptation Point to reroll. You must take the second result.
+  (4)-[Triggered/Start of Turn]: Regain 2(bT) Ki Points and 1 Adaptation Point.
+---
+
+[passive]
+# The Saving Throw chosen of the two - its Racial Saving Throw Bonus.
+allow save.racial.$choice;
+# (1) Through the header's `grantsUnique`. (2)
+unique.kiCost -= 2(T);
+# (3) Beside the Karmic Effects after an attack's Strike, Dodge or Wound Roll: an Adaptation Point for the Base Die again, the second
+# result taken - 3 a Round (chat.mjs nekoGenesRerollOption).
+allow nekoMajinGenes.reroll;
+
+# (4) Your turn begins. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 4]
+ki.value += 2(bT);
+adaptation.stacks += 1;
