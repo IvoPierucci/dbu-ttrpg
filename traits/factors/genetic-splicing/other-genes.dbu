@@ -1,0 +1,24 @@
+id: other-genes
+name: Other Genes
+order: 14
+category: body
+importance: secondary
+# [Any - you decide]: the Saving Throw its Racial Saving Throw Bonus goes to, chosen as it is gained.
+choose: savingThrow
+description: >
+  The blood of one of the many wild and wonderful alien races of the galaxy empowers you.
+text: >
+  Other Genes [Any – you decide] (Body): The blood of one of the many wild and wonderful alien races of the galaxy empowers you.
+  (1)-[Passive]: Select a Race created through Custom Species. Gain access to a Custom Species Racial Trait possessed by that Race (you do not gain any Twinned effects). You cannot trade this Racial Trait out for a Factor Trait.
+  (2)-[Triggered/Power, 1/Round]: Gain 1 Adaptation Point.
+---
+
+[passive]
+# The Saving Throw named after its name - its Racial Saving Throw Bonus.
+allow save.racial.$choice;
+# (1) Custom Species is not in this system: the Race and its Racial Trait are the table's - the Trait, written, added by hand from the
+# Traits tab as any Racial Trait is; its Twinned effects not had, and that it cannot be traded for a Factor Trait, the table's.
+
+# (2) The Power Up used. Automatic by default, its Triggered/Automatic button.
+[triggered/power, 1/round, effect 2]
+adaptation.stacks += 1;
