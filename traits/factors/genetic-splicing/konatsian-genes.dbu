@@ -1,0 +1,48 @@
+id: konatsian-genes
+name: Konatsian Genes
+order: 11
+category: body
+importance: secondary
+description: >
+  As the battle ebbs and flows, the tension inside you grows as your Konatsian blood rises to the occasion.
+text: >
+  Konatsian Genes [Morale] (Body): As the battle ebbs and flows, the tension inside you grows as your Konatsian blood rises to the occasion.
+  (1)-[Triggered]: If you spend 2+ Adaptation Points through the second effect of Artificial Warrior to increase the Wound Roll of an Attacking Maneuver, increase your Wound Roll for that Attacking Maneuver by 1(T) for each Health Threshold you are below.
+  (2)-[Triggered]: If you spend 2+ Adaptation Points through the third effect of Artificial Warrior, increase your Soak Value by 1(T) for each Health Threshold you are below for the duration of that Attacking Maneuver.
+  (4)-[Triggered]: If an Ally is Defeated, gain an Adaptation Point.
+  (5)-[Triggered/Start of Turn]: If you are below the Injured Health Threshold, gain an Adaptation Point.
+  (6)-[Triggered, 1/Encounter]: If you are below the Injured Health Threshold, you may spend 3 Adaptation Points to enter the Superior State until the end of your next turn. If you enter the Superior State through this effect, ignore the second effect of the Superior State.
+---
+
+[passive]
+# [Morale]: its Racial Saving Throw Bonus.
+allow save.racial.morale;
+# (1) An attack's Wound Roll with 2+ Adaptation Points spent on it: asked - 1(T) for each Health Threshold below (chat.mjs rollSide).
+# (2) 2+ spent as a hit is settled: asked - Soak 1(T) for each for that attack (chat.mjs adaptationReductionFor).
+allow konatsianGenes.wound;
+allow konatsianGenes.soak;
+
+# (4) An Ally of yours on the scene Defeated (ally-defeated). Automatic by default, its Triggered/Automatic button.
+[triggered/ally-defeated, effect 4]
+adaptation.stacks += 1;
+
+# (5) Injured or Critical as your turn begins. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 5]
+requires belowThreshold("injured");
+adaptation.stacks += 1;
+
+# (6) Injured or Critical with 3 Adaptation Points - offered as you are knocked through a Health Threshold, and as your turn begins, once
+# an Encounter between the two: Superior till the end of your next turn, its mark waiving the State's 2nd effect for as long.
+[triggered/threshold, 1/encounter, effect 6]
+requires belowThreshold("injured") && stacksAtLeast(3, "adaptation");
+adaptation.stacks -= 3;
+gain(konatsian-superior-mark);
+expires(konatsian-superior-mark, next-turn);
+enterState(superior, 1, next-turn);
+
+[triggered/start-of-turn, 1/encounter, effect 6]
+requires belowThreshold("injured") && stacksAtLeast(3, "adaptation");
+adaptation.stacks -= 3;
+gain(konatsian-superior-mark);
+expires(konatsian-superior-mark, next-turn);
+enterState(superior, 1, next-turn);

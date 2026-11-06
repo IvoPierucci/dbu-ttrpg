@@ -1,0 +1,17 @@
+id: konatsian-superior-mark
+name: Konatsian Genes
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Konatsian Genes (6)'s mark, as long as the Superior State it gave.
+combatCondition: no
+source: Core Rule
+description: >
+  Konatsian Genes: Superior through it - the State's 2nd effect ignored.
+text: >
+  Konatsian Genes (6): If you enter the Superior State through this effect, ignore the second effect of the Superior State.
+
+---
+
+[passive]
+# The Superior State's "Increase the Damage you would receive from an Opponent's Attacking Maneuver by 2(T)" waived (`superiorUnhurt`).
+allow superior.noExtraDamage;

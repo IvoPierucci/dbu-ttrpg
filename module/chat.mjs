@@ -1345,8 +1345,9 @@ async function spendAdaptation(actor, what) {
  */
 async function adaptationReductionFor(target, attack, uuid) {
   const before = (attack.result?.targets ?? []).find(entry => entry.uuid === uuid);
-  if (before?.hit) return { value: Number(before.adaptationReduction) || 0, step: Number(before.adaptationStep) || 0 };
-  const none = { value: 0, step: 0 };
+  if (before?.hit) return { value: Number(before.adaptationReduction) || 0, step: Number(before.adaptationStep) || 0,
+    soak: Number(before.adaptationSoak) || 0 };
+  const none = { value: 0, step: 0, soak: 0 };
   if (target?.system?.effects?.slots?.["adaptationSpend.hit"] !== true) return none;
   const spent = await spendAdaptation(target, `hit by ${attack.maneuverName ?? "an attack"}`);
   // Combat Blueprint (2), Genetic Survivor: "If you spend 2+ Adaptation Points through the 3rd effect of Artificial Warrior, you may reduce
@@ -1356,7 +1357,14 @@ async function adaptationReductionFor(target, attack, uuid) {
     && ((await askPlayerChoice(target, `${target.name}: Combat Blueprint`,
       [{ value: "down", label: "This attack's Damage Category one down" }, { value: "no", label: "No" }])) === "down");
   if (step) await requestActorUpdate(target, { [`flags.${SCOPE}.blueprintSurvivorRound`]: roundKey() });
-  return { value: spent * Math.max(1, Number(target.system.tierOfPower) || 1), step: step ? 1 : 0 };
+  // Konatsian Genes (2): "increase your Soak Value by 1(T) for each Health Threshold you are below for the duration of that Attacking
+  // Maneuver" - with 2+ spent, asked.
+  const depth = Number(target.system.threshold?.depth) || 0;
+  const soak = ((spent >= 2) && (depth > 0) && (target.system.effects?.slots?.["konatsianGenes.soak"] === true)
+    && ((await askPlayerChoice(target, `${target.name}: Konatsian Genes`, [
+      { value: "yes", label: `Soak +${depth * Math.max(1, Number(target.system.tierOfPower) || 1)} for this attack` },
+      { value: "no", label: "No" }])) === "yes")) ? depth * Math.max(1, Number(target.system.tierOfPower) || 1) : 0;
+  return { value: spent * Math.max(1, Number(target.system.tierOfPower) || 1), step: step ? 1 : 0, soak };
 }
 
 /**
@@ -9529,6 +9537,17 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     for (let index = parts.length - 1; index >= 0; index--) if (String(parts[index].label).startsWith("Dim. Defense")) parts.splice(index, 1);
   }
   const blueprintCharge = blueprintTaken && (blueprint === "aggressor");
+  // Konatsian Genes (1): 2+ spent on an attack's Wound Roll - "increase your Wound Roll for that Attacking Maneuver by 1(T) for each Health
+  // Threshold you are below", asked.
+  const konatsianDepth = Number(actor.system.threshold?.depth) || 0;
+  if ((slot === "wound") && attackingManeuver && (adapted >= 2) && (konatsianDepth > 0)
+    && (actor.system.effects?.slots?.["konatsianGenes.wound"] === true)) {
+    const value = konatsianDepth * Math.max(1, Number(actor.system.tierOfPower) || 1);
+    if ((await askPlayerChoice(actor, `${actor.name}: Konatsian Genes`, [
+      { value: "yes", label: `Wound Roll +${value} (1(T) for each Health Threshold below)` }, { value: "no", label: "No" }])) === "yes") {
+      parts.push({ label: "Konatsian Genes", value });
+    }
+  }
   // Android Cybernetics (5): 2+ spent on a Signature Technique's Wound Roll - "apply an Energy Charge to that Attacking Maneuver", asked,
   // once an Encounter: its dice on this Wound Roll.
   if (oneCharge && (slot === "wound") && (adapted >= 2) && (actor.system.effects?.slots?.["androidCybernetics.charge"] === true)
@@ -29867,7 +29886,7 @@ async function resolveAttackWork(message, attack) {
     const tough = hit ? await toughReductionFor(target, attack, uuid) : { value: 0, step: 0 };
     // Artificial Warrior (3): Adaptation Points spent as the hit is, 1(T) of Damage Reduction each for this attack - and with 2+, Combat
     // Blueprint's Genetic Survivor, its Category one down.
-    const adapt = hit ? await adaptationReductionFor(target, attack, uuid) : { value: 0, step: 0 };
+    const adapt = hit ? await adaptationReductionFor(target, attack, uuid) : { value: 0, step: 0, soak: 0 };
 
     branches.push({
       uuid,
@@ -29912,6 +29931,8 @@ async function resolveAttackWork(message, attack) {
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
       adaptationReduction: adapt.value,
       adaptationStep: adapt.step,
+      // Konatsian Genes (2): Soak for this attack.
+      adaptationSoak: adapt.soak,
       toughReduction: tough.value,
       toughStep: tough.step,
       ...(defender ? { refinedSoak: defender.soak, unstudy: [{ by: target.uuid, uuid: attacker.uuid }] } : {}),
@@ -31912,6 +31933,7 @@ async function rollAttackWoundWork(message, attack) {
     // Metallic Exoskeleton (2): the Direct Hit or the Guard - its Apparel Bonus "before any calculations", asked.
     const exoSoak = await exoskeletonSoak(target, own);
     const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0) + (Number(own.ironSoak) || 0) + exoSoak
+      + (Number(own.adaptationSoak) || 0)
       // Refined Combat (1) against one Studied, and Defender's half Surgency for this attack.
       + refinedParts(target, attacker).reduce((sum, part) => sum + part.value, 0) + (Number(own.refinedSoak) || 0)
       // Draconic Physique (2): an Impaired Opponent's attack.
