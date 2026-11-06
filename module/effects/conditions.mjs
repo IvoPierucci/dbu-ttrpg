@@ -706,6 +706,9 @@ const PREDICATES = {
   ofFoundation: (scope, name) => Boolean(scope.context?.foundation)
     && (String(scope.context.foundation).toLowerCase() === String(name?.value ?? name ?? "").toLowerCase()),
 
+  /** The roll that answered `critical-scored` was a Strike or a Wound Roll - its `rollKind` (Offensive Design's). */
+  strikeOrWound: scope => ["strike", "wound"].includes(String(scope.context?.rollKind ?? "")),
+
   /** The Focused Foundation is that one - Archetype Focus's, said as `focused.<foundation>` (Archetype Defense's). */
   focusedOn: (scope, name) => scope.data?.effects?.slots?.[`focused.${String(name?.value ?? name ?? "").toLowerCase()}`] === true,
 

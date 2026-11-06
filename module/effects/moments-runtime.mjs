@@ -314,7 +314,9 @@ export async function stacksGained(actor, names, counts = {}) {
   // Star's - with how many.
   // And Power's - Greed of the Hera's "Each time you gain a stack(s) of Power".
   for (const [name, moment] of [["overwhelm", "overwhelm-gained"], ["demonicpower", "demonic-power-gained"],
-    ["power", "power-gained"], ["negativeenergy", "negative-energy-gained"], ["sunlight", "sunlight-gained"]]) {
+    ["power", "power-gained"], ["negativeenergy", "negative-energy-gained"], ["sunlight", "sunlight-gained"],
+    // Adaptation Points - Offensive Design's "If you gain an Adaptation Point".
+    ["adaptation", "adaptation-gained"]]) {
     if (!names.includes(name)) continue;
     const context = { gained: Math.max(1, Number(counts[name]) || 1) };
     await offerTriggers(actor, moment, context);
@@ -331,7 +333,7 @@ export async function stacksGained(actor, names, counts = {}) {
 }
 
 /** The Resources whose stacks gained are a Moment where an effect writes them - Comfort's. */
-const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower", "power", "negativeenergy", "sunlight"]);
+const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower", "power", "negativeenergy", "sunlight", "adaptation"]);
 
 /** A character an effect named, by uuid or by name, or nothing. */
 function named(who) {

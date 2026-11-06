@@ -1374,8 +1374,13 @@ export async function blueprintPower(actor) {
   await regainPools(actor, spent * each, spent * each);
   // An Adaptation Point - Artificial Warrior's Resource, so only where it is held at all.
   const { resourceLimits } = await import("./effects/traits.mjs");
+  const before = Number(actor.system.resources?.adaptation?.stacks) || 0;
   if ((spent >= 2) && resourceLimits(actor).adaptation) {
-    await setResource(actor, "adaptation", (Number(actor.system.resources?.adaptation?.stacks) || 0) + 1);
+    await setResource(actor, "adaptation", before + 1);
+    // Gained, where it was not at its Maximum already - Offensive Design (2)'s.
+    if ((Number(actor.system.resources?.adaptation?.stacks) || 0) > before) {
+      await (await import("./effects/moments-runtime.mjs")).stacksGained(actor, ["adaptation"], { adaptation: 1 });
+    }
   }
   return true;
 }
@@ -9424,6 +9429,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     const { kept, dropped } = linkedPick(first, second, linked);
     // Asked on the first alone: Combat Blueprint's Energy Charge stands whichever is kept.
     if (first.blueprintCharge) kept.blueprintCharge = true;
+    if (first.adapted) kept.adapted = first.adapted;
     kept.linked = { mode: linked, dropped: dropped?.total ?? null,
       label: (linked === "high") ? "Twin-Linked" : "Dead-Link" };
     return kept;
@@ -9704,7 +9710,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // "Each time you score a Critical Result on a Combat Roll" - Evolved Right Eye's Critical Eye. Once a roll.
   if (combatRoll && collect && (outcome === "critical")) {
     // An attack's Strike or Wound: its Foundation, for what answers only one's - Archetype Focus (2).
-    await answerFor(actor, "critical-scored", attackingManeuver && foundation ? { foundation } : {});
+    // And which roll it was - Offensive Design (3)'s Strike or Wound (`strikeOrWound`).
+    await answerFor(actor, "critical-scored", { ...((attackingManeuver && foundation) ? { foundation } : {}), ...(slot ? { rollKind: slot } : {}) });
     // "If you or an Ally scores a Critical Result" - Dragon of Light (5)'s.
     for (const ally of alliesOnScene(actor).filter(each => !each.system?.defeated && triggersFor(each, ["ally-critical-scored"]).length)) {
       await answerFor(ally, "ally-critical-scored", {});
@@ -9728,6 +9735,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   return {
     // Combat Blueprint's Genetic Aggressor: an Energy Charge for the attack this Strike Roll is made for (resolveAttackWork).
     ...(blueprintCharge ? { blueprintCharge: true } : {}),
+    // Adaptation Points spent on it - Offensive Design (4) counts an attack's Strike and Wound together.
+    ...(adapted ? { adapted } : {}),
     actorUuid: actor.uuid,
     actorName: actor.name,
     natural,
@@ -15400,6 +15409,27 @@ function championWoundParts(attacker) {
 function spotterParts(attacker) {
   const holders = attacker ? spotters(attacker, "spotter.strike") : [];
   return holders.length ? [{ label: "Dedicated Spotter", written: "+1(T)", value: Math.max(1, bestTier(holders)) }] : [];
+}
+
+/**
+ * Offensive Design (4): "If you hit an Opponent with an Attacking Maneuver that you have spent 3+ Adaptation Points on the Combat Rolls
+ * of, you may increase the Damage Category of that Attacking Maneuver by 1 Category" - its Strike and Wound Rolls' together, asked as its
+ * Damage is worked out, once an Encounter; kept with the attack's card, so settled again it is as it was.
+ */
+async function offensiveDesignCategory(message, attacker, attack, wound) {
+  if (attacker?.system?.effects?.slots?.["offensiveDesign.category"] !== true) return false;
+  const kept = attacker.getFlag?.(SCOPE, "offensiveDesignCategory");
+  if (kept?.message === message.id) return true;
+  const encounter = game.combat?.id ?? "none";
+  const spent = (Number(attack.result?.strike?.adapted) || 0) + (Number(wound?.adapted) || 0);
+  const opponentHit = (attack.result?.targets ?? []).some(entry => entry.hit && !isAbsoluteMiss(entry)
+    && areOpponents(attacker, fromUuidSync(entry.uuid)));
+  if ((spent < 3) || !opponentHit || (kept?.encounter === encounter)) return false;
+  const answer = await askPlayerChoice(attacker, `${attacker.name}: Offensive Design - the Damage Category 1 higher?`,
+    [{ value: "yes", label: "Yes (1/Encounter)" }, { value: "no", label: "No" }]);
+  if (answer !== "yes") return false;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.offensiveDesignCategory`]: { encounter, message: message.id } });
+  return true;
 }
 
 /**
@@ -23152,7 +23182,7 @@ async function declareWoundCritical(message, attacker) {
     settledTargets = settledTargets.map(line => (line.uuid === own.uuid) ? { ...own, effectiveWound, damage } : line);
   }
   requestEdit(message, { type: "attack", attack: { ...attack, result: { ...result, wound, targets: settledTargets } } });
-  await answerFor(attacker, "critical-scored", {});
+  await answerFor(attacker, "critical-scored", { rollKind: "wound" });
 }
 
 /**
@@ -23251,7 +23281,7 @@ async function declareStrikeCritical(message, attacker, { via = "eye" } = {}) {
       (line.uuid === entry.uuid) ? { ...own, hit, against, incomingDamage } : line);
   }
   requestEdit(message, { type: "attack", attack: { ...attack, result: { ...result, strike, targets: settledTargets } } });
-  await answerFor(attacker, "critical-scored", {});
+  await answerFor(attacker, "critical-scored", { rollKind: "strike" });
 }
 
 function angelicOffenseButtons(message, container, attack) {
@@ -31618,8 +31648,10 @@ async function rollAttackWoundWork(message, attack) {
   const unhinged = await askUnhinged(attacker, attack, wound);
   // Dedicated Spotter (2): an Ally in the Spectator State - a Critical Result, a step up.
   const spotted = await spotterCategory(message, attacker, attack, wound);
+  // Offensive Design (4): 3+ Adaptation Points on its Combat Rolls, a step up - asked.
+  const designed = await offensiveDesignCategory(message, attacker, attack, wound);
   // And Assassinate (2)'s, bought as it hit.
-  const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0) + (spotted ? 1 : 0) + (attack.impaled ? 1 : 0);
+  const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0) + (spotted ? 1 : 0) + (attack.impaled ? 1 : 0) + (designed ? 1 : 0);
   // Counter Elemental's Vulnerability: "If you are hit by an Attacking Maneuver of your Vulnerability, increase the Damage Category of
   // that Attacking Maneuver by 1 Category for the sake of your Damage Calculation" - theirs alone.
   const vulnerable = entry => [attack.profile, ...extraProfilesOf(attack)].some(id => id

@@ -1,0 +1,31 @@
+id: offensive-design
+name: Offensive Design
+order: 4
+category: mind
+importance: secondary
+description: >
+  Literally built for battle, your potent offense is one of your best selling points.
+text: >
+  Offensive Design (Mind): Literally built for battle, your potent offense is one of your best selling points.
+  (1)-[Passive]: Reduce the Critical Target of your Strike and Wound Rolls by 1.
+  (2)-[Triggered, 3/Round]: If you gain an Adaptation Point, regain 1(bT) Ki Points.
+  (3)-[Triggered, 3/Round]: If you score a Critical Result on your Strike or Wound Roll, gain an Adaptation Point.
+  (4)-[Triggered, 1/Encounter]: If you hit an Opponent with an Attacking Maneuver that you have spent 3+ Adaptation Points on the Combat Rolls of, you may increase the Damage Category of that Attacking Maneuver by 1 Category.
+---
+
+[passive]
+# (1)
+criticalTarget.strike -= 1;
+criticalTarget.wound -= 1;
+# (4) Asked as its Damage is worked out, an Opponent hit: 3+ Adaptation Points on its Strike and Wound Rolls together - its Damage
+# Category 1 higher, once an Encounter (chat.mjs offensiveDesignCategory).
+allow offensiveDesign.category;
+
+# (2) An Adaptation Point gained (adaptation-gained). Automatic by default, its Triggered/Automatic button.
+[triggered/adaptation-gained, 3/round, effect 2]
+ki.value += 1(bT);
+
+# (3) A Critical Result on a Strike or Wound Roll of yours. Automatic by default, its Triggered/Automatic button.
+[triggered/critical-scored, 3/round, effect 3]
+requires strikeOrWound;
+adaptation.stacks += 1;

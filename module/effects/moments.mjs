@@ -152,6 +152,9 @@ const TABLE = [
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },
   { key: "sunlight-gained", label: "You gain a stack of Sunlight", provides: [],
     doc: "Fired as Arboreal's Sunlight is gained (moments-runtime.mjs stacksGained) - its (6)." },
+  { key: "adaptation-gained", label: "You gain an Adaptation Point", provides: [],
+    doc: "Fired as Artificial Warrior's Adaptation Points are gained, by an effect or by Combat Blueprint (1) (moments-runtime.mjs "
+       + "stacksGained) - Offensive Design's. What is the player's is asked in a window first." },
   { key: "comfort-gained", label: "You gain a stack of Comfort", provides: [],
     doc: "Fired as Comfortable Count's Comfort is gained (moments-runtime.mjs stacksGained). What is the player's is asked "
        + "in a window first." },
