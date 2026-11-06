@@ -22896,7 +22896,7 @@ async function cunningDodge(message, target) {
   await rewriteBranch(message, target.uuid, () => ({ answer, hit }));
   // Dodged after all: "If you dodge an Attacking Maneuver".
   if (!hit && branch.hit) await answerFor(target, "dodged-attack", { attackerUuid: attack?.attackerUuid ?? "" });
-  await answerFor(target, "critical-scored", {});
+  await answerFor(target, "critical-scored", { rollKind: "dodge" });
 }
 
 /**

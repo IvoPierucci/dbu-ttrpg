@@ -708,6 +708,8 @@ const PREDICATES = {
 
   /** The roll that answered `critical-scored` was a Strike or a Wound Roll - its `rollKind` (Offensive Design's). */
   strikeOrWound: scope => ["strike", "wound"].includes(String(scope.context?.rollKind ?? "")),
+  /** And a Dodge Roll (Defensive Design's). */
+  dodgeRolled: scope => String(scope.context?.rollKind ?? "") === "dodge",
 
   /** The Focused Foundation is that one - Archetype Focus's, said as `focused.<foundation>` (Archetype Defense's). */
   focusedOn: (scope, name) => scope.data?.effects?.slots?.[`focused.${String(name?.value ?? name ?? "").toLowerCase()}`] === true,

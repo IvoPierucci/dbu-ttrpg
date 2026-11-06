@@ -1,0 +1,35 @@
+id: defensive-design
+name: Defensive Design
+order: 5
+category: mind
+importance: secondary
+description: >
+  You were able to withstand as much punishment as possible, so that you can stand tall on the battlefield.
+text: >
+  Defensive Design (Mind): You were able to withstand as much punishment as possible, so that you can stand tall on the battlefield.
+  (1)-[Passive]: Reduce the Critical Target of your Dodge Rolls by 1.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T).
+  (3)-[Triggered, 3/Round]: If you gain an Adaptation Point, regain 1(bT) Life Points.
+  (4)-[Triggered, 3/Round]: If you score a Critical Result on your Dodge Rolls, gain an Adaptation Point.
+  (5)-[1/Encounter]: You may spend 2 Adaptation Points to use the Defend Maneuver without spending a Counter Action.
+---
+
+[passive]
+# (1), (2)
+criticalTarget.dodge -= 1;
+damageReduction += 1(T);
+
+# (3) An Adaptation Point gained (adaptation-gained). Automatic by default, its Triggered/Automatic button.
+[triggered/adaptation-gained, 3/round, effect 3]
+life.value += 1(bT);
+
+# (4) A Critical Result on a Dodge Roll of yours. Automatic by default, its Triggered/Automatic button.
+[triggered/critical-scored, 3/round, effect 4]
+requires dodgeRolled;
+adaptation.stacks += 1;
+
+# (5) Ticked in Respond as you Defend, with 2 Adaptation Points to spend: no Counter Action for it, the 2 spent.
+[triggered/defending, 1/encounter, effect 5]
+requires stacksAtLeast(2, "adaptation");
+defend.free = true;
+adaptation.stacks -= 2;
