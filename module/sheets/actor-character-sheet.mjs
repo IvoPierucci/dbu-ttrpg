@@ -470,6 +470,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       thiefInstant: DBUCharacterSheet._onThiefInstant,
       flipInstant: DBUCharacterSheet._onFlipInstant,
       soarInstant: DBUCharacterSheet._onSoarInstant,
+      heranInstant: DBUCharacterSheet._onHeranInstant,
       desperateInstant: DBUCharacterSheet._onDesperateInstant,
       desperateSupport: DBUCharacterSheet._onDesperateSupport,
       hateInstant: DBUCharacterSheet._onHateInstant,
@@ -2078,6 +2079,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               && (this.actor.system.effects?.slots?.["dirtyTrick.desperateInstant"] === true),
             // Frequent Flyer (1): "You may use the Soar Maneuver as an Instant Maneuver" - once a Round.
             soarInstant: (maneuver.id === "soar") && (this.actor.system.effects?.slots?.["soar.asInstant"] === true),
+            // Heran Genes (2): "While you are below the Injured Health Threshold, you may use the Power Up Maneuver as an Instant" - once a Round.
+            heranInstant: (maneuver.id === "power-up") && (this.actor.system.effects?.slots?.["heranGenes.powerInstant"] === true)
+              && ["injured", "critical"].includes(this.actor.system.threshold?.key ?? ""),
             // Acrobat Star (1): "You may use the Flip Maneuver as an Instant Maneuver."
             flipInstant: (maneuver.id === "flip") && (this.actor.system.effects?.slots?.["flip.asInstant"] === true),
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
@@ -7400,6 +7404,22 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
     return this.actor.setFlag("dbu-ttrpg", "soarInstantRound", round);
+  }
+
+  /** Heran Genes (2): the Power Up as an Instant Maneuver, Injured or Critical, once a Round. */
+  static async _onHeranInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["heranGenes.powerInstant"] !== true)) return;
+    if (!["injured", "critical"].includes(this.actor.system.threshold?.key ?? "")) {
+      return ui.notifications.warn(`${this.actor.name}: Heran Genes - only below the Injured Health Threshold.`);
+    }
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "heranInstantRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
+    }
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    return this.actor.setFlag("dbu-ttrpg", "heranInstantRound", round);
   }
 
   /** Acrobat Star (1): the Flip as an Instant Maneuver - its own 1/Round the only limit. */

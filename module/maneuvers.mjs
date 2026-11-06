@@ -2119,6 +2119,11 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   if (!noArea && !declared.weapon && (slots["martial.area"] === true)) {
     declared = await askAddedArea(actor, declared, { title: "Martial Artist", flag: "martialAreaRound", ki: 2 * bT });
   }
+  // Heran Genes (4): "If you would use an Attacking Maneuver that does not possess an AoE, you may spend 2 Adaptation Points to apply a
+  // Standard Cone or Line AoE to that Attacking Maneuver."
+  if (!noArea && (slots["heranGenes.area"] === true)) {
+    declared = await askAddedArea(actor, declared, { title: "Heran Genes", flag: "heranAreaRound", ki: 0, adaptation: 2 });
+  }
   // Greed of the Hera (4): "If you would use an Attacking Maneuver with a Minor or Standard AoE, you may spend up to 4(bT) Ki
   // Points. For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1."
   if ((slots["greed.magnitude"] === true) && area() && (magnitudeIndex(area()) <= MAGNITUDES.indexOf("standard"))) {
@@ -2129,24 +2134,34 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   if (magic && (slots["mage.magnitude"] === true) && area()) {
     declared = await askBoughtMagnitude(actor, declared, area(), { title: "Mage", flag: "mageMagnitudeRound", step: 2 * bT });
   }
+  // Heran Genes (3): "If you would use an Attacking Maneuver that possesses an AoE, you may spend up to 2 Adaptation Points to increase
+  // the Magnitude of that AoE by 1 Category for each Adaptation Point spent."
+  if ((slots["heranGenes.magnitude"] === true) && area()) {
+    declared = await askBoughtMagnitude(actor, declared, area(), { title: "Heran Genes", flag: "heranMagnitudeRound", step: 1, adaptation: true });
+  }
   return declared;
 }
 
 /** A Cone or a Line, Standard (no Magnitude named - DEFAULT_AREA_MAGNITUDE), on an attack with no AoE: asked, once a Round. */
-async function askAddedArea(actor, declared, { title, flag, ki, encounter = false }) {
+async function askAddedArea(actor, declared, { title, flag, ki, encounter = false, adaptation = 0 }) {
   if (declared.area ?? PROFILES[declared.profile]?.area) return declared;
   // Once a Round - or, Elementalist's, once an Encounter.
   const round = encounter ? (game.combat?.id ?? "none") : `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.("dbu-ttrpg", flag) === round) return declared;
   if (((Number(actor.system.ki?.value) || 0) - (Number(declared.kiSurcharge) || 0)) < ki) return declared;
+  // Or Adaptation Points - Heran Genes', spent as it is taken.
+  const held = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  if (held < adaptation) return declared;
+  const price = adaptation ? `${adaptation} Adaptation Points: a` : (ki ? `${ki} Ki: a` : "A");
   const shape = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title },
-    content: `<p data-tooltip="Once ${encounter ? "an Encounter" : "a Round"}. A Standard AoE.">${ki ? `${ki} Ki: a` : "A"} Cone or a Line?</p>`,
+    content: `<p data-tooltip="Once ${encounter ? "an Encounter" : "a Round"}. A Standard AoE.">${price} Cone or a Line?</p>`,
     buttons: [{ action: "cone", label: "Cone" }, { action: "line", label: "Line" }, { action: "no", label: "No" }],
     rejectClose: false
   });
   if (!["cone", "line"].includes(shape)) return declared;
   await actor.setFlag("dbu-ttrpg", flag, round);
+  if (adaptation) await (await import("./chat.mjs")).setResource(actor, "adaptation", held - adaptation);
   return { ...declared, area: { shape }, kiSurcharge: (Number(declared.kiSurcharge) || 0) + ki };
 }
 
@@ -2182,23 +2197,30 @@ async function askArtilleryArea(actor, declared, bT) {
 }
 
 /** 1 or 2 Magnitudes on the Area it has, `step` Ki each: asked, once a Round. */
-async function askBoughtMagnitude(actor, declared, area, { title, flag, step }) {
+async function askBoughtMagnitude(actor, declared, area, { title, flag, step, adaptation = false }) {
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.("dbu-ttrpg", flag) === round) return declared;
-  const ki = (Number(actor.system.ki?.value) || 0) - (Number(declared.kiSurcharge) || 0);
+  // Paid in Adaptation Points, 1 each - Heran Genes' - spent as it is taken; in Ki, with the attack.
+  const held = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  const ki = adaptation ? held : ((Number(actor.system.ki?.value) || 0) - (Number(declared.kiSurcharge) || 0));
+  const unit = adaptation ? "Adaptation Point" : "Ki";
   if (ki < step) return declared;
   const steps = Number(await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title },
-    content: `<p data-tooltip="Once a Round. ${step} Ki for each.">The Magnitude of its ${
+    content: `<p data-tooltip="Once a Round. ${step} ${unit} for each.">The Magnitude of its ${
       Handlebars.escapeExpression(areaLabel({ ...area, magnitudeSteps: (Number(area.magnitudeSteps) || 0)
         + (Number(declared.boughtMagnitude) || 0) }))}?</p>`,
-    buttons: [{ action: "1", label: `+1 (${step} Ki)` },
-      ...((ki >= 2 * step) ? [{ action: "2", label: `+2 (${2 * step} Ki)` }] : []),
+    buttons: [{ action: "1", label: `+1 (${step} ${unit})` },
+      ...((ki >= 2 * step) ? [{ action: "2", label: `+2 (${2 * step} ${unit}${(adaptation && (step > 0)) ? "s" : ""})` }] : []),
       { action: "0", label: "No" }],
     rejectClose: false
   })) || 0;
   if (!steps) return declared;
   await actor.setFlag("dbu-ttrpg", flag, round);
+  if (adaptation) {
+    await (await import("./chat.mjs")).setResource(actor, "adaptation", held - (steps * step));
+    return { ...declared, boughtMagnitude: (Number(declared.boughtMagnitude) || 0) + steps };
+  }
   return { ...declared, boughtMagnitude: (Number(declared.boughtMagnitude) || 0) + steps,
     kiSurcharge: (Number(declared.kiSurcharge) || 0) + (steps * step) };
 }

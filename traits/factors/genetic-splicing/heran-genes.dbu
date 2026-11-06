@@ -1,0 +1,37 @@
+id: heran-genes
+name: Heran Genes
+order: 10
+category: body
+importance: secondary
+# [Any - you decide]: the Saving Throw its Racial Saving Throw Bonus goes to, chosen as it is gained.
+choose: savingThrow
+description: >
+  The blood of conquerors flows through your veins, thanks to the Heran genes infused in your genetic structure.
+text: >
+  Heran Genes [Any – you decide] (Body): The blood of conquerors flows through your veins, thanks to the Heran genes infused in your genetic structure.
+  (1)-[Passive]: Increase your Soak Value by 1(T) while you possess 2+ stacks of Power.
+  (2)-[1/Round]: While you are below the Injured Health Threshold, you may use the Power Up Maneuver as an Instant Maneuver.
+  (3)-[Triggered, 1/Round]: If you would use an Attacking Maneuver that possesses an AoE, you may spend up to 2 Adaptation Points to increase the Magnitude of that AoE by 1 Category for each Adaptation Point spent.
+  (4)-[Triggered, 1/Round]: If you would use an Attacking Maneuver that does not possess an AoE, you may spend 2 Adaptation Points to apply a Standard Cone or Line AoE to that Attacking Maneuver.
+  (5)-[Triggered/Start of Turn]: Lose up to 2 stacks of Power. For every stack of Power lost, gain an Adaptation Point.
+---
+
+[passive]
+# The Saving Throw named after its name - its Racial Saving Throw Bonus.
+allow save.racial.$choice;
+# (1)
+if (stacksAtLeast(2, "power")) {
+    soakValue += 1(T);
+}
+# (2) An "Instant" button on the Power Up's row while Injured or Critical, once a Round (actor-character-sheet.mjs _onHeranInstant).
+allow heranGenes.powerInstant;
+# (3), (4) Asked as an Attacking Maneuver is declared, with the Adaptation Points: a Standard Cone or Line for 2 where it has no AoE, 1 or 2
+# Magnitudes for as many where it has - once a Round each, Greed of the Hera's way (maneuvers.mjs askBoughtAreas).
+allow heranGenes.area;
+allow heranGenes.magnitude;
+
+# (5) Your turn begins with Power: how many of up to 2 stacks, asked - an Adaptation Point each (chat.mjs heranGenesTrade). Automatic by
+# default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 5]
+requires hasResource("power");
+heranGenesTrade();

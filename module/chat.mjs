@@ -22292,6 +22292,23 @@ export async function bioBerserk(actor) {
 }
 
 /**
+ * Heran Genes (5): "Lose up to 2 stacks of Power. For every stack of Power lost, gain an Adaptation Point." How many, asked.
+ */
+export async function heranGenesTrade(actor) {
+  const { UNSPENT, stacksGained } = await import("./effects/moments-runtime.mjs");
+  const power = Number(actor?.system?.resources?.power?.stacks) || 0;
+  const most = Math.min(2, power);
+  if (most <= 0) return UNSPENT;
+  const lost = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Heran Genes`, most, "Power stacks lost - an Adaptation Point each"));
+  if (lost <= 0) return UNSPENT;
+  await setResource(actor, "power", power - lost);
+  const before = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  await setResource(actor, "adaptation", before + lost);
+  const gained = (Number(actor.system.resources?.adaptation?.stacks) || 0) - before;
+  if (gained > 0) await stacksGained(actor, ["adaptation"], { adaptation: gained });
+}
+
+/**
  * Demon Genes (1): "Roll a 1d10. If you score a Natural Result of 6+ on this roll, enter the Superior State until the end of your turn. If
  * you score a Dice Score of 5 or less, suffer from the Impediment Combat Condition until the end of your turn." Its Option's change to the
  * Natural Result first - Demon Person Genes' 1 more but on a 1, Makyan Genes' 1 less. (3), Automatic: "a Natural Result of 1 ... lose all of

@@ -467,6 +467,10 @@ export const VERBS = Object.freeze({
     doc: "Demon Genes (1), (3) and its Option: the 1d10 - Superior or Impediment till the end of the turn; at a 1 the Adaptation Points or "
        + "Fatigued (chat.mjs demonGenesRoll)."
   },
+  heranGenesTrade: {
+    args: [0, 0],
+    doc: "Heran Genes (5): up to 2 stacks of Power lost, how many asked - an Adaptation Point each (chat.mjs heranGenesTrade)."
+  },
   bioBerserk: {
     args: [0, 0],
     doc: "Bio-Berserker (3): a 1d10 - at a 1, Compelled at a random Opponent in your Field of Aggression (chat.mjs bioBerserk)."
