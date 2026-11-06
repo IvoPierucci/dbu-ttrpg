@@ -1,0 +1,17 @@
+id: focus-tall-yardrat-genes
+name: Tall Yardrat Genes
+order: 1
+optionOf: genetic-focus-yardrat
+optionEffect: 5
+# Yardrat Genes' Option chosen: this one.
+follows: tall-yardrat-genes
+description: >
+  While you are on an adjacent Square to your Bio-Bonded Ally, increase the Wound Rolls and Soak Value of both you and your Bio-Bonded Ally by 1(T).
+text: >
+  Tall Yardrat Genes [Passive]: While you are on an adjacent Square to your Bio-Bonded Ally, increase the Wound Rolls and Soak Value of both you and your Bio-Bonded Ally by 1(T).
+
+---
+
+# Beside your Bio-Bonded Ally: Wound and Soak 1(T), yours and theirs (chat.mjs bioBondParts).
+[passive]
+allow focusYardrat.tall;

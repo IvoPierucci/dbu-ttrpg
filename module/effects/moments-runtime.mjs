@@ -680,6 +680,7 @@ async function runVerb(actor, call, context) {
       const { conduitPower } = await import("../chat.mjs");
       return conduitPower(actor);
     }
+    case "bioBondTo": return (await import("../chat.mjs")).bioBondTo(actor, context?.allyUuid);
     case "bondTo": {
       const { bondTo } = await import("../chat.mjs");
       return bondTo(actor, context?.allyUuid);

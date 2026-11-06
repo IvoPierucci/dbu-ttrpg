@@ -1,0 +1,34 @@
+id: genetic-focus-yardrat
+name: Genetic Focus: Yardrat
+order: 18
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Yardrat Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# (5) Its Choice, a file beside it for each - the one following Yardrat Genes' Option, not asked; asked where it has none.
+optionEffect: 5
+optionsFollow: yardrat-genes
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Yardrat (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Yardrat Genes Factor Trait
+  (2)-[Passive]: Upon gaining this Factor Trait, gain a stack of Spirit Control while you possess this Trait. This stack of Spirit Control does not count towards your Awakening Limit, and you do not gain the Attribute Modifier Bonus from this stack of Spirit Control.
+  (3)-[Triggered, 1/Round, Ruling]: If you give Ki Points to an Ally (except a Minion) through the Empower Maneuver, you become ‘Bio-Bonded’ until you become Bio-Bonded to another Ally. You cannot be Bio-Bonded with a Character that another Bio-Android is already Bio-Bonded to.
+  (4)-[Triggered]: When your Bio-Bonded Ally is hit by an Attacking Maneuver, you may spend any number of Adaptation Points. For each spent, increase their Damage Reduction by 1(T) for the duration of that Attacking Maneuver.
+  (5)-[Choice]: Depending on your Choice for the Option effect of Yardrat Genes, gain one of the following effects:
+  * Tall Yardrat Genes [Passive]: While you are on an adjacent Square to your Bio-Bonded Ally, increase the Wound Rolls and Soak Value of both you and your Bio-Bonded Ally by 1(T).
+  * Bulbous Yardrat Genes [Passsive]: While they are not at Long Range, increase the Combat Rolls and Soak Value of your Bio-Bonded Ally by 1(T).
+---
+
+[passive]
+# (2) Awakenings are not in this system: the stack of Spirit Control - outside the Awakening Limit, without its Attribute Modifier Bonus -
+# is the table's.
+# (4) Your Bio-Bonded Ally hit: a button on the attack's card before the Wound Roll - how many Adaptation Points, asked; 1(T) of Damage
+# Reduction each for them, for that attack (chat.mjs bioBondButtons). It spends: no Triggered/Automatic button.
+allow focusYardrat.bioBond;
+
+# (3) Ki given through the Empower (empowered-ally) to an Ally not a Minion, not Bio-Bonded to another: Bio-Bonded to them, till Bio-Bonded
+# to another - Power of the Weak (4)'s way. Once a Round; free: Automatic by default, its Triggered/Automatic button.
+[triggered/empowered-ally, 1/round, effect 3]
+requires bioBondOpen;
+bioBondTo();

@@ -643,6 +643,19 @@ const PREDICATES = {
     return !others.some(other => other && (other.uuid !== self.uuid) && (bondOf(other)?.uuid === ally));
   },
 
+  /**
+   * Genetic Focus: Yardrat (3): the Ally Empowered (empowered-ally) not Bio-Bonded to you already, not a Minion, nor Bio-Bonded to another -
+   * "You cannot be Bio-Bonded with a Character that another Bio-Android is already Bio-Bonded to."
+   */
+  bioBondOpen: scope => {
+    const self = scope.data?.parent;
+    const ally = scope.context?.allyUuid;
+    if (!self || !ally || (self.getFlag?.("dbu-ttrpg", "bioBonded")?.uuid === ally)) return false;
+    if (globalThis.fromUuidSync?.(ally)?.system?.minion) return false;
+    const others = [...(globalThis.game?.actors ?? []), ...(globalThis.canvas?.tokens?.placeables ?? []).map(token => token.actor)];
+    return !others.some(other => other && (other.uuid !== self.uuid) && (other.getFlag?.("dbu-ttrpg", "bioBonded")?.uuid === ally));
+  },
+
   /** Wrath of the Dragon (5): the one failing an Opponent not at Long Range (moment opponent-steadfast-failed). */
   failedNear: scope => {
     const self = scope.data?.parent;

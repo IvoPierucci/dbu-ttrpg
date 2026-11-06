@@ -1,0 +1,17 @@
+id: focus-bulbous-yardrat-genes
+name: Bulbous Yardrat Genes
+order: 2
+optionOf: genetic-focus-yardrat
+optionEffect: 5
+# Yardrat Genes' Option chosen: this one.
+follows: bulbous-yardrat-genes
+description: >
+  While they are not at Long Range, increase the Combat Rolls and Soak Value of your Bio-Bonded Ally by 1(T).
+text: >
+  Bulbous Yardrat Genes [Passive]: While they are not at Long Range, increase the Combat Rolls and Soak Value of your Bio-Bonded Ally by 1(T).
+
+---
+
+# Your Bio-Bonded Ally not at Long Range: their Combat Rolls and Soak 1(T) (chat.mjs bioBondParts).
+[passive]
+allow focusYardrat.bulbous;

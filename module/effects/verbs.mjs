@@ -986,6 +986,10 @@ export const VERBS = Object.freeze({
     doc: "Parasitic Biology (3): this Round's Inferior, hit - 2(bT) off their Ki Points, 1(bT) more for each Revenge Point spent on "
        + "the attack (chat.mjs parasiteDrain)."
   },
+  bioBondTo: {
+    args: [0, 0],
+    doc: "Genetic Focus: Yardrat (3): Bio-Bonded to the Ally Empowered, till Bio-Bonded to another (chat.mjs bioBondTo)."
+  },
   chooseSpecimen: {
     args: [0, 0],
     names: [],

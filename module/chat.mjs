@@ -24554,6 +24554,78 @@ export async function warriorEmpower(actor) {
  * Power of the Weak (4): Bonded to that Ally - "until you become Bonded to another Ally". Spiritual Pacifist (2): "Your Bonded
  * Ally has their Combat Rolls increased by 1(T)" - its mark taken off the one before and put on this one.
  */
+/** Genetic Focus: Yardrat (3): Bio-Bonded to that Ally, till Bio-Bonded to another (`bioBonded`). */
+export async function bioBondTo(actor, allyUuid) {
+  const ally = fromUuidSync(allyUuid ?? "");
+  if (!actor || !ally) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.bioBonded`]: { uuid: ally.uuid, name: ally.name } });
+}
+
+/**
+ * Genetic Focus: Yardrat (5): Tall Yardrat Genes - "While you are on an adjacent Square to your Bio-Bonded Ally, increase the Wound Rolls and
+ * Soak Value of both you and your Bio-Bonded Ally by 1(T)"; Bulbous Yardrat Genes - "While they are not at Long Range, increase the Combat
+ * Rolls and Soak Value of your Bio-Bonded Ally by 1(T)". What this one gets, on a Strike, Dodge, Wound or Soak, from whoever holds it.
+ */
+function bioBondParts(actor, roll) {
+  if (!actor) return [];
+  const parts = [];
+  const seen = new Set();
+  for (const holder of [actor, ...(canvas?.tokens?.placeables ?? []).map(token => token.actor)]) {
+    if (!holder || seen.has(holder.uuid) || holder.system?.defeated) continue;
+    seen.add(holder.uuid);
+    const ally = fromUuidSync(holder.getFlag?.(SCOPE, "bioBonded")?.uuid ?? "");
+    if (!ally || ((actor.uuid !== holder.uuid) && (actor.uuid !== ally.uuid))) continue;
+    const slots = holder.system.effects?.slots ?? {};
+    const value = Math.max(1, Number(holder.system.tierOfPower) || 1);
+    if ((slots["focusYardrat.tall"] === true) && ["wound", "soak"].includes(roll) && adjacent(holder, ally)) {
+      parts.push({ label: `Tall Yardrat Genes (${(actor.uuid === holder.uuid) ? ally.name : holder.name})`, written: "+1(T)", value });
+    }
+    if ((slots["focusYardrat.bulbous"] === true) && (actor.uuid === ally.uuid) && !atLongRange(holder, ally)) {
+      parts.push({ label: `Bulbous Yardrat Genes (${holder.name})`, written: "+1(T)", value });
+    }
+  }
+  return parts;
+}
+
+/**
+ * Genetic Focus: Yardrat (4): "When your Bio-Bonded Ally is hit by an Attacking Maneuver, you may spend any number of Adaptation Points. For
+ * each spent, increase their Damage Reduction by 1(T) for the duration of that Attacking Maneuver." A button for whoever is Bio-Bonded to one
+ * hit, before the Wound Roll; kept on the attack (`bioBondReduction`).
+ */
+function bioBondButtons(message, attack, container) {
+  const result = attack?.result;
+  if (!result || result.wound) return;
+  const hits = (result.targets ?? []).filter(entry => entry.hit).map(entry => entry.uuid);
+  const seen = new Set();
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    const holder = token.actor;
+    if (!holder?.isOwner || seen.has(holder.uuid) || holder.system?.defeated) continue;
+    seen.add(holder.uuid);
+    const ally = fromUuidSync(holder.getFlag?.(SCOPE, "bioBonded")?.uuid ?? "");
+    if (!ally || !hits.includes(ally.uuid) || (holder.system.effects?.slots?.["focusYardrat.bioBond"] !== true)) continue;
+    if ((attack.bioBondReduction ?? []).some(entry => (entry.by === holder.uuid) && (entry.uuid === ally.uuid))) continue;
+    const held = Number(holder.system.resources?.adaptation?.stacks) || 0;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Genetic Focus: Yardrat - ${ally.name}'s Damage Reduction`;
+    button.disabled = held <= 0;
+    button.dataset.tooltip = "Adaptation Points: 1(T) of Damage Reduction each for them, for this attack";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const have = Number(holder.system.resources?.adaptation?.stacks) || 0;
+      const spent = Math.min(have, await askPlayerAmount(holder, `${holder.name}: Genetic Focus: Yardrat - ${ally.name}`, have,
+        "Adaptation Points - 1(T) of Damage Reduction each"));
+      if (!spent) { button.disabled = false; return; }
+      await setResource(holder, "adaptation", have - spent);
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, bioBondReduction: [...(fresh.bioBondReduction ?? []),
+        { by: holder.uuid, name: holder.name, uuid: ally.uuid, value: spent * Math.max(1, Number(holder.system.tierOfPower) || 1) }] } });
+    });
+    container.append(button);
+  }
+}
+
 export async function bondTo(actor, allyUuid) {
   const ally = fromUuidSync(allyUuid ?? "");
   // Twinned Spirits (1): "you cannot become Bonded with any other Character".
@@ -29996,6 +30068,8 @@ function strikeParts(attacker, attack) {
     ...spotterParts(attacker),
     // Party Tactics (1): an Ally beside you.
     ...partyParts(attacker),
+    // Genetic Focus: Yardrat (5): Bulbous' Combat Rolls.
+    ...bioBondParts(attacker, "strike"),
     ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
     ...profileSlotStrike(attacker, attack),
@@ -31483,6 +31557,8 @@ function woundParts(attacker, attack) {
     ...telepathicWoundParts(attacker),
     // Party Tactics (1): an Ally beside you.
     ...partyParts(attacker),
+    // Genetic Focus: Yardrat (5): Tall's and Bulbous' Wound.
+    ...bioBondParts(attacker, "wound"),
     ...(critWound ? [{ label: "Critical Specialist", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(kata ? [{ label: "Precision Kata (Critical)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(herculean ? [{ label: "Herculean Power (Hefty Muscle again)", written: `+${heftyTimes}(T)`,
@@ -32400,6 +32476,8 @@ async function rollAttackWoundWork(message, attack) {
       + draconicParts(target, attacker).reduce((sum, part) => sum + part.value, 0)
       // Power of the Weak (6): the Ki of whoever is Bonded to them.
       + (attack.bondSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
+      // Genetic Focus: Yardrat (5): Tall's and Bulbous' Soak.
+      + bioBondParts(target, "soak").reduce((sum, part) => sum + part.value, 0)
       // Spiritual Warrior (2): Power of the Weak (3)'s Ki on the Soak Value as well.
       + (attack.weak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.soak) || 0), 0)
       // Balanced Defender (2).
@@ -32530,6 +32608,8 @@ async function rollAttackWoundWork(message, attack) {
       + (Number(own.greedReduction) || 0) + (Number(own.adaptationReduction) || 0) + (Number(own.toughReduction) || 0)
       // Party Tactics (3): a stack of an Ally's Tension, for this attack.
       + (attack.partyReduction ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
+      // Genetic Focus: Yardrat (4): the Adaptation Points of whoever is Bio-Bonded to them, for this attack.
+      + (attack.bioBondReduction ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
       // Super Elastic Body (1): "Increase your Damage Reduction against Physical and Energy Attacks by 2(T)."
       + (((target.system.effects?.slots?.["elastic.reduction"] === true) && ["physical", "energy"].includes(attack.foundation))
         ? 2 * Math.max(1, Number(target.system.tierOfPower) || 1) : 0));
@@ -32784,6 +32864,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...guidanceDodgeParts(actor));
   // Party Tactics (1): an Ally beside you.
   parts.push(...partyParts(actor));
+  // Genetic Focus: Yardrat (5): Bulbous' Combat Rolls.
+  parts.push(...bioBondParts(actor, "dodge"));
   // Refined Combat's Fleet-Footed.
   parts.push(...fleetDodge(actor, attack));
   parts.push(...speedsterDodge(actor, attack));
@@ -38000,6 +38082,7 @@ function renderAttack(message, html) {
   tremendousButtons(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
+  bioBondButtons(message, attack, container);
 
   // Combination's three more Strikes come between the hit and the Wound Roll, and they
   // decide what the Wound Roll is worth - so they are their own step and the Wound
