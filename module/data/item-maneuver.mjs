@@ -772,6 +772,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeBestial: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeForm: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** Weapon Shift: the uuid of the character wielding you. */
+        shapeWielder: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeLeft: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** How many Duplicate Minions it has made that stand. */
         duplicates: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

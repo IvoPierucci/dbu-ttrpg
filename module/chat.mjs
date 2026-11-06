@@ -14163,9 +14163,10 @@ async function chooseShape(actor, unique, name, actionsSpent) {
 }
 
 /** The shape, said: its Size, its Bestial Traits for the table, or the Vehicle or Weapon the table makes. */
-function shapeSaid(plan) {
+function shapeSaid(plan, actor = null) {
   if (plan.form === "vehicle") return "a Vehicle - its Craftsmanship Grade 1/2 your Tier of Power (rounded up)";
-  if (plan.form === "weapon") return "a Weapon - its Craftsmanship Grade 1/2 your Tier of Power (rounded up)";
+  // Weapon Shift: "a Craftsmanship Grade equal to 2 + your base Tier of Power".
+  if (plan.form === "weapon") return `a Weapon - Craftsmanship Grade ${2 + Math.max(1, Number(actor?.system?.baseTierOfPower) || 1)}`;
   const size = plan.size ? DBUCharacterData.SIZES[plan.size]?.label : "";
   return [size ? `${size} Size` : "", plan.bestial
     ? `${plan.bestial} Bestial Trait${(plan.bestial === 1) ? "" : "s"} for Body-Category Secondary Racial Traits` : ""]
@@ -14179,7 +14180,7 @@ async function applyShape(actor, item, plan) {
     "system.unique.shapeBestial": plan.bestial || 0, "system.unique.shapeForm": plan.form || "",
     "system.unique.shapeLeft": can.unlimited ? 0 : 5 });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${Handlebars.escapeExpression(item.name)}: ${Handlebars.escapeExpression(shapeSaid(plan))}`
+    content: `<p>${Handlebars.escapeExpression(item.name)}: ${Handlebars.escapeExpression(shapeSaid(plan, actor))}`
       + `${can.unlimited ? "" : " - for 5 turns"}.</p>` });
 }
 
@@ -14203,7 +14204,7 @@ export async function postShapeshift(actor, maneuver, plan) {
 /** Its effects off the Item: the Size given back with them. */
 async function endShape(actor, item) {
   await item.update({ "system.unique.applied": false, "system.unique.shapeSize": "", "system.unique.shapeBestial": 0,
-    "system.unique.shapeForm": "", "system.unique.shapeLeft": 0 });
+    "system.unique.shapeForm": "", "system.unique.shapeLeft": 0, "system.unique.shapeWielder": "" });
 }
 
 /**
@@ -24618,6 +24619,66 @@ function bioBondParts(actor, roll) {
 }
 
 /**
+ * Weapon Shift: "If you are wielded, increase the Wound Rolls of your Attacking Maneuvers by 1/4 (rounded up) of the Might of your wielder
+ * and increase the Wound Rolls of your wielder's Attacking Maneuvers by 1/4 (rounded up) of your Might." The one wielded, and whoever on the
+ * Battlefield is wielding a Weapon-shaped character.
+ */
+export function weaponShiftParts(actor) {
+  if (!actor) return [];
+  const parts = [];
+  const quarter = who => Math.ceil(Math.max(0, Number(who?.system?.might) || 0) / 4);
+  const seen = new Set();
+  for (const holder of [actor, ...(canvas?.tokens?.placeables ?? []).map(token => token.actor), ...Array.from(game.actors ?? [])]) {
+    if (!holder || seen.has(holder.uuid)) continue;
+    seen.add(holder.uuid);
+    const shape = Array.from(holder.items ?? []).find(item => (item.type === "maneuver") && item.system?.unique?.shapeshift
+      && item.system.unique.applied && (item.system.unique.shapeForm === "weapon") && item.system.unique.shapeWielder);
+    if (!shape) continue;
+    const wielder = fromUuidSync(shape.system.unique.shapeWielder);
+    if (!wielder) continue;
+    if (holder.uuid === actor.uuid) {
+      const value = quarter(wielder);
+      if (value) parts.push({ label: `Weapon Shift (wielded by ${wielder.name})`, value });
+    } else if (wielder.uuid === actor.uuid) {
+      const value = quarter(holder);
+      if (value) parts.push({ label: `Weapon Shift (wielding ${holder.name})`, value });
+    }
+  }
+  return parts;
+}
+
+/** Weapon Shift: wielded by a character with you in their Melee Range - their 1 Action and your consent, the table's. */
+export async function wieldShape(actor, itemId) {
+  const item = actor?.items?.get(itemId);
+  if (!item?.system?.unique?.applied || (item.system.unique.shapeForm !== "weapon")) return;
+  const { whyNotWithinMelee } = await import("./maneuvers.mjs");
+  const seen = new Set([actor.uuid]);
+  const near = (canvas?.tokens?.placeables ?? []).map(token => token.actor).filter(other => {
+    if (!other || seen.has(other.uuid) || !["character", "minion"].includes(other.type)) return false;
+    seen.add(other.uuid);
+    return !whyNotWithinMelee(other, actor, "wield");
+  });
+  if (!near.length) return ui.notifications.warn(`${actor.name}: nobody has you in their Melee Range to wield you.`);
+  const picked = await askPlayerChoice(actor, `${actor.name}: Weapon Shift - wielded by`,
+    [...near.map(other => ({ value: other.uuid, label: other.name })), { value: "none", label: "Nobody" }]);
+  const wielder = near.find(other => other.uuid === picked);
+  if (!wielder) return;
+  await item.update({ "system.unique.shapeWielder": wielder.uuid });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(wielder.name)} wields ${Handlebars.escapeExpression(actor.name)}`
+      + ` (Weapon Shift).</div>` });
+}
+
+/** Weapon Shift: no longer wielded - "during your turn by spending 1 Action", or moved other than by the wielder. */
+export async function unwieldShape(actor, itemId) {
+  const item = actor?.items?.get(itemId);
+  if (!item?.system?.unique?.shapeWielder) return;
+  await item.update({ "system.unique.shapeWielder": "" });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)} is no longer wielded (Weapon Shift).</div>` });
+}
+
+/**
  * Genetic Focus: Yardrat (4): "When your Bio-Bonded Ally is hit by an Attacking Maneuver, you may spend any number of Adaptation Points. For
  * each spent, increase their Damage Reduction by 1(T) for the duration of that Attacking Maneuver." A button for whoever is Bio-Bonded to one
  * hit, before the Wound Roll; kept on the attack (`bioBondReduction`).
@@ -31588,7 +31649,7 @@ function woundParts(attacker, attack) {
     // Party Tactics (1): an Ally beside you.
     ...partyParts(attacker),
     // Genetic Focus: Yardrat (5): Tall's and Bulbous' Wound.
-    ...bioBondParts(attacker, "wound"),
+    ...bioBondParts(attacker, "wound"), ...weaponShiftParts(attacker),
     ...(critWound ? [{ label: "Critical Specialist", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(kata ? [{ label: "Precision Kata (Critical)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(herculean ? [{ label: "Herculean Power (Hefty Muscle again)", written: `+${heftyTimes}(T)`,

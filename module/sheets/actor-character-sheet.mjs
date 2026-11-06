@@ -495,6 +495,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       webSave: DBUCharacterSheet._onWebSave,
       ghostGone: DBUCharacterSheet._onGhostGone,
       shapeDestroyed: DBUCharacterSheet._onShapeDestroyed,
+      wieldShape: DBUCharacterSheet._onWieldShape,
+      unwieldShape: DBUCharacterSheet._onUnwieldShape,
       throughPortal: DBUCharacterSheet._onThroughPortal,
       releaseFinish: DBUCharacterSheet._onReleaseFinish,
       cageClash: DBUCharacterSheet._onCageClash,
@@ -2354,6 +2356,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Vehicle Shift, Weapon Shift: its Destroyed button.
         shapeObject: (unique.shapeshift && unique.applied && ["vehicle", "weapon"].includes(unique.shapeForm))
           ? ((unique.shapeForm === "vehicle") ? "Vehicle" : "Weapon") : "",
+        // Weapon Shift: wielded, and by whom.
+        shapeWeapon: (unique.shapeshift && unique.applied && (unique.shapeForm === "weapon"))
+          ? { wielder: unique.shapeWielder ? (fromUuidSync(unique.shapeWielder)?.name ?? "Someone") : "" } : null,
         // Portal Creation: the Portals held, dismissed as an Instant, and the next Maneuver through them.
         portals: (unique.portals && !grantedBy) ? { held: Number(unique.portalsHeld) || 0, max: portalsMaxOf(unique),
           through: Boolean(actor.getFlag?.("dbu-ttrpg", "throughPortal")) } : null,
@@ -2581,6 +2586,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onShapeDestroyed(event, target) {
     const { shapeDestroyed } = await import("../chat.mjs");
     return shapeDestroyed(this.actor, target.dataset.itemId);
+  }
+
+  /** Weapon Shift: wielded by a character with you in their Melee Range, and no longer. */
+  static async _onWieldShape(event, target) {
+    const { wieldShape } = await import("../chat.mjs");
+    return wieldShape(this.actor, target.dataset.itemId);
+  }
+
+  static async _onUnwieldShape(event, target) {
+    const { unwieldShape } = await import("../chat.mjs");
+    return unwieldShape(this.actor, target.dataset.itemId);
   }
 
   /** Portal Creation: "can dismiss any number of Portals as an Instant Maneuver". */

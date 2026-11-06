@@ -3,23 +3,37 @@ name: Weapon Shift
 advancement: true
 prerequisite: N/A
 tpCost: 5
-# Offered at 2+ Actions instead of the effects; the Weapon and its rules are the table's. Its last rule, the shape row's Destroyed
+# Offered at 2+ Actions instead of the effects; the Weapon's Craftsmanship Grade said, 2 + the base Tier of Power - the Weapon itself the
+# table's. While it is the shape (maneuvers.mjs whyNotWeaponShape): the nine Maneuvers named refused; a Special Maneuver only where a Skill
+# opens it; no Unique Ability that is a Standard Maneuver - Shapeshift itself kept, to put it off; the Movement Maneuver refused while
+# wielded. Wielded: the shape row's Wielded button, picking a character with you in their Melee Range (their 1 Action, your consent - the
+# table's), Unwielded to stop; each one's Wound Rolls 1/4 (rounded up) of the other's Might (chat.mjs weaponShiftParts). Attacking with
+# yourself as the Weapon, and Damage to the Weapon going to your Life Points, the table's. Destroyed except by Damage, the row's Destroyed
 # button: Life 1 below the next Health Threshold, Shapeshift ended (chat.mjs shapeDestroyed).
 shapeWeapon: true
 source: Core Rule
 description: >
-  Shapeshift at 2+ Actions can make you a Weapon instead - the table's to run; destroyed but not by Damage, its Destroyed button.
+  Shapeshift at 2+ Actions can make you a Weapon instead: Maneuvers held to its rules, wielded from the shape row with each other's
+  Might on the Wound Rolls, and its Destroyed button.
 text: >
   Weapon Shift: You possess the unique capability to transform yourself into a weapon.
   –Prerequisites: N/A
   –TP Cost: 5
   –Effect: If you spend 2+ Actions through Shapeshifting, instead of selecting effects, you may transform into a Weapon.
-  Upon doing so, create a Weapon with a Craftsmanship Grade equal to 1/2 (rounded up) of your Tier of Power. You become
-  that Weapon, following the below rules:
+  Upon doing so, create a Weapon with a Craftsmanship Grade equal to 2 + your base Tier of Power. You become that Weapon,
+  following the below rules:
 
-  * You cannot use any Maneuver except the Movement Maneuver or Basic Attack Maneuver, but you can only use the Basic
-  Attack Maneuver if you use yourself as the Weapon for that Attacking Maneuver.
-  * You may be wielded as a Weapon with your consent, but if you are, then you cannot use the Movement Maneuver.
+  * You cannot use the following Maneuvers: Feature Thrust, Grapple, Launch, Pin, Terrain Lift, Throw, Toss, No Effort,
+  and Blockade.
+  * You cannot use any Special Maneuvers, except those granted access to by your Skills (see: Skills).
+  * You cannot use any Unique Abilities that are Standard Maneuvers.
+  * If you use an Attacking Maneuver, you must use yourself as the Weapon for that Attacking Maneuver.
+  * You may be wielded as a Weapon, but while you are wielded as a Weapon, you cannot use the Movement Maneuver and if you
+  are moved by any means other than the movement of your wielder, you stop being wielded. To be wielded, a character may
+  spend 1 Action (with your consent) to wield you if you are in their Melee Range. You can stop being wielded during your
+  turn by spending 1 Action.
+  * If you are wielded, increase the Wound Rolls of your Attacking Maneuvers by 1/4 (rounded up) of the Might of your
+  wielder and increase the Wound Rolls of your wielder's Attacking Maneuvers by 1/4 (rounded up) of your Might.
   * Any Damage inflicted to yourself as a Weapon is instead inflicted directly to your Life Points.
   * If an effect would destroy the Weapon except by inflicting Damage, you have your Life Points reduced to 1 Life Point
   below your next Health Threshold and you forcefully stop benefiting from the effects of Shapeshift.

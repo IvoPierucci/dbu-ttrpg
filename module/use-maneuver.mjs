@@ -37,7 +37,7 @@ import {
   paidSince,
   godStrikeCost,
   squaresAway,
-  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotAtMaster, whyNotCopyClone, whyNoMinionRoom, minionRoom,
+  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotWeaponShape, whyNotAtMaster, whyNotCopyClone, whyNoMinionRoom, minionRoom,
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
@@ -4917,6 +4917,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   const notForMinions = whyNotMinionManeuver(actor, maneuver);
   if (notForMinions) {
     ui.notifications.warn(notForMinions);
+    return false;
+  }
+  // Weapon Shift: what a Weapon cannot use.
+  const notAsWeapon = whyNotWeaponShape(actor, maneuver);
+  if (notAsWeapon) {
+    ui.notifications.warn(notAsWeapon);
     return false;
   }
   // Limited Control: one that makes Minions, with no room for another.

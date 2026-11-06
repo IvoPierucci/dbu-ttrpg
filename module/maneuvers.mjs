@@ -4157,6 +4157,36 @@ export function whyNotMinionManeuver(actor, maneuver) {
   return null;
 }
 
+/** Weapon Shift: "You cannot use the following Maneuvers: Feature Thrust, Grapple, Launch, Pin, Terrain Lift, Throw, Toss, No Effort, and Blockade." */
+export const WEAPON_SHAPE_BARRED = Object.freeze(["feature-thrust", "grapple", "launch", "pin", "terrain-lift", "throw", "toss", "no-effort",
+  "blockade"]);
+
+/** The Shapeshift a character is a Weapon through (Weapon Shift), or null. */
+export function weaponShapeOf(actor) {
+  return Array.from(actor?.items ?? []).find(item => (item.type === "maneuver") && item.system?.unique?.shapeshift
+    && item.system.unique.applied && (item.system.unique.shapeForm === "weapon")) ?? null;
+}
+
+/**
+ * Weapon Shift, the shape taken: "You cannot use the following Maneuvers: [nine]. You cannot use any Special Maneuvers, except those
+ * granted access to by your Skills. You cannot use any Unique Abilities that are Standard Maneuvers" - Shapeshift itself kept, used again
+ * to put the shape off. "While you are wielded as a Weapon, you cannot use the Movement Maneuver."
+ */
+export function whyNotWeaponShape(actor, maneuver) {
+  const shape = weaponShapeOf(actor);
+  if (!shape || !maneuver) return null;
+  const said = `${actor.name} is a Weapon (Weapon Shift)`;
+  if (WEAPON_SHAPE_BARRED.includes(maneuver.id)) return `${said}: no ${maneuver.name}.`;
+  if (maneuver.special && !(actor.system?.specialManeuvers ?? []).find(entry => entry.maneuver === maneuver.id)?.open) {
+    return `${said}: no Special Maneuver but those a Skill opens.`;
+  }
+  if (uniqueLibraryOf(actor, maneuver) && (maneuver.type === "standard") && (maneuver.itemId !== shape.id)) {
+    return `${said}: no Unique Ability that is a Standard Maneuver.`;
+  }
+  if ((maneuver.id === "movement") && shape.system.unique.shapeWielder) return `${said}, wielded: no Movement Maneuver.`;
+  return null;
+}
+
 /** A Goop's one Maneuver, and Battle Goo's two more. */
 const GOOP_MANEUVERS = Object.freeze(["movement"]);
 const BATTLE_GOO_MANEUVERS = Object.freeze(["basic-attack", "intervene"]);
