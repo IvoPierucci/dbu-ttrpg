@@ -3466,18 +3466,22 @@ async function settleBlockade(message, clash) {
  * Blockade's Resource is handed out by a Clash landing, which no Moment describes. Capped
  * at what the library declares, like every other write to the bag.
  */
-export async function setResource(actor, name, stacks) {
+export async function setResource(actor, name, stacks, { lost = false } = {}) {
   const { replaceObject } = await import("./conditions.mjs");
   const { resourceLimits } = await import("./effects/traits.mjs");
 
   const held = { ...(actor.system.resources ?? {}) };
   const max = resourceLimits(actor)[name] ?? 0;
   const capped = Math.max(0, max ? Math.min(stacks, max) : stacks);
+  const before = Number(held[name]?.stacks) || 0;
 
   if (capped > 0) held[name] = { stacks: capped, max };
   else delete held[name];
 
-  return actor.update({ "system.resources": replaceObject(held) });
+  const done = await actor.update({ "system.resources": replaceObject(held) });
+  // Adaptation Points spent - not lost (Demon Genes (3)'s `lost`): adaptation-spent, how many (Genetic Focus: Angel's).
+  if ((name === "adaptation") && !lost && (capped < before)) await answerFor(actor, "adaptation-spent", { spent: before - capped });
+  return done;
 }
 
 /**
@@ -9574,6 +9578,13 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const adaptDoubled = (slot === "wound") && signatureRoll && (actor.system.effects?.slots?.["earthlingGenes.signatureWound"] === true);
   if (adapted) parts.push({ label: `Adaptation Points (${adapted})${adaptDoubled ? " x2 (Earthling Genes)" : ""}`,
     value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) * (adaptDoubled ? 2 : 1) });
+  // Genetic Focus: Angel (5): "If you spend Adaptation Points on a Combat Roll, increase its Natural Result by 1 for each Adaptation Point
+  // spent (max. +2)" - asked.
+  if (adapted && (actor.system.effects?.slots?.["focusAngel.natural"] === true)) {
+    const more = Math.min(2, adapted);
+    if ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Angel`, [
+      { value: "yes", label: `Natural Result +${more}` }, { value: "no", label: "No" }])) === "yes") naturalAdd = (Number(naturalAdd) || 0) + more;
+  }
   // Yardrat Genes (2): "If an Ally makes a Combat Roll, you can spend any number of Adaptation Points on that Combat Roll. For each
   // Adaptation Point spent, increase that Combat Roll by 1(T)" - asked of each Ally on the scene who has it, their Tier.
   if (combatRoll && collect) {
@@ -22517,7 +22528,7 @@ export async function demonGenesRoll(actor) {
   const { enterState } = await import("./effects/moments-runtime.mjs");
   if (superior) await enterState(actor, "superior", 1, "turn", "Demon Genes");
   else await markUntilNextTurn(actor, actor, "impediment", 1, "end", "Demon Genes", false);
-  if (one && held) await setResource(actor, "adaptation", 0);
+  if (one && held) await setResource(actor, "adaptation", 0, { lost: true });
   else if (one) await markUntilNextTurn(actor, actor, "fatigued", 1, "end", "Demon Genes", false);
   if (superior && makyan) {
     const before = Number(actor.system.resources?.adaptation?.stacks) || 0;

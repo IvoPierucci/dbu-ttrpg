@@ -185,6 +185,8 @@ export function resolvePath(p, scope) {
 
   // How many stacks were just gained, where a Moment says - Redirected Energy's "Upon gaining a stack of Overwhelm".
   if (p === "gained") return scope.context?.gained ?? 1;
+  // And how many were just spent - Genetic Focus: Angel's "If you spend an Adaptation Point" (adaptation-spent).
+  if (p === "spent") return scope.context?.spent ?? 1;
 
   // Bio-Berserker (2): the Opponents in your Field of Aggression - a Large Sphere around you - as the scene stands.
   if (p === "fieldOfAggression") return opponentsWithin(scope.data?.parent, SPHERE_RADIUS.large - 1).length;

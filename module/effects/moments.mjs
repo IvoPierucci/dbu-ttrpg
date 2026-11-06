@@ -161,6 +161,10 @@ const TABLE = [
   { key: "targeted-by-attack", label: "You are targeted by an Attacking Maneuver", provides: [],
     doc: "Fired for each one an attack is aimed at as it is declared, its maker aside (chat.mjs postAttack) - Majin Genes'. What is "
        + "the player's is asked in a window first." },
+  { key: "adaptation-spent", label: "You spend Adaptation Points", provides: [],
+    doc: "Fired as Adaptation Points are spent, by an effect's script or a spending asked (`spent`, how many) - not lost, as Demon "
+       + "Genes' (3) loses them (chat.mjs setResource, moments-runtime.mjs writeStateful) - Genetic Focus: Angel's. What is the "
+       + "player's is asked in a window first." },
   { key: "plating-reduced", label: "Your Natural Armor has its Break Value reduced", provides: [],
     doc: "Fired as a piece of Natural Armor of yours loses Break Value or is destroyed, by whoever lowered it (natural-armor.mjs) - "
        + "Arcosian Genes' Genetic Survivor. What is the player's is asked in a window first." },

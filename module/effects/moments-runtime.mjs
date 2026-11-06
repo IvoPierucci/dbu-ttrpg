@@ -295,8 +295,12 @@ async function writeStateful(actor, slots) {
     updates[path] = negative ? value : Math.max(least, value);
   }
 
+  // Adaptation Points spent by the script - adaptation-spent, how many (Genetic Focus: Angel's).
+  const spentAdaptation = resources ? Math.max(0, (Number(actor.system.resources?.adaptation?.stacks) || 0)
+    - (Number(resources.adaptation?.stacks) || 0)) : 0;
   if (!foundry.utils.isEmpty(updates)) await actor.update(updates);
   if (gained.length) await stacksGained(actor, gained, counts);
+  if (spentAdaptation) await (await import("../chat.mjs")).answerFor(actor, "adaptation-spent", { spent: spentAdaptation });
 }
 
 /**
