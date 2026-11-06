@@ -1,0 +1,36 @@
+id: shinjin-genes
+name: Shinjin Genes
+order: 17
+category: body
+importance: secondary
+description: >
+  Harnessing the keen insight and ki efficiency of the Shinjin, you are capable of feats of near-godly power.
+text: >
+  Shinjin Genes [Cognitive] (Body): Harnessing the keen insight and ki efficiency of the Shinjin, you are capable of feats of near-godly power.
+  (1)-[Passive]: You can sense God Ki.
+  (2)-[Passive]: Reduce the TP Cost of all Unique Abilities by 2.
+  (3)-[Passive]: Reduce the Ki Point Cost of all Attacking Maneuvers by 1(T).
+  (4)-[Passive]: Increase your Combat Rolls and Soak Value by 1(T) for the duration of your Counter Maneuvers.
+  (5)-[Triggered]: At the end of a Combat Round, for every 2 Counter Actions you possess, gain an Adaptation Point.
+  (6)-[1/Round]: Spend 2 Adaptation Points to use a Counter Maneuver without spending the Action Cost.
+---
+
+[passive]
+# [Cognitive]: its Racial Saving Throw Bonus.
+allow save.racial.cognitive;
+# (1), (2) - both kinds of Unique Ability - and (3)
+allow sense.godKi;
+unique.technical.tpCost -= 2;
+unique.magical.tpCost -= 2;
+attack.kiCost -= 1(T);
+# (4) A Counter Maneuver used: its mark - Combat Rolls and Soak 1(T) - till the attack it answered is done, or the turn ends - Shinjin-Raised
+# (2)'s, the same words (maneuvers.mjs recordManeuverType, chat.mjs attackDurationEnds).
+allow shinjinRaised.counter;
+# (6) Defending or Intervening with 2 Adaptation Points: asked, once a Round - for them, not its Counter Action (chat.mjs shinjinFreeCounter).
+allow shinjinGenes.counter;
+
+# (5) As each Combat Round ends: an Adaptation Point for every 2 Counter Actions left - those of the Round just ended, as Skill of the
+# Watcher's (4) counts them. Automatic by default, its Triggered/Automatic button.
+[triggered/end-of-round, effect 5]
+requires actions.counterLeftLastRound >= 2;
+adaptation.stacks += floor(actions.counterLeftLastRound / 2);

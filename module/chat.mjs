@@ -22445,6 +22445,22 @@ async function shadowGenesImpair(holder, opponent) {
 }
 
 /**
+ * Shinjin Genes (6): "Spend 2 Adaptation Points to use a Counter Maneuver without spending the Action Cost" - the Defend or the Intervene,
+ * asked as it is paid for, once a Round; whether it was.
+ */
+async function shinjinFreeCounter(actor, what) {
+  const held = Number(actor?.system?.resources?.adaptation?.stacks) || 0;
+  if ((held < 2) || (actor.system.effects?.slots?.["shinjinGenes.counter"] !== true) || (actor.getFlag?.(SCOPE, "shinjinCounterRound") === roundKey())) {
+    return false;
+  }
+  if ((await askPlayerChoice(actor, `${actor.name}: Shinjin Genes - ${what}`,
+    [{ value: "yes", label: "2 Adaptation Points - no Counter Action (1/Round)" }, { value: "no", label: "No" }])) !== "yes") return false;
+  await setResource(actor, "adaptation", held - 2);
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.shinjinCounterRound`]: roundKey() });
+  return true;
+}
+
+/**
  * Heran Genes (5): "Lose up to 2 stacks of Power. For every stack of Power lost, gain an Adaptation Point." How many, asked.
  */
 export async function heranGenesTrade(actor) {
@@ -28637,9 +28653,13 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     && ((await askPlayerChoice(actor, `${actor.name}: Dragon Lord's Fury - ${attack?.attackerName ?? "a Studied Opponent"}, Studied`,
       [{ value: "yes", label: "Intervene without a Counter Action (1/Round)" }, { value: "no", label: "No" }])) === "yes");
   if (furyFree) await actor.setFlag(SCOPE, "dragonFuryRound", roundKey());
+  // Shinjin Genes (6): 2 Adaptation Points for its Counter Action, asked, once a Round.
+  const shinjinFree = !protector && !refinedFree && !pacifistFree && !syncFree && !furyFree && !markWall
+    && await shinjinFreeCounter(actor, "the Intervene Maneuver");
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
-  if (!protector && !refinedFree && !pacifistFree && !syncFree && !furyFree && !markWall && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!protector && !refinedFree && !pacifistFree && !syncFree && !furyFree && !markWall && !shinjinFree
+    && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
   // Battle Goo (3): "if a Goop uses the Intervene Maneuver, they are destroyed after using the Maneuver" (combat.mjs).
   if (actor.getFlag?.(SCOPE, "minionKind") === "goop") await requestActorUpdate(actor, { [`flags.${SCOPE}.goopIntervened`]: true });
@@ -37011,7 +37031,9 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
   // Dual Wielding Specialist (2): "Use the Parry effect of the Defend Maneuver without spending a Counter Action" - 2+ Weapons
   // wielded, asked, once a Round (one or the other of its two).
   const dual = !free && !perfect && !angel && (chosen.defence === "parry") && await (await import("./maneuvers.mjs")).askDualParry(target);
-  if (!free && !perfect && !dual && !angel && !await spendActions(target, 1, "counter")) {
+  // Shinjin Genes (6): 2 Adaptation Points for its Counter Action, asked, once a Round.
+  const shinjin = !free && !perfect && !dual && !angel && await shinjinFreeCounter(target, "the Defend Maneuver");
+  if (!free && !perfect && !dual && !angel && !shinjin && !await spendActions(target, 1, "counter")) {
     // No Counter Action to pay with after all: its Ki back - Angel-Raised's too.
     await refundManeuverCost(target, { name: "Defend", kiCost: cost + (angel ? angelCost : 0) });
     return;
