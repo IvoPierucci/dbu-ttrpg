@@ -9432,7 +9432,7 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
  * grow is not yet a result. Both outcomes are therefore applied here and now.
  */
 async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
-                                           slot = null, collect = true, strikeAdapted = 0,
+                                           slot = null, collect = true, strikeAdapted = 0, oneCharge = "",
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
@@ -9460,7 +9460,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Twin-Linked keeps the higher of two, Dead-Link the lower. The second is made without offering
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
-    const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted,
+    const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted, oneCharge,
       criticalTarget, botchUnlessCritical, naturalAdd };
     const clone = () => ((typeof modifiers === "number") ? modifiers : modifiers.map(part => ({ ...part })));
     const first = await rollSide(actor, clone(), { ...again, collect });
@@ -9510,6 +9510,15 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     for (let index = parts.length - 1; index >= 0; index--) if (String(parts[index].label).startsWith("Dim. Defense")) parts.splice(index, 1);
   }
   const blueprintCharge = blueprintTaken && (blueprint === "aggressor");
+  // Android Cybernetics (5): 2+ spent on a Signature Technique's Wound Roll - "apply an Energy Charge to that Attacking Maneuver", asked,
+  // once an Encounter: its dice on this Wound Roll.
+  if (oneCharge && (slot === "wound") && (adapted >= 2) && (actor.system.effects?.slots?.["androidCybernetics.charge"] === true)
+    && (actor.getFlag?.(SCOPE, "cyberChargeEncounter") !== (game.combat?.id ?? "none"))
+    && ((await askPlayerChoice(actor, `${actor.name}: Android Cybernetics`, [
+      { value: "yes", label: `An Energy Charge on this Signature Technique (${oneCharge}, 1/Encounter)` }, { value: "no", label: "No" }])) === "yes")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.cyberChargeEncounter`]: game.combat?.id ?? "none" });
+    extraDice = [...asDiceGroups(extraDice), { label: "Energy Charge (Android Cybernetics)", formula: oneCharge }];
+  }
   // Namekian Genes' Genes of a Warrior Clan: 2+ spent on an attack's Wound Roll - "increase the Wound Roll by 1/2 of your Surgency", asked,
   // once a Round.
   const clanAdd = ((slot === "wound") && attackingManeuver && (adapted >= 2) && (actor.system.effects?.slots?.["namekianGenes.warrior"] === true)
@@ -31642,6 +31651,8 @@ async function rollAttackWoundWork(message, attack) {
   let wound = await rollSide(attacker, woundParts(attacker, attack), {
     // Arcosian Genes' Genetic Aggressor: what was spent on its Strike Roll.
     strikeAdapted: Number(attack.result?.strike?.adapted) || 0,
+    // Android Cybernetics (5): one Energy Charge's dice, for a Signature Technique's.
+    oneCharge: attack.signature ? energyChargeDice(attacker, { ...attack, energyCharges: 1 }) : "",
     extraDice: woundDice(attacker, attack),
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
@@ -36502,6 +36513,18 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     return true;
   }
 
+  // Android Cybernetics (3): "If you use a Ki Surge, you may spend up to 2 Adaptation Points. For every Adaptation Point spent, apply 1/2 of
+  // your Surgency to that Ki Surge" - how many, asked.
+  const adaptationHeld = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  if ((actor.system.effects?.slots?.["androidCybernetics.kiSurge"] === true) && (adaptationHeld > 0)) {
+    const most = Math.min(2, adaptationHeld);
+    const spent = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Android Cybernetics`, most,
+      "Adaptation Points - 1/2 your Surgency more on this Ki Surge each"));
+    if (spent > 0) {
+      await setResource(actor, "adaptation", adaptationHeld - spent);
+      surgency += spent * Math.floor((Number(actor.system.surgency) || 0) / 2);
+    }
+  }
   const { ki, capacity } = actor.system;
   // Power Battery: "you cannot regain Ki Points through Ki Surges" - the Capacity still comes back.
   const kiGain = (actor.system.effects?.slots?.["ki.noRegain"] === true) ? 0

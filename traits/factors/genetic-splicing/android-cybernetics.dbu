@@ -1,0 +1,32 @@
+id: android-cybernetics
+name: Android Cybernetics
+order: 4
+category: body
+importance: secondary
+description: >
+  In addition to your genetics, you are enhanced with Android cybernetics, allowing you to outlast all but the most resilient opponents.
+text: >
+  Android Cybernetics [Cognitive] (Body): In addition to your genetics, you are enhanced with Android cybernetics, allowing you to outlast all but the most resilient opponents.
+  (1)-[Passive]: Increase your Damage Reduction by 1(bT).
+  (2)-[Passive]: Increase your Maximum Ki Points by 2 for each Power Level reached.
+  (3)-[Triggered]: If you use a Ki Surge, you may spend up to 2 Adaptation Points. For every Adaptation Point spent, apply 1/2 of your Surgency to that Ki Surge.
+  (4)-[Triggered/Start of Combat Round]: Regain 2(bT) Ki Points and 1 Adaptation Point.
+  (5)-[Triggered, 1/Encounter]: If you spend 2+ Adaptation Points on the Wound Roll of a Signature Technique, apply an Energy Charge to that Attacking Maneuver.
+---
+
+[passive]
+# [Cognitive]: its Racial Saving Throw Bonus.
+allow save.racial.cognitive;
+# (1), (2)
+damageReduction += 1(bT);
+ki.perLevel += 2;
+# (3) A Ki Surge, with an Adaptation Point to spend: how many, asked (2 at most) - half your Surgency more on it each (chat.mjs takeSurge).
+allow androidCybernetics.kiSurge;
+# (5) The Wound Roll of a Signature Technique with 2+ Adaptation Points spent on it: asked, once an Encounter - an Energy Charge's dice on
+# it (chat.mjs rollSide).
+allow androidCybernetics.charge;
+
+# (4) The Combat Round begins. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-round, effect 4]
+ki.value += 2(bT);
+adaptation.stacks += 1;
