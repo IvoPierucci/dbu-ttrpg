@@ -2124,6 +2124,11 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   if (!noArea && (slots["heranGenes.area"] === true)) {
     declared = await askAddedArea(actor, declared, { title: "Heran Genes", flag: "heranAreaRound", ki: 0, adaptation: 2 });
   }
+  // Magic Blaster (2): "If you use an Attacking Maneuver of the Magic Foundation, you may apply an AoE of your choice to that Attacking
+  // Maneuver. If that Attacking Maneuver already possesses an AoE, you may instead increase the Magnitude of that AoE by 1 Category."
+  if (magic && (slots["magicBlaster.area"] === true)) {
+    declared = await askMagicBlasterArea(actor, declared, area(), noArea);
+  }
   // Greed of the Hera (4): "If you would use an Attacking Maneuver with a Minor or Standard AoE, you may spend up to 4(bT) Ki
   // Points. For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1."
   if ((slots["greed.magnitude"] === true) && area() && (magnitudeIndex(area()) <= MAGNITUDES.indexOf("standard"))) {
@@ -2140,6 +2145,35 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
     declared = await askBoughtMagnitude(actor, declared, area(), { title: "Heran Genes", flag: "heranMagnitudeRound", step: 1, adaptation: true });
   }
   return declared;
+}
+
+/**
+ * Magic Blaster (2): an AoE of your choice - Standard, no Magnitude named - where the Magic attack has none, or its Magnitude 1 higher where
+ * it has one. Asked, once a Round; free.
+ */
+async function askMagicBlasterArea(actor, declared, area, noArea) {
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "magicBlasterAreaRound") === round) return declared;
+  // Where what offered it forbids an AoE - a Feint's - only the Magnitude of one it has.
+  if (area) {
+    const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: "Magic Blaster" },
+      content: `<p data-tooltip="Once a Round.">The Magnitude of its ${Handlebars.escapeExpression(areaLabel({ ...area,
+        magnitudeSteps: (Number(area.magnitudeSteps) || 0) + (Number(declared.boughtMagnitude) || 0) }))} 1 higher?</p>`, rejectClose: false });
+    if (!yes) return declared;
+    await actor.setFlag("dbu-ttrpg", "magicBlasterAreaRound", round);
+    return { ...declared, boughtMagnitude: (Number(declared.boughtMagnitude) || 0) + 1 };
+  }
+  if (noArea) return declared;
+  const shape = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Magic Blaster" },
+    content: `<p data-tooltip="Once a Round. A Standard AoE.">An AoE of your choice?</p>`,
+    buttons: [{ action: "sphere", label: "Sphere" }, { action: "cone", label: "Cone" }, { action: "line", label: "Line" },
+      { action: "no", label: "No" }],
+    rejectClose: false
+  });
+  if (!["sphere", "cone", "line"].includes(shape)) return declared;
+  await actor.setFlag("dbu-ttrpg", "magicBlasterAreaRound", round);
+  return { ...declared, area: { shape }, areaAdded: true };
 }
 
 /** A Cone or a Line, Standard (no Magnitude named - DEFAULT_AREA_MAGNITUDE), on an attack with no AoE: asked, once a Round. */
