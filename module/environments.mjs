@@ -271,6 +271,12 @@ export const ENVIRONMENT_RULES = Object.freeze([
         + "Features are still there to hit. Sinking a rank is picking a lower one."
   },
   {
+    key: "high-qualities",
+    name: "High Environmental Qualities",
+    text: "Environmental Qualities do not typically apply to squares within a High Environment.",
+    note: "Which Qualities a Square up there has is the table's: tick them or not."
+  },
+  {
     key: "rank-zero",
     name: "Ground and High Environments",
     text: "For effects that refer to higher and/or lower ranks of High Environment, the "
