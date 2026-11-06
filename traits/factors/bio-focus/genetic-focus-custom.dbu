@@ -1,0 +1,27 @@
+id: genetic-focus-custom
+name: Genetic Focus: Custom
+order: 14
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Other Genes Factor Trait,
+# shown and never enforced.
+importance: primary
+# (3) "Upon gaining this Factor Trait, gain a Character Perk" - a row at Power Level 1 on the Progression tab, its kind chosen there, named
+# for this and gone with it (racial.mjs grantPerks, `any`).
+grantsPerk: any
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Custom (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Other Genes Factor Trait
+  (2)-[Passive]: Gain the Twinned effects of the Racial Trait gained through the effects of Other Genes.
+  (3)-[Passive]: Upon gaining this Factor Trait, gain a Character Perk. You lose anything gained from this Character Perk if you lose this Trait.
+  (5)-[Triggered, 1/Encounter]: If you use the 2nd effect of Other Genes, instead of gaining 1 Adaptation Point, you may maximize your Adaptation Points.
+---
+
+# (2) Custom Species is not in this system: the Custom Species Racial Trait's Twinned effects are the table's, as the Trait itself is.
+
+# (5) Ticked in the Power Up's window, once an Encounter, with Other Genes: your Adaptation Points to their Maximum - in place of Other
+# Genes (2)'s one, which is left unticked (the player's). What it gives lasts the Encounter: its Triggered/Automatic button (the user's
+# criteria), though offered in the window (`toggle`).
+[triggered/power, 1/encounter, toggle, effect 5]
+requires holdsTrait("other-genes");
+adaptation.stacks += 99;

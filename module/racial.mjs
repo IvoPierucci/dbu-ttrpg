@@ -1690,7 +1690,9 @@ async function grantPerks(actor, source, choices) {
   if (!actor || !choices.length) return;
   const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
   const perks = foundry.utils.deepClone(actor._source?.system?.characterPerks ?? []);
-  for (const choice of choices) {
+  for (const named of choices) {
+    // `any`: a Character Perk of the player's kind, chosen on its row (Genetic Focus: Custom's).
+    const choice = (named === "any") ? "" : named;
     perks.push({ source, lvl: 1, choice, talent: "",
       attributes: Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS).map(key => [key, 0])),
       technique: (choice === "Skill Improvement") ? DBUCharacterData.SKILL_IMPROVEMENT_TP : 0,
