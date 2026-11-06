@@ -7743,7 +7743,7 @@ function attackLine(actor, maneuver, foundation) {
  * is on whose side, and inventing one to decide who may punish an opening would be
  * deciding more than the rules asked.
  */
-function offerExploits(card, actor, maneuver) {
+async function offerExploits(card, actor, maneuver) {
   if (!card || !maneuver?.exploitable) return;
 
   // "Your Movement Maneuver does not provoke the Exploit Maneuver." The card is the only
@@ -7758,6 +7758,18 @@ function offerExploits(card, actor, maneuver) {
 
   // Team Survivalist (1): "You do not trigger the Exploit Maneuver when you use the Brace Maneuver."
   if ((maneuver.id === "brace") && (actor.system.effects?.slots?.["brace.noExploit"] === true)) return;
+
+  // Genetic Focus: Shinjin (5): "If you use Combat Recovery, you may spend 2 Adaptation Points to not trigger an Exploit Maneuver" - asked,
+  // once a Round.
+  const held = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  if ((maneuver.id === "combat-recovery") && (held >= 2) && (actor.system.effects?.slots?.["focusShinjin.noExploit"] === true)
+    && (actor.getFlag?.(SCOPE, "focusShinjinRound") !== roundKey())
+    && ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Shinjin - Combat Recovery`, [
+      { value: "yes", label: "2 Adaptation Points - no Exploit from it (1/Round)" }, { value: "no", label: "No" }])) === "yes")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.focusShinjinRound`]: roundKey() });
+    await setResource(actor, "adaptation", held - 2);
+    return;
+  }
 
   // Lightning Initiative (2): "Your use of the Movement Maneuver does not trigger the Exploit Maneuver from Opponents with a lower
   // Initiative Value than you."
