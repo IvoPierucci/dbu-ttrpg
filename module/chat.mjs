@@ -1368,6 +1368,26 @@ async function adaptationReductionFor(target, attack, uuid) {
 }
 
 /**
+ * Neo-Tuffle Genes' Genes of a Parasite: "If you hit an Opponent with an Attacking Maneuver that you spent 3+ Adaptation Points on, reduce
+ * their Ki points by x(bT), where x is equal to three times the amount of Adaptation Points you spent." Those spent on its Strike Roll -
+ * what is known as it hits; asked, once a Round, every Opponent it hit.
+ */
+async function parasiteGenesFor(attacker, attack, struck) {
+  const spent = Number(attack.result?.strike?.adapted) || 0;
+  if ((spent < 3) || (attacker?.system?.effects?.slots?.["neoTuffleGenes.parasite"] !== true)
+    || (attacker.getFlag?.(SCOPE, "parasiteGenesRound") === roundKey())) return;
+  const hit = struck.map(entry => fromUuidSync(entry.uuid)).filter(other => other && areOpponents(attacker, other));
+  if (!hit.length) return;
+  const loss = 3 * spent * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  if ((await askPlayerChoice(attacker, `${attacker.name}: Genes of a Parasite`, [
+    { value: "yes", label: `${hit.map(other => other.name).join(", ")}: ${loss} Ki Points lost (1/Round)` }, { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.parasiteGenesRound`]: roundKey() });
+  for (const other of hit) {
+    await requestActorUpdate(other, { "system.ki.value": Math.max(0, (Number(other.system.ki?.value) || 0) - loss) });
+  }
+}
+
+/**
  * Cerealian Genes (3): "If you score a Critical Result on the Strike Roll of an Attacking Maneuver, you may spend an Adaptation Point to
  * increase the Wound Roll of that Attacking Maneuver by 3(T)" - asked as it hits; what it adds, or 0.
  */
@@ -9569,6 +9589,17 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     for (let index = parts.length - 1; index >= 0; index--) if (String(parts[index].label).startsWith("Dim. Defense")) parts.splice(index, 1);
   }
   const blueprintCharge = blueprintTaken && (blueprint === "aggressor");
+  // Neo-Tuffle Genes' Genes of Hatred: 3+ spent on the attack's Strike Roll - "increase the Wound Roll of that Attacking Maneuver by an equal
+  // amount", asked, once a Round.
+  if (collect && (slot === "wound") && attackingManeuver && (strikeAdapted >= 3) && (actor.system.effects?.slots?.["neoTuffleGenes.hatred"] === true)
+    && (actor.getFlag?.(SCOPE, "hatredGenesRound") !== roundKey())) {
+    const value = strikeAdapted * Math.max(1, Number(actor.system.tierOfPower) || 1);
+    if ((await askPlayerChoice(actor, `${actor.name}: Genes of Hatred`, [
+      { value: "yes", label: `Wound Roll +${value} (what they added to the Strike, 1/Round)` }, { value: "no", label: "No" }])) === "yes") {
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.hatredGenesRound`]: roundKey() });
+      parts.push({ label: "Genes of Hatred", value });
+    }
+  }
   // Konatsian Genes (1): 2+ spent on an attack's Wound Roll - "increase your Wound Roll for that Attacking Maneuver by 1(T) for each Health
   // Threshold you are below", asked.
   const konatsianDepth = Number(actor.system.threshold?.depth) || 0;
@@ -21057,6 +21088,20 @@ function offerTeamReliance(message, attack, target) {
 }
 
 /**
+ * Neo-Tuffle Genes (2): "If you receive Damage from an Opponent's Attacking Maneuver, you may spend 2 Adaptation Points to use the Basic
+ * Attack Maneuver as an Out-of-Sequence Maneuver. You must target that Opponent for this Attacking Maneuver." Offered on the attack's card,
+ * once a Round; the 2 paid as it is taken (takeOutOfSequence, `adaptationCost`).
+ */
+function offerNeoTuffleStrike(message, target, attacker) {
+  if (!target || !attacker || (target.system?.effects?.slots?.["neoTuffleGenes.strike"] !== true)
+    || ((Number(target.system?.resources?.adaptation?.stacks) || 0) < 2) || (target.getFlag?.(SCOPE, "neoTuffleStrikeRound") === roundKey())) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.grants?.roundFlag === "neoTuffleStrikeRound") && (offer.actorUuid === target.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Neo-Tuffle Genes - 2 Adaptation Points, once a Round",
+    grants: { roundFlag: "neoTuffleStrikeRound", adaptationCost: 2 } } });
+}
+
+/**
  * Super Elastic Body (3): "you may use the Launch Maneuver as an Out-of-Sequence Maneuver against the attacking Character as if they were
  * in a Grapple with you as the Grappler" - offered on the card, once a Round.
  */
@@ -26677,6 +26722,11 @@ async function takeOutOfSequence(message, actor, offer) {
     ui.notifications.warn(`${offer.reason ?? "That effect"}: already used this Combat Round.`);
     return null;
   }
+  // Adaptation Points it costs - Neo-Tuffle Genes (2)'s - there to pay; paid once it is used.
+  if (offer.grants?.adaptationCost && ((Number(actor.system.resources?.adaptation?.stacks) || 0) < Number(offer.grants.adaptationCost))) {
+    ui.notifications.warn(`${actor.name}: not the ${offer.grants.adaptationCost} Adaptation Points for it.`);
+    return null;
+  }
   // Violent Rebuke (3)'s, once a Round.
   if (offer.grants?.rebuke && (actor.getFlag?.(SCOPE, "rebukeRound") === roundKey())) {
     ui.notifications.warn("Violent Rebuke has been used this Combat Round.");
@@ -27195,6 +27245,9 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.rebuke) await requestActorUpdate(actor, { [`flags.${SCOPE}.rebukeRound`]: roundKey() });
   if (offer.grants?.roundFlag) await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.grants.roundFlag}`]: roundKey() });
   if (offer.grants?.encounterFlag) await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.grants.encounterFlag}`]: game.combat?.id ?? "none" });
+  if (offer.grants?.adaptationCost) {
+    await setResource(actor, "adaptation", Math.max(0, (Number(actor.system.resources?.adaptation?.stacks) || 0) - Number(offer.grants.adaptationCost)));
+  }
   // Questing Wisdom (3)'s, once a Round.
   if (offer.grants?.questing) await requestActorUpdate(actor, { [`flags.${SCOPE}.questingRound`]: roundKey() });
   // Power Gifter (2)'s, once a Round - counted on whoever Empowered.
@@ -30887,6 +30940,8 @@ async function answerHit(message, attack, attacker, struck) {
   // Cerealian Genes (3): a Critical Strike - an Adaptation Point for 3(T) on the Wound Roll, asked.
   const cerealian = await cerealianWoundFor(attacker, attack);
   if (cerealian) answer.marks.cerealianWound = cerealian;
+  // Neo-Tuffle Genes' Genes of a Parasite: 3+ spent on its Strike Roll - each Opponent hit loses 3(bT) Ki a point, asked.
+  await parasiteGenesFor(attacker, attack, struck);
   // Burning Fury (2): 4(bT) Life Points for Broken on one hit, asked.
   await burningFuryBreak(attacker, struck);
   // Assassinate (2): one Oblivious of you hit - 5(bT) Ki for the Damage Category, asked.
@@ -35153,6 +35208,8 @@ async function applyAttackDamage(message, target, attack) {
     if (areOpponents(armsUser, target)) {
       await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid, ...(attack.signature ? { bySignature: true } : {}) });
     }
+    // Neo-Tuffle Genes (2): the Basic Attack back at them, offered on this card.
+    if (areOpponents(target, armsUser)) offerNeoTuffleStrike(message, target, armsUser);
     // Ruler (2): "If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm" - for its Master.
     const ruler = isMinion(armsUser) ? game.actors?.get(masterOf(armsUser)) : null;
     if (ruler && areOpponents(armsUser, target)) await answerFor(ruler, "minion-damage", { minionUuid: armsUser.uuid });

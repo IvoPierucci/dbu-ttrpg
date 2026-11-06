@@ -1,0 +1,16 @@
+id: genes-of-a-parasite
+name: Genes of a Parasite
+order: 2
+optionOf: neo-tuffle-genes
+optionEffect: 3
+description: >
+  If you hit an Opponent with an Attacking Maneuver that you spent 3+ Adaptation Points on, reduce their Ki points by x(bT), where x is equal to three times the amount of Adaptation Points you spent.
+text: >
+  Genes of a Parasite [Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver that you spent 3+ Adaptation Points on, reduce their Ki points by x(bT), where x is equal to three times the amount of Adaptation Points you spent.
+
+---
+
+# Asked as an attack with 3+ Adaptation Points spent on its Strike Roll hits - each Opponent it hit loses 3(bT) Ki a point, once a
+# Round (chat.mjs parasiteGenesFor).
+[passive]
+allow neoTuffleGenes.parasite;

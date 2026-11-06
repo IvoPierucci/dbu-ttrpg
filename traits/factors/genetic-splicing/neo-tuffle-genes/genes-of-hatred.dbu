@@ -1,0 +1,16 @@
+id: genes-of-hatred
+name: Genes of Hatred
+order: 1
+optionOf: neo-tuffle-genes
+optionEffect: 3
+description: >
+  If you spend 3+ Adaptation Points on the Strike Roll of an Attacking Maneuver, increase the Wound Roll of that Attacking Maneuver by an equal amount.
+text: >
+  Genes of Hatred [Triggered, 1/Round]: If you spend 3+ Adaptation Points on the Strike Roll of an Attacking Maneuver, increase the Wound Roll of that Attacking Maneuver by an equal amount.
+
+---
+
+# Asked on the Wound Roll of an attack with 3+ Adaptation Points spent on its Strike Roll - what they added to the Strike, once a Round
+# (chat.mjs rollSide).
+[passive]
+allow neoTuffleGenes.hatred;
