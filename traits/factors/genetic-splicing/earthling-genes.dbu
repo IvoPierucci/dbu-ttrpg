@@ -1,0 +1,33 @@
+id: earthling-genes
+name: Earthling Genes
+order: 8
+category: body
+importance: secondary
+description: >
+  In your heart beats the pure determination of the Earthlings, allowing you to persevere no matter how the odds are stacked against you.
+text: >
+  Earthling Genes [Morale] (Body): In your heart beats the pure determination of the Earthlings, allowing you to persevere no matter how the odds are stacked against you.
+  (1)-[Passive]: Increase the number of Technique Points you gain from Skill Improvements by 3.
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase all of your Combat Rolls and Soak Value by 1(T).
+  (3)-[Passive]: Double the bonus to the Wound Rolls of your Signature Techniques from your Adaptation Points.
+  (4)-[Triggered, 1/Round]: If you deal Damage to an Opponent with a Signature Technique, gain an Adaptation Point.
+---
+
+[passive]
+# [Morale]: its Racial Saving Throw Bonus.
+allow save.racial.morale;
+# (1) On every Skill Improvement row.
+techniquePoints.perSkillImprovement += 3;
+# (2) Injured or Critical.
+if (belowThreshold("injured")) {
+    combatRolls += 1(T);
+    soakValue += 1(T);
+}
+# (3) A Signature Technique's Wound Roll: the Adaptation Points spent on it 2(T) each (chat.mjs rollSide).
+allow earthlingGenes.signatureWound;
+
+# (4) Damage dealt to an Opponent by a Signature Technique of yours (damaged-opponent, `bySignatureTechnique`). Automatic by default, its
+# Triggered/Automatic button.
+[triggered/damaged-opponent, 1/round, effect 4]
+requires bySignatureTechnique;
+adaptation.stacks += 1;

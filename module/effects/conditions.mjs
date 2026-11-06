@@ -710,6 +710,8 @@ const PREDICATES = {
   strikeOrWound: scope => ["strike", "wound"].includes(String(scope.context?.rollKind ?? "")),
   /** The Natural Result the Moment carries is that or more - Demon Genes' 1d10 (demon-genes-rolled). */
   naturalAtLeast: (scope, amount) => (Number(scope.context?.natural) || 0) >= (Number(amount?.value ?? amount) || 0),
+  /** The attack that dealt the Damage was a Signature Technique - damaged-opponent's `bySignature` (Earthling Genes'). */
+  bySignatureTechnique: scope => Boolean(scope.context?.bySignature),
   /** And an Attacking Maneuver's Strike Roll (Cerealian Genes'). */
   attackStrikeRolled: scope => (String(scope.context?.rollKind ?? "") === "strike") && Boolean(scope.context?.attackRoll),
   /** And a Dodge Roll (Defensive Design's). */

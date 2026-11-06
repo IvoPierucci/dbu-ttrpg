@@ -9448,7 +9448,7 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
  * grow is not yet a result. Both outcomes are therefore applied here and now.
  */
 async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
-                                           slot = null, collect = true, strikeAdapted = 0, oneCharge = "",
+                                           slot = null, collect = true, strikeAdapted = 0, oneCharge = "", signatureRoll = false,
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
@@ -9476,7 +9476,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Twin-Linked keeps the higher of two, Dead-Link the lower. The second is made without offering
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
-    const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted, oneCharge,
+    const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted, oneCharge, signatureRoll,
       criticalTarget, botchUnlessCritical, naturalAdd };
     const clone = () => ((typeof modifiers === "number") ? modifiers : modifiers.map(part => ({ ...part })));
     const first = await rollSide(actor, clone(), { ...again, collect });
@@ -9510,7 +9510,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     && await spendActions(actor, 1, "counter");
   // Artificial Warrior (2): ticked in the window - how many Adaptation Points, asked; 1(T) on this Combat Roll's Dice Score each.
   const adapted = (answered?.slots?.["adaptationSpend.roll"] === true) ? await spendAdaptation(actor, "this Combat Roll") : 0;
-  if (adapted) parts.push({ label: `Adaptation Points (${adapted})`, value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) });
+  // Earthling Genes (3): "Double the bonus to the Wound Rolls of your Signature Techniques from your Adaptation Points."
+  const adaptDoubled = (slot === "wound") && signatureRoll && (actor.system.effects?.slots?.["earthlingGenes.signatureWound"] === true);
+  if (adapted) parts.push({ label: `Adaptation Points (${adapted})${adaptDoubled ? " x2 (Earthling Genes)" : ""}`,
+    value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) * (adaptDoubled ? 2 : 1) });
   // Combat Blueprint (2), with 2+ of them spent - asked, once a Round each. Genetic Aggressor, on a Strike Roll: "you may apply an Energy
   // Charge to that Attacking Maneuver" (resolveAttackWork). Genetic Agility, on a Dodge Roll: "you may ignore all Diminishing Defense you
   // are suffering from for the duration of that Maneuver" - its rows taken off.
@@ -31724,6 +31727,8 @@ async function rollAttackWoundWork(message, attack) {
     strikeAdapted: Number(attack.result?.strike?.adapted) || 0,
     // Android Cybernetics (5): one Energy Charge's dice, for a Signature Technique's.
     oneCharge: attack.signature ? energyChargeDice(attacker, { ...attack, energyCharges: 1 }) : "",
+    // Earthling Genes (3): a Signature Technique's.
+    signatureRoll: Boolean(attack.signature),
     extraDice: woundDice(attacker, attack),
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
@@ -35073,7 +35078,10 @@ async function applyAttackDamage(message, target, attack) {
     const revengeBefore = Number(target.system.resources?.revengepoints?.stacks) || 0;
     await answerFor(target, "opponent-damage", { attackerUuid: armsUser.uuid });
     // Genetic Aggressor (Artificial Warrior): "If you deal Damage to an Opponent with an Attacking Maneuver" - for its maker.
-    if (areOpponents(armsUser, target)) await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid });
+    // And whether it was a Signature Technique - Earthling Genes'.
+    if (areOpponents(armsUser, target)) {
+      await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid, ...(attack.signature ? { bySignature: true } : {}) });
+    }
     // Ruler (2): "If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm" - for its Master.
     const ruler = isMinion(armsUser) ? game.actors?.get(masterOf(armsUser)) : null;
     if (ruler && areOpponents(armsUser, target)) await answerFor(ruler, "minion-damage", { minionUuid: armsUser.uuid });
