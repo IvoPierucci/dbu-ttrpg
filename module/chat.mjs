@@ -36387,6 +36387,13 @@ export async function rollSteadfastCheck(actor) {
   const karmicBoxes = Array.from({ length: negativeHeld }, (each, index) => ({ name: `karmic${index + 1}`,
     label: "Karmic Reflection: 1 Negative Energy, +1",
     tip: "1 to the Dice Score; passed, 2(T) Ki Points back for it." }));
+  // Genetic Focus: Earthling (5): "you can spend up to 3 Adaptation Points. For every Adaptation Point spent, increase the Dice Score of your
+  // Steadfast Check by 1" - once an Encounter, a box each.
+  const focusHeld = ((actor.system.effects?.slots?.["focusEarthling.steadfast"] === true)
+    && (actor.getFlag?.(SCOPE, "focusEarthlingEncounter") !== (game.combat?.id ?? "none")))
+    ? Math.min(3, Number(actor.system.resources?.adaptation?.stacks) || 0) : 0;
+  const focusBoxes = Array.from({ length: focusHeld }, (each, index) => ({ name: `focusEarthling${index + 1}`,
+    label: "Genetic Focus: Earthling: 1 Adaptation Point, +1", tip: "1 to the Dice Score. Once an Encounter." }));
   // Flexible Muscle (2): "While you only possess 1 Super Stack ... you may choose to automatically succeed" - once an Encounter.
   const flexible = (actor.system.effects?.slots?.["flexibleMuscle.autoPass"] === true) && (actor.system.superStack?.stacks === 1)
     && (actor.getFlag?.(SCOPE, "flexibleMuscleEncounter") !== (game.combat?.id ?? "none"));
@@ -36404,6 +36411,7 @@ export async function rollSteadfastCheck(actor) {
         label: "Heart of Glass: fail it", tip: "No roll: a Ki Surge as an Out-of-Sequence Maneuver, then Surging until the end of your turn if you like." }] : []),
         // Karmic Reflection (4): a Negative Energy for 1 on the Dice Score - up to 2; passed, 2(T) of Ki each.
         ...karmicBoxes,
+        ...focusBoxes,
         ...((shellLeft > 0) ? [{ name: "shell", label: `Sturdy Shell: 1 of ${shell.name}'s Break Value, +1`, tip: "Its Break Value goes down by 1." }] : [])],
       pick: lifeSteps.length ? { label: "Earthling Resolve",
         tip: "Spend Life Points: 1 to the Dice Score for every 2(bT). Once an Encounter.",
@@ -36440,6 +36448,11 @@ export async function rollSteadfastCheck(actor) {
   }
   const lifeSpent = lifeSteps.includes(Number(ready?.picked)) ? Number(ready.picked) : 0;
   const karmicSpent = (ready?.boxes ?? []).filter(name => /^karmic\d$/.test(name)).length;
+  const focusSpent = (ready?.boxes ?? []).filter(name => /^focusEarthling\d$/.test(name)).length;
+  if (focusSpent) {
+    await setResource(actor, "adaptation", (Number(actor.system.resources?.adaptation?.stacks) || 0) - focusSpent);
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.focusEarthlingEncounter`]: game.combat?.id ?? "none" });
+  }
   // Wrath of the Dragon (4): 2 off it for each spent on them - used up by this Check.
   const wrath = Number(actor.getFlag?.(SCOPE, "wrathSteadfast")) || 0;
   if (wrath) await actor.unsetFlag(SCOPE, "wrathSteadfast");
@@ -36467,7 +36480,8 @@ export async function rollSteadfastCheck(actor) {
   // Checks" - is its own term, named, so the card says where it came from.
   const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : "",
     thresholdDice ? String(thresholdDice) : "", lifeSpent ? `${lifeSpent}[Earthling Resolve]` : "",
-    karmicSpent ? `${karmicSpent}[Karmic Reflection]` : "", wrath ? `-${wrath}[Wrath of the Dragon]` : "",
+    karmicSpent ? `${karmicSpent}[Karmic Reflection]` : "", focusSpent ? `${focusSpent}[Genetic Focus: Earthling]` : "",
+    wrath ? `-${wrath}[Wrath of the Dragon]` : "",
     blood ? `-${blood}[Blood in the Water]` : "", shellSpent ? "1[Sturdy Shell]" : "",
     evil ? `-${evil}[Heart of Evil]` : ""].filter(Boolean);
   const roll = new Roll(terms.join(" + "));

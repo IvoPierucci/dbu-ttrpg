@@ -1,0 +1,31 @@
+id: genetic-focus-earthling
+name: Genetic Focus: Earthling
+order: 6
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Earthling Genes Factor
+# Trait, shown and never enforced.
+importance: primary
+# Its own description was given cut short ("T"): asked for.
+text: >
+  Genetic Focus: Earthling (Body) [Uncanny Monster]:
+  (1)-[Prerequisite]: Earthling Genes Factor Trait.
+  (2)-[Passive]: For each Health Threshold you are below, increase your Wound Rolls and Surgency by 1(T).
+  (3)-[Passive]: Increase the amount of Technique Points you gain from Skill Improvement by 2.
+  (4)-[Triggered]: When you use the Signature Technique Maneuver, spend an Adaptation Point. If you do, for this instance of using your chosen Signature Technique, you may either:
+  * Apply an Energy Charge to that Attacking Maneuver.
+  * Add a single Advantage with a TP cost of up to 10 TP to your chosen Signature Technique.
+  (5)-[Triggered/Threshold, 1/Encounter]: Upon making your Steadfast Check for this Health Threshold, you can spend up to 3 Adaptation Points. For every Adaptation Point spent, increase the Dice Score of your Steadfast Check by 1.
+---
+
+[passive]
+# (2)
+wound += threshold.depth * 1(T);
+surgency += threshold.depth * 1(T);
+# (3) On every Skill Improvement row.
+techniquePoints.perSkillImprovement += 2;
+# (4) The Signature Technique's window, with an Adaptation Point: Quick to Master (2)'s search - an Energy Charge, or an Advantage of 10 TP
+# or less - the point spent once one is picked (use-maneuver.mjs).
+# (5) The Steadfast Check's window, once an Encounter: up to 3 boxes, an Adaptation Point for 1 each (chat.mjs rollSteadfastCheck).
+# Both spend: always asked, no button (the user's).
+allow focusEarthling.signature;
+allow focusEarthling.steadfast;

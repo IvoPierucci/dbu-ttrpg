@@ -800,10 +800,14 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   // price (the user's).
   let earthlingOffered = [];
   // Whose it is - Quick to Master's (2) or Earthling-Raised's (3) - for its name and its line.
-  const raisedBy = [["quick-to-master", 2], ["earthling-raised", 3]].find(([id]) => Array.from(actor.items ?? [])
+  // Or Genetic Focus: Earthling's (4), the same choice for an Adaptation Point - where neither free one is had.
+  const raisedBy = [["quick-to-master", 2], ["earthling-raised", 3], ["genetic-focus-earthling", 4]].find(([id]) => Array.from(actor.items ?? [])
     .some(each => each.flags?.["dbu-ttrpg"]?.sourceId === id)) ?? ["earthling-raised", 3];
   const raisedName = getTrait(raisedBy[0])?.name ?? "Earthling-Raised";
-  if (actor.system.effects?.slots?.["signature.earthlingRaised"] === true) {
+  const earthlingFree = actor.system.effects?.slots?.["signature.earthlingRaised"] === true;
+  const earthlingPaid = !earthlingFree && (actor.system.effects?.slots?.["focusEarthling.signature"] === true)
+    && ((Number(actor.system.resources?.adaptation?.stacks) || 0) > 0);
+  if (earthlingFree || earthlingPaid) {
     const { featureCatalogue, featureTP, maxRanks } = await import("./technique.mjs");
     earthlingOffered = featureCatalogue().advantages.filter(def => (def.choose !== "text") && (ranks(def.id) < maxRanks(def)))
       // The next rank's own price - featureTP reads 0 ranks as 1, so a first rank is priced on its own.
@@ -814,7 +818,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     // A search over them rather than a list (the user's: there are many, and the name is known): typed, the ones it
     // starts; nothing typed, nothing taken.
     fields.push(`<div class="dbu-respond-option dbu-ua-search"${tip(...raisedBy)}>
-      <span class="dbu-respond-name">${Handlebars.escapeExpression(raisedName)}</span>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(raisedName)}${earthlingPaid ? " (an Adaptation Point)" : ""}</span>
       <div class="gear-add-quality">
         <input type="text" class="gear-quality-search" data-earthling-search autocomplete="off"
                placeholder="Energy Charge, or an Advantage (10 TP or less)"/>
@@ -1053,6 +1057,10 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       answers.featureChoices = { ...(declared.featureChoices ?? {}), [def.id]: picked };
     }
     answers.advantages = [...(declared.advantages ?? []), answers.earthling];
+  }
+  // Genetic Focus: Earthling (4): one picked - its Adaptation Point.
+  if (earthlingPaid && ((answers.earthling === "charge") || earthlingOffered.some(entry => entry.def.id === answers.earthling))) {
+    await (await import("./chat.mjs")).setResource(actor, "adaptation", (Number(actor.system.resources?.adaptation?.stacks) || 0) - 1);
   }
   // Eye of the Dragon's: the Energy Charge as well, beside the Advantage picked.
   if (answers.eyeBoth && earthlingOffered.some(entry => entry.def.id === answers.earthling)) {
