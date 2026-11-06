@@ -536,6 +536,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "movedThisRound", "weatherUnfelt",
   // The Critical Result answered was on a Strike or Wound Roll (Offensive Design's).
   "strikeOrWound", "dodgeRolled",
+  // 2+ Adaptation Points gained this Combat Round (Biological Weapon's).
+  "adaptationTwiceThisRound",
   // The Maneuver declared an Attacking Maneuver or a Unique Ability (Reserved Combatant's); a Surge through the Surge Maneuver
   // itself (Never Surrender's).
   "attackOrUnique", "bySurgeManeuver",

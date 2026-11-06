@@ -1,0 +1,43 @@
+id: biological-weapon
+name: Biological Weapon
+order: 1
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's.
+importance: primary
+# (1) Its Signature Technique, made as it is gained: on the Techniques list, as many of its TP free as a Signature Technique may cost at
+# your base Tier of Power then; built on its sheet. Kept as gained (racial.mjs grantSignature).
+grantsSignature: Biological Weapon Technique
+description: >
+  The sheer damage you were created to dish out is nothing short of staggering.
+text: >
+  Biological Weapon (Body) [Uncanny Monster]: The sheer damage you were created to dish out is nothing short of staggering.
+  (1)-[Passive]: Upon gaining this Factor Trait, create and gain a Signature Technique with a TP Cost up to the maximum TP Cost for a Signature Technique at your current base Tier of Power.
+  (2)-[Passive]: Increase your maximum amount of Adaptation Points by 1.
+  (3)-[Passive]: If you've gained 2+ Adaptation Points during this Combat Round, increase your Strike and Wound Rolls by 1(T).
+  (4)-[Triggered, 1/Round]: If you use a Signature Technique, you may spend any number of Adaptation Points to gain a number of Energy Charges on that Attacking Maneuver equal to 1/2 of the Adaptation Points spent. For each Adaptation Point spent through this effect, regain 1(bT) Ki Points.
+  (5)-[Triggered/Power, 1/Encounter]: If you have your maximum amount of Adaptation Points, you may spend all of them to enter the Surging State until the end of your next turn. For each Adaptation Point spent, regain 2(bT) Life and Ki Points.
+---
+
+[passive]
+# (2)
+adaptation.max += 1;
+# (3) Counted as they are gained (moments-runtime.mjs stacksGained, `adaptationTwiceThisRound`).
+if (adaptationTwiceThisRound) {
+    strike += 1(T);
+    wound += 1(T);
+}
+
+# (4) Offered in a window as a Signature Technique is declared, with an Adaptation Point to spend: how many, asked - half as many Energy
+# Charges on it, 1(bT) Ki Points each (use-maneuver.mjs, chat.mjs bioWeaponCharges).
+[triggered/declare-maneuver, 1/round, effect 4]
+requires signatureTechnique && hasResource("adaptation");
+bioWeapon.charges = true;
+
+# (5) The Power Up, at your Maximum of Adaptation Points: all of them spent - Surging until the end of your next turn, 2(bT) Life and Ki
+# Points each.
+[triggered/power, 1/encounter, effect 5]
+requires hasResource("adaptation") && !roomFor("adaptation");
+life.value += adaptation.stacks * 2(bT);
+ki.value += adaptation.stacks * 2(bT);
+adaptation.stacks = 0;
+enterState(surging, 1, next-turn);

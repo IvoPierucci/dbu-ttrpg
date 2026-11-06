@@ -721,6 +721,13 @@ const PREDICATES = {
   /** The Surge this Moment is for was taken through the Surge Maneuver itself - Never Surrender (2)'s. */
   bySurgeManeuver: scope => scope.context?.surgeManeuver === true,
 
+  /** 2+ Adaptation Points gained this Combat Round (moments-runtime.mjs stacksGained) - Biological Weapon (3)'s. */
+  adaptationTwiceThisRound: scope => {
+    const held = scope.data?.parent?.getFlag?.("dbu-ttrpg", "adaptationRound");
+    return Boolean(globalThis.game?.combat?.started) && ((Number(held?.count) || 0) >= 2)
+      && (held?.round === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`);
+  },
+
   /** A Snack eaten this Combat Round - Snack Motivated's. */
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,

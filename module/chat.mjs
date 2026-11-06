@@ -1360,6 +1360,22 @@ async function adaptationReductionFor(target, attack, uuid) {
 }
 
 /**
+ * Biological Weapon (4): "If you use a Signature Technique, you may spend any number of Adaptation Points to gain a number of Energy
+ * Charges on that Attacking Maneuver equal to 1/2 of the Adaptation Points spent. For each Adaptation Point spent through this effect,
+ * regain 1(bT) Ki Points." How many, asked; the Charges it comes to (rounded down) for its declaration.
+ */
+export async function bioWeaponCharges(actor) {
+  const held = Number(actor?.system?.resources?.adaptation?.stacks) || 0;
+  if (held <= 0) return 0;
+  const spent = Math.min(held, await askPlayerAmount(actor, `${actor.name}: Biological Weapon`, held,
+    "Adaptation Points - an Energy Charge for every 2, 1(bT) Ki Points each"));
+  if (spent <= 0) return 0;
+  await setResource(actor, "adaptation", held - spent);
+  await regainPools(actor, 0, spent * Math.max(1, Number(actor.system.baseTierOfPower) || 1));
+  return Math.floor(spent / 2);
+}
+
+/**
  * Combat Blueprint (1): "As an Instant Maneuver during your turn, you may spend any number of Power stacks. For each spent Power stack,
  * regain 2(bT) Life and Ki Points. If you spend 2+ stacks through this effect, gain an Adaptation Point." Your turn and a stack to spend
  * are asked before the use is counted (use-maneuver.mjs).

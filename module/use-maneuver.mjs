@@ -6686,7 +6686,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     targets: targetActor ? [targetActor] : []
   }, { quiet: true });
   // What answering it put on the attack - God of Judgment's Energy Charge - within the Profile's ceiling, as any Charge.
-  const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) : 0;
+  // Biological Weapon (4): ticked - Adaptation Points spent, asked; half as many Energy Charges.
+  const bioCharges = (declared && (declaring?.slots?.["bioWeapon.charges"] === true))
+    ? await (await import("./chat.mjs")).bioWeaponCharges(actor) : 0;
+  const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) + bioCharges : 0;
 
   // And what this Maneuver itself does, which is a different question: `declare-maneuver`
   // is heard by everything the character holds, and this is heard only by the Maneuver

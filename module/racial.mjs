@@ -434,6 +434,20 @@ export function ownedRacialTraits(actor) {
 }
 
 /** The Racial Trait of this race a Factor Trait names in brackets to replace - "From Goop (Body) [Majin Regeneration]:" - or null. */
+/**
+ * Biological Weapon (1): "Upon gaining this Factor Trait, create and gain a Signature Technique with a TP Cost up to the maximum TP Cost
+ * for a Signature Technique at your current base Tier of Power" - on the Techniques list, that many of its TP free (none of yours spent
+ * up to it), opened to be built. Kept as gained: nothing takes it away with the Trait.
+ */
+async function grantSignature(actor, item, name) {
+  const { tierTpCap } = await import("./technique.mjs");
+  const cap = tierTpCap(actor.system?.baseTierOfPower);
+  const [made] = await actor.createEmbeddedDocuments("Item", [{ name, type: "maneuver", img: "icons/magic/lightning/bolt-strike-blue.webp",
+    flags: { "dbu-ttrpg": { grantedSignature: item.id } },
+    system: { type: "standard", attacking: true, requiresTarget: true, tags: ["signature"], signature: { level: "super", freeTP: cap } } }]);
+  if (made) await (await import("./chat.mjs")).openForPlayer(actor, made, `${item.name}: build its Signature Technique - up to ${cap} TP, none of yours spent.`);
+}
+
 function replacedTraitOf(file, race) {
   if (!file || !factorOf(file) || !race) return null;
   const named = /^[^:\n]*\)\s*\[([^\]]+)\]\s*:/.exec(String(file.text ?? "").trim())?.[1]?.trim().toLowerCase();
@@ -1018,6 +1032,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   // Seedling Biology (1): the Saibamen's Signature Techniques, the same way.
   const techniques = grantedTechniqueItems(String(trait.grantsTechniques ?? ""), item.id);
   if (techniques.length) await actor.createEmbeddedDocuments("Item", techniques);
+  // Biological Weapon (1): a Signature Technique made as it is gained.
+  if (trait.grantsSignature) await grantSignature(actor, item, String(trait.grantsSignature));
   // Character Perks it gives - More than a Minion (2)'s "an Attribute Addition, a Skill Improvement, and a Talent".
   if (trait.grantsPerk) await grantPerks(actor, item.name, listOf(trait.grantsPerk));
   // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.

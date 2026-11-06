@@ -1,0 +1,6 @@
+id: weapon-of-mass-destruction
+name: Weapon of Mass Destruction
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's). Its own description not given yet.
+requirement: Bio-Android
+maximumFactor: 1
+prerequisites: N/A

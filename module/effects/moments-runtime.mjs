@@ -310,6 +310,13 @@ async function writeStateful(actor, slots) {
  */
 export async function stacksGained(actor, names, counts = {}) {
   const { offerTriggers } = await import("../chat.mjs");
+  // Adaptation Points gained this Combat Round, how many - Biological Weapon (3)'s `adaptationTwiceThisRound`.
+  if (names.includes("adaptation") && globalThis.game?.combat?.started) {
+    const round = `${game.combat.id}:${game.combat.round ?? 0}`;
+    const held = actor.getFlag?.("dbu-ttrpg", "adaptationRound");
+    const count = ((held?.round === round) ? (Number(held.count) || 0) : 0) + Math.max(1, Number(counts.adaptation) || 1);
+    await actor.setFlag?.("dbu-ttrpg", "adaptationRound", { round, count });
+  }
   // Overwhelm's - Redirected Energy's "Upon gaining a stack of Overwhelm" - and Demonic Power's - Demons of the Makyo
   // Star's - with how many.
   // And Power's - Greed of the Hera's "Each time you gain a stack(s) of Power".

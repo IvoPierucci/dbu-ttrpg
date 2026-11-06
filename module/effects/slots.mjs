@@ -352,6 +352,9 @@ const TABLE = [
     doc: "Added to every Combat Roll made answering an Opponent's Attacking Maneuver - the Dodge, a Parry's or another "
        + "defence's Strike, Power Flare's Wound - while no Counter Action is left (chat.mjs respondingParts)." },
   // Lingering Instincts (2).
+  { key: "bioWeapon.charges", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
+    doc: "Biological Weapon (4): ticked as a Signature Technique is declared - how many Adaptation Points, asked; half as many Energy "
+       + "Charges, 1(bT) Ki Points each (use-maneuver.mjs, chat.mjs bioWeaponCharges)." },
   { key: "adaptationSpend.roll", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "Artificial Warrior (2): ticked before a Combat Roll - how many Adaptation Points, asked; 1(T) on its Dice Score each (chat.mjs rollSide)." },
   { key: "lingering.nine", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
