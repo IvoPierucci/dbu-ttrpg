@@ -22450,6 +22450,19 @@ export async function shadowGenesTrade(actor) {
   await requestActorUpdate(actor, { "system.life.value": (Number(life.value) || 0) - lost,
     "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + lost) });
   await answerFor(actor, "life-for-ki", { lostBT: lost / bT });
+  // (6): "If you reduce your Life Points by 8(bT) or more through the second effects of Dragon Genes, gain 2 Adaptation Points" - asked, once
+  // an Encounter (no button: its use is the Encounter's one).
+  const encounter = game.combat?.id ?? "none";
+  if ((lost >= 8 * bT) && (actor.system.effects?.slots?.["shadowDragonGenes.eight"] === true)
+    && (actor.getFlag?.(SCOPE, "shadowEightEncounter") !== encounter)
+    && ((await askPlayerChoice(actor, `${actor.name}: Shadow Dragon Genes`,
+      [{ value: "yes", label: "2 Adaptation Points (1/Encounter)" }, { value: "no", label: "Not now" }])) === "yes")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.shadowEightEncounter`]: encounter });
+    const before = Number(actor.system.resources?.adaptation?.stacks) || 0;
+    await setResource(actor, "adaptation", before + 2);
+    const gained = (Number(actor.system.resources?.adaptation?.stacks) || 0) - before;
+    if (gained > 0) await (await import("./effects/moments-runtime.mjs")).stacksGained(actor, ["adaptation"], { adaptation: gained });
+  }
 }
 
 /**
@@ -22465,6 +22478,45 @@ async function shadowGenesImpair(holder, opponent) {
     [{ value: "yes", label: "An Adaptation Point - Impaired till the start of their next turn" }, { value: "no", label: "No" }])) !== "yes") return;
   await setResource(holder, "adaptation", held - 1);
   await markUntilNextTurn(opponent, opponent, "impaired", 1, "start", "Shadow Dragon Genes");
+}
+
+/**
+ * Defensive Design (5): "You may spend 2 Adaptation Points to use the Defend Maneuver without spending a Counter Action" - asked as its Counter
+ * Action is paid, once an Encounter (no button: its use is the Encounter's one); whether it was.
+ */
+async function defensiveFreeDefend(actor) {
+  const held = Number(actor?.system?.resources?.adaptation?.stacks) || 0;
+  const encounter = game.combat?.id ?? "none";
+  if ((held < 2) || (actor.system.effects?.slots?.["defensiveDesign.defend"] !== true)
+    || (actor.getFlag?.(SCOPE, "defensiveDefendEncounter") === encounter)) return false;
+  if ((await askPlayerChoice(actor, `${actor.name}: Defensive Design - the Defend Maneuver`,
+    [{ value: "yes", label: "2 Adaptation Points - no Counter Action (1/Encounter)" }, { value: "no", label: "Not now" }])) !== "yes") return false;
+  await setResource(actor, "adaptation", held - 2);
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.defensiveDefendEncounter`]: encounter });
+  return true;
+}
+
+/**
+ * Konatsian Genes (6): "If you are below the Injured Health Threshold, you may spend 3 Adaptation Points to enter the Superior State until
+ * the end of your next turn. If you enter the Superior State through this effect, ignore the second effect of the Superior State." Asked as
+ * you are knocked through a Health Threshold and as your turn begins, once an Encounter (no button: its use is the Encounter's one).
+ */
+export async function konatsianSuperior(actor) {
+  const held = Number(actor?.system?.resources?.adaptation?.stacks) || 0;
+  const encounter = game.combat?.id ?? "none";
+  if (!actor || (held < 3) || (actor.system.effects?.slots?.["konatsianSuperior.ask"] !== true)
+    || !["injured", "critical"].includes(actor.system.threshold?.key ?? "")
+    || (actor.getFlag?.(SCOPE, "konatsianSuperiorEncounter") === encounter)) return;
+  if ((await askPlayerChoice(actor, `${actor.name}: Konatsian Genes`,
+    [{ value: "yes", label: "3 Adaptation Points - Superior till the end of your next turn, its 2nd effect ignored (1/Encounter)" },
+      { value: "no", label: "Not now" }])) !== "yes") return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.konatsianSuperiorEncounter`]: encounter });
+  await setResource(actor, "adaptation", held - 3);
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "konatsian-superior-mark", 1);
+  const { expiresAt, enterState } = await import("./effects/moments-runtime.mjs");
+  await expiresAt(actor, "konatsian-superior-mark", "next-turn");
+  await enterState(actor, "superior", 1, "next-turn", "Konatsian Genes");
 }
 
 /**
@@ -37092,9 +37144,10 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
   // Dual Wielding Specialist (2): "Use the Parry effect of the Defend Maneuver without spending a Counter Action" - 2+ Weapons
   // wielded, asked, once a Round (one or the other of its two).
   const dual = !free && !perfect && !angel && (chosen.defence === "parry") && await (await import("./maneuvers.mjs")).askDualParry(target);
-  // Shinjin Genes (6): 2 Adaptation Points for its Counter Action, asked, once a Round.
+  // Shinjin Genes (6): 2 Adaptation Points for its Counter Action, asked, once a Round. Defensive Design (5)'s, once an Encounter.
   const shinjin = !free && !perfect && !dual && !angel && await shinjinFreeCounter(target, "the Defend Maneuver");
-  if (!free && !perfect && !dual && !angel && !shinjin && !await spendActions(target, 1, "counter")) {
+  const designed = !free && !perfect && !dual && !angel && !shinjin && await defensiveFreeDefend(target);
+  if (!free && !perfect && !dual && !angel && !shinjin && !designed && !await spendActions(target, 1, "counter")) {
     // No Counter Action to pay with after all: its Ki back - Angel-Raised's too.
     await refundManeuverCost(target, { name: "Defend", kiCost: cost + (angel ? angelCost : 0) });
     return;

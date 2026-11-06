@@ -17,6 +17,10 @@ text: >
 [passive]
 # [Morale]: its Racial Saving Throw Bonus.
 allow save.racial.morale;
+# (6) Injured or Critical with 3 Adaptation Points - asked as you are knocked through a Health Threshold, and as your turn begins, once an
+# Encounter; no Triggered/Automatic button, the use being the Encounter's one (the user's): Superior till the end of your next turn, its
+# mark waiving the State's 2nd effect for as long (combat.mjs, chat.mjs konatsianSuperior).
+allow konatsianSuperior.ask;
 
 # (1) An attack's Wound Roll with 2+ Adaptation Points spent on it (adaptation-on-roll), below Healthy: 1(T) for each Health Threshold
 # below (chat.mjs rollSide). Automatic by default, its Triggered/Automatic button.
@@ -38,19 +42,3 @@ adaptation.stacks += 1;
 [triggered/start-of-turn, effect 5]
 requires belowThreshold("injured");
 adaptation.stacks += 1;
-
-# (6) Injured or Critical with 3 Adaptation Points - offered as you are knocked through a Health Threshold, and as your turn begins, once
-# an Encounter between the two: Superior till the end of your next turn, its mark waiving the State's 2nd effect for as long.
-[triggered/threshold, 1/encounter, effect 6]
-requires belowThreshold("injured") && stacksAtLeast(3, "adaptation");
-adaptation.stacks -= 3;
-gain(konatsian-superior-mark);
-expires(konatsian-superior-mark, next-turn);
-enterState(superior, 1, next-turn);
-
-[triggered/start-of-turn, 1/encounter, effect 6]
-requires belowThreshold("injured") && stacksAtLeast(3, "adaptation");
-adaptation.stacks -= 3;
-gain(konatsian-superior-mark);
-expires(konatsian-superior-mark, next-turn);
-enterState(superior, 1, next-turn);

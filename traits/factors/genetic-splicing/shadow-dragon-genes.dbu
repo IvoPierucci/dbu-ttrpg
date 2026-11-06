@@ -23,6 +23,9 @@ racialLifeModifier += 2;
 # (4) An Opponent not at Long Range scoring a Botch on an attack's card, with an Adaptation Point: asked - Impaired till the start of
 # their next turn (chat.mjs shadowGenesImpair).
 allow shadowDragonGenes.impair;
+# (6) 8(bT) or more traded through (2): asked, once an Encounter - no Triggered/Automatic button, the use being the Encounter's one (the
+# user's): 2 Adaptation Points (chat.mjs shadowGenesTrade).
+allow shadowDragonGenes.eight;
 
 # (2) Your turn begins: how much Life, up to 8(bT), asked - as much Ki (chat.mjs shadowGenesTrade); then its Moment, what was traded
 # (life-for-ki). Automatic by default, its Triggered/Automatic button.
@@ -33,11 +36,7 @@ shadowGenesTrade();
 [triggered/adaptation-gained, effect 3]
 ki.value += 1(bT);
 
-# (5), (6) What (2) traded. Automatic by default, their Triggered/Automatic buttons.
+# (5) What (2) traded. Automatic by default, its Triggered/Automatic button.
 [triggered/life-for-ki, 1/round, effect 5]
 requires lostAtLeastBT(4);
 adaptation.stacks += 1;
-
-[triggered/life-for-ki, 1/encounter, effect 6]
-requires lostAtLeastBT(8);
-adaptation.stacks += 2;

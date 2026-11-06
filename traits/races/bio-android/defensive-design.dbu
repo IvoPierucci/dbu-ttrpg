@@ -18,6 +18,9 @@ text: >
 # (1), (2)
 criticalTarget.dodge -= 1;
 damageReduction += 1(T);
+# (5) Defending with 2 Adaptation Points: asked as its Counter Action is paid, once an Encounter - no Triggered/Automatic button, the use
+# being the Encounter's one (the user's): the 2 for it instead (chat.mjs defensiveFreeDefend).
+allow defensiveDesign.defend;
 
 # (3) An Adaptation Point gained (adaptation-gained). Automatic by default, its Triggered/Automatic button.
 [triggered/adaptation-gained, 3/round, effect 3]
@@ -27,9 +30,3 @@ life.value += 1(bT);
 [triggered/critical-scored, 3/round, effect 4]
 requires dodgeRolled;
 adaptation.stacks += 1;
-
-# (5) Ticked in Respond as you Defend, with 2 Adaptation Points to spend: no Counter Action for it, the 2 spent.
-[triggered/defending, 1/encounter, effect 5]
-requires stacksAtLeast(2, "adaptation");
-defend.free = true;
-adaptation.stacks -= 2;

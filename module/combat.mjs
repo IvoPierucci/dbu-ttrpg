@@ -495,6 +495,8 @@ async function beginTurn(actor) {
   // Galaxy at the Brink (3): Greed of the Hera's 7th ignored and a Ki Surge - asked before the Moment it would answer.
   await (await import("./chat.mjs")).galaxyHoldsPower(actor);
   const { slots } = await fireMoment(actor, "start-of-turn");
+  // Konatsian Genes (6): asked, once an Encounter.
+  await (await import("./chat.mjs")).konatsianSuperior(actor);
 
   // Defeated keeps its place in the Initiative Order and is only skipped, so that
   // getting back up puts the character straight back into the round. Slowed at three
@@ -1543,6 +1545,8 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
   }
   // And where from - "[Triggered/Injured]" asks for the Injured one crossed (From the Stars', knockedThrough).
   await fireMoment(actor, "threshold", { threshold: now, from: before, knockerUuid: knockedBy });
+  // Konatsian Genes (6): asked, once an Encounter.
+  await (await import("./chat.mjs")).konatsianSuperior(actor);
   // And for whoever knocked them through - an Opponent's Attacking Maneuver's Damage: Inherited Aggression's Battle Born.
   const knocker = knockedBy ? fromUuidSync(knockedBy) : null;
   if (knocker && (knocker.uuid !== actor.uuid)) {
