@@ -199,6 +199,16 @@
   </div>
   {{/if}}
 
+  {{! What Add Racial Trait and Add Other Trait offer: ticked, the Traits greyed as not this character's are left out. }}
+  <section class="panel">
+    <h3 class="panel-title">Trait lists</h3>
+    <label class="debug-toggle"
+           data-tooltip="Add Racial Trait and Add Other Trait leave out the Traits shown greyed - those of another race, or that you should not have.">
+      <input type="checkbox" name="system.hideUnfitTraits" {{#if system.hideUnfitTraits}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
+      Only Traits you may have
+    </label>
+  </section>
+
   {{! Turning the round and the Encounter over by hand - for a table playing without a formal Encounter, and for putting
       things right when one gets out of step. A Combat does the round on its own. }}
   <section class="panel">

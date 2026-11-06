@@ -1555,6 +1555,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     schema.duplicateOf = new fields.StringField({ required: true, blank: true, initial: "" });
     // Minion Creation, Step 11: "Gain a Minion Trait or increase your Life Points by 2 for every Power Level you reach" - the second.
     schema.minionLifeStep = new fields.BooleanField({ required: true, initial: false });
+    // The Settings tab's "Only Traits you may have": Add Racial Trait and Add Other Trait leave out, rather than grey, the ones that are
+    // not this character's to take (the user's).
+    schema.hideUnfitTraits = new fields.BooleanField({ required: true, initial: false });
 
     // Whether this character is Adventuring - what a Buddy's Adventure Effect waits on. A switch
     // on the Biography tab, by the table's ruling: off when a Combat Encounter starts, on again

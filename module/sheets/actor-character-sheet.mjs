@@ -6178,9 +6178,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onAddRacialTrait() {
     if (!this.isEditable) return;
     const had = new Set(this.actor.system.racialTraits ?? []);
-    const traits = racialTraitsInOrder(this.actor.system.race, undefined, this.actor.system.effects?.slots);
     // A Minion's: its race's Secondary and Subrace Traits, two at most (Minion Creation, Step 2).
     const held = [...had].map(id => getTrait(id)).filter(Boolean);
+    // Not this character's to take - dimmed, and why on hover; still taken if picked (the user's). Left out altogether where the Settings
+    // tab's "Only Traits you may have" is ticked.
+    const unfitOf = trait => racialTraitUnfit(trait, this.actor.system.race, this.actor.system.subrace, this.actor.system.effects?.slots)
+      || minionRacialUnfit(trait, this.actor, held);
+    const traits = racialTraitsInOrder(this.actor.system.race, undefined, this.actor.system.effects?.slots)
+      .filter(trait => !this.actor.system.hideUnfitTraits || had.has(trait.id) || !unfitOf(trait));
     if (!traits.length) {
       ui.notifications.info("There are no Racial Traits to add yet.");
       return;
@@ -6196,9 +6201,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
                placeholder="Type a Racial Trait"/>
         <ol class="gear-quality-list" data-feature-list>
           ${traits.map(trait => {
-            // Not this character's to take - dimmed, and why on hover; still taken if picked (the user's).
-            const unfit = racialTraitUnfit(trait, this.actor.system.race, this.actor.system.subrace, this.actor.system.effects?.slots)
-              || minionRacialUnfit(trait, this.actor, held);
+            const unfit = unfitOf(trait);
             return `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : (unfit ? " unfit" : "")}"
             data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
             ${(trait.kind === "factors") ? `data-also="${escape(factorName(trait.owner))}"` : ""}
@@ -6250,7 +6253,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onAddOtherTrait() {
     if (!this.isEditable) return;
     const had = new Set(this.actor.system.racialTraits ?? []);
-    const traits = otherTraitsInOrder();
+    // The Settings tab's "Only Traits you may have": the ones greyed left out.
+    const traits = otherTraitsInOrder().filter(trait => !this.actor.system.hideUnfitTraits || had.has(trait.id)
+      || !otherTraitUnfit(trait, this.actor.system.race));
     if (!traits.length) {
       ui.notifications.info("There are no Other Traits to add yet.");
       return;
