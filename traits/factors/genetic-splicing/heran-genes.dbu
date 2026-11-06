@@ -30,8 +30,8 @@ allow heranGenes.powerInstant;
 allow heranGenes.area;
 allow heranGenes.magnitude;
 
-# (5) Your turn begins with Power: how many of up to 2 stacks, asked - an Adaptation Point each (chat.mjs heranGenesTrade). Automatic by
-# default, its Triggered/Automatic button.
-[triggered/start-of-turn, effect 5]
+# (5) Your turn begins with Power: how many of up to 2 stacks, asked - an Adaptation Point each (chat.mjs heranGenesTrade). It spends
+# Power: no Triggered/Automatic button, ticked on the turn's card (the user's).
+[triggered/start-of-turn, chosen, effect 5]
 requires hasResource("power");
 heranGenesTrade();

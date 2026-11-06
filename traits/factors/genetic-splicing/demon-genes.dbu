@@ -25,8 +25,8 @@ allow save.racial.cognitive;
 
 # (1) Your turn begins: the 1d10 on its own card, its Option's change to it said - 6+ Superior, 5 or less Impediment, both till the end of
 # this turn; (3) at a 1 (or less, Makyan Genes'), every Adaptation Point lost, or Fatigued till the end of the turn with none; the Option's
-# own (chat.mjs demonGenesRoll). Automatic by default, its Triggered/Automatic button.
-[triggered/start-of-turn, effect 1]
+# own (chat.mjs demonGenesRoll). No Triggered/Automatic button - it may go wrong: ticked on the turn's card (the user's).
+[triggered/start-of-turn, chosen, effect 1]
 demonGenesRoll();
 
 # (2) The roll answered (demon-genes-rolled): 8+ an Adaptation Point, 10 (or more) two. Automatic by default, its Triggered/Automatic

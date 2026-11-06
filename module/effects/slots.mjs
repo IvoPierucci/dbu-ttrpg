@@ -361,6 +361,8 @@ const TABLE = [
     doc: "Konatsian Genes (1): 1(T) on this Wound Roll for each Health Threshold below (chat.mjs rollSide)." },
   { key: "konatsianSoak.depth", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "Konatsian Genes (2): Soak 1(T) for each Health Threshold below, for this attack (chat.mjs adaptationReductionFor)." },
+  { key: "phantomGenes.remove", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
+    doc: "Demon Genes' Phantom Genes: Impaired, Broken, Impediment or Guard Down off, which asked (chat.mjs demonGenesRoll)." },
   { key: "battleCreation.three", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "Saiyan Genes (5): Battle Creation to 3, its mark letting 3 stand till the Encounter ends (chat.mjs saiyanGenesPassed)." },
   { key: "focusAngel.natural", phase: PHASES.REACTIVE, kind: F, ops: ["set"],

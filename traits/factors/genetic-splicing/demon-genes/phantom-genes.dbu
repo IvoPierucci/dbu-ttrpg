@@ -10,6 +10,8 @@ text: >
 
 ---
 
-# Read by Demon Genes' roll (chat.mjs demonGenesRoll).
-[passive]
-allow demonGenes.phantom;
+# Into Superior through Demon Genes' roll (demon-genes-superior), once a Round: which of the four off, asked where there are several
+# (chat.mjs demonGenesRoll). Automatic by default, its Triggered/Automatic button (the user's).
+[triggered/demon-genes-superior, 1/round, effect 5]
+requires hasCondition("impaired") || hasCondition("broken") || hasCondition("impediment") || hasCondition("guard-down");
+phantomGenes.remove = true;

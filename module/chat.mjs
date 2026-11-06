@@ -22613,15 +22613,14 @@ export async function demonGenesRoll(actor) {
       await (await import("./effects/moments-runtime.mjs")).stacksGained(actor, ["adaptation"], { adaptation: 1 });
     }
   }
-  if (superior && (slots["demonGenes.phantom"] === true) && (actor.getFlag?.(SCOPE, "phantomGenesRound") !== roundKey())) {
+  // Phantom Genes: its Moment - Automatic or asked in its window, as its button says; which of the four, asked where there are several.
+  const phantom = superior ? await answerFor(actor, "demon-genes-superior", {}) : null;
+  if (phantom?.slots?.["phantomGenes.remove"] === true) {
     const { getTrait } = await import("./effects/traits.mjs");
     const held = ["impaired", "broken", "impediment", "guard-down"].filter(key => (Number(actor.system.conditions?.[key]) || 0) > 0);
-    const key = held.length ? await askPlayerChoice(actor, `${actor.name}: Phantom Genes`,
-      [...held.map(each => ({ value: each, label: getTrait(each)?.name ?? each })), { value: "none", label: "None" }]) : "none";
-    if (held.includes(key)) {
-      await requestActorUpdate(actor, { [`flags.${SCOPE}.phantomGenesRound`]: roundKey() });
-      await (await import("./conditions.mjs")).setCondition(actor, key, 0);
-    }
+    const key = (held.length === 1) ? held[0] : await askPlayerChoice(actor, `${actor.name}: Phantom Genes`,
+      held.map(each => ({ value: each, label: getTrait(each)?.name ?? each })));
+    if (held.includes(key)) await (await import("./conditions.mjs")).setCondition(actor, key, 0);
   }
   await answerFor(actor, "demon-genes-rolled", { natural });
 }
