@@ -27,12 +27,15 @@ if (!hasResource("adaptation")) {
     defenseValue += 1(T);
     soakValue += 1(T);
 }
-# (5) Adaptation Points spent on a Combat Roll: asked - 1 on its Natural Result each, 2 at most (chat.mjs rollSide).
-allow focusAngel.natural;
 
 # (4) Adaptation Points spent, however (adaptation-spent): 2(bT) Life each. Automatic by default, its Triggered/Automatic button.
 [triggered/adaptation-spent, effect 4]
 life.value += 2(bT) * spent;
+
+# (5) Adaptation Points spent on a Combat Roll (adaptation-on-roll): 1 on its Natural Result each, 2 at most (chat.mjs rollSide). Automatic
+# by default, its Triggered/Automatic button.
+[triggered/adaptation-on-roll, effect 5]
+focusAngel.natural = true;
 
 # (6) Knocked into the Injured Health Threshold, or past it: a Healing Surge out of sequence - chosen, never Automatic.
 [triggered/threshold, outOfSequence, effect 6]

@@ -9579,11 +9579,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if (adapted) parts.push({ label: `Adaptation Points (${adapted})${adaptDoubled ? " x2 (Earthling Genes)" : ""}`,
     value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) * (adaptDoubled ? 2 : 1) });
   // Genetic Focus: Angel (5): "If you spend Adaptation Points on a Combat Roll, increase its Natural Result by 1 for each Adaptation Point
-  // spent (max. +2)" - asked.
-  if (adapted && (actor.system.effects?.slots?.["focusAngel.natural"] === true)) {
-    const more = Math.min(2, adapted);
-    if ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Angel`, [
-      { value: "yes", label: `Natural Result +${more}` }, { value: "no", label: "No" }])) === "yes") naturalAdd = (Number(naturalAdd) || 0) + more;
+  // spent (max. +2)" - its Moment, Automatic or asked in its window as its button says.
+  if (adapted) {
+    const onRoll = await answerFor(actor, "adaptation-on-roll", { spent: adapted });
+    if (onRoll?.slots?.["focusAngel.natural"] === true) naturalAdd = (Number(naturalAdd) || 0) + Math.min(2, adapted);
   }
   // Yardrat Genes (2): "If an Ally makes a Combat Roll, you can spend any number of Adaptation Points on that Combat Roll. For each
   // Adaptation Point spent, increase that Combat Roll by 1(T)" - asked of each Ally on the scene who has it, their Tier.
