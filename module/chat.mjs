@@ -1358,12 +1358,10 @@ async function adaptationReductionFor(target, attack, uuid) {
       [{ value: "down", label: "This attack's Damage Category one down" }, { value: "no", label: "No" }])) === "down");
   if (step) await requestActorUpdate(target, { [`flags.${SCOPE}.blueprintSurvivorRound`]: roundKey() });
   // Konatsian Genes (2): "increase your Soak Value by 1(T) for each Health Threshold you are below for the duration of that Attacking
-  // Maneuver" - with 2+ spent, asked.
-  const depth = Number(target.system.threshold?.depth) || 0;
-  const soak = ((spent >= 2) && (depth > 0) && (target.system.effects?.slots?.["konatsianGenes.soak"] === true)
-    && ((await askPlayerChoice(target, `${target.name}: Konatsian Genes`, [
-      { value: "yes", label: `Soak +${depth * Math.max(1, Number(target.system.tierOfPower) || 1)} for this attack` },
-      { value: "no", label: "No" }])) === "yes")) ? depth * Math.max(1, Number(target.system.tierOfPower) || 1) : 0;
+  // Maneuver" - its Moment, Automatic or asked in its window as its button says.
+  const onHit = spent ? await answerFor(target, "adaptation-on-hit", { spent }) : null;
+  const soak = (onHit?.slots?.["konatsianSoak.depth"] === true)
+    ? (Number(target.system.threshold?.depth) || 0) * Math.max(1, Number(target.system.tierOfPower) || 1) : 0;
   return { value: spent * Math.max(1, Number(target.system.tierOfPower) || 1), step: step ? 1 : 0, soak };
 }
 
@@ -9578,11 +9576,29 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const adaptDoubled = (slot === "wound") && signatureRoll && (actor.system.effects?.slots?.["earthlingGenes.signatureWound"] === true);
   if (adapted) parts.push({ label: `Adaptation Points (${adapted})${adaptDoubled ? " x2 (Earthling Genes)" : ""}`,
     value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) * (adaptDoubled ? 2 : 1) });
+  // Adaptation Points spent on this roll - or, an attack's Wound Roll, on its Strike: their Moment, each effect answering it Automatic or
+  // asked in its window as its button says.
+  const onRoll = (collect && (adapted || ((slot === "wound") && attackingManeuver && strikeAdapted)))
+    ? await answerFor(actor, "adaptation-on-roll", { spent: adapted, strikeSpent: strikeAdapted, rollKind: slot ?? "",
+      ...(attackingManeuver ? { attackRoll: true } : {}) })
+    : null;
   // Genetic Focus: Angel (5): "If you spend Adaptation Points on a Combat Roll, increase its Natural Result by 1 for each Adaptation Point
-  // spent (max. +2)" - its Moment, Automatic or asked in its window as its button says.
-  if (adapted) {
-    const onRoll = await answerFor(actor, "adaptation-on-roll", { spent: adapted });
-    if (onRoll?.slots?.["focusAngel.natural"] === true) naturalAdd = (Number(naturalAdd) || 0) + Math.min(2, adapted);
+  // spent (max. +2)".
+  if (onRoll?.slots?.["focusAngel.natural"] === true) naturalAdd = (Number(naturalAdd) || 0) + Math.min(2, adapted);
+  // Arcosian Genes (4): Genetic Aggressor - "increase the Wound Roll by the Apparel Bonus of your Plating"; Genetic Agility - "increase the
+  // Dice Score by 1/2 of your Plating's Apparel Bonus".
+  if (onRoll?.slots?.["arcosianWound.plating"] === true) {
+    const value = platingBonus(actor);
+    if (value) parts.push({ label: "Arcosian Genes (Plating)", value });
+  }
+  if (onRoll?.slots?.["arcosianDodge.plating"] === true) {
+    const value = Math.floor(platingBonus(actor) / 2);
+    if (value) parts.push({ label: "Arcosian Genes (1/2 Plating)", value });
+  }
+  // Konatsian Genes (1): "increase your Wound Roll for that Attacking Maneuver by 1(T) for each Health Threshold you are below".
+  if (onRoll?.slots?.["konatsianWound.depth"] === true) {
+    const value = (Number(actor.system.threshold?.depth) || 0) * Math.max(1, Number(actor.system.tierOfPower) || 1);
+    if (value) parts.push({ label: "Konatsian Genes", value });
   }
   // Yardrat Genes (2): "If an Ally makes a Combat Roll, you can spend any number of Adaptation Points on that Combat Roll. For each
   // Adaptation Point spent, increase that Combat Roll by 1(T)" - asked of each Ally on the scene who has it, their Tier.
@@ -9623,17 +9639,6 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       parts.push({ label: "Genes of Hatred", value });
     }
   }
-  // Konatsian Genes (1): 2+ spent on an attack's Wound Roll - "increase your Wound Roll for that Attacking Maneuver by 1(T) for each Health
-  // Threshold you are below", asked.
-  const konatsianDepth = Number(actor.system.threshold?.depth) || 0;
-  if ((slot === "wound") && attackingManeuver && (adapted >= 2) && (konatsianDepth > 0)
-    && (actor.system.effects?.slots?.["konatsianGenes.wound"] === true)) {
-    const value = konatsianDepth * Math.max(1, Number(actor.system.tierOfPower) || 1);
-    if ((await askPlayerChoice(actor, `${actor.name}: Konatsian Genes`, [
-      { value: "yes", label: `Wound Roll +${value} (1(T) for each Health Threshold below)` }, { value: "no", label: "No" }])) === "yes") {
-      parts.push({ label: "Konatsian Genes", value });
-    }
-  }
   // Android Cybernetics (5): 2+ spent on a Signature Technique's Wound Roll - "apply an Energy Charge to that Attacking Maneuver", asked,
   // once an Encounter: its dice on this Wound Roll.
   if (oneCharge && (slot === "wound") && (adapted >= 2) && (actor.system.effects?.slots?.["androidCybernetics.charge"] === true)
@@ -9652,16 +9657,6 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     await requestActorUpdate(actor, { [`flags.${SCOPE}.warriorClanRound`]: roundKey() });
     parts.push({ label: "Genes of a Warrior Clan", value: clanAdd });
   }
-  // Arcosian Genes (4), with 2+ Adaptation Points spent - asked. Genetic Aggressor, on an attack's Wound Roll, spent on it or on its Strike
-  // Roll: "increase the Wound Roll by the Apparel Bonus of your Plating". Genetic Agility, on a Dodge Roll: "increase the Dice Score by 1/2
-  // of your Plating's Apparel Bonus".
-  const genes = !collect ? "" : (((slot === "wound") && attackingManeuver && ((adapted >= 2) || (strikeAdapted >= 2))) ? "aggressor"
-    : (((slot === "dodge") && (adapted >= 2)) ? "agility" : ""));
-  const plating = (genes && (actor.system.effects?.slots?.[`arcosianGenes.${genes}`] === true)) ? platingBonus(actor) : 0;
-  const platingAdd = (genes === "aggressor") ? plating : Math.floor(plating / 2);
-  if (platingAdd && ((await askPlayerChoice(actor, `${actor.name}: Arcosian Genes`, [
-    { value: "yes", label: `${(genes === "aggressor") ? "Wound" : "Dodge"} Roll +${platingAdd} (your Plating)` },
-    { value: "no", label: "No" }])) === "yes")) parts.push({ label: "Arcosian Genes (Plating)", value: platingAdd });
   const baseDie = lingering ? { ...(answered.slots.baseDie ?? {}), add: 0, multiply: 1, set: 9, min: null, max: null }
     : (answered?.slots?.baseDie ?? null);
   const forcedNatural = baseDie?.set ?? null;

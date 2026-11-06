@@ -35,6 +35,7 @@ life.value += 2(bT) * spent;
 # (5) Adaptation Points spent on a Combat Roll (adaptation-on-roll): 1 on its Natural Result each, 2 at most (chat.mjs rollSide). Automatic
 # by default, its Triggered/Automatic button.
 [triggered/adaptation-on-roll, effect 5]
+requires spentAtLeast(1);
 focusAngel.natural = true;
 
 # (6) Knocked into the Injured Health Threshold, or past it: a Healing Surge out of sequence - chosen, never Automatic.

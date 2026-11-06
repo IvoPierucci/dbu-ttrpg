@@ -17,10 +17,18 @@ text: >
 [passive]
 # [Morale]: its Racial Saving Throw Bonus.
 allow save.racial.morale;
-# (1) An attack's Wound Roll with 2+ Adaptation Points spent on it: asked - 1(T) for each Health Threshold below (chat.mjs rollSide).
-# (2) 2+ spent as a hit is settled: asked - Soak 1(T) for each for that attack (chat.mjs adaptationReductionFor).
-allow konatsianGenes.wound;
-allow konatsianGenes.soak;
+
+# (1) An attack's Wound Roll with 2+ Adaptation Points spent on it (adaptation-on-roll), below Healthy: 1(T) for each Health Threshold
+# below (chat.mjs rollSide). Automatic by default, its Triggered/Automatic button.
+[triggered/adaptation-on-roll, effect 1]
+requires attackWoundRolled && spentAtLeast(2) && belowThreshold("bruised");
+konatsianWound.depth = true;
+
+# (2) 2+ spent as a hit is settled (adaptation-on-hit), below Healthy: Soak 1(T) for each for that attack (chat.mjs adaptationReductionFor).
+# Automatic by default, its Triggered/Automatic button.
+[triggered/adaptation-on-hit, effect 2]
+requires spentAtLeast(2) && belowThreshold("bruised");
+konatsianSoak.depth = true;
 
 # (4) An Ally of yours on the scene Defeated (ally-defeated). Automatic by default, its Triggered/Automatic button.
 [triggered/ally-defeated, effect 4]

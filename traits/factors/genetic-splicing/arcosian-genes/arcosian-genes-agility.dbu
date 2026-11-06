@@ -12,7 +12,8 @@ text: >
 
 ---
 
-# Asked on a Dodge Roll with 2+ Adaptation Points spent on it - half your Plating's Apparel Bonus on it, rounded down (chat.mjs
-# rollSide, platingBonus).
-[passive]
-allow arcosianGenes.agility;
+# A Dodge Roll with 2+ Adaptation Points spent on it (adaptation-on-roll): half your Plating's Apparel Bonus on it, rounded down (chat.mjs
+# rollSide, platingBonus). Automatic by default, its Triggered/Automatic button.
+[triggered/adaptation-on-roll, effect 4]
+requires dodgeRolled && spentAtLeast(2);
+arcosianDodge.plating = true;

@@ -710,12 +710,19 @@ const PREDICATES = {
   strikeOrWound: scope => ["strike", "wound"].includes(String(scope.context?.rollKind ?? "")),
   /** The Life Points a trade lost were that many base Tiers' worth or more - life-for-ki's `lostBT` (Shadow Dragon Genes'). */
   lostAtLeastBT: (scope, amount) => (Number(scope.context?.lostBT) || 0) >= (Number(amount?.value ?? amount) || 0),
+  /** The Adaptation Points spent, as the Moment carries them, are that many or more (adaptation-on-roll, adaptation-on-hit). */
+  spentAtLeast: (scope, amount) => (Number(scope.context?.spent) || 0) >= (Number(amount?.value ?? amount) || 0),
+  /** Those on this Wound Roll or on its attack's Strike Roll, the more of the two (Arcosian Genes' Genetic Aggressor). */
+  attackSpentAtLeast: (scope, amount) => Math.max(Number(scope.context?.spent) || 0, Number(scope.context?.strikeSpent) || 0)
+    >= (Number(amount?.value ?? amount) || 0),
   /** The Natural Result the Moment carries is that or more - Demon Genes' 1d10 (demon-genes-rolled). */
   naturalAtLeast: (scope, amount) => (Number(scope.context?.natural) || 0) >= (Number(amount?.value ?? amount) || 0),
   /** The attack that dealt the Damage was a Signature Technique - damaged-opponent's `bySignature` (Earthling Genes'). */
   bySignatureTechnique: scope => Boolean(scope.context?.bySignature),
   /** And an Attacking Maneuver's Strike Roll (Cerealian Genes'). */
   attackStrikeRolled: scope => (String(scope.context?.rollKind ?? "") === "strike") && Boolean(scope.context?.attackRoll),
+  /** And an Attacking Maneuver's Wound Roll (Arcosian Genes', Konatsian Genes'). */
+  attackWoundRolled: scope => (String(scope.context?.rollKind ?? "") === "wound") && Boolean(scope.context?.attackRoll),
   /** And a Dodge Roll (Defensive Design's). */
   dodgeRolled: scope => String(scope.context?.rollKind ?? "") === "dodge",
 

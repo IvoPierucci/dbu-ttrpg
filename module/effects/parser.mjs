@@ -488,7 +488,7 @@ const PREDICATE_NAMES = new Set([
   // Defense's).
   "ofFoundation", "focusedOn",
   // The Natural Result a Moment carries (Demon Genes').
-  "naturalAtLeast", "lostAtLeastBT",
+  "naturalAtLeast", "lostAtLeastBT", "spentAtLeast", "attackSpentAtLeast",
   "wearing", "inEnvironment",
   // Elemental Adaptation's: a Profile some Battle Weather is connected to.
   "weatherConnected", "holdsTrait", "inWeather",
@@ -537,7 +537,7 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // The Movement Maneuver used this Combat Round (Terrifying Speed's); a Battle Weather on you not felt (Survivalist's).
   "movedThisRound", "weatherUnfelt",
   // The Critical Result answered was on a Strike or Wound Roll (Offensive Design's).
-  "strikeOrWound", "dodgeRolled", "attackStrikeRolled", "bySignatureTechnique",
+  "strikeOrWound", "dodgeRolled", "attackStrikeRolled", "bySignatureTechnique", "attackWoundRolled",
   // 2+ Adaptation Points gained this Combat Round (Biological Weapon's).
   "adaptationTwiceThisRound",
   // The Maneuver declared an Attacking Maneuver or a Unique Ability (Reserved Combatant's); a Surge through the Surge Maneuver

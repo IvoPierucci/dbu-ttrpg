@@ -12,7 +12,8 @@ text: >
 
 ---
 
-# Asked on its Wound Roll, 2+ Adaptation Points spent on it or on its Strike Roll - your Plating's Apparel Bonus on it (chat.mjs
-# rollSide, platingBonus).
-[passive]
-allow arcosianGenes.aggressor;
+# An attack's Wound Roll with 2+ Adaptation Points spent on it or on its Strike Roll (adaptation-on-roll): your Plating's Apparel Bonus on
+# it (chat.mjs rollSide, platingBonus). Automatic by default, its Triggered/Automatic button.
+[triggered/adaptation-on-roll, effect 4]
+requires attackWoundRolled && attackSpentAtLeast(2);
+arcosianWound.plating = true;

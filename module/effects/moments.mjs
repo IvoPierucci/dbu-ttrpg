@@ -162,8 +162,13 @@ const TABLE = [
     doc: "Fired for each one an attack is aimed at as it is declared, its maker aside (chat.mjs postAttack) - Majin Genes'. What is "
        + "the player's is asked in a window first." },
   { key: "adaptation-on-roll", label: "You spend Adaptation Points on a Combat Roll", provides: [],
-    doc: "Fired as Adaptation Points are spent on a Combat Roll of yours, before it is rolled (`spent`, how many; chat.mjs rollSide) - "
-       + "Genetic Focus: Angel's (5). What is the player's is asked in a window first." },
+    doc: "Fired as Adaptation Points are spent on a Combat Roll of yours, before it is rolled (`spent`, how many; `strikeSpent`, those on "
+       + "its attack's Strike, where this is its Wound; `rollKind`, `attackRoll`; chat.mjs rollSide) - and on an attack's Wound Roll where "
+       + "only its Strike had them - Genetic Focus: Angel's (5), Arcosian Genes', Konatsian Genes' (1). What is the player's is asked in a "
+       + "window first." },
+  { key: "adaptation-on-hit", label: "You spend Adaptation Points as you are hit", provides: [],
+    doc: "Fired as Adaptation Points are spent on Damage Reduction as a hit is settled (`spent`; chat.mjs adaptationReductionFor) - "
+       + "Konatsian Genes' (2). What is the player's is asked in a window first." },
   { key: "adaptation-spent", label: "You spend Adaptation Points", provides: [],
     doc: "Fired as Adaptation Points are spent, by an effect's script or a spending asked (`spent`, how many) - not lost, as Demon "
        + "Genes' (3) loses them (chat.mjs setResource, moments-runtime.mjs writeStateful) - Genetic Focus: Angel's. What is the "
