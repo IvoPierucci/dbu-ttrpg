@@ -450,7 +450,8 @@ async function grantSignature(actor, item, name) {
 
 function replacedTraitOf(file, race) {
   if (!file || !factorOf(file) || !race) return null;
-  const named = /^[^:\n]*\)\s*\[([^\]]+)\]\s*:/.exec(String(file.text ?? "").trim())?.[1]?.trim().toLowerCase();
+  // Up to its first "(Category) [Trait]:" - its name may have a colon of its own (Genetic Focus: Android).
+  const named = /^[^\n]*?\)\s*\[([^\]]+)\]\s*:/.exec(String(file.text ?? "").trim())?.[1]?.trim().toLowerCase();
   if (!named) return null;
   return racialTraitFiles().find(each => !factorOf(each) && (each.owner === race) && (String(each.name).toLowerCase() === named)) ?? null;
 }

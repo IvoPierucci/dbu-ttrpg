@@ -1,0 +1,16 @@
+id: focus-power-absorption
+# Technological Being's Option, copied for Genetic Focus: Android (4).
+name: Power Absorption
+order: 3
+optionOf: genetic-focus-android
+optionEffect: 4
+description: >
+  You gain access to the Power Drain and Attack Absorption Special Maneuvers (see — Special Maneuers).
+text: >
+  Power Absorption [Passive]: You gain access to the Power Drain and Attack Absorption Special Maneuvers (see — Special Maneuers).
+
+---
+
+[passive]
+allow maneuver.power-drain;
+allow maneuver.attack-absorption;

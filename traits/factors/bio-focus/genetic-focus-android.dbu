@@ -1,0 +1,32 @@
+id: genetic-focus-android
+name: Genetic Focus: Android
+order: 1
+category: body
+# "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Android Cybernetics Factor
+# Trait, shown and never enforced.
+importance: primary
+# (4) Its two Options, chosen as it is gained - Technological Being's ten, copied beside it (`focus-*`).
+optionEffect: 4
+description: >
+  Though your genes are entirely artificial, your cybernetic enhancements are even more prominent.
+text: >
+  Genetic Focus: Android (Body) [Uncanny Monster]: Though your genes are entirely artificial, your cybernetic enhancements are even more prominent.
+  (1)-[Prerequisite]: Android Cybernetics Factor Trait.
+  (2)-[Passive]: Double the amount of Ki Points you gain through the 4th effect of Android Cybernetics.
+  (3)-[Passive]: Increase your Surgency by 2(T).
+  (4)-[Multi-Option/2]: Upon gaining this Factor, choose two of the following effects to have access to while you possess this Trait:
+  * Surging Power [Triggered/Power]: Spend 3(bT) Ki Points to gain an additional stack of Power.
+  * Weapon Ports [Passive, Ruling]: At Character Creation, create 2 Weapons with a Craftsmanship Grade of 2 that have different Weapon Types. These Weapons possess the Artisan Weapon Quality (1 Slot). These Weapons are known as your ‘Installed Weapons’, are Integrated into your Character, and cannot be destroyed through any means.
+  * Power Absorption [Passive]: You gain access to the Power Drain and Attack Absorption Special Maneuvers (see — Special Maneuvers).
+  * Hyper Resilience [Triggered, 2/Round]: If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no Damage.
+  * Enhanced Reflexes [Triggered, 1/Round]: When you are the target of an Attacking Maneuver, you may choose to ignore all of your stacks of Diminishing Defense against that Attacking Maneuver. If you possess no stacks of Diminishing Defense, then apply your Greater Dice to this Dodge Roll.
+  * Weapon Style [Passive]: You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points.
+  * Heroic Style [Triggered]: Increase your Combat Rolls by 1(T) until the end of your turn when you use the Hype Maneuver.
+  * Calculating Style [Triggered]: Increase your Combat Rolls by 1(T) until the end of your turn when you use the Analysis Maneuver.
+  * Alternate Scale Structure [Passive]: Upon gaining this effect, select either the Tiny Size Category or the Enormous Size Category. That selected Size Category becomes your base Size Category. Additionally, if you choose Tiny, increase your Soak Value by 1(T) and if you choose Enormous, increase your Defense Value by 1(T).
+  * Extension Feature [Passive]: You possess the Extension Attack Monstrous Trait.
+---
+
+[passive]
+# (2) In Android Cybernetics' own (4), its Ki once more where this is held (`holdsTrait`). (3)
+surgency += 2(T);

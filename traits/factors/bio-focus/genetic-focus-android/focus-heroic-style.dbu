@@ -1,0 +1,28 @@
+id: focus-heroic-style
+# Technological Being's Option, copied for Genetic Focus: Android (4).
+name: Heroic Style
+order: 7
+optionOf: genetic-focus-android
+optionEffect: 4
+# Till the end of the turn - bookkeeping, not a Resource the rules name.
+resource: heroicstyle
+resourceInternal: true
+resourceLabel: Heroic Style
+resourceMax: 1
+description: >
+  Increase your Combat Rolls by 1(T) until the end of your turn when you use the Hype Maneuver.
+text: >
+  Heroic Style [Triggered]: Increase your Combat Rolls by 1(T) until the end of your turn when you use the Hype Maneuver.
+
+---
+
+# The Hype Maneuver declared: Automatic, by itself; Triggered, asked in its window - Combat Rolls +1(T) till the end of your turn.
+[passive]
+if (hasResource("heroicstyle")) {
+    combatRolls += 1(T);
+}
+
+[triggered/declare-maneuver, toggle, effect 4]
+requires using("hype");
+heroicstyle.stacks += 1;
+expires(heroicstyle, turn);

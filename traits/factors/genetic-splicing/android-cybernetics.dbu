@@ -30,3 +30,7 @@ allow androidCybernetics.charge;
 [triggered/start-of-round, effect 4]
 ki.value += 2(bT);
 adaptation.stacks += 1;
+# Genetic Focus: Android (2): "Double the amount of Ki Points you gain through the 4th effect of Android Cybernetics."
+if (holdsTrait("genetic-focus-android")) {
+    ki.value += 2(bT);
+}

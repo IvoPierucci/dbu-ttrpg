@@ -1,0 +1,17 @@
+id: focus-extension-feature
+# Technological Being's Option, copied for Genetic Focus: Android (4).
+name: Extension Feature
+order: 10
+optionOf: genetic-focus-android
+optionEffect: 4
+grantsOther: monstrous
+grantsOtherFrom: extension-attack
+description: >
+  You possess the Extension Attack Monstrous Trait.
+text: >
+  Extension Feature [Passive]: You possess the Extension Attack Monstrous Trait.
+
+---
+
+# The Extension Attack Monstrous Trait, given as this Option is chosen - in the Other Traits list, gone with it (its header's
+# `grantsOther`; racial.mjs madeByOption).

@@ -1,0 +1,17 @@
+id: focus-hyper-resilience
+# Technological Being's Option, copied for Genetic Focus: Android (4).
+name: Hyper Resilience
+order: 4
+optionOf: genetic-focus-android
+optionEffect: 4
+description: >
+  If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no Damage.
+text: >
+  Hyper Resilience [Triggered, 2/Round]: If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no Damage.
+
+---
+
+# Read where an attack's Damage on you is settled (chat.mjs lightDamageAnswer): less than half the Soak Value, none.
+# Automatic by default; set Triggered, asked there, with the Damage known.
+[triggered/light-damage, 2/round, effect 4]
+incoming.damage = 0;
