@@ -28,8 +28,8 @@ allow shadowDragonGenes.impair;
 allow shadowDragonGenes.eight;
 
 # (2) Your turn begins: how much Life, up to 8(bT), asked - as much Ki (chat.mjs shadowGenesTrade); then its Moment, what was traded
-# (life-for-ki). Automatic by default, its Triggered/Automatic button.
-[triggered/start-of-turn, effect 2]
+# (life-for-ki). It spends Life Points - a resource: no Triggered/Automatic button, ticked on the turn's card (the user's).
+[triggered/start-of-turn, chosen, effect 2]
 shadowGenesTrade();
 
 # (3) An Adaptation Point gained. Automatic by default, its Triggered/Automatic button.
