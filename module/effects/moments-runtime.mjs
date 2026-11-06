@@ -376,9 +376,11 @@ async function runVerb(actor, call, context) {
       await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
         flavor: `${base} - ${rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}`,
         flags: { "dbu-ttrpg": { check: steadfastCheckFlag(actor, roll, natural,
-          { target, base, passed, ...((args[1] && (String(args[1]) !== "life")) ? { enter: [String(args[1]), args[2] ?? null] } : {}) }) } } });
+          { target, base, passed, ...((args[1] && !["life", "saiyan-genes"].includes(String(args[1]))) ? { enter: [String(args[1]), args[2] ?? null] } : {}) }) } } });
       // Dormant Saiya Power (2): "If you succeed, set your Life Points to 1."
       if (passed && (String(args[1]) === "life")) return actor.update({ "system.life.value": 1 });
+      // Saiyan Genes (4), (5): Life 1 under the Critical Health Threshold, Adaptation Points to their Maximum, Battle Creation to 3 asked.
+      if (passed && (String(args[1]) === "saiyan-genes")) return (await import("../chat.mjs")).saiyanGenesPassed(actor);
       if (passed && args[1]) return enterState(actor, args[1], 1, args[2] ?? null);
       return;
     }

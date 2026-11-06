@@ -1,0 +1,16 @@
+id: battle-creation-mark
+name: Saiyan Genes
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Saiyan Genes (5)'s mark - Battle Creation set to 3, its Maximum 3 for the rest of the Encounter.
+combatCondition: no
+source: Core Rule
+description: >
+  Saiyan Genes: Battle Creation set to 3 - its Maximum 3 till the Encounter ends.
+text: >
+  Saiyan Genes (5): If you succeed the Steadfast Check for the 4th effect of Saiyan Genes, set your stacks of Battle Creation to 3.
+
+---
+
+[passive]
+battlecreation.max += 1;

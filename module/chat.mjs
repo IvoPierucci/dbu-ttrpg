@@ -22388,6 +22388,29 @@ export async function bioBerserk(actor) {
 }
 
 /**
+ * Saiyan Genes (4), its Steadfast Check made: "set your Life Points to 1 below the Critical Health Threshold and maximize your Adaptation
+ * Points" - Battle at the Edge's line. (5) [Triggered, 1/Encounter]: "set your stacks of Battle Creation to 3" - asked; its mark lets 3 stand
+ * for the rest of the Encounter.
+ */
+export async function saiyanGenesPassed(actor) {
+  const max = Number(actor.system.life?.max) || 0;
+  const critical = Math.floor(max * DBUCharacterData.THRESHOLDS.injured.above);
+  await requestActorUpdate(actor, { "system.life.value": Math.max(1, critical - 1) });
+  const { resourceLimits } = await import("./effects/traits.mjs");
+  const most = Number(resourceLimits(actor).adaptation) || 0;
+  if (most) await setResource(actor, "adaptation", most);
+  const encounter = game.combat?.id ?? "none";
+  if ((actor.getFlag?.(SCOPE, "battleCreationEncounter") === encounter)
+    || ((await askPlayerChoice(actor, `${actor.name}: Saiyan Genes`,
+      [{ value: "yes", label: "Battle Creation to 3 (1/Encounter)" }, { value: "no", label: "No" }])) !== "yes")) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.battleCreationEncounter`]: encounter });
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "battle-creation-mark", 1);
+  await (await import("./effects/moments-runtime.mjs")).expiresAt(actor, "battle-creation-mark", "encounter");
+  await setResource(actor, "battlecreation", 3);
+}
+
+/**
  * Heran Genes (5): "Lose up to 2 stacks of Power. For every stack of Power lost, gain an Adaptation Point." How many, asked.
  */
 export async function heranGenesTrade(actor) {

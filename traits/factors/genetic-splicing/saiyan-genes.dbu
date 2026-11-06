@@ -1,0 +1,45 @@
+id: saiyan-genes
+name: Saiyan Genes
+order: 15
+category: body
+importance: secondary
+# [Any - you decide]: the Saving Throw its Racial Saving Throw Bonus goes to, chosen as it is gained.
+choose: savingThrow
+# (1) Battle Creation, its Resource - 2 at most, 3 once (5) has set it there (its mark, `battlecreation.max`) - lost as the Encounter
+# ends, as every Resource is.
+resource: battlecreation
+resourceLabel: Battle Creation
+resourceMax: 2
+description: >
+  With the warrior blood of the Saiyans coursing through your veins, your hunger for a fight lets you constantly adapt to the changing tides of battle.
+text: >
+  Saiyan Genes [Any – you decide] (Body): With the warrior blood of the Saiyans coursing through your veins, your hunger for a fight lets you constantly adapt to the changing tides of battle.
+  (1)-[Triggered/Threshold, Resource]: Gain a stack of Battle Creation (max. 2) and 1 Adaptation Point.
+  (2)-[Passive]: For each stack of Battle Creation, increase your Combat Rolls and Surgency by 1(T).
+  (3)-[Passive]: For each stack of Battle Creation, increase the Dice Score of your Steadfast Checks by 1.
+  (4)-[Triggered/Defeated]: Spend 3 Adaptation Points to make a Steadfast Check, but reduce the Dice Score of this Steadfast Check by 2. If you succeed, set your Life Points to 1 below the Critical Health Threshold and maximize your Adaptation Points.
+  (5)-[Triggered, 1/Encounter]: If you succeed the Steadfast Check for the 4th effect of Saiyan Genes, set your stacks of Battle Creation to 3.
+---
+
+[passive]
+# The Saving Throw named after its name - its Racial Saving Throw Bonus.
+allow save.racial.$choice;
+# (2), (3) What the stacks are worth.
+if (hasResource("battlecreation")) {
+    combatRolls += battlecreation.stacks * 1(T);
+    surgency += battlecreation.stacks * 1(T);
+    steadfast.dice += battlecreation.stacks;
+}
+
+# (1) Knocked through a Health Threshold. Automatic by default, its Triggered/Automatic button.
+[triggered/threshold, effect 1]
+battlecreation.stacks += 1;
+adaptation.stacks += 1;
+
+# (4) Chosen on the Defeated card, with 3 Adaptation Points: a Steadfast Check, 2 off it - made, your Life Points 1 under the Critical
+# Health Threshold, your Adaptation Points to their Maximum; and (5), asked once an Encounter, Battle Creation to 3 (chat.mjs
+# saiyanGenesPassed).
+[triggered/defeated, effect 4]
+requires stacksAtLeast(3, "adaptation");
+adaptation.stacks -= 3;
+steadfastEnter(-2, saiyan-genes);
