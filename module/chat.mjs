@@ -722,6 +722,25 @@ async function heartOfEvilKnock(attacker, target) {
 }
 
 /**
+ * Genetic Focus: Demon (5): "If you deal Damage to an Opponent with an Attacking Maneuver, spend an Adaptation Point to make a Clash
+ * (Impulsive/Corporeal/Cognitive/Morale) against that Opponent. If you win, they suffer from either the: Drained, Broken, or Impaired Combat
+ * Condition (you decide) until the start of your next turn." Asked, once a Round; which, asked of the winner (settleImpede).
+ */
+async function focusDemonClash(attacker, target) {
+  const held = Number(attacker?.system?.resources?.adaptation?.stacks) || 0;
+  if ((held <= 0) || (attacker.system?.effects?.slots?.["focusDemon.clash"] !== true)
+    || (attacker.getFlag?.(SCOPE, "focusDemonClashRound") === roundKey())) return;
+  if ((await askPlayerChoice(attacker, `${attacker.name}: Genetic Focus: Demon - ${target.name} damaged`,
+    [{ value: "yes", label: "An Adaptation Point - a Saving Throw Clash; won, Drained, Broken or Impaired (1/Round)" },
+      { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.focusDemonClashRound`]: roundKey() });
+  await setResource(attacker, "adaptation", held - 1);
+  return postSaveClash(attacker, target, { maneuverName: "Genetic Focus: Demon", saves: ["impulsive", "corporeal", "cognitive", "morale"],
+    reason: "Win and they are Drained, Broken or Impaired till the start of your next turn - which, yours.",
+    impede: { applied: false, choose: "focus-demon", source: "Genetic Focus: Demon" } });
+}
+
+/**
  * Honorable Demon (3): "If you would inflict a Combat Condition on an Opponent (except through the 3rd effect of Demonic Combat),
  * you may instead use the Power Up Maneuver as an Out-of-Sequence Maneuver." Asked as it lands, once a Round: taken, the stack is
  * taken back and the Power Up used; not, it stands - inflicted, for (1) and (4).
@@ -21438,6 +21457,16 @@ async function settleImpede(message, clash) {
     edge = (picked === "shaken") ? "start" : "end";
     next = true;
   }
+  // Genetic Focus: Demon (5): Drained, Broken or Impaired till the start of your next turn - which, asked of the winner.
+  if (clash.impede.choose === "focus-demon") {
+    const picked = await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Demon - ${target.name}`,
+      [{ value: "drained", label: "Drained" }, { value: "broken", label: "Broken" }, { value: "impaired", label: "Impaired" },
+        { value: "none", label: "None" }]);
+    if (!["drained", "broken", "impaired"].includes(picked)) return settledNote(message, `${source}: nothing put on them.`);
+    condition = picked;
+    edge = "start";
+    next = true;
+  }
   // Or several - Bestial Presence's Broken and Shaken.
   const conditions = Array.isArray(clash.impede.conditions) && clash.impede.conditions.length ? clash.impede.conditions : [condition];
   for (const each of conditions) await markUntilNextTurn(actor, target, each, 1, edge, source, next);
@@ -22601,7 +22630,19 @@ export async function heranGenesTrade(actor) {
  * Moment, with the Natural Result.
  */
 export async function demonGenesRoll(actor) {
-  const roll = await new Roll("1d10").evaluate();
+  let roll = await new Roll("1d10").evaluate();
+  // Genetic Focus: Demon (4): "You can spend an Adaptation Point to reroll the 1d10 for the 1st effect of Demon Genes. If you do, you must
+  // accept the results" - asked, once a Round, the first shown.
+  const points = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  let first = null;
+  if ((actor.system.effects?.slots?.["focusDemon.reroll"] === true) && (points > 0) && (actor.getFlag?.(SCOPE, "focusDemonRerollRound") !== roundKey())
+    && ((await askPlayerChoice(actor, `${actor.name}: Demon Genes rolled ${roll.total}`, [
+      { value: "yes", label: "Reroll it - an Adaptation Point, the second kept (1/Round)" }, { value: "no", label: "Keep it" }])) === "yes")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.focusDemonRerollRound`]: roundKey() });
+    await setResource(actor, "adaptation", points - 1);
+    first = roll.total;
+    roll = await new Roll("1d10").evaluate();
+  }
   const rolled = Number(roll.total) || 0;
   const slots = actor.system.effects?.slots ?? {};
   const person = (slots["demonGenes.person"] === true) && (rolled !== 1);
@@ -22615,7 +22656,8 @@ export async function demonGenesRoll(actor) {
     superior ? "Superior till the end of the turn" : "Impediment till the end of the turn",
     ...(one ? [held ? "every Adaptation Point lost" : "Fatigued till the end of the turn"] : [])
   ];
-  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Demon Genes - ${said.join("; ")}` });
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `Demon Genes${(first !== null) ? ` (rerolled from ${first})` : ""} - ${said.join("; ")}` });
   const { enterState } = await import("./effects/moments-runtime.mjs");
   if (superior) await enterState(actor, "superior", 1, "turn", "Demon Genes");
   else await markUntilNextTurn(actor, actor, "impediment", 1, "end", "Demon Genes", false);
@@ -22638,6 +22680,15 @@ export async function demonGenesRoll(actor) {
     if (held.includes(key)) await (await import("./conditions.mjs")).setCondition(actor, key, 0);
   }
   await answerFor(actor, "demon-genes-rolled", { natural });
+  // Genetic Focus: Demon (6): "If you roll a Natural Result of 10 on the 1st effect of Demon Genes, you may use the Power Up Maneuver as an
+  // Out-of-Sequence Maneuver" - asked, once an Encounter.
+  const encounter = game.combat?.id ?? "none";
+  if ((natural >= 10) && (slots["focusDemon.powerUp"] === true) && (actor.getFlag?.(SCOPE, "focusDemonPowerEncounter") !== encounter)
+    && ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Demon - a 10`, [
+      { value: "yes", label: "The Power Up, out of sequence (1/Encounter)" }, { value: "no", label: "Not now" }])) === "yes")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.focusDemonPowerEncounter`]: encounter });
+    await ownOutOfSequence(actor, "power-up");
+  }
 }
 
 /**
@@ -35424,6 +35475,8 @@ async function applyAttackDamage(message, target, attack) {
     if (areOpponents(armsUser, target)) {
       await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid, ...(attack.signature ? { bySignature: true } : {}) });
     }
+    // Genetic Focus: Demon (5): an Adaptation Point for a Clash at them, asked, once a Round.
+    if (areOpponents(armsUser, target)) await focusDemonClash(armsUser, target);
     // Neo-Tuffle Genes (2): the Basic Attack back at them, offered on this card.
     if (areOpponents(target, armsUser)) offerNeoTuffleStrike(message, target, armsUser);
     // Ruler (2): "If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm" - for its Master.
