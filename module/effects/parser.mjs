@@ -535,7 +535,7 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // The Movement Maneuver used this Combat Round (Terrifying Speed's); a Battle Weather on you not felt (Survivalist's).
   "movedThisRound", "weatherUnfelt",
   // The Critical Result answered was on a Strike or Wound Roll (Offensive Design's).
-  "strikeOrWound", "dodgeRolled",
+  "strikeOrWound", "dodgeRolled", "attackStrikeRolled",
   // 2+ Adaptation Points gained this Combat Round (Biological Weapon's).
   "adaptationTwiceThisRound",
   // The Maneuver declared an Attacking Maneuver or a Unique Ability (Reserved Combatant's); a Surge through the Surge Maneuver

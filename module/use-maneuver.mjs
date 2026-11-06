@@ -1792,19 +1792,30 @@ async function applyModifiers(actor, applied, { maneuver = null, declared = null
       content: "<p>The Called Shot for 2 stacks of Critical Eye instead of its Action?</p>", rejectClose: false });
     if (byEyes) applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
   }
+  // Cerealian Genes (5): "When making an Attacking Maneuver, you may spend 2 Adaptation Points to turn that Attacking Maneuver into a
+  // Called Shot without paying the additional Action Cost" - asked, once a Round; paid with the rest below.
+  let byAdaptation = false;
+  if (called && !byEyes && (actor.system.effects?.slots?.["cerealianGenes.calledShot"] === true)
+    && ((Number(actor.system.resources?.adaptation?.stacks) || 0) >= 2)
+    && (actor.getFlag?.("dbu-ttrpg", "cerealianCalledRound") !== round)) {
+    byAdaptation = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - Cerealian Genes` },
+      content: "<p data-tooltip=\"Once a Round\">The Called Shot for 2 Adaptation Points instead of its Action?</p>", rejectClose: false });
+    if (byAdaptation) applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
+  }
   // Weak Point Analysis, its Clash won: "you may make that Maneuver a Called Shot" - the next Attacking Maneuver at them this
   // Round, the Called Shot on it without its Action.
   const aimedAt = new Set(Array.from(game.user.targets ?? []).map(token => token.actor?.uuid));
   const weak = (await import("./chat.mjs")).weakPoints(actor).find(entry => entry.won && !entry.message && aimedAt.has(entry.uuid));
   let weakCalled = false;
-  if (called && !byEyes && weak) {
+  if (called && !byEyes && !byAdaptation && weak) {
     weakCalled = true;
     applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
   }
   // Attentive Warrior (3): "If you have Initiative Advantage, when making an Attacking Maneuver, you may apply the Called Shot
   // Modifier Maneuver to that Attacking Maneuver without spending an Action" - asked, once an Encounter.
   const encounter = game.combat?.id ?? "none";
-  if (called && !byEyes && !weakCalled && (actor.system.effects?.slots?.["calledShot.byAdvantage"] === true)
+  if (called && !byEyes && !byAdaptation && !weakCalled && (actor.system.effects?.slots?.["calledShot.byAdvantage"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "attentiveCalledEncounter") !== encounter)
     && (await import("./effects/conditions.mjs")).initiativeAdvantageOf(actor)
     && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
@@ -1889,6 +1900,10 @@ async function applyModifiers(actor, applied, { maneuver = null, declared = null
     else delete resources.criticaleye;
     await actor.update({ "system.resources": replaceObject(resources),
       ...(byEyes ? { "flags.dbu-ttrpg.pinpointCalledRound": round } : {}) });
+  }
+  if (byAdaptation) {
+    await (await import("./chat.mjs")).setResource(actor, "adaptation", (Number(actor.system.resources?.adaptation?.stacks) || 0) - 2);
+    await actor.setFlag("dbu-ttrpg", "cerealianCalledRound", round);
   }
 
   for (const entry of applied) {

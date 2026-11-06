@@ -1359,6 +1359,22 @@ async function adaptationReductionFor(target, attack, uuid) {
   return { value: spent * Math.max(1, Number(target.system.tierOfPower) || 1), step: step ? 1 : 0 };
 }
 
+/**
+ * Cerealian Genes (3): "If you score a Critical Result on the Strike Roll of an Attacking Maneuver, you may spend an Adaptation Point to
+ * increase the Wound Roll of that Attacking Maneuver by 3(T)" - asked as it hits; what it adds, or 0.
+ */
+async function cerealianWoundFor(attacker, attack) {
+  const held = Number(attacker?.system?.resources?.adaptation?.stacks) || 0;
+  if ((attack.result?.strike?.outcome !== "critical") || (held <= 0)
+    || (attacker.system.effects?.slots?.["cerealianGenes.wound"] !== true)) return 0;
+  const value = 3 * Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  const yes = (await askPlayerChoice(attacker, `${attacker.name}: Cerealian Genes`,
+    [{ value: "yes", label: `An Adaptation Point - Wound Roll +${value}` }, { value: "no", label: "No" }])) === "yes";
+  if (!yes) return 0;
+  await setResource(attacker, "adaptation", held - 1);
+  return value;
+}
+
 /** Your Plating's Apparel Bonus - the Active Natural Armor's, nothing broken (Arcosian Genes'). */
 function platingBonus(actor) {
   const item = Array.from(actor?.items ?? []).find(each => (each.flags?.["dbu-ttrpg"]?.naturalArmor === true) && each.system?.equipped);
@@ -9778,7 +9794,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if (combatRoll && collect && (outcome === "critical")) {
     // An attack's Strike or Wound: its Foundation, for what answers only one's - Archetype Focus (2).
     // And which roll it was - Offensive Design (3)'s Strike or Wound (`strikeOrWound`).
-    await answerFor(actor, "critical-scored", { ...((attackingManeuver && foundation) ? { foundation } : {}), ...(slot ? { rollKind: slot } : {}) });
+    await answerFor(actor, "critical-scored", { ...((attackingManeuver && foundation) ? { foundation } : {}), ...(slot ? { rollKind: slot } : {}),
+      ...(attackingManeuver ? { attackRoll: true } : {}) });
     // "If you or an Ally scores a Critical Result" - Dragon of Light (5)'s.
     for (const ally of alliesOnScene(actor).filter(each => !each.system?.defeated && triggersFor(each, ["ally-critical-scored"]).length)) {
       await answerFor(ally, "ally-critical-scored", {});
@@ -23350,7 +23367,7 @@ async function declareStrikeCritical(message, attacker, { via = "eye" } = {}) {
       (line.uuid === entry.uuid) ? { ...own, hit, against, incomingDamage } : line);
   }
   requestEdit(message, { type: "attack", attack: { ...attack, result: { ...result, strike, targets: settledTargets } } });
-  await answerFor(attacker, "critical-scored", { rollKind: "strike" });
+  await answerFor(attacker, "critical-scored", { rollKind: "strike", attackRoll: true });
 }
 
 function angelicOffenseButtons(message, container, attack) {
@@ -30745,6 +30762,9 @@ async function answerHit(message, attack, attacker, struck) {
   // Skills of a Genius (4): with Spite, Ki spent on it, asked once a Round - not out of the Capacity.
   const genius = await geniusWoundKi(attacker, struck);
   if (genius) answer.marks.geniusWound = genius;
+  // Cerealian Genes (3): a Critical Strike - an Adaptation Point for 3(T) on the Wound Roll, asked.
+  const cerealian = await cerealianWoundFor(attacker, attack);
+  if (cerealian) answer.marks.cerealianWound = cerealian;
   // Burning Fury (2): 4(bT) Life Points for Broken on one hit, asked.
   await burningFuryBreak(attacker, struck);
   // Assassinate (2): one Oblivious of you hit - 5(bT) Ki for the Damage Category, asked.
@@ -30932,6 +30952,8 @@ function woundParts(attacker, attack) {
     ...((Number(attack.blasterWound) || 0) ? [{ label: attack.blasterName || "Blaster Master", value: Number(attack.blasterWound) }] : []),
     // Skills of a Genius (4): the Ki spent as it hit.
     ...((Number(attack.geniusWound) || 0) ? [{ label: "Skills of a Genius", value: Number(attack.geniusWound) }] : []),
+    // Cerealian Genes (3): the Adaptation Point spent as it hit.
+    ...((Number(attack.cerealianWound) || 0) ? [{ label: "Cerealian Genes", written: "+3(T)", value: Number(attack.cerealianWound) }] : []),
     // Furious Flex (2): the Top Layer destroyed as it hit.
     ...((Number(attack.furiousWound) || 0) ? [{ label: `Furious Flex (${attack.furiousName || "Top Layer"} destroyed)`, value: Number(attack.furiousWound) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,

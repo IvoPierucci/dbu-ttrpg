@@ -1,0 +1,34 @@
+id: cerealian-genes
+name: Cerealian Genes
+order: 6
+category: body
+importance: secondary
+description: >
+  Possessing the evolved right eye of the Cerealians, your talents for perception and striking vital points are unparalleled.
+text: >
+  Cerealian Genes [Impulsive] (Body): Possessing the evolved right eye of the Cerealians, your talents for perception and striking vital points are unparalleled.
+  (1)-[Passive]: Reduce the Critical Target of your Strike Rolls by 1.
+  (2)-[Passive]: You cannot suffer from the Long Range Penalty, but none of your Signature Techniques may possess the Short Range Disadvantage.
+  (3)-[Triggered]: If you score a Critical Result on the Strike Roll of an Attacking Maneuver, you may spend an Adaptation Point to increase the Wound Roll of that Attacking Maneuver by 3(T).
+  (4)-[Triggered]: If you score a Critical Result on the Strike Roll of an Attacking Maneuver, gain an Adaptation Point.
+  (5)-[Triggered, 1/Round]: When making an Attacking Maneuver, you may spend 2 Adaptation Points to turn that Attacking Maneuver into a Called Shot without paying the additional Action Cost.
+---
+
+[passive]
+# [Impulsive]: its Racial Saving Throw Bonus.
+allow save.racial.impulsive;
+# (1)
+criticalTarget.strike -= 1;
+# (2) No Long Range Penalty; the Short Range Disadvantage refused in the Technique builder (technique.mjs featureProblem).
+allow longRange.ignore;
+allow cerealianGenes.noShortRange;
+# (3) A Critical Strike that hit: asked, with an Adaptation Point - 3(T) on its Wound Roll (chat.mjs cerealianWoundFor).
+allow cerealianGenes.wound;
+# (5) The Called Shot applied to an Attacking Maneuver, with 2 Adaptation Points: asked, once a Round - for them, not its Action
+# (use-maneuver.mjs applyModifiers).
+allow cerealianGenes.calledShot;
+
+# (4) A Critical Result on an attack's Strike Roll. Automatic by default, its Triggered/Automatic button.
+[triggered/critical-scored, effect 4]
+requires attackStrikeRolled;
+adaptation.stacks += 1;

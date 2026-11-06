@@ -708,6 +708,8 @@ const PREDICATES = {
 
   /** The roll that answered `critical-scored` was a Strike or a Wound Roll - its `rollKind` (Offensive Design's). */
   strikeOrWound: scope => ["strike", "wound"].includes(String(scope.context?.rollKind ?? "")),
+  /** And an Attacking Maneuver's Strike Roll (Cerealian Genes'). */
+  attackStrikeRolled: scope => (String(scope.context?.rollKind ?? "") === "strike") && Boolean(scope.context?.attackRoll),
   /** And a Dodge Roll (Defensive Design's). */
   dodgeRolled: scope => String(scope.context?.rollKind ?? "") === "dodge",
 

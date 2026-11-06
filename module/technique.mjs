@@ -495,6 +495,10 @@ export function choicesOf(sig) {
 export function featureProblem(id, sig, options = {}) {
   const def = featureDef(id);
   if (!def) return "Unknown feature.";
+  // Cerealian Genes (2): "none of your Signature Techniques may possess the Short Range Disadvantage".
+  if ((id === "short-range") && (options.actor?.system?.effects?.slots?.["cerealianGenes.noShortRange"] === true)) {
+    return "Cerealian Genes: none of your Signature Techniques may possess it.";
+  }
   if (!def.requires) return "";
   const ctx = { ...requirementContext(sig, options), choice: choiceOf(sig, id) };
   return requirementHolds(def.requires, ctx) ? "" : `Requirement: ${def.requirement}`;
