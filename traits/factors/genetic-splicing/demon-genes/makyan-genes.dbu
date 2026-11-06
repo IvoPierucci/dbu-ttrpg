@@ -1,0 +1,15 @@
+id: makyan-genes
+name: Makyan Genes
+order: 2
+optionOf: demon-genes
+optionEffect: 5
+description: >
+  Reduce the Natural Result of the 1d10 rolled for the 1st effect of Demon Genes by 1. If you enter the Superior State through the 1st effect of Demon Genes, gain an Adaptation Point.
+text: >
+  Makyan Genes [Passive]: Reduce the Natural Result of the 1d10 rolled for the 1st effect of Demon Genes by 1. If you enter the Superior State through the 1st effect of Demon Genes, gain an Adaptation Point.
+
+---
+
+# Read by Demon Genes' roll (chat.mjs demonGenesRoll).
+[passive]
+allow demonGenes.makyan;

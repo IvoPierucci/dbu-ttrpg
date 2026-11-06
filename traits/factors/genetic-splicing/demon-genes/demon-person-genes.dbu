@@ -1,0 +1,15 @@
+id: demon-person-genes
+name: Demon Person Genes
+order: 1
+optionOf: demon-genes
+optionEffect: 5
+description: >
+  Increase the Natural Result of the 1d10 rolled for the 1st effect of Demon Genes by 1 (after being rolled), unless the Natural Result is 1.
+text: >
+  Demon Person Genes [Passive]: Increase the Natural Result of the 1d10 rolled for the 1st effect of Demon Genes by 1 (after being rolled), unless the Natural Result is 1.
+
+---
+
+# Read by Demon Genes' roll (chat.mjs demonGenesRoll).
+[passive]
+allow demonGenes.person;

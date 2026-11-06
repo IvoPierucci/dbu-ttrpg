@@ -1,0 +1,15 @@
+id: phantom-genes
+name: Phantom Genes
+order: 3
+optionOf: demon-genes
+optionEffect: 5
+description: >
+  If you enter the Superior State through the 1st effect of Demon Genes, you may remove a Combat Condition (Impaired, Broken, Impediment, or Guard Down) you are suffering from.
+text: >
+  Phantom Genes [Triggered, 1/Round]: If you enter the Superior State through the 1st effect of Demon Genes, you may remove a Combat Condition (Impaired, Broken, Impediment, or Guard Down) you are suffering from.
+
+---
+
+# Read by Demon Genes' roll (chat.mjs demonGenesRoll).
+[passive]
+allow demonGenes.phantom;

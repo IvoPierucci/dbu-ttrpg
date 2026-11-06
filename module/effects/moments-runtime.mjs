@@ -777,6 +777,7 @@ async function runVerb(actor, call, context) {
     case "mutantConsume": return (await import("../chat.mjs")).mutantConsume(actor);
     case "trollPower": return (await import("../chat.mjs")).trollPower(actor);
     case "bioBerserk": return (await import("../chat.mjs")).bioBerserk(actor);
+    case "demonGenesRoll": return (await import("../chat.mjs")).demonGenesRoll(actor);
     case "undeadRise": return (await import("../chat.mjs")).undeadRise(actor);
     case "sadisticKi": return (await import("../chat.mjs")).sadisticKi(actor);
     case "demonicGod": return (await import("../chat.mjs")).demonicGod(actor);

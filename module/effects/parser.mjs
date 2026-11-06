@@ -487,6 +487,8 @@ const PREDICATE_NAMES = new Set([
   // The Foundation of the attack whose roll answered the Moment - Archetype Focus's; the Focused Foundation (Archetype
   // Defense's).
   "ofFoundation", "focusedOn",
+  // The Natural Result a Moment carries (Demon Genes').
+  "naturalAtLeast",
   "wearing", "inEnvironment",
   // Elemental Adaptation's: a Profile some Battle Weather is connected to.
   "weatherConnected", "holdsTrait", "inWeather",

@@ -1,0 +1,45 @@
+id: demon-genes
+name: Demon Genes
+order: 7
+category: body
+importance: secondary
+# (5) Its Option, chosen as it is gained: a file beside it for each.
+optionEffect: 5
+description: >
+  Filled with the overflowing power of the Demon race, you use your sly cunning and adaptability to overwhelm your enemies.
+text: >
+  Demon Genes [Cognitive] (Body): Filled with the overflowing power of the Demon race, you use your sly cunning and adaptability to overwhelm your enemies.
+  (1)-[Triggered/Start of Turn]: Roll a 1d10. If you score a Natural Result of 6+ on this roll, enter the Superior State until the end of your turn. If you score a Dice Score of 5 or less, suffer from the Impediment Combat Condition until the end of your turn.
+  (2)-[Triggered]: If you score a Natural Result of 8+ on the 1st effect of Demon Genes, gain an Adaptation Point. If the Natural Result is 10, gain 2 Adaptation Points instead.
+  (3)-[Automatic]: If you score a Natural Result of 1 on the 1st effect of Demon Genes, lose all of your Adaptation Points. If you have no Adaptation Points, suffer from the Fatigued Combat Condition until the end of your turn.
+  (4)-[Triggered/Superior, 1/Round]: Spend an Adaptation Point to use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+  (5)-[Option]: Upon gaining this Factor Trait, choose one of the following effects to have access to while you possess this Trait:
+  * Demon Person Genes [Passive]: Increase the Natural Result of the 1d10 rolled for the 1st effect of Demon Genes by 1 (after being rolled), unless the Natural Result is 1.
+  * Makyan Genes [Passive]: Reduce the Natural Result of the 1d10 rolled for the 1st effect of Demon Genes by 1. If you enter the Superior State through the 1st effect of Demon Genes, gain an Adaptation Point.
+  * Phantom Genes [Triggered, 1/Round]: If you enter the Superior State through the 1st effect of Demon Genes, you may remove a Combat Condition (Impaired, Broken, Impediment, or Guard Down) you are suffering from.
+---
+
+[passive]
+# [Cognitive]: its Racial Saving Throw Bonus.
+allow save.racial.cognitive;
+
+# (1) Your turn begins: the 1d10 on its own card, its Option's change to it said - 6+ Superior, 5 or less Impediment, both till the end of
+# this turn; (3) at a 1 (or less, Makyan Genes'), every Adaptation Point lost, or Fatigued till the end of the turn with none; the Option's
+# own (chat.mjs demonGenesRoll). Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 1]
+demonGenesRoll();
+
+# (2) The roll answered (demon-genes-rolled): 8+ an Adaptation Point, 10 (or more) two. Automatic by default, its Triggered/Automatic
+# button.
+[triggered/demon-genes-rolled, effect 2]
+requires naturalAtLeast(8);
+adaptation.stacks += 1;
+if (naturalAtLeast(10)) {
+    adaptation.stacks += 1;
+}
+
+# (4) Entering the Superior State, with an Adaptation Point: the Power Up out of sequence for it - chosen, never Automatic.
+[triggered/state/superior, 1/round, outOfSequence, effect 4]
+requires hasResource("adaptation");
+adaptation.stacks -= 1;
+maneuverOutOfSequence(power-up);

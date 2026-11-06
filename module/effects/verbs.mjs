@@ -462,6 +462,11 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Troll (4): Feral till the end of your next turn - Feral already, Surging till the start of it, asked (chat.mjs trollPower)."
   },
+  demonGenesRoll: {
+    args: [0, 0],
+    doc: "Demon Genes (1), (3) and its Option: the 1d10 - Superior or Impediment till the end of the turn; at a 1 the Adaptation Points or "
+       + "Fatigued (chat.mjs demonGenesRoll)."
+  },
   bioBerserk: {
     args: [0, 0],
     doc: "Bio-Berserker (3): a 1d10 - at a 1, Compelled at a random Opponent in your Field of Aggression (chat.mjs bioBerserk)."

@@ -22289,6 +22289,55 @@ export async function bioBerserk(actor) {
 }
 
 /**
+ * Demon Genes (1): "Roll a 1d10. If you score a Natural Result of 6+ on this roll, enter the Superior State until the end of your turn. If
+ * you score a Dice Score of 5 or less, suffer from the Impediment Combat Condition until the end of your turn." Its Option's change to the
+ * Natural Result first - Demon Person Genes' 1 more but on a 1, Makyan Genes' 1 less. (3), Automatic: "a Natural Result of 1 ... lose all of
+ * your Adaptation Points. If you have no Adaptation Points, suffer from the Fatigued Combat Condition until the end of your turn" - at 1 or
+ * less. Into Superior through it: Makyan Genes' Adaptation Point; Phantom Genes' Combat Condition off, asked, once a Round. Then (2)'s
+ * Moment, with the Natural Result.
+ */
+export async function demonGenesRoll(actor) {
+  const roll = await new Roll("1d10").evaluate();
+  const rolled = Number(roll.total) || 0;
+  const slots = actor.system.effects?.slots ?? {};
+  const person = (slots["demonGenes.person"] === true) && (rolled !== 1);
+  const makyan = slots["demonGenes.makyan"] === true;
+  const natural = rolled + (person ? 1 : 0) - (makyan ? 1 : 0);
+  const superior = natural >= 6;
+  const held = Number(actor.system.resources?.adaptation?.stacks) || 0;
+  const one = natural <= 1;
+  const said = [
+    ...((person || makyan) ? [`${person ? "Demon Person Genes +1" : "Makyan Genes -1"}: ${natural}`] : []),
+    superior ? "Superior till the end of the turn" : "Impediment till the end of the turn",
+    ...(one ? [held ? "every Adaptation Point lost" : "Fatigued till the end of the turn"] : [])
+  ];
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Demon Genes - ${said.join("; ")}` });
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  if (superior) await enterState(actor, "superior", 1, "turn", "Demon Genes");
+  else await markUntilNextTurn(actor, actor, "impediment", 1, "end", "Demon Genes", false);
+  if (one && held) await setResource(actor, "adaptation", 0);
+  else if (one) await markUntilNextTurn(actor, actor, "fatigued", 1, "end", "Demon Genes", false);
+  if (superior && makyan) {
+    const before = Number(actor.system.resources?.adaptation?.stacks) || 0;
+    await setResource(actor, "adaptation", before + 1);
+    if ((Number(actor.system.resources?.adaptation?.stacks) || 0) > before) {
+      await (await import("./effects/moments-runtime.mjs")).stacksGained(actor, ["adaptation"], { adaptation: 1 });
+    }
+  }
+  if (superior && (slots["demonGenes.phantom"] === true) && (actor.getFlag?.(SCOPE, "phantomGenesRound") !== roundKey())) {
+    const { getTrait } = await import("./effects/traits.mjs");
+    const held = ["impaired", "broken", "impediment", "guard-down"].filter(key => (Number(actor.system.conditions?.[key]) || 0) > 0);
+    const key = held.length ? await askPlayerChoice(actor, `${actor.name}: Phantom Genes`,
+      [...held.map(each => ({ value: each, label: getTrait(each)?.name ?? each })), { value: "none", label: "None" }]) : "none";
+    if (held.includes(key)) {
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.phantomGenesRound`]: roundKey() });
+      await (await import("./conditions.mjs")).setCondition(actor, key, 0);
+    }
+  }
+  await answerFor(actor, "demon-genes-rolled", { natural });
+}
+
+/**
  * Undead Survival (4): "Use a Healing Surge as an Out-of-Sequence Maneuver, then enter the Undying State until the end of the Combat
  * Encounter. If you do, ignore the 2nd effect of the Undying State" - entered above the Life it would be set from, so its 1 is not.
  */
