@@ -122,6 +122,10 @@
           {{#if row.shape}}
           <div class="unique-resource">
             <span data-tooltip="The shape taken - Bestial Traits are the table's">{{row.shape}}</span>
+            {{#if row.shapeObject}}
+            <button type="button" class="dbu-clash-button" data-action="shapeDestroyed" data-item-id="{{row.itemId}}"
+                    data-tooltip="An effect destroyed the {{row.shapeObject}}, not by Damage: your Life Points 1 below your next Health Threshold, and Shapeshift ends">Destroyed</button>
+            {{/if}}
           </div>
           {{/if}}
           {{#if row.portals}}

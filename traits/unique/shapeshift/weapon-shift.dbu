@@ -3,11 +3,12 @@ name: Weapon Shift
 advancement: true
 prerequisite: N/A
 tpCost: 5
-# Offered at 2+ Actions instead of the effects; the Weapon and its rules are the table's.
+# Offered at 2+ Actions instead of the effects; the Weapon and its rules are the table's. Its last rule, the shape row's Destroyed
+# button: Life 1 below the next Health Threshold, Shapeshift ended (chat.mjs shapeDestroyed).
 shapeWeapon: true
 source: Core Rule
 description: >
-  Shapeshift at 2+ Actions can make you a Weapon instead - the table's to run.
+  Shapeshift at 2+ Actions can make you a Weapon instead - the table's to run; destroyed but not by Damage, its Destroyed button.
 text: >
   Weapon Shift: You possess the unique capability to transform yourself into a weapon.
   –Prerequisites: N/A

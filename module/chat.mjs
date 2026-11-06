@@ -14218,6 +14218,36 @@ export async function endShapeshift(actor, why) {
   }
 }
 
+/**
+ * Vehicle Shift, Weapon Shift: "If an effect would destroy the Vehicle except by inflicting Damage, you have your Life Points reduced to 1
+ * Life Point below your next Health Threshold and you forcefully stop benefiting from the effects of Shapeshift." The next line below the
+ * one you are in - a Minion's, Injured (Minion Rules) - and 1 under it; in Critical there is none below, the Life Points left. Its Steadfast
+ * Check asked as any other.
+ */
+export function shapeDestroyedLife(actor) {
+  const max = Number(actor?.system?.life?.max) || 0;
+  const now = Number(actor?.system?.life?.value) || 0;
+  const order = Object.keys(DBUCharacterData.THRESHOLDS);
+  const here = order.indexOf(actor?.system?.threshold?.key ?? "healthy");
+  const next = actor?.system?.typicalMinion ? ((here < order.indexOf("injured")) ? "injured" : "") : (order[here + 1] ?? "");
+  if (!next) return now;
+  // A threshold is reached at or under its line (thresholdKey: "above" the one before it) - so the line is the previous one's fraction.
+  const line = Math.floor(max * DBUCharacterData.THRESHOLDS[order[order.indexOf(next) - 1]].above);
+  return Math.min(now, line - 1);
+}
+
+export async function shapeDestroyed(actor, itemId) {
+  const item = actor?.items?.get(itemId);
+  const form = item?.system?.unique?.shapeForm;
+  if (!item?.system?.unique?.applied || !["vehicle", "weapon"].includes(form)) return;
+  const to = shapeDestroyedLife(actor);
+  if (to !== (Number(actor.system.life?.value) || 0)) await actor.update({ "system.life.value": to });
+  await endShape(actor, item);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)}: the ${form === "vehicle" ? "Vehicle" : "Weapon"} destroyed - `
+      + `1 Life Point below the next Health Threshold, and Shapeshift ends.</div>` });
+}
+
 /** Reshape: 6(T) Ki Points and the shape chosen again, at the Actions it was used with. */
 function renderShapeshift(message, html) {
   const shape = message.getFlag(SCOPE, SHAPE_FLAG);

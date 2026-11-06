@@ -494,6 +494,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       springTrap: DBUCharacterSheet._onSpringTrap,
       webSave: DBUCharacterSheet._onWebSave,
       ghostGone: DBUCharacterSheet._onGhostGone,
+      shapeDestroyed: DBUCharacterSheet._onShapeDestroyed,
       throughPortal: DBUCharacterSheet._onThroughPortal,
       releaseFinish: DBUCharacterSheet._onReleaseFinish,
       cageClash: DBUCharacterSheet._onCageClash,
@@ -2350,6 +2351,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           unique.shapeBestial ? `${unique.shapeBestial} Bestial` : "",
           unique.shapeLeft ? `${unique.shapeLeft} turn${(unique.shapeLeft === 1) ? "" : "s"} left` : ""
         ].filter(Boolean).join(" · ") : "",
+        // Vehicle Shift, Weapon Shift: its Destroyed button.
+        shapeObject: (unique.shapeshift && unique.applied && ["vehicle", "weapon"].includes(unique.shapeForm))
+          ? ((unique.shapeForm === "vehicle") ? "Vehicle" : "Weapon") : "",
         // Portal Creation: the Portals held, dismissed as an Instant, and the next Maneuver through them.
         portals: (unique.portals && !grantedBy) ? { held: Number(unique.portalsHeld) || 0, max: portalsMaxOf(unique),
           through: Boolean(actor.getFlag?.("dbu-ttrpg", "throughPortal")) } : null,
@@ -2571,6 +2575,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const item = this.actor.items.get(target.dataset.itemId);
     const left = Number(item?.system?.unique?.ghosts) || 0;
     if (left) return item.update({ "system.unique.ghosts": left - 1 });
+  }
+
+  /** Vehicle Shift, Weapon Shift: the shape destroyed except by Damage - Life 1 below the next Health Threshold, Shapeshift ended. */
+  static async _onShapeDestroyed(event, target) {
+    const { shapeDestroyed } = await import("../chat.mjs");
+    return shapeDestroyed(this.actor, target.dataset.itemId);
   }
 
   /** Portal Creation: "can dismiss any number of Portals as an Instant Maneuver". */

@@ -3,11 +3,12 @@ name: Vehicle Shift
 advancement: true
 prerequisite: N/A
 tpCost: 5
-# Offered at 2+ Actions instead of the effects; the Vehicle and its rules are the table's (Vehicles are not in the system).
+# Offered at 2+ Actions instead of the effects; the Vehicle and its rules are the table's (Vehicles are not in the system). Its last rule,
+# the shape row's Destroyed button: Life 1 below the next Health Threshold, Shapeshift ended (chat.mjs shapeDestroyed).
 shapeVehicle: true
 source: Core Rule
 description: >
-  Shapeshift at 2+ Actions can make you a Vehicle instead - the table's to run.
+  Shapeshift at 2+ Actions can make you a Vehicle instead - the table's to run; destroyed but not by Damage, its Destroyed button.
 text: >
   Vehicle Shift: You are able to turn into a vehicle to ferry others around.
   –Prerequisites: N/A
