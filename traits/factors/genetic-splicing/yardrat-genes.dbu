@@ -1,0 +1,38 @@
+id: yardrat-genes
+name: Yardrat Genes
+order: 18
+category: body
+importance: secondary
+# [Cognitive or Impulsive]: which one its Racial Saving Throw Bonus goes to, chosen as it is gained.
+choose: list
+choices: Cognitive, Impulsive
+# (5) Its Option, chosen as it is gained: a file beside it for each.
+optionEffect: 5
+description: >
+  The energy efficiency and teamwork tendencies of the Yardrat peoples allow you to grant your unimaginable strength to your Allies.
+text: >
+  Yardrat Genes [Cognitive or Impulsive] (Body): The energy efficiency and teamwork tendencies of the Yardrat peoples allow you to grant your unimaginable strength to your Allies.
+  (1)-[Passive]: Increase your Maximum Ki Points by 2 for every Power Level reached.
+  (2)-[Triggered]: If an Ally makes a Combat Roll, you can spend any number of Adaptation Points on that Combat Roll. For each Adaptation Point spent, increase that Combat Roll by 1(T).
+  (3)-[Triggered]: If you are targeted by an Attacking Maneuver, you may spend up to 4(bT) Ki Points. For every 2(bT) Ki Points spent, increase your Strike and Dodge Rolls by 1(T) for the duration of that Attacking Maneuver.
+  (4)-[Triggered, 1/Round]: If you use the Empower Maneuver, gain an Adaptation Point for every Action spent on the Empower Maneuver.
+  (5)-[Option]: Upon gaining this Factor Trait, choose one of the following effects to have access to while you possess this Trait:
+  * Tall Yardrat Genes [Triggered]: When you apply the 3rd effect of Yardrat Genes, increase your Soak Value by 1(T) for every 2(bT) Ki Points spent through that effect. This increase lasts for the duration of that Attacking Maneuver.
+  * Bulbous Yardrat Genes [Triggered, 1/Round]: If you target an Ally with the Empower Maneuver, you may transfer any stacks of Power you possess to that Ally. These Power stacks last until the end of their next turn.
+---
+
+[passive]
+# The Saving Throw chosen of the two - its Racial Saving Throw Bonus.
+allow save.racial.$choice;
+# (1)
+ki.perLevel += 2;
+# (2) An Ally's Combat Roll, with an Adaptation Point: how many, asked of you before it is rolled - 1(T) of yours each (chat.mjs rollSide).
+allow yardratGenes.allyRoll;
+# (3) Power of the Weak (3)'s words: its button on the attack's card - 2(bT) or 4(bT) Ki, 1(T) or 2(T) on your Dodge, or a Parry's Strike
+# (chat.mjs weakButtons).
+allow weak.targeted;
+
+# (4) Ki given through the Empower (empowered-ally): an Adaptation Point for each Action spent on it. Automatic by default, its
+# Triggered/Automatic button.
+[triggered/empowered-ally, 1/round, effect 4]
+adaptation.stacks += actionsSpent;

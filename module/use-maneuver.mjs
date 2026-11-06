@@ -475,7 +475,8 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
   // What they gain of it - Spiritual Pacifist (5)'s "the amount of Ki Points they gained": none where Genki takes it as a wager.
   const genki = ally.items?.get(ally.system.charging?.maneuverId ?? "")?.system?.signature?.superProfile === "genki";
   const gained = genki ? 0 : Math.max(0, Math.min(sent, (Number(ally.system.ki.max) || 0) - (Number(ally.system.ki.value) || 0)));
-  await answerFor(actor, "empowered-ally", { allyUuid: ally.uuid, gained });
+  // And the Actions spent on it - Yardrat Genes (4)'s `actionsSpent`.
+  await answerFor(actor, "empowered-ally", { allyUuid: ally.uuid, gained, actionsSpent });
   const bonded = ((bondBefore !== ally.uuid) && (actor.getFlag?.("dbu-ttrpg", "bonded")?.uuid === ally.uuid)) ? " &middot; Bonded" : "";
   // Spiritual Pacifist (4): Power stacks, up to the Actions spent, asked once a Round.
   const { pacifistPower } = await import("./chat.mjs");

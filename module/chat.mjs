@@ -9574,6 +9574,19 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const adaptDoubled = (slot === "wound") && signatureRoll && (actor.system.effects?.slots?.["earthlingGenes.signatureWound"] === true);
   if (adapted) parts.push({ label: `Adaptation Points (${adapted})${adaptDoubled ? " x2 (Earthling Genes)" : ""}`,
     value: adapted * Math.max(1, Number(actor.system.tierOfPower) || 1) * (adaptDoubled ? 2 : 1) });
+  // Yardrat Genes (2): "If an Ally makes a Combat Roll, you can spend any number of Adaptation Points on that Combat Roll. For each
+  // Adaptation Point spent, increase that Combat Roll by 1(T)" - asked of each Ally on the scene who has it, their Tier.
+  if (combatRoll && collect) {
+    for (const ally of alliesOnScene(actor)) {
+      const held = Number(ally.system?.resources?.adaptation?.stacks) || 0;
+      if (ally.system?.defeated || (held <= 0) || (ally.system?.effects?.slots?.["yardratGenes.allyRoll"] !== true)) continue;
+      const spent = Math.min(held, await askPlayerAmount(ally, `${ally.name}: Yardrat Genes - ${actor.name}'s Combat Roll`, held,
+        "Adaptation Points - 1(T) of yours on it each"));
+      if (spent <= 0) continue;
+      await setResource(ally, "adaptation", held - spent);
+      parts.push({ label: `${ally.name}'s Adaptation Points (${spent})`, value: spent * Math.max(1, Number(ally.system.tierOfPower) || 1) });
+    }
+  }
   // Combat Blueprint (2), with 2+ of them spent - asked, once a Round each. Genetic Aggressor, on a Strike Roll: "you may apply an Energy
   // Charge to that Attacking Maneuver" (resolveAttackWork). Genetic Agility, on a Dodge Roll: "you may ignore all Diminishing Defense you
   // are suffering from for the duration of that Maneuver" - its rows taken off.
@@ -24325,18 +24338,21 @@ export async function bondTo(actor, allyUuid) {
  * next turn, as far as their Power goes - and gained as Power is (`power-gained`).
  */
 export async function pacifistPower(actor, ally, actionsSpent) {
-  if (!actor || !ally || (actor.system?.effects?.slots?.["pacifist.power"] !== true)) return;
-  if (actor.getFlag?.(SCOPE, "pacifistPowerRound") === roundKey()) return;
+  if (!actor || !ally) return;
+  // Or Bulbous Yardrat Genes': "you may transfer any stacks of Power you possess to that Ally" - no Action cap, once a Round of its own.
+  const bulbous = (actor.system?.effects?.slots?.["yardratGenes.bulbous"] === true) && (actor.getFlag?.(SCOPE, "bulbousPowerRound") !== roundKey());
+  const pacifist = (actor.system?.effects?.slots?.["pacifist.power"] === true) && (actor.getFlag?.(SCOPE, "pacifistPowerRound") !== roundKey());
+  if (!bulbous && !pacifist) return;
   const held = Number(actor.system.resources?.power?.stacks) || 0;
   const { resourceLimits } = await import("./effects/traits.mjs");
   const theirs = Number(ally.system.resources?.power?.stacks) || 0;
   const limit = Number(resourceLimits(ally).power) || 0;
-  const most = Math.min(held, Math.max(1, Number(actionsSpent) || 1), limit ? Math.max(0, limit - theirs) : Infinity);
+  const most = Math.min(held, bulbous ? Infinity : Math.max(1, Number(actionsSpent) || 1), limit ? Math.max(0, limit - theirs) : Infinity);
   if (most <= 0) return;
-  const moved = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Spiritual Pacifist - Power to ${ally.name}`, most,
-    "Power stacks, till the end of their next turn"));
+  const moved = Math.min(most, await askPlayerAmount(actor, `${actor.name}: ${bulbous ? "Bulbous Yardrat Genes" : "Spiritual Pacifist"} - Power to ${ally.name}`,
+    most, "Power stacks, till the end of their next turn"));
   if (moved <= 0) return;
-  await actor.setFlag(SCOPE, "pacifistPowerRound", roundKey());
+  await actor.setFlag(SCOPE, bulbous ? "bulbousPowerRound" : "pacifistPowerRound", roundKey());
   const { replaceObject } = await import("./conditions.mjs");
   const mine = { ...(actor.system.resources ?? {}) };
   if (held - moved > 0) mine.power = { ...mine.power, stacks: held - moved };

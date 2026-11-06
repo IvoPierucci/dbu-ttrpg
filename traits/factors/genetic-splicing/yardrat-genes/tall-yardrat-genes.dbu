@@ -1,0 +1,15 @@
+id: tall-yardrat-genes
+name: Tall Yardrat Genes
+order: 1
+optionOf: yardrat-genes
+optionEffect: 5
+description: >
+  When you apply the 3rd effect of Yardrat Genes, increase your Soak Value by 1(T) for every 2(bT) Ki Points spent through that effect. This increase lasts for the duration of that Attacking Maneuver.
+text: >
+  Tall Yardrat Genes [Triggered]: When you apply the 3rd effect of Yardrat Genes, increase your Soak Value by 1(T) for every 2(bT) Ki Points spent through that effect. This increase lasts for the duration of that Attacking Maneuver.
+
+---
+
+# Spiritual Warrior (2)'s words: the Soak beside (3)'s button's Strike and Dodge (chat.mjs weakButtons).
+[passive]
+allow warrior.weakSoak;

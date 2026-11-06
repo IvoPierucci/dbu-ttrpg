@@ -1,0 +1,16 @@
+id: bulbous-yardrat-genes
+name: Bulbous Yardrat Genes
+order: 2
+optionOf: yardrat-genes
+optionEffect: 5
+description: >
+  If you target an Ally with the Empower Maneuver, you may transfer any stacks of Power you possess to that Ally. These Power stacks last until the end of their next turn.
+text: >
+  Bulbous Yardrat Genes [Triggered, 1/Round]: If you target an Ally with the Empower Maneuver, you may transfer any stacks of Power you possess to that Ally. These Power stacks last until the end of their next turn.
+
+---
+
+# The Empower at an Ally: how many of your Power stacks, asked, once a Round - till the end of their next turn, Spiritual Pacifist (4)'s
+# way without its Action cap (chat.mjs pacifistPower).
+[passive]
+allow yardratGenes.bulbous;
