@@ -1,6 +1,8 @@
 id: weapon-of-mass-destruction
 name: Weapon of Mass Destruction
-# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's). Its own description not given yet.
+# A Racial Factor: what it asks for, shown beside its Factor Trait and never enforced (the user's).
 requirement: Bio-Android
 maximumFactor: 1
 prerequisites: N/A
+description: >
+  Though a biological being you may be, you’re still artificially created, intended as a weapon to point at others and let loose on a rampage. Designed for sheer, unmitigated power, you smash through any obstacle before you.
