@@ -1689,7 +1689,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       combat: ["turn", "states", "resources", "conditions"].includes(windowIs),
       resources: windowIs === "resources", conditions: windowIs === "conditions",
       // The Settings tab's States' Triggered / Automatic, in the same window over the sheet (the user's).
-      stateTriggers: windowIs === "stateTriggers" };
+      stateTriggers: windowIs === "stateTriggers",
+      // And its Allies' and Minions' (or Master's) Manage windows.
+      allies: windowIs === "allies", minions: windowIs === "minions", master: windowIs === "master" };
 
     // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
     // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together. What

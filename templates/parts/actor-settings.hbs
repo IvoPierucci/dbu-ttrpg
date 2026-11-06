@@ -1,75 +1,151 @@
 <div class="tab {{tabs.settings.cssClass}}" data-group="primary" data-tab="settings">
 
-  {{! Who this character's Allies are, for every effect: those on this list, and those whose own list names them - both ways.
-      Nobody else, whatever their token's disposition. }}
-  <section class="panel ally-panel">
-    <h3 class="panel-title">Allies</h3>
-    {{#if editable}}
-    <button type="button" class="edit-toggle ally-add" data-action="addAllies">+ Add Allies</button>
-    {{/if}}
-    {{#if allies.length}}
-    <ul class="ally-list">
-      {{#each allies as |ally|}}
-      <li class="ally{{#if ally.theirs}} theirs{{/if}}{{#if ally.missing}} missing{{/if}}">
-        {{#if ally.theirs}}
-        <span class="ally-x-space"></span>
+  {{! Allies and Minions (a Minion's: its Master) side by side, as the Combat tab's lists are (the user's): who they are, shown;
+      adding, taking off and hiding a name in each one's Manage window. Allies: those on this list, and those whose own list names
+      them - both ways; nobody else, whatever their token's disposition. A Character's Minions, or a Minion's one Master - either
+      side is enough, and the two are Allies. A Minion has no Minions. }}
+  <div class="dbu-combat-lists dbu-settings-lists">
+    <section class="dbu-clist">
+      <header class="dbu-clist-head">
+        <h3>Allies</h3>
+        <button type="button" class="dbu-manage" data-action="openCombatWindow" data-window="allies"
+                data-tooltip="Add Allies, take them off, and hide their names">Manage</button>
+      </header>
+      <div class="dbu-clist-rows">
+        {{#each allies as |ally|}}
+          <div class="dbu-crow dbu-person{{#if ally.missing}} missing{{/if}}">
+            {{#if ally.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if ally.img}}<img class="ally-img" src="{{ally.img}}" alt=""/>{{/if}}{{/if}}
+            <span class="dbu-person-name">{{ally.name}}</span>
+            {{#if ally.inherited}}<span class="dbu-temp" data-tooltip="{{ally.why}}">{{ally.note}}</span>
+            {{else if ally.theirs}}<span class="dbu-temp" data-tooltip="Their Allies list names this character - taken off from their sheet">from their list</span>{{/if}}
+          </div>
         {{else}}
-          {{#if @root.editable}}
-          <button type="button" class="ally-x" data-action="removeAlly" data-ally-id="{{ally.id}}"
-                  data-tooltip="Take {{ally.name}} off the Allies list">&#10005;</button>
-          {{else}}
-          <span class="ally-x-space"></span>
-          {{/if}}
+        <p class="dbu-clist-empty">No Allies yet. Every other Character counts as an Opponent.</p>
+        {{/each}}
+      </div>
+    </section>
+    {{#if isMinion}}
+    <section class="dbu-clist">
+      <header class="dbu-clist-head">
+        <h3>Master</h3>
+        <button type="button" class="dbu-manage" data-action="openCombatWindow" data-window="master"
+                data-tooltip="Set this Minion's Master, or take them off">Manage</button>
+      </header>
+      <div class="dbu-clist-rows">
+        {{#if masterEntry}}
+          <div class="dbu-crow dbu-person{{#if masterEntry.missing}} missing{{/if}}">
+            {{#if masterEntry.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if masterEntry.img}}<img class="ally-img" src="{{masterEntry.img}}" alt=""/>{{/if}}{{/if}}
+            <span class="dbu-person-name">{{masterEntry.name}}</span>
+            {{#if masterEntry.theirs}}<span class="dbu-temp" data-tooltip="Their Minions list names this Minion - taken off from their sheet">from their list</span>{{/if}}
+          </div>
+        {{else}}
+        <p class="dbu-clist-empty">No Master yet.</p>
         {{/if}}
-        {{#if ally.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if ally.img}}<img class="ally-img" src="{{ally.img}}" alt=""/>{{/if}}{{/if}}
-        <span class="ally-name">{{ally.name}}</span>
-        {{#if ally.inherited}}<span class="ally-note" data-tooltip="{{ally.why}}">{{ally.note}}</span>
-        {{else if ally.theirs}}<span class="ally-note" data-tooltip="Their Allies list names this character - taken off from their sheet">from their list</span>{{/if}}
-        {{#if @root.isGM}}{{#unless ally.theirs}}
-        <button type="button" class="ally-eye{{#if ally.nameHidden}} off{{/if}}" data-action="toggleAllyName" data-ally-id="{{ally.id}}"
-                data-tooltip="{{#if ally.nameHidden}}Hidden: this sheet's players see &quot;Unknown Ally&quot;{{else}}Shown to this sheet's players{{/if}}">
-          <i class="fa-solid {{#if ally.nameHidden}}fa-eye-slash{{else}}fa-eye{{/if}}"></i></button>
-        {{/unless}}{{/if}}
-      </li>
-      {{/each}}
-    </ul>
+      </div>
+    </section>
     {{else}}
-    <p class="tab-placeholder">No Allies yet. Every other Character counts as an Opponent.</p>
+    <section class="dbu-clist">
+      <header class="dbu-clist-head">
+        <h3>Minions</h3>
+        {{#if minionCaps}}<span class="dbu-clist-note" data-tooltip="Limited Control: one in a Combat Encounter (Minion Talents increase this number); outside of one, that plus your base Tier of Power">{{minionCaps.combat}} in combat &middot; {{#if minionCaps.unlimited}}no limit in all{{else}}{{minionCaps.outside}} in all{{/if}}</span>{{/if}}
+        <button type="button" class="dbu-manage" data-action="openCombatWindow" data-window="minions"
+                data-tooltip="Add Minions and take them off">Manage</button>
+      </header>
+      <div class="dbu-clist-rows">
+        {{#each minionsList as |minion|}}
+          <div class="dbu-crow dbu-person{{#if minion.missing}} missing{{/if}}">
+            {{#if minion.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if minion.img}}<img class="ally-img" src="{{minion.img}}" alt=""/>{{/if}}{{/if}}
+            <span class="dbu-person-name">{{minion.name}}</span>
+            {{#if minion.kind}}<span class="dbu-temp">{{minion.kind}}</span>{{/if}}
+            {{#if minion.theirs}}<span class="dbu-temp" data-tooltip="This Minion's sheet names you as its Master - taken off there">from their sheet</span>{{/if}}
+          </div>
+        {{else}}
+        <p class="dbu-clist-empty">No Minions.</p>
+        {{/each}}
+      </div>
+    </section>
     {{/if}}
-  </section>
+  </div>
 
-  {{! A Character's Minions, or a Minion's one Master (the user's) - either side is enough, as with Allies, and the two are
-      Allies. A Minion has no Minions; a Minion with a Master is changed by no list, only by an effect that says so. }}
+  {{#if combatWindow.allies}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window" role="dialog" aria-modal="true">
+      <header><h3>Allies</h3></header>
+      <div class="dbu-combat-window-body ally-panel">
+      {{#if editable}}
+      <button type="button" class="edit-toggle ally-add" data-action="addAllies">+ Add Allies</button>
+      {{/if}}
+      {{#if allies.length}}
+      <ul class="ally-list">
+        {{#each allies as |ally|}}
+        <li class="ally{{#if ally.theirs}} theirs{{/if}}{{#if ally.missing}} missing{{/if}}">
+          {{#if ally.theirs}}
+          <span class="ally-x-space"></span>
+          {{else}}
+            {{#if @root.editable}}
+            <button type="button" class="ally-x" data-action="removeAlly" data-ally-id="{{ally.id}}"
+                    data-tooltip="Take {{ally.name}} off the Allies list">&#10005;</button>
+            {{else}}
+            <span class="ally-x-space"></span>
+            {{/if}}
+          {{/if}}
+          {{#if ally.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if ally.img}}<img class="ally-img" src="{{ally.img}}" alt=""/>{{/if}}{{/if}}
+          <span class="ally-name">{{ally.name}}</span>
+          {{#if ally.inherited}}<span class="ally-note" data-tooltip="{{ally.why}}">{{ally.note}}</span>
+          {{else if ally.theirs}}<span class="ally-note" data-tooltip="Their Allies list names this character - taken off from their sheet">from their list</span>{{/if}}
+          {{#if @root.isGM}}{{#unless ally.theirs}}
+          <button type="button" class="ally-eye{{#if ally.nameHidden}} off{{/if}}" data-action="toggleAllyName" data-ally-id="{{ally.id}}"
+                  data-tooltip="{{#if ally.nameHidden}}Hidden: this sheet's players see &quot;Unknown Ally&quot;{{else}}Shown to this sheet's players{{/if}}">
+            <i class="fa-solid {{#if ally.nameHidden}}fa-eye-slash{{else}}fa-eye{{/if}}"></i></button>
+          {{/unless}}{{/if}}
+        </li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="tab-placeholder">No Allies yet. Every other Character counts as an Opponent.</p>
+      {{/if}}
+      </div>
+      <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
+    </div>
+  </div>
+  {{/if}}
+
   {{#if isMinion}}
-  <section class="panel ally-panel">
-    <h3 class="panel-title">Master</h3>
-    {{#if masterEntry}}
-    <ul class="ally-list">
-      <li class="ally{{#if masterEntry.theirs}} theirs{{/if}}">
-        {{#if masterEntry.theirs}}
-        <span class="ally-x-space"></span>
-        {{else}}
-          {{#if editable}}
-          <button type="button" class="ally-x" data-action="clearMaster"
-                  data-tooltip="Take {{masterEntry.name}} off as Master">&#10005;</button>
-          {{else}}
+  {{#if combatWindow.master}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window" role="dialog" aria-modal="true">
+      <header><h3>Master</h3></header>
+      <div class="dbu-combat-window-body ally-panel">
+      {{#if masterEntry}}
+      <ul class="ally-list">
+        <li class="ally{{#if masterEntry.theirs}} theirs{{/if}}">
+          {{#if masterEntry.theirs}}
           <span class="ally-x-space"></span>
+          {{else}}
+            {{#if editable}}
+            <button type="button" class="ally-x" data-action="clearMaster"
+                    data-tooltip="Take {{masterEntry.name}} off as Master">&#10005;</button>
+            {{else}}
+            <span class="ally-x-space"></span>
+            {{/if}}
           {{/if}}
-        {{/if}}
-        {{#if masterEntry.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if masterEntry.img}}<img class="ally-img" src="{{masterEntry.img}}" alt=""/>{{/if}}{{/if}}
-        <span class="ally-name">{{masterEntry.name}}</span>
-        {{#if masterEntry.theirs}}<span class="ally-note" data-tooltip="Their Minions list names this Minion - taken off from their sheet">from their list</span>{{/if}}
-      </li>
-    </ul>
-    {{else}}
-    {{#if editable}}
-    <button type="button" class="edit-toggle ally-add" data-action="setMaster">Set Master</button>
-    {{/if}}
-    <p class="tab-placeholder">No Master yet.</p>
-    {{/if}}
-  </section>
+          {{#if masterEntry.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if masterEntry.img}}<img class="ally-img" src="{{masterEntry.img}}" alt=""/>{{/if}}{{/if}}
+          <span class="ally-name">{{masterEntry.name}}</span>
+          {{#if masterEntry.theirs}}<span class="ally-note" data-tooltip="Their Minions list names this Minion - taken off from their sheet">from their list</span>{{/if}}
+        </li>
+      </ul>
+      {{else}}
+      {{#if editable}}
+      <button type="button" class="edit-toggle ally-add" data-action="setMaster">Set Master</button>
+      {{/if}}
+      <p class="tab-placeholder">No Master yet.</p>
+      {{/if}}
+      </div>
+      <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
+    </div>
+  </div>
+  {{/if}}
 
-  {{! The Minion's kind (the user's): a Special Minion, and a Duplicate - "Duplicates ... are Special Minions". }}
   <section class="panel minion-kind-panel">
     <h3 class="panel-title">Kind of Minion</h3>
     <label class="debug-toggle"
@@ -107,39 +183,43 @@
     {{/unless}}
   </section>
   {{else}}
-  <section class="panel ally-panel">
-    <h3 class="panel-title">
-      Minions
-      {{#if minionCaps}}<span class="panel-note" data-tooltip="Limited Control: one in a Combat Encounter (Minion Talents increase this number); outside of one, that plus your base Tier of Power">Up to {{minionCaps.combat}} in combat &middot; {{#if minionCaps.unlimited}}no limit in all{{else}}{{minionCaps.outside}} in all{{/if}}</span>{{/if}}
-    </h3>
-    {{#if editable}}
-    <button type="button" class="edit-toggle ally-add" data-action="addMinions">+ Add Minions</button>
-    {{/if}}
-    {{#if minionsList.length}}
-    <ul class="ally-list">
-      {{#each minionsList as |minion|}}
-      <li class="ally{{#if minion.theirs}} theirs{{/if}}{{#if minion.missing}} missing{{/if}}">
-        {{#if minion.theirs}}
-        <span class="ally-x-space"></span>
-        {{else}}
-          {{#if @root.editable}}
-          <button type="button" class="ally-x" data-action="removeMinion" data-minion-id="{{minion.id}}"
-                  data-tooltip="Take {{minion.name}} off the Minions list">&#10005;</button>
-          {{else}}
+  {{#if combatWindow.minions}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window" role="dialog" aria-modal="true">
+      <header><h3>Minions</h3></header>
+      <div class="dbu-combat-window-body ally-panel">
+      {{#if editable}}
+      <button type="button" class="edit-toggle ally-add" data-action="addMinions">+ Add Minions</button>
+      {{/if}}
+      {{#if minionsList.length}}
+      <ul class="ally-list">
+        {{#each minionsList as |minion|}}
+        <li class="ally{{#if minion.theirs}} theirs{{/if}}{{#if minion.missing}} missing{{/if}}">
+          {{#if minion.theirs}}
           <span class="ally-x-space"></span>
+          {{else}}
+            {{#if @root.editable}}
+            <button type="button" class="ally-x" data-action="removeMinion" data-minion-id="{{minion.id}}"
+                    data-tooltip="Take {{minion.name}} off the Minions list">&#10005;</button>
+            {{else}}
+            <span class="ally-x-space"></span>
+            {{/if}}
           {{/if}}
-        {{/if}}
-        {{#if minion.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if minion.img}}<img class="ally-img" src="{{minion.img}}" alt=""/>{{/if}}{{/if}}
-        <span class="ally-name">{{minion.name}}</span>
-        {{#if minion.kind}}<span class="ally-note">{{minion.kind}}</span>{{/if}}
-        {{#if minion.theirs}}<span class="ally-note" data-tooltip="This Minion's sheet names you as its Master - taken off there">from their sheet</span>{{/if}}
-      </li>
-      {{/each}}
-    </ul>
-    {{else}}
-    <p class="tab-placeholder">No Minions.</p>
-    {{/if}}
-  </section>
+          {{#if minion.unknown}}<span class="ally-img ally-unknown" aria-hidden="true">?</span>{{else}}{{#if minion.img}}<img class="ally-img" src="{{minion.img}}" alt=""/>{{/if}}{{/if}}
+          <span class="ally-name">{{minion.name}}</span>
+          {{#if minion.kind}}<span class="ally-note">{{minion.kind}}</span>{{/if}}
+          {{#if minion.theirs}}<span class="ally-note" data-tooltip="This Minion's sheet names you as its Master - taken off there">from their sheet</span>{{/if}}
+        </li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="tab-placeholder">No Minions.</p>
+      {{/if}}
+      </div>
+      <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
+    </div>
+  </div>
+  {{/if}}
   {{/if}}
 
   {{! The States' Triggered effects, set beforehand as a Racial Trait's are (the user's): Triggered, offered where its

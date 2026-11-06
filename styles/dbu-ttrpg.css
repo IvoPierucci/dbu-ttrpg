@@ -4884,3 +4884,48 @@
 .dbu-ttrpg .dbu-addendum { margin-top: 4px; }
 .dbu-ttrpg .dbu-addendum > summary { cursor: pointer; font-weight: bold; }
 .dbu-ttrpg .dbu-addendum[open] > summary { margin-bottom: 2px; }
+
+/* Settings: Allies and Minions (or Master) side by side, as the Combat tab's lists; each one's Manage window over the sheet. */
+.dbu-ttrpg .dbu-settings-lists {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-bottom: 8px;
+}
+
+.dbu-ttrpg .dbu-person {
+  justify-content: center;
+}
+
+.dbu-ttrpg .dbu-person .ally-img {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  border: none;
+}
+
+.dbu-ttrpg .dbu-person .ally-unknown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dbu-panel-raised);
+  font-size: 11px;
+}
+
+.dbu-ttrpg .dbu-person-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dbu-ttrpg .dbu-person.missing .dbu-person-name {
+  color: var(--dbu-text-dim);
+  font-style: italic;
+}
+
+.dbu-ttrpg .dbu-clist-note {
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+  white-space: nowrap;
+}
