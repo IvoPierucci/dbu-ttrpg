@@ -3579,6 +3579,8 @@ export function whyNotSpecial(actor, maneuver) {
     return `Something is keeping ${actor.name} from using ${maneuver.name}.`;
   }
   if (openedWithoutGear(actor, maneuver)) return null;
+  // Assimilation (3): a Goop of its holder's.
+  if ((maneuver.id === "absorb") && goopAbsorbs(actor)) return null;
 
   // Or an Item they hold: the Energy-Suction Device - "While you possess this Item, gain
   // access to the Power Drain Special Maneuver". An Accessory only while it is worn: the
@@ -4143,6 +4145,8 @@ export function makesMinions(actor, maneuver) {
  */
 export function whyNotMinionManeuver(actor, maneuver) {
   if ((actor?.type !== "minion") || !maneuver) return null;
+  // Assimilation (3): a Goop's Absorb, its Non-Minion tag ignored.
+  if ((maneuver.id === "absorb") && goopAbsorbs(actor)) return null;
   if (minionLine(actor, maneuver) === "non-minion") return `${actor.name} is a Minion: ${maneuver.name} is Non-Minion.`;
   if (makesMinions(actor, maneuver)) return `${actor.name} is a Minion: a Minion cannot create a Minion (${maneuver.name}).`;
   if (actor.system?.duplicate && (maneuver.id === "empower")) return `${actor.name} is a Duplicate: no Empower Maneuver.`;
@@ -4185,6 +4189,12 @@ export function whyNotWeaponShape(actor, maneuver) {
   }
   if ((maneuver.id === "movement") && shape.system.unique.shapeWielder) return `${said}, wielded: no Movement Maneuver.`;
   return null;
+}
+
+/** Assimilation (3): "Your Goops gain access to (and can use) the Absorb Maneuver ignoring the (Non-Minion) tag" - their Master's. */
+export function goopAbsorbs(actor) {
+  if (actor?.getFlag?.("dbu-ttrpg", "minionKind") !== "goop") return false;
+  return globalThis.game?.actors?.get?.(masterOf(actor))?.system?.effects?.slots?.["assimilation.goopAbsorb"] === true;
 }
 
 /** A Goop's one Maneuver, and Battle Goo's two more. */

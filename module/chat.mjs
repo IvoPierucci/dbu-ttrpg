@@ -1756,7 +1756,7 @@ export async function postDrainClash(actor, target, maneuver, actions, store) {
 }
 
 /** The Absorb Maneuver's first Clash: "Make a Clash (Strike vs Strike/Dodge) against them." */
-export async function postAbsorbClash(actor, target, maneuver) {
+export async function postAbsorbClash(actor, target, maneuver, { goop = null } = {}) {
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: "",
@@ -1766,14 +1766,14 @@ export async function postAbsorbClash(actor, target, maneuver) {
         [CLASH_FLAG]: {
           category: "strike",
           clashLabel: "Clash (Strike vs Strike/Dodge)",
-          maneuverName: maneuver.name,
+          maneuverName: goop ? `${maneuver.name} (${goop.name}, Assimilation)` : maneuver.name,
           reason: `Win and a Clash (Corporeal) at ${target.name} follows; lose and ${target.name} may Exploit.`,
           challengerUuid: actor.uuid,
           challengerName: actor.name,
           defenderUuid: target.uuid,
           defenderName: target.name,
           defenderRoll: "",
-          absorbing: { applied: false },
+          absorbing: { applied: false, goopUuid: goop?.uuid ?? "" },
           ready: [],
           result: null
         }
@@ -1788,14 +1788,16 @@ async function settleAbsorbing(message, clash) {
   const target = fromUuidSync(clash.defenderUuid);
   if (!actor || !target) return;
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, absorbing: { ...clash.absorbing, applied: true } });
+  // Assimilation (3): the Goop used it, so the Exploit is at the Goop.
+  const goop = clash.absorbing?.goopUuid ? fromUuidSync(clash.absorbing.goopUuid) : null;
   if (whoWonClash(clash.result) !== "challenger") {
-    offerExploitTo(message, target, actor, `${clash.maneuverName} - the Clash was lost`, "absorb");
+    offerExploitTo(message, target, goop ?? actor, `${clash.maneuverName} - the Clash was lost`, "absorb");
     return settledNote(message, `${target.name} slips free.`);
   }
-  await settledNote(message, `${actor.name} engulfs ${target.name} - a Clash (Corporeal).`);
+  await settledNote(message, `${goop?.name ?? actor.name} engulfs ${target.name} - a Clash (Corporeal).`);
   return postSaveClash(actor, target, { maneuverName: "Absorb", saves: ["corporeal"],
     reason: `Win and ${target.name} is Absorbed; lose and ${target.name} is Shaken till the end of their next turn.`,
-    absorbHold: { applied: false } });
+    absorbHold: { applied: false, goopUuid: goop?.uuid ?? "" } });
 }
 
 /**
@@ -1816,9 +1818,12 @@ async function settleAbsorbHold(message, clash) {
     }
     return settledNote(message, `${target.name} breaks free - Shaken till the end of their next turn.`);
   }
+  // Assimilation (3): "if they succeed, they are instantly Defeated and you are treated as if you succeeded at using the Absorb Maneuver".
+  const goop = clash.absorbHold?.goopUuid ? fromUuidSync(clash.absorbHold.goopUuid) : null;
+  if (goop) await requestDismissDuplicates([goop]);
   await absorbCharacter(actor, target);
-  return settledNote(message, `${target.name} is Absorbed into ${actor.name}: removed from the Combat Encounter, a stack of the `
-    + "Absorption Awakening (a Level 2 Temporary Awakening - its effects, the table's).");
+  return settledNote(message, `${target.name} is Absorbed into ${actor.name}${goop ? ` - ${goop.name} Defeated` : ""}: removed from the `
+    + "Combat Encounter, a stack of the Absorption Awakening (a Level 2 Temporary Awakening - its effects, the table's).");
 }
 
 /**
@@ -1833,6 +1838,8 @@ export async function absorbCharacter(actor, target) {
     { uuid: target.uuid, name: target.name }] });
   await setCondition(actor, "absorption-awakening", (Number(actor.system.conditions?.["absorption-awakening"]) || 0) + 1);
   await removeFromEncounter(target);
+  // Assimilation (4): the Absorbed's Top Layer, asked.
+  await (await import("./assimilation.mjs")).assimilateApparel(actor, target);
   const racial = Array.from(actor.items ?? []).filter(item => item.type === "racial");
   if (!racial.some(item => (item.system?.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === "natural-dragon")))) return;
   if ((Number(actor.system.conditions?.["ball-form"]) || 0) > 0) await setCondition(actor, "ball-form", 0);

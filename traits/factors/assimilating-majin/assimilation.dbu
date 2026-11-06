@@ -10,14 +10,20 @@ text: >
   Assimilation (Body): Possessing the ability to absorb the bodies and powers of others, you can grow stronger by consuming beings with the scattered pieces of your body.
   (1)-[Passive]: Increase your Corporeal Save by 1(T).
   (2)-[Passive]: You gain access to the Absorb Maneuver.
-  (3)-[Passive]: If you have the Primordial Majin Factor, your Goops gain access to (and can use) the Absorb Maneuver (see — Special Maneuvers) ignoring the (Non-Minion) tag. Your Goop uses your Combat Rolls and Saving Throws for this Maneuver, and if they succeed, they are instantly Defeated and you are treated as if you succeeded at using the Absorb Maneuver on your target instead.
-  (4)-[Triggered]: Upon gaining a stack of the Absorption Awakening, you may replace your Top Layer of Apparel with the Top Layer of Apparel equipped by the Absorbed Character for that stack of Absorption. If you do, that piece of Apparel may gain any Special Apparel Qualities possessed by the piece of Apparel it replaced.
+  (3)-[Passive]: Your Goops gain access to (and can use) the Absorb Maneuver (see — Special Maneuvers) ignoring the (Non-Minion) tag. Your Goop uses your Combat Rolls and Saving Throws for this Maneuver, and if they succeed, they are instantly Defeated and you are treated as if you succeeded at using the Absorb Maneuver on your target instead.
+  (4)-[Triggered]: Upon gaining a stack of the Absorption Awakening, you may replace your Top Layer of Apparel with the Top Layer of Apparel equipped by the Absorbed Character for that stack of Absorption while you possess that stack of Absorption (if lost, you regain the piece of Apparel replaced by this effect). If you do, that piece of Apparel may gain any Special Apparel Qualities possessed by the piece of Apparel it replaced.
 
 ---
 
 [passive]
 # (1)
 save.corporeal += 1(T);
-# Not built: (2) the Absorb Maneuver, (3) Primordial Majin's Goops, (4) the Absorption Awakening - none of them in this system yet. Its
-# access is said here; the rest is the table's till they are.
+# (2)
 allow maneuver.absorb;
+# (3) Your Goops may use the Absorb Maneuver, its Non-Minion tag aside (maneuvers.mjs goopAbsorbs): the Clashes rolled with your Strike
+# and your Corporeal Save; both won, the Goop Defeated and the Absorbed yours (chat.mjs postAbsorbClash's `goop`, settleAbsorbHold).
+allow assimilation.goopAbsorb;
+# (4) A stack of the Absorption Awakening gained, the Absorbed wearing a Top Layer: asked, being [Triggered] - a copy of it worn in place
+# of your Top Layer, which is taken off; then each Special Apparel Quality of yours asked onto it. That stack lost, the copy gone and
+# yours back on (assimilation.mjs).
+allow assimilation.apparel;

@@ -5240,7 +5240,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
   // The Absorb Maneuver: "Minions: Non-Minion" - and a Character targeted within your Melee Range; its Clash.
   if (maneuver.id === "absorb") {
-    const refused = actor.system?.minion ? `${actor.name} is a Minion: the Absorb Maneuver is not theirs.`
+    // Assimilation (3): a Goop's - "Your Goop uses your Combat Rolls and Saving Throws for this Maneuver": the Clashes its Master's.
+    const { goopAbsorbs } = await import("./maneuvers.mjs");
+    const goop = goopAbsorbs(actor);
+    const { masterOf } = await import("./allies.mjs");
+    const master = goop ? game.actors?.get(masterOf(actor)) : null;
+    const refused = (actor.system?.minion && !goop) ? `${actor.name} is a Minion: the Absorb Maneuver is not theirs.`
+      : (goop && !master) ? `${actor.name} has no Master to Absorb for.`
       : !targetActor ? "Target a Character first."
       : (targetActor.uuid === actor.uuid) ? "Target another Character."
       : whyNotWithinMelee(actor, targetActor, maneuver.name);
@@ -5252,7 +5258,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type);
     const { postAbsorbClash } = await import("./chat.mjs");
-    await postAbsorbClash(actor, targetActor, maneuver);
+    await (goop ? postAbsorbClash(master, targetActor, maneuver, { goop: actor }) : postAbsorbClash(actor, targetActor, maneuver));
     return true;
   }
 
