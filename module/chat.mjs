@@ -9787,14 +9787,11 @@ function runHitAnswers(message, attack) {
   }), 0);
 }
 
-/** Change on a hit's answer (the user's): taken back, its window again with what was picked. */
+/** Cancel on a hit's answer (the user's): taken back - Apply effects and the Reroll on the card again, no window opened. */
 async function changeHitAnswer(message, actors) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack?.result || attack.result.wound || attack.woundHeld) return;
-  const initials = new Map((attack.hitPending ?? []).filter(entry => actors.some(actor => actor.uuid === entry.uuid))
-    .map(entry => [entry.uuid, { ...entry.answer }]));
   for (const actor of actors) await requestEdit(message, { type: "hitUnpending", uuid: actor.uuid });
-  return openHitWindows(message, initials);
 }
 
 /**
@@ -31255,27 +31252,23 @@ function runPendingAnswers(message, attack) {
   }, 0);
 }
 
-/** Change (the user's): no longer ready - what they had picked put back in their window, opened again. */
+/** Cancel (the user's): no longer ready, their answer taken back - the card as though nothing had been picked; no window opened. */
 async function changeAnswer(message, actors) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack || attack.result || attackIsReady(attack)) return;
-  const initials = new Map((attack.pending ?? []).filter(entry => actors.some(actor => actor.uuid === entry.uuid))
-    .map(entry => [entry.uuid, { ...entry.answer }]));
   for (const actor of actors) await requestEdit(message, { type: "unready", uuid: actor.uuid });
-  return respondDialog(message, Boolean(message.getFlag(SCOPE, RESPONDABLE_FLAG)), { initials });
 }
 
-/** The attacker's Change: no longer ready, what its window armed put back, the window again. */
+/** The attacker's Cancel: no longer ready, what its window armed put back - its Apply effects on the card again, no window opened. */
 async function changeAttacker(message, attacker) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack || attack.result || attackIsReady(attack)) return;
   const armed = new Set(attack.attackerArmed ?? []);
   if (armed.size) await attacker.update({ "system.armedTalents": (attacker.system.armedTalents ?? []).filter(id => !armed.has(id)) });
   await requestEdit(message, { type: "unready", uuid: attacker.uuid });
-  return attackerStage(message, message.getFlag(SCOPE, ATTACK_FLAG) ?? attack, attacker);
 }
 
-/** "✓ Ready" with its Change beside it (the user's) - or, every side ready, that nothing changes now. */
+/** "✓ Ready" with its Cancel beside it (the user's): what was picked taken back, the card's buttons as before it. */
 function readyRow(onChange) {
   const row = document.createElement("div");
   row.className = "dbu-ready-row";
@@ -31283,8 +31276,8 @@ function readyRow(onChange) {
   const change = document.createElement("button");
   change.type = "button";
   change.className = "dbu-ready-change";
-  change.textContent = "Change";
-  change.dataset.tooltip = "Not ready any more - your window again, with what you picked";
+  change.textContent = "Cancel";
+  change.dataset.tooltip = "Not ready any more - what you picked taken back, as though you had picked nothing";
   change.addEventListener("click", onChange);
   row.append(change);
   return row;
