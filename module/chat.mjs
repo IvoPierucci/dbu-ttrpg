@@ -4128,6 +4128,8 @@ export function requestEdit(message, request) {
 
 export function registerChatHooks() {
   Hooks.on("renderChatMessageHTML", onRenderChatMessage);
+  // A card an Instant makes from its stage goes before the Maneuver it answers (anchorNewMessage).
+  Hooks.on("preCreateChatMessage", document => anchorNewMessage(document));
 }
 
 /**
@@ -10367,34 +10369,53 @@ async function applyInstantDone(messageId, id) {
   return message.setFlag(SCOPE, INSTANT_STAGE_FLAG, { ...stage, pending, done: !pending.length });
 }
 
-/** Every side decided: the Instants played one at a time, in Initiative Order, each by whoever plays that character - paid then. */
+/** Every side decided and nobody picked one: the stage simply over - written once, by the GM. */
 const instantsClaimed = new Set();
 function runInstants(message, attack) {
   const stage = instantStageOf(message);
-  if (stage.done || instantWaiting(message, attack).length) return;
-  if (!stage.pending.length) {
-    // Nobody picked one: the stage simply over - written once, by the GM.
-    const key = `none:${message.id}`;
-    if (game.user.isGM && (game.user === game.users.activeGM) && !instantsClaimed.has(key)) {
-      instantsClaimed.add(key);
-      message.setFlag(SCOPE, INSTANT_STAGE_FLAG, { ...stage, done: true });
-    }
-    return;
+  if (stage.done || stage.pending.length || instantWaiting(message, attack).length) return;
+  const key = `none:${message.id}`;
+  if (game.user.isGM && (game.user === game.users.activeGM) && !instantsClaimed.has(key)) {
+    instantsClaimed.add(key);
+    message.setFlag(SCOPE, INSTANT_STAGE_FLAG, { ...stage, done: true });
   }
-  const next = instantsInOrder(stage)[0];
-  const actor = fromUuidSync(next.uuid);
-  const executor = actor ? playerOf(actor) : game.users.activeGM;
-  if ((executor !== game.user) || instantsClaimed.has(next.id)) return;
-  instantsClaimed.add(next.id);
-  setTimeout(async () => {
-    try {
-      if (actor) await playInstant(message, actor, next.maneuverId);
-    } catch (error) {
-      console.error("DBU TTRPG | Could not play an Instant", next, error);
-    } finally {
-      await requestEdit(message, { type: "instantDone", id: next.id });
+}
+
+/**
+ * Where a card made now goes in the chat (the user's: in the order things resolve): before the Maneuver the Instant answers - its
+ * timestamp just under that card's, so it sits above it, now and once the chat is loaded again (Foundry places by timestamp).
+ */
+const chatAnchor = { before: null, count: 0 };
+export function anchorNewMessage(data) {
+  if (!chatAnchor.before) return;
+  chatAnchor.count += 1;
+  data.updateSource?.({ timestamp: chatAnchor.before - 1000 + chatAnchor.count });
+}
+
+/**
+ * Use (the user's): the next Instant in Initiative Order, used as it is from the sheet - its own card, its price paid then - its
+ * card placed before the Maneuver it answers; then the next one's Use opens. Its owner's, or the GM's.
+ */
+async function useStageInstant(message, entry) {
+  const actor = fromUuidSync(entry.uuid);
+  if (!actor) return requestEdit(message, { type: "instantDone", id: entry.id });
+  const owned = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.system.maneuverId === entry.maneuverId));
+  const before = message.timestamp ?? Date.now();
+  chatAnchor.before = before - 1000 + (instantsInOrder(instantStageOf(message)).findIndex(each => each.id === entry.id) + 1) * 100;
+  chatAnchor.count = 0;
+  let used = false;
+  try {
+    if (owned) {
+      const { useOwnedManeuver } = await import("./use-maneuver.mjs");
+      used = Boolean(await useOwnedManeuver(actor, owned.id));
+    } else {
+      await playInstant(message, actor, entry.maneuverId);
+      used = true;
     }
-  }, 0);
+  } finally {
+    chatAnchor.before = null;
+  }
+  if (used) return requestEdit(message, { type: "instantDone", id: entry.id });
 }
 
 /**
@@ -10419,11 +10440,38 @@ function renderInstantStage(message, attack, container) {
   }).join("");
   const order = playing ? `<ol class="dbu-instant-order">${instantsInOrder(stage).map(entry =>
     `<li><b>${esc(getManeuver(entry.maneuverId)?.name ?? entry.maneuverId)}</b> - ${esc(fromUuidSync(entry.uuid)?.name ?? "")}</li>`).join("")}</ol>` : "";
-  box.innerHTML = `<div class="dbu-instant-title">${playing ? "Instants - played in Initiative Order" : "Instants"}</div>${order}${rows}
-    <div class="dbu-clash-result">${playing ? "Playing the Instants" : `Instants first - waiting on ${waiting
+  box.innerHTML = `<div class="dbu-instant-title">${playing ? "Instants - in Initiative Order" : "Instants"}</div>${order}${rows}
+    <div class="dbu-clash-result">${playing ? "Each Instant in turn - its Use" : `Instants first - waiting on ${waiting
       .map(uuid => esc(fromUuidSync(uuid)?.name ?? "")).join(", ")}`}</div>`;
   container.append(box);
-  if (playing) return;
+  if (playing) {
+    // One by one (the user's): the first still to use has its Use - for whoever plays them, or the GM - the rest wait for it.
+    const ordered = instantsInOrder(stage);
+    box.querySelectorAll(".dbu-instant-order li").forEach((item, index) => {
+      const entry = ordered[index];
+      const actor = fromUuidSync(entry.uuid);
+      if (!actor?.isOwner) return;
+      const first = index === 0;
+      const use = document.createElement("button");
+      use.type = "button";
+      use.className = "dbu-instant-use";
+      use.textContent = "Use";
+      use.disabled = !first;
+      use.dataset.tooltip = first ? "Use it now - its card goes before this Maneuver's" : "After the one before it";
+      use.addEventListener("click", () => { use.disabled = true; return useStageInstant(message, entry); });
+      item.append(" ", use);
+      if (first) {
+        const skip = document.createElement("button");
+        skip.type = "button";
+        skip.className = "dbu-instant-use";
+        skip.textContent = "Skip";
+        skip.dataset.tooltip = "Not used after all - nothing was paid";
+        skip.addEventListener("click", () => requestEdit(message, { type: "instantDone", id: entry.id }));
+        item.append(" ", skip);
+      }
+    });
+    return;
+  }
 
   const mine = ownedCharacters().filter(actor => hasInstant(actor, message, attack) || stage.decided.includes(actor.uuid)
     || stage.pending.some(entry => entry.uuid === actor.uuid));

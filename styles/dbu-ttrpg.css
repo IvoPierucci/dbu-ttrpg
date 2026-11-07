@@ -5316,3 +5316,7 @@
 .dbu-clash-button.dbu-instant-button { background: #4a3a6a; border-color: #7a5eaa; color: #efe3ff; }
 .dbu-ready-row .dbu-instant-button { flex: 1; margin: 0; }
 .dbu-dim { color: var(--dbu-chat-dim, #8f8f8f); }
+
+/* Each Instant's Use, on its line - the first open, the rest waiting (the user's). */
+.dbu-instant-order .dbu-instant-use { display: inline-block; width: auto; height: auto; line-height: 1.3; padding: 0 8px; font-size: 11px; margin-left: 4px; }
+.dbu-instant-order .dbu-instant-use:disabled { opacity: 0.45; }
