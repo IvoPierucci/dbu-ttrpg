@@ -3725,10 +3725,10 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
   }
 
   const now = (type === "instant")
-    ? { held: true, messageId: messageId ?? "" }
-    : { held: false, messageId: "" };
+    ? { held: true, messageId: messageId ?? "", before: false }
+    : { held: false, messageId: "", before: false };
 
-  if ((now.held === held.held) && (now.messageId === held.messageId)) {
+  if ((now.held === held.held) && (now.messageId === held.messageId) && !held.before) {
     return Object.keys(lastUpdate).length ? actor.update(lastUpdate) : undefined;
   }
   return actor.update({ "system.instantPlayed": now, ...lastUpdate });
@@ -3739,8 +3739,13 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
  *
  * @returns {null|string} null when they may, otherwise what is in the way
  */
-export function whyNotAnotherInstant(actor) {
-  if (!actor?.system?.instantPlayed?.held) return null;
+export function whyNotAnotherInstant(actor, { messageId = "" } = {}) {
+  const held = actor?.system?.instantPlayed;
+  if (!held?.held) return null;
+  // Played from a Maneuver's card, it came before that Maneuver (the user's): only a second Instant on the same one is refused.
+  if (held.before) {
+    return (messageId && (messageId === held.messageId)) ? "You already played an Instant on this Maneuver." : null;
+  }
   return "Your last Maneuver was an Instant. Use another kind first.";
 }
 

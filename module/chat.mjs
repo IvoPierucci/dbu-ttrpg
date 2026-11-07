@@ -10305,7 +10305,7 @@ function instantOptions(actor, message, attack) {
     if (attack?.technique?.features?.includes("instant-assault")) reason = "Instant Assault";
     else if (!maneuver.surge && (frozenBy(actor) || frozenTurnOf(actor))) reason = "time is frozen";
     else if (maneuver.godManeuver && whyNotSpecial(actor, maneuver)) reason = whyNotSpecial(actor, maneuver);
-    else if (whyNotAnotherInstant(actor)) reason = "your last Maneuver was an Instant";
+    else if (whyNotAnotherInstant(actor, { messageId: message?.id ?? "" })) reason = whyNotAnotherInstant(actor, { messageId: message?.id ?? "" });
     return { maneuver, reason };
   });
 }
@@ -10415,6 +10415,9 @@ async function useStageInstant(message, entry) {
   } finally {
     chatAnchor.before = null;
   }
+  // From the card, before the Maneuver it answers (the user's): held from a second Instant on this Maneuver only - not as the last
+  // Maneuver used, which this one comes after.
+  if (used) await requestActorUpdate(actor, { "system.instantPlayed": { held: true, messageId: message.id, before: true } });
   if (used) return requestEdit(message, { type: "instantDone", id: entry.id });
 }
 
@@ -10750,6 +10753,8 @@ async function playInstant(message, actor, maneuverId) {
   // which is why the rule had to be inferred from the message log instead, and why
   // somebody else playing a Standard Maneuver was letting you play a second.
   await recordManeuverType(actor, "instant", { messageId: message.id });
+  // Played on the card, it came before the Maneuver it answers (the user's): held only from a second Instant on that one.
+  await requestActorUpdate(actor, { "system.instantPlayed": { held: true, messageId: message.id, before: true } });
 
   requestEdit(message, {
     type: "respond",
