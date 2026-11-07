@@ -3210,9 +3210,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // Two Slots, one inside the other: the one named for this Throw, and then the
         // one that names all of them. Outermost so that a blanket halving lands on the
         // finished Throw, which is what Calculation Priority asks.
+        // Its ingredients named, for its hover (the user's): the Attribute Score, and the racial 1(T) - the race's, or what gave it.
         value: withEffects(this, "save.all",
           withEffects(this, `save.${save}`,
-            atts[from].score + (racial ? this.perTier(1) : 0)),
+            atts[from].score + (racial ? this.perTier(1) : 0), { parts: [
+              { label: `${from.charAt(0).toUpperCase()}${from.slice(1)} Score`, value: atts[from].score },
+              ...(racial ? [{ label: racialSaves.includes(save) ? "Racial Saving Throw"
+                : `${(this.effects?.slots?.[`save.racial.${save}`]?.parts ?? []).map(part => part.source).find(Boolean) ?? "Racial"} (Saving Throw)`,
+                value: this.perTier(1) }] : [])
+            ] }),
           { as: `save.${save}`, wraps: true }),
         criticalTarget: racial
           ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget - 1)
