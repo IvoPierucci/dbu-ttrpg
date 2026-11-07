@@ -272,6 +272,15 @@ function applyRequest(request) {
     case "desperate": return game.messages.get(request.messageId)?.setFlag(SCOPE, DESPERATE_FLAG,
       { ...(game.messages.get(request.messageId)?.getFlag(SCOPE, DESPERATE_FLAG) ?? {}), [request.exploiterUuid]: request.state });
     case "karmic": return applyKarmicRecord(request.messageId, request.actorId, request.key);
+    // Power Flare's Ki Wager, chosen in the window that opens once it is hit (the user's) - on its line of the card.
+    case "flareWager": {
+      const card = game.messages.get(request.messageId);
+      const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+      if (!attack?.result?.targets || attack.result.wound) return;
+      return card.setFlag(SCOPE, ATTACK_FLAG, { ...attack, result: { ...attack.result, targets: attack.result.targets.map(entry =>
+        ((entry.uuid === request.uuid) ? { ...entry, defenceWager: request.wager, defenceFoundation: request.foundation || entry.defenceFoundation,
+          flareWagered: true } : entry)) } });
+    }
     // "No reroll" (the user's): this side has done with its rerolls, and the Wound Roll waits on it no longer.
     case "rerollDone": {
       const card = game.messages.get(request.messageId);
@@ -9606,6 +9615,297 @@ async function respondPicker(message, entries) {
     ],
     rejectClose: false
   }).then(result => (Array.isArray(result) ? result : null));
+}
+
+/**
+ * Who among your characters can answer this hit, and with what (the user's): the one hit - Block with a Shield (having dodged, no
+ * other Counter), Barrier, what answers being hit, Power Flare's Ki Wager - and an Ally of theirs - the Intervene, a Barrier that
+ * covers them. Each greyed with why where nothing is left.
+ */
+function hitEntries(message, attack) {
+  const blockers = new Map(possibleBlockers(attack).map(entry => [entry.target.uuid, entry]));
+  const barriers = new Map(possibleBarriers(attack).map(entry => [entry.user.uuid, entry]));
+  const interveners = !deflection(attack) ? possibleInterveners(attack).filter(who => shieldableTargets(attack, who).length) : [];
+  const stepping = new Map(interveners.map(actor => [actor.uuid, shieldableTargets(attack, actor)]));
+  const hits = new Map(targetResults(attack).filter(({ own }) => own?.hit && !isAbsoluteMiss(own)).map(entry => [entry.uuid, entry]));
+  const owned = new Map();
+  for (const uuid of [...hits.keys(), ...barriers.keys(), ...stepping.keys()]) {
+    const actor = fromUuidSync(uuid);
+    if (actor?.isOwner && isCharacter(actor)) owned.set(uuid, actor);
+  }
+  return [...owned.values()].map(actor => {
+    const own = hits.get(actor.uuid)?.own ?? null;
+    const triggers = own ? relevantTriggers(actor, message, "hit") : [];
+    const flare = Boolean(own && (own.defense === "powerFlare") && !own.flareWagered);
+    const entry = { actor, isHit: Boolean(own), own, block: blockers.get(actor.uuid) ?? null, barrier: barriers.get(actor.uuid) ?? null,
+      intervene: stepping.get(actor.uuid) ?? null, triggers, flare };
+    entry.usable = Boolean(entry.block || entry.barrier || entry.intervene || triggers.length || flare);
+    entry.why = entry.usable ? "" : "nothing here answers this hit";
+    return entry;
+  });
+}
+
+/** The Apply effects button's: one character's window, or the picker for several (the user's). */
+async function openHitWindows(message) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.result || attack.result.wound) return;
+  const entries = hitEntries(message, attack);
+  const usable = entries.filter(entry => entry.usable);
+  if (!usable.length) return;
+  let chosen = null;
+  if (usable.length === 1) {
+    const one = await hitActorWindow(message, attack, usable[0]);
+    chosen = one ? [one] : null;
+  } else {
+    chosen = await hitPicker(message, attack, entries);
+  }
+  if (!chosen?.length) return;
+  for (const choice of chosen) {
+    try {
+      await applyHitChoice(message, attack, choice);
+    } catch (error) {
+      console.error("DBU TTRPG | Could not answer the hit", choice, error);
+      ui.notifications.error("DBU TTRPG | An answer to the hit failed. See the console.");
+    }
+  }
+}
+
+/**
+ * What a character's answer to the hit would roll, for its window's box: the Block's Strike with the Shield, the Barrier's Wound,
+ * the Intervene's - Defense Wall's "Wound - Soak - DR", Deflect's Might Clash - and Power Flare's Wound with its Ki Wager.
+ */
+function hitRollData(actor, attack) {
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const dice = combatDiceGroups(actor);
+  const base = DBUCharacterData.BASE_DIE;
+  const charges = (Number(attack.energyCharges) || 0) + (Number(attack.powerShot) || 0);
+  const soak = Number(actor.system.soakValue) || 0;
+  const category = resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0);
+  const wallSoak = Math.floor(soak * (DAMAGE_CATEGORIES[category]?.soakMultiplier ?? 1)) + Math.ceil(soak / 2);
+  return {
+    block: { what: `Strike Roll &middot; Block, with your Shield &middot; ${attack.result?.strike?.total ?? "?"} to beat`,
+      formula: { base, dice, parts: windowParts(actor, [{ label: "Strike", value: actor.system.combat?.strike ?? 0, workingsKey: "strike" }]) } },
+    barrier: { what: "Wound Roll &middot; Barrier &middot; taken off the Damage",
+      formula: { base, dice, parts: windowParts(actor, [{ label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) } },
+    wall: { what: `Damage if hit &middot; Defense Wall &middot; ${DAMAGE_CATEGORIES[category]?.label ?? ""} Category`,
+      line: `<span class="dbu-formula-piece dbu-formula-base" data-tooltip="Their Wound Roll, taken in your Ally's place">Wound</span>`
+        + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="${Handlebars.escapeExpression(`Soak Value ${soak}, +1/2 (rounded up) for Defense Wall`)}">${wallSoak} Soak</span>`
+        + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Damage Reduction">${Number(actor.system.damageReduction) || 0} DR</span>` },
+    deflect: { what: "Might Clash &middot; Deflect &middot; against the attacker",
+      formula: { base, dice, parts: [{ label: "Might", value: Number(actor.system.might) || 0 },
+        ...(charges ? [{ label: "Energy Charges and Power Shot", value: -charges * tier }] : [])] } },
+    flare: { what: "Wound Roll &middot; Power Flare &middot; against their Wound",
+      formula: { base, dice, parts: windowParts(actor, [{ label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) } }
+  };
+}
+
+/**
+ * One character's window once a hit lands (the user's): what they have, the roll their answer makes in its box (Power Flare's Wound
+ * with its Ki Wager, picked here), Actions to turn into Counter Actions by hand, then Maneuvers - Block, Barrier, the Intervene for
+ * an Ally with its effect and whom - and Effects, what answers being hit.
+ */
+async function hitActorWindow(message, attack, entry, { fromPicker = false, initial = null } = {}) {
+  const { actor } = entry;
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const roll = hitRollData(actor, attack);
+  const wagerMax = entry.flare ? maxKiWager(actor) : 0;
+  const counterLeft = game.combat?.started ? actionsLeft(actor, "counter") : Infinity;
+  const convertible = game.combat?.started ? convertibleActions(actor) : 0;
+  const maneuvers = [
+    entry.block ? `<label class="dbu-respond-option" data-counter-row="1"><input type="radio" name="hit-man" value="block"/>
+      <span class="dbu-respond-name">Block</span>${(entry.block.shields.length > 1)
+        ? `<select name="hit-shield">${entry.block.shields.map(item => `<option value="${item.id}">${esc(item.name)}</option>`).join("")}</select>`
+        : ""}<span class="dbu-respond-source">${esc(entry.block.shields[0]?.name)} &middot; 1 Counter Action</span></label>` : "",
+    entry.barrier ? `<label class="dbu-respond-option" data-counter-row="1"><input type="radio" name="hit-man" value="barrier"/>
+      <span class="dbu-respond-name">${esc(entry.barrier.item.name)}</span><span class="dbu-trait-tag">Unique Ability</span>
+      <span class="dbu-respond-source">1 Counter Action &middot; ${maneuverKiCost(uniqueDefinitionOf(entry.barrier.item), null, actor)} KP${
+        entry.barrier.covers.some(({ uuid }) => uuid !== actor.uuid) ? ` &middot; covers ${esc(entry.barrier.covers.map(({ uuid }) => fromUuidSync(uuid)?.name).filter(Boolean).join(", "))}` : ""}</span></label>` : "",
+    entry.intervene ? `<label class="dbu-respond-option" data-counter-row="1"><input type="radio" name="hit-man" value="intervene"/>
+      <span class="dbu-respond-name">Intervene</span>
+      <select name="hit-effect" disabled>${Object.entries(INTERVENE_OPTIONS).map(([key, option]) =>
+        `<option value="${key}" title="${esc(option.summary)}">${esc(option.label)} [${interveneOptionCost(key, actor)} KP]</option>`).join("")}</select>
+      <select name="hit-ally" disabled>${entry.intervene.map(ally => `<option value="${ally.uuid}">for ${esc(ally.name)}</option>`).join("")}</select>
+      <span class="dbu-respond-source">1 Counter Action &middot; Boosted Speed ${actor.system.speed?.boosted ?? 0} Squares</span></label>` : ""
+  ].filter(Boolean).join("");
+  const triggers = entry.triggers.map(effect => `
+    <label class="dbu-respond-option"${triggerTip(effect)}>
+      <input type="checkbox" name="hit-trigger" value="${effect.blockId}"/>
+      <span class="dbu-respond-name">${esc(effect.sourceName)}</span>
+      <span class="dbu-respond-source">${esc(triggerText(effect))}</span>
+    </label>`).join("");
+  const convertLine = (convertible > 0 && maneuvers)
+    ? `<label class="dbu-roll-convert">Turn <input type="number" class="dbu-roll-number" name="hit-convert" min="0" max="${convertible}" value="0"/>
+         of your <b>${convertible}</b> Action${(convertible === 1) ? "" : "s"} into Counter Actions</label>` : "";
+  const top = `${resourceLine(actor)}${rollBoxHtml("", "")}${convertLine}`;
+  const body = `${maneuvers ? rollSection("Maneuvers", `<label class="dbu-respond-option"><input type="radio" name="hit-man" value="" checked/>
+      <span class="dbu-respond-name">None</span></label>${maneuvers}`) : ""}${entry.flare
+      ? rollSection("Power Flare", '<p class="dbu-respond-note">Your Wound Roll answers theirs, rolled once theirs is - its Ki Wager is set in the box above.</p>') : ""}${
+      triggers ? rollSection("Effects", `<div class="dbu-respond-group dbu-respond-fixed"><div class="dbu-respond-fixed-title">Triggered Effects</div>${triggers}</div>`) : ""}`;
+
+  const redraw = element => {
+    const picked = element.querySelector('input[name="hit-man"]:checked')?.value || "";
+    for (const name of ["hit-effect", "hit-ally"]) {
+      const field = element.querySelector(`select[name="${name}"]`);
+      if (field) field.disabled = picked !== "intervene";
+    }
+    const convert = Math.max(0, Math.min(convertible, Number(element.querySelector('input[name="hit-convert"]')?.value) || 0));
+    const short = (counterLeft + convert) < 1;
+    for (const row of element.querySelectorAll("[data-counter-row]")) {
+      const input = row.querySelector("input");
+      input.disabled = short;
+      row.classList.toggle("dbu-respond-blocked", short);
+      const note = row.querySelector(".dbu-respond-source");
+      if (note && !note.dataset.text) note.dataset.text = note.innerHTML;
+      if (note) note.innerHTML = short ? "no Counter Action - turn an Action into one above" : note.dataset.text;
+      if (short && input.checked) element.querySelector('input[name="hit-man"][value=""]').checked = true;
+    }
+    const box = element.querySelector(".dbu-roll-box");
+    const what = box.querySelector(".dbu-roll-what");
+    const line = box.querySelector(".dbu-roll-line");
+    const wagerField = element.querySelector('input[name="hit-wager"]');
+    const kept = wagerField ? wagerField.value : "0";
+    const now = element.querySelector('input[name="hit-man"]:checked')?.value || "";
+    box.style.visibility = "visible";
+    if (now === "block") { what.innerHTML = roll.block.what; line.innerHTML = formulaHtml(roll.block.formula); return; }
+    if (now === "barrier") { what.innerHTML = roll.barrier.what; line.innerHTML = formulaHtml(roll.barrier.formula); return; }
+    if (now === "intervene") {
+      const effect = element.querySelector('select[name="hit-effect"]')?.value;
+      if (effect === "defenseWall") { what.innerHTML = roll.wall.what; line.innerHTML = roll.wall.line; return; }
+      what.innerHTML = roll.deflect.what.replace("Deflect", esc(INTERVENE_OPTIONS[effect]?.label ?? "Deflect"));
+      line.innerHTML = formulaHtml(roll.deflect.formula);
+      return;
+    }
+    if (entry.flare) {
+      what.innerHTML = roll.flare.what;
+      if (!wagerField) {
+        line.innerHTML = `${formulaHtml(roll.flare.formula)} + <input type="number" class="dbu-roll-number" name="hit-wager" min="0" max="${wagerMax}" value="${esc(kept)}"
+          data-tooltip="Ki Wager - at most ${wagerMax}, half your Capacity"/> <span class="dbu-roll-dim">Ki Wager</span>`;
+        line.querySelector('input[name="hit-wager"]').addEventListener("input", () => redraw(element));
+      }
+      return;
+    }
+    if (entry.own?.answer) {
+      what.innerHTML = `Hit &middot; ${esc(entry.own.defenseLabel ?? "Dodge")} ${entry.own.answer.total} against Strike ${attack.result?.strike?.total ?? "?"}`;
+      line.innerHTML = '<span class="dbu-roll-dim">Their Wound Roll comes next.</span>';
+      return;
+    }
+    box.style.visibility = "hidden";
+  };
+
+  const read = element => {
+    const man = element.querySelector('input[name="hit-man"]:checked')?.value || "";
+    const triggersPicked = [...element.querySelectorAll('input[name="hit-trigger"]:checked')];
+    const allyId = element.querySelector('select[name="hit-ally"]')?.value;
+    const effect = element.querySelector('select[name="hit-effect"]')?.value;
+    const summary = [man === "block" ? "Block" : man === "barrier" ? entry.barrier?.item?.name
+      : man === "intervene" ? `Intervene (${INTERVENE_OPTIONS[effect]?.label ?? ""}, for ${fromUuidSync(allyId ?? "")?.name ?? ""})` : "",
+      ...triggersPicked.map(input => input.closest("label")?.querySelector(".dbu-respond-name")?.textContent?.trim()),
+      entry.flare ? `Ki Wager ${Number(element.querySelector('input[name="hit-wager"]')?.value) || 0}` : ""].filter(Boolean).join(" &middot; ");
+    return { actor, entry, man, shieldId: element.querySelector('select[name="hit-shield"]')?.value ?? entry.block?.shields?.[0]?.id ?? null,
+      effect, ally: allyId, triggers: triggersPicked.map(input => input.value),
+      wager: entry.flare ? Math.max(0, Math.min(wagerMax, Math.floor(Number(element.querySelector('input[name="hit-wager"]')?.value) || 0))) : null,
+      convert: Math.max(0, Math.min(convertible, Number(element.querySelector('input[name="hit-convert"]')?.value) || 0)),
+      summary: summary || "Nothing" };
+  };
+
+  return foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${entry.isHit ? "Hit" : "An Ally hit"} - ${actor.name}` },
+    content: rollWindowHtml({ top, body }),
+    render: (event, dialog) => {
+      const element = dialog.element;
+      if (initial) {
+        const man = element.querySelector(`input[name="hit-man"][value="${initial.man ?? ""}"]`);
+        if (man) man.checked = true;
+        for (const blockId of initial.triggers ?? []) {
+          const box = element.querySelector(`input[name="hit-trigger"][value="${blockId}"]`);
+          if (box) box.checked = true;
+        }
+      }
+      element.querySelectorAll("input, select").forEach(input => {
+        input.addEventListener("change", () => redraw(element));
+        input.addEventListener("input", () => redraw(element));
+      });
+      redraw(element);
+      if (initial?.wager) {
+        const wager = element.querySelector('input[name="hit-wager"]');
+        if (wager) wager.value = String(initial.wager);
+      }
+    },
+    buttons: [
+      { action: "confirm", label: fromPicker ? "Save" : "Apply", default: true, callback: (event, button, dialog) => read(dialog.element) },
+      { action: "cancel", label: fromPicker ? "Back" : "Close" }
+    ],
+    rejectClose: false
+  }).then(result => ((result && (typeof result === "object")) ? result : null));
+}
+
+/** The picker once a hit lands, for several of your characters (the user's): the one hit first, Done applying every answer. */
+async function hitPicker(message, attack, entries) {
+  const picks = new Map();
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const ordered = [...entries].sort((a, b) => (Number(b.isHit) - Number(a.isHit)) || a.actor.name.localeCompare(b.actor.name));
+  const row = entry => `<div class="dbu-respond-who${entry.isHit ? " dbu-respond-who-target" : ""}${entry.usable ? "" : " dbu-respond-blocked"}" data-who="${entry.actor.uuid}">
+      <img src="${esc(entry.actor.img)}" alt=""/>
+      <div class="dbu-respond-who-body">
+        <div class="dbu-respond-name">${esc(entry.actor.name)}${entry.isHit ? ' <span class="dbu-respond-who-tag">Hit</span>' : ""}</div>
+        <div class="dbu-respond-source">${entry.usable ? [entry.block ? "Block" : "", entry.barrier ? entry.barrier.item.name : "",
+          entry.intervene ? `Intervene for ${entry.intervene.map(ally => ally.name).join(", ")}` : "",
+          entry.triggers.length ? `${entry.triggers.length} effect${(entry.triggers.length === 1) ? "" : "s"}` : "",
+          entry.flare ? "Power Flare's Ki Wager" : ""].filter(Boolean).map(esc).join(" &middot; ") : esc(entry.why)}</div>
+        <div class="dbu-respond-who-answer" data-answer>${entry.usable ? "Nothing" : ""}</div>
+      </div>
+      ${entry.usable ? '<button type="button" class="dbu-respond-who-go" data-choose>Choose</button>' : ""}
+    </div>`;
+  return foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Hit - ${attack.maneuverName ?? "this attack"}` },
+    content: rollWindowHtml({ top: '<p class="dbu-respond-hint">Who answers the hit, and how?</p>', body: ordered.map(row).join("") }),
+    render: (event, dialog) => {
+      for (const button of dialog.element.querySelectorAll("[data-choose]")) {
+        button.addEventListener("click", async () => {
+          const holder = button.closest("[data-who]");
+          const entry = entries.find(each => each.actor.uuid === holder.dataset.who);
+          const answer = await hitActorWindow(message, attack, entry, { fromPicker: true, initial: picks.get(entry.actor.uuid) });
+          if (!answer) return;
+          picks.set(entry.actor.uuid, answer);
+          holder.querySelector("[data-answer]").innerHTML = answer.summary;
+          holder.querySelector("[data-answer]").classList.add("dbu-respond-who-set");
+          button.textContent = "Change";
+        });
+      }
+    },
+    buttons: [
+      { action: "confirm", label: "Done", default: true, callback: () => [...picks.values()] },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  }).then(result => (Array.isArray(result) ? result : null));
+}
+
+/** One character's answer to the hit, carried out: Actions turned, effects armed, Power Flare's wager paid and written, the Maneuver played. */
+async function applyHitChoice(message, attack, choice) {
+  const { actor, entry } = choice;
+  if (choice.convert > 0) await convertActions(actor, choice.convert);
+  if (choice.triggers?.length) {
+    await actor.update({ "system.armedTalents": [...new Set([...(actor.system.armedTalents ?? []), ...choice.triggers])] });
+  }
+  if (entry.flare && (choice.wager !== null)) {
+    const wager = Math.min(choice.wager, maxKiWager(actor));
+    if (wager > 0) {
+      const { ki, capacity } = actor.system;
+      await requestActorUpdate(actor, { "system.ki.value": ki.value - wager, "system.capacity.spent": capacity.spent + wager });
+    }
+    await requestEdit(message, { type: "flareWager", uuid: actor.uuid, wager, foundation: entry.own?.defenceFoundation ?? "energy" });
+  }
+  if (choice.man === "block" && entry.block) {
+    const shield = entry.block.shields.find(item => item.id === choice.shieldId) ?? entry.block.shields[0];
+    return blockStage(message, attack, actor, [shield]);
+  }
+  if (choice.man === "barrier" && entry.barrier) return barrierStage(message, attack, entry.barrier);
+  if (choice.man === "intervene" && entry.intervene && choice.ally && choice.effect) {
+    return playIntervene(message, attack, { who: actor.uuid, ally: choice.ally, effect: choice.effect });
+  }
 }
 
 /** Carry out everything the reader chose, for every character they chose it for. */
@@ -38809,15 +39109,6 @@ function renderAttack(message, html) {
 
     // Rerolls first and on their own button (the user's): a reroll can undo the hit, so it is settled before what answers it.
     if (karmic?.situation?.lost) container.append(rerollButton(message, target, karmic.situation, karmic.options));
-    if (onHit.length) {
-      const apply = document.createElement("button");
-      apply.type = "button";
-      apply.className = "dbu-clash-button";
-      apply.textContent = "Apply effects";
-      apply.dataset.tooltip = "Trigger effects that answer being hit";
-      apply.addEventListener("click", () => prepareRoll(target, onHit, `Hit - ${target.name}`, "", { rolling: false }));
-      container.append(apply);
-    }
   }
 
   // The attacker gets the same. Usually it matters when the Strike is the roll that
@@ -38889,44 +39180,18 @@ function renderAttack(message, html) {
   // The Block Maneuver: "When you are hit by an Attacking Maneuver, you may use this Counter
   // Maneuver." Hit, and the Wound Roll not yet made - the same window Intervene answers.
   // Barrier: "When you are hit by an Attacking Maneuver" - the same window.
-  if (!result.wound) {
-    for (const entry of possibleBarriers(attack)) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "dbu-clash-button";
-      button.textContent = `${entry.user.name}: ${entry.item.name}`;
-      button.dataset.tooltip = "1 Counter Action. Your Wound Roll: the Damage taken is that much less.";
-      button.addEventListener("click", () => barrierStage(message, attack, entry));
-      container.append(button);
-    }
-  }
-  if (!result.wound) {
-    for (const { target, shields } of possibleBlockers(attack)) {
-      const block = document.createElement("button");
-      block.type = "button";
-      block.className = "dbu-clash-button";
-      block.textContent = `${target.name}: Block`;
-      block.dataset.tooltip = "1 Counter Action. A Strike Roll with your Shield against this "
-        + "attack's Strike: win and the Shield is hit instead of you.";
-      block.addEventListener("click", () => blockStage(message, attack, target, shields));
-      container.append(block);
-    }
-  }
-
-  if (!result.wound && !deflection(attack)) {
-    const usable = possibleInterveners(attack)
-      .filter(who => shieldableTargets(attack, who).length);
-
-    if (usable.length) {
-      const step = document.createElement("button");
-      step.type = "button";
-      step.className = "dbu-clash-button";
-      step.textContent = "Intervene";
-      step.dataset.tooltip = "Step in front of an Ally this attack hit. Costs a Counter "
-        + "Action, and the effect you choose sets the Ki cost. Needs the Intervene "
-        + "Maneuver - a character made before it existed gets it from Add core maneuvers.";
-      step.addEventListener("click", () => openIntervene(message, attack));
-      container.append(step);
+  // Everything that answers a hit, one button (the user's): Block, Barrier, the Intervene for an Ally, what answers being hit, Power
+  // Flare's Ki Wager - a window for each of your characters with something to do, a picker before them where there are several.
+  if (!result.wound && !pendingRerolls(message).length) {
+    const entries = hitEntries(message, attack);
+    if (entries.some(entry => entry.usable)) {
+      const apply = document.createElement("button");
+      apply.type = "button";
+      apply.className = "dbu-clash-button";
+      apply.textContent = "Apply effects";
+      apply.dataset.tooltip = "What answers this hit: Block, Barrier, the Intervene, effects for being hit, Power Flare's Ki Wager";
+      apply.addEventListener("click", () => openHitWindows(message));
+      container.append(apply);
     }
   }
 
