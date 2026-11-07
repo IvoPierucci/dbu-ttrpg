@@ -8209,8 +8209,12 @@ function renderInstantResponses(message, html) {
       container.append(note);
       return;
     }
-    if (mine.length && (ready.length === mine.length)) {
-      container.append(readyRow(() => changeAnswer(message, ready)));
+    // Cancel takes back only your own (the user's): your targets ready, and any of yours who answered without being one - an
+    // Instant kept on the card. Nobody else's ready is touched.
+    const bystanders = (attack.pending ?? []).map(entry => fromUuidSync(entry.uuid))
+      .filter(actor => actor?.isOwner && !mine.some(each => each.uuid === actor.uuid));
+    if ((mine.length && (ready.length === mine.length)) || (!mine.length && bystanders.length)) {
+      container.append(readyRow(() => changeAnswer(message, [...ready, ...bystanders])));
       return;
     }
   }
@@ -31256,7 +31260,8 @@ function runPendingAnswers(message, attack) {
 async function changeAnswer(message, actors) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack || attack.result || attackIsReady(attack)) return;
-  for (const actor of actors) await requestEdit(message, { type: "unready", uuid: actor.uuid });
+  // Only yours, whoever pressed it (the user's).
+  for (const actor of actors.filter(each => each?.isOwner)) await requestEdit(message, { type: "unready", uuid: actor.uuid });
 }
 
 /** The attacker's Cancel: no longer ready, what its window armed put back - its Apply effects on the card again, no window opened. */
