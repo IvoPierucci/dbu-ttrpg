@@ -5171,3 +5171,61 @@
 .dbu-roll-tag-critical { background: #3d5a2a; color: #cfe8a8; }
 .dbu-roll-tag-botch { background: #5a2a2a; color: #f0b0a0; }
 .application.dbu-dialog .dbu-formula-fixed { color: #f08a6a; font-weight: bold; }
+
+/* Respond's picker (the user's): a row for each character you own - the target first - its answer under its name. */
+.application.dbu-dialog .dbu-respond-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border: 1px solid var(--dbu-chat-rule);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.application.dbu-dialog .dbu-respond-who img {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: none;
+  border-radius: 3px;
+  object-fit: cover;
+}
+.application.dbu-dialog .dbu-respond-who-body { flex: 1; min-width: 0; }
+.application.dbu-dialog .dbu-respond-who-target { border-color: #b05a4a; }
+.application.dbu-dialog .dbu-respond-who-tag {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 4px;
+  border-radius: 2px;
+  background: #b05a4a;
+  color: #fff;
+  vertical-align: middle;
+}
+.application.dbu-dialog .dbu-respond-who-answer { font-size: 11px; font-style: italic; color: var(--dbu-chat-dim); }
+.application.dbu-dialog .dbu-respond-who-set { font-style: normal; color: #8fd18f; }
+.application.dbu-dialog .dbu-respond-who-go { flex: 0 0 auto; width: auto; line-height: 1.4; padding: 2px 10px; }
+/* Actions turned into Counter Actions by hand, under the roll's box. */
+.application.dbu-dialog .dbu-roll-convert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--dbu-chat-dim);
+}
+.application.dbu-dialog .dbu-roll-convert b { color: var(--dbu-chat-text); }
+/* The Defend's option, beside it. */
+.application.dbu-dialog .dbu-respond-option select { flex: 0 0 auto; width: auto; height: auto; font-size: 11px; padding: 0 2px; }
+/* Paid by Karma: its purple tag (the user's). */
+.dbu-karma-tag {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  padding: 0 4px;
+  border-radius: 2px;
+  background: #5a3d7a;
+  color: #e3cff5;
+}
+.application.dbu-dialog .dbu-roll-up { color: #8fd18f; font-weight: bold; }

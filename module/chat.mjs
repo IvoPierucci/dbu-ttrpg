@@ -12,7 +12,7 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import { automaticIds, chosenAsItHappens, reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { bondOf, evaluate as evaluateCondition, partnerOf as partnerOfSync } from "./effects/conditions.mjs";
 import { permits } from "./effects/interpreter.mjs";
-import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
+import { actionsLeft, actionsWithin, convertActions, convertibleActions, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
 import { activeBuddy, activeBuddies, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
@@ -8486,8 +8486,8 @@ function triggerPreview(actor, entry, slot, context = {}) {
  * by one, the Greater Dice one lends, and - a Natural Result at the Critical Target or past it - the Critical Extra Dice and
  * its tag. What is spent (`data-spend`) adds `data-per` a unit, under its `data-label`.
  */
-function livePreview(actor, formula, combatRoll, slot, previews, element) {
-  const ticked = [...element.querySelectorAll('input[name="trigger"]:checked')].map(input => previews[input.value]).filter(Boolean);
+function livePreview(actor, formula, combatRoll, slot, previews, element, triggerName = "trigger") {
+  const ticked = [...element.querySelectorAll(`input[name="${triggerName}"]:checked`)].map(input => previews[input.value]).filter(Boolean);
   const spent = [...element.querySelectorAll("[data-spend]")].filter(input => input.tagName !== "SELECT").map(input => {
     const count = (input.type === "checkbox") ? (input.checked ? 1 : 0)
       : Math.max(0, Math.min(Number(input.max) || Infinity, Number(input.value) || 0));
@@ -8766,7 +8766,7 @@ async function respondDialog(message, respondable) {
   const movement = movementOnCard(message);
   const answered = new Set((message.getFlag(SCOPE, RESPONSES_FLAG) ?? []).map(entry => entry.actorUuid));
 
-  const sections = characters.map(actor => {
+  const entries = characters.map(actor => {
     // Any of the people this attack reaches, not the one it was first aimed at. An
     // area attack adds to that list, and somebody added to it is being attacked as
     // much as the first one was - they were the ones who could neither Dodge nor
@@ -8825,7 +8825,7 @@ async function respondDialog(message, respondable) {
       ? `<label class="dbu-respond-option dbu-respond-dodge">
            <input type="radio" name="counter-${actor.id}" value="dodge" checked/>
            <span class="dbu-respond-name" data-tooltip="No Maneuver, no Action">Dodge</span>
-           <span class="dbu-respond-source dbu-formula">${defenceFormula(actor, "dodge", attack)}</span>
+           <span class="dbu-respond-source">no Maneuver, no Action - its roll is in the box above</span>
          </label>`
       : "";
 
@@ -8883,7 +8883,9 @@ async function respondDialog(message, respondable) {
       ownCounters.push({ ...maneuver, id: `mirror:${item.id}`, type: "counter", actionCost: 1, mirror: true,
         name: `${item.name} (Mirrored Attack)`, source: `Unique Ability - ${maneuverKiCost(maneuver, null, actor)} KP` });
     }
-    const counters = [...counterManeuvers().filter(maneuver => godListed(actor, maneuver)), ...ownCounters].map(maneuver => {
+    // The Intervene answers an Ally being hit, not this declaration (the user's): offered on the card once one is.
+    const counters = [...counterManeuvers().filter(maneuver => godListed(actor, maneuver) && (maneuver.id !== "intervene")),
+      ...ownCounters].map(maneuver => {
       // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
       // who is not the target is shown it but cannot take it.
       let blocked = !unresolved || waiting;
@@ -9012,7 +9014,9 @@ async function respondDialog(message, respondable) {
         : maneuver.source;
 
       const label = (maneuver.duel && duelRunning(attack)) ? "Join the Duel" : maneuver.name;
-      return option(`counter-${actor.id}`, maneuver.id, label, note, blocked, reason);
+      // The Defend Maneuver: its option picked beside it (the user's), not in a window of its own after.
+      if (maneuver.defend && attack) return defendOptionRow(actor, attack, maneuver.id, label, note, blocked, reason);
+      return option(`counter-${actor.id}`, maneuver.id, label, note, blocked, reason, { counter: true });
     }).join("");
 
     // Both Dodge and the Defend Maneuver are called for by being attacked, and a
@@ -9068,7 +9072,9 @@ async function respondDialog(message, respondable) {
       ? karmicOptionsFor(actor, message).filter(effect => !answersAfterTheFact(effect))
       : [];
 
-    const karmic = karmicOptions.map(effect => `
+    // None to begin with: a radio cannot be unpicked, and Karmic Desperation is taken only with the Defend (the user's).
+    const karmic = (karmicOptions.length ? `<label class="dbu-respond-option"><input type="radio" name="karma-${actor.id}" value="" checked/>
+        <span class="dbu-respond-name">None</span></label>` : "") + karmicOptions.map(effect => `
       <label class="dbu-respond-option${effect.blocked ? " dbu-respond-blocked" : ""}"
              ${effect.blocked ? `data-tooltip="${Handlebars.escapeExpression(effect.blocked)}"` : ""}>
         <input type="radio" name="karma-${actor.id}" value="${effect.key}"
@@ -9089,51 +9095,50 @@ async function respondDialog(message, respondable) {
          </details>`
       : "";
 
-    return `
-      <details class="dbu-respond-actor" open>
-        <summary>${Handlebars.escapeExpression(actor.name)}</summary>
+    // Who can answer at all (the user's): the target always - a Dodge costs nothing; anyone else with an Instant to play before
+    // the attack, a Counter that answers something here, or a Triggered effect. The rest are shown, greyed, with why.
+    const answersAttack = unresolved && !waiting;
+    const instantOpen = respondable && !answered.has(actor.uuid)
+      && instantManeuvers().some(maneuver => godListed(actor, maneuver) && !attack?.technique?.features?.includes("instant-assault"));
+    const usable = answersAttack || instantOpen || (triggers.length > 0) || canBlock || canStop;
+    const why = waiting ? "waiting on the Duel's winner" : (!respondable && !answersAttack) ? "nothing to answer here" : "nothing here answers this";
 
-        ${dodge}
-        ${willing}
+    // Turned only by hand, never on their own (the user's: it is easy to miss) - spent as the answer is played.
+    const convertible = game.combat?.started ? convertibleActions(actor) : 0;
+    const convertLine = (convertible > 0)
+      ? `<label class="dbu-roll-convert">Turn <input type="number" class="dbu-roll-number" name="convert-${actor.id}" min="0" max="${convertible}" value="0"/>
+           of your <b>${convertible}</b> Action${(convertible === 1) ? "" : "s"} into Counter Actions</label>`
+      : "";
 
-        ${counterGroup}
-
-        <details class="dbu-respond-group">
-          <summary>Instant Maneuvers</summary>
-          ${instants || `<p class="dbu-respond-note">None.</p>`}
-        </details>
-
-        <details class="dbu-respond-group">
-          <summary>Triggered Effects</summary>
-          ${triggerRows}
-        </details>
-
-        ${karmaGroup}
-      </details>`;
-  }).join("");
-
-  const chosen = await foundry.applications.api.DialogV2.wait({
-    classes: ["dbu-dialog"],
-    window: { title: "Respond" },
-    content: rollWindowHtml({ body: sections }),
-    buttons: [
-      {
-        action: "confirm",
-        label: "Confirm",
-        callback: (event, button, dialog) => characters.map(actor => ({
-          actor,
-          counter: dialog.element.querySelector(`input[name="counter-${actor.id}"]:checked`)?.value ?? null,
-          instant: dialog.element.querySelector(`input[name="instant-${actor.id}"]:checked`)?.value ?? null,
-          willing: dialog.element.querySelector(`input[name="willing-${actor.id}"]`)?.checked ?? null,
-          karma: dialog.element.querySelector(`input[name="karma-${actor.id}"]:checked`)?.value ?? null,
-          triggers: [...dialog.element.querySelectorAll(`input[name="trigger-${actor.id}"]:checked`)]
-            .map(input => input.value)
-        }))
-      },
-      { action: "cancel", label: "Cancel" }
-    ],
-    rejectClose: false
+    const fixedTriggers = triggers.length
+      ? `<div class="dbu-respond-group dbu-respond-fixed"><div class="dbu-respond-fixed-title">Triggered Effects</div>${triggerRows}</div>` : "";
+    return {
+      actor, isTarget: answersAttack, usable, why, triggers,
+      top: `${resourceLine(actor)}${rollBoxHtml("", "")}${convertLine}`,
+      // Two sections, as the user drew them: the Maneuvers - Dodge, the Counters, the Instants - and the Effects.
+      body: `${rollSection("Maneuvers", `${dodge}${counterGroup}<details class="dbu-respond-group"><summary>Instant Maneuvers</summary>${
+        instants || `<p class="dbu-respond-note">None.</p>`}</details>`)}${
+        (willing || fixedTriggers || karmaGroup) ? rollSection("Effects", `${willing}${fixedTriggers}${karmaGroup}`) : ""}`,
+      roll: answersAttack ? respondRollData(actor, attack) : null,
+      previews: answersAttack ? Object.fromEntries(["dodge", "strike", "wound"].map(slot => [slot,
+        Object.fromEntries(triggers.map(entry => [entry.blockId, triggerPreview(actor, entry, slot, {})]))])) : {}
+    };
   });
+
+  // One character: its window. Several that can answer (the user's): a window to pick whose answer to set, each its own
+  // window, Done sending them all - Cancel nothing.
+  const usable = entries.filter(entry => entry.usable);
+  if (!usable.length) {
+    ui.notifications.info("Nothing you play answers this.");
+    return;
+  }
+  let chosen = null;
+  if (entries.length === 1 || usable.length === 1) {
+    const one = await respondActorWindow(message, usable[0]);
+    chosen = one ? [one] : null;
+  } else {
+    chosen = await respondPicker(message, entries);
+  }
 
   if (!Array.isArray(chosen)) return;
 
@@ -9146,9 +9151,288 @@ async function respondDialog(message, respondable) {
   }
 }
 
+/**
+ * What a character's answer would roll, by answer, for its window's box: the Dodge, each Defend option's roll, the Power
+ * Flare's Wound - each a formula - and what Direct Hit and Guard leave of the hit, which nothing rolls.
+ */
+function respondRollData(actor, attack) {
+  const formula = key => {
+    const parts = DEFENCES[key]?.parts?.(actor, attack);
+    return parts ? { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor), parts: windowParts(actor, parts.map(part =>
+      (DEFENCE_WORKINGS[part.label] ? { ...part, workingsKey: DEFENCE_WORKINGS[part.label] } : part))) } : null;
+  };
+  // Direct Hit and Guard: "Wound - Soak - DR", the Soak as it will stand and the Damage Category known before any Wound (the user's).
+  const damage = key => {
+    const from = resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0);
+    const category = resolveDamageCategory(attack.damageCategory, (attack.damageCategoryShift ?? 0) + (DEFENCES[key]?.damageCategoryShift ?? 0));
+    const base = Number(actor.system.soakValue) || 0;
+    const soak = DEFENCES[key].soak(Math.floor(base * (DAMAGE_CATEGORIES[category]?.soakMultiplier ?? 1)));
+    const reduction = Number(actor.system.damageReduction) || 0;
+    const label = (key === "guard") ? "Guard" : "Direct Hit";
+    const fromLabel = DAMAGE_CATEGORIES[from]?.label ?? "";
+    const toLabel = DAMAGE_CATEGORIES[category]?.label ?? "";
+    return {
+      what: `Damage if hit &middot; ${label} &middot; ${(from !== category) ? `${fromLabel} &rarr; <span class="dbu-roll-up">${toLabel}</span>` : toLabel} Category`,
+      line: `<span class="dbu-formula-piece dbu-formula-base" data-tooltip="${Handlebars.escapeExpression((key === "guard")
+        ? "Their Wound Roll, halved - rolled once you are hit" : "Their Wound Roll - rolled once you are hit")}">${(key === "guard") ? "Wound &divide; 2" : "Wound"}</span>`
+        + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="${Handlebars.escapeExpression(`Soak Value ${base}${
+          (DAMAGE_CATEGORIES[category]?.soakMultiplier ?? 1) !== 1 ? `, ${toLabel} Category: ${DAMAGE_CATEGORIES[category].summary}` : ""}${
+          (key === "directHit") ? ", +1/2 for Direct Hit" : ""}`)}">${soak} Soak</span>`
+        + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Damage Reduction">${reduction} DR</span>`
+    };
+  };
+  return {
+    dodge: formula("dodge"), parry: formula("parry"), crossCounter: formula("crossCounter"),
+    crossCounterSignature: formula("crossCounterSignature"), directHit: damage("directHit"), guard: damage("guard"),
+    powerFlare: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor), parts: windowParts(actor, [
+      { label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) }
+  };
+}
+
+/**
+ * Which of the Defend Maneuver's options can answer this attack: those the attack leaves open (Counter-only), Counter's only
+ * with a Technique that has it, no Parry against Encompassing Attack at two ranks, only Guard after losing a Fake Out.
+ */
+function openDefendOptions(target, attack) {
+  const allowed = attack?.defencesAllowed ?? [];
+  const hasCounterTechnique = Array.from(target.items ?? []).some(item => (item.type === "maneuver")
+    && (item.system.advantages ?? []).includes("counter"));
+  const encompassed = (attack?.technique?.features ?? []).filter(id => id === "encompassing-attack").length >= 2;
+  const fakedOut = (attack?.fakeOutLosers ?? []).includes(target.uuid);
+  const offered = allowed.length ? Object.entries(DEFEND_OPTIONS).filter(([key]) => allowed.includes(key)) : Object.entries(DEFEND_OPTIONS);
+  return offered
+    .filter(([, option]) => !option.needsCounterTechnique || hasCounterTechnique)
+    .filter(([key]) => !(encompassed && (key === "parry")))
+    .filter(([key]) => !fakedOut || (key === "guard"));
+}
+
+/** The Defend Maneuver's row in Respond: its option picked in a list beside it (the user's), each with its Ki Point Cost. */
+function defendOptionRow(actor, attack, value, label, note, blocked, reason) {
+  const open = openDefendOptions(actor, attack);
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const flarePhysical = (actor.system.effects?.slots?.["archetype.defense"] === true) && (actor.system.effects?.slots?.["focused.physical"] === true);
+  const disabled = blocked || !open.length;
+  return `
+    <label class="dbu-respond-option ${disabled ? "dbu-respond-blocked" : ""}" data-counter-row="1"
+           ${(reason || !open.length) ? `data-tooltip="${esc(reason || "No option of the Defend Maneuver can answer this attack.")}"` : ""}>
+      <input type="radio" name="counter-${actor.id}" value="${value}" ${disabled ? "disabled" : ""}/>
+      <span class="dbu-respond-name">${esc(label)}</span>
+      <select name="defendOpt-${actor.id}" disabled>${open.map(([key, entry]) =>
+        `<option value="${key}" title="${esc(entry.summary)}">${esc(entry.label)} [${defendOptionCost(key, actor, attack)} KP]</option>`).join("")}</select>
+      <select name="flareFoundation-${actor.id}" hidden>
+        <option value="energy">Wound as Energy</option><option value="magic">Wound as Magic</option>
+        ${flarePhysical ? '<option value="physical">Wound as Physical (Archetype Defense)</option>' : ""}
+      </select>
+      <span class="dbu-respond-source" data-cost-note>${esc(blocked ? reason : note)}</span>
+    </label>`;
+}
+
+/**
+ * One character's Respond window (the user's): what they have, the roll their answer makes in its box - following what is
+ * picked and ticked - the Actions they turn into Counter Actions, then the Maneuvers and the Effects. From the picker it Saves
+ * back to it; on its own it is the answer, sent. The answer, or null.
+ */
+async function respondActorWindow(message, entry, { fromPicker = false, initial = null } = {}) {
+  const { actor } = entry;
+  const id = actor.id;
+  const pick = (element, name) => element.querySelector(`input[name="${name}-${id}"]:checked`)?.value ?? null;
+  const counterLeft = game.combat?.started ? actionsLeft(actor, "counter") : Infinity;
+  const read = element => {
+    const counter = pick(element, "counter");
+    const defendOption = (counter === "defend") ? (element.querySelector(`select[name="defendOpt-${id}"]`)?.value ?? null) : null;
+    const name = input => input?.closest("label")?.querySelector(".dbu-respond-name")?.textContent?.trim() ?? "";
+    const optionText = element.querySelector(`select[name="defendOpt-${id}"]`)?.selectedOptions?.[0]?.textContent?.replace(/ \[.*$/, "") ?? "";
+    const triggers = [...element.querySelectorAll(`input[name="trigger-${id}"]:checked`)];
+    const karma = pick(element, "karma") || null;
+    const instant = pick(element, "instant");
+    const summary = [counter ? `${name(element.querySelector(`input[name="counter-${id}"]:checked`))}${defendOption ? ` (${optionText})` : ""}` : "",
+      (instant && (instant !== "none")) ? name(element.querySelector(`input[name="instant-${id}"]:checked`)) : "",
+      ...triggers.map(name), karma ? name(element.querySelector(`input[name="karma-${id}"]:checked`)) : ""].filter(Boolean).join(" &middot; ");
+    return {
+      actor, counter, instant, defendOption,
+      flareFoundation: element.querySelector(`select[name="flareFoundation-${id}"]`)?.value || "energy",
+      willing: element.querySelector(`input[name="willing-${id}"]`)?.checked ?? null,
+      karma, triggers: triggers.map(input => input.value),
+      convert: Math.max(0, Math.min(Number(element.querySelector(`input[name="convert-${id}"]`)?.max) || 0,
+        Number(element.querySelector(`input[name="convert-${id}"]`)?.value) || 0)),
+      summary: summary || "Nothing"
+    };
+  };
+
+  const redraw = element => {
+    const counter = pick(element, "counter");
+    const optionField = element.querySelector(`select[name="defendOpt-${id}"]`);
+    const flareField = element.querySelector(`select[name="flareFoundation-${id}"]`);
+    const defending = counter === "defend";
+    if (optionField) optionField.disabled = !defending;
+    const option = defending ? optionField?.value : null;
+    if (flareField) flareField.hidden = option !== "powerFlare";
+
+    // The Counter Actions there are - with what was turned by hand.
+    const convert = Math.max(0, Math.min(Number(element.querySelector(`input[name="convert-${id}"]`)?.max) || 0,
+      Number(element.querySelector(`input[name="convert-${id}"]`)?.value) || 0));
+    const counters = counterLeft + convert;
+    // A Counter costs one: none left and none turned, greyed - all but the Defend, which Karmic Desperation can pay for.
+    for (const row of element.querySelectorAll("[data-counter-row]")) {
+      const input = row.querySelector("input");
+      const isDefend = input?.value === "defend";
+      const short = (counters < 1) && !isDefend;
+      if (row.dataset.blockedBy === undefined) row.dataset.blockedBy = input?.disabled ? "own" : "";
+      if (row.dataset.blockedBy === "own") continue;
+      input.disabled = short;
+      row.classList.toggle("dbu-respond-blocked", short);
+      const note = row.querySelector("[data-cost-note], .dbu-respond-source");
+      if (note && !note.dataset.text) note.dataset.text = note.textContent;
+      if (note && !isDefend) note.textContent = short ? "no Counter Action - turn an Action into one above" : note.dataset.text;
+      if (short && input.checked) {
+        input.checked = false;
+        const dodge = element.querySelector(`input[name="counter-${id}"][value="dodge"]`);
+        if (dodge) dodge.checked = true;
+      }
+    }
+
+    // Karmic Desperation: only with the Defend; ticked, and kept, where nothing else can pay its Counter Action (the user's).
+    const desperation = element.querySelector(`input[name="karma-${id}"][value="karmic-desperation"]`);
+    const none = element.querySelector(`input[name="karma-${id}"][value=""]`);
+    if (desperation && !desperation.closest("label")?.classList.contains("dbu-respond-blocked")) {
+      if (!defending) {
+        desperation.disabled = true;
+        if (desperation.checked && none) none.checked = true;
+      } else if (counters < 1) {
+        desperation.checked = true;
+        desperation.disabled = true;
+        for (const other of element.querySelectorAll(`input[name="karma-${id}"]`)) if (other !== desperation) other.disabled = true;
+      } else {
+        desperation.disabled = false;
+        for (const other of element.querySelectorAll(`input[name="karma-${id}"]`)) {
+          if (!other.closest("label")?.classList.contains("dbu-respond-blocked")) other.disabled = false;
+        }
+      }
+    }
+    const defendNote = element.querySelector(`select[name="defendOpt-${id}"]`)?.closest("label")?.querySelector("[data-cost-note]");
+    if (defendNote) {
+      if (!defendNote.dataset.text) defendNote.dataset.text = defendNote.textContent;
+      defendNote.innerHTML = (defending && desperation?.checked)
+        ? '<span class="dbu-karma-tag">Karmic Desperation</span> 1 Karma Point'
+        : (counters < 1) ? (desperation ? "only with Karmic Desperation" : "no Counter Action - turn an Action into one above")
+        : Handlebars.escapeExpression(defendNote.dataset.text);
+    }
+
+    // The box: what the answer rolls, with what is ticked - or what is left of the hit; empty where nothing is rolled.
+    const box = element.querySelector(".dbu-roll-box");
+    const what = box?.querySelector(".dbu-roll-what");
+    const line = box?.querySelector(".dbu-roll-line");
+    if (!box) return;
+    const roll = entry.roll;
+    const evade = counter === "dodge" || String(counter ?? "").startsWith("ua:") || (getManeuver(counter ?? "")?.cancelCharge === true);
+    const key = evade ? "dodge" : option;
+    const slot = (key === "parry") ? "strike" : (key === "powerFlare") ? "wound" : "dodge";
+    const show = (whatHtml, lineHtml) => { box.style.visibility = "visible"; what.innerHTML = whatHtml; line.innerHTML = lineHtml; };
+    if (!roll || !key) { box.style.visibility = "hidden"; return; }
+    if ((key === "directHit") || (key === "guard")) return show(roll[key].what, roll[key].line);
+    const formula = roll[key];
+    if (!formula) { box.style.visibility = "hidden"; return; }
+    const names = { dodge: "Dodge Roll", parry: "Strike Roll &middot; Parry", crossCounter: "Dodge Roll &middot; Cross Counter",
+      crossCounterSignature: "Dodge Roll &middot; Cross Counter", powerFlare: "Wound Roll &middot; Power Flare &middot; after theirs" };
+    const willing = element.querySelector(`input[name="willing-${id}"]`)?.checked;
+    const shown = formulaHtml(livePreview(actor, formula, true, slot, entry.previews[slot] ?? {}, element, `trigger-${id}`));
+    show(`${names[key]}${willing ? " &middot; Willing failure: totals 0" : ""}`, (key === "powerFlare")
+      ? `${shown} + <span class="dbu-formula-piece dbu-roll-dim" data-tooltip="Ki Wager - how much is chosen in the next window: Power Flare is hit whatever the dice, and your Wound Roll's window comes then.">Ki Wager</span>`
+      : shown);
+  };
+
+  return foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Respond - ${actor.name}` },
+    content: rollWindowHtml({ top: entry.top, body: entry.body }),
+    render: (event, dialog) => {
+      const element = dialog.element;
+      // What was picked before - Change in the picker - put back.
+      if (initial) {
+        const set = (name, value) => { const input = element.querySelector(`input[name="${name}-${id}"][value="${value}"]`); if (input) input.checked = true; };
+        if (initial.counter) set("counter", initial.counter);
+        if (initial.instant) set("instant", initial.instant);
+        if (initial.karma !== undefined) set("karma", initial.karma ?? "");
+        for (const blockId of initial.triggers ?? []) set("trigger", blockId);
+        const willing = element.querySelector(`input[name="willing-${id}"]`);
+        if (willing && (initial.willing !== null) && (initial.willing !== undefined)) willing.checked = initial.willing;
+        const option = element.querySelector(`select[name="defendOpt-${id}"]`);
+        if (option && initial.defendOption) option.value = initial.defendOption;
+        const convert = element.querySelector(`input[name="convert-${id}"]`);
+        if (convert && initial.convert) convert.value = String(initial.convert);
+      }
+      element.querySelectorAll("input, select").forEach(input => {
+        input.addEventListener("change", () => redraw(element));
+        input.addEventListener("input", () => redraw(element));
+      });
+      redraw(element);
+    },
+    buttons: [
+      { action: "confirm", label: fromPicker ? "Save" : "Ready", default: true, callback: (event, button, dialog) => read(dialog.element) },
+      { action: "cancel", label: fromPicker ? "Back" : "Close" }
+    ],
+    rejectClose: false
+  }).then(result => ((result && (typeof result === "object")) ? result : null));
+}
+
+/**
+ * Respond for several characters (the user's): one row each - the target first, what they have, what they answer - a window
+ * each behind Choose, Done sending every answer, Cancel none. A target never opened answers with its Dodge, as Respond always
+ * has. The answers, or null.
+ */
+async function respondPicker(message, entries) {
+  const picks = new Map();
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const ordered = [...entries].sort((a, b) => (Number(b.isTarget) - Number(a.isTarget)) || a.actor.name.localeCompare(b.actor.name));
+  const row = entry => {
+    const { actor } = entry;
+    const counter = game.combat?.started ? actionsLeft(actor, "counter") : null;
+    const actions = game.combat?.started ? actionsLeft(actor, "standard") : null;
+    const stats = [(actions !== null) ? `${actions} Action${(actions === 1) ? "" : "s"}` : "",
+      (counter !== null) ? `${counter} Counter Action${(counter === 1) ? "" : "s"}` : "", `Karma ${actor.system.karma ?? 0}`].filter(Boolean).join(" &middot; ");
+    return `<div class="dbu-respond-who${entry.isTarget ? " dbu-respond-who-target" : ""}${entry.usable ? "" : " dbu-respond-blocked"}" data-who="${actor.uuid}">
+      <img src="${esc(actor.img)}" alt=""/>
+      <div class="dbu-respond-who-body">
+        <div class="dbu-respond-name">${esc(actor.name)}${entry.isTarget ? ' <span class="dbu-respond-who-tag">Target</span>' : ""}</div>
+        <div class="dbu-respond-source">${entry.usable ? stats : esc(entry.why)}</div>
+        <div class="dbu-respond-who-answer" data-answer>${entry.usable ? (entry.isTarget ? "Dodge (default)" : "Nothing") : ""}</div>
+      </div>
+      ${entry.usable ? '<button type="button" class="dbu-respond-who-go" data-choose>Choose</button>' : ""}
+    </div>`;
+  };
+  return foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Respond - ${message.getFlag(SCOPE, ATTACK_FLAG)?.maneuverName ?? "this Maneuver"}` },
+    content: rollWindowHtml({ top: '<p class="dbu-respond-hint">Who answers, and how?</p>', body: ordered.map(row).join("") }),
+    render: (event, dialog) => {
+      for (const button of dialog.element.querySelectorAll("[data-choose]")) {
+        button.addEventListener("click", async () => {
+          const holder = button.closest("[data-who]");
+          const entry = entries.find(each => each.actor.uuid === holder.dataset.who);
+          const answer = await respondActorWindow(message, entry, { fromPicker: true, initial: picks.get(entry.actor.uuid) });
+          if (!answer) return;
+          picks.set(entry.actor.uuid, answer);
+          holder.querySelector("[data-answer]").innerHTML = answer.summary;
+          holder.querySelector("[data-answer]").classList.add("dbu-respond-who-set");
+          button.textContent = "Change";
+        });
+      }
+    },
+    buttons: [
+      { action: "confirm", label: "Done", default: true, callback: () => entries.filter(entry => entry.usable).map(entry =>
+        picks.get(entry.actor.uuid) ?? (entry.isTarget
+          ? { actor: entry.actor, counter: "dodge", instant: null, willing: null, karma: null, triggers: [], convert: 0 } : null)).filter(Boolean) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  }).then(result => (Array.isArray(result) ? result : null));
+}
+
 /** Carry out everything the reader chose, for every character they chose it for. */
 async function applyResponses(message, chosen, attack) {
   for (const choice of chosen) {
+    // Actions turned into Counter Actions by hand first (the user's), so the Counter played after can be paid.
+    if (choice.convert > 0) await convertActions(choice.actor, choice.convert);
     // Another attack answered: a Counter Maneuver used before has run its course.
     await endCounterBoost(choice.actor);
     // Arming comes first: a Counter resolves the exchange, and anything meant to shape
@@ -9174,7 +9458,8 @@ async function applyResponses(message, chosen, attack) {
       await playInstant(message, choice.actor, choice.instant);
     }
     if (choice.counter && (choice.counter !== "none")) {
-      await playCounter(message, choice.actor, choice.counter, attack);
+      await playCounter(message, choice.actor, choice.counter, attack,
+        choice.defendOption ? { defence: choice.defendOption, kiWager: 0, foundation: choice.flareFoundation || "energy" } : null);
     }
   }
 }
@@ -9265,9 +9550,9 @@ async function playAside(actor, maneuverId) {
 }
 
 /** One selectable row in the Respond dialog. */
-function option(name, value, label, note, disabled, reason) {
+function option(name, value, label, note, disabled, reason, { counter = false } = {}) {
   return `
-    <label class="dbu-respond-option ${disabled ? "dbu-respond-blocked" : ""}"
+    <label class="dbu-respond-option ${disabled ? "dbu-respond-blocked" : ""}"${counter ? " data-counter-row=\"1\"" : ""}
            ${reason ? `data-tooltip="${Handlebars.escapeExpression(reason)}"` : ""}>
       <input type="radio" name="${name}" value="${value}" ${disabled ? "disabled" : ""}/>
       <span class="dbu-respond-name">${Handlebars.escapeExpression(label)}</span>
@@ -9330,7 +9615,7 @@ async function playInstant(message, actor, maneuverId) {
  * Answer the attack: either plainly, by dodging, or with a Counter Maneuver. Both
  * resolve the exchange, which is why they share one group of choices.
  */
-async function playCounter(message, actor, answer, attack) {
+async function playCounter(message, actor, answer, attack, preset = null) {
   // The Blockade is the one Counter Maneuver that does not answer an attack, so it is
   // reached before the guard that says there has to be one.
   const blockade = getManeuver(answer);
@@ -9373,7 +9658,7 @@ async function playCounter(message, actor, answer, attack) {
   }
 
   if (!maneuver.defend) return;
-  return defendAgainst(message, actor, attack);
+  return defendAgainst(message, actor, attack, chooseDefence, preset);
 }
 
 /**
@@ -37605,7 +37890,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
  * A list rather than a row of buttons: each option needs its own explanation, and one
  * of them needs a field of its own.
  */
-async function defendAgainst(message, target, attack, then = chooseDefence) {
+async function defendAgainst(message, target, attack, then = chooseDefence, preset = null) {
   // Reached from Respond, where the Defend Maneuver is chosen; this asks which of its
   // effects is being used and what it costs.
 
@@ -37686,7 +37971,10 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
     </label>`;
   }).join("");
 
-  const chosen = await foundry.applications.api.DialogV2.wait({
+  // Picked in Respond beside the Defend Maneuver (the user's) - asked here only where nothing picked it.
+  const presetOpen = preset?.defence && open.some(([key]) => key === preset.defence);
+  const chosen = presetOpen ? { defence: preset.defence, kiWager: Math.min(Math.max(Number(preset.kiWager) || 0, 0), wagerMax),
+    foundation: preset.foundation || "energy" } : await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: "Defend" },
     content: `<div class="dbu-defend-list">${options}</div>`,
