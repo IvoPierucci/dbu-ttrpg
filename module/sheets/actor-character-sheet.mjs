@@ -49,7 +49,7 @@ import { actionsLeft, actionsWithin, convertActions, convertibleActions, isTheir
   from "../combat.mjs";
 import { whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
 import { baseDieLine, breakdownTable, contributionLine, extraDiceLine, partLine, noteLine, floorLine, skillWorkingsTable,
-         fromOutcome, workingsTable, atRollTime } from "../breakdown.mjs";
+         fromOutcome, workingsTable, atRollTime, saveClashBonuses } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   checkCard,
@@ -935,11 +935,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       workings: context.workings[`${key}.mod`]
     }));
 
-    context.saves = Object.entries(this.actor.system.savingThrows).map(([key, save]) => ({
-      key,
-      ...save,
-      workings: context.workings[`save.${key}`]
-    }));
+    // Each Saving Throw's box (the user's): its Check, and where a Clash of it always adds something its Clash beside it - one number
+    // where they are the same. What adds only in some Clashes told under the total, never added; its Critical Target by its name.
+    context.saves = Object.entries(this.actor.system.savingThrows).map(([key, save]) => {
+      const { always, sometimes } = saveClashBonuses(this.actor.system, key);
+      const clash = save.value + always.reduce((sum, part) => sum + part.value, 0);
+      const split = clash !== save.value;
+      return {
+        key,
+        ...save,
+        clash,
+        split,
+        workings: workingsTable(this.actor.system, `save.${key}`, { aside: split ? [] : sometimes }) || context.workings[`save.${key}`],
+        clashWorkings: split
+          ? breakdownTable([partLine({ label: `${save.label} (Check)`, value: save.value }), ...always.map(partLine)], clash, { aside: sometimes })
+          : ""
+      };
+    });
 
     context.combatEditMode = this.#combatEditMode;
     // Offered until it is taken. Not gated on there being a Combat in the tracker: a
@@ -2812,7 +2824,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // sheet shows is what the button rolls, and the Bonus is a row inside it.
     const skills = Object.values(this.actor.system.skills)
       // One sum: its Score, Ranks and Size, then every effect on the Bonus or the Check alike (the user's) - breakdown.mjs.
-      .map(skill => ({ ...skill, workings: skillWorkingsTable(this.actor.system, skill.key) || (workings[`skill.${skill.key}`] ?? "") }));
+      .map(skill => ({ ...skill, workings: skillWorkingsTable(this.actor.system, skill.key) || (workings[`skill.${skill.key}`] ?? ""),
+        // Its Critical Target beside its Bonus, as Strike's and Dodge's (the user's) - marked where an effect lowered it.
+        critical: skillCriticalTarget(this.actor, skill.key) ?? (Number(this.actor.system.criticalTarget) || 10),
+        criticalLowered: (skillCriticalTarget(this.actor, skill.key) ?? 99) < (Number(this.actor.system.criticalTarget) || 10) }));
     return Object.keys(this.actor.system.attributes)
       .map(attribute => ({
         attribute,

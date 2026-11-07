@@ -138,10 +138,21 @@
       <h3 class="dbu-side-title">Saving Throws</h3>
       <div class="dbu-box-grid">
         {{#each saves as |save|}}
-        <div class="stat {{#if save.racial}}stat-racial{{/if}}">
-          <button type="button" class="stat-roll" data-action="rollSave" data-save="{{save.key}}"
-                  data-tooltip="Roll 1d10 + {{save.label}} &middot; crits on {{save.criticalTarget}}+{{#if save.racial}} &middot; racial Saving Throw{{/if}}"><em>{{save.label}}</em></button>
-          <span data-tooltip-html="{{save.workings}}">{{save.value}}</span>
+        {{! One number where its Check and Clash are the same; split, each with its hover, where a Clash of it always adds (the user's). }}
+        <div class="stat dbu-save {{#if save.racial}}stat-racial{{/if}}">
+          <div class="dbu-save-head">
+            <button type="button" class="stat-roll" data-action="rollSave" data-save="{{save.key}}"
+                    data-tooltip="Roll 1d10 + {{save.label}} &middot; crits on {{save.criticalTarget}}+{{#if save.racial}} &middot; racial Saving Throw{{/if}}"><em>{{save.label}}</em></button>
+            <i class="dbu-crit" data-tooltip="Critical Target">({{save.criticalTarget}}+)</i>
+          </div>
+          {{#if save.split}}
+          <div class="dbu-save-halves">
+            <div data-tooltip-html="{{save.workings}}"><small>Check</small><b>{{save.value}}</b></div>
+            <div data-tooltip-html="{{save.clashWorkings}}"><small>Clash</small><b class="dbu-save-up">{{save.clash}}</b></div>
+          </div>
+          {{else}}
+          <div class="dbu-save-one" data-tooltip-html="{{save.workings}}"><b>{{save.value}}</b></div>
+          {{/if}}
         </div>
         {{/each}}
       </div>

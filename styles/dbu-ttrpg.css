@@ -4962,3 +4962,89 @@
 .dbu-ttrpg .ally-picks .ally-eye.off {
   opacity: 0.5;
 }
+
+/* A Saving Throw's box (the user's): its name and Critical Target on top, one number under them where Check and Clash are the same,
+   two halves where a Clash of it always adds. */
+.dbu-ttrpg .dbu-box-grid .dbu-save {
+  align-items: stretch;
+}
+
+.dbu-ttrpg .dbu-save-head {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.dbu-ttrpg .dbu-save-head .dbu-crit {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-save-one,
+.dbu-ttrpg .dbu-save-halves {
+  flex: 1;
+  border-top: 1px solid var(--dbu-border);
+  margin-top: 1px;
+}
+
+.dbu-ttrpg .dbu-save-one {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dbu-ttrpg .dbu-save-halves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.dbu-ttrpg .dbu-save-halves > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dbu-ttrpg .dbu-save-halves > div + div {
+  border-left: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg .dbu-save-halves small {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-save b {
+  font-size: 15px;
+}
+
+.dbu-ttrpg .dbu-save .dbu-save-up {
+  color: #8fd18f;
+}
+
+/* A Skill's Critical Target, beside its Bonus - green where an effect lowered it. */
+.dbu-ttrpg .skill-crit {
+  flex: 0 0 30px;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .skill-crit-lowered {
+  color: #8fd18f;
+}
+
+/* Told under a hover's total and not added: what raises it only in some Clashes. */
+.dbu-bd-aside-head td {
+  border-top: 1px dashed var(--dbu-border-strong, #777);
+  padding-top: 3px;
+  font-style: italic;
+  font-size: 0.9em;
+  color: #9fc7e6;
+}
+
+.dbu-bd-aside td {
+  color: #9fc7e6;
+}

@@ -77,6 +77,7 @@
 
           <span class="skill-ranks" data-tooltip="Ranks">{{skill.ranks}}</span>
           <span class="skill-bonus" data-tooltip-html="{{skill.workings}}">{{numberFormat skill.roll decimals=0 sign=true}}</span>
+          <span class="skill-crit {{#if skill.criticalLowered}}skill-crit-lowered{{/if}}" data-tooltip="Critical Target">({{skill.critical}}+)</span>
         </li>
         {{/each}}
       </ul>

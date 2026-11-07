@@ -257,7 +257,7 @@ function ordered(lines) {
  * column empty rather than shifting the others, which is what keeps the values in a
  * line the eye can follow.
  */
-export function breakdownTable(lines, total) {
+export function breakdownTable(lines, total, { aside = [] } = {}) {
   const rows = ordered(lines).map(line => {
     if (line.kind === "note") {
       return `<tr class="dbu-bd-note"><td colspan="4">${esc(line.source)}</td></tr>`;
@@ -281,8 +281,23 @@ export function breakdownTable(lines, total) {
       <td></td><td></td>
       <td class="dbu-bd-value">[${total}]</td>
       <td class="dbu-bd-source">(Total)</td>
-    </tr>
+    </tr>${asideRows(aside)}
   </table>`;
+}
+
+/**
+ * Below the total, told and not added (the user's): what would raise the number only in some Clashes - an Opponent's, your Unique
+ * Ability's, against a Shard Carrier - so the sheet says it is there without pretending it always is.
+ */
+function asideRows(aside) {
+  if (!aside?.length) return "";
+  return `<tr class="dbu-bd-aside-head"><td colspan="4">Only in some Clashes, not added:</td></tr>`
+    + aside.map(line => `<tr class="dbu-bd-aside">
+      <td class="dbu-bd-written">${esc(line.written ?? signed(line.value))}</td>
+      <td class="dbu-bd-each"></td>
+      <td class="dbu-bd-value">[${esc(signed(line.value))}]</td>
+      <td class="dbu-bd-source">(${esc(line.label)})</td>
+    </tr>`).join("");
 }
 
 /**
@@ -352,7 +367,7 @@ export function contributionLine(part) {
  * `total` overrides the answer, for the values clamped once more outside every Slot. A
  * table whose answer differs from the number it is attached to is worse than no table.
  */
-export function workingsTable(system, key, { extra = [], total = null } = {}) {
+export function workingsTable(system, key, { extra = [], total = null, aside = [] } = {}) {
   const keys = Array.isArray(key) ? key : [key];
   const steps = keys.map(one => system.effects?.workings?.[one]).filter(Boolean);
   if (!steps.length) return "";
@@ -377,7 +392,48 @@ export function workingsTable(system, key, { extra = [], total = null } = {}) {
 
   for (const note of extra) if (note) lines.push(noteLine(note));
 
-  return breakdownTable(lines, total ?? steps[steps.length - 1].value);
+  return breakdownTable(lines, total ?? steps[steps.length - 1].value, { aside });
+}
+
+/**
+ * What a Saving Throw adds in a Clash, for its box on the sheet (the user's): `always`, what raises it in every Clash of it - Improved
+ * Taunt's Morale, Willpower's chosen one - inside the Clash number; `sometimes`, what raises it only in some Clashes - who opened it,
+ * through what, against whom - told below that number's total and never added. The card adds each where it applies (chat.mjs
+ * clashParts); this only says they are there.
+ */
+export function saveClashBonuses(system, key) {
+  const slots = system?.effects?.slots ?? {};
+  const tier = Math.max(1, Number(system?.tierOfPower) || 1);
+  const named = (slot, fallback) => (slots[slot]?.parts ?? []).map(part => part.source).find(Boolean) ?? fallback;
+  const added = slot => Number(slots[slot]?.add) || 0;
+  const always = [];
+  if ((key === "morale") && added("clash.morale")) always.push({ label: named("clash.morale", "Morale Clash"), value: added("clash.morale") });
+  if (slots[`willpower.save.${key}`] === true) always.push({ label: "Willpower", written: "+1(T)", value: tier });
+
+  const sometimes = [];
+  const add = (slot, fallback, when) => {
+    if (added(slot)) sometimes.push({ label: `${named(slot, fallback)}: ${when}`, value: added(slot) });
+  };
+  const flag = (slot, name, when, value = tier, written = "+1(T)") => {
+    if (slots[slot] === true) sometimes.push({ label: `${name}: ${when}`, written, value });
+  };
+  const opened = "if an Opponent opened it";
+  add("clash.saveDefending", "Attentive Warrior", opened);
+  add("clash.defendingMightOrSave", "Battle Tension", opened);
+  add("clash.defending", "Warding Weapon", opened);
+  flag("angelRaised.clash", "Angel-Raised", `${opened}, with no Counter Actions`);
+  flag("arboreal.rootedClash", "Rooted (Arboreal)", "if it would move you, while Rooted", 2 * tier, "+2(T)");
+  add("clash.unique", "Frigid Tricks", "if your Unique Ability opened it");
+  add("clash.uniqueAny", "Bag of Tricks", "if your Unique Ability opened it against an Opponent");
+  flag("corsair.clash", "Sorcering Corsair", "if your Unique Ability opened it against an Opponent beside your Ally, once a Round");
+  flag("clash.vsShardCarrier", "Glass Shards", "against a Shard Carrier");
+  flag("disguised.vsImpaired", "Disguised Shadow", "against an Impaired Opponent");
+  flag("thief.clashTension", "Thief", "against an Opponent, spending 1 Tension, once a Round");
+  flag("fairy.save", "Fairy", "once a Round");
+  if ((system?.timed ?? []).some(entry => (entry?.kind === "condition") && (entry.key === "seen"))) {
+    sometimes.push({ label: "Intuit: against the Opponent you made Seen", written: "+1(T)", value: tier });
+  }
+  return { always, sometimes };
 }
 
 /**
