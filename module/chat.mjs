@@ -272,6 +272,11 @@ function applyRequest(request) {
     case "desperate": return game.messages.get(request.messageId)?.setFlag(SCOPE, DESPERATE_FLAG,
       { ...(game.messages.get(request.messageId)?.getFlag(SCOPE, DESPERATE_FLAG) ?? {}), [request.exploiterUuid]: request.state });
     case "karmic": return applyKarmicRecord(request.messageId, request.actorId, request.key);
+    // "No reroll" (the user's): this side has done with its rerolls, and the Wound Roll waits on it no longer.
+    case "rerollDone": {
+      const card = game.messages.get(request.messageId);
+      return card?.setFlag(SCOPE, REROLLS_DONE_FLAG, [...new Set([...(card.getFlag(SCOPE, REROLLS_DONE_FLAG) ?? []), request.uuid])]);
+    }
     default:
       console.warn("DBU TTRPG | Unknown relayed edit", request);
       return undefined;
@@ -6122,14 +6127,194 @@ function renderCheckKarma(message, html) {
 
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "dbu-clash-button dbu-karma-button";
-  button.textContent = "Apply effects";
-  button.dataset.tooltip = "Effects that can still change this roll";
-  button.addEventListener("click", () =>
-    prepareRoll(actor, [], "After the roll", "",
-      { karmic: { message, check, options }, rolling: false }));
+  button.className = "dbu-clash-button dbu-reroll-button";
+  button.textContent = "Reroll";
+  button.dataset.tooltip = "Rerolls that can still change this roll";
+  button.addEventListener("click", () => rerollWindow(message, actor, { check, options }));
 
   (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/** Who has said they make no reroll on this card - the Wound Roll waits on the rest (the user's). */
+const REROLLS_DONE_FLAG = "rerollsDone";
+
+/** The keys of the rerolls that roll the Base Die again - Lucky's, Earthling Resolve's, and the rest - and whether the higher is kept. */
+function rerollKind(key) {
+  const text = String(key);
+  if (text === "karmic-chance") return { base: true, keepHigher: true };
+  if (text === "karmic-boost") return { boost: true };
+  if (text.startsWith(`${LUCKY_REROLL}:`) || [RESOLVE_REROLL, DAMA_REROLL, NEKO_GENES_REROLL, TAI_CHI_REROLL, FORTITUDE_REROLL].includes(text)) {
+    return { base: true };
+  }
+  return null;
+}
+
+/** The fewest and most a formula of plain dice can come to - "1d10+1d4" is 2 to 14. */
+function diceSpan(formula) {
+  const terms = String(formula ?? "").split("+").map(term => term.trim()).filter(term => /^\d*d\d+$/.test(term));
+  return terms.reduce((span, term) => {
+    const [count, faces] = term.split("d").map(Number);
+    return { low: span.low + (count || 1), high: span.high + (count || 1) * faces };
+  }, { low: 0, high: 0 });
+}
+
+/**
+ * What the lost roll needed (the user's: the Reroll window says it): to beat the other side's total - a tie is the one answering's
+ * - as a number to reach. Null where nothing is clashed against.
+ */
+function rerollNeed(message, situation) {
+  if (!situation) return null;
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (clash?.result) {
+    const other = (situation.uuid === clash.challengerUuid) ? clash.result.defender : clash.result.challenger;
+    return (Number(other?.total) || 0) + (situation.answering ? 0 : 1);
+  }
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const result = attack?.result;
+  if (!result) return null;
+  if (situation.stage === "wound") {
+    if (situation.uuid !== attack.attackerUuid) return (Number(result.wound?.total) || 0) + 1;
+    const flares = targetResults(attack).map(entry => entry.own?.counterWound?.total).filter(Number.isFinite);
+    return flares.length ? Math.min(...flares) : null;
+  }
+  if (situation.uuid === attack.attackerUuid) {
+    const answers = targetResults(attack).map(entry => entry.own?.answer?.total).filter(Number.isFinite);
+    return answers.length ? Math.min(...answers) + 1 : null;
+  }
+  return Number(result.strike?.total) || null;
+}
+
+/** The lost roll's name: the Strike, the Dodge or a Parry, the Wound, a Clash. */
+function rerollRollName(message, situation) {
+  if (!situation) return "Roll";
+  if (message.getFlag(SCOPE, CLASH_FLAG)) return "Clash Roll";
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (situation.stage === "wound") return "Wound Roll";
+  if (situation.uuid === attack?.attackerUuid) return "Strike Roll";
+  const label = DEFENCES[defenceFor(attack, situation.uuid)?.defence]?.label;
+  return label ? `${label} Roll` : "Roll";
+}
+
+/**
+ * The Reroll window (the user's: one for every roll lost - a Strike, a Dodge, a Clash, a lone Check): the roll as it fell, die by
+ * die, what it needed; every reroll there is to take - Karmic Effects in purple, a Trait's or a Talent's in blue - one at a time, and
+ * as one is picked the die it throws again marked and how far the roll can move. Reroll takes it; No reroll lets the Wound Roll go on.
+ */
+async function rerollWindow(message, actor, { situation = null, check = null, options = [] } = {}) {
+  const side = situation?.side ?? check ?? {};
+  const natural = Number(side.natural) || 0;
+  const total = Number(side.total) || 0;
+  const need = rerollNeed(message, situation) ?? (Number(check?.tn ?? check?.difficultyTn) || null);
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const lines = side.lines ?? [];
+  const extra = lines.filter(line => line.kind === "dice");
+  const diceSum = natural + extra.reduce((sum, line) => sum + (Number(line.value) || 0), 0);
+  const bonus = total - diceSum;
+  const bT = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const greater = actor.system.dice?.greater?.formula ?? "";
+
+  const verdict = (low, high) => {
+    if (need === null) return { text: `${low} to ${high}`, kind: "" };
+    if (low >= need) return { text: "a sure win", kind: "good" };
+    if (high < need) return { text: `out of reach - ${need} needed`, kind: "bad" };
+    return { text: `${need} or more needed`, kind: "meh" };
+  };
+  const project = key => {
+    const kind = rerollKind(key);
+    if (!kind) return null;
+    if (kind.boost) {
+      const span = diceSpan(greater);
+      return { low: total + bT + span.low, high: total + bT + span.high, boost: true };
+    }
+    const rest = total - natural;
+    const low = kind.keepHigher ? total : rest + 1;
+    const high = Math.max(total, rest + 10);
+    const meh = (need !== null) && (low < need) && (high >= need) ? ` - on a ${need - rest} or more` : "";
+    return { low, high, base: true, meh };
+  };
+
+  const chip = (value, cls, tip) => `<span class="dbu-roll-chip ${cls}" data-tooltip="${esc(tip)}">${esc(value)}</span>`;
+  const line = picked => {
+    const kind = picked ? rerollKind(picked) : null;
+    const projection = picked ? project(picked) : null;
+    const chips = [chip(natural, kind?.base ? "dbu-roll-chip-target" : "dbu-roll-chip-base", "Base Die"),
+      ...extra.map(each => chip(each.value, "dbu-roll-chip-dice", `${each.written ?? ""} - ${each.source ?? ""}`))];
+    const added = kind?.boost ? ` + ${chip(greater, "dbu-roll-chip-added", "Greater Dice - Karmic Boost")} + <b class="dbu-formula-bonus">${bT}</b>` : "";
+    const arrow = projection ? ` <span class="dbu-roll-arrow">${total} &rarr; ${projection.low} to ${projection.high}</span>` : ` <span class="dbu-roll-arrow">= ${total}</span>`;
+    return `${chips.join(" + ")}${bonus ? ` + <b class="dbu-formula-bonus">${bonus}</b>` : ""}${added}${arrow}`;
+  };
+  const what = picked => {
+    const projection = picked ? project(picked) : null;
+    const said = projection ? verdict(projection.low, projection.high) : null;
+    const tail = said ? `<span class="dbu-roll-${said.kind || "dim"}">${esc(said.text)}${projection?.meh ? esc(projection.meh) : ""}</span>`
+      : (situation?.lost ? '<span class="dbu-roll-bad">lost</span>' : "");
+    return [esc(rerollRollName(message, situation)), (need !== null) ? `${need} to ${situation?.answering ? "hold" : "beat"}` : "", tail]
+      .filter(Boolean).join(" &middot; ");
+  };
+
+  const rows = options.map(effect => `
+    <label class="dbu-respond-option${effect.blocked ? " dbu-respond-blocked" : ""}"${effect.blocked ? ` data-tooltip="${esc(effect.blocked)}"` : ""}>
+      <input type="radio" name="reroll" value="${esc(effect.key)}" ${effect.blocked ? "disabled" : ""}/>
+      <span class="dbu-respond-name" data-tooltip="${esc(effect.text)}">${esc(effect.name)}</span>
+      ${effect.trait ? '<span class="dbu-trait-tag">Trait</span>' : `<span class="dbu-karma-tag">${esc(effect.costLabel ?? "Karma")}</span>`}
+      <span class="dbu-respond-source">${esc(effect.blocked ?? (effect.trait ? effect.costLabel : effect.text))}</span>
+    </label>`).join("");
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const waits = Boolean(attack && situation && (situation.stage === "strike") && !attack.result?.wound);
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Reroll - ${actor.name}` },
+    content: rollWindowHtml({
+      top: `<div class="dbu-roll-resources"><span>Karma <b>${actor.system.karma ?? 0}</b></span></div>${rollBoxHtml(what(null), line(null))}`,
+      body: rollSection("Rerolls", `<label class="dbu-respond-option"><input type="radio" name="reroll" value="" checked/><span class="dbu-respond-name">None</span></label>${rows}`)
+    }),
+    render: (event, dialog) => {
+      const box = dialog.element.querySelector(".dbu-roll-box");
+      const redraw = () => {
+        const picked = dialog.element.querySelector('input[name="reroll"]:checked')?.value || null;
+        box.querySelector(".dbu-roll-what").innerHTML = what(picked);
+        box.querySelector(".dbu-roll-line").innerHTML = line(picked);
+      };
+      dialog.element.querySelectorAll('input[name="reroll"]').forEach(input => input.addEventListener("change", redraw));
+    },
+    buttons: [
+      { action: "reroll", label: "Reroll", default: true,
+        callback: (event, button, dialog) => ({ key: dialog.element.querySelector('input[name="reroll"]:checked')?.value || null }) },
+      ...(waits ? [{ action: "none", label: "No reroll", callback: () => ({ none: true }) }] : []),
+      { action: "cancel", label: "Close" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return;
+  if (chosen.none) return requestEdit(message, { type: "rerollDone", uuid: actor.uuid });
+  if (!chosen.key) return;
+  if (situation) return takeAfterTheFact(message, situation, chosen.key);
+  if (check) return takeOnCheck(message, actor, check, chosen.key);
+}
+
+/**
+ * Whoever lost the Strike and still has a reroll to take, and has not said they take none - the Wound Roll waits on them (the user's),
+ * since a reroll can turn a hit into a miss. Every side, whoever plays it.
+ */
+function pendingRerolls(message) {
+  everySide.on = true;
+  let sides = [];
+  try { sides = clashSides(message); } finally { everySide.on = false; }
+  const done = message.getFlag(SCOPE, REROLLS_DONE_FLAG) ?? [];
+  return sides.filter(entry => (entry.stage === "strike") && entry.lost && !done.includes(entry.uuid)
+    && offerableTo(entry, message).some(effect => effect.available)).map(entry => entry.actor);
+}
+
+/** The orange Reroll button (the user's), for a side that lost - its window behind it. */
+function rerollButton(message, actor, situation, options, label = "Reroll") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button dbu-reroll-button";
+  button.textContent = label;
+  button.dataset.tooltip = "Rerolls that can still change this roll - Karmic Effects, a Trait's or a Talent's";
+  button.addEventListener("click", () => rerollWindow(message, actor, { situation, options }));
+  return button;
 }
 
 /**
@@ -6157,15 +6342,7 @@ function renderAfterTheFact(message, html) {
     const options = offerableTo(situation, message);
     if (!options.some(effect => effect.available)) continue;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "dbu-clash-button dbu-karma-button";
-    button.textContent = `${situation.actor.name}: apply effects`;
-    button.dataset.tooltip = "Change this result with a Karmic Effect";
-    button.addEventListener("click", () =>
-      prepareRoll(situation.actor, [], `${situation.actor.name}: after the roll`, "",
-        { karmic: { message, situation, options }, rolling: false }));
-    container.append(button);
+    container.append(rerollButton(message, situation.actor, situation, options, `${situation.actor.name}: Reroll`));
   }
 }
 
@@ -6298,10 +6475,13 @@ function beaten(side, other, takesTies) {
   return takesTies ? (side.total < other.total) : (side.total <= other.total);
 }
 
+/** Set while every side of a roll is asked for, whoever plays it - who still has a reroll the Wound waits on. */
+const everySide = { on: false };
+
 /** Narrow to the characters you own. */
 function mine(entry) {
   const actor = fromUuidSync(entry.uuid);
-  if (!actor?.isOwner) return [];
+  if (!actor || (!actor.isOwner && !everySide.on)) return [];
   return [{ ...entry, actor }];
 }
 
@@ -38627,17 +38807,15 @@ function renderAttack(message, html) {
     const onHit = entry.own?.hit ? relevantTriggers(target, message, "hit") : [];
     const karmic = afterTheFactFor(message, target);
 
-    if (onHit.length || karmic) {
+    // Rerolls first and on their own button (the user's): a reroll can undo the hit, so it is settled before what answers it.
+    if (karmic?.situation?.lost) container.append(rerollButton(message, target, karmic.situation, karmic.options));
+    if (onHit.length) {
       const apply = document.createElement("button");
       apply.type = "button";
-      apply.className = `dbu-clash-button${karmic ? " dbu-karma-button" : ""}`;
+      apply.className = "dbu-clash-button";
       apply.textContent = "Apply effects";
-      apply.dataset.tooltip = karmic
-        ? "Effects that answer this, and Karmic Effects that can still change it"
-        : "Trigger effects that answer being hit";
-      apply.addEventListener("click", () =>
-        prepareRoll(target, onHit, momentTitle(karmic, "defence"), "",
-          { karmic, rolling: false }));
+      apply.dataset.tooltip = "Trigger effects that answer being hit";
+      apply.addEventListener("click", () => prepareRoll(target, onHit, `Hit - ${target.name}`, "", { rolling: false }));
       container.append(apply);
     }
   }
@@ -38649,17 +38827,8 @@ function renderAttack(message, html) {
     const attacker = fromUuidSync(attack.attackerUuid);
     const karmic = attacker?.isOwner ? afterTheFactFor(message, attacker) : null;
 
-    if (karmic) {
-      const apply = document.createElement("button");
-      apply.type = "button";
-      apply.className = "dbu-clash-button dbu-karma-button";
-      apply.textContent = "Apply effects";
-      apply.dataset.tooltip = "Karmic Effects that can still change this Strike";
-      apply.addEventListener("click", () =>
-        prepareRoll(attacker, [], momentTitle(karmic, "strike"), "",
-          { karmic, rolling: false }));
-      container.append(apply);
-    }
+    // A Strike that missed: its Reroll (the user's) - the same window as anyone's.
+    if (karmic?.situation?.lost) container.append(rerollButton(message, attacker, karmic.situation, karmic.options));
   }
 
   // Once the Wound Roll is made and before the Damage is dealt, both sides get one
@@ -38672,14 +38841,7 @@ function renderAttack(message, html) {
       const karmic = who?.isOwner ? afterTheFactFor(message, who) : null;
       if (!karmic) continue;
 
-      const apply = document.createElement("button");
-      apply.type = "button";
-      apply.className = "dbu-clash-button dbu-karma-button";
-      apply.textContent = `${who.name}: apply effects`;
-      apply.dataset.tooltip = "Karmic Effects that can still change the Wound Roll";
-      apply.addEventListener("click", () =>
-        prepareRoll(who, [], momentTitle(karmic, "wound"), "", { karmic, rolling: false }));
-      container.append(apply);
+      container.append(rerollButton(message, who, karmic.situation, karmic.options, `${who.name}: Reroll`));
     }
   }
 
@@ -38866,6 +39028,18 @@ function renderAttack(message, html) {
   if (!result.wound && owesWound(attack)) {
     const roller = woundRoller(attack);
     if (!roller?.isOwner) return;
+
+    // Not before the rerolls (the user's): one could turn this hit into a miss.
+    const waiting = pendingRerolls(message);
+    if (waiting.length) {
+      const held = document.createElement("button");
+      held.type = "button";
+      held.className = "dbu-clash-button";
+      held.disabled = true;
+      held.textContent = `Roll Wound - waiting on ${waiting.map(actor => actor.name).join(", ")}'s reroll`;
+      container.append(held);
+      return;
+    }
 
     const roll = document.createElement("button");
     roll.type = "button";

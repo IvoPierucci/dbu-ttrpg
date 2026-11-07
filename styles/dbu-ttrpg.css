@@ -5229,3 +5229,33 @@
   color: #e3cff5;
 }
 .application.dbu-dialog .dbu-roll-up { color: #8fd18f; font-weight: bold; }
+
+/* The Reroll button (the user's): orange, beside the card's others. */
+.dbu-clash-button.dbu-reroll-button { background: #5a4a2a; border-color: #a8843c; color: #f5e3c0; }
+/* The lost roll die by die, in the Reroll window's box - the die a reroll takes marked. */
+.dbu-roll-chip {
+  display: inline-block;
+  min-width: 18px;
+  text-align: center;
+  border: 1px solid #666;
+  border-radius: 3px;
+  padding: 0 3px;
+  font-weight: bold;
+}
+.dbu-roll-chip-base { border-color: #e9e3d8; }
+.dbu-roll-chip-dice { border-color: #9fc7e6; color: #9fc7e6; }
+.dbu-roll-chip-target { background: #4a3a1a; border-color: #f0b44a; color: #f0b44a; }
+.dbu-roll-chip-added { border-style: dashed; border-color: #c8a0e0; color: #c8a0e0; }
+.dbu-roll-arrow { font-size: 12px; margin-left: 4px; }
+.dbu-roll-good { color: #8fd18f; font-weight: bold; }
+.dbu-roll-bad { color: #f0a090; font-weight: bold; }
+.dbu-roll-meh { color: #f0b44a; font-weight: bold; }
+/* A Trait's or a Talent's own, beside a Karmic Effect's purple. */
+.dbu-trait-tag {
+  font-size: 9px;
+  font-weight: bold;
+  padding: 0 4px;
+  border-radius: 2px;
+  background: #3d5a6a;
+  color: #cfe3f5;
+}
