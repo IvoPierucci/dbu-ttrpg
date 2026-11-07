@@ -5259,3 +5259,6 @@
   background: #3d5a6a;
   color: #cfe3f5;
 }
+
+/* Deal Damage (the user's): the one hit's, in red. */
+.dbu-clash-button.dbu-damage-button { background: #5e3c3c; border-color: #9c5a5a; color: #f8e8e8; }

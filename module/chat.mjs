@@ -8380,6 +8380,7 @@ async function outcomeTurn(actor, kind) {
  * armed for it.
  */
 export async function offerTriggers(actor, moment, context = {}) {
+  if (offersAnswered.moments.has(String(moment).split(/[(/]/)[0])) return;
   // Asked with what happened - who fell, for Lock On's and Burning Hatred's `requires` - or a `requires` reading it was
   // never true here, and the effect never offered.
   if (!unarmedTriggers(actor, moment, context).length) return;
@@ -9906,6 +9907,105 @@ async function applyHitChoice(message, attack, choice) {
   if (choice.man === "intervene" && entry.intervene && choice.ally && choice.effect) {
     return playIntervene(message, attack, { who: actor.uuid, ally: choice.ally, effect: choice.effect });
   }
+}
+
+/** The Moments of taking Damage from an Attacking Maneuver, and of being hit for none, that Deal Damage offers (the user's). */
+const DAMAGE_MOMENTS = Object.freeze({ taken: ["opponent-damage", "heavy-hit", "damage-applied"], none: ["hit-unharmed"] });
+
+/**
+ * What Deal Damage has to offer one hit (the user's): "Before the Damage" - what can lower or cancel it, Hyper Resilience - and what
+ * answers taking it, or taking none. `any` false, it is dealt by itself.
+ */
+function dealDamageChoices(target, own) {
+  const before = (own?.lightOffer ?? []).map(id => reactiveFor(target).find(entry => entry.blockId === id)).filter(entry => entry?.available);
+  const taken = DAMAGE_MOMENTS.taken.flatMap(moment => unarmedTriggers(target, moment));
+  const none = DAMAGE_MOMENTS.none.flatMap(moment => unarmedTriggers(target, moment));
+  const unique = list => [...new Map(list.map(entry => [entry.blockId, entry])).values()];
+  return { before, taken: unique(taken), none: unique(none), any: Boolean(before.length || taken.length || none.length) };
+}
+
+/** Dealt by itself where nothing is left to choose (the user's) - by the one who plays them, or the GM if they are away; once. */
+const autoDealt = new Set();
+function autoDealDamage(message, target, attack) {
+  const key = `${message.id}:${target.uuid}`;
+  if (autoDealt.has(key)) return;
+  const player = playerOf(target);
+  const mine = (player && player.active) ? (player === game.user) : (game.user === game.users.activeGM);
+  if (!mine) return;
+  autoDealt.add(key);
+  setTimeout(() => applyAttackDamage(message, target, attack).catch(error => {
+    console.error("DBU TTRPG | Could not deal the Damage", error);
+    autoDealt.delete(key);
+  }), 0);
+}
+
+/**
+ * Deal Damage (the user's): what reaches the one hit - "Wound - Soak - DR = Damage", their Life before and after, the Damage
+ * Category - then "Before the Damage", what can lower or cancel it (Hyper Resilience), applied first and live; then what answers
+ * taking it - or, where it came to nothing, what answers being hit for none instead: no Damage taken is no Damage for an effect.
+ */
+async function dealDamageWindow(message, target, attack) {
+  const own = targetResult(attack, target.uuid);
+  if (!own || own.applied) return;
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const choices = dealDamageChoices(target, own);
+  const life = Number(target.system.life?.value) || 0;
+  const max = Number(target.system.life?.max) || 0;
+  const category = DAMAGE_CATEGORIES[own.damageCategory]?.label ?? "";
+  const row = (entry, name) => `<label class="dbu-respond-option"${triggerTip(entry)}>
+      <input type="checkbox" name="${name}" value="${entry.blockId}"/>
+      <span class="dbu-respond-name">${esc(entry.sourceName)}</span>
+      <span class="dbu-respond-source">${esc(triggerText(entry))}</span></label>`;
+  const halfSoak = Math.floor((Number(target.system.soakValue) || 0) / 2);
+  const body = `${choices.before.length ? rollSection("Before the Damage", choices.before.map(entry => row(entry, "before")).join("")) : ""}${
+    choices.taken.length ? `<div data-taken>${rollSection("On taking Damage", choices.taken.map(entry => row(entry, "taken")).join(""))}</div>` : ""}${
+    choices.none.length ? `<div data-none>${rollSection("On taking no Damage", choices.none.map(entry => row(entry, "none")).join(""))}</div>` : ""}`;
+  const top = `<div class="dbu-roll-resources"><span>Life <b>${life}</b> / ${max}</span><span>Soak <b>${own.soak ?? target.system.soakValue ?? 0}</b></span>
+    <span>DR <b>${own.reduction ?? target.system.damageReduction ?? 0}</b></span></div>${rollBoxHtml("", "")}`;
+  const redraw = element => {
+    const cancelled = Boolean(element.querySelector('input[name="before"]:checked'));
+    const damage = cancelled ? 0 : (Number(own.damage) || 0);
+    const box = element.querySelector(".dbu-roll-box");
+    box.querySelector(".dbu-roll-what").innerHTML = `Damage &middot; ${esc(category)} Category &middot; Life ${life} &rarr; ${damage
+      ? `<span class="dbu-roll-bad">${life - damage}</span>` : `<span class="dbu-roll-good">${life}</span>`}`;
+    const wound = Number(own.effectiveWound ?? attack.result?.wound?.total) || 0;
+    box.querySelector(".dbu-roll-line").innerHTML = `<span class="dbu-formula-piece dbu-formula-base" data-tooltip="Their Wound Roll">${wound}</span>`
+      + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Soak Value, as the Damage Category leaves it">${own.soak ?? 0} Soak</span>`
+      + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Damage Reduction">${own.reduction ?? 0} DR</span>`
+      + ` = ${damage ? `<span class="dbu-roll-bad">${damage}</span>` : `${cancelled ? `<s>${own.damage}</s> ` : ""}<span class="dbu-roll-good">0</span>`}`;
+    // Nothing taken: what answers taking it is gone, and what answers being hit for none comes in (the user's).
+    const takenBox = element.querySelector("[data-taken]");
+    if (takenBox) {
+      takenBox.classList.toggle("dbu-respond-blocked", !damage);
+      takenBox.querySelectorAll("input").forEach(input => { input.disabled = !damage; if (!damage) input.checked = false; });
+    }
+    const noneBox = element.querySelector("[data-none]");
+    if (noneBox) noneBox.hidden = Boolean(damage);
+  };
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Damage - ${target.name}` },
+    content: rollWindowHtml({ top, body }),
+    render: (event, dialog) => {
+      dialog.element.querySelectorAll("input").forEach(input => input.addEventListener("change", () => redraw(dialog.element)));
+      redraw(dialog.element);
+    },
+    buttons: [
+      { action: "confirm", label: "Take Damage", default: true, callback: (event, button, dialog) => ({
+        before: [...dialog.element.querySelectorAll('input[name="before"]:checked')].map(input => input.value),
+        after: [...dialog.element.querySelectorAll('input[name="taken"]:checked, input[name="none"]:checked')].map(input => input.value) }) },
+      { action: "cancel", label: "Close" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return;
+  // Before the Damage first: spent, and the Damage nothing.
+  for (const blockId of chosen.before) await spendTriggeredEffect(target, blockId);
+  const damageOverride = chosen.before.length ? 0 : null;
+  if (chosen.after.length) {
+    await target.update({ "system.armedTalents": [...new Set([...(target.system.armedTalents ?? []), ...chosen.after])] });
+  }
+  return dealAttackDamage(message, target, attack, { damageOverride, answered: [...DAMAGE_MOMENTS.taken, ...DAMAGE_MOMENTS.none, "light-damage"] });
 }
 
 /** Carry out everything the reader chose, for every character they chose it for. */
@@ -27447,6 +27547,12 @@ async function overkillAnswer(target, damage) {
   return offered.find(entry => entry.blockId === picked) ?? null;
 }
 
+/** An effect answering light Damage by itself (Hyper Resilience set Automatic), or null. */
+function lightDamageAutomatic(target) {
+  return reactiveFor(target).find(entry => entry.available && entry.armed
+    && (String(entry.program.blocks?.[0]?.moment ?? "") === "light-damage")) ?? null;
+}
+
 async function lightDamageAnswer(target, damage) {
   const automatic = reactiveFor(target).find(entry => entry.available && entry.armed
     && (String(entry.program.blocks?.[0]?.moment ?? "") === "light-damage"));
@@ -33760,9 +33866,11 @@ async function rollAttackWoundWork(message, attack) {
     // Damage" - Automatic, or asked of whoever plays them once the Damage is known (the user's); spent only where it took
     // it away.
     const rolledDamage = dealt + punchingDown;
-    const resilient = ((rolledDamage > 0) && (rolledDamage < (Number(target.system.soakValue) || 0) / 2))
-      ? await lightDamageAnswer(target, rolledDamage) : null;
+    const light = (rolledDamage > 0) && (rolledDamage < (Number(target.system.soakValue) || 0) / 2);
+    const resilient = light ? lightDamageAutomatic(target) : null;
     if (resilient) await spendTriggeredEffect(target, resilient.blockId);
+    // Left to choose in Deal Damage's "Before the Damage" (the user's) - what cancels it there takes away what answers taking it.
+    const lightOffer = (light && !resilient) ? unarmedTriggers(target, "light-damage").map(entry => entry.blockId) : [];
     const untouched = resilient ? 0 : rolledDamage;
     // Undying Determination (1): past their Life Points, halved - asked once; settled again, as it was answered.
     const previous = (attack.result?.targets ?? []).find(entry => entry.uuid === target.uuid);
@@ -33788,6 +33896,7 @@ async function rollAttackWoundWork(message, attack) {
       ...(halving ? { undyingHalved: true } : {}),
       ...(resistedBy ? { resistedHalved: true } : {}),
       ...(ghostly ? { incorporealNone: true } : {}),
+      ...(lightOffer.length ? { lightOffer } : {}),
       ...(punchingDown ? { punchingDown } : {}),
       ...(extra.length ? { techniqueExtra: extra } : {}) });
   }
@@ -36544,7 +36653,23 @@ function featureNote(profile, attack = null) {
 }
 
 /** Take the damage off one target, once and once only. */
-async function applyAttackDamage(message, target, attack) {
+/**
+ * Deal Damage's (the user's): the Damage as its window left it - nothing, where "Before the Damage" cancelled it - and the Moments it
+ * answered not asked again: what was left unticked there was declined.
+ */
+async function dealAttackDamage(message, target, attack, { damageOverride = null, answered = [] } = {}) {
+  offersAnswered.moments = new Set(answered);
+  try {
+    return await applyAttackDamage(message, target, attack, { damageOverride });
+  } finally {
+    offersAnswered.moments = new Set();
+  }
+}
+
+/** The Moments a Deal Damage window answered, while its Damage is applied - offered no second time. */
+const offersAnswered = { moments: new Set() };
+
+async function applyAttackDamage(message, target, attack, { damageOverride = null } = {}) {
   const own = targetResult(attack, target.uuid);
   if (!own || own.applied) return;
   // Delayed: "instead of your Opponent taking any Damage, keep a record of the Dice Score of your
@@ -36558,7 +36683,7 @@ async function applyAttackDamage(message, target, attack) {
   // normally would from this Attacking Maneuver" - and the piece loses 1 Break Value, below.
   const atApparel = own.hit && !isAbsoluteMiss(own)
     && (attack.modifiers ?? []).some(modifier => modifier.atApparel);
-  const settledDamage = atApparel ? Math.floor(own.damage / 2) : own.damage;
+  const settledDamage = (damageOverride !== null) ? damageOverride : (atApparel ? Math.floor(own.damage / 2) : own.damage);
   // Intelligent Fighter (4): a Studied Ally about to be Defeated - their Surgency off it, asked. Dragon of Light (6): the same, its
   // Life Points given first.
   const shielded = (own.hit && !isAbsoluteMiss(own) && (settledDamage > 0))
@@ -39423,15 +39548,20 @@ function renderAttack(message, html) {
       continue;
     }
 
-    // A Wound the Soak Value absorbed entirely, or a Power Flare that beat it:
-    // nothing to apply.
-    if (entry.own.damage <= 0) continue;
-
+    // Deal Damage (the user's): the one hit sees what reaches them and chooses what answers it - or, nothing to choose, it is
+    // dealt by itself. A Wound the Soak Value absorbed entirely, with nothing answering that, is nothing to deal.
+    const choices = dealDamageChoices(target, entry.own);
+    if ((entry.own.damage <= 0) && !choices.any) continue;
+    if (!choices.any) {
+      autoDealDamage(message, target, attack);
+      continue;
+    }
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "dbu-clash-button";
-    button.textContent = `Apply ${entry.own.damage} damage to ${target.name}`;
-    button.addEventListener("click", () => applyAttackDamage(message, target, attack));
+    button.className = "dbu-clash-button dbu-damage-button";
+    button.textContent = `Deal Damage - ${target.name}`;
+    button.dataset.tooltip = `${entry.own.damage} Damage, and what answers it`;
+    button.addEventListener("click", () => dealDamageWindow(message, target, attack));
     container.append(button);
   }
 }
