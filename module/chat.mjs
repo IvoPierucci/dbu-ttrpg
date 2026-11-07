@@ -281,6 +281,15 @@ function applyRequest(request) {
         ((entry.uuid === request.uuid) ? { ...entry, defenceWager: request.wager, defenceFoundation: request.foundation || entry.defenceFoundation,
           flareWagered: true } : entry)) } });
     }
+    // A hit's answers (the user's): kept on the card till the Wound Roll is confirmed, then carried out before it is made.
+    case "hitPending": return applyHitPending(request.messageId, request.uuid, request.answer);
+    case "hitUnpending": return applyHitUnpending(request.messageId, request.uuid);
+    case "hitDone": return applyHitDone(request.messageId, request.id);
+    case "woundHeld": {
+      const card = game.messages.get(request.messageId);
+      const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+      return (attack?.result && !attack.result.wound) ? card.setFlag(SCOPE, ATTACK_FLAG, { ...attack, woundHeld: true }) : undefined;
+    }
     // Respond on an attack (the user's): the answer kept on the card till every side is ready, then carried out.
     case "pendingAnswer": return applyPendingAnswer(request.messageId, request.uuid, request.answer);
     case "answerDone": return applyAnswerDone(request.messageId, request.id);
@@ -6314,14 +6323,17 @@ function pendingRerolls(message) {
   everySide.on = true;
   let sides = [];
   try { sides = clashSides(message); } finally { everySide.on = false; }
-  const done = message.getFlag(SCOPE, REROLLS_DONE_FLAG) ?? [];
+  const done = [...(message.getFlag(SCOPE, REROLLS_DONE_FLAG) ?? []),
+    ...(message.getFlag(SCOPE, ATTACK_FLAG)?.hitPending ?? []).map(entry => entry.uuid)];
   return sides.filter(entry => (entry.stage === "strike") && entry.lost && !done.includes(entry.uuid)
     && offerableTo(entry, message).some(effect => effect.available)).map(entry => entry.actor);
 }
 
 /** Whether this side has done with its Strike's rerolls - No reroll said, or the hit answered (the user's). */
 function rerollsClosed(message, actor) {
-  return (message.getFlag(SCOPE, REROLLS_DONE_FLAG) ?? []).includes(actor?.uuid);
+  // An answer to the hit kept on the card closes them too (the user's) - and Change, taking it back, opens them again.
+  const kept = (message.getFlag(SCOPE, ATTACK_FLAG)?.hitPending ?? []).some(entry => entry.uuid === actor?.uuid);
+  return kept || (message.getFlag(SCOPE, REROLLS_DONE_FLAG) ?? []).includes(actor?.uuid);
 }
 
 /** The orange Reroll button (the user's), for a side that lost - its window behind it. */
@@ -9666,10 +9678,7 @@ function hitEntries(message, attack) {
   const blockers = new Map(possibleBlockers(attack).map(entry => [entry.target.uuid, entry]));
   const barriers = new Map(possibleBarriers(attack).map(entry => [entry.user.uuid, entry]));
   const interveners = !deflection(attack) ? possibleInterveners(attack).filter(who => shieldableTargets(attack, who).length) : [];
-  // Not for an Ally who may still reroll their way out of the hit - stepping in front of a blow that may yet miss them.
-  const rerolling = new Set(pendingRerolls(message).map(actor => actor.uuid));
-  const stepping = new Map(interveners.map(actor => [actor.uuid, shieldableTargets(attack, actor).filter(ally => !rerolling.has(ally.uuid))])
-    .filter(([, allies]) => allies.length));
+  const stepping = new Map(interveners.map(actor => [actor.uuid, shieldableTargets(attack, actor)]));
   const hits = new Map(targetResults(attack).filter(({ own }) => own?.hit && !isAbsoluteMiss(own)).map(entry => [entry.uuid, entry]));
   const owned = new Map();
   for (const uuid of [...hits.keys(), ...barriers.keys(), ...stepping.keys()]) {
@@ -9689,28 +9698,103 @@ function hitEntries(message, attack) {
 }
 
 /** The Apply effects button's: one character's window, or the picker for several (the user's). */
-async function openHitWindows(message) {
+async function openHitWindows(message, initials = new Map()) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
-  if (!attack?.result || attack.result.wound) return;
+  if (!attack?.result || attack.result.wound || attack.woundHeld) return;
   const entries = hitEntries(message, attack);
   const usable = entries.filter(entry => entry.usable);
   if (!usable.length) return;
   let chosen = null;
   if (usable.length === 1) {
-    const one = await hitActorWindow(message, attack, usable[0]);
+    const one = await hitActorWindow(message, attack, usable[0], { initial: initials.get(usable[0].actor.uuid) ?? null });
     chosen = one ? [one] : null;
   } else {
-    chosen = await hitPicker(message, attack, entries);
+    chosen = await hitPicker(message, attack, entries, initials);
   }
   if (!chosen?.length) return;
+  // Kept on the card, nothing spent (the user's): carried out once the Wound Roll is confirmed - till then, Change.
   for (const choice of chosen) {
-    try {
-      await applyHitChoice(message, attack, choice);
-    } catch (error) {
-      console.error("DBU TTRPG | Could not answer the hit", choice, error);
-      ui.notifications.error("DBU TTRPG | An answer to the hit failed. See the console.");
-    }
+    await requestEdit(message, { type: "hitPending", uuid: choice.actor.uuid, answer: hitAnswerOf(choice) });
   }
+}
+
+/** A hit's answer as the card keeps it till the Wound Roll is confirmed: what was picked, and nothing of the window's own. */
+function hitAnswerOf(choice) {
+  return { man: choice.man ?? "", shieldId: choice.shieldId ?? null, effect: choice.effect ?? null, ally: choice.ally ?? null,
+    triggers: choice.triggers ?? [], wager: choice.wager ?? null, convert: Number(choice.convert) || 0, summary: choice.summary ?? "" };
+}
+
+/** Kept on the card - the one before replaced; refused once the Wound Roll is confirmed. */
+async function applyHitPending(messageId, uuid, answer) {
+  const message = game.messages.get(messageId);
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.result || attack.result.wound || attack.woundHeld) return;
+  return message.setFlag(SCOPE, ATTACK_FLAG, { ...attack,
+    hitPending: [...(attack.hitPending ?? []).filter(entry => entry.uuid !== uuid), { id: foundry.utils.randomID(), uuid, answer }] });
+}
+
+/** Change: taken back - and with it, the Reroll it closed open again (the user's). */
+async function applyHitUnpending(messageId, uuid) {
+  const message = game.messages.get(messageId);
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.result || attack.result.wound || attack.woundHeld) return;
+  return message.setFlag(SCOPE, ATTACK_FLAG, { ...attack, hitPending: (attack.hitPending ?? []).filter(entry => entry.uuid !== uuid) });
+}
+
+/** One carried out, off the list. */
+async function applyHitDone(messageId, id) {
+  const message = game.messages.get(messageId);
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack) return;
+  return message.setFlag(SCOPE, ATTACK_FLAG, { ...attack, hitPending: (attack.hitPending ?? []).filter(entry => entry.id !== id) });
+}
+
+/**
+ * The Wound Roll confirmed (the user's: both sides): the hit's answers kept on the card carried out - paid, played - one at a time,
+ * each by whoever plays that character (the GM where they are away); the last done, the Wound Roll made by whoever owes it.
+ */
+const hitClaimed = new Set();
+function runHitAnswers(message, attack) {
+  if (!attack?.result || attack.result.wound || !attack.woundHeld) return;
+  const pending = attack.hitPending ?? [];
+  if (pending.length) {
+    const next = pending[0];
+    const actor = fromUuidSync(next.uuid);
+    const executor = actor ? playerOf(actor) : game.users.activeGM;
+    if ((executor !== game.user) || hitClaimed.has(next.id)) return;
+    hitClaimed.add(next.id);
+    setTimeout(async () => {
+      try {
+        const fresh = message.getFlag(SCOPE, ATTACK_FLAG);
+        const entry = actor ? hitEntries(message, fresh).find(each => each.actor.uuid === actor.uuid) : null;
+        if (entry) await applyHitChoice(message, fresh, { ...next.answer, actor, entry });
+      } catch (error) {
+        console.error("DBU TTRPG | Could not answer the hit", next, error);
+        ui.notifications.error("DBU TTRPG | An answer to the hit failed. See the console.");
+      } finally {
+        await requestEdit(message, { type: "hitDone", id: next.id });
+      }
+    }, 0);
+    return;
+  }
+  const roller = woundRoller(attack);
+  const key = `wound:${message.id}`;
+  if (!roller || (playerOf(roller) !== game.user) || hitClaimed.has(key)) return;
+  hitClaimed.add(key);
+  setTimeout(() => rollAttackWound(message, message.getFlag(SCOPE, ATTACK_FLAG)).catch(error => {
+    console.error("DBU TTRPG | Could not roll the Wound", error);
+    hitClaimed.delete(key);
+  }), 0);
+}
+
+/** Change on a hit's answer (the user's): taken back, its window again with what was picked. */
+async function changeHitAnswer(message, actors) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.result || attack.result.wound || attack.woundHeld) return;
+  const initials = new Map((attack.hitPending ?? []).filter(entry => actors.some(actor => actor.uuid === entry.uuid))
+    .map(entry => [entry.uuid, { ...entry.answer }]));
+  for (const actor of actors) await requestEdit(message, { type: "hitUnpending", uuid: actor.uuid });
+  return openHitWindows(message, initials);
 }
 
 /**
@@ -9860,6 +9944,12 @@ async function hitActorWindow(message, attack, entry, { fromPicker = false, init
       if (initial) {
         const man = element.querySelector(`input[name="hit-man"][value="${initial.man ?? ""}"]`);
         if (man) man.checked = true;
+        for (const [name, value] of [["hit-effect", initial.effect], ["hit-ally", initial.ally], ["hit-shield", initial.shieldId]]) {
+          const field = element.querySelector(`select[name="${name}"]`);
+          if (field && value) field.value = value;
+        }
+        const convert = element.querySelector('input[name="hit-convert"]');
+        if (convert && initial.convert) convert.value = String(initial.convert);
         for (const blockId of initial.triggers ?? []) {
           const box = element.querySelector(`input[name="hit-trigger"][value="${blockId}"]`);
           if (box) box.checked = true;
@@ -9876,7 +9966,7 @@ async function hitActorWindow(message, attack, entry, { fromPicker = false, init
       }
     },
     buttons: [
-      { action: "confirm", label: fromPicker ? "Save" : "Apply", default: true, callback: (event, button, dialog) => read(dialog.element) },
+      { action: "confirm", label: fromPicker ? "Save" : "Ready", default: true, callback: (event, button, dialog) => read(dialog.element) },
       { action: "cancel", label: fromPicker ? "Back" : "Close" }
     ],
     rejectClose: false
@@ -9884,7 +9974,7 @@ async function hitActorWindow(message, attack, entry, { fromPicker = false, init
 }
 
 /** The picker once a hit lands, for several of your characters (the user's): the one hit first, Done applying every answer. */
-async function hitPicker(message, attack, entries) {
+async function hitPicker(message, attack, entries, initials = new Map()) {
   const picks = new Map();
   const esc = text => Handlebars.escapeExpression(text ?? "");
   const ordered = [...entries].sort((a, b) => (Number(b.isHit) - Number(a.isHit)) || a.actor.name.localeCompare(b.actor.name));
@@ -9909,7 +9999,8 @@ async function hitPicker(message, attack, entries) {
         button.addEventListener("click", async () => {
           const holder = button.closest("[data-who]");
           const entry = entries.find(each => each.actor.uuid === holder.dataset.who);
-          const answer = await hitActorWindow(message, attack, entry, { fromPicker: true, initial: picks.get(entry.actor.uuid) });
+          const answer = await hitActorWindow(message, attack, entry, { fromPicker: true,
+            initial: picks.get(entry.actor.uuid) ?? initials.get(entry.actor.uuid) ?? null });
           if (!answer) return;
           picks.set(entry.actor.uuid, answer);
           holder.querySelector("[data-answer]").innerHTML = answer.summary;
@@ -9929,8 +10020,6 @@ async function hitPicker(message, attack, entries) {
 /** One character's answer to the hit, carried out: Actions turned, effects armed, Power Flare's wager paid and written, the Maneuver played. */
 async function applyHitChoice(message, attack, choice) {
   const { actor, entry } = choice;
-  // Answering the hit closes its rerolls (the user's): what was chosen for being hit is never undone by a reroll after.
-  if (entry.isHit) await requestEdit(message, { type: "rerollDone", uuid: actor.uuid });
   if (choice.convert > 0) await convertActions(actor, choice.convert);
   if (choice.triggers?.length) {
     await actor.update({ "system.armedTalents": [...new Set([...(actor.system.armedTalents ?? []), ...choice.triggers])] });
@@ -32840,6 +32929,8 @@ async function woundStage(message, attack) {
   if (!HIT_ANSWERS.has(message.id)) {
     await answerHit(message, attack, attacker, struck, questions.length ? hitAnswerScript(questions, ready?.spent ?? {}) : null);
   }
+  // Both sides confirmed (the user's): what was kept for the hit - an Intervene, a Block - carried out first, then the roll.
+  if ((message.getFlag(SCOPE, ATTACK_FLAG)?.hitPending ?? []).length) return requestEdit(message, { type: "woundHeld" });
   return rollAttackWound(message, attack);
 }
 
@@ -39468,10 +39559,23 @@ function renderAttack(message, html) {
   // Barrier: "When you are hit by an Attacking Maneuver" - the same window.
   // Everything that answers a hit, one button (the user's): Block, Barrier, the Intervene for an Ally, what answers being hit, Power
   // Flare's Ki Wager - a window for each of your characters with something to do, a picker before them where there are several.
-  // Always there once the Strike is settled (the user's) - answering the hit is what closes the one hit's Reroll.
-  if (!result.wound) {
+  // Always there once the Strike is settled (the user's) - answering the hit is what closes the one hit's Reroll; kept, not
+  // played, till the Wound Roll is confirmed, with Change till then.
+  if (!result.wound) runHitAnswers(message, attack);
+  if (!result.wound && attack.woundHeld) {
+    const note = document.createElement("div");
+    note.className = "dbu-settled-note";
+    note.textContent = (attack.hitPending ?? []).length ? "The Wound Roll is confirmed - the answers to the hit first, then the roll."
+      : "The Wound Roll is confirmed.";
+    container.append(note);
+  }
+  if (!result.wound && !attack.woundHeld) {
     const entries = hitEntries(message, attack);
-    if (entries.some(entry => entry.usable)) {
+    const kept = new Set((attack.hitPending ?? []).map(entry => entry.uuid));
+    const mine = entries.filter(entry => entry.usable);
+    if (mine.length && mine.every(entry => kept.has(entry.actor.uuid))) {
+      container.append(readyRow(() => changeHitAnswer(message, mine.map(entry => entry.actor))));
+    } else if (entries.some(entry => entry.usable)) {
       const apply = document.createElement("button");
       apply.type = "button";
       apply.className = "dbu-clash-button";
@@ -39581,6 +39685,8 @@ function renderAttack(message, html) {
     const roller = woundRoller(attack);
     if (!roller?.isOwner) return;
 
+    // Confirmed already, waiting on the hit's answers kept on the card (runHitAnswers): nothing to press.
+    if (attack.woundHeld) return;
     // Not before the rerolls (the user's): one could turn this hit into a miss.
     const waiting = pendingRerolls(message);
     if (waiting.length) {
