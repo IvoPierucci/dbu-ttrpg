@@ -162,6 +162,42 @@ export function partLine(part) {
   };
 }
 
+/**
+ * A Combat Roll's parts as its card's hover shows them (the user's): the sheet's own number - its Strike, Dodge or Wound with what the
+ * sheet already takes off it (Diminishing, the Muscle Penalty, a Health Threshold's) - as one row, "(sheet)", and over it only what this
+ * attack or defence brought. A penalty the sheet counts and this roll did not - Power Burst's, Last Legs' - its own row giving it back,
+ * so the column still adds up. Only for showing: the total is the same either way.
+ *
+ * @param {string} slot      "strike", "dodge" or "wound"
+ * @param {object[]} parts   the roll's parts
+ * @param {object} penalties what the sheet takes off: { offense, defense, muscle, threshold } - each a positive number
+ */
+export function foldSheetParts(slot, parts, penalties = {}) {
+  const isBase = part => (slot === "strike") ? ((part.label === "Strike") || /^strike(\.|$)/.test(String(part.workingsKey ?? "")))
+    : (slot === "dodge") ? (part.label === "Dodge")
+    : (slot === "wound") ? ((part.label === "Wound") || /^wound\./.test(String(part.workingsKey ?? ""))) : false;
+  const at = (parts ?? []).findIndex(isBase);
+  if (at < 0) return parts;
+  // What the sheet takes off, by the label the roll gives each.
+  const sheet = [
+    ...((slot === "strike") ? [["Dim. Offense", "Diminishing Offense", Number(penalties.offense) || 0]] : []),
+    ...((slot === "dodge") ? [["Dim. Defense", "Diminishing Defense", Number(penalties.defense) || 0]] : []),
+    ...((slot !== "wound") ? [["Muscle Penalty", "Muscle Penalty", Number(penalties.muscle) || 0]] : []),
+    ["Thresholds", "Health Threshold", Number(penalties.threshold) || 0]
+  ].filter(([, , value]) => value > 0);
+  const folded = new Set(sheet.map(([label]) => label));
+  const base = parts[at];
+  const sheetValue = (Number(base.value) || 0) - sheet.reduce((sum, [, , value]) => sum + value, 0);
+  const missing = sheet.filter(([label]) => !parts.some(part => part.label === label));
+  const back = missing.reduce((sum, [, , value]) => sum + value, 0);
+  const rest = parts.filter((part, index) => (index !== at) && !folded.has(part.label));
+  return [
+    { label: `${base.label} (sheet)`, value: sheetValue },
+    ...(back ? [{ label: `Not on this roll: ${missing.map(([, named]) => named).join(", ")}`, value: back }] : []),
+    ...rest
+  ];
+}
+
 /** Something that happened to the roll that is not a number. */
 export function noteLine(text) {
   return { kind: "note", rank: LINE_ORDER.note, written: "", value: null, source: text };

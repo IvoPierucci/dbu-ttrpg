@@ -31,7 +31,7 @@ import { armorPiercing, damageAttributeOf, karmicSteps, linkedPick, skyAssaultWa
   techniqueWoundAgainst, techniqueWoundParts } from "./technique-attack.mjs";
 import { advantageWoundParts, featureRanks, pushes, staggers, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
-import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine,
+import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine, foldSheetParts,
          fromOutcome, withoutOutcome, breakdownTable, breakdownText, formulaHtml, workingsTable } from "./breakdown.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
@@ -9913,7 +9913,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // the rest below, once it is known whether there are any.
   const lines = [];
 
-  for (const part of parts) {
+  // The sheet's own Strike, Dodge or Wound as one row, and over it only what this roll brought (the user's) - breakdown.mjs foldSheetParts.
+  const shownParts = ["strike", "dodge", "wound"].includes(slot) ? foldSheetParts(slot, parts, {
+    offense: actor.system?.diminishing?.offense?.penalty, defense: actor.system?.diminishing?.defense?.penalty,
+    muscle: actor.system?.superStack?.musclePenalty, threshold: actor.system?.threshold?.penalty }) : parts;
+  for (const part of shownParts) {
     // A part worth nothing is left out rather than shown as zero: a row saying a
     // Threshold took nothing off is a row to read past.
     if (part.value) lines.push(partLine(part));
