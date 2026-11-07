@@ -4848,6 +4848,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
                                                     portal = false, combo = false, spiritSword = null,
                                                     extraTargets = [], armedAs = "", extraCharges = 0 } = {}) {
   if (!actor || !maneuver) return false;
+  // Its /Round and /Encounter uses as they were - Instantaneous Control's Cancel takes off what making it added.
+  const usesBefore = { used: [...(actor.system.usedManeuvers ?? [])], round: [...(actor.system.talentUses?.round ?? [])],
+    encounter: [...(actor.system.talentUses?.encounter ?? [])] };
   // A Maneuver of your own in sequence: a Counter Maneuver used before has run its course.
   if (!outOfSequence) await (await import("./chat.mjs")).endCounterBoost(actor);
   // Time Freeze: no Out-of-Sequence Maneuver in a Frozen Turn - your own, or another's but a Surge.
@@ -6831,6 +6834,18 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // since a Grapple with nobody in it was refused above.
   // What the United Attack Disadvantage gives back if the Ally asked does not join: "regain your Action
   // and Ki Points spent on this Signature Technique Maneuver".
+  // What making it took, all of it, for Instantaneous Control's Cancel (the user's): its Actions, its Ki and Capacity (a Ki Wager
+  // with them), and the /Round and /Encounter uses it and what was applied to it counted.
+  if (declared) {
+    const added = (before, now) => { const left = [...before]; return now.filter(entry => {
+      const at = left.indexOf(entry); if (at < 0) return true; left.splice(at, 1); return false; }); };
+    declared = { ...declared, refund: { ...(declared.paid ?? {}),
+      actions: outOfSequence ? 0 : actionCostOf(maneuver, actionsSpent).amount, kind: actionCostOf(maneuver, actionsSpent).kind,
+      extraActions: (Number(declared.extraActions) || 0) + (Number(burstActions) || 0),
+      used: added(usesBefore.used, actor.system.usedManeuvers ?? []),
+      round: added(usesBefore.round, actor.system.talentUses?.round ?? []),
+      encounter: added(usesBefore.encounter, actor.system.talentUses?.encounter ?? []) } };
+  }
   if (declared?.unitedWith) {
     declared = { ...declared, unitedWith: { ...declared.unitedWith, paid: {
       ki: fromStore ? 0 : moving.fromSelf,

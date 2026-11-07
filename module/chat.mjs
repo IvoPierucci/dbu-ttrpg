@@ -10142,6 +10142,138 @@ async function dealDamageWindow(message, target, attack) {
   return dealAttackDamage(message, target, attack, { damageOverride, answered: [...DAMAGE_MOMENTS.taken, ...DAMAGE_MOMENTS.none, "light-damage"] });
 }
 
+/**
+ * The GM's Targets (the user's: Instantaneous Control's tool for the table): the Maneuver's targets - × takes one out, Undo puts it
+ * back, Add brings another from the scene - and the choice of changing them or cancelling the Maneuver, its maker regaining what it
+ * cost. An AoE with a target still in it must go on. The table says whether anyone left the range; nothing here measures it.
+ */
+async function targetsWindow(message) {
+  if (!game.user.isGM) return;
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || attack.icCancelled) return;
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const current = attackTargets(attack);
+  const onScene = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .filter(actor => actor && isCharacter(actor) && (actor.uuid !== attack.attackerUuid)).map(actor => [actor.uuid, actor])).values()]
+    .filter(actor => !current.some(target => target.uuid === actor.uuid));
+  const refund = attack.refund ?? attack.paid ?? {};
+  const area = Boolean(attackArea(attack));
+  const row = (uuid, name, img) => `<div class="dbu-gm-target" data-uuid="${uuid}"><img src="${esc(img)}" alt=""/>
+    <span class="dbu-respond-name">${esc(name)}</span><span class="dbu-respond-source" data-said></span>
+    <button type="button" class="dbu-gm-x" data-x>×</button></div>`;
+  const regained = [((Number(refund.actions) || 0) + (Number(refund.extraActions) || 0)) ? `${(Number(refund.actions) || 0) + (Number(refund.extraActions) || 0)} Action(s)` : "",
+    refund.ki ? `${refund.ki} KP` : "", refund.divine ? `${refund.divine} Divine Ki` : ""].filter(Boolean).join(" &middot; ") || "nothing";
+  const body = `${rollSection("Targets", `<div data-list>${current.map(target => row(target.uuid, target.name, fromUuidSync(target.uuid)?.img)).join("")}</div>
+      <div class="dbu-gm-add"><select data-add><option value="">Add a target…</option>${onScene.map(actor =>
+        `<option value="${actor.uuid}">${esc(actor.name)}</option>`).join("")}</select><button type="button" data-add-go>Add</button></div>`)}
+    ${rollSection("Instantaneous Control", `
+      <label class="dbu-respond-option"><input type="radio" name="ic" value="change" checked/><span class="dbu-respond-name">Change the targets</span>
+        <span class="dbu-respond-source">as above - the Maneuver goes on</span></label>
+      <label class="dbu-respond-option" data-cancel-row><input type="radio" name="ic" value="cancel"/><span class="dbu-respond-name">Cancel the Maneuver</span>
+        <span class="dbu-respond-source" data-cancel-note>and regain what was spent on it</span></label>
+      <p class="dbu-respond-note">${esc(attack.attackerName)} regains ${regained}${(refund.used?.length || refund.round?.length || refund.encounter?.length)
+        ? "; its /Round and /Encounter uses don't count" : ""}.</p>`)}`;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Targets - ${attack.maneuverName}` },
+    content: rollWindowHtml({ body }),
+    render: (event, dialog) => {
+      const element = dialog.element;
+      const sync = () => {
+        // An AoE with a target still in it must go on: Cancel only once nobody is left.
+        const left = element.querySelectorAll("[data-uuid]:not(.dbu-gm-out)").length;
+        const blocked = area && (left > 0);
+        const cancel = element.querySelector('input[name="ic"][value="cancel"]');
+        cancel.disabled = blocked;
+        if (blocked && cancel.checked) element.querySelector('input[name="ic"][value="change"]').checked = true;
+        element.querySelector("[data-cancel-row]").classList.toggle("dbu-respond-blocked", blocked);
+        element.querySelector("[data-cancel-note]").textContent = blocked
+          ? "an AoE with a target still in it must go on" : "and regain what was spent on it";
+      };
+      const wire = holder => holder.querySelector("[data-x]")?.addEventListener("click", () => {
+        const out = !holder.classList.contains("dbu-gm-out");
+        holder.classList.toggle("dbu-gm-out", out);
+        holder.querySelector("[data-said]").textContent = out ? "taken out" : "";
+        holder.querySelector("[data-x]").textContent = out ? "Undo" : "×";
+        sync();
+      });
+      element.querySelectorAll("[data-uuid]").forEach(wire);
+      element.querySelector("[data-add-go]")?.addEventListener("click", () => {
+        const select = element.querySelector("[data-add]");
+        const actor = fromUuidSync(select.value);
+        if (!actor) return;
+        const holder = document.createElement("div");
+        holder.innerHTML = row(actor.uuid, actor.name, actor.img);
+        const added = holder.firstElementChild;
+        element.querySelector("[data-list]").append(added);
+        wire(added);
+        select.querySelector(`option[value="${CSS.escape(actor.uuid)}"]`)?.remove();
+        select.value = "";
+        sync();
+      });
+      sync();
+    },
+    buttons: [
+      { action: "apply", label: "Apply", default: true, callback: (event, button, dialog) => ({
+        mode: dialog.element.querySelector('input[name="ic"]:checked')?.value ?? "change",
+        keep: [...dialog.element.querySelectorAll("[data-uuid]:not(.dbu-gm-out)")].map(holder => holder.dataset.uuid) }) },
+      { action: "cancel", label: "Close" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return;
+  if (chosen.mode === "cancel") return cancelByInstantaneousControl(message);
+  return retarget(message, chosen.keep);
+}
+
+/**
+ * Change the targets (the user's): who is taken out loses their place on the card, and an answer of theirs kept there is dropped -
+ * nothing of it was paid; who is added comes in waiting, to answer as any target.
+ */
+async function retarget(message, keep) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.attackerUuid || attack.result) return;
+  const wanted = keep.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  if (!wanted.length) return ui.notifications.warn("A Maneuver needs a target - cancel it instead.");
+  const kept = new Set(wanted.map(actor => actor.uuid));
+  // The list the card reads (attackTargets): those kept as they were, those added by name.
+  const before = new Map(attackTargets(attack).map(target => [target.uuid, target]));
+  const targets = wanted.map(actor => before.get(actor.uuid) ?? { uuid: actor.uuid, name: actor.name });
+  return requestEdit(message, { type: "attack", attack: { ...attack,
+    targets, targetUuid: targets[0].uuid, targetName: targets[0].name,
+    ready: (attack.ready ?? []).filter(uuid => (uuid === attack.attackerUuid) || kept.has(uuid)),
+    pending: (attack.pending ?? []).filter(entry => kept.has(entry.uuid) || !attackParticipants(attack).includes(entry.uuid)),
+    defences: (attack.defences ?? []).filter(entry => kept.has(entry.uuid)) } });
+}
+
+/**
+ * Instantaneous Control's Cancel: "regain the Action(s) and Ki Points you spent on that Maneuver (including Ki Wagers)", and "that
+ * Maneuver or any effects applied to it do not count towards any /Round or /Encounter limitations" - the uses it added taken off.
+ */
+async function cancelByInstantaneousControl(message) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.attackerUuid || attack.result) return;
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const refund = attack.refund ?? attack.paid ?? {};
+  if (attacker) {
+    const kind = refund.kind || "standard";
+    const actions = (Number(refund.actions) || 0) + (Number(refund.extraActions) || 0);
+    const without = (list, gone) => { const left = [...(list ?? [])]; for (const entry of gone ?? []) {
+      const at = left.lastIndexOf(entry); if (at >= 0) left.splice(at, 1); } return left; };
+    await requestActorUpdate(attacker, {
+      "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + (Number(refund.ki) || 0)),
+      "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - (Number(refund.capacity) || 0)),
+      ...(refund.divine ? { "system.divineKi.value": Math.min(attacker.system.divineKi?.max ?? Infinity,
+        (attacker.system.divineKi?.value ?? 0) + (Number(refund.divine) || 0)) } : {}),
+      ...(actions ? { [`system.actionsSpent.${kind}`]: Math.max(0, (attacker.system.actionsSpent?.[kind] ?? 0) - actions) } : {}),
+      ...(refund.used?.length ? { "system.usedManeuvers": without(attacker.system.usedManeuvers, refund.used) } : {}),
+      ...((refund.round?.length || refund.encounter?.length) ? { "system.talentUses": {
+        round: without(attacker.system.talentUses?.round, refund.round), encounter: without(attacker.system.talentUses?.encounter, refund.encounter) } } : {})
+    });
+  }
+  return requestEdit(message, { type: "attack", attack: { ...attack, icCancelled: true, pending: [] } });
+}
+
 /** Carry out everything the reader chose, for every character they chose it for. */
 async function applyResponses(message, chosen, attack) {
   for (const choice of chosen) {
@@ -29121,7 +29253,7 @@ export async function postAttack(actor, target, maneuver,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
                                    extraTargets = [], freeWager = 0, unitedWith = null,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
-                                   genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
+                                   genkiLifeforce = 0, portal = false, spiritSword = null, paid = null, refund = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], strikeExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
@@ -29678,6 +29810,8 @@ export async function postAttack(actor, target, maneuver,
           kiWager: kiWager + (Number(freeWager) || 0),
           // What making it took from its maker's pools - Divine Counter's cancelling gives it back.
           paid,
+          // And all it took - Actions, uses - for Instantaneous Control's Cancel (the GM's Targets).
+          refund,
           // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it
           // is a Ki Wager either way - and only the card's note says the difference.
           wagerFromLife: Boolean(wagerFromLife && kiWager),
@@ -39297,7 +39431,8 @@ function renderAttack(message, html) {
   const card = document.createElement("div");
   card.className = "dbu-clash";
   card.innerHTML = `
-    <div class="dbu-clash-title">${Handlebars.escapeExpression(attack.maneuverName)}
+    <div class="dbu-clash-title">${Handlebars.escapeExpression(attack.maneuverName)}${(game.user.isGM && !result && !attack.icCancelled)
+      ? ' <button type="button" class="dbu-gm-targets" data-tooltip="Change this Maneuver\'s targets, or cancel it (Instantaneous Control)">Targets</button>' : ""}
       <span class="dbu-clash-skill">${Handlebars.escapeExpression(attack.profileLabel)} &middot;
         ${Handlebars.escapeExpression(attack.foundationLabel)} &middot;
         ${Handlebars.escapeExpression(DAMAGE_CATEGORIES[attack.damageCategory]?.label ?? "")}${
@@ -39346,13 +39481,16 @@ function renderAttack(message, html) {
       : attack.disarmingSwap?.pending
       ? `${Handlebars.escapeExpression(attack.disarmingSwap.name ?? "")} answers with the Defend Maneuver - `
         + `${Handlebars.escapeExpression(attack.attackerName)} may cancel it for another (Disarming Demeanor).`
+      : attack.icCancelled
+      ? "Cancelled - Instantaneous Control: its Actions and Ki Points regained, its uses not counted."
       : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `
         + `${Handlebars.escapeExpression(attack.maneuverName)} fails, and its Action and Ki are regained.`
       : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
+  card.querySelector(".dbu-gm-targets")?.addEventListener("click", () => targetsWindow(message));
   if (attack.unitedFailed || attack.punished || attack.divineCancelled || attack.godBindCancelled
-    || attack.disarmingSwapped) return;
+    || attack.disarmingSwapped || attack.icCancelled) return;
   disarmingSwapButtons(message, html, attack);
   unansweredDodges(message, html, attack);
   dimensionalHoleButtons(message, html, attack);
