@@ -3724,11 +3724,18 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
     return Object.keys(lastUpdate).length ? actor.update(lastUpdate) : undefined;
   }
 
-  const now = (type === "instant")
-    ? { held: true, messageId: messageId ?? "", before: false }
-    : { held: false, messageId: "", before: false };
+  // A Maneuver of yours declared while an Instant held you: kept on its card - an Instant of yours played on that card comes before
+  // it, so after that Instant, and is refused (the user's: the last Maneuver *you* used, in the order things resolved).
+  if ((type !== "instant") && held.held && messageId) {
+    try { await globalThis.game?.messages?.get?.(messageId)?.setFlag?.("dbu-ttrpg", "makerInstantHeld", true); }
+    catch (error) { console.warn("DBU TTRPG | Could not mark the card as declared under an Instant's hold", error); }
+  }
 
-  if ((now.held === held.held) && (now.messageId === held.messageId) && !held.before) {
+  const now = (type === "instant")
+    ? { held: true, messageId: messageId ?? "" }
+    : { held: false, messageId: "" };
+
+  if ((now.held === held.held) && (now.messageId === held.messageId)) {
     return Object.keys(lastUpdate).length ? actor.update(lastUpdate) : undefined;
   }
   return actor.update({ "system.instantPlayed": now, ...lastUpdate });
@@ -3739,13 +3746,8 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
  *
  * @returns {null|string} null when they may, otherwise what is in the way
  */
-export function whyNotAnotherInstant(actor, { messageId = "" } = {}) {
-  const held = actor?.system?.instantPlayed;
-  if (!held?.held) return null;
-  // Played from a Maneuver's card, it came before that Maneuver (the user's): only a second Instant on the same one is refused.
-  if (held.before) {
-    return (messageId && (messageId === held.messageId)) ? "You already played an Instant on this Maneuver." : null;
-  }
+export function whyNotAnotherInstant(actor) {
+  if (!actor?.system?.instantPlayed?.held) return null;
   return "Your last Maneuver was an Instant. Use another kind first.";
 }
 

@@ -1075,10 +1075,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // into permission for another.
     schema.instantPlayed = new fields.SchemaField({
       held: new fields.BooleanField({ required: true, initial: false }),
-      messageId: new fields.StringField({ required: true, blank: true, initial: "" }),
-      // Played from a Maneuver's card - before that Maneuver (the user's): it holds you only from a second Instant on that same
-      // Maneuver, `messageId` its card; the Maneuver came after it, so the next one may be answered with one.
-      before: new fields.BooleanField({ required: true, initial: false })
+      messageId: new fields.StringField({ required: true, blank: true, initial: "" })
     });
 
     // --- Diminishing Offense and Defense ---

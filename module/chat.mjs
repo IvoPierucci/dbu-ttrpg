@@ -285,6 +285,10 @@ function applyRequest(request) {
     case "instantDecide": return applyInstantDecide(request.messageId, request.uuid, request.maneuverId ?? null);
     case "instantCancel": return applyInstantCancel(request.messageId, request.uuid);
     case "instantDone": return applyInstantDone(request.messageId, request.id);
+    case "instantUsedOn": {
+      const card = game.messages.get(request.messageId);
+      return card?.setFlag(SCOPE, INSTANTS_ON_FLAG, [...new Set([...(card.getFlag(SCOPE, INSTANTS_ON_FLAG) ?? []), request.uuid])]);
+    }
     // A hit's answers (the user's): kept on the card till the Wound Roll is confirmed, then carried out before it is made.
     case "hitPending": return applyHitPending(request.messageId, request.uuid, request.answer);
     case "hitUnpending": return applyHitUnpending(request.messageId, request.uuid);
@@ -10299,15 +10303,41 @@ function instantStageOf(message) {
 /** Every Instant Maneuver a character could play here, each with why not where it cannot (the user's: greyed, its reason beside it). */
 function instantOptions(actor, message, attack) {
   if (!actor) return [];
+  const maker = messageMaker(message, attack);
   return instantManeuvers().filter(maneuver => godListed(actor, maneuver)).map(maneuver => {
     let reason = "";
     // Instant Assault: "No Instant Maneuvers can be triggered in response to this Attacking Maneuver."
     if (attack?.technique?.features?.includes("instant-assault")) reason = "Instant Assault";
     else if (!maneuver.surge && (frozenBy(actor) || frozenTurnOf(actor))) reason = "time is frozen";
     else if (maneuver.godManeuver && whyNotSpecial(actor, maneuver)) reason = whyNotSpecial(actor, maneuver);
-    else if (whyNotAnotherInstant(actor, { messageId: message?.id ?? "" })) reason = whyNotAnotherInstant(actor, { messageId: message?.id ?? "" });
+    else if ((message?.getFlag(SCOPE, INSTANTS_ON_FLAG) ?? []).includes(actor.uuid)) reason = "you already played an Instant on this Maneuver";
+    // Your own Maneuver: an Instant played on it comes before it - after whatever you used before declaring it.
+    else if (maker === actor.uuid) { if (message?.getFlag(SCOPE, "makerInstantHeld")) reason = "your last Maneuver before this one was an Instant"; }
+    // Anyone else's: after your own last Maneuver.
+    else if (whyNotAnotherInstant(actor)) reason = "your last Maneuver was an Instant";
     return { maneuver, reason };
   });
+}
+
+/** Who used the Maneuver a card is: its attacker, or whoever speaks it. */
+function messageMaker(message, attack) {
+  if (attack?.attackerUuid) return attack.attackerUuid;
+  return ChatMessage.getSpeakerActor?.(message?.speaker ?? {})?.uuid ?? "";
+}
+
+/** Who has played an Instant on a Maneuver's card - one each (the user's), whatever they did after. */
+const INSTANTS_ON_FLAG = "instantsOn";
+
+/**
+ * After an Instant played from a Maneuver's card (the user's): the last Maneuver *you* used, in the order things resolved. Your own
+ * Maneuver comes after it - you are not held by it; on anyone else's it is your last until you use another kind (a Counter on the
+ * same Maneuver included). Either way it is the one Instant you play on that Maneuver.
+ */
+async function afterCardInstant(message, actor, attack) {
+  if (messageMaker(message, attack) === actor.uuid) {
+    await requestActorUpdate(actor, { "system.instantPlayed": { held: false, messageId: "" } });
+  }
+  await requestEdit(message, { type: "instantUsedOn", uuid: actor.uuid });
 }
 
 /** Whether a character has an Instant they could play here at all. */
@@ -10415,9 +10445,7 @@ async function useStageInstant(message, entry) {
   } finally {
     chatAnchor.before = null;
   }
-  // From the card, before the Maneuver it answers (the user's): held from a second Instant on this Maneuver only - not as the last
-  // Maneuver used, which this one comes after.
-  if (used) await requestActorUpdate(actor, { "system.instantPlayed": { held: true, messageId: message.id, before: true } });
+  if (used) await afterCardInstant(message, actor, message.getFlag(SCOPE, ATTACK_FLAG));
   if (used) return requestEdit(message, { type: "instantDone", id: entry.id });
 }
 
@@ -10753,8 +10781,8 @@ async function playInstant(message, actor, maneuverId) {
   // which is why the rule had to be inferred from the message log instead, and why
   // somebody else playing a Standard Maneuver was letting you play a second.
   await recordManeuverType(actor, "instant", { messageId: message.id });
-  // Played on the card, it came before the Maneuver it answers (the user's): held only from a second Instant on that one.
-  await requestActorUpdate(actor, { "system.instantPlayed": { held: true, messageId: message.id, before: true } });
+  // Played on the card, before the Maneuver it answers (the user's): its maker not held by it; one Instant each on it.
+  await afterCardInstant(message, actor, message.getFlag(SCOPE, ATTACK_FLAG));
 
   requestEdit(message, {
     type: "respond",
