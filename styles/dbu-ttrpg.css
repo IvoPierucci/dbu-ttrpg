@@ -5262,3 +5262,17 @@
 
 /* Deal Damage (the user's): the one hit's, in red. */
 .dbu-clash-button.dbu-damage-button { background: #5e3c3c; border-color: #9c5a5a; color: #f8e8e8; }
+
+/* "✓ Ready" and Change (the user's): confirmed, and still to be taken back while a side is not. */
+.dbu-ready-row { display: flex; gap: 6px; margin-top: 5px; }
+.dbu-ready-done {
+  flex: 1;
+  text-align: center;
+  padding: 3px;
+  border: 1px solid #4f7a4f;
+  border-radius: 3px;
+  background: #2c3d2c;
+  color: #8fd18f;
+  font-size: 12px;
+}
+.dbu-ready-change { flex: 0 0 auto; width: auto; line-height: 1.4; padding: 2px 10px; font-size: 12px; }

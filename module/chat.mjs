@@ -281,6 +281,10 @@ function applyRequest(request) {
         ((entry.uuid === request.uuid) ? { ...entry, defenceWager: request.wager, defenceFoundation: request.foundation || entry.defenceFoundation,
           flareWagered: true } : entry)) } });
     }
+    // Respond on an attack (the user's): the answer kept on the card till every side is ready, then carried out.
+    case "pendingAnswer": return applyPendingAnswer(request.messageId, request.uuid, request.answer);
+    case "answerDone": return applyAnswerDone(request.messageId, request.id);
+    case "unready": return applyUnready(request.messageId, request.uuid);
     // "No reroll" (the user's): this side has done with its rerolls, and the Wound Roll waits on it no longer.
     case "rerollDone": {
       const card = game.messages.get(request.messageId);
@@ -8176,6 +8180,24 @@ function renderInstantResponses(message, html) {
 
   if (!ownedCharacters().length) return;
 
+  // An attack not yet rolled (the user's): your targets ready - "✓ Ready" and Change while a side is not; every side ready, the
+  // answers carried out and nothing changed now.
+  if (attack && !attack.result) {
+    const mine = attackTargets(attack).map(target => fromUuidSync(target.uuid)).filter(actor => actor?.isOwner);
+    const ready = mine.filter(actor => (attack.ready ?? []).includes(actor.uuid));
+    if (attackIsReady(attack)) {
+      const note = document.createElement("div");
+      note.className = "dbu-settled-note";
+      note.textContent = "Everyone is ready - no changes now.";
+      container.append(note);
+      return;
+    }
+    if (mine.length && (ready.length === mine.length)) {
+      container.append(readyRow(() => changeAnswer(message, ready)));
+      return;
+    }
+  }
+
   const respond = document.createElement("button");
   respond.type = "button";
   respond.className = "dbu-respond-button";
@@ -8948,7 +8970,7 @@ function rollsOnMessage(message, actor) {
   return false;
 }
 
-async function respondDialog(message, respondable) {
+async function respondDialog(message, respondable, { initials = new Map() } = {}) {
   const characters = ownedCharacters();
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   // The other thing a Counter Maneuver can answer. Until the Blockade Maneuver, every
@@ -9324,13 +9346,24 @@ async function respondDialog(message, respondable) {
   }
   let chosen = null;
   if (entries.length === 1 || usable.length === 1) {
-    const one = await respondActorWindow(message, usable[0]);
+    const one = await respondActorWindow(message, usable[0], { initial: initials.get(usable[0].actor.uuid) ?? null });
     chosen = one ? [one] : null;
   } else {
-    chosen = await respondPicker(message, entries);
+    chosen = await respondPicker(message, entries, initials);
   }
 
   if (!Array.isArray(chosen)) return;
+
+  // An attack not yet rolled (the user's): nothing is paid or played on confirming - each answer is written on the card, its
+  // character ready, and carried out once every side is (runPendingAnswers). Until then it can be changed.
+  if (attack && !attack.result) {
+    for (const choice of chosen) {
+      const answer = answerOf(choice);
+      if (!answer) continue;
+      await requestEdit(message, { type: "pendingAnswer", uuid: choice.actor.uuid, answer });
+    }
+    return;
+  }
 
   try {
     await applyResponses(message, chosen, attack);
@@ -9570,7 +9603,7 @@ async function respondActorWindow(message, entry, { fromPicker = false, initial 
  * each behind Choose, Done sending every answer, Cancel none. A target never opened answers with its Dodge, as Respond always
  * has. The answers, or null.
  */
-async function respondPicker(message, entries) {
+async function respondPicker(message, entries, initials = new Map()) {
   const picks = new Map();
   const esc = text => Handlebars.escapeExpression(text ?? "");
   const ordered = [...entries].sort((a, b) => (Number(b.isTarget) - Number(a.isTarget)) || a.actor.name.localeCompare(b.actor.name));
@@ -9599,7 +9632,8 @@ async function respondPicker(message, entries) {
         button.addEventListener("click", async () => {
           const holder = button.closest("[data-who]");
           const entry = entries.find(each => each.actor.uuid === holder.dataset.who);
-          const answer = await respondActorWindow(message, entry, { fromPicker: true, initial: picks.get(entry.actor.uuid) });
+          const answer = await respondActorWindow(message, entry, { fromPicker: true,
+            initial: picks.get(entry.actor.uuid) ?? initials.get(entry.actor.uuid) ?? null });
           if (!answer) return;
           picks.set(entry.actor.uuid, answer);
           holder.querySelector("[data-answer]").innerHTML = answer.summary;
@@ -31040,21 +31074,128 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
 }
 
 /** Record that the attacker has finished applying whatever they are bringing. */
-function readyAttacker(message) {
+function readyAttacker(message, armed = []) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack || attack.result || endedByDuel(attack)) return;
 
   return settleAttack(message, {
     ...attack,
+    attackerArmed: armed,
     ready: [...new Set([...(attack.ready ?? []), attack.attackerUuid])]
   });
+}
+
+/**
+ * An answer from Respond as the card keeps it till it is carried out: who, and what - each Maneuver, the Defend's option, what
+ * was ticked, Actions to turn. Null for an answer of nothing at all (a bystander who picked nothing).
+ */
+function answerOf(choice) {
+  const answer = { counter: choice.counter ?? null, instant: choice.instant ?? null, defendOption: choice.defendOption ?? null,
+    flareFoundation: choice.flareFoundation ?? "energy", willing: choice.willing ?? null, karma: choice.karma ?? null,
+    triggers: choice.triggers ?? [], convert: Number(choice.convert) || 0, summary: choice.summary ?? "" };
+  const something = answer.counter || (answer.instant && (answer.instant !== "none")) || answer.triggers.length || answer.karma
+    || answer.willing;
+  return something ? answer : null;
+}
+
+/** Written on the card: their answer, kept - the one before replaced - and a target ready; refused once every side is. */
+async function applyPendingAnswer(messageId, uuid, answer) {
+  const message = game.messages.get(messageId);
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || attackIsReady(attack)) return;
+  const pending = [...(attack.pending ?? []).filter(entry => entry.uuid !== uuid), { id: foundry.utils.randomID(), uuid, answer }];
+  const participant = attackParticipants(attack).includes(uuid);
+  return settleAttack(message, { ...attack, pending,
+    ready: participant ? [...new Set([...(attack.ready ?? []), uuid])] : (attack.ready ?? []) });
+}
+
+/** One answer carried out: off the list, and the attack rolled once none is left. */
+async function applyAnswerDone(messageId, id) {
+  const message = game.messages.get(messageId);
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result) return;
+  return settleAttack(message, { ...attack, pending: (attack.pending ?? []).filter(entry => entry.id !== id) });
+}
+
+/** Change (the user's): no longer ready, their answer taken back - while some side still is not. */
+async function applyUnready(messageId, uuid) {
+  const message = game.messages.get(messageId);
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || attackIsReady(attack)) return;
+  return message.setFlag(SCOPE, ATTACK_FLAG, { ...attack,
+    ready: (attack.ready ?? []).filter(each => each !== uuid),
+    pending: (attack.pending ?? []).filter(entry => entry.uuid !== uuid),
+    ...((uuid === attack.attackerUuid) ? { attackerArmed: [] } : {}) });
+}
+
+/**
+ * Every side ready (the user's): the answers kept on the card carried out - paid, played - one at a time in the order they came,
+ * each by whoever plays that character (the GM where they are away), and the attack rolled once the last is done.
+ */
+const answersClaimed = new Set();
+function runPendingAnswers(message, attack) {
+  if (!attack || attack.result || !(attack.pending ?? []).length || !attackIsReady(attack)) return;
+  const next = attack.pending[0];
+  const actor = fromUuidSync(next.uuid);
+  const executor = actor ? playerOf(actor) : game.users.activeGM;
+  if (executor !== game.user) return;
+  if (answersClaimed.has(next.id)) return;
+  answersClaimed.add(next.id);
+  setTimeout(async () => {
+    try {
+      if (actor) {
+        const fresh = message.getFlag(SCOPE, ATTACK_FLAG);
+        await applyResponses(message, [{ ...next.answer, actor }], fresh);
+      }
+    } catch (error) {
+      console.error("DBU TTRPG | Could not carry out an answer", next, error);
+      ui.notifications.error("DBU TTRPG | An answer failed. See the console.");
+    } finally {
+      await requestEdit(message, { type: "answerDone", id: next.id });
+    }
+  }, 0);
+}
+
+/** Change (the user's): no longer ready - what they had picked put back in their window, opened again. */
+async function changeAnswer(message, actors) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || attackIsReady(attack)) return;
+  const initials = new Map((attack.pending ?? []).filter(entry => actors.some(actor => actor.uuid === entry.uuid))
+    .map(entry => [entry.uuid, { ...entry.answer }]));
+  for (const actor of actors) await requestEdit(message, { type: "unready", uuid: actor.uuid });
+  return respondDialog(message, Boolean(message.getFlag(SCOPE, RESPONDABLE_FLAG)), { initials });
+}
+
+/** The attacker's Change: no longer ready, what its window armed put back, the window again. */
+async function changeAttacker(message, attacker) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || attackIsReady(attack)) return;
+  const armed = new Set(attack.attackerArmed ?? []);
+  if (armed.size) await attacker.update({ "system.armedTalents": (attacker.system.armedTalents ?? []).filter(id => !armed.has(id)) });
+  await requestEdit(message, { type: "unready", uuid: attacker.uuid });
+  return attackerStage(message, message.getFlag(SCOPE, ATTACK_FLAG) ?? attack, attacker);
+}
+
+/** "✓ Ready" with its Change beside it (the user's) - or, every side ready, that nothing changes now. */
+function readyRow(onChange) {
+  const row = document.createElement("div");
+  row.className = "dbu-ready-row";
+  row.innerHTML = '<span class="dbu-ready-done">&#10003; Ready</span>';
+  const change = document.createElement("button");
+  change.type = "button";
+  change.className = "dbu-ready-change";
+  change.textContent = "Change";
+  change.dataset.tooltip = "Not ready any more - your window again, with what you picked";
+  change.addEventListener("click", onChange);
+  row.append(change);
+  return row;
 }
 
 /** Write the attack back, and roll it if that was the last confirmation needed. */
 async function settleAttack(message, attack) {
   // Sacrifice Play's Clash, still to be rolled: who the attack is at waits on it. Punisher Guard's Basic Attack: this
   // Exploit waits on it, and is cancelled by it.
-  if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending
+  if (!attackIsReady(attack) || (attack.pending ?? []).length || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending
     || attack.punisherHold?.pending || attack.punished || attack.trapHold?.pending || attack.stealthHold?.pending
     || attack.divineHold?.pending || attack.divineCancelled
     || attack.godBindHold?.pending || attack.godBindCancelled
@@ -32452,6 +32593,7 @@ async function addAreaTargets(message, attack, attacker) {
 
 async function attackerStage(message, attack, attacker) {
   const triggers = relevantTriggers(attacker, message, "response");
+  const before = new Set(attacker.system.armedTalents ?? []);
   // Their own Attacking Maneuver, so Compelled's Urgency reaches this one. Respond's shape (the user's): what they have, the
   // attack, the Strike in its box, the Effects - and "Ready", since it is rolled once every side is.
   const ready = await prepareRoll(attacker, triggers, `Strike Roll - ${attacker.name}`,
@@ -32460,7 +32602,9 @@ async function attackerStage(message, attack, attacker) {
       formula: { what: "Strike Roll", base: DBUCharacterData.BASE_DIE,
         dice: combatDiceGroups(attacker), parts: windowParts(attacker, strikeParts(attacker, attack)) } });
   if (!ready) return;
-  return readyAttacker(message);
+  // What the window armed, kept on the card, so Change can put it back (the user's).
+  const armed = (attacker.system.armedTalents ?? []).filter(id => !before.has(id));
+  return readyAttacker(message, armed);
 }
 
 /**
@@ -39209,6 +39353,12 @@ function renderAttack(message, html) {
     const attacker = fromUuidSync(attack.attackerUuid);
     // The United Attack Disadvantage: nothing is rolled until the Ally asked has joined or refused.
     if (attacker?.isOwner && (unitedPending(attack) || duelRunning(attack))) return;
+    // Every side ready: the answers kept on the card carried out, one at a time, then the roll.
+    runPendingAnswers(message, attack);
+    // Ready and not every side yet (the user's): "✓ Ready" and Change.
+    if (attacker?.isOwner && (attack.ready ?? []).includes(attack.attackerUuid) && !attackIsReady(attack)) {
+      container.append(readyRow(() => changeAttacker(message, attacker)));
+    }
     if (attacker?.isOwner && !(attack.ready ?? []).includes(attack.attackerUuid)) {
       const ready = document.createElement("button");
       ready.type = "button";
