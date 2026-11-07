@@ -7904,16 +7904,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const ready = await prepareRoll(this.actor, [], `${name} Check`,
       against ? `${Handlebars.escapeExpression(against.label)} (${against.tn})` : "", { formula: {
         base: DBUCharacterData.BASE_DIE, parts: [
-          { label: name, value: skill.bonus, workings: workingsTable(this.actor.system, `skill.${key}.bonus`) },
-          { label: "Effects", value: skill.roll - skill.bonus,
-            workings: (skill.roll !== skill.bonus) ? workingsTable(this.actor.system, `skill.${key}`) : "" },
+          { label: name, value: skill.roll, workings: skillWorkingsTable(this.actor.system, key) },
           ...(minus ? [{ label: minusLabel, value: -minus }] : [])
         ] } });
     if (!ready) return "closed";
     const total = await this.#rollCheck({
+      // The Skill as the sheet shows it, one row, and over it only what this Check brought (the user's).
       parts: [
-        { label: name, value: skill.bonus },
-        { label: "Effects", value: skill.roll - skill.bonus },
+        { label: `${name} (sheet)`, value: skill.roll },
         ...(minus ? [{ label: minusLabel, value: -minus }] : [])
       ],
       flavor: `${name} Check`,
@@ -7986,9 +7984,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       difficulties: true, senses: sensesAsked(this.actor, target.dataset.skill),
       boxes: silk ? [{ name: "silk", label: `Silk Production: ${silkCost} Ki, +2`, tip: "Its Ki spent as you roll." }] : [],
       formula: { base: BASE_DIE, parts: [
-        { label: name, value: skill.bonus, workings: workingsTable(this.actor.system, `skill.${target.dataset.skill}.bonus`) },
-        { label: "Effects", value: total - skill.bonus,
-          workings: (total !== skill.bonus) ? workingsTable(this.actor.system, `skill.${target.dataset.skill}`) : "" }
+        { label: name, value: total, workings: skillWorkingsTable(this.actor.system, target.dataset.skill) }
       ] }
     });
     if (!ready) return;
@@ -8012,13 +8008,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (silkTaken) await this.actor.update({ "system.ki.value": Math.max(0, (Number(this.actor.system.ki?.value) || 0) - silkCost) });
 
     // A Skill's critical die is a flat 1d4: it does not grow with Tier of Power.
-    // Two rows, because they are two things: the Skill Bonus the sheet shows, and
-    // whatever applies only to rolling this Skill - which does not raise that Bonus and
-    // must not look as though it did.
+    // The Skill as the sheet shows it, one row - its Bonus and every effect on it already in it - and over it only what this
+    // Check brought (the user's: raising the Check or the Bonus come to the same thing).
     return this.#rollCheck({
       parts: [
-        { label: name, value: skill.bonus },
-        { label: "Effects", value: skill.roll - skill.bonus },
+        { label: `${name} (sheet)`, value: skill.roll },
         ...(silkTaken ? [{ label: "Silk Production", value: 2 }] : [])
       ],
       flavor: `${name} Check`,
