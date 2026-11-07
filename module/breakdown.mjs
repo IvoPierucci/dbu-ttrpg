@@ -519,7 +519,7 @@ export function atRollTime(system, which) {
  * @param {{label: string, value: number, workings?: string}[]} [formula.parts]   what is added, `workings` an HTML
  *   table (workingsTable) where the part has one
  */
-export function formulaHtml({ base = "1d10", dice = [], parts = [] } = {}) {
+export function formulaHtml({ base = "1d10", dice = [], parts = [], fixedBase = null, fixedTip = "", tags = [] } = {}) {
   // Escaped here for an attribute, quotes and all: the tooltip may be a whole table.
   const attr = text => String(text ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;")
     .replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -535,11 +535,13 @@ export function formulaHtml({ base = "1d10", dice = [], parts = [] } = {}) {
     ? breakdownTable(counted.map(part => partLine({ label: part.label, value: Number(part.value) || 0 })), bonus) : "";
   // The Base Die on its own, then every other die together by its faces (the user's: "2d10", not "1d10 + 1d10") - each
   // group's hover saying where each of its dice comes from.
+  // A Base Die an effect sets rather than rolls - Power of the Z-Warrior's 10 - written as its number (the user's: it is
+  // set to 10, and that is what makes it a Critical). What the result already is - Critical, Botch - beside it as tags.
   return [
-    piece(base, "Base Die", false, "base"),
+    (fixedBase !== null) ? piece(String(fixedBase), fixedTip || "Base Die: not rolled", false, "fixed") : piece(base, "Base Die", false, "base"),
     ...mergedDice(dice).map(group => piece(group.formula, group.tip, true, "dice")),
     piece(String(bonus), `${tables.join("")}${summed}`, true, "bonus")
-  ].join(" + ");
+  ].join(" + ") + (tags.length ? ` ${tags.map(tag => `<span class="dbu-roll-tag dbu-roll-tag-${esc(tag.kind)}" data-tooltip="${attr(tag.tip ?? "")}">${esc(tag.label)}</span>`).join(" ")}` : "");
 }
 
 /**

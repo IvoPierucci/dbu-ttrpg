@@ -1462,12 +1462,14 @@ async function cerealianWoundFor(attacker, attack) {
   // Genetic Focus: Cerealian (2): "You do not have to spend an Adaptation Point to trigger the 3rd effect of Cerealian Genes" - its Moment,
   // Automatic or asked in its window as its button says.
   if (attacker.items?.some?.(item => item.flags?.["dbu-ttrpg"]?.sourceId === "genetic-focus-cerealian")) {
+    // Its own window, as the hit lands - not a question for the Wound's (askScript).
+    if (askScript?.questions) return 0;
     const free = await answerFor(attacker, "cerealian-critical", {});
     return (free?.slots?.["cerealianWound.free"] === true) ? value : 0;
   }
   if (held <= 0) return 0;
   const yes = (await askPlayerChoice(attacker, `${attacker.name}: Cerealian Genes`,
-    [{ value: "yes", label: `An Adaptation Point - Wound Roll +${value}` }, { value: "no", label: "No" }])) === "yes";
+    [{ value: "yes", label: `An Adaptation Point - Wound Roll +${value}` }, { value: "no", label: "No" }], { per: value })) === "yes";
   if (!yes) return 0;
   await setResource(attacker, "adaptation", held - 1);
   return value;
@@ -8245,7 +8247,8 @@ export const CHOICE_QUERY = "dbu-ttrpg.choose";
  * A choice an effect asks the character's player for - Born for Battle's "Strike, Dodge, or Wound (you decide)" - asked of
  * them wherever the effect runs (a Round turning over runs on the GM's client). The value chosen, or null.
  */
-export async function askPlayerChoice(actor, title, options) {
+export async function askPlayerChoice(actor, title, options, { per = 0 } = {}) {
+  if (askScript) return askScript.choice({ title, options, per });
   const player = playerOf(actor);
   if (!player) return null;
   if (player === game.user) return showChoice({ title, options });
@@ -8270,7 +8273,8 @@ export async function showChoice({ title, options }) {
 export const AMOUNT_QUERY = "dbu-ttrpg.amount";
 
 /** An amount an effect asks for, from 0 to `max`, of the character's player: the number, or 0 where none was given. */
-export async function askPlayerAmount(actor, title, max, label) {
+export async function askPlayerAmount(actor, title, max, label, { per = 0 } = {}) {
+  if (askScript) return askScript.amount({ title, max, label, per });
   const player = playerOf(actor);
   if (!player || (max <= 0)) return 0;
   if (player === game.user) return showAmount({ title, max, label });
@@ -8430,6 +8434,82 @@ export function rollBoxHtml(what, line) {
 }
 
 /**
+ * A roll window's line of what the character has to spend (the user's): Ki and its Capacity, the Actions, the Counter
+ * Actions, the Karma - to choose without opening the sheet.
+ */
+export function resourceLine(actor) {
+  const system = actor?.system ?? {};
+  const counter = game.combat?.started ? actionsLeft(actor, "counter") : null;
+  const actions = game.combat?.started ? actionsLeft(actor, "standard") : null;
+  const cell = (label, value) => `<span>${label} <b>${value}</b></span>`;
+  return `<div class="dbu-roll-resources">${[
+    cell("Ki", `${system.ki?.value ?? 0} / ${system.ki?.max ?? 0}`),
+    (actions !== null) ? cell("Actions", actions) : "",
+    (counter !== null) ? cell("Counter Actions", counter) : "",
+    cell("Karma", system.karma ?? 0)
+  ].join("")}</div>`;
+}
+
+/** The attack a roll window answers, as its card heads it: whom, with what. `verb` - "Attacking", "Hit". */
+export function rollAttackLine(attack, verb = "Attacking") {
+  if (!attack) return "";
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const whom = attackTargets(attack).map(entry => fromUuidSync(entry.uuid)?.name).filter(Boolean).join(", ");
+  const bits = [attack.maneuverName, attack.profileLabel, attack.foundationLabel, DAMAGE_CATEGORIES[attack.damageCategory]?.label,
+    attack.energyCharges ? `${attack.energyCharges} Energy Charge${(attack.energyCharges === 1) ? "" : "s"}` : "",
+    attack.kiWager ? `Ki Wager ${attack.kiWager}` : ""].filter(Boolean).map(esc);
+  return `<div class="dbu-roll-attack"><span class="dbu-roll-dim">${esc(verb)}</span> <b>${esc(whom)}</b> <span class="dbu-roll-dim">with</span> ${bits.join(" &middot; ")}</div>`;
+}
+
+/** One titled section of a roll window - Maneuvers, Effects, Spend on this roll - as Respond's are. */
+export function rollSection(title, inner) {
+  return `<section class="dbu-roll-section"><div class="dbu-roll-section-title">${Handlebars.escapeExpression(title)}</div>${inner}</section>`;
+}
+
+/**
+ * What one Triggered effect would do to a Combat Roll if ticked, read the way the roll reads it (`combat-roll`): what it adds
+ * to the roll's Slot, a Base Die it sets (Power of the Z-Warrior's 10), the Greater Dice it lends a Dodge.
+ */
+function triggerPreview(actor, entry, slot, context = {}) {
+  try {
+    const scope = { data: actor.system, errors: [], context: { roll: true, ...context }, queue: [] };
+    const { slots } = collectReactive([{ ...entry, armed: true }], "combat-roll", scope);
+    return { label: entry.sourceName, value: applySlot(slots, slot, 0), setBase: slots?.baseDie?.set ?? null,
+      greater: (slot === "dodge") && (slots?.["dodge.greaterDice"] === true) };
+  } catch (error) {
+    return { label: entry.sourceName, value: 0, setBase: null, greater: false };
+  }
+}
+
+/**
+ * The formula as it stands with what is ticked and spent in the window: each effect's own row on the bonus, a Base Die set
+ * by one, the Greater Dice one lends, and - a Natural Result at the Critical Target or past it - the Critical Extra Dice and
+ * its tag. What is spent (`data-spend`) adds `data-per` a unit, under its `data-label`.
+ */
+function livePreview(actor, formula, combatRoll, slot, previews, element) {
+  const ticked = [...element.querySelectorAll('input[name="trigger"]:checked')].map(input => previews[input.value]).filter(Boolean);
+  const spent = [...element.querySelectorAll("[data-spend]")].filter(input => input.tagName !== "SELECT").map(input => {
+    const count = (input.type === "checkbox") ? (input.checked ? 1 : 0)
+      : Math.max(0, Math.min(Number(input.max) || Infinity, Number(input.value) || 0));
+    return { label: input.dataset.label || input.dataset.spend, value: count * (Number(input.dataset.per) || 0) };
+  }).filter(part => part.value);
+  const setBase = ticked.map(each => each.setBase).find(value => value !== null && value !== undefined) ?? null;
+  const target = Number(actor.system.criticalTarget) || 10;
+  const critical = (setBase !== null) && (setBase >= target);
+  const criticalDice = actor.system.dice?.[`critical${(slot ?? "").charAt(0).toUpperCase()}${(slot ?? "").slice(1)}`]?.formula
+    ?? actor.system.dice?.critical?.formula ?? "";
+  const by = ticked.find(each => (each.setBase ?? null) !== null)?.label ?? "";
+  return { ...formula,
+    parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll), ...spent,
+      ...ticked.filter(each => each.value).map(each => ({ label: each.label, value: each.value }))],
+    dice: [...(formula.dice ?? []), ...(ticked.some(each => each.greater) ? [{ label: "Greater Dice", formula: actor.system.dice?.greater?.formula ?? "" }] : []),
+      ...(critical && criticalDice ? [{ label: `Critical Extra Dice (${by})`, formula: criticalDice }] : [])],
+    fixedBase: setBase,
+    fixedTip: setBase !== null ? `${by}: the Base Die is not rolled - its Natural Result is set to ${setBase}${critical ? ", a Critical Result" : ""}.` : "",
+    tags: critical ? [{ kind: "critical", label: "Critical", tip: `A Natural Result of ${setBase}: a Critical Result.` }] : [] };
+}
+
+/**
  * A roll window's content (the user's): `top` fixed - the resources, the roll's box, a line under it - and `body`, every
  * section that can be ticked, in one scroll of its own, the window no taller than the screen.
  */
@@ -8441,7 +8521,12 @@ export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
                                     difficulties = false, senses = [], formula = null, offerWilling = true,
-                                    pick = null, boxes = [] } = {}) {
+                                    pick = null, boxes = [], slot = null, top = "", confirmLabel = null, spend = "" } = {}) {
+  // What each offered effect would do to this roll, worked out before it is ticked - so the box shows it the moment it is
+  // (the user's). Only for a Combat Roll with its own Slot: what answers it is read at `combat-roll`.
+  const previews = (formula && slot && combatRoll)
+    ? Object.fromEntries(effects.map(entry => [entry.blockId, triggerPreview(actor, entry, slot, { attackingManeuver })]))
+    : {};
   const rows = effects.map(entry => `
     <label class="dbu-respond-option"${triggerTip(entry)}>
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -8548,17 +8633,35 @@ export async function prepareRoll(actor, effects, title, hint = "",
     // Fixed on top: what is rolled, in its box of one size - the same as Respond's (the user's); under it one scroll for
     // everything that can be ticked, so the roll stays in sight however long the list (rollWindowHtml).
     content: rollWindowHtml({
-      top: `${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${formula ? rollBoxHtml(formula.what ?? title, formulaHtml({ ...formula,
-        parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll)] })) : ""}`,
-      body: `${rows}${difficultyRows}${pickRow}${boxRows}${senseRows}${willing}${traitGroup}${karmicGroup}`
+      top: `${top}${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${formula ? rollBoxHtml(formula.what ?? title,
+        `<span data-roll-formula>${formulaHtml({ ...formula, parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll)] })}</span>`) : ""}`,
+      // What is spent on the roll (the Wound's), then the Effects - Willing failure, the Triggered ones never folded, the
+      // Traits' and the Karmic ones - each section titled, as Respond's are (the user's).
+      body: `${difficultyRows}${pickRow}${boxRows}${senseRows}${spend ? rollSection("Spend on this roll", spend) : ""}${
+        (willing || rows || traitGroup || karmicGroup) ? rollSection("Effects", `${willing}${rows
+          ? `<div class="dbu-respond-group dbu-respond-fixed"><div class="dbu-respond-fixed-title">Triggered Effects</div>${rows}</div>` : ""}${traitGroup}${karmicGroup}`) : ""}`
     }),
+    // The box follows what is ticked and spent, before anything is rolled.
+    render: (event, dialog) => {
+      const shown = dialog.element.querySelector("[data-roll-formula]");
+      if (!formula || !shown) return;
+      const redraw = () => shown.innerHTML = formulaHtml(livePreview(actor, formula, combatRoll, slot, previews, dialog.element));
+      dialog.element.querySelectorAll('input[name="trigger"], [data-spend]').forEach(input => {
+        input.addEventListener("change", redraw);
+        input.addEventListener("input", redraw);
+      });
+    },
     buttons: [
       {
         action: "confirm",
-        // The roll is made from here, or - after the fact - what was picked is applied.
-        label: rolling ? "Roll" : "Apply",
+        // The roll is made from here, or - after the fact - what was picked is applied. An attacker's Strike only says it
+        // is ready: it is rolled once every side is (`confirmLabel`).
+        label: confirmLabel ?? (rolling ? "Roll" : "Apply"),
         default: true,
         callback: (event, button, dialog) => ({
+          spent: Object.fromEntries([...dialog.element.querySelectorAll("[data-spend]")].map(input => [input.dataset.spend,
+            (input.type === "checkbox") ? input.checked : (input.tagName === "SELECT") ? input.value
+              : Math.max(0, Math.min(Number(input.max) || Infinity, Number(input.value) || 0))])),
           triggers: [...dialog.element.querySelectorAll('input[name="trigger"]:checked')].map(input => input.value),
           willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? null,
           karmic: dialog.element.querySelector('input[name="karmic"]:checked')?.value ?? null,
@@ -8599,8 +8702,9 @@ export async function prepareRoll(actor, effects, title, hint = "",
   // An object rather than `true` where a Difficulty was offered, so the caller can read
   // what was picked. Truthy either way, which is what every other caller tests - and the
   // one that tests `=== false` still gets what it was looking for from a cancel.
-  return (difficulties || senses.length || pick || boxes.length)
-    ? { difficulty: chosen.difficulty || "", senses: chosen.senses ?? [], picked: chosen.picked ?? "", boxes: chosen.boxes ?? [] }
+  return (difficulties || senses.length || pick || boxes.length || spend)
+    ? { difficulty: chosen.difficulty || "", senses: chosen.senses ?? [], picked: chosen.picked ?? "", boxes: chosen.boxes ?? [],
+      spent: chosen.spent ?? {} }
     : true;
 }
 
@@ -16269,7 +16373,8 @@ async function furiousFlexAsk(attacker) {
     baseTier: attacker.system?.baseTierOfPower ?? 1 })?.bonus) || 0;
   if (!bonus) return null;
   const yes = (await askPlayerChoice(attacker, `${attacker.name}: Furious Flex`,
-    [{ value: "yes", label: `Destroy ${top.name} - Wound +${2 * bonus} (1/Encounter)` }, { value: "no", label: "No" }])) === "yes";
+    [{ value: "yes", label: `Destroy ${top.name} - Wound +${2 * bonus} (1/Encounter)` }, { value: "no", label: "No" }],
+    { per: 2 * bonus })) === "yes";
   if (!yes) return null;
   await requestActorUpdate(attacker, { [`flags.${SCOPE}.furiousFlexEncounter`]: game.combat?.id ?? "none",
     items: [{ _id: top.id, ...brokenChanges(top, getTrait), "system.equipped": false, "system.layer": "" }] });
@@ -21160,7 +21265,8 @@ function angelicOffenseOpen(attacker, attack) {
 async function spendCriticalEye(attacker, attack) {
   const held = Number(attacker?.system?.resources?.criticaleye?.stacks) || 0;
   if (!held || (attacker.system.effects?.slots?.["criticalEye.spend"] !== true)) return attack;
-  const spent = await askPlayerAmount(attacker, `${attacker.name}: Critical Eye`, held, "Critical Eye stacks: 2(T) Wound each");
+  const spent = await askPlayerAmount(attacker, `${attacker.name}: Critical Eye`, held, "Critical Eye stacks: 2(T) Wound each",
+    { per: 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) });
   if (!spent) return attack;
   const { replaceObject } = await import("./conditions.mjs");
   const resources = { ...(attacker.system.resources ?? {}) };
@@ -21195,7 +21301,8 @@ async function spendBlasterKi(attacker, attack, struck) {
   const most = Math.min(5 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1), Number(attacker.system.ki?.value) || 0,
     Number(attacker.system.capacity?.remaining) || 0);
   if (most <= 0) return null;
-  const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: ${which.name}`, most, "Ki Points - as much on the Wound Roll"));
+  const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: ${which.name}`, most, "Ki Points - as much on the Wound Roll",
+    { per: 1 }));
   if (spent <= 0) return null;
   const { ki, capacity } = attacker.system;
   await requestActorUpdate(attacker, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent });
@@ -21214,7 +21321,8 @@ async function geniusWoundKi(attacker, struck) {
   if (!struck.some(({ uuid }) => areOpponents(attacker, fromUuidSync(uuid)))) return 0;
   const most = Math.min(2 * spite * Math.max(1, Number(attacker.system.baseTierOfPower) || 1), Number(attacker.system.ki?.value) || 0);
   if (most <= 0) return 0;
-  const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: Skills of a Genius`, most, "Ki Points - as much on the Wound Roll"));
+  const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: Skills of a Genius`, most, "Ki Points - as much on the Wound Roll",
+    { per: 1 }));
   if (spent <= 0) return 0;
   await requestActorUpdate(attacker, { "system.ki.value": attacker.system.ki.value - spent, [`flags.${SCOPE}.geniusWoundRound`]: roundKey() });
   return spent;
@@ -31473,10 +31581,13 @@ async function addAreaTargets(message, attack, attacker) {
 
 async function attackerStage(message, attack, attacker) {
   const triggers = relevantTriggers(attacker, message, "response");
-  // Their own Attacking Maneuver, so Compelled's Urgency reaches this one.
-  const ready = await prepareRoll(attacker, triggers, "Before the Strike Roll",
-    "", { combatRoll: true, attackingManeuver: true, urgent: Boolean(attack.urgentRolls), formula: { base: DBUCharacterData.BASE_DIE,
-      dice: combatDiceGroups(attacker), parts: windowParts(attacker, strikeParts(attacker, attack)) } });
+  // Their own Attacking Maneuver, so Compelled's Urgency reaches this one. Respond's shape (the user's): what they have, the
+  // attack, the Strike in its box, the Effects - and "Ready", since it is rolled once every side is.
+  const ready = await prepareRoll(attacker, triggers, `Strike Roll - ${attacker.name}`,
+    "", { combatRoll: true, attackingManeuver: true, urgent: Boolean(attack.urgentRolls), slot: "strike", confirmLabel: "Ready",
+      top: `${resourceLine(attacker)}${rollAttackLine(attack, "Attacking")}`,
+      formula: { what: "Strike Roll", base: DBUCharacterData.BASE_DIE,
+        dice: combatDiceGroups(attacker), parts: windowParts(attacker, strikeParts(attacker, attack)) } });
   if (!ready) return;
   return readyAttacker(message);
 }
@@ -31489,11 +31600,94 @@ async function attackerStage(message, attack, attacker) {
  * Trick's, Searing Anger's. Once an attack, on this client.
  */
 const HIT_ANSWERS = new Map();
-async function answerHit(message, attack, attacker, struck) {
+
+/**
+ * What the questions asked as an attack hits are answered by while the Wound's window is open (the user's: one section of it,
+ * not a window each) - `questions` gathering them, every one declined so nothing is spent; otherwise answering what the window
+ * said, by title. Null the rest of the time, and every question asked as it always was.
+ */
+let askScript = null;
+
+/** The questions this hit would ask, each declined - nothing spent, nothing marked - for the Wound's window to show. */
+async function hitQuestions(attacker, attack, struck) {
+  const questions = [];
+  askScript = {
+    questions,
+    amount: question => { if (question.max > 0) questions.push({ kind: "amount", ...question }); return 0; },
+    choice: question => { questions.push({ kind: "choice", ...question }); return null; }
+  };
+  try {
+    await spendCriticalEye(attacker, attack);
+    await spendBlasterKi(attacker, attack, struck);
+    await geniusWoundKi(attacker, struck);
+    await cerealianWoundFor(attacker, attack);
+    await parasiteGenesFor(attacker, attack, struck);
+    await burningFuryBreak(attacker, struck);
+    await assassinateCategory(attacker, struck);
+    await impalingCategory(attacker, attack, struck);
+    await styleGreed(attacker);
+    await furiousFlexAsk(attacker);
+  } catch (error) {
+    console.warn("DBU TTRPG | The Wound's questions could not all be gathered", error);
+  } finally {
+    askScript = null;
+  }
+  return questions;
+}
+
+/** A question's name, its asker's own name off the front of it: "Goku: Critical Eye" is "Critical Eye". */
+function questionName(actor, title) {
+  const head = `${actor?.name ?? ""}: `;
+  return String(title).startsWith(head) ? String(title).slice(head.length) : String(title);
+}
+
+/**
+ * The Wound's "Spend on this roll" section: a number for each amount (its most), a box for each yes or no, a list for a pick of
+ * several - each answering one question by its title; what it adds to the Wound shown as it is set (`data-per`).
+ */
+function hitSpendRows(attacker, questions) {
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  return questions.map((question, at) => {
+    const key = `q${at}`;
+    const name = esc(questionName(attacker, question.title));
+    if (question.kind === "amount") {
+      return `<label class="dbu-respond-option"><span class="dbu-respond-name">${name}</span>
+        <input type="number" class="dbu-roll-number" data-spend="${key}" data-per="${question.per ?? 0}" data-label="${name}" min="0" max="${question.max}" value="0"/>
+        <span class="dbu-respond-source">${esc(question.label)} &middot; up to ${question.max}</span></label>`;
+    }
+    const yes = question.options.find(option => option.value === "yes");
+    if (yes && (question.options.length === 2)) {
+      return `<label class="dbu-respond-option"><input type="checkbox" data-spend="${key}" data-per="${question.per ?? 0}" data-label="${name}"/>
+        <span class="dbu-respond-name">${name}</span><span class="dbu-respond-source">${esc(yes.label)}</span></label>`;
+    }
+    return `<label class="dbu-respond-option"><span class="dbu-respond-name">${name}</span>
+      <select data-spend="${key}">${question.options.map(option => `<option value="${esc(option.value)}"${(option.value === "none") ? " selected" : ""}>${esc(option.label)}</option>`).join("")}</select></label>`;
+  }).join("");
+}
+
+/** What the window said to each question, for answering them as the hit is settled: by title, in the asker's own terms. */
+function hitAnswerScript(questions, spent = {}) {
+  const said = new Map(questions.map((question, at) => [question.title, spent[`q${at}`]]));
+  return {
+    amount: ({ title }) => Number(said.get(title)) || 0,
+    choice: ({ title, options }) => {
+      const value = said.get(title);
+      if (value === true) return "yes";
+      if (value === false) return options.some(option => option.value === "no") ? "no" : null;
+      return options.some(option => option.value === value) ? value : null;
+    }
+  };
+}
+
+async function answerHit(message, attack, attacker, struck, script = null) {
   if (HIT_ANSWERS.has(message.id)) return HIT_ANSWERS.get(message.id);
   const answer = { marks: {}, pressure: false, pressureMost: false, unseen: 0, searing: false };
   HIT_ANSWERS.set(message.id, answer);
   if (!struck.length) return answer;
+  // Answered from the Wound's window where it asked them (hitAnswerScript) - these questions only, never what answers the hit
+  // after them.
+  askScript = script;
+  try {
   // Evolved Right Eye (4): Critical Eye spent on it, asked - 2(T) each (woundParts).
   const eyed = await spendCriticalEye(attacker, attack);
   if (eyed.criticalEye) answer.marks.criticalEye = eyed.criticalEye;
@@ -31519,6 +31713,9 @@ async function answerHit(message, attack, attacker, struck) {
   // Furious Flex (2): the Top Layer destroyed, asked - twice its Apparel Bonus on this Wound Roll.
   const flexed = await furiousFlexAsk(attacker);
   if (flexed) Object.assign(answer.marks, { furiousWound: flexed.value, furiousName: flexed.name });
+  } finally {
+    askScript = null;
+  }
   // Variable Fighter (2): whether it was an Armed Attack.
   const armedHit = Boolean(attack.weapon && !attack.weapon.unarmed);
   // Ferocious Assault (2): whether it was made through the Basic Attack Maneuver, and whom it hit.
@@ -31588,24 +31785,36 @@ function struckBy(attack, attacker) {
 async function woundStage(message, attack) {
   const attacker = woundRoller(attack);
   if (!attacker) return;
-  // The hit answered first, so the window shows the Wound it gave (answerHit).
-  const hitAnswer = await answerHit(message, attack, attacker, struckBy(attack, attacker));
-  attack = { ...attack, ...hitAnswer.marks };
+  // What the hit asks - Critical Eye, Blaster Master, Furious Flex... - gathered into the window's "Spend on this roll" (the user's),
+  // answered from it once the window is confirmed; nothing spent before that.
+  const struck = struckBy(attack, attacker);
+  const questions = HIT_ANSWERS.has(message.id) ? [] : await hitQuestions(attacker, attack, struck);
 
   const triggers = relevantTriggers(attacker, message, "hit");
-  const ready = await prepareRoll(attacker, triggers, "On hitting",
+  const category = DAMAGE_CATEGORIES[resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0)]?.label ?? "";
+  const ready = await prepareRoll(attacker, triggers, `Wound Roll - ${attacker.name}`,
     "", {
+      // The Strike's shape (the user's): what they have, whom it hit, the Wound in its box with its Damage Category - known
+      // before the dice, as the Wound is not - and the Effects.
+      slot: "wound",
+      top: `${resourceLine(attacker)}${rollAttackLine(attack, "Hit")}`,
       combatRoll: true,
       attackingManeuver: true,
       // "As an Urgent Roll." A reflected attack's Wound Roll cannot be failed on purpose
       // - the option is closed with its reason beside it, the way Compelled closes it.
       urgent: Boolean(attack.urgentWound || attack.urgentRolls),
       // A Wound Roll recorded when it hit - Delayed's - is not rolled again, so it has no formula.
-      formula: Number.isFinite(attack.fixedWound) ? null : { base: DBUCharacterData.BASE_DIE,
+      spend: hitSpendRows(attacker, questions),
+      formula: Number.isFinite(attack.fixedWound) ? null : { what: `Wound Roll${category ? ` &middot; ${category} Category` : ""}`,
+        base: DBUCharacterData.BASE_DIE,
         dice: combatDiceGroups(attacker, woundDice(attacker, attack)),
         parts: windowParts(attacker, woundParts(attacker, attack)) }
     });
   if (!ready) return;
+  // What the window said to the hit's questions, spent now - rollAttackWound reads the answer kept for this attack.
+  if (!HIT_ANSWERS.has(message.id)) {
+    await answerHit(message, attack, attacker, struck, questions.length ? hitAnswerScript(questions, ready?.spent ?? {}) : null);
+  }
   return rollAttackWound(message, attack);
 }
 

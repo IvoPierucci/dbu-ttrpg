@@ -5109,3 +5109,65 @@
 .application.dbu-dialog .dbu-formula-base { font-weight: bold; }
 .application.dbu-dialog .dbu-formula-dice { color: #9fc7e6; }
 .application.dbu-dialog .dbu-formula-bonus { color: var(--dbu-chat-accent); font-weight: bold; }
+
+/* A roll window's resources and the attack it answers, over the box. */
+.application.dbu-dialog .dbu-roll-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--dbu-chat-dim);
+}
+.application.dbu-dialog .dbu-roll-resources b { color: var(--dbu-chat-text); }
+.application.dbu-dialog .dbu-roll-attack {
+  font-size: 11px;
+  padding: 4px 6px;
+  border: 1px solid var(--dbu-chat-rule);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.15);
+}
+.application.dbu-dialog .dbu-roll-dim { color: var(--dbu-chat-dim); }
+/* Its sections, each titled: Maneuvers, Spend on this roll, Effects. */
+.application.dbu-dialog .dbu-roll-section {
+  border: 1px solid var(--dbu-chat-rule);
+  border-radius: 4px;
+  padding: 4px 6px 2px;
+  margin-bottom: 6px;
+}
+.application.dbu-dialog .dbu-roll-section-title {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--dbu-chat-rule);
+  padding-bottom: 2px;
+  margin-bottom: 3px;
+}
+/* A list never folded - the Triggered Effects (the user's). */
+.application.dbu-dialog .dbu-respond-fixed-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dbu-chat-accent);
+  padding: 2px 0;
+  border-bottom: 1px solid var(--dbu-chat-rule);
+  margin-bottom: 2px;
+}
+.application.dbu-dialog .dbu-roll-number {
+  width: 52px;
+  flex: 0 0 auto;
+}
+/* What the result already is, beside the formula: a Critical, a Botch - both at once where both. */
+.dbu-roll-tag {
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  vertical-align: middle;
+  cursor: help;
+}
+.dbu-roll-tag-critical { background: #3d5a2a; color: #cfe8a8; }
+.dbu-roll-tag-botch { background: #5a2a2a; color: #f0b0a0; }
+.application.dbu-dialog .dbu-formula-fixed { color: #f08a6a; font-weight: bold; }
