@@ -281,6 +281,10 @@ function applyRequest(request) {
         ((entry.uuid === request.uuid) ? { ...entry, defenceWager: request.wager, defenceFoundation: request.foundation || entry.defenceFoundation,
           flareWagered: true } : entry)) } });
     }
+    // The Instants before the Maneuver (the user's): decided, taken back, carried out.
+    case "instantDecide": return applyInstantDecide(request.messageId, request.uuid, request.maneuverId ?? null);
+    case "instantCancel": return applyInstantCancel(request.messageId, request.uuid);
+    case "instantDone": return applyInstantDone(request.messageId, request.id);
     // A hit's answers (the user's): kept on the card till the Wound Roll is confirmed, then carried out before it is made.
     case "hitPending": return applyHitPending(request.messageId, request.uuid, request.answer);
     case "hitUnpending": return applyHitUnpending(request.messageId, request.uuid);
@@ -8197,6 +8201,17 @@ function renderInstantResponses(message, html) {
 
   if (!ownedCharacters().length) return;
 
+  // A Maneuver that is not an attack: its Instants played at once, from their own button (the user's) - nothing waits on them.
+  if (!attack && respondable && ownedCharacters().some(actor => hasInstant(actor, message, null))) {
+    const instant = document.createElement("button");
+    instant.type = "button";
+    instant.className = "dbu-clash-button dbu-instant-button";
+    instant.textContent = "Instant Maneuver";
+    instant.addEventListener("click", () => instantWindows(message, null));
+    container.append(instant);
+  }
+  // The Instant stage first: Respond only once it is over (renderAttack draws it).
+  if (attack && !attack.result && instantStageOpen(message, attack)) return;
   // An attack not yet rolled (the user's): your targets ready - "✓ Ready" and Change while a side is not; every side ready, the
   // answers carried out and nothing changed now.
   if (attack && !attack.result) {
@@ -9331,9 +9346,8 @@ async function respondDialog(message, respondable, { initials = new Map() } = {}
     // Who can answer at all (the user's): the target always - a Dodge costs nothing; anyone else with an Instant to play before
     // the attack, a Counter that answers something here, or a Triggered effect. The rest are shown, greyed, with why.
     const answersAttack = unresolved && !waiting;
-    const instantOpen = respondable && !answered.has(actor.uuid)
-      && instantManeuvers().some(maneuver => godListed(actor, maneuver) && !attack?.technique?.features?.includes("instant-assault"));
-    const usable = answersAttack || instantOpen || (triggers.length > 0) || canBlock || canStop;
+    // Instants are not Respond's any more (the user's): their own button, before the Maneuver (instantStage).
+    const usable = answersAttack || (triggers.length > 0) || canBlock || canStop;
     const why = waiting ? "waiting on the Duel's winner" : (!respondable && !answersAttack) ? "nothing to answer here" : "nothing here answers this";
 
     // Turned only by hand, never on their own (the user's: it is easy to miss) - spent as the answer is played.
@@ -9349,8 +9363,7 @@ async function respondDialog(message, respondable, { initials = new Map() } = {}
       actor, isTarget: answersAttack, usable, why, triggers,
       top: `${resourceLine(actor)}${rollBoxHtml("", "")}${convertLine}`,
       // Two sections, as the user drew them: the Maneuvers - Dodge, the Counters, the Instants - and the Effects.
-      body: `${rollSection("Maneuvers", `${dodge}${counterGroup}<details class="dbu-respond-group"><summary>Instant Maneuvers</summary>${
-        instants || `<p class="dbu-respond-note">None.</p>`}</details>`)}${
+      body: `${rollSection("Maneuvers", `${dodge}${counterGroup}`)}${
         (willing || fixedTriggers || karmaGroup) ? rollSection("Effects", `${willing}${fixedTriggers}${karmaGroup}`) : ""}`,
       roll: answersAttack ? respondRollData(actor, attack) : null,
       previews: answersAttack ? Object.fromEntries(["dodge", "strike", "wound"].map(slot => [slot,
@@ -10272,6 +10285,250 @@ async function cancelByInstantaneousControl(message) {
     });
   }
   return requestEdit(message, { type: "attack", attack: { ...attack, icCancelled: true, pending: [] } });
+}
+
+/** The Instants before a Maneuver (the user's): who decided, what was picked - kept, not played - and whether it is over. */
+const INSTANT_STAGE_FLAG = "instantStage";
+function instantStageOf(message) {
+  const stage = message.getFlag(SCOPE, INSTANT_STAGE_FLAG) ?? {};
+  return { decided: stage.decided ?? [], pending: stage.pending ?? [], done: Boolean(stage.done) };
+}
+
+/** Every Instant Maneuver a character could play here, each with why not where it cannot (the user's: greyed, its reason beside it). */
+function instantOptions(actor, message, attack) {
+  if (!actor) return [];
+  return instantManeuvers().filter(maneuver => godListed(actor, maneuver)).map(maneuver => {
+    let reason = "";
+    // Instant Assault: "No Instant Maneuvers can be triggered in response to this Attacking Maneuver."
+    if (attack?.technique?.features?.includes("instant-assault")) reason = "Instant Assault";
+    else if (!maneuver.surge && (frozenBy(actor) || frozenTurnOf(actor))) reason = "time is frozen";
+    else if (maneuver.godManeuver && whyNotSpecial(actor, maneuver)) reason = whyNotSpecial(actor, maneuver);
+    else if (whyNotAnotherInstant(actor)) reason = "your last Maneuver was an Instant";
+    return { maneuver, reason };
+  });
+}
+
+/** Whether a character has an Instant they could play here at all. */
+function hasInstant(actor, message, attack) {
+  return instantOptions(actor, message, attack).some(option => !option.reason);
+}
+
+/** The attacker and each target still to decide - only those with an Instant to play: who has none decided already. */
+function instantWaiting(message, attack) {
+  if (!attack || attack.result || !message.getFlag(SCOPE, RESPONDABLE_FLAG)) return [];
+  const stage = instantStageOf(message);
+  return attackParticipants(attack).filter(uuid => !stage.decided.includes(uuid) && hasInstant(fromUuidSync(uuid), message, attack));
+}
+
+/** The stage still open: some side to decide, or some Instant picked still to play - and not over. */
+function instantStageOpen(message, attack) {
+  if (!attack || attack.result || attack.icCancelled || !message.getFlag(SCOPE, RESPONDABLE_FLAG)) return false;
+  const stage = instantStageOf(message);
+  return !stage.done && Boolean(stage.pending.length || instantWaiting(message, attack).length);
+}
+
+/** Orders of Instance: the Instants picked, in Initiative Order - the Combat Tracker's; outside it, as they were picked. */
+function instantsInOrder(stage) {
+  const turns = (game.combat?.turns ?? []).map(combatant => combatant.actor?.uuid);
+  const at = uuid => { const index = turns.indexOf(uuid); return (index < 0) ? Infinity : index; };
+  return [...stage.pending].map((entry, index) => ({ entry, index }))
+    .sort((a, b) => (at(a.entry.uuid) - at(b.entry.uuid)) || (a.index - b.index)).map(({ entry }) => entry);
+}
+
+/** Decided: an Instant picked - kept, not played - or none; over once every side has and nothing is left to play. */
+async function applyInstantDecide(messageId, uuid, maneuverId) {
+  const message = game.messages.get(messageId);
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  const stage = message ? instantStageOf(message) : null;
+  if (!stage || stage.done || !attack || attack.result) return;
+  const participant = attackParticipants(attack).includes(uuid);
+  const next = { ...stage,
+    decided: participant ? [...new Set([...stage.decided, uuid])] : stage.decided,
+    pending: [...stage.pending.filter(entry => entry.uuid !== uuid), ...(maneuverId ? [{ id: foundry.utils.randomID(), uuid, maneuverId }] : [])] };
+  return message.setFlag(SCOPE, INSTANT_STAGE_FLAG, next);
+}
+
+/** Cancel (the user's): undecided again, its Instant taken back - while some side has still to decide. */
+async function applyInstantCancel(messageId, uuid) {
+  const message = game.messages.get(messageId);
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  const stage = message ? instantStageOf(message) : null;
+  if (!stage || stage.done || !attack || attack.result || !instantWaiting(message, attack).length) return;
+  return message.setFlag(SCOPE, INSTANT_STAGE_FLAG, { ...stage, decided: stage.decided.filter(each => each !== uuid),
+    pending: stage.pending.filter(entry => entry.uuid !== uuid) });
+}
+
+/** One played, off the list - the last of them closing the stage. */
+async function applyInstantDone(messageId, id) {
+  const message = game.messages.get(messageId);
+  const stage = message ? instantStageOf(message) : null;
+  if (!stage) return;
+  const pending = stage.pending.filter(entry => entry.id !== id);
+  return message.setFlag(SCOPE, INSTANT_STAGE_FLAG, { ...stage, pending, done: !pending.length });
+}
+
+/** Every side decided: the Instants played one at a time, in Initiative Order, each by whoever plays that character - paid then. */
+const instantsClaimed = new Set();
+function runInstants(message, attack) {
+  const stage = instantStageOf(message);
+  if (stage.done || instantWaiting(message, attack).length) return;
+  if (!stage.pending.length) {
+    // Nobody picked one: the stage simply over - written once, by the GM.
+    const key = `none:${message.id}`;
+    if (game.user.isGM && (game.user === game.users.activeGM) && !instantsClaimed.has(key)) {
+      instantsClaimed.add(key);
+      message.setFlag(SCOPE, INSTANT_STAGE_FLAG, { ...stage, done: true });
+    }
+    return;
+  }
+  const next = instantsInOrder(stage)[0];
+  const actor = fromUuidSync(next.uuid);
+  const executor = actor ? playerOf(actor) : game.users.activeGM;
+  if ((executor !== game.user) || instantsClaimed.has(next.id)) return;
+  instantsClaimed.add(next.id);
+  setTimeout(async () => {
+    try {
+      if (actor) await playInstant(message, actor, next.maneuverId);
+    } catch (error) {
+      console.error("DBU TTRPG | Could not play an Instant", next, error);
+    } finally {
+      await requestEdit(message, { type: "instantDone", id: next.id });
+    }
+  }, 0);
+}
+
+/**
+ * The Instant stage on the card (the user's): who decides and how they stand, the Instants picked in their order once all have, and
+ * for your characters Instant Maneuver and No Instant - or, decided, "✓ Ready" and Cancel. Who is not a target may play one too, but
+ * is not waited on.
+ */
+function renderInstantStage(message, attack, container) {
+  const stage = instantStageOf(message);
+  const waiting = instantWaiting(message, attack);
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const box = document.createElement("div");
+  box.className = "dbu-instant-stage";
+  const playing = !waiting.length && stage.pending.length;
+  const rows = attackParticipants(attack).map(uuid => {
+    const actor = fromUuidSync(uuid);
+    const picked = stage.pending.some(entry => entry.uuid === uuid);
+    const state = waiting.includes(uuid) ? ["dbu-pending", "deciding"] : picked ? ["dbu-ready", "ready"]
+      : stage.decided.includes(uuid) ? ["dbu-dim", "no Instant"] : ["dbu-dim", "none to play"];
+    return `<div class="dbu-clash-side"><span class="dbu-clash-name ${state[0]}">${esc(actor?.name ?? "")}<em> ${(uuid === attack.attackerUuid)
+      ? "attacker" : "target"}</em></span><span class="dbu-clash-waiting ${state[0]}">${state[1]}</span></div>`;
+  }).join("");
+  const order = playing ? `<ol class="dbu-instant-order">${instantsInOrder(stage).map(entry =>
+    `<li><b>${esc(getManeuver(entry.maneuverId)?.name ?? entry.maneuverId)}</b> - ${esc(fromUuidSync(entry.uuid)?.name ?? "")}</li>`).join("")}</ol>` : "";
+  box.innerHTML = `<div class="dbu-instant-title">${playing ? "Instants - played in Initiative Order" : "Instants"}</div>${order}${rows}
+    <div class="dbu-clash-result">${playing ? "Playing the Instants" : `Instants first - waiting on ${waiting
+      .map(uuid => esc(fromUuidSync(uuid)?.name ?? "")).join(", ")}`}</div>`;
+  container.append(box);
+  if (playing) return;
+
+  const mine = ownedCharacters().filter(actor => hasInstant(actor, message, attack) || stage.decided.includes(actor.uuid)
+    || stage.pending.some(entry => entry.uuid === actor.uuid));
+  const deciding = mine.filter(actor => waiting.includes(actor.uuid));
+  const bystanders = mine.filter(actor => !attackParticipants(attack).includes(actor.uuid) && !stage.pending.some(entry => entry.uuid === actor.uuid));
+  const decided = mine.filter(actor => stage.decided.includes(actor.uuid) || stage.pending.some(entry => entry.uuid === actor.uuid));
+  if (deciding.length || bystanders.length) {
+    const row = document.createElement("div");
+    row.className = "dbu-ready-row";
+    const instant = document.createElement("button");
+    instant.type = "button";
+    instant.className = "dbu-clash-button dbu-instant-button";
+    instant.textContent = "Instant Maneuver";
+    instant.addEventListener("click", () => instantWindows(message, attack));
+    row.append(instant);
+    if (deciding.length) {
+      const none = document.createElement("button");
+      none.type = "button";
+      none.className = "dbu-ready-change";
+      none.textContent = "No Instant";
+      none.dataset.tooltip = "None from you - " + deciding.map(actor => actor.name).join(", ");
+      none.addEventListener("click", async () => {
+        for (const actor of deciding) await requestEdit(message, { type: "instantDecide", uuid: actor.uuid, maneuverId: null });
+      });
+      row.append(none);
+    }
+    container.append(row);
+  } else if (decided.length) {
+    container.append(readyRow(async () => {
+      for (const actor of decided) await requestEdit(message, { type: "instantCancel", uuid: actor.uuid });
+    }));
+  }
+}
+
+/**
+ * Instant Maneuver (the user's): one window a character - what they have, every Instant they could play, one of them; several of
+ * yours, a picker first. On an attack it is kept for the stage (nothing paid); on any other Maneuver, played at once.
+ */
+async function instantWindows(message, attack) {
+  const stage = instantStageOf(message);
+  const actors = ownedCharacters().filter(actor => hasInstant(actor, message, attack)
+    && !stage.pending.some(entry => entry.uuid === actor.uuid));
+  if (!actors.length) return;
+  const picks = new Map();
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const one = async (actor, fromPicker = false) => {
+    const rows = instantOptions(actor, message, attack).map(({ maneuver, reason }) => `
+      <label class="dbu-respond-option${reason ? " dbu-respond-blocked" : ""}"${reason ? ` data-tooltip="${esc(reason)}"` : ""}>
+        <input type="radio" name="instant" value="${esc(maneuver.id)}" ${reason ? "disabled" : ""}/>
+        <span class="dbu-respond-name">${esc(maneuver.name)}</span>
+        <span class="dbu-respond-source">${esc(reason || maneuver.source || "")}</span></label>`).join("");
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `Instant Maneuver - ${actor.name}` },
+      content: rollWindowHtml({ top: resourceLine(actor), body: rollSection("Instant Maneuvers - one",
+        `<label class="dbu-respond-option"><input type="radio" name="instant" value="" checked/><span class="dbu-respond-name">None</span></label>${rows}`) }),
+      buttons: [
+        { action: "confirm", label: fromPicker ? "Save" : (attack ? "Ready" : "Play"), default: true,
+          callback: (event, button, dialog) => ({ id: dialog.element.querySelector('input[name="instant"]:checked')?.value || "" }) },
+        { action: "cancel", label: fromPicker ? "Back" : "Close" }
+      ],
+      rejectClose: false
+    });
+    return (chosen && (typeof chosen === "object")) ? chosen.id : null;
+  };
+  if (actors.length === 1) {
+    const id = await one(actors[0]);
+    if (id === null) return;
+    picks.set(actors[0].uuid, id);
+  } else {
+    const done = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: "Instant Maneuver" },
+      content: rollWindowHtml({ top: '<p class="dbu-respond-hint">Who plays an Instant?</p>', body: actors.map(actor =>
+        `<div class="dbu-respond-who" data-who="${actor.uuid}"><img src="${esc(actor.img)}" alt=""/><div class="dbu-respond-who-body">
+          <div class="dbu-respond-name">${esc(actor.name)}</div><div class="dbu-respond-who-answer" data-answer>Nothing</div></div>
+          <button type="button" class="dbu-respond-who-go" data-choose>Choose</button></div>`).join("") }),
+      render: (event, dialog) => {
+        for (const button of dialog.element.querySelectorAll("[data-choose]")) {
+          button.addEventListener("click", async () => {
+            const holder = button.closest("[data-who]");
+            const actor = actors.find(each => each.uuid === holder.dataset.who);
+            const id = await one(actor, true);
+            if (id === null) return;
+            picks.set(actor.uuid, id);
+            holder.querySelector("[data-answer]").textContent = id ? (getManeuver(id)?.name ?? id) : "None";
+            holder.querySelector("[data-answer]").classList.add("dbu-respond-who-set");
+            button.textContent = "Change";
+          });
+        }
+      },
+      buttons: [{ action: "confirm", label: "Done", default: true, callback: () => true }, { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if (done !== true) return;
+  }
+  for (const [uuid, id] of picks) {
+    const actor = fromUuidSync(uuid);
+    if (!attack) {
+      if (id && actor) await playInstant(message, actor, id);
+      continue;
+    }
+    // A target or the attacker: decided either way. Anyone else: only an Instant picked counts.
+    if (id || attackParticipants(attack).includes(uuid)) await requestEdit(message, { type: "instantDecide", uuid, maneuverId: id || null });
+  }
 }
 
 /** Carry out everything the reader chose, for every character they chose it for. */
@@ -39590,6 +39847,13 @@ function renderAttack(message, html) {
     const attacker = fromUuidSync(attack.attackerUuid);
     // The United Attack Disadvantage: nothing is rolled until the Ally asked has joined or refused.
     if (attacker?.isOwner && (unitedPending(attack) || duelRunning(attack))) return;
+    // The Instants first (the user's): till the attacker and every target decided and what was picked is played, in Initiative
+    // Order, nothing else of the Maneuver is offered.
+    if (instantStageOpen(message, attack)) {
+      renderInstantStage(message, attack, container);
+      runInstants(message, attack);
+      return;
+    }
     // Every side ready: the answers kept on the card carried out, one at a time, then the roll.
     runPendingAnswers(message, attack);
     // Ready and not every side yet (the user's): "✓ Ready" and Change.
