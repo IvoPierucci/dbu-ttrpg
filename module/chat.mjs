@@ -6319,6 +6319,11 @@ function pendingRerolls(message) {
     && offerableTo(entry, message).some(effect => effect.available)).map(entry => entry.actor);
 }
 
+/** Whether this side has done with its Strike's rerolls - No reroll said, or the hit answered (the user's). */
+function rerollsClosed(message, actor) {
+  return (message.getFlag(SCOPE, REROLLS_DONE_FLAG) ?? []).includes(actor?.uuid);
+}
+
 /** The orange Reroll button (the user's), for a side that lost - its window behind it. */
 function rerollButton(message, actor, situation, options, label = "Reroll") {
   const button = document.createElement("button");
@@ -9921,6 +9926,8 @@ async function hitPicker(message, attack, entries) {
 /** One character's answer to the hit, carried out: Actions turned, effects armed, Power Flare's wager paid and written, the Maneuver played. */
 async function applyHitChoice(message, attack, choice) {
   const { actor, entry } = choice;
+  // Answering the hit closes its rerolls (the user's): what was chosen for being hit is never undone by a reroll after.
+  if (entry.isHit) await requestEdit(message, { type: "rerollDone", uuid: actor.uuid });
   if (choice.convert > 0) await convertActions(actor, choice.convert);
   if (choice.triggers?.length) {
     await actor.update({ "system.armedTalents": [...new Set([...(actor.system.armedTalents ?? []), ...choice.triggers])] });
@@ -39382,8 +39389,9 @@ function renderAttack(message, html) {
     const onHit = entry.own?.hit ? relevantTriggers(target, message, "hit") : [];
     const karmic = afterTheFactFor(message, target);
 
-    // Rerolls first and on their own button (the user's): a reroll can undo the hit, so it is settled before what answers it.
-    if (karmic?.situation?.lost) container.append(rerollButton(message, target, karmic.situation, karmic.options));
+    // Rerolls first and on their own button (the user's): a reroll can undo the hit, so it is settled before what answers it - and
+    // closed once they said No reroll or answered the hit, so effects for being hit are never followed by a reroll.
+    if (karmic?.situation?.lost && !rerollsClosed(message, target)) container.append(rerollButton(message, target, karmic.situation, karmic.options));
   }
 
   // The attacker gets the same. Usually it matters when the Strike is the roll that
@@ -39394,7 +39402,7 @@ function renderAttack(message, html) {
     const karmic = attacker?.isOwner ? afterTheFactFor(message, attacker) : null;
 
     // A Strike that missed: its Reroll (the user's) - the same window as anyone's.
-    if (karmic?.situation?.lost) container.append(rerollButton(message, attacker, karmic.situation, karmic.options));
+    if (karmic?.situation?.lost && !rerollsClosed(message, attacker)) container.append(rerollButton(message, attacker, karmic.situation, karmic.options));
   }
 
   // Once the Wound Roll is made and before the Damage is dealt, both sides get one
