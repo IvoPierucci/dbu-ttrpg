@@ -523,8 +523,8 @@ export function formulaHtml({ base = "1d10", dice = [], parts = [] } = {}) {
   // Escaped here for an attribute, quotes and all: the tooltip may be a whole table.
   const attr = text => String(text ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;")
     .replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const piece = (text, tip, html = false) =>
-    `<span class="dbu-formula-piece" ${html ? "data-tooltip-html" : "data-tooltip"}="${attr(tip)}">${esc(text)}</span>`;
+  const piece = (text, tip, html = false, kind = "") =>
+    `<span class="dbu-formula-piece${kind ? ` dbu-formula-${kind}` : ""}" ${html ? "data-tooltip-html" : "data-tooltip"}="${attr(tip)}">${esc(text)}</span>`;
   const counted = parts.filter(part => Number(part.value) || part.workings);
   const netted = counted.reduce((sum, part) => sum + (Number(part.value) || 0), 0);
   // Penalties cancel bonuses but never take a roll below its dice.
@@ -533,9 +533,40 @@ export function formulaHtml({ base = "1d10", dice = [], parts = [] } = {}) {
     .map(part => `<div class="dbu-bd-head">${esc(part.label)}</div>${part.workings}`);
   const summed = ((counted.length > 1) || !tables.length)
     ? breakdownTable(counted.map(part => partLine({ label: part.label, value: Number(part.value) || 0 })), bonus) : "";
+  // The Base Die on its own, then every other die together by its faces (the user's: "2d10", not "1d10 + 1d10") - each
+  // group's hover saying where each of its dice comes from.
   return [
-    piece(base, "Base Die"),
-    ...dice.filter(group => group.formula).map(group => piece(group.formula, group.label)),
-    piece(String(bonus), `${tables.join("")}${summed}`, true)
+    piece(base, "Base Die", false, "base"),
+    ...mergedDice(dice).map(group => piece(group.formula, group.tip, true, "dice")),
+    piece(String(bonus), `${tables.join("")}${summed}`, true, "bonus")
   ].join(" + ");
+}
+
+/**
+ * The dice beside the Base Die, gathered by their faces - largest first - each group with the table of where its dice
+ * come from: `1d10` of the Tier of Power and `1d10+1d4` of Greater Dice are `2d10` and `1d4`. A group whose formula is not
+ * plain dice (`2d10kh`, a modifier) is kept whole, as written, where it would not add up.
+ */
+export function mergedDice(groups = []) {
+  const byFaces = new Map();
+  const whole = [];
+  for (const group of groups.filter(each => each?.formula)) {
+    const terms = String(group.formula).split("+").map(term => term.trim()).filter(Boolean);
+    const plain = terms.every(term => /^\d*d\d+$/.test(term));
+    if (!plain) {
+      whole.push({ formula: String(group.formula), tip: esc(group.label ?? "") });
+      continue;
+    }
+    for (const term of terms) {
+      const [count, faces] = term.split("d").map(Number);
+      const entry = byFaces.get(faces) ?? { count: 0, from: [] };
+      entry.count += count || 1;
+      entry.from.push(`${count || 1}d${faces}: ${group.label ?? ""}`);
+      byFaces.set(faces, entry);
+    }
+  }
+  return [...[...byFaces.entries()].sort((a, b) => b[0] - a[0]).map(([faces, entry]) => ({
+    formula: `${entry.count}d${faces}`,
+    tip: `<div class="dbu-bd-head">${entry.count}d${faces}</div>${entry.from.map(line => `<div>${esc(line)}</div>`).join("")}`
+  })), ...whole];
 }

@@ -8421,6 +8421,22 @@ export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll 
   return null;
 }
 
+/**
+ * The box a roll window shows its roll in (the user's, every window alike): one size, two lines - what is rolled above,
+ * the formula under it - so ticking something never moves what is beneath it. `what` is HTML.
+ */
+export function rollBoxHtml(what, line) {
+  return `<div class="dbu-roll-box"><div class="dbu-roll-what">${what ?? ""}</div><div class="dbu-roll-line dbu-formula">${line ?? ""}</div></div>`;
+}
+
+/**
+ * A roll window's content (the user's): `top` fixed - the resources, the roll's box, a line under it - and `body`, every
+ * section that can be ticked, in one scroll of its own, the window no taller than the screen.
+ */
+export function rollWindowHtml({ top = "", body = "" } = {}) {
+  return `<div class="dbu-respond-dialog dbu-roll-window">${top ? `<div class="dbu-roll-top">${top}</div>` : ""}<div class="dbu-roll-scroll">${body}</div></div>`;
+}
+
 export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
@@ -8478,7 +8494,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
     : `<label class="dbu-respond-option dbu-respond-willing">
          <input type="checkbox" name="willing" ${actor.system.willingFailure ? "checked" : ""}/>
          <span class="dbu-respond-name">Willing failure</span>
-         <span class="dbu-respond-source">Fail on purpose: this roll totals 0, however the dice land.</span>
+         <span class="dbu-respond-source">this roll totals 0</span>
        </label>`;
 
   // "Against an Opponent in the form of a Clash or against a set Difficulty Category."
@@ -8529,12 +8545,13 @@ export async function prepareRoll(actor, effects, title, hint = "",
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title },
-    content: `<div class="dbu-respond-dialog">
-      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}
-      ${formula ? `<p class="dbu-formula">${formulaHtml({ ...formula,
-        parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll)] })}</p>` : ""}
-      ${rows}${difficultyRows}${pickRow}${boxRows}${senseRows}${willing}${traitGroup}${karmicGroup}
-    </div>`,
+    // Fixed on top: what is rolled, in its box of one size - the same as Respond's (the user's); under it one scroll for
+    // everything that can be ticked, so the roll stays in sight however long the list (rollWindowHtml).
+    content: rollWindowHtml({
+      top: `${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${formula ? rollBoxHtml(formula.what ?? title, formulaHtml({ ...formula,
+        parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll)] })) : ""}`,
+      body: `${rows}${difficultyRows}${pickRow}${boxRows}${senseRows}${willing}${traitGroup}${karmicGroup}`
+    }),
     buttons: [
       {
         action: "confirm",
@@ -8690,7 +8707,7 @@ async function respondDialog(message, respondable) {
            <input type="checkbox" name="willing-${actor.id}"
                   ${actor.system.willingFailure ? "checked" : ""}/>
            <span class="dbu-respond-name">Willing failure</span>
-           <span class="dbu-respond-source">your next roll totals 0</span>
+           <span class="dbu-respond-source">this roll totals 0</span>
          </label>`
 
     // Dodging is not a Maneuver and costs no Counter Action, but it is the other way to
@@ -8994,7 +9011,7 @@ async function respondDialog(message, respondable) {
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: "Respond" },
-    content: `<div class="dbu-respond-dialog">${sections}</div>`,
+    content: rollWindowHtml({ body: sections }),
     buttons: [
       {
         action: "confirm",

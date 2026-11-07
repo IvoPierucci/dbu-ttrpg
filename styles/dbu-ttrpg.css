@@ -5048,3 +5048,64 @@
 .dbu-bd-aside td {
   color: #9fc7e6;
 }
+
+/* --- Roll windows (the user's, every one alike) ------------------------------------------------------------------
+   Fixed on top: the resources and the roll's box, of one size; under them one scroll for every section that can be
+   ticked; the buttons fixed under that. The window no taller than the screen. */
+.application.dbu-dialog .dbu-roll-window {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: calc(100vh - 160px);
+  min-width: 340px;
+}
+.application.dbu-dialog .dbu-roll-top {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--dbu-chat-rule);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
+  position: relative;
+  z-index: 1;
+}
+.application.dbu-dialog .dbu-roll-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+/* The roll's box: two lines, one height, whatever is in it. */
+.application.dbu-dialog .dbu-roll-box {
+  height: 58px;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--dbu-chat-rule);
+  border-radius: 4px;
+}
+.application.dbu-dialog .dbu-roll-what {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dbu-chat-dim);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.application.dbu-dialog .dbu-roll-box .dbu-formula {
+  margin: 0;
+  text-align: left;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.application.dbu-dialog .dbu-formula-base { font-weight: bold; }
+.application.dbu-dialog .dbu-formula-dice { color: #9fc7e6; }
+.application.dbu-dialog .dbu-formula-bonus { color: var(--dbu-chat-accent); font-weight: bold; }
