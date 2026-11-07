@@ -48,7 +48,7 @@ import {
 import { actionsLeft, actionsWithin, convertActions, convertibleActions, isTheirTurn, newRoundFor, spendActions }
   from "../combat.mjs";
 import { whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
-import { baseDieLine, breakdownTable, contributionLine, extraDiceLine, partLine, noteLine, floorLine,
+import { baseDieLine, breakdownTable, contributionLine, extraDiceLine, partLine, noteLine, floorLine, skillWorkingsTable,
          fromOutcome, workingsTable, atRollTime } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
@@ -2811,7 +2811,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Each Skill carries the table for its own roll. The roll, not the Bonus: what the
     // sheet shows is what the button rolls, and the Bonus is a row inside it.
     const skills = Object.values(this.actor.system.skills)
-      .map(skill => ({ ...skill, workings: workings[`skill.${skill.key}`] ?? "" }));
+      // One sum: its Score, Ranks and Size, then every effect on the Bonus or the Check alike (the user's) - breakdown.mjs.
+      .map(skill => ({ ...skill, workings: skillWorkingsTable(this.actor.system, skill.key) || (workings[`skill.${skill.key}`] ?? "") }));
     return Object.keys(this.actor.system.attributes)
       .map(attribute => ({
         attribute,

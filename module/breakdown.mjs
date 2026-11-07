@@ -381,6 +381,33 @@ export function workingsTable(system, key, { extra = [], total = null } = {}) {
 }
 
 /**
+ * A Skill's hover on the sheet (the user's): what its number is made of as one sum - 1/2 its Attribute Score, its Ranks, Size, and
+ * every effect after them, whether it raises the Skill Bonus (Thief's) or the Skill Check (Gifted Student's): "raising the Skill
+ * Check or the Skill Bonus come to the same thing". The Bonus's workings, then the roll's past the Bonus itself. Its total the
+ * Skill's roll; "" where there are no workings.
+ */
+export function skillWorkingsTable(system, key) {
+  const bonus = system?.effects?.workings?.[`skill.${key}.bonus`];
+  const roll = system?.effects?.workings?.[`skill.${key}`];
+  if (!bonus || !roll) return "";
+  const lines = [];
+  const named = (bonus.parts ?? []).filter(part => Number(part.value) !== 0);
+  if (named.length) for (const part of named) lines.push(partLine({ label: part.label, value: part.value }));
+  else lines.push(partLine({ label: "Base", value: bonus.base }));
+  for (const step of [bonus, roll]) {
+    // The roll's own ingredients but the Bonus it was built on - Gifted Student's.
+    if (step === roll) {
+      for (const part of (roll.parts ?? []).filter(each => (each.label !== "Skill Bonus") && Number(each.value))) {
+        lines.push(partLine({ label: part.label, value: part.value }));
+      }
+    }
+    for (const part of step.contributions ?? []) lines.push(contributionLine(part));
+    if ((step.floored !== null) && (step.floored !== undefined)) lines.push(floorLine(step.base, step.floored, "nothing goes below zero"));
+  }
+  return breakdownTable(lines, system.skills?.[key]?.roll ?? roll.value);
+}
+
+/**
  * Everything a Combat Roll picks up between the sheet and the dice.
  *
  * None of it is in the number above, and none of it can be: Diminishing Offense counts
