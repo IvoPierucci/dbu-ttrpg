@@ -9666,7 +9666,10 @@ function hitEntries(message, attack) {
   const blockers = new Map(possibleBlockers(attack).map(entry => [entry.target.uuid, entry]));
   const barriers = new Map(possibleBarriers(attack).map(entry => [entry.user.uuid, entry]));
   const interveners = !deflection(attack) ? possibleInterveners(attack).filter(who => shieldableTargets(attack, who).length) : [];
-  const stepping = new Map(interveners.map(actor => [actor.uuid, shieldableTargets(attack, actor)]));
+  // Not for an Ally who may still reroll their way out of the hit - stepping in front of a blow that may yet miss them.
+  const rerolling = new Set(pendingRerolls(message).map(actor => actor.uuid));
+  const stepping = new Map(interveners.map(actor => [actor.uuid, shieldableTargets(attack, actor).filter(ally => !rerolling.has(ally.uuid))])
+    .filter(([, allies]) => allies.length));
   const hits = new Map(targetResults(attack).filter(({ own }) => own?.hit && !isAbsoluteMiss(own)).map(entry => [entry.uuid, entry]));
   const owned = new Map();
   for (const uuid of [...hits.keys(), ...barriers.keys(), ...stepping.keys()]) {
@@ -39465,7 +39468,8 @@ function renderAttack(message, html) {
   // Barrier: "When you are hit by an Attacking Maneuver" - the same window.
   // Everything that answers a hit, one button (the user's): Block, Barrier, the Intervene for an Ally, what answers being hit, Power
   // Flare's Ki Wager - a window for each of your characters with something to do, a picker before them where there are several.
-  if (!result.wound && !pendingRerolls(message).length) {
+  // Always there once the Strike is settled (the user's) - answering the hit is what closes the one hit's Reroll.
+  if (!result.wound) {
     const entries = hitEntries(message, attack);
     if (entries.some(entry => entry.usable)) {
       const apply = document.createElement("button");
