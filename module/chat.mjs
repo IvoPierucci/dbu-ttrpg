@@ -265,6 +265,15 @@ function applyRequest(request) {
     case "initiative": return applyInitiative(request.combatId, request.combatantId, request.initiative);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
+    // A miss rerolled to a hit (the user's): what it offered goes, but what was taken already.
+    case "missOffersDropped": {
+      const card = game.messages.get(request.messageId);
+      if (!card) return;
+      const taken = takenOffers(card);
+      const offers = card.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
+      const kept = offers.filter(offer => (offer.onMiss !== request.uuid) || taken.includes(offer.actorUuid));
+      return (kept.length === offers.length) ? undefined : card.setFlag(SCOPE, OOS_OFFERS_FLAG, kept);
+    }
     // Rubbery Body's move taken, of whom.
     case "moveTaken": {
       const card = game.messages.get(request.messageId);
@@ -4113,6 +4122,8 @@ export async function endGrapple(grappler, grappled) {
  * answers it too generously and leaves the update to be refused by the server.
  */
 export function requestEdit(message, request) {
+  // An offer a miss made: tagged with whom it missed, so a reroll that turns it to a hit takes it back (offerOnMiss).
+  if ((request?.type === "offer") && missContext.uuid) request = { ...request, offer: { ...request.offer, onMiss: missContext.uuid } };
   const payload = { ...request, messageId: message.id };
 
   // Surfaced rather than left to an unhandled rejection: a failure here stops the
@@ -7318,6 +7329,37 @@ async function resettleClash(message, situation, given = null) {
  * Karma Point here - so the outcome is recomputed rather than left saying what it said
  * before the number moved.
  */
+/** Whom the offers being made are for missing - set only while offerOnMiss makes them (requestEdit tags them). */
+const missContext = { uuid: "" };
+
+/**
+ * What an attack that missed a target offers - Watchful Gaze (4) for a Dodge, Flow of Combat, Scarlet Spotter, Angelic Offense (3),
+ * Raised Gravity (2), Feline Build (4), Violent Rebuke (3), Sinister Dragon - each offer tagged with whom it missed: a reroll that
+ * turns the miss to a hit takes back what was not taken (the user's), one that turns a hit to a miss makes them.
+ */
+function offerOnMiss(message, attack, entry, attacker) {
+  if (entry.hit || (entry.uuid === attack.attackerUuid)) return;
+  const target = fromUuidSync(entry.uuid);
+  missContext.uuid = entry.uuid;
+  try {
+    // Watchful Gaze (4): an Angel's Counter Action, for their Basic Attack - a Dodge that beat it.
+    if ((entry.defense === "dodge") && entry.answer) offerWatchfulGaze(message, target, attacker);
+    // Flow of Combat, Scarlet Spotter: no Damage from it - the Exploit at who made it. Angelic Offense (3): the Basic Attack.
+    offerFlowExploit(message, target, attacker);
+    offerUnscathedExploit(message, target, attacker);
+    offerAngelicCounter(message, target, attacker);
+    // Raised Gravity (2): dodged - the Signature Technique Maneuver.
+    offerGravityTechnique(message, target, attacker);
+    // Feline Build (4): no Damage from it - a Copied Technique; Violent Rebuke (3): the Basic Attack back, hit or not.
+    offerFelineTechnique(message, target);
+    offerRebuke(message, target, attacker);
+    // Sinister Dragon: an Impaired Opponent's attack that missed you.
+    offerSinisterUnharmed(message, target, attacker);
+  } finally {
+    missContext.uuid = "";
+  }
+}
+
 async function resettleAttack(message, situation, given = null) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   const result = attack?.result;
@@ -7374,10 +7416,17 @@ async function resettleAttack(message, situation, given = null) {
       (line.uuid === entry.uuid) ? { ...own, answer, hit, against, incomingDamage } : line);
   }
 
-  requestEdit(message, {
-    type: "attack",
-    attack: { ...attack, result: { ...result, strike, targets: settledTargets } }
-  });
+  const next = { ...attack, result: { ...result, strike, targets: settledTargets } };
+  await requestEdit(message, { type: "attack", attack: next });
+
+  // A miss rerolled to a hit takes back what the miss offered; a hit rerolled to a miss offers it (the user's).
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  for (const entry of branches) {
+    const now = settledTargets.find(line => line.uuid === entry.uuid);
+    if (!now || (Boolean(now.hit) === Boolean(entry.own.hit))) continue;
+    if (now.hit) await requestEdit(message, { type: "missOffersDropped", uuid: entry.uuid });
+    else offerOnMiss(message, next, { ...now, uuid: entry.uuid }, attacker);
+  }
 
   return true;
 }
@@ -32342,23 +32391,11 @@ async function resolveAttackWork(message, attack) {
   for (const entry of branches) {
     if (!entry.hit && (entry.defense === "dodge") && entry.answer && (entry.uuid !== attack.attackerUuid)) {
       await answerFor(fromUuidSync(entry.uuid), "dodged-attack", { attackerUuid: attack.attackerUuid ?? "" });
-      // Watchful Gaze (4): an Angel's Counter Action, for their Basic Attack.
-      offerWatchfulGaze(message, fromUuidSync(entry.uuid), attacker);
     }
   }
-  // Flow of Combat: an attack that missed you - no Damage from it - and the Exploit at who made it.
   for (const entry of branches) {
-    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFlowExploit(message, fromUuidSync(entry.uuid), attacker);
-    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerUnscathedExploit(message, fromUuidSync(entry.uuid), attacker);
-    // Angelic Offense (3): the same, and the Basic Attack.
-    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerAngelicCounter(message, fromUuidSync(entry.uuid), attacker);
-    // Raised Gravity (2): dodged - the Signature Technique Maneuver.
-    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerGravityTechnique(message, fromUuidSync(entry.uuid), attacker);
-    // Feline Build (4): no Damage from it - a Copied Technique; Violent Rebuke (3): the Basic Attack back, hit or not.
-    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFelineTechnique(message, fromUuidSync(entry.uuid));
-    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerRebuke(message, fromUuidSync(entry.uuid), attacker);
-    // Sinister Dragon: an Impaired Opponent's attack that missed you.
-    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerSinisterUnharmed(message, fromUuidSync(entry.uuid), attacker);
+    // What a miss offers (offerOnMiss) - taken back if a reroll turns it to a hit.
+    offerOnMiss(message, attack, entry, attacker);
     // Angelic Offense (2)'s Guard Down: this was the next Attacking Maneuver aimed at them.
     await endAngelicGuardDown(fromUuidSync(entry.uuid));
   }
