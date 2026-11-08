@@ -1075,7 +1075,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // into permission for another.
     schema.instantPlayed = new fields.SchemaField({
       held: new fields.BooleanField({ required: true, initial: false }),
-      messageId: new fields.StringField({ required: true, blank: true, initial: "" })
+      messageId: new fields.StringField({ required: true, blank: true, initial: "" }),
+      // "Cannot be used if your last Maneuver during this Turn was an Instant Maneuver": the Turn it was played in - another Turn,
+      // and it holds nothing (maneuvers.mjs instantTurnKey). Blank outside a Combat, where it holds till another kind is used.
+      turn: new fields.StringField({ required: true, blank: true, initial: "" })
     });
 
     // --- Diminishing Offense and Defense ---

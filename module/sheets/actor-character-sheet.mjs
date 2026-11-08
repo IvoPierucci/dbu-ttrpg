@@ -7439,7 +7439,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     else delete resources.demonicpower;
     const { replaceObject } = await import("../conditions.mjs");
     return this.actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.creativeRound": round,
-      "system.instantPlayed": { held: true, messageId: "" } });
+      "system.instantPlayed": { held: true, messageId: "", turn: (await import("../maneuvers.mjs")).instantTurnKey() } });
   }
 
   /**

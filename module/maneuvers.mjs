@@ -3716,7 +3716,9 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
     round: combat?.started ? (combat.round ?? 0) : 0, hit: [] };
   const lastUpdate = actor.system?.lastManeuver ? { "system.lastManeuver": last } : {};
 
-  const held = actor.system.instantPlayed ?? { held: false, messageId: "" };
+  const stored = actor.system.instantPlayed ?? { held: false, messageId: "" };
+  // Held only within the Turn it was played in (the user's rule text).
+  const held = instantHeld(stored) ? stored : { held: false, messageId: "" };
 
   // Triggered by the Instant that is holding you, so it does not count as getting out
   // from under it.
@@ -3732,10 +3734,10 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
   }
 
   const now = (type === "instant")
-    ? { held: true, messageId: messageId ?? "" }
-    : { held: false, messageId: "" };
+    ? { held: true, messageId: messageId ?? "", turn: instantTurnKey() }
+    : { held: false, messageId: "", turn: "" };
 
-  if ((now.held === held.held) && (now.messageId === held.messageId)) {
+  if ((now.held === stored.held) && (now.messageId === stored.messageId) && ((now.turn ?? "") === (stored.turn ?? ""))) {
     return Object.keys(lastUpdate).length ? actor.update(lastUpdate) : undefined;
   }
   return actor.update({ "system.instantPlayed": now, ...lastUpdate });
@@ -3747,8 +3749,24 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
  * @returns {null|string} null when they may, otherwise what is in the way
  */
 export function whyNotAnotherInstant(actor) {
-  if (!actor?.system?.instantPlayed?.held) return null;
-  return "Your last Maneuver was an Instant. Use another kind first.";
+  if (!instantHeld(actor?.system?.instantPlayed)) return null;
+  return "Your last Maneuver this Turn was an Instant. Use another kind first.";
+}
+
+/** The Turn being played - the Combat's, its Round and whose Turn - or blank outside one. */
+export function instantTurnKey() {
+  const combat = globalThis.game?.combat;
+  return combat?.started ? `${combat.id}:${combat.round ?? 0}:${combat.turn ?? 0}` : "";
+}
+
+/**
+ * Whether an Instant played still holds you: "your last Maneuver during this Turn" (the user's rule text) - one played in another
+ * Turn holds nothing; one played outside a Combat holds till another kind is used.
+ */
+export function instantHeld(played) {
+  if (!played?.held) return false;
+  const turn = played.turn ?? "";
+  return !turn || (turn === instantTurnKey());
 }
 
 /**
