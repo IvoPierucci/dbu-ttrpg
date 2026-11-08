@@ -4874,7 +4874,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
   // United Attack joins somebody else's attack, so it is played from that attack's card.
   if (maneuver.united) {
-    ui.notifications.warn(`${maneuver.name} is played from an Ally's attack card, with its United Attack button.`);
+    ui.notifications.warn(`${maneuver.name} is played from an Ally's attack card, with its Instant Maneuver button.`);
     return false;
   }
   // A Counter Unique Ability answers an attack aimed at you - the Afterimage Technique - so it is played from

@@ -10323,6 +10323,11 @@ function instantOptions(actor, message, attack) {
     // Instant Assault: "No Instant Maneuvers can be triggered in response to this Attacking Maneuver."
     if (attack?.technique?.features?.includes("instant-assault")) reason = "Instant Assault";
     else if ((frozenBy(actor) || frozenTurnOf(actor)) && !(maneuver.surge ?? getManeuver(maneuver.id)?.surge)) reason = "time is frozen";
+    // United Attack (the user's: an Instant, played from the Instant Maneuver window): an Ally's attack still open, joined once.
+    else if (maneuver.united && !attack) reason = "joins an Ally's attack";
+    else if (maneuver.united && (attack.attackerUuid === actor.uuid)) reason = "your own attack";
+    else if (maneuver.united && (attack.reflectedFrom || (attack.united ?? []).some(entry => entry.uuid === actor.uuid)
+      || duelSideOf(attack, actor.uuid))) reason = (attack.united ?? []).some(entry => entry.uuid === actor.uuid) ? "already joined" : "cannot join this one";
     else if ((message?.getFlag(SCOPE, INSTANTS_ON_FLAG) ?? []).includes(actor.uuid)) reason = "you already played an Instant on this Maneuver";
     // Your own Maneuver: an Instant played on it comes before it - after whatever you used before declaring it.
     else if (maker === actor.uuid) { if (message?.getFlag(SCOPE, "makerInstantHeld")) reason = "your last Maneuver before this one was an Instant"; }
@@ -10362,7 +10367,13 @@ function hasInstant(actor, message, attack) {
 function instantWaiting(message, attack) {
   if (!attack || attack.result || !message.getFlag(SCOPE, RESPONDABLE_FLAG)) return [];
   const stage = instantStageOf(message);
-  return attackParticipants(attack).filter(uuid => !stage.decided.includes(uuid) && hasInstant(fromUuidSync(uuid), message, attack));
+  return instantDeciders(attack).filter(uuid => !stage.decided.includes(uuid) && hasInstant(fromUuidSync(uuid), message, attack));
+}
+
+/** Who the Instant stage waits on: the attacker, each target - and the Ally the United Attack Disadvantage asks, till they join. */
+function instantDeciders(attack) {
+  const asked = unitedPending(attack) ? attack.unitedWith?.uuid : "";
+  return [...attackParticipants(attack), ...((asked && !attackParticipants(attack).includes(asked)) ? [asked] : [])];
 }
 
 /** The stage still open: some side to decide, or some Instant picked still to play - and not over. */
@@ -10448,7 +10459,8 @@ async function useStageInstant(message, entry) {
   chatAnchor.count = 0;
   let used = false;
   try {
-    if (owned) {
+    if (owned?.system?.united) used = Boolean(await uniteOnCard(message, message.getFlag(SCOPE, ATTACK_FLAG), actor));
+    else if (owned) {
       const { useOwnedManeuver } = await import("./use-maneuver.mjs");
       used = Boolean(await useOwnedManeuver(actor, owned.id));
     } else {
@@ -10474,13 +10486,13 @@ function renderInstantStage(message, attack, container) {
   const box = document.createElement("div");
   box.className = "dbu-instant-stage";
   const playing = !waiting.length && stage.pending.length;
-  const rows = attackParticipants(attack).map(uuid => {
+  const rows = instantDeciders(attack).map(uuid => {
     const actor = fromUuidSync(uuid);
     const picked = stage.pending.some(entry => entry.uuid === uuid);
     const state = waiting.includes(uuid) ? ["dbu-pending", "deciding"] : picked ? ["dbu-ready", "ready"]
       : stage.decided.includes(uuid) ? ["dbu-dim", "no Instant"] : ["dbu-dim", "none to play"];
     return `<div class="dbu-clash-side"><span class="dbu-clash-name ${state[0]}">${esc(actor?.name ?? "")}<em> ${(uuid === attack.attackerUuid)
-      ? "attacker" : "target"}</em></span><span class="dbu-clash-waiting ${state[0]}">${state[1]}</span></div>`;
+      ? "attacker" : attackParticipants(attack).includes(uuid) ? "target" : "asked"}</em></span><span class="dbu-clash-waiting ${state[0]}">${state[1]}</span></div>`;
   }).join("");
   const order = playing ? `<ol class="dbu-instant-order">${instantsInOrder(stage).map(entry =>
     `<li><b>${esc(getManeuver(entry.maneuverId)?.name ?? entry.maneuverId)}</b> - ${esc(fromUuidSync(entry.uuid)?.name ?? "")}</li>`).join("")}</ol>` : "";
@@ -10520,7 +10532,7 @@ function renderInstantStage(message, attack, container) {
   const mine = ownedCharacters().filter(actor => hasInstant(actor, message, attack) || stage.decided.includes(actor.uuid)
     || stage.pending.some(entry => entry.uuid === actor.uuid));
   const deciding = mine.filter(actor => waiting.includes(actor.uuid));
-  const bystanders = mine.filter(actor => !attackParticipants(attack).includes(actor.uuid) && !stage.pending.some(entry => entry.uuid === actor.uuid));
+  const bystanders = mine.filter(actor => !instantDeciders(attack).includes(actor.uuid) && !stage.pending.some(entry => entry.uuid === actor.uuid));
   const decided = mine.filter(actor => stage.decided.includes(actor.uuid) || stage.pending.some(entry => entry.uuid === actor.uuid));
   if (deciding.length || bystanders.length) {
     const row = document.createElement("div");
@@ -10619,7 +10631,7 @@ async function instantWindows(message, attack) {
       continue;
     }
     // A target or the attacker: decided either way. Anyone else: only an Instant picked counts.
-    if (id || attackParticipants(attack).includes(uuid)) await requestEdit(message, { type: "instantDecide", uuid, maneuverId: id || null });
+    if (id || instantDeciders(attack).includes(uuid)) await requestEdit(message, { type: "instantDecide", uuid, maneuverId: id || null });
   }
 }
 
@@ -37311,13 +37323,9 @@ function unitedButtons(message, attack, container) {
     return;
   }
   const joiners = asked?.isOwner && !mine.some(actor => actor.uuid === asked.uuid) ? [asked, ...mine] : mine;
+  // Joining this attack is an Instant (the user's): played from the Instant Maneuver window, its Use in the Instant stage.
   for (const joiner of joiners) {
-    button(joiners.length > 1 ? `United Attack: ${joiner.name}` : "United Attack",
-      "Instant, 1/Round: 1 Action and the Ki of the same Profile (or your Signature Technique's). Adds 1/2 of "
-      + "your Force or Magic Modifier to their Wound, up to 1(bT) ranks of your Technique's Advantages, and a "
-      + "Ki Wager of up to 1/4 of your Max Capacity.",
-      () => uniteOnCard(message, attack, joiner));
-    // "When an Ally uses an Attacking Maneuver or Duel Maneuver": the initiator's Initiating Attack.
+    // "When an Ally uses an Attacking Maneuver or Duel Maneuver": the initiator's Initiating Attack - a Duel declared after the stage.
     if (attack.duel && (attack.duel.initiating?.kind !== "power")) {
       button(`United Attack: ${attack.duel.initiatorName}${joiners.length > 1 ? ` (${joiner.name})` : ""}`,
         `Join ${attack.duel.initiatorName}'s Duel: the same, on their Initiating Attack; you wager on each Duel Clash.`,
@@ -37342,8 +37350,9 @@ async function uniteOnCard(message, attack, joiner) {
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${joiner.name} joins `
       + `${attack.attackerName}'s ${attack.maneuverName} with United Attack${entry.techniqueName
         ? ` (${entry.techniqueName})` : ""}: ${entry.cost} Ki${entry.wager ? `, ${entry.wager} wagered` : ""}.`)}</div>` });
-  return requestEdit(message, { type: "attack", attack: withJoiner(attack, entry, attacker,
+  await requestEdit(message, { type: "attack", attack: withJoiner(attack, entry, attacker,
     { ceiling: maxEnergyCharges(attack.profile, DBUCharacterData.MAX_ENERGY_CHARGES, attacker) }) });
+  return true;
 }
 
 /**
