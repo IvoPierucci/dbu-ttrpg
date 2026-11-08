@@ -4145,8 +4145,9 @@ export function requestEdit(message, request) {
 
 export function registerChatHooks() {
   Hooks.on("renderChatMessageHTML", onRenderChatMessage);
-  // A card an Instant makes from its stage goes before the Maneuver it answers (anchorNewMessage).
-  Hooks.on("preCreateChatMessage", document => anchorNewMessage(document));
+  // A card an Instant makes goes before the Maneuver it answers (anchorNewMessage); a targeted Maneuver's card carries its use
+  // (stampManeuverUse) - for the GM's Targets.
+  Hooks.on("preCreateChatMessage", document => { anchorNewMessage(document); stampManeuverUse(document); });
 }
 
 /**
@@ -4347,6 +4348,7 @@ function onRenderChatMessage(message, html) {
   renderMoment(message, html);
   renderInstantResponses(message, html);
   renderInstantRow(message, html);
+  renderUseTargets(message, html);
   renderOutOfSequence(message, html);
   renderAfterTheFact(message, html);
   renderCurePoison(message, html);
@@ -10310,25 +10312,169 @@ async function retarget(message, keep) {
 async function cancelByInstantaneousControl(message) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack?.attackerUuid || attack.result) return;
-  const attacker = fromUuidSync(attack.attackerUuid);
-  const refund = attack.refund ?? attack.paid ?? {};
-  if (attacker) {
-    const kind = refund.kind || "standard";
-    const actions = (Number(refund.actions) || 0) + (Number(refund.extraActions) || 0);
-    const without = (list, gone) => { const left = [...(list ?? [])]; for (const entry of gone ?? []) {
-      const at = left.lastIndexOf(entry); if (at >= 0) left.splice(at, 1); } return left; };
-    await requestActorUpdate(attacker, {
-      "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + (Number(refund.ki) || 0)),
-      "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - (Number(refund.capacity) || 0)),
-      ...(refund.divine ? { "system.divineKi.value": Math.min(attacker.system.divineKi?.max ?? Infinity,
-        (attacker.system.divineKi?.value ?? 0) + (Number(refund.divine) || 0)) } : {}),
-      ...(actions ? { [`system.actionsSpent.${kind}`]: Math.max(0, (attacker.system.actionsSpent?.[kind] ?? 0) - actions) } : {}),
-      ...(refund.used?.length ? { "system.usedManeuvers": without(attacker.system.usedManeuvers, refund.used) } : {}),
-      ...((refund.round?.length || refund.encounter?.length) ? { "system.talentUses": {
-        round: without(attacker.system.talentUses?.round, refund.round), encounter: without(attacker.system.talentUses?.encounter, refund.encounter) } } : {})
-    });
-  }
+  await regainRefund(fromUuidSync(attack.attackerUuid), attack.refund ?? attack.paid ?? {});
   return requestEdit(message, { type: "attack", attack: { ...attack, icCancelled: true, pending: [] } });
+}
+
+/**
+ * What a Maneuver cost, given back (Instantaneous Control's Cancel): its Actions - of one kind, or by kind - its Ki, Capacity and Divine
+ * Ki, and the /Round and /Encounter uses it and what was applied to it counted, taken off.
+ */
+async function regainRefund(actor, refund = {}) {
+  if (!actor) return;
+  const kind = refund.kind || "standard";
+  const actions = (Number(refund.actions) || 0) + (Number(refund.extraActions) || 0);
+  const byKind = { ...(refund.actionsBy ?? {}) };
+  if (actions) byKind[kind] = (byKind[kind] ?? 0) + actions;
+  const without = (list, gone) => { const left = [...(list ?? [])]; for (const entry of gone ?? []) {
+    const at = left.lastIndexOf(entry); if (at >= 0) left.splice(at, 1); } return left; };
+  await requestActorUpdate(actor, {
+    "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + (Number(refund.ki) || 0)),
+    "system.capacity.spent": Math.max(0, actor.system.capacity.spent - (Number(refund.capacity) || 0)),
+    ...(refund.divine ? { "system.divineKi.value": Math.min(actor.system.divineKi?.max ?? Infinity,
+      (actor.system.divineKi?.value ?? 0) + (Number(refund.divine) || 0)) } : {}),
+    ...Object.fromEntries(Object.entries(byKind).filter(([, n]) => n > 0).map(([each, n]) =>
+      [`system.actionsSpent.${each}`, Math.max(0, (actor.system.actionsSpent?.[each] ?? 0) - n)])),
+    ...(refund.used?.length ? { "system.usedManeuvers": without(actor.system.usedManeuvers, refund.used) } : {}),
+    ...((refund.round?.length || refund.encounter?.length) ? { "system.talentUses": {
+      round: without(actor.system.talentUses?.round, refund.round), encounter: without(actor.system.talentUses?.encounter, refund.encounter) } } : {})
+  });
+}
+
+/**
+ * Any targeted Maneuver's use (the user's: Instantaneous Control is every Maneuver's - a Unique Ability's reach can be left too): who
+ * used it, at whom, and what it cost, on its cards - the Maneuver's own and its Clash's, not an attack's (that one has its own). Begun
+ * before the use with what the character had, ended after with the difference (useManeuver).
+ */
+const MANEUVER_USE_FLAG = "maneuverUse";
+const maneuverUses = [];
+
+/** Pools and uses as they stand, to tell what a use took. */
+function useSnapshot(actor) {
+  const system = actor?.system ?? {};
+  return { ki: Number(system.ki?.value) || 0, capacity: Number(system.capacity?.spent) || 0, divine: Number(system.divineKi?.value) || 0,
+    actions: { ...(system.actionsSpent ?? {}) }, used: [...(system.usedManeuvers ?? [])],
+    round: [...(system.talentUses?.round ?? [])], encounter: [...(system.talentUses?.encounter ?? [])] };
+}
+
+/** A targeted Maneuver's use begins: its record, on top of any it is made within. */
+export function beginManeuverUse(actor, maneuver, targets = []) {
+  const aimed = targets.filter(target => target && (target.uuid !== actor?.uuid));
+  const use = { id: foundry.utils.randomID(), actorUuid: actor?.uuid ?? "", actorName: actor?.name ?? "", maneuverName: maneuver?.name ?? "",
+    targets: aimed.map(target => ({ uuid: target.uuid, name: target.name })), before: useSnapshot(actor) };
+  maneuverUses.push(use);
+  return use;
+}
+
+/** Its card being made: the record on it - a Maneuver's own card or its Clash's, not an attack's, and only where it has a target. */
+function stampManeuverUse(document) {
+  const use = maneuverUses.at(-1);
+  if (!use?.targets.length) return;
+  const flags = document.flags?.[SCOPE] ?? {};
+  if (flags[ATTACK_FLAG] || flags[MANEUVER_USE_FLAG] || !(flags[RESPONDABLE_FLAG] || flags[CLASH_FLAG])) return;
+  const speaker = ChatMessage.getSpeakerActor?.(document.speaker ?? {});
+  if (speaker && (speaker.uuid !== use.actorUuid)) return;
+  document.updateSource?.({ [`flags.${SCOPE}.${MANEUVER_USE_FLAG}`]: { id: use.id, actorUuid: use.actorUuid, actorName: use.actorName,
+    maneuverName: use.maneuverName, targets: use.targets } });
+}
+
+/** The use over: what it cost - the difference from before - written on its cards; nothing, where it was not used. */
+export async function endManeuverUse(use, used) {
+  const at = maneuverUses.indexOf(use);
+  if (at >= 0) maneuverUses.splice(at, 1);
+  if (!use?.targets.length) return;
+  const cards = (game.messages?.contents ?? []).filter(message => message.getFlag(SCOPE, MANEUVER_USE_FLAG)?.id === use.id);
+  if (!cards.length) return;
+  const actor = fromUuidSync(use.actorUuid);
+  const now = useSnapshot(actor);
+  const added = (before, after) => { const left = [...before]; return after.filter(entry => {
+    const index = left.indexOf(entry); if (index < 0) return true; left.splice(index, 1); return false; }); };
+  const refund = { ki: Math.max(0, use.before.ki - now.ki), capacity: Math.max(0, now.capacity - use.before.capacity),
+    divine: Math.max(0, use.before.divine - now.divine),
+    actionsBy: Object.fromEntries(Object.keys({ ...use.before.actions, ...now.actions })
+      .map(kind => [kind, Math.max(0, (Number(now.actions[kind]) || 0) - (Number(use.before.actions[kind]) || 0))]).filter(([, n]) => n > 0)),
+    used: added(use.before.used, now.used), round: added(use.before.round, now.round), encounter: added(use.before.encounter, now.encounter) };
+  for (const card of cards) {
+    if (!used) { if (card.isOwner) await card.unsetFlag(SCOPE, MANEUVER_USE_FLAG); continue; }
+    if (card.isOwner) await card.setFlag(SCOPE, MANEUVER_USE_FLAG, { ...card.getFlag(SCOPE, MANEUVER_USE_FLAG), refund });
+  }
+}
+
+/** The GM's Targets on a targeted Maneuver's card that is not an attack - beside its name - till a Clash of it is rolled or it is cancelled. */
+function renderUseTargets(message, html) {
+  const use = message.getFlag(SCOPE, MANEUVER_USE_FLAG);
+  if (!use || message.getFlag(SCOPE, ATTACK_FLAG)) return;
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (use.cancelled || clash?.icCancelled) {
+    const note = document.createElement("div");
+    note.className = "dbu-use-cancelled";
+    note.textContent = "Cancelled - Instantaneous Control: its Actions and Ki Points regained, its uses not counted.";
+    (html.querySelector(".message-content") ?? html).append(note);
+    return;
+  }
+  if (!game.user.isGM || clash?.result) return;
+  const title = html.querySelector(".dbu-clash-title") ?? html.querySelector(".dbu-maneuver-name");
+  if (!title) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-gm-targets";
+  button.textContent = "Targets";
+  button.dataset.tooltip = clash ? "Change this Maneuver's target, or cancel it (Instantaneous Control)" : "Cancel this Maneuver (Instantaneous Control)";
+  button.addEventListener("click", () => useTargetsWindow(message));
+  title.append(" ", button);
+}
+
+/**
+ * The GM's Targets for a Maneuver that is not an attack (the user's): Instantaneous Control - its Clash's target changed while it is not
+ * rolled, or the Maneuver cancelled, its maker regaining what it cost. What it already did besides is the table's to undo.
+ */
+async function useTargetsWindow(message) {
+  if (!game.user.isGM) return;
+  const use = message.getFlag(SCOPE, MANEUVER_USE_FLAG);
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (!use || use.cancelled || clash?.result || clash?.icCancelled) return;
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  const current = clash ? [{ uuid: clash.defenderUuid, name: clash.defenderName }] : (use.targets ?? []);
+  const others = clash ? [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .filter(actor => actor && isCharacter(actor) && (actor.uuid !== use.actorUuid) && (actor.uuid !== clash.defenderUuid))
+    .map(actor => [actor.uuid, actor])).values()] : [];
+  const refund = use.refund ?? {};
+  const actions = Object.values(refund.actionsBy ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
+  const regained = [actions ? `${actions} Action(s)` : "", refund.ki ? `${refund.ki} KP` : "", refund.divine ? `${refund.divine} Divine Ki` : ""]
+    .filter(Boolean).join(" &middot; ") || "nothing";
+  const body = `${rollSection(clash ? "Target" : "Targets", current.map(target => `<div class="dbu-gm-target"><img src="${esc(fromUuidSync(target.uuid)?.img)}" alt=""/>
+      <span class="dbu-respond-name">${esc(target.name)}</span></div>`).join(""))}
+    ${rollSection("Instantaneous Control", `${clash ? `
+      <label class="dbu-respond-option"><input type="radio" name="ic" value="change" checked/><span class="dbu-respond-name">Change the target</span>
+        <select data-to><option value="">another on the scene…</option>${others.map(actor => `<option value="${actor.uuid}">${esc(actor.name)}</option>`).join("")}</select></label>` : ""}
+      <label class="dbu-respond-option"><input type="radio" name="ic" value="cancel" ${clash ? "" : "checked"}/><span class="dbu-respond-name">Cancel the Maneuver</span>
+        <span class="dbu-respond-source">and regain what was spent on it</span></label>
+      <p class="dbu-respond-note">${esc(use.actorName)} regains ${regained}${(refund.used?.length || refund.round?.length || refund.encounter?.length)
+        ? "; its /Round and /Encounter uses don't count" : ""}. What it already did besides is the table's to undo.</p>`)}`;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Targets - ${use.maneuverName}` },
+    content: rollWindowHtml({ body }),
+    buttons: [
+      { action: "apply", label: "Apply", default: true, callback: (event, button, dialog) => ({
+        mode: dialog.element.querySelector('input[name="ic"]:checked')?.value ?? "cancel",
+        to: dialog.element.querySelector("[data-to]")?.value ?? "" }) },
+      { action: "cancel", label: "Close" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return;
+  if (chosen.mode === "cancel") {
+    await regainRefund(fromUuidSync(use.actorUuid), refund);
+    if (clash) await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, icCancelled: true });
+    return message.setFlag(SCOPE, MANEUVER_USE_FLAG, { ...use, cancelled: true });
+  }
+  // A Clash's new target: the defender's side as fresh - not ready, no Skill picked.
+  const to = fromUuidSync(chosen.to);
+  if (!clash || !to) return ui.notifications.warn("Pick the new target first.");
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, defenderUuid: to.uuid, defenderName: to.name, defenderSkill: "",
+    ready: (clash.ready ?? []).filter(uuid => uuid !== clash.defenderUuid) });
+  return message.setFlag(SCOPE, MANEUVER_USE_FLAG, { ...use, targets: [{ uuid: to.uuid, name: to.name }] });
 }
 
 /** Every Instant Maneuver a character could play here, each with why not where it cannot (the user's: greyed, its reason beside it). */
@@ -10446,7 +10592,11 @@ function renderInstantRow(message, html) {
   if (!attack && !respondable && !played.length) return;
   const container = html.querySelector(".message-content") ?? html;
   const esc = text => Handlebars.escapeExpression(text ?? "");
-  const open = respondable && (!attack || (!attack.result && !attack.icCancelled && !attackIsReady(attack)));
+  // Before anything is rolled (the user's: an Instant comes before the Maneuver is known to end one way or another) - an attack till
+  // every side is ready or it is settled, a Clash (a Skill Clash, the Grapple's) till its dice are in; none once cancelled.
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  const open = respondable && !message.getFlag(SCOPE, MANEUVER_USE_FLAG)?.cancelled && !clash?.icCancelled && !clash?.result
+    && (!attack || (!attack.result && !attack.icCancelled && !attackIsReady(attack)));
   const mine = open ? ownedCharacters().filter(actor => hasInstant(actor, message, attack)) : [];
   if (!played.length && !mine.length) return;
   const row = document.createElement("div");
@@ -12512,6 +12662,15 @@ function awaitingClash(clash) {
 function renderSkillClash(message, html) {
   const clash = message.getFlag(SCOPE, CLASH_FLAG);
   if (!clash) return;
+  // Cancelled by Instantaneous Control (the GM's Targets): its name, and nothing more to roll - renderUseTargets says why.
+  if (clash.icCancelled) {
+    const container = html.querySelector(".message-content") ?? html;
+    const card = document.createElement("div");
+    card.className = "dbu-clash";
+    card.innerHTML = `<div class="dbu-clash-title">${Handlebars.escapeExpression(clash.maneuverName)}</div>`;
+    container.append(card);
+    return;
+  }
 
   const container = html.querySelector(".message-content") ?? html;
   const result = clash.result;

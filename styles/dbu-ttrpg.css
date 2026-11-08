@@ -5280,7 +5280,7 @@
 .dbu-ready-change:hover { color: #ffffff; background: #4a4258; border-color: #9a8aac; }
 
 /* The GM's Targets (the user's): small and grey beside the Maneuver's name, lit only when pointed at. */
-.dbu-clash-title .dbu-gm-targets {
+.dbu-clash-title .dbu-gm-targets, .dbu-maneuver-name .dbu-gm-targets {
   display: inline-block;
   width: auto;
   height: auto;
@@ -5296,7 +5296,8 @@
   border-radius: 3px;
   opacity: 0.65;
 }
-.dbu-clash-title .dbu-gm-targets:hover { opacity: 1; color: var(--dbu-chat-text, #ccc); border-color: #777; }
+.dbu-clash-title .dbu-gm-targets:hover, .dbu-maneuver-name .dbu-gm-targets:hover { opacity: 1; color: var(--dbu-chat-text, #ccc); border-color: #777; }
+.dbu-use-cancelled { margin-top: 4px; font-size: 11px; color: #e8c860; }
 .application.dbu-dialog .dbu-gm-target { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
 .application.dbu-dialog .dbu-gm-target img { width: 22px; height: 22px; flex: 0 0 22px; border: none; border-radius: 3px; object-fit: cover; }
 .application.dbu-dialog .dbu-gm-target .dbu-respond-name { flex: 1; }

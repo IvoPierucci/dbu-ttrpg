@@ -4823,7 +4823,19 @@ export async function useManeuver(actor, maneuver, options = {}) {
   }
   // Mystic Power (2): readied this Round - the Unique Ability now used, Might and Saving Throws 1(T) for it.
   if ((maneuver?.tags ?? []).includes("uniqueAbility")) await (await import("./chat.mjs")).mysticPowerOn(actor);
-  const used = await useManeuverThrough(actor, maneuver, options);
+  // A targeted Maneuver's use (the user's): what it cost, kept on its cards for the GM's Targets - Instantaneous Control.
+  const { beginManeuverUse, endManeuverUse } = await import("./chat.mjs");
+  // Only a Maneuver that aims at someone - a target needed, a Clash opened - not whatever token happens to be targeted.
+  const targeted = Boolean(maneuver?.requiresTarget || maneuver?.clash || maneuver?.attacking);
+  const aimed = !targeted ? [] : options.targetUuid ? [fromUuidSync(options.targetUuid)]
+    : Array.from(game.user?.targets ?? []).map(token => token.actor);
+  const use = beginManeuverUse(actor, maneuver, aimed.filter(Boolean));
+  let used = false;
+  try {
+    used = await useManeuverThrough(actor, maneuver, options);
+  } finally {
+    await endManeuverUse(use, used);
+  }
   if (ferocious && !used) await ferociousUndo(actor);
   if (used && geneticFlag && game.combat?.started) await actor.setFlag("dbu-ttrpg", geneticFlag, round);
   return used;
