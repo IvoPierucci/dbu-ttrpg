@@ -47,7 +47,7 @@ import {
 } from "../conditions.mjs";
 import { actionsLeft, actionsWithin, convertActions, convertibleActions, isTheirTurn, newRoundFor, spendActions }
   from "../combat.mjs";
-import { whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
+import { instantHeld, instantTurnKey, whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
 import { baseDieLine, breakdownTable, contributionLine, extraDiceLine, partLine, noteLine, floorLine, skillWorkingsTable,
          fromOutcome, workingsTable, atRollTime, saveClashBonuses } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
@@ -447,6 +447,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       resizable: true
     },
     actions: {
+      toggleInstantHeld: DBUCharacterSheet._onToggleInstantHeld,
       rollAttribute: DBUCharacterSheet._onAttributeRoll,
       dbuChangeTab: DBUCharacterSheet._onChangeTab,
       rollSkill: DBUCharacterSheet._onSkillRoll,
@@ -954,6 +955,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
 
     context.combatEditMode = this.#combatEditMode;
+    // "Last was Instant": the hold as the rule reads it - an Instant this Turn (maneuvers.mjs instantHeld).
+    context.instantHeld = instantHeld(this.actor.system.instantPlayed);
     // Offered until it is taken. Not gated on there being a Combat in the tracker: a
     // table running an Encounter without one still has an Encounter, and this is the
     // only door to its start for them.
@@ -3356,6 +3359,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       flavor: "Might Check",
       criticalDice: this.actor.system.dice.critical.formula
     });
+  }
+
+  /** "Last was Instant", set by hand in edit mode - this Turn's, for the table to correct (Turns are the Combat's). */
+  static async _onToggleInstantHeld(event, target) {
+    return this.actor.update({ "system.instantPlayed": target.checked
+      ? { held: true, messageId: "", turn: instantTurnKey() }
+      : { held: false, messageId: "", turn: "" } });
   }
 
   static async _onSaveRoll(event, target) {

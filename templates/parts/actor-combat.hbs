@@ -437,14 +437,14 @@
           </div>
           {{/if}}
 
+          {{! The Instant hold as the rule reads it: your last Maneuver this Turn an Instant (maneuvers.mjs instantHeld). }}
           <div class="stat"
-               data-tooltip="An Instant Maneuver cannot follow another Instant.">
+               data-tooltip="An Instant Maneuver cannot be used if your last Maneuver this Turn was an Instant.">
             <em>Last was Instant</em>
             {{#if combatEditMode}}
-            <input type="checkbox" name="system.lastManeuverWasInstant"
-                   {{#if system.lastManeuverWasInstant}}checked{{/if}}/>
+            <input type="checkbox" data-action="toggleInstantHeld" {{#if instantHeld}}checked{{/if}}/>
             {{else}}
-            <span>{{#if system.lastManeuverWasInstant}}Yes{{else}}No{{/if}}</span>
+            <span>{{#if instantHeld}}Yes{{else}}No{{/if}}</span>
             {{/if}}
           </div>
 
