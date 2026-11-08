@@ -8259,15 +8259,6 @@ function renderInstantResponses(message, html) {
 
   if (!ownedCharacters().length) return;
 
-  // A Maneuver that is not an attack: its Instants played at once, from their own button (the user's) - nothing waits on them.
-  if (!attack && respondable && ownedCharacters().some(actor => hasInstant(actor, message, null))) {
-    const instant = document.createElement("button");
-    instant.type = "button";
-    instant.className = "dbu-clash-button dbu-instant-button";
-    instant.textContent = "Instant Maneuver";
-    instant.addEventListener("click", () => instantWindows(message, null));
-    container.append(instant);
-  }
   // An attack not yet rolled (the user's): your targets ready - "✓ Ready" and Change while a side is not; every side ready, the
   // answers carried out and nothing changed now.
   if (attack && !attack.result) {
@@ -10443,17 +10434,19 @@ async function useCardInstant(message, actor, maneuverId) {
 }
 
 /**
- * The Instant row at an attack card's foot (the user's): an Instant played at once, before the Maneuver - nothing waits on it, the
- * order is the table's - while the attack is still open: gone once every side is ready or it is settled, and for whoever played one on
- * it already. What was played on the card stays noted under it, in yellow.
+ * The Instant row at a Maneuver card's foot (the user's): an Instant played at once, before the Maneuver - nothing waits on it, the
+ * order is the table's. On an attack while it is still open - gone once every side is ready or it is settled; on any other Maneuver
+ * that can be answered, while the card is there. Gone for whoever played one on it already. What was played stays noted, in yellow.
  */
 function renderInstantRow(message, html) {
-  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
-  if (!attack?.attackerUuid) return;
+  const found = message.getFlag(SCOPE, ATTACK_FLAG);
+  const attack = found?.attackerUuid ? found : null;
+  const respondable = Boolean(message.getFlag(SCOPE, RESPONDABLE_FLAG));
+  const played = message.getFlag(SCOPE, INSTANTS_PLAYED_FLAG) ?? [];
+  if (!attack && !respondable && !played.length) return;
   const container = html.querySelector(".message-content") ?? html;
   const esc = text => Handlebars.escapeExpression(text ?? "");
-  const played = message.getFlag(SCOPE, INSTANTS_PLAYED_FLAG) ?? [];
-  const open = !attack.result && !attack.icCancelled && Boolean(message.getFlag(SCOPE, RESPONDABLE_FLAG)) && !attackIsReady(attack);
+  const open = respondable && (!attack || (!attack.result && !attack.icCancelled && !attackIsReady(attack)));
   const mine = open ? ownedCharacters().filter(actor => hasInstant(actor, message, attack)) : [];
   if (!played.length && !mine.length) return;
   const row = document.createElement("div");
@@ -10474,7 +10467,7 @@ function renderInstantRow(message, html) {
 
 /**
  * Instant Maneuver (the user's): one window a character - what they have, every Instant they could play, one of them; several of
- * yours, a picker first. Played at once: on an attack before it (useCardInstant), on any other Maneuver into its card.
+ * yours, a picker first. Played at once, its card before the Maneuver's (useCardInstant) - an attack's or any other.
  */
 async function instantWindows(message, attack) {
   const actors = ownedCharacters().filter(actor => hasInstant(actor, message, attack));
@@ -10534,9 +10527,8 @@ async function instantWindows(message, attack) {
   }
   for (const [uuid, id] of picks) {
     const actor = fromUuidSync(uuid);
-    if (!id || !actor) continue;
-    if (attack) await useCardInstant(message, actor, id);
-    else await playInstant(message, actor, id);
+    // The same on any card (the user's): used as from the sheet, its card before the Maneuver's.
+    if (id && actor) await useCardInstant(message, actor, id);
   }
 }
 
