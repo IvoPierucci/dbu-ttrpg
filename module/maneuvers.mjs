@@ -3753,18 +3753,15 @@ export function whyNotAnotherInstant(actor) {
   return "Your last Maneuver this Turn was an Instant. Use another kind first.";
 }
 
-/** Instants that stop the Instant stage for nobody by default - too seldom played on another's attack (the user's). */
-export const INSTANTS_NOT_STOPPING = Object.freeze(["no-effort", "united-attack-maneuver"]);
-
 /**
- * Whether an Instant stops an attack's Instant stage for its owner by default (the user's): every one but No Effort and United Attack,
- * and Command - which stops only for a character with a Minion Talent: having Minions or not, Goops and Duplicates come and go in a
- * battle, so the Talent is what counts.
+ * The Instants that stop the Instant stage for nobody by default (the user's): the four core ones every character is given at the start -
+ * Command, No Effort, Surge, United Attack - held by all and seldom played on another's attack. Set on the Settings tab by hand, they do.
  */
+export const INSTANTS_NOT_STOPPING = Object.freeze(["command", "no-effort", "surge", "united-attack-maneuver"]);
+
+/** Whether an Instant stops an attack's Instant stage for its owner by default: every one but those four. */
 export function instantStopsDefault(actor, id) {
-  if (INSTANTS_NOT_STOPPING.includes(id)) return false;
-  if (id !== "command") return true;
-  return Array.from(actor?.items ?? []).some(item => (item.type === "talent") && (item.system?.category === "minion"));
+  return !INSTANTS_NOT_STOPPING.includes(id);
 }
 
 /** Whether this Instant stops the Instant stage for them: as they set it on the Settings tab, or by default. */
