@@ -152,6 +152,23 @@ Hooks.on("preUpdateActor", (actor, changes) => {
 // is reliably available, and ready is the backstop for the case where it was not.
 Hooks.once("ready", registerManeuverSocket);
 
+// The three placeholder Maneuvers taken out on 2026-10-10 (1a286da) - Jump, Thumb War, Crouch - still held as Items by characters made
+// before then (the user's: "ya no son necesarias"). Taken off them once the world is ready, by the active GM: the world's characters,
+// and the unlinked tokens' own.
+export const RETIRED_MANEUVERS = Object.freeze(["jump", "thumb-war", "crouch"]);
+Hooks.once("ready", async () => {
+  if (!game.user.isGM || (game.user !== game.users.activeGM)) return;
+  const actors = [...(game.actors ?? [])];
+  for (const scene of game.scenes ?? []) {
+    for (const token of scene.tokens ?? []) if (!token.actorLink && token.actor) actors.push(token.actor);
+  }
+  for (const actor of actors) {
+    const ids = Array.from(actor.items ?? []).filter(item => (item.type === "maneuver")
+      && RETIRED_MANEUVERS.includes(item.system?.maneuverId || item.flags?.["dbu-ttrpg"]?.sourceId)).map(item => item.id);
+    if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids).catch(error => console.error("DBU TTRPG | Retired Maneuvers", error));
+  }
+});
+
 // Compiled effects are cached by the content they came from, so a stale entry cannot
 // happen - an edit produces a different key. These only bound how much is kept.
 Hooks.on("updateItem", item => forget(item.uuid));
