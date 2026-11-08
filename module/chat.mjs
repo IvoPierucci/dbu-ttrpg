@@ -10091,21 +10091,6 @@ function dealDamageChoices(target, own) {
   return { before, taken: unique(taken), none: unique(none), any: Boolean(before.length || taken.length || none.length) };
 }
 
-/** Dealt by itself where nothing is left to choose (the user's) - by the one who plays them, or the GM if they are away; once. */
-const autoDealt = new Set();
-function autoDealDamage(message, target, attack) {
-  const key = `${message.id}:${target.uuid}`;
-  if (autoDealt.has(key)) return;
-  const player = playerOf(target);
-  const mine = (player && player.active) ? (player === game.user) : (game.user === game.users.activeGM);
-  if (!mine) return;
-  autoDealt.add(key);
-  setTimeout(() => applyAttackDamage(message, target, attack).catch(error => {
-    console.error("DBU TTRPG | Could not deal the Damage", error);
-    autoDealt.delete(key);
-  }), 0);
-}
-
 /**
  * Deal Damage (the user's): what reaches the one hit - "Wound - Soak - DR = Damage", their Life before and after, the Damage
  * Category - then "Before the Damage", what can lower or cancel it (Hyper Resilience), applied first and live; then what answers
@@ -40319,20 +40304,23 @@ function renderAttack(message, html) {
       continue;
     }
 
-    // Deal Damage (the user's): the one hit sees what reaches them and chooses what answers it - or, nothing to choose, it is
-    // dealt by itself. A Wound the Soak Value absorbed entirely, with nothing answering that, is nothing to deal.
+    // Deal Damage (the user's): always its button, never dealt by itself - with something to choose, its window; with nothing, the
+    // click deals it to that target. A Wound the Soak Value absorbed entirely, with nothing answering that, is nothing to deal.
     const choices = dealDamageChoices(target, entry.own);
     if ((entry.own.damage <= 0) && !choices.any) continue;
-    if (!choices.any) {
-      autoDealDamage(message, target, attack);
-      continue;
-    }
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dbu-clash-button dbu-damage-button";
     button.textContent = `Deal Damage - ${target.name}`;
-    button.dataset.tooltip = `${entry.own.damage} Damage, and what answers it`;
-    button.addEventListener("click", () => dealDamageWindow(message, target, attack));
+    button.dataset.tooltip = choices.any ? `${entry.own.damage} Damage, and what answers it` : `${entry.own.damage} Damage to ${target.name}`;
+    button.addEventListener("click", () => {
+      if (choices.any) return dealDamageWindow(message, target, attack);
+      button.disabled = true;
+      return applyAttackDamage(message, target, attack).catch(error => {
+        console.error("DBU TTRPG | Could not deal the Damage", error);
+        button.disabled = false;
+      });
+    });
     container.append(button);
   }
 }
