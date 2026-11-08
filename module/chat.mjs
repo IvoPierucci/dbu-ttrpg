@@ -86,6 +86,8 @@ import {
   throughBasicAttack
 } from "./maneuvers.mjs";
 import { appliedTraits, boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
+import { definitionOf } from "./use-maneuver.mjs";
+import { traitActive } from "./conditions.mjs";
 
 /** Flag scope for everything this system stores on a ChatMessage. */
 const SCOPE = "dbu-ttrpg";
@@ -8253,6 +8255,18 @@ function instantManeuvers() {
   return allManeuvers().filter(maneuver => maneuver.type === "instant");
 }
 
+/**
+ * The Instants a character has, as their sheet lists them (the user's): their own Maneuver Items, none that nothing has opened yet - a
+ * Trait's not active, a Special one not theirs - and no Signature Technique but through the Signature Technique Maneuver.
+ */
+function ownInstants(actor) {
+  return Array.from(actor?.items ?? []).filter(item => (item.type === "maneuver") && (item.system?.type === "instant"))
+    .map(item => definitionOf(item))
+    .filter(maneuver => !(maneuver.signature && !maneuver.signatureTechnique))
+    .filter(maneuver => !(maneuver.fromTrait && !traitActive(actor, maneuver.fromTrait)) && !whyNotSpecial(actor, maneuver))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** A God Maneuver is listed only where an effect grants it, as on the sheet; every other Maneuver always. */
 function godListed(actor, maneuver) {
   return !maneuver.godManeuver || (actor?.system?.effects?.slots?.[`maneuver.${maneuver.id}`] === true);
@@ -10304,12 +10318,11 @@ function instantStageOf(message) {
 function instantOptions(actor, message, attack) {
   if (!actor) return [];
   const maker = messageMaker(message, attack);
-  return instantManeuvers().filter(maneuver => godListed(actor, maneuver)).map(maneuver => {
+  return ownInstants(actor).map(maneuver => {
     let reason = "";
     // Instant Assault: "No Instant Maneuvers can be triggered in response to this Attacking Maneuver."
     if (attack?.technique?.features?.includes("instant-assault")) reason = "Instant Assault";
-    else if (!maneuver.surge && (frozenBy(actor) || frozenTurnOf(actor))) reason = "time is frozen";
-    else if (maneuver.godManeuver && whyNotSpecial(actor, maneuver)) reason = whyNotSpecial(actor, maneuver);
+    else if ((frozenBy(actor) || frozenTurnOf(actor)) && !(maneuver.surge ?? getManeuver(maneuver.id)?.surge)) reason = "time is frozen";
     else if ((message?.getFlag(SCOPE, INSTANTS_ON_FLAG) ?? []).includes(actor.uuid)) reason = "you already played an Instant on this Maneuver";
     // Your own Maneuver: an Instant played on it comes before it - after whatever you used before declaring it.
     else if (maker === actor.uuid) { if (message?.getFlag(SCOPE, "makerInstantHeld")) reason = "your last Maneuver before this one was an Instant"; }
@@ -10429,7 +10442,7 @@ export function anchorNewMessage(data) {
 async function useStageInstant(message, entry) {
   const actor = fromUuidSync(entry.uuid);
   if (!actor) return requestEdit(message, { type: "instantDone", id: entry.id });
-  const owned = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.system.maneuverId === entry.maneuverId));
+  const owned = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && ((item.system.maneuverId || item.id) === entry.maneuverId));
   const before = message.timestamp ?? Date.now();
   chatAnchor.before = before - 1000 + (instantsInOrder(instantStageOf(message)).findIndex(each => each.id === entry.id) + 1) * 100;
   chatAnchor.count = 0;
