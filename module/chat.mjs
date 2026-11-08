@@ -10371,7 +10371,9 @@ function stampManeuverUse(document) {
   const use = maneuverUses.at(-1);
   if (!use?.targets.length) return;
   const flags = document.flags?.[SCOPE] ?? {};
-  if (flags[ATTACK_FLAG] || flags[MANEUVER_USE_FLAG] || !(flags[RESPONDABLE_FLAG] || flags[CLASH_FLAG])) return;
+  // A Maneuver's own card (postManeuver's) of any type - Standard, Counter, Out-of-Sequence - or a Clash's; never an attack's.
+  const maneuverCard = String(document.content ?? "").includes('class="dbu-maneuver-name"');
+  if (flags[ATTACK_FLAG] || flags[MANEUVER_USE_FLAG] || !(flags[RESPONDABLE_FLAG] || flags[CLASH_FLAG] || maneuverCard)) return;
   const speaker = ChatMessage.getSpeakerActor?.(document.speaker ?? {});
   if (speaker && (speaker.uuid !== use.actorUuid)) return;
   document.updateSource?.({ [`flags.${SCOPE}.${MANEUVER_USE_FLAG}`]: { id: use.id, actorUuid: use.actorUuid, actorName: use.actorName,
@@ -10469,10 +10471,11 @@ async function useTargetsWindow(message) {
     if (clash) await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, icCancelled: true });
     return message.setFlag(SCOPE, MANEUVER_USE_FLAG, { ...use, cancelled: true });
   }
-  // A Clash's new target: the defender's side as fresh - not ready, no Skill picked.
+  // A Clash's new target: the defender's side as fresh - not ready, no Skill or roll picked.
   const to = fromUuidSync(chosen.to);
   if (!clash || !to) return ui.notifications.warn("Pick the new target first.");
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, defenderUuid: to.uuid, defenderName: to.name, defenderSkill: "",
+    ...(("defenderRoll" in clash) ? { defenderRoll: "" } : {}),
     ready: (clash.ready ?? []).filter(uuid => uuid !== clash.defenderUuid) });
   return message.setFlag(SCOPE, MANEUVER_USE_FLAG, { ...use, targets: [{ uuid: to.uuid, name: to.name }] });
 }
