@@ -579,6 +579,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
       resetTurnState: DBUCharacterSheet._onResetTurnState,
       openCombatWindow: DBUCharacterSheet._onOpenCombatWindow,
+      addSpecialty: DBUCharacterSheet._onAddSpecialty,
+      removeSpecialty: DBUCharacterSheet._onRemoveSpecialty,
+      keepSpecialty: DBUCharacterSheet._onKeepSpecialty,
       closeCombatWindow: DBUCharacterSheet._onCloseCombatWindow,
       pinCombat: DBUCharacterSheet._onPinCombat,
       setThresholdCheck: DBUCharacterSheet._onSetThresholdCheck,
@@ -665,6 +668,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   /** The Escape that closes that window rather than the sheet, while one is open. */
   #combatKey = null;
+
+  /** The added Specialty asked about before it is taken off, having Ranks - its id, or none. */
+  #specialtyConfirm = null;
 
   /**
    * Which collapsible sections are open, by their `data-section` name.
@@ -1510,6 +1516,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }));
     context.racialTraits = this.#racialTraitChoices(triggered);
     context.stateTriggers = this.#stateTriggers();
+    // Skill Specialties: Craft's and Knowledge's, the Core ones and this character's own (the user's).
+    context.specialties = this.#specialtyGroups();
     // Evolution, Bestial and Monstrous Traits: the same rows, in a list of their own (the user's).
     context.otherTraits = this.#racialTraitChoices(triggered, ownedOtherTraits(this.actor));
     context.isGM = game.user.isGM;
@@ -1648,7 +1656,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * (`overflow`), as the list it replaces refused.
    */
   #racialSkillBenefit() {
-    const { SKILLS } = DBUCharacterData;
+    const SKILLS = this.actor.system.skillTable ?? DBUCharacterData.SKILLS;
     const slots = racialSkillRankCount(this.actor.system.race, this.#minionMade());
     const picks = (this.actor.system.racialSkillRanks ?? []).filter(key => key && SKILLS[key]).slice(0, slots);
     const progression = this.actor.system.progression;
@@ -1713,7 +1721,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // The Settings tab's States' Triggered / Automatic, in the same window over the sheet (the user's).
       stateTriggers: windowIs === "stateTriggers",
       // And its Allies' and Minions' (or Master's) Manage windows.
-      allies: windowIs === "allies", minions: windowIs === "minions", master: windowIs === "master" };
+      allies: windowIs === "allies", minions: windowIs === "minions", master: windowIs === "master",
+      // The Settings tab's Skill Specialties.
+      specialties: windowIs === "specialties" };
 
     // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
     // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together. What
@@ -2813,7 +2823,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** A listed Specialty ticked or unticked: the Skill's field holds the keys, comma-separated. */
   static async _onToggleSpecialty(event, target) {
     const key = target.dataset.skill;
-    const skill = DBUCharacterData.SKILLS[key];
+    const skill = (this.actor.system.skillTable ?? DBUCharacterData.SKILLS)[key];
     if (!skill?.specialties) return;
     const held = new Set(DBUCharacterData.specialtiesHeld(skill, this.actor.system.skillSpecializations?.[key]));
     if (target.checked) held.add(target.dataset.specialty);
@@ -2848,7 +2858,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * always derived from the option rather than entered by hand.
    */
   _prepareProgressionRows() {
-    const { SKILLS } = DBUCharacterData;
+    const SKILLS = this.actor.system.skillTable ?? DBUCharacterData.SKILLS;
     // A Talent Addition row names the Talent taken at that Level - every Talent written, by Category - and the Talent is
     // put on the character from it (talents.mjs syncProgressionTalents).
 
@@ -2926,7 +2936,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * against the Scores and Ranks of the table's rows up to that Level and the Perks above it there too.
    */
   #prepareCharacterPerks() {
-    const { SKILLS } = DBUCharacterData;
+    const SKILLS = this.actor.system.skillTable ?? DBUCharacterData.SKILLS;
     const system = this.actor.system;
     const powerLevel = system.powerLevel;
     const attributeKeys = Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS);
@@ -3576,6 +3586,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (fresh || !this.#combatWindow) old.forEach(overlay => overlay.remove());
       if (fresh) {
         this.element.append(fresh);
+        // Skill Specialties: renamed by writing over it, its key kept; Enter in the new one's field adds it.
+        for (const field of fresh.querySelectorAll("[data-specialty-name]")) {
+          field.addEventListener("change", () => {
+            const name = field.value.trim();
+            if (!name) { field.value = field.defaultValue; return; }
+            this.actor.update({ "system.skillSpecialties": (this.actor.system.skillSpecialties ?? [])
+              .map(entry => ((entry.id === field.dataset.specialtyName) ? { ...entry, name } : { ...entry })) });
+          });
+          field.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); field.blur(); } });
+        }
+        for (const field of fresh.querySelectorAll("[data-specialty-new]")) {
+          field.addEventListener("keydown", event => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            fresh.querySelector(`[data-action="addSpecialty"][data-base="${field.dataset.specialtyNew}"]`)?.click();
+          });
+        }
         fresh.addEventListener("pointerdown", event => { if (event.target === fresh) this.#closeCombatWindow(); });
         if (!this.#combatKey) {
           this.#combatKey = event => {
@@ -3691,7 +3718,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const escape = text => String(text).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
     const attributes = Object.entries(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)
       .map(([key, abbr]) => ({ key, abbr, name: DBUCharacterSheet.#attributeName(key) }));
-    const skills = Object.entries(DBUCharacterData.SKILLS).map(([key, skill]) => ({ key, name: skill.label, attribute: skill.attribute }));
+    const skills = Object.entries(this.actor.system.skillTable ?? DBUCharacterData.SKILLS)
+      .map(([key, skill]) => ({ key, name: skill.label, attribute: skill.attribute }));
     const counted = list => list.reduce((map, key) => { if (key) map[key] = (map[key] ?? 0) + 1; return map; }, {});
     // A row's Level, or a Character Perk's.
     const levelText = () => (data.lvl ? `${data.perk ? "Character Perk · " : ""}Power Level ${data.lvl} · ` : "");
@@ -3754,7 +3782,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         : skills.filter(({ key }) => counts[key]).map(({ key, name }) => ((counts[key] > 1) ? `+${counts[key]} ${name}` : name));
       const over = Object.entries(counts).filter(([key, n]) => (((Number(data.before?.[key]) || 0) + n) > data.cap)
         || (data.overflow ?? []).includes(key))
-        .map(([key]) => ((kind === "attributes") ? DBUCharacterSheet.#attributeName(key) : (DBUCharacterData.SKILLS[key]?.label ?? key)));
+        .map(([key]) => ((kind === "attributes") ? DBUCharacterSheet.#attributeName(key) : ((this.actor.system.skillTable ?? DBUCharacterData.SKILLS)[key]?.label ?? key)));
       return `<div class="dbu-benefit-summary">${names.length ? `<b>${escape(names.join(", "))}</b>` : "Nothing chosen yet."}`
         + `${over.length ? ` <span class="over">— ${escape(over.join(", "))} over the cap of ${data.cap}</span>` : ""}</div>`;
     };
@@ -4465,7 +4493,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (!answers.technique) return null;
     }
     if (chooses === "skill") {
-      answers.skill = await pick("Skill", Object.entries(DBUCharacterData.SKILLS).map(([key, skill]) =>
+      answers.skill = await pick("Skill", Object.entries(actor.system?.skillTable ?? DBUCharacterData.SKILLS).map(([key, skill]) =>
         [key, skill.label]));
       if (!answers.skill) return null;
     }
@@ -4503,7 +4531,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       grows: (buddyHeader(item, getTrait, "grows") === true) && Boolean(this.actor.system.adventuring)
         && !buddy.destroyed,
       buddyKind: { greater: "Greater", unique: "Unique" }[String(buddyHeader(item, getTrait, "buddyKind") ?? "")] ?? "",
-      choiceLabel: buddyChoiceLabel(item, getTrait, { profiles: PROFILES, skills: DBUCharacterData.SKILLS,
+      choiceLabel: buddyChoiceLabel(item, getTrait, { profiles: PROFILES, skills: this.actor.system.skillTable ?? DBUCharacterData.SKILLS,
         techniqueName: technique?.name ?? "" }),
       tip: buddyLine(item, getTrait).map(trait => trait.description ?? "").filter(Boolean).join(" ")
     };
@@ -7290,7 +7318,64 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** The Turn State's window, or a list's Manage window, over the sheet. */
   static _onOpenCombatWindow(event, target) {
     this.#combatWindow = target.dataset.window || null;
+    this.#specialtyConfirm = null;
     this.render();
+  }
+
+  /**
+   * Skill Specialties, for the Settings tab and its window (the user's): Craft's and Knowledge's side by side - the Core ones by
+   * name, and this character's own with their Ranks, renamed by writing over them and taken off (asked first, where they have Ranks).
+   */
+  #specialtyGroups() {
+    const table = DBUCharacterData.SKILLS;
+    const own = this.actor.system.skillSpecialties ?? [];
+    return Object.entries(DBUCharacterData.SPECIALTY_BASES).map(([base, def]) => ({
+      base, label: def.label,
+      note: (base === "craft") ? "Scholarship · (R) · Repair at 2" : "Scholarship",
+      core: Object.entries(table).filter(([key]) => DBUCharacterData.skillFamily(key) === base)
+        .map(([, skill]) => skill.label.replace(/^[^(]*\(|\)$/g, "")),
+      added: own.filter(entry => entry.base === base).map(entry => {
+        const ranks = Number(this.actor.system.skills?.[entry.id]?.ranks) || 0;
+        return { id: entry.id, name: entry.name, ranks, ranksLabel: ranks ? `${ranks} Rank${(ranks === 1) ? "" : "s"}` : "",
+          confirm: this.#specialtyConfirm === entry.id };
+      })
+    }));
+  }
+
+  /** A Specialty added to Craft or Knowledge: its name from the field beside the button, its key from its Skill's. */
+  static async _onAddSpecialty(event, target) {
+    const base = target.dataset.base;
+    if (!DBUCharacterData.SPECIALTY_BASES[base]) return;
+    const field = this.element.querySelector(`[data-specialty-new="${base}"]`);
+    const name = String(field?.value ?? "").trim();
+    if (!name) return ui.notifications.warn("Write the Specialty's name first.");
+    const own = this.actor.system.skillSpecialties ?? [];
+    const label = DBUCharacterData.SPECIALTY_BASES[base].label;
+    if (Object.values(this.actor.system.skillTable).some(skill => skill.label.toLowerCase() === `${label} (${name})`.toLowerCase())) {
+      return ui.notifications.warn(`${label} (${name}) is there already.`);
+    }
+    let id = `${base}${foundry.utils.randomID(8)}`;
+    while (id in DBUCharacterData.SKILLS) id = `${base}${foundry.utils.randomID(8)}`;
+    return this.actor.update({ "system.skillSpecialties": [...own.map(entry => ({ ...entry })), { id, base, name }] });
+  }
+
+  /** An added Specialty taken off - asked first in the window where it has Ranks; its Ranks then stand for no Skill. */
+  static async _onRemoveSpecialty(event, target) {
+    const id = target.dataset.id;
+    const ranks = Number(this.actor.system.skills?.[id]?.ranks) || 0;
+    if (ranks && !target.dataset.sure) {
+      this.#specialtyConfirm = id;
+      return this.render();
+    }
+    this.#specialtyConfirm = null;
+    return this.actor.update({ "system.skillSpecialties": (this.actor.system.skillSpecialties ?? [])
+      .filter(entry => entry.id !== id).map(entry => ({ ...entry })) });
+  }
+
+  /** Not taken off after all. */
+  static _onKeepSpecialty() {
+    this.#specialtyConfirm = null;
+    return this.render();
   }
 
   /** Closed: the button, Escape, or a click beside it. The Turn State's Edit locks again with it. */

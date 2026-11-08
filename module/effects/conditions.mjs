@@ -206,7 +206,7 @@ const PREDICATES = {
    * effect asking - a Skill's Ranks.
    */
   accessElsewhere: (scope, id) => {
-    const table = scope.data?.constructor?.SKILLS ?? {};
+    const table = scope.data?.skillTable ?? scope.data?.constructor?.SKILLS ?? {};
     const needs = Number(scope.data?.constructor?.SKILL_MANEUVER_RANKS) || 2;
     return Object.entries(table).some(([key, skill]) => (skill.specialManeuver === String(id))
       && ((Number(scope.data?.skills?.[key]?.ranks) || 0) >= needs));

@@ -303,6 +303,45 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     return pairs < DBUCharacterData.PAIRED_SKILL_RANKS_LEVEL_1;
   }
 
+  /**
+   * The Skills a character may add Specialties to, on their Settings tab (the user's): each one added a Skill of its own, as the
+   * Core ones are - Craft's with Scholarship, Required, and the Repair Maneuver at 2 Ranks; Knowledge's with Scholarship - listed
+   * after its Skill's Core ones. Keyed from the Skill's own (`craft...`, `knowledge...`), so whatever reads "any Craft" or "any
+   * Knowledge" by its key counts it too.
+   */
+  static SPECIALTY_BASES = Object.freeze({
+    craft: { label: "Craft", after: "craftVehicles", skill: { attribute: "scholarship", required: true, specialManeuver: "repair" } },
+    knowledge: { label: "Knowledge", after: "knowledgeHistory", skill: { attribute: "scholarship" } }
+  });
+
+  /** The Skill table with a character's own Specialties in it, each after its Skill's Core ones. */
+  static skillTableOf(specialties = []) {
+    const added = Array.from(specialties ?? []).filter(entry => entry?.id && DBUCharacterData.SPECIALTY_BASES[entry.base]
+      && !(entry.id in DBUCharacterData.SKILLS));
+    if (!added.length) return DBUCharacterData.SKILLS;
+    const table = {};
+    for (const [key, skill] of Object.entries(DBUCharacterData.SKILLS)) {
+      table[key] = skill;
+      for (const [base, def] of Object.entries(DBUCharacterData.SPECIALTY_BASES)) {
+        if (def.after !== key) continue;
+        for (const entry of added.filter(each => each.base === base)) {
+          table[entry.id] = { ...def.skill, label: `${def.label} (${String(entry.name ?? "").trim() || "Unnamed"})`, base, custom: true };
+        }
+      }
+    }
+    return Object.freeze(table);
+  }
+
+  /** Which Skill a Specialty belongs to - "craft", "knowledge" - Core or added; blank for any other Skill. */
+  static skillFamily(key) {
+    return Object.keys(DBUCharacterData.SPECIALTY_BASES).find(base => String(key ?? "").startsWith(base)) ?? "";
+  }
+
+  /** This character's Skill table: the Core Skills and the Specialties added on their Settings tab. */
+  get skillTable() {
+    return DBUCharacterData.skillTableOf(this.skillSpecialties);
+  }
+
   /** Skill rank slots granted by a Skill Improvement: 6 for the Level 1 slot, 4 otherwise. */
   static SKILL_RANK_SLOTS = 4;
   static SKILL_RANK_SLOTS_LEVEL_1 = 6;
@@ -1759,6 +1798,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       required: true, integer: true, initial: DBUCharacterData.CRITICAL_TARGET_DEFAULT
     });
 
+    // --- Specialties added to Craft and Knowledge (the user's) ---
+    // On the Settings tab, by whoever owns the sheet: each a Skill of its own (DBUCharacterData.SPECIALTY_BASES). Its id is its
+    // Skill key, kept through a rename, so the Ranks given it stay.
+    schema.skillSpecialties = new fields.ArrayField(new fields.SchemaField({
+      id: new fields.StringField({ required: true, blank: false }),
+      base: new fields.StringField({ required: true, choices: ["craft", "knowledge"], initial: "craft" }),
+      name: new fields.StringField({ required: true, blank: true, initial: "" })
+    }), { required: true, initial: () => [] });
+
     // --- Specialisations for Encompassing Skills ---
     // A Skill covering a field too broad to roll against directly, where the player writes what theirs is
     // in. Craft and Knowledge were; their Specialties are Skills of their own now, and none is left.
@@ -2102,7 +2150,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? [])];
     const early = {
       attributes: this.attributes,
-      skills: Object.fromEntries(Object.keys(DBUCharacterData.SKILLS).map(key =>
+      skills: Object.fromEntries(Object.keys(this.skillTable).map(key =>
         [key, { ranks: ranks.filter(rank => rank === key).length }]))
     };
     // Kept for what reads a Rank before the Skills are worked out: a worn piece's own Effects,
@@ -2152,7 +2200,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
           .filter(holder => (Number(holder.system?.resources?.power?.stacks) || 0) > 0);
         return rulers.length ? Math.max(1, bestTier(rulers)) : 0;
       })(),
-      skills: DBUCharacterData.SKILLS
+      skills: this.skillTable
     });
 
     // The Brace Maneuver: "Until the start of your next turn, treat all Battle Weathers as if
@@ -2425,7 +2473,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     const rankCap = DBUCharacterData.skillRankCap(this.tierOfPower);
 
-    this.skills = Object.fromEntries(Object.entries(DBUCharacterData.SKILLS).map(([key, skill]) => {
+    this.skills = Object.fromEntries(Object.entries(this.skillTable).map(([key, skill]) => {
       // And the Ranks an effect gives - Divine Magic's.
       const ranks = rankSlots.filter(slot => slot === key).length + Math.max(0, slot(this, `skill.${key}.ranks`));
       // One step per Size Category away from Medium, in whichever direction the Skill
@@ -3005,13 +3053,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       //
       // Then every Skill that uses the same Attribute Score - "all Skill Checks that use
       // your Personality Score" - outermost, as `save.all` is round the one Throw.
+      const own = withEffects(this, `skill.${key}`, entry.bonus + this.giftedStudent.skillCheck, {
+        parts: [
+          { label: "Skill Bonus", value: entry.bonus },
+          { label: "Gifted Student", value: this.giftedStudent.skillCheck }
+        ]
+      });
+      // Every Specialty of one Skill, the Core ones and those added - Smart Buddy's "your Knowledge Skill" (`skills.family.<skill>`).
+      const family = DBUCharacterData.skillFamily(key);
       entry.roll = withEffects(this, `skills.${entry.attribute}`,
-        withEffects(this, `skill.${key}`, entry.bonus + this.giftedStudent.skillCheck, {
-          parts: [
-            { label: "Skill Bonus", value: entry.bonus },
-            { label: "Gifted Student", value: this.giftedStudent.skillCheck }
-          ]
-        }),
+        family ? withEffects(this, `skills.family.${family}`, own, { as: `skill.${key}`, wraps: true }) : own,
         { as: `skill.${key}`, wraps: true });
     }
     // Enhanced Search (1): "When making a Clairvoyance or Perception Skill Check/Clash, you may use the higher Skill Bonus

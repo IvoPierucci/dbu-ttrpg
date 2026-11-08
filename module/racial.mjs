@@ -552,7 +552,7 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     // of a Genius's "Skills that use Scholarship or Insight").
     const attributes = listOf(source?.chooseAttribute).map(each => each.toLowerCase());
     const ranks = key => (Number(actor?.system?.skills?.[key]?.ranks) || 0) + earlier.filter(each => each === key).length;
-    return Object.entries(DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
+    return Object.entries(actor?.system?.skillTable ?? DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
       .filter(([, skill]) => !attributes.length || attributes.includes(skill.attribute))
       .filter(([key]) => (kind === "skill") || (ranks(key) >= 2))
       // A second Skill chosen after a first is another one - Practiced's "2 different Skills".
@@ -568,7 +568,7 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
   }
   if (kind === "knowledge") {
     const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
-    return Object.entries(DBUCharacterData.SKILLS).filter(([key]) => key.startsWith("knowledge"))
+    return Object.entries(actor?.system?.skillTable ?? DBUCharacterData.SKILLS).filter(([key]) => key.startsWith("knowledge"))
       .map(([key, skill]) => [key, skill.label]);
   }
   // Profile Focus: "a Profile from your Focused Foundation" - Archetype Focus's, where it is had; any Profile where it is not.

@@ -97,6 +97,10 @@ export function meetsPrerequisite(definition, system) {
   const named = (Array.isArray(definition?.requiresSkill) ? definition.requiresSkill
     : String(definition?.requiresSkill ?? "").split(",")).map(each => String(each).trim()).filter(Boolean);
   if (!named.length) return false;
+  // Every Knowledge Specialty named - Recall's, Research's - and those the character added count too (the user's).
+  if (KNOWLEDGE_SKILLS.every(key => named.includes(key))) {
+    named.push(...Object.keys(system?.skills ?? {}).filter(key => (system.skills[key]?.base === "knowledge") && !named.includes(key)));
+  }
   // Any of several - Create's "Craft Skill (or Medicine/Cooking ...)".
   if (named.length > 1) return named.some(one => meetsPrerequisite({ ...definition, requiresSkill: one }, system));
   const [said] = named;
@@ -382,5 +386,6 @@ export const KNOWLEDGE_SKILLS = Object.freeze(["knowledge", "knowledgeProfession
 
 /** The Knowledge Skills a character has so many Ranks in - Recall's and Research's "2+". */
 export function knowledgeHeld(system, least = 2) {
-  return KNOWLEDGE_SKILLS.filter(key => (Number(system?.skills?.[key]?.ranks) || 0) >= least);
+  const added = Object.keys(system?.skills ?? {}).filter(key => system.skills[key]?.base === "knowledge");
+  return [...KNOWLEDGE_SKILLS, ...added].filter(key => (Number(system?.skills?.[key]?.ranks) || 0) >= least);
 }

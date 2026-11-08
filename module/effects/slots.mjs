@@ -899,6 +899,9 @@ const PATTERNS = [
     valid: () => true,
     doc: "How many Weather Tiers lower its wearer feels one Battle Weather, by its id." },
   // Skilled Ogre (1): "Increase the Skill Bonus of all Skills that use that Attribute by 1."
+  // Every Specialty of Craft or of Knowledge, the Core ones and those a character added - Smart Buddy's "your Knowledge Skill".
+  { match: /^skills\.family\.(craft|knowledge)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC, valid: () => true,
+    doc: "A bonus to rolls of every Specialty of that Skill - Craft's or Knowledge's, those added on the Settings tab too." },
   { match: /^skills\.of\.(\w+)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: (data, [k]) => k in (data.attributes ?? {}),
     doc: "Added to the Skill Bonus of every Skill that Attribute governs (Skilled Ogre's)." },
   { match: /^(\w+)\.score$/, phase: PHASES.TIER, kind: N, ops: ["add"],
@@ -935,19 +938,19 @@ const PATTERNS = [
     ops: ["allow", "forbid", "set"], valid: (data, [, attribute]) => attribute in (data.attributes ?? {}),
     doc: "This Saving Throw may be worked out from that Attribute's Score instead, where it is the higher." },
   { match: /^skill\.(\w+)\.from\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
-    valid: (data, [k, attribute]) => (k in (data.skills ?? data.constructor?.SKILLS ?? {})) && (attribute in (data.attributes ?? {})),
+    valid: (data, [k, attribute]) => (k in (data.skillTable ?? data.skills ?? data.constructor?.SKILLS ?? {})) && (attribute in (data.attributes ?? {})),
     doc: "That Skill's Skill Bonus may be worked out from that Attribute's Score instead, where it is the higher." },
   { match: /^skill\.(\w+)\.criticalTarget$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
-    valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
+    valid: (data, [k]) => k in (data.skillTable ?? data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "Added to the Critical Target of that Skill's Checks - negative is easier." },
   { match: /^skill\.(\w+)\.natural$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
-    valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
+    valid: (data, [k]) => k in (data.skillTable ?? data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "Added to the Natural Result of that Skill's Checks." },
   // The same, only on a Check relying on one sense - "made relying on sight", "related to
   // your hearing". Whether one is, is the player's to say when they roll it - asked only
   // while this is not zero. The senses are those in senses.mjs.
   { match: /^skill\.(\w+)\.natural\.(\w+)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
-    valid: (data, [k, sense]) => (k in (data.skills ?? data.constructor?.SKILLS ?? {}))
+    valid: (data, [k, sense]) => (k in (data.skillTable ?? data.skills ?? data.constructor?.SKILLS ?? {}))
       && (sense in SENSES),
     doc: "Added to the Natural Result of that Skill's Checks made relying on that sense: "
        + "sight or hearing." },
@@ -1070,7 +1073,7 @@ const PATTERNS = [
   { match: /^unique\.(technical|magical)\.(tpCost|kiCost)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
     doc: "The TP or KP Cost of every Unique Ability of that type. The TP never below half the listed cost." },
   { match: /^skill\.(\w+)\.bonus$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
-    valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
+    valid: (data, [k]) => k in (data.skillTable ?? data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "The Skill Bonus itself, as the sheet shows it." },
   // The same shape and the same fix: a CORE Slot whose values are derived later still.
   // Nothing in the library writes one yet, so this was latent rather than biting.

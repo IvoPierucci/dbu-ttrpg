@@ -20,7 +20,7 @@ const SCOPE = "dbu-ttrpg";
 export const DUPLICATED_FIELDS = Object.freeze([
   "attributes", "transformationBonuses", "racialSkillRanks", "racialAttributeChoices", "racialSavingThrow", "basicAttackProfiles", "trainingBonuses",
   "rollModifiers", "diceModifiers", "capacityModifiers", "actionModifiers", "tierOfPowerModifier", "criticalTarget",
-  "skillSpecializations", "externalModifiers", "powerLevel", "race", "size", "subrace", "alignment", "progression",
+  "skillSpecializations", "skillSpecialties", "externalModifiers", "powerLevel", "race", "size", "subrace", "alignment", "progression",
   "characterPerks", "combatPins", "combatUnpins", "debug"
 ]);
 

@@ -233,6 +233,67 @@
     </label>
   </section>
 
+  {{! Skill Specialties (the user's): Craft's and Knowledge's own, each a Skill of its own - a summary here, side by side; added,
+      renamed and taken off in a window over the sheet, by whoever owns it. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Skill Specialties
+      <span class="panel-note">Craft &amp; Knowledge</span>
+      {{#if editable}}
+      <button type="button" class="edit-toggle" data-action="openCombatWindow" data-window="specialties"
+              data-tooltip="Add Specialties to Craft and Knowledge, rename them and take them off">Manage</button>
+      {{/if}}
+    </h3>
+    <div class="dbu-specialty-summary">
+      {{#each specialties as |group|}}
+      <div><b>{{group.label}}</b>
+        {{#each group.added as |entry|}}<span class="dbu-specialty-chip">{{entry.name}}</span>{{else}}<em>Only the Core Specialties.</em>{{/each}}
+      </div>
+      {{/each}}
+    </div>
+  </section>
+
+  {{#if combatWindow.specialties}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window dbu-specialty-window" role="dialog" aria-modal="true">
+      <header><h3>Skill Specialties</h3></header>
+      <p class="dbu-manage-note">Each a Skill of its own, with its own Ranks. Core: the rules' own. Yours: renamed by writing over them.</p>
+      <div class="dbu-combat-window-body dbu-specialty-pair">
+        {{#each specialties as |group|}}
+        <div class="dbu-specialty-group">
+          <h4>{{group.label}} <em>{{group.note}}</em></h4>
+          {{#each group.core as |name|}}
+          <div class="dbu-specialty-row"><span class="dbu-specialty-name">{{name}}</span><span class="dbu-specialty-core">Core</span></div>
+          {{/each}}
+          {{#each group.added as |entry|}}
+          <div class="dbu-specialty-row">
+            <input type="text" data-specialty-name="{{entry.id}}" value="{{entry.name}}" {{#unless @root.editable}}disabled{{/unless}}/>
+            {{#if entry.ranksLabel}}<span class="dbu-specialty-ranks">{{entry.ranksLabel}}</span>{{/if}}
+            <button type="button" class="dbu-specialty-remove" data-action="removeSpecialty" data-id="{{entry.id}}"
+                    data-tooltip="Take it off" {{#unless @root.editable}}disabled{{/unless}}><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          {{#if entry.confirm}}
+          <div class="dbu-specialty-confirm">
+            {{group.label}} ({{entry.name}}) has {{entry.ranksLabel}}. Take it off anyway? Those Ranks then stand for no Skill.
+            <span>
+              <button type="button" data-action="removeSpecialty" data-id="{{entry.id}}" data-sure="1">Take it off</button>
+              <button type="button" data-action="keepSpecialty">Keep it</button>
+            </span>
+          </div>
+          {{/if}}
+          {{/each}}
+          <div class="dbu-specialty-add">
+            <input type="text" data-specialty-new="{{group.base}}" placeholder="New {{group.label}}…" {{#unless @root.editable}}disabled{{/unless}}/>
+            <button type="button" data-action="addSpecialty" data-base="{{group.base}}" {{#unless @root.editable}}disabled{{/unless}}>+ Add</button>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
+    </div>
+  </div>
+  {{/if}}
+
   {{! Stand-ins for systems that do not exist yet, so the rules that depend on them
       can still be tried out. }}
   <section class="panel">

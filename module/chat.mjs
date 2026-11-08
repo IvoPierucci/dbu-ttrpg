@@ -23999,7 +23999,8 @@ export async function tamagamiDefeat(actor, knockerUuid = "") {
   if (knocker && (actor.system.effects?.slots?.["honorbound.clash"] === true) && !alliesOnScene(actor).some(ally => ally.uuid === knocker.uuid)) {
     const { default: Data } = await import("./data/actor-character.mjs");
     const skill = await askPlayerChoice(actor, `${actor.name}: Honorbound - a Skill Clash at ${knocker.name}, or let it fall`,
-      [...Object.entries(Data.SKILLS).map(([key, entry]) => ({ value: key, label: entry.label })), { value: "none", label: "Let it fall" }]);
+      [...Object.entries(actor.system?.skillTable ?? Data.SKILLS).map(([key, entry]) => ({ value: key, label: entry.label })),
+        { value: "none", label: "Let it fall" }]);
     if (skill && (skill !== "none")) {
       return postSkillClash(actor, knocker, { name: "Honorbound", type: "outOfSequence",
         clash: { skill, defenderSkills: [skill] } }, { honorbound: { applied: false, itemId: ball.id } });
