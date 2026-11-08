@@ -5347,3 +5347,20 @@
   background: rgba(181, 96, 74, 0.12); font-size: 11px; }
 .dbu-ttrpg .dbu-specialty-confirm span { display: flex; gap: 6px; margin-top: 4px; }
 .dbu-ttrpg .dbu-specialty-confirm button { flex: 1; height: 22px; line-height: 20px; padding: 0 6px; font-size: 11px; }
+
+/* Which Instants stop the Instant stage (the user's): the Settings tab's summary and window. */
+.dbu-ttrpg .dbu-instant-stop-summary { display: grid; gap: 2px; font-size: 12px; }
+.dbu-ttrpg .dbu-instant-stop-summary b { font-weight: normal; opacity: 0.75; }
+.dbu-ttrpg .dbu-stop-chip { display: inline-block; margin: 0 3px 2px 0; padding: 0 6px; border: 1px solid; border-radius: 3px; }
+.dbu-ttrpg .dbu-stop-chip.on { border-color: #7a5eaa; background: rgba(122, 94, 170, 0.25); }
+.dbu-ttrpg .dbu-stop-chip.off { border-color: var(--dbu-border); opacity: 0.7; text-decoration: line-through; }
+.dbu-ttrpg .dbu-combat-window.dbu-instant-stop-window { width: min(400px, 100%); }
+.dbu-ttrpg .dbu-instant-stop-source { display: block; font-size: 10px; opacity: 0.7; }
+.dbu-ttrpg .dbu-instant-stop-footer { display: flex; justify-content: space-between; gap: 6px; }
+.dbu-ttrpg .dbu-instant-stop-footer span { display: flex; gap: 6px; }
+/* The Instant row at an attack card's foot, where there is no Instant stage; what was played on it, in yellow. */
+.dbu-instant-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(128, 128, 128, 0.5); }
+.dbu-instant-row-text { flex: 1; min-width: 0; font-size: 11px; opacity: 0.85; }
+.dbu-instant-played { color: #e8c860; opacity: 1; }
+.dbu-instant-row-button { flex: 0 0 auto; width: auto; line-height: 1.4; padding: 1px 10px; font-size: 11px; background: #4a3a6a;
+  border: 1px solid #7a5eaa; color: #efe3ff; }

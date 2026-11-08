@@ -3753,6 +3753,30 @@ export function whyNotAnotherInstant(actor) {
   return "Your last Maneuver this Turn was an Instant. Use another kind first.";
 }
 
+/**
+ * Whether an Instant stops an attack's Instant stage for its owner by default (the user's): every one but Command - which stops only for
+ * a character with a Minion Talent: having Minions or not, Goops and Duplicates come and go in a battle, so the Talent is what counts.
+ */
+export function instantStopsDefault(actor, id) {
+  if (id !== "command") return true;
+  return Array.from(actor?.items ?? []).some(item => (item.type === "talent") && (item.system?.category === "minion"));
+}
+
+/** Whether this Instant stops the Instant stage for them: as they set it on the Settings tab, or by default. */
+export function instantStops(actor, maneuver) {
+  const id = maneuver?.id ?? "";
+  if ((actor?.system?.instantStops ?? []).includes(id)) return true;
+  if ((actor?.system?.instantNoStops ?? []).includes(id)) return false;
+  return instantStopsDefault(actor, id);
+}
+
+/**
+ * The Instants used during your own turn alone - No Effort ("can only be used during your turn"), Arboreal (4), Cloaking System (4),
+ * Combat Blueprint (1), Spectral Monster (2) - as useManeuverOnce refuses them; Watchful Gaze (3), your turn or an Ally's.
+ */
+export const OWN_TURN_INSTANTS = Object.freeze(["no-effort", "arboreal-fourth-effect", "cloaking-system-fourth-effect",
+  "combat-blueprint-first-effect", "spectral-monster-second-effect"]);
+
 /** The Turn being played - the Combat's, its Round and whose Turn - or blank outside one. */
 export function instantTurnKey() {
   const combat = globalThis.game?.combat;

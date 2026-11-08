@@ -1112,6 +1112,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Out-of-Sequence Maneuver counts as that other Maneuver, unless it was triggered
     // by the very Instant that is holding you - which would be laundering an Instant
     // into permission for another.
+    // Which of their Instants stop an attack's Instant stage for them (the user's, the Settings tab): those set by hand either way -
+    // by Maneuver id - the rest as maneuvers.mjs instantStopsDefault has them.
+    schema.instantStops = new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: () => [] });
+    schema.instantNoStops = new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: () => [] });
+
     schema.instantPlayed = new fields.SchemaField({
       held: new fields.BooleanField({ required: true, initial: false }),
       messageId: new fields.StringField({ required: true, blank: true, initial: "" }),

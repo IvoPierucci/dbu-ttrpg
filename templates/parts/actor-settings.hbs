@@ -223,6 +223,54 @@
   </div>
   {{/if}}
 
+  {{! Which of their Instants stop an attack's Instant stage for them (the user's): a summary here, set in a window over the sheet. One
+      that does not stop is still theirs to play - from the stage another opened, or the card's Instant row where there is none. }}
+  {{#if instantStopList.length}}
+  <section class="panel">
+    <h3 class="panel-title">
+      Instant stage
+      <span class="panel-note">which Instants stop an attack for you</span>
+      {{#if editable}}
+      <button type="button" class="edit-toggle" data-action="openCombatWindow" data-window="instantStops"
+              data-tooltip="Which of your Instants an attack's Instant stage waits for you to decide on">Manage</button>
+      {{/if}}
+    </h3>
+    <div class="dbu-instant-stop-summary">
+      <div><b>Stop for:</b> {{#each instantStopList as |entry|}}{{#if entry.stops}}<span class="dbu-stop-chip on">{{entry.name}}</span>{{/if}}{{/each}}</div>
+      <div><b>Not for:</b> {{#each instantStopList as |entry|}}{{#unless entry.stops}}<span class="dbu-stop-chip off">{{entry.name}}</span>{{/unless}}{{/each}}</div>
+    </div>
+  </section>
+  {{/if}}
+
+  {{#if combatWindow.instantStops}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window dbu-instant-stop-window" role="dialog" aria-modal="true">
+      <header><h3>Instant stage</h3></header>
+      <p class="dbu-manage-note">Stops: an attack on you or by you waits for you to decide. Doesn't: not waited for - still yours to play.</p>
+      <div class="dbu-combat-window-body">
+        <ul class="dbu-state-triggers">
+          {{#each instantStopList as |entry|}}
+          <li>
+            <span class="dbu-state-trigger-name">{{entry.name}}{{#if entry.source}}<small class="dbu-instant-stop-source">{{entry.source}}</small>{{/if}}</span>
+            <span class="dbu-state-trigger-buttons">
+              <button type="button" class="trait-arm {{#if entry.stops}}active{{/if}}" data-action="toggleInstantStop" data-id="{{entry.id}}"
+                      {{#unless @root.editable}}disabled{{/unless}}>{{#if entry.stops}}Stops{{else}}Doesn't{{/if}}</button>
+            </span>
+          </li>
+          {{/each}}
+        </ul>
+      </div>
+      <footer class="dbu-instant-stop-footer">
+        <span>
+          <button type="button" class="dbu-manage" data-action="setInstantStops" data-stops="1" {{#unless editable}}disabled{{/unless}}>All stop</button>
+          <button type="button" class="dbu-manage" data-action="setInstantStops" data-stops="0" {{#unless editable}}disabled{{/unless}}>None stop</button>
+        </span>
+        <button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button>
+      </footer>
+    </div>
+  </div>
+  {{/if}}
+
   {{! What Add Racial Trait and Add Other Trait offer: ticked, the Traits greyed as not this character's are left out. }}
   <section class="panel">
     <h3 class="panel-title">Trait lists</h3>
