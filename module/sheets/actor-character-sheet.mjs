@@ -47,7 +47,7 @@ import {
 } from "../conditions.mjs";
 import { actionsLeft, actionsWithin, convertActions, convertibleActions, isTheirTurn, newRoundFor, spendActions }
   from "../combat.mjs";
-import { OWN_TURN_INSTANTS, instantHeld, instantStops, instantTurnKey, whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
+import { instantHeld, instantTurnKey, whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
 import { baseDieLine, breakdownTable, contributionLine, extraDiceLine, partLine, noteLine, floorLine, skillWorkingsTable,
          fromOutcome, workingsTable, atRollTime, saveClashBonuses } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
@@ -580,8 +580,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       resetTurnState: DBUCharacterSheet._onResetTurnState,
       openCombatWindow: DBUCharacterSheet._onOpenCombatWindow,
       addSpecialty: DBUCharacterSheet._onAddSpecialty,
-      toggleInstantStop: DBUCharacterSheet._onToggleInstantStop,
-      setInstantStops: DBUCharacterSheet._onSetInstantStops,
       removeSpecialty: DBUCharacterSheet._onRemoveSpecialty,
       keepSpecialty: DBUCharacterSheet._onKeepSpecialty,
       closeCombatWindow: DBUCharacterSheet._onCloseCombatWindow,
@@ -1520,8 +1518,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.stateTriggers = this.#stateTriggers();
     // Skill Specialties: Craft's and Knowledge's, the Core ones and this character's own (the user's).
     context.specialties = this.#specialtyGroups();
-    // Which of their Instants stop an attack's Instant stage for them (the user's).
-    context.instantStopList = this.#instantStopList();
     // Evolution, Bestial and Monstrous Traits: the same rows, in a list of their own (the user's).
     context.otherTraits = this.#racialTraitChoices(triggered, ownedOtherTraits(this.actor));
     context.isGM = game.user.isGM;
@@ -1726,8 +1722,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stateTriggers: windowIs === "stateTriggers",
       // And its Allies' and Minions' (or Master's) Manage windows.
       allies: windowIs === "allies", minions: windowIs === "minions", master: windowIs === "master",
-      // The Settings tab's Skill Specialties, and which Instants stop the Instant stage.
-      specialties: windowIs === "specialties", instantStops: windowIs === "instantStops" };
+      // The Settings tab's Skill Specialties.
+      specialties: windowIs === "specialties" };
 
     // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
     // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together. What
@@ -7344,37 +7340,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           confirm: this.#specialtyConfirm === entry.id };
       })
     }));
-  }
-
-  /**
-   * Their Instant Maneuvers as their Maneuvers list has them - none nothing has opened yet - each with whether it stops an attack's
-   * Instant stage for them (the user's): set by hand, or by default (maneuvers.mjs instantStops).
-   */
-  #instantStopList() {
-    return this.#ownedManeuvers().filter(maneuver => (maneuver.type === "instant") && !this.#notYetOpen(maneuver)
-      && !(maneuver.signature && !maneuver.signatureTechnique))
-      .map(maneuver => ({ id: maneuver.id, name: maneuver.name, stops: instantStops(this.actor, maneuver),
-        source: [maneuver.source || ((maneuver.tags ?? []).includes("uniqueAbility") ? "Unique Ability" : ""),
-          (maneuver.noEffort || OWN_TURN_INSTANTS.includes(maneuver.id)) ? "only during your turn: stops your own attacks alone" : "",
-          (maneuver.id === "watchful-gaze-third-effect") ? "during your turn or an Ally's" : ""].filter(Boolean).join(" · ") }));
-  }
-
-  /** One Instant's Stops / Doesn't, set by hand - kept either way, so its default no longer decides it. */
-  static async _onToggleInstantStop(event, target) {
-    const id = target.dataset.id;
-    const now = instantStops(this.actor, { id });
-    const on = (this.actor.system.instantStops ?? []).filter(each => each !== id);
-    const off = (this.actor.system.instantNoStops ?? []).filter(each => each !== id);
-    return this.actor.update({ "system.instantStops": now ? on : [...on, id], "system.instantNoStops": now ? [...off, id] : off });
-  }
-
-  /** All stop, or none: every Instant listed set by hand. */
-  static async _onSetInstantStops(event, target) {
-    const ids = this.#instantStopList().map(entry => entry.id);
-    const stop = target.dataset.stops === "1";
-    const on = (this.actor.system.instantStops ?? []).filter(each => !ids.includes(each));
-    const off = (this.actor.system.instantNoStops ?? []).filter(each => !ids.includes(each));
-    return this.actor.update({ "system.instantStops": stop ? [...on, ...ids] : on, "system.instantNoStops": stop ? off : [...off, ...ids] });
   }
 
   /** A Specialty added to Craft or Knowledge: its name from the field beside the button, its key from its Skill's. */

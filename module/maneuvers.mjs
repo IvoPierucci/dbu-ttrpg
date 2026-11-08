@@ -3754,25 +3754,6 @@ export function whyNotAnotherInstant(actor) {
 }
 
 /**
- * The Instants that stop the Instant stage for nobody by default (the user's): the four core ones every character is given at the start -
- * Command, No Effort, Surge, United Attack - held by all and seldom played on another's attack. Set on the Settings tab by hand, they do.
- */
-export const INSTANTS_NOT_STOPPING = Object.freeze(["command", "no-effort", "surge", "united-attack-maneuver"]);
-
-/** Whether an Instant stops an attack's Instant stage for its owner by default: every one but those four. */
-export function instantStopsDefault(actor, id) {
-  return !INSTANTS_NOT_STOPPING.includes(id);
-}
-
-/** Whether this Instant stops the Instant stage for them: as they set it on the Settings tab, or by default. */
-export function instantStops(actor, maneuver) {
-  const id = maneuver?.id ?? "";
-  if ((actor?.system?.instantStops ?? []).includes(id)) return true;
-  if ((actor?.system?.instantNoStops ?? []).includes(id)) return false;
-  return instantStopsDefault(actor, id);
-}
-
-/**
  * The Instants used during your own turn alone - No Effort ("can only be used during your turn"), Arboreal (4), Cloaking System (4),
  * Combat Blueprint (1), Spectral Monster (2) - as useManeuverOnce refuses them; Watchful Gaze (3), your turn or an Ally's.
  */
