@@ -10452,7 +10452,7 @@ function renderInstantRow(message, html) {
   const row = document.createElement("div");
   row.className = "dbu-instant-row";
   const notes = played.map(entry => `<div class="dbu-instant-played">${esc(entry.actorName)}: ${esc(entry.name)}, before this Maneuver</div>`).join("");
-  row.innerHTML = `<div class="dbu-instant-row-text">${notes || "An Instant before this Maneuver"}</div>`;
+  row.innerHTML = `<div class="dbu-instant-row-text">${notes || '<span class="dbu-instant-hint">An Instant before this Maneuver</span>'}</div>`;
   if (mine.length) {
     const button = document.createElement("button");
     button.type = "button";
@@ -10532,7 +10532,7 @@ async function instantWindows(message, attack) {
   }
 }
 
-/** Carry out everything the reader chose, for every character they chose it for. *//** Carry out everything the reader chose, for every character they chose it for. */
+/** Carry out everything the reader chose, for every character they chose it for. */
 async function applyResponses(message, chosen, attack) {
   for (const choice of chosen) {
     // Actions turned into Counter Actions by hand first (the user's), so the Counter played after can be paid.

@@ -5305,9 +5305,6 @@
 .application.dbu-dialog .dbu-gm-add { display: flex; gap: 6px; margin-top: 4px; }
 .application.dbu-dialog .dbu-gm-add select { flex: 1; }
 
-/* The Instant Maneuver button (a card that is not an attack): violet. */
-.dbu-clash-button.dbu-instant-button { background: #4a3a6a; border-color: #7a5eaa; color: #efe3ff; }
-.dbu-ready-row .dbu-instant-button { flex: 1; margin: 0; }
 .dbu-dim { color: var(--dbu-chat-dim, #8f8f8f); }
 
 /* Skill Specialties (the user's): Craft's and Knowledge's side by side - the summary on the Settings tab and its window. */
@@ -5335,9 +5332,10 @@
 .dbu-ttrpg .dbu-specialty-confirm span { display: flex; gap: 6px; margin-top: 4px; }
 .dbu-ttrpg .dbu-specialty-confirm button { flex: 1; height: 22px; line-height: 20px; padding: 0 6px; font-size: 11px; }
 
-/* The Instant row at an attack card's foot (the user's); what was played on it, in yellow. */
+/* The Instant row at a Maneuver card's foot (the user's); what was played on it, in yellow. */
 .dbu-instant-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(128, 128, 128, 0.5); }
-.dbu-instant-row-text { flex: 1; min-width: 0; font-size: 11px; opacity: 0.85; }
-.dbu-instant-played { color: #e8c860; opacity: 1; }
+.dbu-instant-row-text { flex: 1; min-width: 0; font-size: 11px; }
+.dbu-instant-hint { opacity: 0.75; }
+.dbu-instant-played { color: #e8c860; }
 .dbu-instant-row-button { flex: 0 0 auto; width: auto; line-height: 1.4; padding: 1px 10px; font-size: 11px; background: #4a3a6a;
   border: 1px solid #7a5eaa; color: #efe3ff; }
