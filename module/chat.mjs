@@ -10357,6 +10357,8 @@ function instantOptions(actor, message, attack) {
     // Instant Assault: "No Instant Maneuvers can be triggered in response to this Attacking Maneuver."
     if (attack?.technique?.features?.includes("instant-assault")) reason = "Instant Assault";
     else if ((frozenBy(actor) || frozenTurnOf(actor)) && !(maneuver.surge ?? getManeuver(maneuver.id)?.surge)) reason = "time is frozen";
+    // "During your turn" (the user's: No Effort on another's attack is none to play) - so not waited on for it.
+    else if (whyNotThisTurn(actor, maneuver)) reason = whyNotThisTurn(actor, maneuver);
     // United Attack (the user's: an Instant, played from the Instant Maneuver window): an Ally's attack still open, joined once.
     else if (maneuver.united && !attack) reason = "joins an Ally's attack";
     else if (maneuver.united && (attack.attackerUuid === actor.uuid)) reason = "your own attack";
@@ -10369,6 +10371,25 @@ function instantOptions(actor, message, attack) {
     else if (whyNotAnotherInstant(actor)) reason = "your last Maneuver was an Instant";
     return { maneuver, reason };
   });
+}
+
+/**
+ * The Instants used during your own turn alone - No Effort ("can only be used during your turn"), Arboreal (4), Cloaking System (4),
+ * Combat Blueprint (1), Spectral Monster (2) - as useManeuverOnce refuses them; Watchful Gaze (3), your turn or an Ally's.
+ */
+const OWN_TURN_INSTANTS = Object.freeze(["no-effort", "arboreal-fourth-effect", "cloaking-system-fourth-effect",
+  "combat-blueprint-first-effect", "spectral-monster-second-effect"]);
+
+/** Why an Instant cannot be played in the Turn now under way, or "" - outside a Combat, any time. */
+function whyNotThisTurn(actor, maneuver) {
+  const combat = globalThis.game?.combat;
+  if (!combat?.started || !actor) return "";
+  const current = combat.combatant?.actor ?? null;
+  if (!current || (current.uuid === actor.uuid)) return "";
+  if (maneuver?.id === "watchful-gaze-third-effect") {
+    return alliesOnScene(actor).some(ally => ally.uuid === current.uuid) ? "" : "only during your turn or an Ally's";
+  }
+  return (maneuver?.noEffort || OWN_TURN_INSTANTS.includes(maneuver?.id)) ? "only during your turn" : "";
 }
 
 /** Who used the Maneuver a card is: its attacker, or whoever speaks it. */
