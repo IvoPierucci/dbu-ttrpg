@@ -10471,10 +10471,12 @@ async function useTargetsWindow(message) {
     if (clash) await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, icCancelled: true });
     return message.setFlag(SCOPE, MANEUVER_USE_FLAG, { ...use, cancelled: true });
   }
-  // A Clash's new target: the defender's side as fresh - not ready, no Skill or roll picked.
+  // A Clash's new target: the defender's side as fresh - not ready, no Skill or roll picked - and named in its line too.
   const to = fromUuidSync(chosen.to);
   if (!clash || !to) return ui.notifications.warn("Pick the new target first.");
+  const renamed = (clash.reason && clash.defenderName) ? String(clash.reason).split(clash.defenderName).join(to.name) : clash.reason;
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, defenderUuid: to.uuid, defenderName: to.name, defenderSkill: "",
+    ...(renamed !== undefined ? { reason: renamed } : {}),
     ...(("defenderRoll" in clash) ? { defenderRoll: "" } : {}),
     ready: (clash.ready ?? []).filter(uuid => uuid !== clash.defenderUuid) });
   return message.setFlag(SCOPE, MANEUVER_USE_FLAG, { ...use, targets: [{ uuid: to.uuid, name: to.name }] });
