@@ -4928,10 +4928,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ui.notifications.warn(notAsWeapon);
     return false;
   }
-  // Angel's Unique Rule: no Duplicate of an Angel.
+  // Angel's Unique Rule: no Duplicate of an Angel - of the user here; Copy Clone's target once it is known, below.
   const { whyNoAngelDuplicate } = await import("./maneuvers.mjs");
   const { cannotBeMinion } = await import("./races.mjs");
-  const angelDuplicate = whyNoAngelDuplicate(actor, maneuver, targetActor, cannotBeMinion);
+  const angelDuplicate = whyNoAngelDuplicate(actor, maneuver, null, cannotBeMinion);
   if (angelDuplicate) {
     ui.notifications.warn(angelDuplicate);
     return false;
@@ -5172,11 +5172,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // Whom Unify, Absorb and Disarm are aimed at - read here, as the target below is resolved only after them.
+  const aimedFirst = (targetUuid ? fromUuidSync(targetUuid) : null) ?? game.user.targets?.first()?.actor ?? null;
+
   // The Unify Maneuver: who, and willing, asked before anything is paid; then they become part of you (chat.mjs unify).
   if (maneuver.id === "unify") {
     const { unifyRefusal, unifyWilling, unify } = await import("./chat.mjs");
     const aimed = (actor.system.effects?.slots?.["unify.androids"] === true)
-      ? Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean) : [targetActor].filter(Boolean);
+      ? Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean) : [aimedFirst].filter(Boolean);
     const refused = unifyRefusal(actor, aimed);
     if (refused) {
       ui.notifications.warn(refused);
@@ -5258,9 +5261,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const master = goop ? game.actors?.get(masterOf(actor)) : null;
     const refused = (actor.system?.minion && !goop) ? `${actor.name} is a Minion: the Absorb Maneuver is not theirs.`
       : (goop && !master) ? `${actor.name} has no Master to Absorb for.`
-      : !targetActor ? "Target a Character first."
-      : (targetActor.uuid === actor.uuid) ? "Target another Character."
-      : whyNotWithinMelee(actor, targetActor, maneuver.name);
+      : !aimedFirst ? "Target a Character first."
+      : (aimedFirst.uuid === actor.uuid) ? "Target another Character."
+      : whyNotWithinMelee(actor, aimedFirst, maneuver.name);
     if (refused) {
       ui.notifications.warn(refused);
       return false;
@@ -5269,17 +5272,17 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type);
     const { postAbsorbClash } = await import("./chat.mjs");
-    await (goop ? postAbsorbClash(master, targetActor, maneuver, { goop: actor }) : postAbsorbClash(actor, targetActor, maneuver));
+    await (goop ? postAbsorbClash(master, aimedFirst, maneuver, { goop: actor }) : postAbsorbClash(actor, aimedFirst, maneuver));
     return true;
   }
 
   // The Disarm Maneuver: an Opponent wielding a Weapon, within your Melee Range - its Clash.
   if (maneuver.id === "disarm") {
     const { wieldedWeapons } = await import("./gear.mjs");
-    const refused = !targetActor ? "Target an Opponent first."
-      : !areOpponents(targetActor, actor) ? `${targetActor.name} is not an Opponent.`
-      : !wieldedWeapons(Array.from(targetActor.items ?? [])).length ? `${targetActor.name} wields no Weapon.`
-      : whyNotWithinMelee(actor, targetActor, maneuver.name);
+    const refused = !aimedFirst ? "Target an Opponent first."
+      : !areOpponents(aimedFirst, actor) ? `${aimedFirst.name} is not an Opponent.`
+      : !wieldedWeapons(Array.from(aimedFirst.items ?? [])).length ? `${aimedFirst.name} wields no Weapon.`
+      : whyNotWithinMelee(actor, aimedFirst, maneuver.name);
     if (refused) {
       ui.notifications.warn(refused);
       return false;
@@ -5288,7 +5291,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type);
     const { postDisarmClash } = await import("./chat.mjs");
-    await postDisarmClash(actor, targetActor, maneuver);
+    await postDisarmClash(actor, aimedFirst, maneuver);
     return true;
   }
 
@@ -5417,7 +5420,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       return false;
     }
     // Copy Clone: a Character not at Long Range, of a Tier of Power no higher than yours.
-    const notCopied = whyNotCopyClone(actor, maneuver, targetActor);
+    const notCopied = whyNotCopyClone(actor, maneuver, targetActor) ?? whyNoAngelDuplicate(actor, maneuver, targetActor, cannotBeMinion);
     if (notCopied) {
       ui.notifications.warn(notCopied);
       return false;
