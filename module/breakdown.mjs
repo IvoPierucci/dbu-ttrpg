@@ -387,7 +387,7 @@ export function workingsTable(system, key, { extra = [], total = null, aside = [
   // it did not. A part worth nothing is left out: "Size 0" is a row saying only that Size
   // did not apply.
   const named = (first.parts ?? []).filter(part => Number(part.value) !== 0);
-  if (named.length) for (const part of named) lines.push(partLine({ label: part.label, value: part.value }));
+  if (named.length) for (const part of named) lines.push(partLine({ label: part.label, value: part.value, written: part.written }));
   else lines.push(partLine({ label: "Base", value: first.base }));
 
   for (const step of steps) {
@@ -456,7 +456,7 @@ export function skillWorkingsTable(system, key) {
   if (!bonus || !roll) return "";
   const lines = [];
   const named = (bonus.parts ?? []).filter(part => Number(part.value) !== 0);
-  if (named.length) for (const part of named) lines.push(partLine({ label: part.label, value: part.value }));
+  if (named.length) for (const part of named) lines.push(partLine({ label: part.label, value: part.value, written: part.written }));
   else lines.push(partLine({ label: "Base", value: bonus.base }));
   for (const step of [bonus, roll]) {
     // The roll's own ingredients but the Bonus it was built on - Gifted Student's.
