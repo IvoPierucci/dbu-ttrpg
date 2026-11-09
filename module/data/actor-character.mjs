@@ -149,6 +149,9 @@ function perThreshold(data, key) {
  */
 function ownFoundation(data, key, shared) {
   if (!data.effects?.slots?.[key]) return shared;
+  // Wrapped round the shared one's workings, filed under this same key a moment ago (the user's: the Physical Wound's hover showed
+  // one "Wound" row, Born for Battle and the rest folded into it): its rows, then this Foundation's own.
+  if (data.effects?.workings?.[key]) return withEffects(data, key, shared, { wraps: true });
   return withEffects(data, key, shared, { parts: [{ label: key.startsWith("wound") ? "Wound" : "Strike", value: shared }] });
 }
 
