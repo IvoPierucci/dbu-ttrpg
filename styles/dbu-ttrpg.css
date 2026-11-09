@@ -490,7 +490,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 3px 14px;
-  padding-block: 3px;
+  padding-block: 1px;
 }
 
 /* The two rows closer (the user's: they felt far apart) - Foundry's own tab item is tall. */
