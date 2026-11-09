@@ -517,8 +517,8 @@
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
-  /* Room under the line the tabs draw, before the first section's name (the user's: it nearly touched it) - 12px, asked. */
-  padding-top: 12px;
+  /* Room under the line the tabs draw, before the first section's name (the user's: it nearly touched it) - 6px, asked. */
+  padding-top: 6px;
 }
 
 /* --- Header ---------------------------------------------------------------- */
