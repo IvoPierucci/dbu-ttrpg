@@ -489,10 +489,9 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 3px 14px;
-  /* 2px less again (the user's): past nothing, so drawn 1px into what is above and below. */
-  padding-block: 0;
-  margin-block: -1px;
+  /* The two rows of names closer (the user's); 3px above and below them. */
+  gap: 0 14px;
+  padding-block: 3px;
 }
 
 /* The two rows closer (the user's: they felt far apart) - Foundry's own tab item is tall. */
@@ -500,8 +499,8 @@
   flex: 0 0 auto;
   text-align: center;
   white-space: nowrap;
-  line-height: 1.5;
-  padding-block: 1px;
+  line-height: 1.3;
+  padding-block: 0;
   /* A little larger (the user's). */
   font-size: 1.1em;
 }
