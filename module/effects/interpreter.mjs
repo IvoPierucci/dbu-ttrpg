@@ -65,9 +65,9 @@ export function applyPassives(entries, phase, scope) {
       for (let i = 0; i < times; i++) {
         run(b.statements, {
           ...blockScope,
-          collect: (slot, op, value, kind) => {
+          collect: (slot, op, value, kind, written) => {
             contributed = true;
-            gather(contributions, slot, op, value, kind, entry, b, phase, scope);
+            gather(contributions, slot, op, value, kind, entry, b, phase, scope, written);
           }
         });
       }
@@ -182,7 +182,7 @@ function run(statements, scope) {
         const value = (slot.kind === KINDS.DICE)
           ? resolveDice(s.amount, scope)
           : resolveAmount(s.amount, scope);
-        scope.collect(slot, s.op, value, slot.kind);
+        scope.collect(slot, s.op, value, slot.kind, writtenAmount(s.amount));
         break;
       }
 
@@ -257,7 +257,25 @@ function reachesPhase(statements, scope) {
   });
 }
 
-function gather(contributions, slot, op, value, kind, entry, b, phase, scope) {
+/**
+ * An amount as its file writes it (the user's: a hover's left column is what the effect gives - "1(T)", "2(bT)", "3" - its right one
+ * what that came to): a plain number or one per Tier, base Tier or Weather Tier, a subtraction of one; "" for anything worked out
+ * further (a path, a sum, a call), which the number alone then stands for.
+ */
+export function writtenAmount(amount) {
+  const simple = a => ((a?.type === "flat") && (typeof a.value === "number")) ? String(a.value)
+    : (a?.type === "perTier") ? `${a.value}(T)` : (a?.type === "perBaseTier") ? `${a.value}(bT)`
+    : (a?.type === "perWeatherTier") ? `${a.value}(WT)` : "";
+  if (!amount) return "";
+  // `x -= 2(T)` is stored as adding (0 - 2(T)).
+  if ((amount.type === "binary") && (amount.op === "-") && (amount.left?.type === "flat") && (amount.left.value === 0)) {
+    const right = simple(amount.right);
+    return right ? `-${right}` : "";
+  }
+  return simple(amount);
+}
+
+function gather(contributions, slot, op, value, kind, entry, b, phase, scope, written = "") {
   // During the derived pass a Slot only lands in its own phase, which is what keeps the
   // ordering honest. At a Moment there is no ordering left to protect - every value is
   // settled - so a reactive block may name any Slot, and the caller decides which of
@@ -270,7 +288,7 @@ function gather(contributions, slot, op, value, kind, entry, b, phase, scope) {
   for (const key of targets) {
     if (!contributions.has(key)) contributions.set(key, { kind, entries: [] });
     contributions.get(key).entries.push({
-      op, value,
+      op, value, written,
       priority: entry.priority ?? PRIORITY.base,
       source: entry.sourceName,
       // And which - `condition:poisoned`, `quality:aflame` - for a reader asking what kind of thing it was (Superior
@@ -314,7 +332,7 @@ function resolveNumber(entries, scope) {
     // Which of these actually bit is not decided here - a `set` that lost on Priority
     // is still a contribution somebody made, and saying so is more use than silently
     // dropping it.
-    parts: entries.map(e => ({ op: e.op, value: e.value, source: e.source ?? "", sourceId: e.sourceId ?? "" })),
+    parts: entries.map(e => ({ op: e.op, value: e.value, written: e.written ?? "", source: e.source ?? "", sourceId: e.sourceId ?? "" })),
     // Dice rolled onto a number - Combat Recovery's `life.value += 1d10(bT)` - are added as what they rolled; a dice Slot
     // keeps its dice as dice (its value is not a number), and is left to whatever rolls them.
     add: entries.filter(e => (e.op === "add") || ((e.op === "add-dice") && (typeof e.value === "number")))

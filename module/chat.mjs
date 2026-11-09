@@ -1648,7 +1648,7 @@ function corsairClashBonus(actor, clash, uuid) {
 function bagClashBonus(actor, clash, uuid) {
   if (((clash?.category ?? "skill") === "skill") || !bagOpen(actor, clash, uuid)) return [];
   const slot = actor.system.effects.slots["clash.uniqueAny"];
-  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Through a Unique Ability", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Through a Unique Ability", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 function bagNatural(actor, clash, uuid) {
@@ -11812,7 +11812,7 @@ function beatdownClashBonus(actor, clash, uuid) {
   if ((clash?.category !== "might") || !(Number(slot?.add) || 0)) return [];
   const other = fromUuidSync((uuid === clash.challengerUuid) ? (clash.defenderUuid ?? "") : (clash.challengerUuid ?? ""));
   if (!other || (other.uuid === actor.uuid) || !areOpponents(other, actor) || !conditioned(other)) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /**
@@ -12298,14 +12298,14 @@ function saveDefendingParts(actor, clash, uuid) {
   if ((uuid !== clash.defenderUuid) || !(Number(slot?.add) || 0)
     || alliesOnScene(actor).some(ally => ally.uuid === clash.challengerUuid)) return [];
   return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Initiated by an Opponent",
-    value: Number(slot.add) }];
+    value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /** Improved Taunt (1): "Increase your Dice Score for any Morale Clash by 1(T)" - the side answering with Morale. */
 function moraleClashParts(actor, clash, uuid) {
   const slot = actor?.system?.effects?.slots?.["clash.morale"];
   if ((savePicked(clash, uuid) !== "morale") || !(Number(slot?.add) || 0)) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Morale Clash", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Morale Clash", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /** Which roll a side makes in Wrestler's Clash: the Grappler's Might; the Grappled's answer, Might till they say. */
@@ -21559,7 +21559,7 @@ function largerParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["wound.vsLarger"];
   if (!(Number(slot?.add) || 0) || !target || (sizeDifference(target, attacker) <= 0)
     || alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Larger", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Larger", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /** Tremendous Warrior (1): "Increase your Strike Rolls against an Opponent with a smaller Size Category than you by 1(T)." */
@@ -21567,7 +21567,7 @@ function smallerParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["strike.vsSmaller"];
   if (!(Number(slot?.add) || 0) || !target || (sizeDifference(attacker, target) <= 0)
     || alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Smaller", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Smaller", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /** Fleet of Foot (2): its 1(T), against the one it names. */
@@ -28325,7 +28325,7 @@ function rangeParts(attacker, attack, target, roll) {
 function flankerParts(attacker, target, roll) {
   const slot = attacker?.system?.effects?.slots?.[`${roll}.flanking`];
   if (!(Number(slot?.add) || 0) || !target || (attacker.uuid === target.uuid) || !brigandAllyBeside(attacker, target)) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Flanking", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Flanking", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /**
@@ -28341,7 +28341,7 @@ function packFlankParts(attacker, target) {
   const near = alliesOnScene(attacker).filter(ally => !ally.system?.defeated && (ally.getActiveTokens?.(false, true) ?? [])
     .some(token => (squaresBetween(token, at) ?? 99) <= reach));
   if (near.length < 2) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Pack Animal", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Pack Animal", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /** Hidden: "Increase your Combat Rolls against Characters who are Oblivious of you by 2(bT)." */
@@ -28355,7 +28355,7 @@ function shakenTechniqueParts(attacker, attack, target) {
   const slot = attacker?.system?.effects?.slots?.["wound.signatureVsShaken"];
   if (!(Number(slot?.add) || 0) || !attack?.technique || !target || (attacker.uuid === target.uuid)
     || !((Number(target.system?.conditions?.shaken) || 0) > 0)) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Against the Shaken", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Against the Shaken", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /**
@@ -28389,7 +28389,7 @@ function heelParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["wound.vsGrappled"];
   if (!(Number(slot?.add) || 0) || !target || (attacker.uuid === target.uuid) || !target.system?.grapple?.partner
     || alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "In a Grapple", value: Number(slot.add) }];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "In a Grapple", value: Number(slot.add), written: slotWritten(slot) }];
 }
 
 /** An Opponent of theirs with one of their Allies on a Square adjacent - Brigand Combat's. */
@@ -31954,7 +31954,26 @@ function selfExploded(area, given) {
 function maneuverStrikeParts(attacker, attack) {
   const slot = attack?.maneuverId ? attacker.system.effects?.slots?.[`${attack.maneuverId}.strike`] : null;
   return (slot?.parts ?? []).filter(part => part.op === "add" && Number(part.value))
-    .map(part => ({ label: part.source || "Effects", value: Number(part.value) }));
+    .map(part => ({ label: part.source || "Effects", value: Number(part.value), written: partWritten(part) }));
+}
+
+/**
+ * An effect's amount as its file writes it, signed - "+1(T)", "-2(bT)" - for a hover's left column (the user's), where it is one
+ * written per Tier; nothing where it is a plain number or worked out further, the number then standing for itself.
+ */
+function partWritten(part) {
+  const written = String(part?.written ?? "");
+  const value = Number(part?.value) || 0;
+  if (!/[()]/.test(written)) return undefined;
+  const signedWritten = written.startsWith("-") ? written : `+${written}`;
+  if ((signedWritten.startsWith("-") && (value > 0)) || (signedWritten.startsWith("+") && (value < 0))) return undefined;
+  return signedWritten;
+}
+
+/** A Slot shown as one row: its one effect's amount as written - several effects in it, the number alone. */
+function slotWritten(slot) {
+  const adds = (slot?.parts ?? []).filter(part => (part.op === "add") && Number(part.value));
+  return (adds.length === 1) ? partWritten(adds[0]) : undefined;
 }
 
 /** Critical Point (2)'s 2(T) more on a Strike Roll that came out a Critical Result. */

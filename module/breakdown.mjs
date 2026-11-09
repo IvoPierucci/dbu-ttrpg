@@ -346,8 +346,16 @@ export function contributionLine(part) {
     case "max":
       return { ...partLine({ label, value, rank: "negative" }),
         written: `at most ${value}`, shown: `<= ${value}` };
-    default:
-      return partLine({ label, value });
+    default: {
+      // What the effect gives as its file writes it - "+1(T)", "-2(bT)" - beside what that came to (the user's).
+      const line = partLine({ label, value });
+      const written = String(part.written ?? "");
+      if (!written || (written === String(Math.abs(value))) || !/[()]/.test(written)) return line;
+      const signedWritten = /^-/.test(written) ? written : `+${written}`;
+      // "-" written but more than 0 came of it (a subtraction of a negative): the number alone, rather than a sign that misleads.
+      if ((signedWritten.startsWith("-") && (value > 0)) || (signedWritten.startsWith("+") && (value < 0))) return line;
+      return { ...line, written: signedWritten };
+    }
   }
 }
 
