@@ -448,6 +448,23 @@
             {{/if}}
           </div>
 
+          {{! The Super Stacks (the user's): a box here, not a Resource - where they come from on hover; stepped by hand in Edit. }}
+          {{#if superStackBox}}
+          <div class="stat stat-super" data-tooltip-html="{{superStackBox.tip}}">
+            <em>Super Stacks</em>
+            {{#if combatEditMode}}
+            <span class="condition-stacks">
+              <button type="button" class="stack-step" data-action="stepResource" data-resource="superStack" data-step="-1">&minus;</button>
+              <span class="stack-count">{{superStackBox.stacks}}/{{superStackBox.max}}</span>
+              <button type="button" class="stack-step" data-action="stepResource" data-resource="superStack" data-step="1">+</button>
+            </span>
+            {{else}}
+            <span>{{superStackBox.stacks}}<span class="stat-of">/{{superStackBox.max}}</span></span>
+            {{/if}}
+            {{#if superStackBox.note}}<i class="stat-note">{{superStackBox.note}}</i>{{/if}}
+          </div>
+          {{/if}}
+
           {{! What is left this round over what the round gives you. Both refill when the
               round turns over, so the second number is the one that is yours to change. }}
           <div class="stat" data-tooltip="Standard Actions left this round, of what each round gives you">

@@ -211,7 +211,6 @@ function resourceRows(system, owned = null) {
  */
 function stackRows(system, owned = null) {
   const { offense, defense } = system.diminishing ?? {};
-  const { superStack } = system;
 
   return [
     {
@@ -233,23 +232,7 @@ function stackRows(system, owned = null) {
       tooltip: "One stack for each Attacking Maneuver aimed at you, unless you use the "
         + "Defend Maneuver. Each takes 1 off your Dodge Rolls."
     },
-    {
-      key: "superStack",
-      name: "Super Stacks",
-      stacks: superStack?.stacks ?? 0,
-      // The one of the three with a ceiling of its own, and it is a real one - held
-      // until something takes it away rather than cleared by the round like the two
-      // above.
-      max: superStack?.max ?? 0,
-      note: [
-        superStack?.musclePenalty ? `Strike & Dodge -${superStack.musclePenalty}` : "",
-        superStack?.solidBulk ? `Soak +${superStack.solidBulk}` : "",
-        superStack?.massivePower ? `Wound +${superStack.massivePower}` : ""
-      ].filter(Boolean).join(" \u00b7 "),
-      tooltip: "Muscle Penalty: 1(bT) off Strike and Dodge per stack, 1(bT) more at "
-        + "three. Solid Bulk: 1(bT) of Soak per stack. Massive Power: 1/4 of your Force "
-        + "Modifier on the Wound Rolls of Physical and Energy Attacks, per stack."
-    },
+    // The Super Stacks are not here (the user's): a box of their own in the Turn State, its sources on hover.
     ...resourceRows(system, owned)
   ];
 }
@@ -1761,13 +1744,40 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Advantages, Talents, Transformations) - Synthetic Muscle's "cannot possess any" never.
     const superReachable = (slots["synthetic.noSuperStacks"] !== true) && (namedBy(/Super Stack/).length > 0);
     const resources = context.stacks.map(row => {
-      const reachable = row.key.startsWith("diminishing.") || ((row.key === "superStack") ? superReachable : row.reachable);
-      const givers = (row.key === "superStack") ? namedBy(/Super Stack/).join(", ") : "";
-      const source = givers ? `from ${givers}` : (row.source ?? "");
+      const reachable = row.key.startsWith("diminishing.") || row.reachable;
+      const source = row.source ?? "";
       // Every one they can come to hold is listed unasked but Unfamiliar, which an Opponent inflicts (the user's).
       return { ...shownOf("resources", row, row.stacks > 0, reachable && (row.key !== "unfamiliar")), reachable, source };
     });
     context.resourceRows = resources.filter(row => row.shown);
+
+    // The Super Stacks, a box in the Turn State (the user's) - where something of theirs gives them, or they hold some: how many of
+    // three, what they do now, and on hover where they come from - what of theirs gives them, what effect adds some, what was gained.
+    {
+      const held = system.superStack ?? {};
+      const givers = namedBy(/Super Stack/);
+      const parts = (slots.superStacks?.parts ?? []).filter(part => Number(part.value));
+      const gained = Number(system.superStacks) || 0;
+      const shown = (superReachable && (slots["synthetic.noSuperStacks"] !== true)) || (Number(held.stacks) > 0) || (gained > 0);
+      const esc = text => Handlebars.escapeExpression(String(text ?? ""));
+      const lines = [
+        `<b>Super Stacks</b>: ${held.stacks ?? 0} of ${held.max ?? DBUCharacterData.MAX_SUPER_STACKS}`,
+        givers.length ? `Given by: ${esc(givers.join(", "))}` : "",
+        ...parts.map(part => `${esc(part.source || "An effect")}: ${(Number(part.value) > 0) ? "+" : ""}${Number(part.value)}`),
+        gained ? `Gained in play or set by hand: ${gained}` : "",
+        (slots["synthetic.noSuperStacks"] === true) ? "Synthetic Muscle: you cannot possess any." : "",
+        held.musclePenalty ? `Muscle Penalty: Strike and Dodge -${held.musclePenalty}` : "",
+        held.solidBulk ? `Solid Bulk: Soak +${held.solidBulk}` : "",
+        held.massivePower ? `Massive Power: Physical and Energy Wound +${held.massivePower}` : "",
+        (held.stacks ?? 0) ? "" : "None held now."
+      ].filter(Boolean);
+      context.superStackBox = shown ? {
+        stacks: held.stacks ?? 0, max: held.max ?? DBUCharacterData.MAX_SUPER_STACKS,
+        note: [held.musclePenalty ? `Strike & Dodge -${held.musclePenalty}` : "", held.solidBulk ? `Soak +${held.solidBulk}` : "",
+          held.massivePower ? `Wound +${held.massivePower}` : ""].filter(Boolean).join(" \u00b7 "),
+        tip: lines.join("<br>")
+      } : null;
+    }
     context.resourcePicks = resources.filter(row => row.reachable || (row.stacks > 0));
 
     // Dice, above the Aptitudes.
