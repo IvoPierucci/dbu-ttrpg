@@ -2695,7 +2695,24 @@ async function payActions(actor, maneuver, spent = null) {
  * and speak in terms of a definition object. Converting here keeps that from having to
  * change everywhere at once.
  */
+/**
+ * A Maneuver Item's definition, made once while the Item is unchanged (the user's: the sheet and every chat card made them again and
+ * again). Kept by the Item's system data - which Foundry makes anew whenever the Item is updated - and checked against its name and
+ * when it was last changed; handed out as a copy, so nothing that changes one changes another.
+ */
+const definitions = new WeakMap();
 export function definitionOf(item) {
+  const system = item?.system;
+  if (!system || (typeof system !== "object")) return makeDefinition(item);
+  const stamp = `${item.id}|${item.name}|${item._stats?.modifiedTime ?? ""}`;
+  const known = definitions.get(system);
+  if (known && (known.stamp === stamp)) return { ...known.definition };
+  const definition = makeDefinition(item);
+  definitions.set(system, { stamp, definition });
+  return { ...definition };
+}
+
+function makeDefinition(item) {
   return {
     id: item.system.maneuverId || item.id,
     itemId: item.id,

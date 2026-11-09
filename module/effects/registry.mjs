@@ -30,12 +30,19 @@ import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, ca
  */
 const cache = new Map();
 
+const hashes = new Map();
 function hash(text) {
+  // Kept by the text itself (the user's: working the effects out was slow) - the same text, the same hash; bounded.
+  const known = hashes.get(text);
+  if (known !== undefined) return known;
   let h = 0;
   for (let i = 0; i < text.length; i++) {
     h = ((h << 5) - h + text.charCodeAt(i)) | 0;
   }
-  return h.toString(36);
+  const made = h.toString(36);
+  if (hashes.size > 5000) hashes.clear();
+  hashes.set(text, made);
+  return made;
 }
 
 /**

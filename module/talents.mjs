@@ -188,14 +188,29 @@ export function talentChoicesFor(actor, entry) {
     if ((item.type === "talent") && item.flags?.["dbu-ttrpg"]?.fromTrait) taken.add(item.flags["dbu-ttrpg"].sourceId);
   }
   const groups = new Map();
-  for (const trait of [...talentFiles()].sort(compareTalents)) {
+  for (const { trait, label } of sortedTalents()) {
     if (taken.has(trait.id) && (trait.id !== entry.talent)) continue;
-    const category = talentCategoryOf(trait);
-    const label = category ? (category.raceLabel ? `${category.label} - ${category.raceLabel}` : category.label) : "Other";
     if (!groups.has(label)) groups.set(label, []);
     groups.get(label).push({ value: trait.id, label: trait.name, selected: trait.id === entry.talent });
   }
   return [...groups].map(([label, options]) => ({ label, options }));
+}
+
+/**
+ * Every Talent file in the published order, each with its Category's label - sorted once, not for every Talent Addition row of every
+ * render (the user's: the sheet was slow). The files are read once a session; a different set of them sorts again.
+ */
+let sortedCache = { key: "", list: [] };
+function sortedTalents() {
+  const files = talentFiles();
+  const key = `${files.length}:${files.map(trait => trait.id).join(",")}`;
+  if (sortedCache.key === key) return sortedCache.list;
+  const list = [...files].sort(compareTalents).map(trait => {
+    const category = talentCategoryOf(trait);
+    return { trait, label: category ? (category.raceLabel ? `${category.label} - ${category.raceLabel}` : category.label) : "Other" };
+  });
+  sortedCache = { key, list };
+  return list;
 }
 
 /** The Talent Items a character owns, in the order the Talents are published: by Category, then within it. */
