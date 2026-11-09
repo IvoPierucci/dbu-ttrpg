@@ -1,5 +1,5 @@
 import DBUCharacterData from "./data/actor-character.mjs";
-import { isCharacter } from "./actor-types.mjs";
+import { isCharacter, isMinion } from "./actor-types.mjs";
 import { initiativeOrder, masterOf, minionsOf } from "./allies.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
@@ -57,6 +57,8 @@ import { registerConditionHooks } from "./conditions.mjs";
 }
 
 Hooks.once("init", () => {
+  // Whether the characters' tokens were linked to their sheets once (the user's) - done by the active GM at ready, then never again.
+  game.settings.register("dbu-ttrpg", "charactersLinked", { scope: "world", config: false, type: Boolean, default: false });
   console.log("DBU TTRPG | Initializing system");
 
   // Register the character data model for the "character" Actor type
@@ -187,6 +189,29 @@ Hooks.once("ready", registerManeuverSocket);
 // before then (the user's: "ya no son necesarias"). Taken off them once the world is ready, by the active GM: the world's characters,
 // and the unlinked tokens' own.
 export const RETIRED_MANEUVERS = Object.freeze(["jump", "thumb-war", "crouch"]);
+// Every character's token linked to the sheet on the Actors list, once (the user's: two sheets of one character, each changed apart) -
+// the prototype and every token already on a scene; what was kept on a token alone is let go, the list's sheet kept. Minions are left
+// as they are.
+Hooks.once("ready", async () => {
+  if (!game.user.isGM || (game.user !== game.users.activeGM) || game.settings.get("dbu-ttrpg", "charactersLinked")) return;
+  const characters = new Set([...(game.actors ?? [])].filter(actor => isCharacter(actor) && !isMinion(actor)).map(actor => actor.id));
+  let linked = 0;
+  for (const actor of game.actors ?? []) {
+    if (!characters.has(actor.id) || actor.prototypeToken?.actorLink) continue;
+    await actor.update({ "prototypeToken.actorLink": true }).catch(error => console.error("DBU TTRPG | Linking", actor.name, error));
+    linked++;
+  }
+  for (const scene of game.scenes ?? []) {
+    const tokens = [...(scene.tokens ?? [])].filter(token => !token.actorLink && characters.has(token.actorId));
+    if (!tokens.length) continue;
+    await scene.updateEmbeddedDocuments("Token", tokens.map(token => ({ _id: token.id, actorLink: true })))
+      .catch(error => console.error("DBU TTRPG | Linking tokens on", scene.name, error));
+    linked += tokens.length;
+  }
+  await game.settings.set("dbu-ttrpg", "charactersLinked", true);
+  if (linked) ui.notifications.info(`DBU TTRPG: ${linked} character token(s) linked to their sheets on the Actors list.`);
+});
+
 // An unlinked token's actor holds its world actor's Items as well as its own: only its own are touched there - its delta's (the user's:
 // deleting the world actor's through the token, already gone, left the token's sheet with every Item twice and "does not exist").
 Hooks.once("ready", async () => {
@@ -485,6 +510,10 @@ Hooks.on("preCreateActor", (actor, data, options, userId) => {
   if (!isCharacter(actor)) return;
 
   const updates = {};
+
+  // A character's token is the character (the user's: the token and the Actors list held two sheets of one character): linked, unless
+  // it was made unlinked on purpose. A Minion's stays a copy of its own - five Saibamen from one sheet, each its own Life.
+  if (!isMinion(actor) && (data.prototypeToken?.actorLink === undefined)) updates["prototypeToken.actorLink"] = true;
 
   const submitted = data.system?.progression;
   // A Minion's own (Minion Creation's Minion PL) - a Duplicate's comes copied from its Master.
