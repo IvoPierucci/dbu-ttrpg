@@ -1036,6 +1036,9 @@ export function reactiveFor(actor, options = {}) {
   return programsFor(actor, options).flatMap(entry =>
     (entry.program.blocks ?? [])
       .filter(b => (b.mode === "triggered") || (b.mode === "automatic"))
+      // A block waiting on a Level - Raging's Apoplectic, `from 3` - only once the State is at it (the user's: offered at every Level
+      // reached), as a passive one is (interpreter.mjs levelReached).
+      .filter(b => !b.modifiers?.fromLevel || ((Number(entry.level) || 0) >= Number(b.modifiers.fromLevel)))
       .map(b => ({
         ...entry,
         program: { ...entry.program, blocks: [b] },
