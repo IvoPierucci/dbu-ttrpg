@@ -2650,10 +2650,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.meleeRange = withEffects(this, "meleeRange", this.size.meleeRange);
 
     // Defense Value: equal to Agility Modifier, then adjusted for Size.
-    // Named for what it is in its hover (the user's): the Agility Modifier, "(Size)" where Size changed it.
+    // Named for what it is in its hover (the user's): the Agility Modifier, and Size a row of its own where it changed it.
     const ownDefense = DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier);
     this.defenseValue = withEffects(this, "defenseValue", ownDefense, {
-      parts: [{ label: `Agility Modifier${(ownDefense !== atts.agility.mod) ? " (Size)" : ""}`, value: ownDefense }] });
+      parts: [{ label: "Agility Modifier", value: atts.agility.mod }, { label: "Size", value: ownDefense - atts.agility.mod }] });
 
     // Speed: Normal = 2 + (1/2 Agility Mod); Boosted = Agility Mod + 2.
     // Each Speed through its own Slot, then both through the one that names them
@@ -2790,10 +2790,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel + champion + kind
         + ruled, {
         parts: [
-          // Named for what it is (the user's): the Tenacity Modifier - or the base Tier of Power, where that is the higher - and Size, where
-          // it changed it.
-          { label: `${(atts.tenacity.mod >= this.baseTierOfPower) ? "Tenacity Modifier" : "Base Tier of Power"}${
-            (ownSoak !== Math.max(atts.tenacity.mod, this.baseTierOfPower)) ? " (Size)" : ""}`, value: ownSoak },
+          // Named for what it is (the user's): the Tenacity Modifier - or the base Tier of Power, where that is the higher - and Size a
+          // row of its own where it changed it.
+          { label: (atts.tenacity.mod >= this.baseTierOfPower) ? "Tenacity Modifier" : "Base Tier of Power",
+            value: Math.max(atts.tenacity.mod, this.baseTierOfPower) },
+          { label: "Size", value: ownSoak - Math.max(atts.tenacity.mod, this.baseTierOfPower) },
           { label: (bulkTimes > 1) ? "Solid Bulk (twice, Adamantine Muscle)" : "Solid Bulk", value: this.superStack.solidBulk * bulkTimes },
           ...soakBelow.parts,
           ...(battery ? [{ label: "Power Battery", value: battery }] : []),
