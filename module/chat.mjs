@@ -8283,13 +8283,24 @@ function renderInstantResponses(message, html) {
     }
   }
 
-  const respond = document.createElement("button");
-  respond.type = "button";
-  respond.className = "dbu-respond-button";
-  respond.textContent = "Respond";
-  respond.dataset.tooltip = "Play a Counter or Instant Maneuver, or trigger an effect";
-  respond.addEventListener("click", () => respondDialog(message, respondable));
-  container.append(respond);
+  // Only where one of yours has something to play (the user's) - the Instants are the card's Instant row, not this: asked of the same
+  // reckoning the window makes, the button put in its place once the answer is in.
+  const spot = document.createElement("span");
+  spot.hidden = true;
+  container.append(spot);
+  respondDialog(message, respondable, { check: true }).then(any => {
+    if (!any || !spot.isConnected) return spot.remove();
+    const respond = document.createElement("button");
+    respond.type = "button";
+    respond.className = "dbu-respond-button";
+    respond.textContent = "Respond";
+    respond.dataset.tooltip = "Play a Counter Maneuver, or trigger an effect";
+    respond.addEventListener("click", () => respondDialog(message, respondable));
+    spot.replaceWith(respond);
+  }).catch(error => {
+    console.error("DBU TTRPG | Could not tell whether anything answers this", error);
+    spot.remove();
+  });
 }
 
 function instantManeuvers() {
@@ -9067,7 +9078,7 @@ function rollsOnMessage(message, actor) {
   return false;
 }
 
-async function respondDialog(message, respondable, { initials = new Map() } = {}) {
+async function respondDialog(message, respondable, { initials = new Map(), check = false } = {}) {
   const characters = ownedCharacters();
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   // The other thing a Counter Maneuver can answer. Until the Blockade Maneuver, every
@@ -9435,6 +9446,8 @@ async function respondDialog(message, respondable, { initials = new Map() } = {}
   // One character: its window. Several that can answer (the user's): a window to pick whose answer to set, each its own
   // window, Done sending them all - Cancel nothing.
   const usable = entries.filter(entry => entry.usable);
+  // Asked only whether there is anything to play (the user's: no Respond button where there is nothing).
+  if (check) return usable.length > 0;
   if (!usable.length) {
     ui.notifications.info("Nothing you play answers this.");
     return;
