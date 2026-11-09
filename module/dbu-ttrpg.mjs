@@ -25,6 +25,27 @@ import { registerCombatHooks, registerBreathHooks, registerDefeatHooks, register
   from "./combat.mjs";
 import { registerConditionHooks } from "./conditions.mjs";
 
+// A sheet that cannot be worked out is left half-made - no Wound, no dice - and everything after fails on it (the user's: a Respond
+// that broke on a target's Defense). Said once, by name, with the error that stopped it, so it can be found.
+{
+  const prepare = DBUCharacterData.prototype.prepareDerivedData;
+  const said = new Set();
+  DBUCharacterData.prototype.prepareDerivedData = function (...args) {
+    try {
+      return prepare.apply(this, args);
+    } catch (error) {
+      const name = this.parent?.name ?? "A character";
+      console.error(`DBU TTRPG | ${name}'s sheet could not be worked out`, error);
+      const key = `${this.parent?.uuid ?? name}:${error?.message ?? error}`;
+      if (!said.has(key) && globalThis.ui?.notifications) {
+        said.add(key);
+        ui.notifications.error(`DBU TTRPG | ${name}'s sheet could not be worked out - see the console (F12).`);
+      }
+      throw error;
+    }
+  };
+}
+
 Hooks.once("init", () => {
   console.log("DBU TTRPG | Initializing system");
 
