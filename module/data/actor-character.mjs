@@ -2807,7 +2807,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
             value: Math.max(atts.tenacity.mod, this.baseTierOfPower) },
           { label: "Size", value: ownSoak - Math.max(atts.tenacity.mod, this.baseTierOfPower),
             written: sizeWritten(ownSoak - Math.max(atts.tenacity.mod, this.baseTierOfPower), this.size.soakModifier, this.tierOfPower) },
-          { label: (bulkTimes > 1) ? "Solid Bulk (twice, Adamantine Muscle)" : "Solid Bulk", value: this.superStack.solidBulk * bulkTimes },
+          // Called by what gives it (the user's: "Super Stacks", not "Solid Bulk"), written as the rule has it - 1(bT) a stack.
+          { label: (bulkTimes > 1) ? "Super Stacks (twice, Adamantine Muscle)" : "Super Stacks", value: this.superStack.solidBulk * bulkTimes,
+            written: (this.superStack.solidBulk === this.perBaseTier(this.superStack.stacks))
+              ? `+${this.superStack.stacks * bulkTimes}(bT)` : undefined },
           ...soakBelow.parts,
           ...(battery ? [{ label: "Power Battery", value: battery }] : []),
           ...(steel ? [{ label: "Steel Muscle", value: steel }] : []),
