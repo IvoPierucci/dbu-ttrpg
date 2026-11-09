@@ -147,6 +147,16 @@ function perThreshold(data, key) {
  * A Foundation's own Strike or Wound - `strike.energy`, `wound.physical` - on top of the shared one, where something raises
  * that Foundation's alone; the shared one, and its workings left where they were, where nothing does.
  */
+/**
+ * Size's row as the Size table writes it - per Tier: "+1(T)", "-2(T)" (the user's) - where all of it applied; where the floor of an
+ * Aptitude stopped part of it, the number alone.
+ */
+function sizeWritten(applied, modifier, tier) {
+  const perTier = modifier / Math.max(1, Number(tier) || 1);
+  if (!applied || (applied !== modifier) || !Number.isInteger(perTier)) return undefined;
+  return `${(perTier > 0) ? "+" : ""}${perTier}(T)`;
+}
+
 function ownFoundation(data, key, shared) {
   if (!data.effects?.slots?.[key]) return shared;
   // Wrapped round the shared one's workings, filed under this same key a moment ago (the user's: the Physical Wound's hover showed
@@ -2653,7 +2663,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Named for what it is in its hover (the user's): the Agility Modifier, and Size a row of its own where it changed it.
     const ownDefense = DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier);
     this.defenseValue = withEffects(this, "defenseValue", ownDefense, {
-      parts: [{ label: "Agility Modifier", value: atts.agility.mod }, { label: "Size", value: ownDefense - atts.agility.mod }] });
+      parts: [{ label: "Agility Modifier", value: atts.agility.mod },
+        { label: "Size", value: ownDefense - atts.agility.mod, written: sizeWritten(ownDefense - atts.agility.mod, this.size.defenseModifier, this.tierOfPower) }] });
 
     // Speed: Normal = 2 + (1/2 Agility Mod); Boosted = Agility Mod + 2.
     // Each Speed through its own Slot, then both through the one that names them
@@ -2794,7 +2805,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
           // row of its own where it changed it.
           { label: (atts.tenacity.mod >= this.baseTierOfPower) ? "Tenacity Modifier" : "Base Tier of Power",
             value: Math.max(atts.tenacity.mod, this.baseTierOfPower) },
-          { label: "Size", value: ownSoak - Math.max(atts.tenacity.mod, this.baseTierOfPower) },
+          { label: "Size", value: ownSoak - Math.max(atts.tenacity.mod, this.baseTierOfPower),
+            written: sizeWritten(ownSoak - Math.max(atts.tenacity.mod, this.baseTierOfPower), this.size.soakModifier, this.tierOfPower) },
           { label: (bulkTimes > 1) ? "Solid Bulk (twice, Adamantine Muscle)" : "Solid Bulk", value: this.superStack.solidBulk * bulkTimes },
           ...soakBelow.parts,
           ...(battery ? [{ label: "Power Battery", value: battery }] : []),
