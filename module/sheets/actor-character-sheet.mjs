@@ -934,12 +934,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.kiPercent = DBUCharacterSheet.#percentFull(this.actor.system.ki);
     context.divineKiPercent = DBUCharacterSheet.#percentFull(this.actor.system.divineKi ?? {});
     // Wound is per Foundation, so the labels come from the same config the values do.
-    context.woundRolls = Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => ({
-      label: foundation.label,
-      value: this.actor.system.combat.wound[key],
-      workings: workingsTable(this.actor.system, `wound.${key}`,
-        { extra: atRollTime(this.actor.system, "wound") })
-    }));
+    // The Super Stacks' Massive Power on the Physical and Energy Wound (the user's): added at the attack (chat.mjs superStackWoundParts),
+    // shown here in the number and as a row of its own - the attack still adds it once, not this.
+    const massive = Number(this.actor.system.superStack?.massivePower) || 0;
+    const massiveStacks = Number(this.actor.system.superStack?.stacks) || 0;
+    context.woundRolls = Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => {
+      const reaches = Boolean(massive) && DBUCharacterData.MASSIVE_POWER_FOUNDATIONS.includes(key);
+      const value = this.actor.system.combat.wound[key] + (reaches ? massive : 0);
+      return {
+        label: foundation.label,
+        value,
+        workings: workingsTable(this.actor.system, `wound.${key}`, { extra: atRollTime(this.actor.system, "wound"),
+          more: reaches ? [{ label: `Super Stacks (Massive Power, ${massiveStacks} x 1/4 Force Modifier)`, value: massive }] : [],
+          total: reaches ? value : null })
+      };
+    });
 
     // A Foundation's own Strike, where something raises it apart from the shared one - "Energy Strike".
     context.strikeRolls = Object.entries(DBUCharacterData.FOUNDATIONS)

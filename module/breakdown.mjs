@@ -375,7 +375,7 @@ export function contributionLine(part) {
  * `total` overrides the answer, for the values clamped once more outside every Slot. A
  * table whose answer differs from the number it is attached to is worse than no table.
  */
-export function workingsTable(system, key, { extra = [], total = null, aside = [] } = {}) {
+export function workingsTable(system, key, { extra = [], total = null, aside = [], more = [] } = {}) {
   const keys = Array.isArray(key) ? key : [key];
   const steps = keys.map(one => system.effects?.workings?.[one]).filter(Boolean);
   if (!steps.length) return "";
@@ -397,6 +397,9 @@ export function workingsTable(system, key, { extra = [], total = null, aside = [
       lines.push(floorLine(step.base, step.floored, "nothing goes below zero"));
     }
   }
+
+  // Added outside every Slot by its reader - the Super Stacks' Massive Power on the Wound - rows of their own, in the sum (`total`).
+  for (const part of more) if (part && Number(part.value)) lines.push(partLine(part));
 
   for (const note of extra) if (note) lines.push(noteLine(note));
 
