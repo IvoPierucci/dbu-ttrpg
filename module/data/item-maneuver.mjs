@@ -659,6 +659,11 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         tpChange: new fields.NumberField({ required: true, integer: true, initial: 0 }),
         /** Its own price not charged; what is bought onto it still is (the user's). */
         free: new fields.BooleanField({ required: true, initial: false }),
+        /**
+         * Not owned (the user's): one you may use but do not possess - a Genetic Donor's, Genetic Catalogue's "You may use a Unique
+         * Ability possessed by your Genetic Donors". No Passive Bonus of it applies, and it costs no TP at all (unique.mjs).
+         */
+        notOwned: new fields.BooleanField({ required: true, initial: false }),
         prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The file it was gained from, if any - `unique/<id>.dbu`. */
         libraryId: new fields.StringField({ required: true, blank: true, initial: "" }),

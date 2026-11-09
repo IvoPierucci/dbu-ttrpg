@@ -61,11 +61,13 @@ export function uniqueTPOf(unique, slots = null) {
   // Never below half the listed cost: a half-point would be below it, so it is kept.
   const floor = Math.ceil(listed / 2);
   const base = Math.max(floor, listed + change - reduction);
-  const free = unique?.free === true;
+  // Not owned (the user's): used, not possessed - nothing of it charged, its Advancements neither.
+  const notOwned = unique?.notOwned === true;
+  const free = notOwned || (unique?.free === true);
   const charged = free ? 0 : base;
-  const advancements = (unique?.advancements ?? []).filter(entry => entry.bought && !entry.free)
+  const advancements = notOwned ? 0 : (unique?.advancements ?? []).filter(entry => entry.bought && !entry.free)
     .reduce((sum, entry) => sum + advancementTPOf(entry), 0);
-  return { listed, change, reduction, floor, base, free, charged, advancements, total: charged + advancements };
+  return { listed, change, reduction, floor, base, free, notOwned, charged, advancements, total: charged + advancements };
 }
 
 /** An Advancement's TP Cost: its own, changed by its TP Cost Change - never below nothing (the user's). */
@@ -79,12 +81,29 @@ export function advancementTPOf(entry) {
  */
 export function uniqueScriptOf(system) {
   const unique = system?.unique ?? {};
-  return [system?.script ?? "",
-    ...(unique.advancements ?? []).filter(entry => entry.bought).map(entry => entry.script ?? ""),
+  // Not owned (the user's: "you may use", not "you gain access to"): none of its Passive Bonuses - its own or an Advancement's - only
+  // what using it does. Its Restrictions stay.
+  const own = part => (unique.notOwned ? withoutPassives(part) : part);
+  return [own(system?.script ?? ""),
+    ...(unique.advancements ?? []).filter(entry => entry.bought).map(entry => own(entry.script ?? "")),
     ...(unique.restrictions ?? []).filter(entry => entry.applied).map(entry => entry.script ?? "")]
     .map(part => String(part).trim()).filter(Boolean).join("\n\n")
     // "While this Unique Ability's effects are applied" - the Atmospheric Bubble's.
     .replace(/\$applied\b/g, unique.applied ? "1" : "0");
+}
+
+/**
+ * A script with its [passive] blocks taken out - a Unique Ability not owned (the user's). A block that is what using it does rather than
+ * a Passive Bonus says so with the line `# Kept when not owned` (the Atmospheric Bubble applied, Body Change's Unfamiliar) and stays.
+ */
+export function withoutPassives(script) {
+  const blocks = [];
+  for (const line of String(script ?? "").split(/\r?\n/)) {
+    if (/^\s*\[/.test(line) || !blocks.length) blocks.push([line]);
+    else blocks.at(-1).push(line);
+  }
+  return blocks.filter(lines => !/^\s*\[passive\b[^\]]*\]/.test(lines[0]) || lines.some(line => /#\s*Kept when not owned/i.test(line)))
+    .map(lines => lines.join("\n")).join("\n");
 }
 
 /**

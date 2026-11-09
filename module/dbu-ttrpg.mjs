@@ -166,6 +166,10 @@ Hooks.once("ready", async () => {
     const ids = Array.from(actor.items ?? []).filter(item => (item.type === "maneuver")
       && RETIRED_MANEUVERS.includes(item.system?.maneuverId || item.flags?.["dbu-ttrpg"]?.sourceId)).map(item => item.id);
     if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids).catch(error => console.error("DBU TTRPG | Retired Maneuvers", error));
+    // A Genetic Donor's Unique Ability copied before "Not owned" existed: not owned (the user's).
+    const donors = Array.from(actor.items ?? []).filter(item => (item.flags?.["dbu-ttrpg"]?.genetic?.kind === "unique")
+      && item.system?.unique && !item.system.unique.notOwned).map(item => ({ _id: item.id, "system.unique.notOwned": true }));
+    if (donors.length) await actor.updateEmbeddedDocuments("Item", donors).catch(error => console.error("DBU TTRPG | Not owned", error));
   }
 });
 

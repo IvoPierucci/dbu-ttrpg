@@ -116,6 +116,8 @@ export async function copyFromDonors(actor, talent) {
       delete own.copied;
       data.flags = { ...(data.flags ?? {}), [SCOPE]: { ...own, grantedBy: talent.id,
         genetic: { from: donor.name, fromUuid: donor.uuid, kind } } };
+      // "You may use a Unique Ability possessed by your Genetic Donors" - used, not owned (the user's): no Passive Bonus, no TP.
+      if (kind === "unique") foundry.utils.setProperty(data, "system.unique.notOwned", true);
       made.push(data);
     }
   }

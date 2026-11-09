@@ -55,6 +55,7 @@ text: >
 # "Each stack of Unfamiliar reduces your Combat Rolls by 1(bT) and your Stress Bonus by 1. While you have 2+ stacks of
 # Unfamiliar, reduce your current Tier of Power by 1."
 [passive]
+# Kept when not owned: what using it leaves - Unfamiliar - not a Passive Bonus.
 if (unfamiliar.stacks > 0) {
   combatRolls -= (unfamiliar.stacks * 1(bT));
   stressBonus -= unfamiliar.stacks;

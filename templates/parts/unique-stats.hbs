@@ -40,9 +40,15 @@
         <em>TP Cost Change</em>
         <input type="number" name="system.unique.tpChange" value="{{system.unique.tpChange}}"/>
       </div>
-      <div class="stat" data-tooltip="Its own TP Cost is not charged. Advancements bought onto it still are.">
+      <div class="stat" data-tooltip="{{#if system.unique.notOwned}}Not owned: nothing of it is charged.{{else}}Its own TP Cost is not charged. Advancements bought onto it still are.{{/if}}">
         <em>Free</em>
-        <input type="checkbox" name="system.unique.free" {{#if system.unique.free}}checked{{/if}}/>
+        <input type="checkbox" name="system.unique.free"
+               {{#if system.unique.notOwned}}checked disabled{{else}}{{#if system.unique.free}}checked{{/if}}{{/if}}/>
+      </div>
+      {{! Not owned (the user's): one you may use but do not possess - a Genetic Donor's. No Passive Bonus, no TP. }}
+      <div class="stat" data-tooltip="You may use it, but do not possess it - a Genetic Donor's: none of its Passive Bonuses apply, and it costs no TP.">
+        <em>Not owned</em>
+        <input type="checkbox" name="system.unique.notOwned" {{#if system.unique.notOwned}}checked{{/if}}/>
       </div>
     </div>
   </section>

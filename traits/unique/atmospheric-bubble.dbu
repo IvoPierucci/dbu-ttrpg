@@ -33,6 +33,7 @@ text: >
 # "Ignore the rules for Unbreathable Environments while this Unique Ability's effects are applied." `$applied`
 # is 1 while they are (unique.mjs uniqueScriptOf).
 [passive]
+# Kept when not owned: what the Bubble applied does, not a Passive Bonus.
 if ($applied == 1) {
   forbid unbreathableEnvironments;
 }
