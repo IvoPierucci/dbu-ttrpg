@@ -2650,8 +2650,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.meleeRange = withEffects(this, "meleeRange", this.size.meleeRange);
 
     // Defense Value: equal to Agility Modifier, then adjusted for Size.
-    this.defenseValue = withEffects(this, "defenseValue",
-      DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier));
+    // Named for what it is in its hover (the user's): the Agility Modifier, "(Size)" where Size changed it.
+    const ownDefense = DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier);
+    this.defenseValue = withEffects(this, "defenseValue", ownDefense, {
+      parts: [{ label: `Agility Modifier${(ownDefense !== atts.agility.mod) ? " (Size)" : ""}`, value: ownDefense }] });
 
     // Speed: Normal = 2 + (1/2 Agility Mod); Boosted = Agility Mod + 2.
     // Each Speed through its own Slot, then both through the one that names them
