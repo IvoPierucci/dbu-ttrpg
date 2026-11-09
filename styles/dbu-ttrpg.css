@@ -5356,3 +5356,6 @@
 .dbu-ttrpg .dbu-mchip { padding: 0 5px; border: 1px solid #6c6078; border-radius: 3px; font-size: 10px; white-space: nowrap; }
 .dbu-ttrpg .dbu-mchip.uses { border-color: #4f8a62; }
 .dbu-ttrpg .dbu-mchip.out { border-color: #8a4f4f; color: #e0a0a0; }
+
+/* An Item's icon in a Manage window - the Maneuvers' - square, not a portrait's circle. */
+.dbu-ttrpg .ally-picks .ally-img.dbu-item-img { border-radius: 3px; }

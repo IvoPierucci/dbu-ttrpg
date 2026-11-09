@@ -192,12 +192,12 @@
     <div class="dbu-combat-window" role="dialog" aria-modal="true">
       <header><h3>Manage &middot; {{maneuverManage.label}}</h3></header>
       <p class="dbu-manage-note">Ticked: shown on the list. Unticked: hidden here only - still yours, still on your hotbar, still offered where it applies.</p>
-      <div class="dbu-combat-window-body dbu-picks">
+      <div class="dbu-combat-window-body dbu-picks ally-picks">
         {{#each maneuverManage.picks as |pick|}}
         <label class="dbu-pick{{#if pick.shown}} on{{/if}}">
           <input type="checkbox" data-action="pickManeuver" data-id="{{pick.itemId}}" {{#if pick.shown}}checked{{/if}}
                  {{#unless @root.editable}}disabled{{/unless}}/>
-          {{#if pick.img}}<img class="ally-img" src="{{pick.img}}" alt=""/>{{/if}}
+          {{#if pick.img}}<img class="ally-img dbu-item-img" src="{{pick.img}}" alt=""/>{{/if}}
           {{pick.name}}
         </label>
         {{else}}
