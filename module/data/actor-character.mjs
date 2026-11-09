@@ -2788,7 +2788,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel + champion + kind
         + ruled, {
         parts: [
-          { label: "Own Soak", value: ownSoak },
+          // Named for what it is (the user's): the Tenacity Modifier - or the base Tier of Power, where that is the higher - and Size, where
+          // it changed it.
+          { label: `${(atts.tenacity.mod >= this.baseTierOfPower) ? "Tenacity Modifier" : "Base Tier of Power"}${
+            (ownSoak !== Math.max(atts.tenacity.mod, this.baseTierOfPower)) ? " (Size)" : ""}`, value: ownSoak },
           { label: (bulkTimes > 1) ? "Solid Bulk (twice, Adamantine Muscle)" : "Solid Bulk", value: this.superStack.solidBulk * bulkTimes },
           ...soakBelow.parts,
           ...(battery ? [{ label: "Power Battery", value: battery }] : []),
