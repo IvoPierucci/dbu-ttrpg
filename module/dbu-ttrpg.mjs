@@ -30,7 +30,15 @@ import { registerConditionHooks } from "./conditions.mjs";
 {
   const prepare = DBUCharacterData.prototype.prepareDerivedData;
   const said = new Set();
+  // The sheets being worked out right now, by their token's (or their own) uuid. Working one out reads the tokens on the scene -
+  // Allies within reach - and asking an unlinked token for its actor while that very actor is still being made makes another,
+  // whose working out asks again: "Maximum call stack size exceeded" on loading a scene (the user's, Sereh's token). The copy made
+  // inside is left unworked - the one being made is the one kept.
+  const preparing = new Set();
   DBUCharacterData.prototype.prepareDerivedData = function (...args) {
+    const key = this.parent?.token?.uuid ?? this.parent?.uuid ?? null;
+    if (key && preparing.has(key)) return;
+    if (key) preparing.add(key);
     try {
       return prepare.apply(this, args);
     } catch (error) {
@@ -42,6 +50,8 @@ import { registerConditionHooks } from "./conditions.mjs";
         ui.notifications.error(`DBU TTRPG | ${name}'s sheet could not be worked out - see the console (F12).`);
       }
       throw error;
+    } finally {
+      if (key) preparing.delete(key);
     }
   };
 }
