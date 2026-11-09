@@ -182,7 +182,7 @@ function run(statements, scope) {
         const value = (slot.kind === KINDS.DICE)
           ? resolveDice(s.amount, scope)
           : resolveAmount(s.amount, scope);
-        scope.collect(slot, s.op, value, slot.kind, writtenAmount(s.amount));
+        scope.collect(slot, s.op, value, slot.kind, writtenAmount(s.amount, side => resolveAmount(side, scope)));
         break;
       }
 
@@ -262,11 +262,22 @@ function reachesPhase(statements, scope) {
  * what that came to): a plain number or one per Tier, base Tier or Weather Tier, a subtraction of one; "" for anything worked out
  * further (a path, a sum, a call), which the number alone then stands for.
  */
-export function writtenAmount(amount) {
+export function writtenAmount(amount, resolve = null) {
   const simple = a => ((a?.type === "flat") && (typeof a.value === "number")) ? String(a.value)
     : (a?.type === "perTier") ? `${a.value}(T)` : (a?.type === "perBaseTier") ? `${a.value}(bT)`
     : (a?.type === "perWeatherTier") ? `${a.value}(WT)` : "";
   if (!amount) return "";
+  // One per Tier times a count - the Jacket's `1(bT) * $slots` - the count worked out and written in: "2(bT)" for two Slots (the user's).
+  const scale = { perTier: "T", perBaseTier: "bT", perWeatherTier: "WT" };
+  const hasTier = a => Boolean(a) && ((a.type in scale) || ["left", "right", "then", "else"].some(key => hasTier(a[key]))
+    || (a.args ?? []).some(hasTier));
+  if ((amount.type === "binary") && (amount.op === "*") && resolve) {
+    const [tiered, count] = (amount.left?.type in scale) ? [amount.left, amount.right] : [amount.right, amount.left];
+    if ((tiered?.type in scale) && !hasTier(count)) {
+      const times = Number(resolve(count));
+      if (Number.isFinite(times)) return `${Math.round(tiered.value * times * 100) / 100}(${scale[tiered.type]})`;
+    }
+  }
   // `x -= 2(T)` is stored as adding (0 - 2(T)).
   if ((amount.type === "binary") && (amount.op === "-") && (amount.left?.type === "flat") && (amount.left.value === 0)) {
     const right = simple(amount.right);
