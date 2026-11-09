@@ -33721,7 +33721,8 @@ function woundBase(attacker, attack) {
   const wound = attacker.system.combat.wound[attack.foundation] ?? 0;
   const own = attack.damageAttribute;
   const attribute = DBUCharacterData.FOUNDATIONS[attack.foundation]?.attribute;
-  const theirs = attacker.system.attributes?.[attribute]?.mod ?? 0;
+  // The Damage Attribute the Wound already holds - its Foundation's, or Magic for Magic Warrior (2) - taken out for one named instead.
+  const theirs = attacker.system.combat.woundAttribute?.[attack.foundation] ?? attacker.system.attributes?.[attribute]?.mod ?? 0;
   // Saibabrute (3): the Damage Attribute of a Physical or Energy Attack raised - whichever stands (`damageAttribute.<foundation>`).
   const raised = Number(attacker?.system?.effects?.slots?.[`damageAttribute.${attack?.foundation}`]?.add) || 0;
   // Low-Power Crush: "Halve your Damage Attribute for this Attacking Maneuver" - whichever stands.

@@ -3164,6 +3164,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       ? { label: `${DBUCharacterData.FOUNDATIONS[focused]?.label ?? focused} Strike (Archetype Defense)`, value: strikeBy[focused] }
       : { label: "Physical Strike", value: strikeBy.physical };
 
+    // Each Foundation's Damage Attribute: its own - Force, or Magic - but for Magic Warrior (2)'s "You may use your Magic Modifier as
+    // the Damage Attribute for all Physical and Energy Attacks", taken where it is the higher (the user's: the Combat tab's Wound
+    // showed Force), as the attack itself takes it (maneuvers.mjs favoredDamage).
+    const woundAttribute = (key, foundation) => {
+      const name = foundation.attribute;
+      const own = { label: `${name.charAt(0).toUpperCase()}${name.slice(1)} Modifier`, value: atts[name].mod };
+      if (!["physical", "energy"].includes(key) || (this.effects?.slots?.["magicWarrior.damage"] !== true)) return own;
+      return (atts.magic.mod > own.value) ? { label: "Magic Modifier (Magic Warrior)", value: atts.magic.mod } : own;
+    };
     this.combat = {
       strike: combatStrike,
       strikeBy,
@@ -3191,7 +3200,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       wound: Object.fromEntries(
         Object.entries(DBUCharacterData.FOUNDATIONS)
           .map(([key, foundation]) =>
-            [key, ownFoundation(this, `wound.${key}`, withEffects(this, "wound", atts[foundation.attribute].mod
+            [key, ownFoundation(this, `wound.${key}`, withEffects(this, "wound", woundAttribute(key, foundation).value
               + perThreshold(this, "wound").value + (this.steadyMomentum ?? 0), {
               as: `wound.${key}`,
               parts: [...perThreshold(this, "wound").parts,
@@ -3199,12 +3208,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
                 // The Damage Attribute this Foundation names, by name: a Wound Roll of
                 // 7 says nothing about which Attribute it came from, and that is the
                 // first thing anybody asks of it.
-                label: `${foundation.attribute.charAt(0).toUpperCase()}`
-                  + `${foundation.attribute.slice(1)} Modifier`,
-                value: atts[foundation.attribute].mod
+                label: woundAttribute(key, foundation).label,
+                value: woundAttribute(key, foundation).value
               }]
             }))])
-      )
+      ),
+      // The Damage Attribute each Wound above holds, so an attack that names another takes this one out (chat.mjs woundBase).
+      woundAttribute: Object.fromEntries(Object.entries(DBUCharacterData.FOUNDATIONS)
+        .map(([key, foundation]) => [key, woundAttribute(key, foundation).value]))
     };
 
 
