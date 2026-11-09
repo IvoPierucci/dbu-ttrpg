@@ -3889,7 +3889,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const paint = () => {
       shown.forEach((option, index) => option.classList.toggle("active", index === active));
-      shown[active]?.scrollIntoView({ block: "nearest" });
+      // Kept in sight by scrolling the list alone - never what is under it, which would close it (onScroll).
+      const marked = shown[active];
+      if (marked && !list.hidden) {
+        if (marked.offsetTop < list.scrollTop) list.scrollTop = marked.offsetTop;
+        else if ((marked.offsetTop + marked.offsetHeight) > (list.scrollTop + list.clientHeight)) {
+          list.scrollTop = marked.offsetTop + marked.offsetHeight - list.clientHeight;
+        }
+      }
     };
     const draw = typed => {
       const query = String(typed ?? "").trim().toLowerCase();
@@ -3913,29 +3920,37 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (query || (active < 0)) active = shown.findIndex(option => option.dataset.value !== "");
       paint();
     };
+    // Out of the table (the user's: it was cut short inside it) - placed against the screen, under the box where it fits, else on the
+    // side with more room, no taller than that room; placed again as typing changes its height.
+    const place = () => {
+      if (list.hidden) return;
+      const at = box.getBoundingClientRect();
+      const below = window.innerHeight - at.bottom - 8;
+      const above = at.top - 8;
+      Object.assign(list.style, { position: "fixed", left: `${at.left}px`, right: "auto", bottom: "auto",
+        width: `${Math.max(at.width, 180)}px`, maxHeight: "" });
+      const wanted = Math.min(list.scrollHeight, 320);
+      const up = (below < wanted) && (above > below);
+      list.style.maxHeight = `${Math.max(90, Math.min(320, up ? above : below))}px`;
+      const top = up ? (at.top - 2 - list.offsetHeight) : (at.bottom + 2);
+      list.style.top = `${top}px`;
+      // A window moved by a transform puts "fixed" inside it: corrected by where it actually landed.
+      const real = list.getBoundingClientRect();
+      if (Math.abs(real.left - at.left) > 1) list.style.left = `${at.left + (at.left - real.left)}px`;
+      if (Math.abs(real.top - top) > 1) list.style.top = `${top + (top - real.top)}px`;
+    };
     const open = () => {
-      if (!list.hidden) return;
+      if (!list.hidden) return place();
       list.hidden = false;
       box.setAttribute("aria-expanded", "true");
-      // Measured against what actually cuts it off (the user's: opened upward it was cut short) - the nearest box around it that
-      // scrolls or hides what overflows, not the whole window: under the box where it fits, else on whichever side has more room,
-      // and no taller than that room.
-      let clip = combo.parentElement;
-      while (clip && (clip !== document.body)) {
-        const style = window.getComputedStyle(clip);
-        if (/(auto|scroll|hidden|clip)/.test(`${style.overflowY} ${style.overflow}`)) break;
-        clip = clip.parentElement;
-      }
-      const room = (clip ?? document.body).getBoundingClientRect();
-      const at = box.getBoundingClientRect();
-      const below = room.bottom - at.bottom - 6;
-      const above = at.top - room.top - 6;
-      list.style.maxHeight = "";
-      const wanted = Math.min(list.scrollHeight, 260);
-      const up = (below < wanted) && (above > below);
-      combo.classList.toggle("up", up);
-      list.style.maxHeight = `${Math.max(90, Math.min(260, up ? above : below))}px`;
+      place();
     };
+    // Scrolled while open, it would float away from its box: closed instead - not by scrolling the list itself.
+    const onScroll = event => {
+      if (!combo.isConnected) return document.removeEventListener("scroll", onScroll, true);
+      if (!list.hidden && !list.contains(event.target)) close();
+    };
+    document.addEventListener("scroll", onScroll, true);
     const close = () => {
       list.hidden = true;
       box.setAttribute("aria-expanded", "false");
