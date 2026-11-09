@@ -489,13 +489,17 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 2px 16px;
+  gap: 0 14px;
+  padding-block: 2px;
 }
 
+/* The two rows closer (the user's: they felt far apart) - Foundry's own tab item is tall. */
 .dbu-ttrpg .sheet-tabs > .item {
   flex: 0 0 auto;
   text-align: center;
   white-space: nowrap;
+  line-height: 1.45;
+  padding-block: 1px;
 }
 
 .dbu-ttrpg .sheet-tabs::after {
@@ -629,7 +633,8 @@
   align-items: baseline;
   justify-content: space-between;
   margin: 0 0 6px;
-  padding-bottom: 3px;
+  /* Room between a section's name and its line (the user's: they nearly touched). */
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--dbu-border);
   font-size: 13px;
   text-transform: uppercase;
