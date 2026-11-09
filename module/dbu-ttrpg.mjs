@@ -177,19 +177,27 @@ Hooks.once("ready", registerManeuverSocket);
 // before then (the user's: "ya no son necesarias"). Taken off them once the world is ready, by the active GM: the world's characters,
 // and the unlinked tokens' own.
 export const RETIRED_MANEUVERS = Object.freeze(["jump", "thumb-war", "crouch"]);
+// An unlinked token's actor holds its world actor's Items as well as its own: only its own are touched there - its delta's (the user's:
+// deleting the world actor's through the token, already gone, left the token's sheet with every Item twice and "does not exist").
 Hooks.once("ready", async () => {
   if (!game.user.isGM || (game.user !== game.users.activeGM)) return;
-  const actors = [...(game.actors ?? [])];
+  const sources = [...(game.actors ?? [])].map(actor => ({ actor, items: Array.from(actor.items ?? []) }));
   for (const scene of game.scenes ?? []) {
-    for (const token of scene.tokens ?? []) if (!token.actorLink && token.actor) actors.push(token.actor);
+    for (const token of scene.tokens ?? []) {
+      if (token.actorLink || !token.actor) continue;
+      const own = Array.from(token.delta?.items ?? []);
+      if (own.length) sources.push({ actor: token.actor, items: own });
+    }
   }
-  for (const actor of actors) {
-    const ids = Array.from(actor.items ?? []).filter(item => (item.type === "maneuver")
-      && RETIRED_MANEUVERS.includes(item.system?.maneuverId || item.flags?.["dbu-ttrpg"]?.sourceId)).map(item => item.id);
+  for (const { actor, items } of sources) {
+    const ids = items.filter(item => (item.type === "maneuver")
+      && RETIRED_MANEUVERS.includes(item.system?.maneuverId || item.flags?.["dbu-ttrpg"]?.sourceId)).map(item => item.id)
+      .filter(id => actor.items?.has?.(id));
     if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids).catch(error => console.error("DBU TTRPG | Retired Maneuvers", error));
     // A Genetic Donor's Unique Ability copied before "Not owned" existed: not owned (the user's).
-    const donors = Array.from(actor.items ?? []).filter(item => (item.flags?.["dbu-ttrpg"]?.genetic?.kind === "unique")
-      && item.system?.unique && !item.system.unique.notOwned).map(item => ({ _id: item.id, "system.unique.notOwned": true }));
+    const donors = items.filter(item => (item.flags?.["dbu-ttrpg"]?.genetic?.kind === "unique")
+      && item.system?.unique && !item.system.unique.notOwned && actor.items?.has?.(item.id))
+      .map(item => ({ _id: item.id, "system.unique.notOwned": true }));
     if (donors.length) await actor.updateEmbeddedDocuments("Item", donors).catch(error => console.error("DBU TTRPG | Not owned", error));
   }
 });
