@@ -104,10 +104,17 @@ export async function copyFromDonors(actor, talent) {
     .map(item => item.id);
   if (old.length) await actor.deleteEmbeddedDocuments("Item", old);
   const made = [];
+  // A Unique Ability the character has of their own, or one already copied from another Donor: not given again (the user's).
+  const uaKey = item => String(item.system?.unique?.libraryId || item.name || "").trim().toLowerCase();
+  const had = new Set(Array.from(actor.items ?? []).filter(item => isUniqueAbility(item) && !old.includes(item.id)).map(uaKey));
   for (const donor of donorsOf(talent)) {
     for (const item of Array.from(donor.items ?? [])) {
       const kind = isUniqueAbility(item) ? "unique" : ((item.type === "maneuver") && isBuilt(item)) ? "technique" : "";
       if (!kind) continue;
+      if (kind === "unique") {
+        if (had.has(uaKey(item))) continue;
+        had.add(uaKey(item));
+      }
       const data = item.toObject();
       delete data._id;
       data.name = `${item.name} (${donor.name})`;

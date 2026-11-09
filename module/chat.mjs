@@ -10313,6 +10313,7 @@ async function cancelByInstantaneousControl(message) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack?.attackerUuid || attack.result) return;
   await regainRefund(fromUuidSync(attack.attackerUuid), attack.refund ?? attack.paid ?? {});
+  await freeGeneticUse(message);
   return requestEdit(message, { type: "attack", attack: { ...attack, icCancelled: true, pending: [] } });
 }
 
@@ -10347,6 +10348,18 @@ async function regainRefund(actor, refund = {}) {
  * before the use with what the character had, ended after with the difference (useManeuver).
  */
 const MANEUVER_USE_FLAG = "maneuverUse";
+const GENETIC_USE_FLAG = "geneticUse";
+
+/**
+ * Instantaneous Control's Cancel of a Genetic Donor's Unique Ability or Signature Technique: "that Maneuver ... do not count towards any
+ * /Round ... limitations" - Genetic Catalogue's once a Round freed, where it is still this Round's (the user's).
+ */
+async function freeGeneticUse(message) {
+  const genetic = message.getFlag(SCOPE, GENETIC_USE_FLAG);
+  const actor = genetic ? fromUuidSync(genetic.actorUuid) : null;
+  if (!actor || !genetic.flag || (actor.getFlag?.(SCOPE, genetic.flag) !== genetic.round)) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.-=${genetic.flag}`]: null });
+}
 const maneuverUses = [];
 
 /** Pools and uses as they stand, to tell what a use took. */
@@ -10358,10 +10371,10 @@ function useSnapshot(actor) {
 }
 
 /** A targeted Maneuver's use begins: its record, on top of any it is made within. */
-export function beginManeuverUse(actor, maneuver, targets = []) {
+export function beginManeuverUse(actor, maneuver, targets = [], genetic = null) {
   const aimed = targets.filter(target => target && (target.uuid !== actor?.uuid));
   const use = { id: foundry.utils.randomID(), actorUuid: actor?.uuid ?? "", actorName: actor?.name ?? "", maneuverName: maneuver?.name ?? "",
-    targets: aimed.map(target => ({ uuid: target.uuid, name: target.name })), before: useSnapshot(actor) };
+    targets: aimed.map(target => ({ uuid: target.uuid, name: target.name })), before: useSnapshot(actor), genetic };
   maneuverUses.push(use);
   return use;
 }
@@ -10369,8 +10382,16 @@ export function beginManeuverUse(actor, maneuver, targets = []) {
 /** Its card being made: the record on it - a Maneuver's own card or its Clash's, not an attack's, and only where it has a target. */
 function stampManeuverUse(document) {
   const use = maneuverUses.at(-1);
-  if (!use?.targets.length) return;
+  if (!use) return;
   const flags = document.flags?.[SCOPE] ?? {};
+  // A Genetic Donor's, used: its Genetic Catalogue once a Round named on its cards - an attack's too - for a Cancel to give back.
+  if (use.genetic && !flags[GENETIC_USE_FLAG]) {
+    const speaker = ChatMessage.getSpeakerActor?.(document.speaker ?? {});
+    if (!speaker || (speaker.uuid === use.actorUuid)) {
+      document.updateSource?.({ [`flags.${SCOPE}.${GENETIC_USE_FLAG}`]: { actorUuid: use.actorUuid, ...use.genetic } });
+    }
+  }
+  if (!use.targets.length) return;
   // A Maneuver's own card (postManeuver's) of any type - Standard, Counter, Out-of-Sequence - or a Clash's; never an attack's.
   const maneuverCard = String(document.content ?? "").includes('class="dbu-maneuver-name"');
   if (flags[ATTACK_FLAG] || flags[MANEUVER_USE_FLAG] || !(flags[RESPONDABLE_FLAG] || flags[CLASH_FLAG] || maneuverCard)) return;
@@ -10468,6 +10489,7 @@ async function useTargetsWindow(message) {
   if (!chosen || (typeof chosen !== "object")) return;
   if (chosen.mode === "cancel") {
     await regainRefund(fromUuidSync(use.actorUuid), refund);
+    await freeGeneticUse(message);
     if (clash) await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, icCancelled: true });
     return message.setFlag(SCOPE, MANEUVER_USE_FLAG, { ...use, cancelled: true });
   }

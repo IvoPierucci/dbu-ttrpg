@@ -4830,7 +4830,8 @@ export async function useManeuver(actor, maneuver, options = {}) {
   const targeted = !options.atFeature && Boolean(maneuver?.requiresTarget || maneuver?.clash || maneuver?.attacking);
   const aimed = !targeted ? [] : options.targetUuid ? [fromUuidSync(options.targetUuid)]
     : Array.from(game.user?.targets ?? []).map(token => token.actor);
-  const use = beginManeuverUse(actor, maneuver, aimed.filter(Boolean));
+  const use = beginManeuverUse(actor, maneuver, aimed.filter(Boolean),
+    (geneticFlag && game.combat?.started) ? { flag: geneticFlag, round } : null);
   let used = false;
   try {
     used = await useManeuverThrough(actor, maneuver, options);

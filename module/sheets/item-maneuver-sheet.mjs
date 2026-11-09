@@ -187,6 +187,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       chosen: ["technical", "magical"].map(value => ({ value, label: UNIQUE_TYPES[value].label,
         selected: unique.chosenType === value })),
       tp: uniqueTPOf(unique, this.item.actor?.system?.effects?.slots),
+      // Genetic Catalogue's copy (the user's): who it is from - shown, never set or taken off by hand.
+      geneticDonor: this.item.flags?.["dbu-ttrpg"]?.genetic?.from ?? "",
       // The Adv & Disadv tab's shape (the user's): the search offers what is not had yet - locked ones shown
       // and refused - and a card each for what is. Only what came from the game's files: nothing is made here
       // (the user's ruling), and one made before that is left out once it is not had.
