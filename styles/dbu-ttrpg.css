@@ -490,7 +490,7 @@
   flex-wrap: wrap;
   justify-content: center;
   /* The two rows of names closer (the user's); 3px above and below them. */
-  gap: 4px 14px;
+  gap: 3px 14px;
   padding-block: 3px;
 }
 
