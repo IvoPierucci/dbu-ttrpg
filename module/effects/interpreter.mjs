@@ -182,7 +182,7 @@ function run(statements, scope) {
         const value = (slot.kind === KINDS.DICE)
           ? resolveDice(s.amount, scope)
           : resolveAmount(s.amount, scope);
-        scope.collect(slot, s.op, value, slot.kind, writtenAmount(s.amount, side => resolveAmount(side, scope)));
+        scope.collect(slot, s.op, value, slot.kind, writtenAmount(s.amount, side => resolveAmount(side, scope), scope.level));
         break;
       }
 
@@ -262,11 +262,23 @@ function reachesPhase(statements, scope) {
  * what that came to): a plain number or one per Tier, base Tier or Weather Tier, a subtraction of one; "" for anything worked out
  * further (a path, a sum, a call), which the number alone then stands for.
  */
-export function writtenAmount(amount, resolve = null) {
+export function writtenAmount(amount, resolve = null, level = null) {
   const simple = a => ((a?.type === "flat") && (typeof a.value === "number")) ? String(a.value)
     : (a?.type === "perTier") ? `${a.value}(T)` : (a?.type === "perBaseTier") ? `${a.value}(bT)`
     : (a?.type === "perWeatherTier") ? `${a.value}(WT)` : "";
   if (!amount) return "";
+  // A Level per Tier - Raging's `L(T)` - the Level written in: "2(T)" at Level 2 (the user's).
+  if ((amount.type === "level") && amount.scale && Number.isFinite(Number(level))) return `${Number(level)}(${amount.scale})`;
+  // A count times the Tier itself - Power Up's `power.stacks * tierOfPower` - the count written in: "2(T)" for two stacks (the user's).
+  const tierPath = { tierOfPower: "T", baseTierOfPower: "bT" };
+  if ((amount.type === "binary") && (amount.op === "*") && resolve) {
+    const [tier, count] = (amount.left?.type === "path") && tierPath[amount.left.path] ? [amount.left, amount.right]
+      : (amount.right?.type === "path") && tierPath[amount.right.path] ? [amount.right, amount.left] : [null, null];
+    if (tier) {
+      const times = Number(resolve(count));
+      if (Number.isFinite(times)) return `${Math.round(times * 100) / 100}(${tierPath[tier.path]})`;
+    }
+  }
   // One per Tier times a count - the Jacket's `1(bT) * $slots` - the count worked out and written in: "2(bT)" for two Slots (the user's).
   const scale = { perTier: "T", perBaseTier: "bT", perWeatherTier: "WT" };
   const hasTier = a => Boolean(a) && ((a.type in scale) || ["left", "right", "then", "else"].some(key => hasTier(a[key]))
