@@ -18,16 +18,19 @@
               data-tooltip="Hide the Maneuvers of this tab you do not use - they stay yours">Manage</button>
       {{/if}}
     </h3>
+    {{! Typed into, every tab's rows narrowed to the names holding it - each tab counting its matches (the user's). Never submitted. }}
+    <input type="search" class="dbu-maneuver-search" data-maneuver-search placeholder="Search Maneuvers..." autocomplete="off" spellcheck="false"/>
     <div class="dbu-maneuver-tabs">
       {{#each maneuverGroups as |group|}}
       <button type="button" class="dbu-maneuver-tab{{#if group.active}} active{{/if}}" data-action="maneuverTab" data-key="{{group.key}}">
-        {{group.label}}<b>{{group.count}}</b>
+        {{group.label}}<b data-maneuver-count="{{group.key}}">{{group.count}}</b>
       </button>
       {{/each}}
     </div>
     {{#each maneuverGroups as |group|}}
-    {{#if group.active}}
-    <div class="maneuver-group dbu-maneuver-pane" data-section="maneuvers-{{group.key}}">
+    {{! Every type drawn, the open one shown: a search reaches them all. }}
+    <div class="maneuver-group dbu-maneuver-pane" data-section="maneuvers-{{group.key}}" data-maneuver-pane="{{group.key}}"
+         {{#unless group.active}}hidden{{/unless}}>
       {{#if group.note}}<p class="dbu-maneuver-note">{{group.note}}</p>{{/if}}
 
       <ul class="maneuver-list dbu-clist">
@@ -41,7 +44,7 @@
               ApplicationV2 dispatches a click to the nearest [data-action], so the name
               and the pencil keep their own and nothing here has to ask what was
               clicked. }}
-          <div class="maneuver-head" data-action="toggleManeuver">
+          <div class="maneuver-head" data-action="toggleManeuver" data-maneuver-name="{{maneuver.name}}">
             <span class="maneuver-mark" aria-hidden="true"></span>
             {{#if maneuver.img}}<img class="dbu-maneuver-img" src="{{maneuver.img}}" alt=""/>{{/if}}
 
@@ -181,9 +184,9 @@
         <li class="dbu-clist-empty">{{#if group.hidden}}All hidden - Manage shows them again.{{else}}None of this type.{{/if}}</li>
         {{/each}}
       </ul>
+      <p class="dbu-maneuver-note" data-maneuver-nomatch hidden>No Maneuver of this type has that in its name.</p>
       {{#if group.hidden}}<p class="dbu-maneuver-note">{{group.hidden}} hidden - Manage shows them again.</p>{{/if}}
     </div>
-    {{/if}}
     {{/each}}
   </section>
 

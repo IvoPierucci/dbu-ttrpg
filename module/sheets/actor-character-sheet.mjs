@@ -669,6 +669,29 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   static maneuverTabs = new Map();
 
+  /** What the Maneuvers tab's search holds, kept through a render. */
+  #maneuverQuery = "";
+
+  /** The Maneuvers tab's search: every tab's rows narrowed to the names holding it, each tab's count its matches. */
+  #applyManeuverSearch() {
+    const root = this.element;
+    if (!root) return;
+    const query = this.#maneuverQuery.trim().toLowerCase();
+    for (const pane of root.querySelectorAll("[data-maneuver-pane]")) {
+      let shown = 0;
+      for (const row of pane.querySelectorAll("li.maneuver")) {
+        const name = String(row.querySelector("[data-maneuver-name]")?.dataset.maneuverName ?? "").toLowerCase();
+        const hit = !query || name.includes(query);
+        row.hidden = !hit;
+        if (hit) shown++;
+      }
+      const count = root.querySelector(`[data-maneuver-count="${pane.dataset.maneuverPane}"]`);
+      if (count) count.textContent = String(shown);
+      const none = pane.querySelector("[data-maneuver-nomatch]");
+      if (none) none.hidden = !query || (shown > 0);
+    }
+  }
+
   /**
    * Which collapsible sections are open, by their `data-section` name.
    *
@@ -3597,6 +3620,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         const item = this.actor.items.get(input.dataset.itemId);
         item?.update({ [`system.unique.kept.${input.dataset.uniqueKept}`]: Math.max(0, Math.floor(Number(input.value) || 0)) });
       });
+    }
+
+    // The Maneuvers tab's search: kept through a render, applied as it is typed.
+    {
+      const search = this.element.querySelector("[data-maneuver-search]");
+      if (search) {
+        search.value = this.#maneuverQuery;
+        search.addEventListener("input", () => { this.#maneuverQuery = search.value; this.#applyManeuverSearch(); });
+        search.addEventListener("change", event => event.stopPropagation());
+        search.addEventListener("keydown", event => { if (event.key === "Enter") event.preventDefault(); });
+        this.#applyManeuverSearch();
+      }
     }
 
     // A Talent Addition row's list, typed into (`[data-combo]`).

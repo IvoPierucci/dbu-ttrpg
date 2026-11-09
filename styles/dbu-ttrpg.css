@@ -5359,3 +5359,7 @@
 
 /* An Item's icon in a Manage window - the Maneuvers' - square, not a portrait's circle. */
 .dbu-ttrpg .ally-picks .ally-img.dbu-item-img { border-radius: 3px; }
+
+/* The Maneuvers tab's search (the user's). */
+.dbu-ttrpg .dbu-maneuver-search { width: 100%; height: 24px; margin: 2px 0 4px; }
+.dbu-ttrpg .dbu-maneuver-pane[hidden], .dbu-ttrpg .dbu-maneuver-pane li.maneuver[hidden] { display: none; }
