@@ -187,7 +187,11 @@ export function foldSheetParts(slot, parts, penalties = {}) {
   ].filter(([, , value]) => value > 0);
   const folded = new Set(sheet.map(([label]) => label));
   const base = parts[at];
-  const sheetValue = (Number(base.value) || 0) - sheet.reduce((sum, [, , value]) => sum + value, 0);
+  // The Super Stacks held on a Wound: in the sheet's number there (the user's), so in its row here - Power Burst's more stay a row.
+  const held = (slot === "wound") ? (parts ?? []).filter(part => part.label === "Super Stacks") : [];
+  for (const part of held) folded.add(part.label);
+  const sheetValue = (Number(base.value) || 0) - sheet.reduce((sum, [, , value]) => sum + value, 0)
+    + held.reduce((sum, part) => sum + (Number(part.value) || 0), 0);
   const missing = sheet.filter(([label]) => !parts.some(part => part.label === label));
   const back = missing.reduce((sum, [, , value]) => sum + value, 0);
   const rest = parts.filter((part, index) => (index !== at) && !folded.has(part.label));

@@ -35265,11 +35265,13 @@ function superStackWoundParts(attacker, attack) {
   const massivePower = burst ? (massivePerStack * stacks) : ownPower;
   if (!massivePower || !reaches) return [];
 
-  return [{
-    label: burst ? "Super Stacks (Power Burst)" : "Super Stacks",
-    written: (stacks === 1) ? "+1/4 Force" : `+${stacks} × 1/4 Force`,
-    value: massivePower
-  }];
+  // The ones held a row the card folds into the sheet's Wound - the sheet shows them in it (the user's) - and Power Burst's more a row
+  // of its own: what this attack alone brought (breakdown.mjs foldSheetParts).
+  const extra = massivePower - ownPower;
+  return [
+    ...(ownPower ? [{ label: "Super Stacks", written: (own === 1) ? "+1/4 Force" : `+${own} × 1/4 Force`, value: ownPower }] : []),
+    ...(extra ? [{ label: "Super Stacks (Power Burst)", written: `+${stacks - own} × 1/4 Force`, value: extra }] : [])
+  ];
 }
 
 /**
