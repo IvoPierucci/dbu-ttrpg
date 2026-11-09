@@ -5340,3 +5340,19 @@
 .dbu-instant-played { color: #e8c860; }
 .dbu-instant-row-button { flex: 0 0 auto; width: auto; line-height: 1.4; padding: 1px 10px; font-size: 11px; background: #4a3a6a;
   border: 1px solid #7a5eaa; color: #efe3ff; }
+
+/* The Maneuvers tab (the user's): a tab for each type, rows as the Allies' and Minions' lists, chips for what each costs. */
+.dbu-ttrpg .dbu-maneuver-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; }
+.dbu-ttrpg .dbu-maneuver-tab { flex: 0 0 auto; width: auto; line-height: 1.5; padding: 1px 10px; font-size: 12px; border: 1px solid var(--dbu-border);
+  border-radius: 4px; background: transparent; color: var(--dbu-text-dim, #a39cae); }
+.dbu-ttrpg .dbu-maneuver-tab b { margin-left: 5px; font-size: 11px; color: var(--dbu-text); }
+.dbu-ttrpg .dbu-maneuver-tab.active { border-color: var(--dbu-accent, #c9a24a); color: var(--dbu-text); background: rgba(201, 162, 74, 0.15); }
+.dbu-ttrpg .dbu-maneuver-note { margin: 0 0 6px; font-size: 11px; font-style: italic; opacity: 0.75; }
+.dbu-ttrpg .dbu-maneuver-pane .maneuver-list.dbu-clist { margin: 0; padding: 4px 6px; list-style: none; }
+.dbu-ttrpg .dbu-maneuver-pane .maneuver { border: 0; border-bottom: 1px dashed var(--dbu-border); margin: 0; background: transparent; }
+.dbu-ttrpg .dbu-maneuver-pane .maneuver:last-child { border-bottom: 0; }
+.dbu-ttrpg .dbu-maneuver-pane .maneuver-head { gap: 6px; padding: 3px 2px; }
+.dbu-ttrpg .dbu-maneuver-img { width: 22px; height: 22px; flex: 0 0 22px; border: 0; border-radius: 4px; object-fit: cover; }
+.dbu-ttrpg .dbu-mchip { padding: 0 5px; border: 1px solid #6c6078; border-radius: 3px; font-size: 10px; white-space: nowrap; }
+.dbu-ttrpg .dbu-mchip.uses { border-color: #4f8a62; }
+.dbu-ttrpg .dbu-mchip.out { border-color: #8a4f4f; color: #e0a0a0; }

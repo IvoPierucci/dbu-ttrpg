@@ -556,6 +556,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       automateTrigger: DBUCharacterSheet._onAutomateTrigger,
       editItem: DBUCharacterSheet._onEditItem,
       toggleManeuver: DBUCharacterSheet._onToggleManeuver,
+      maneuverTab: DBUCharacterSheet._onManeuverTab,
+      pickManeuver: DBUCharacterSheet._onPickManeuver,
+      showAllManeuvers: DBUCharacterSheet._onShowAllManeuvers,
       releaseGrapple: DBUCharacterSheet._onReleaseGrapple,
       escapeGrapple: DBUCharacterSheet._onEscapeGrapple,
       deleteItem: DBUCharacterSheet._onDeleteItem,
@@ -654,6 +657,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   /** The added Specialty asked about before it is taken off, having Ranks - its id, or none. */
   #specialtyConfirm = null;
+
+  /** The Maneuvers tab's type tab open (the user's) - kept for this character while the world is open. */
+  get #maneuverTab() {
+    return DBUCharacterSheet.maneuverTabs.get(this.actor.uuid) ?? "standard";
+  }
+
+  set #maneuverTab(key) {
+    DBUCharacterSheet.maneuverTabs.set(this.actor.uuid, key);
+  }
+
+  static maneuverTabs = new Map();
 
   /**
    * Which collapsible sections are open, by their `data-section` name.
@@ -1511,7 +1525,22 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       max: capacity.max
     });
     context.skillGroups = this._prepareSkillGroups(context.workings);
-    context.maneuverGroups = this._prepareManeuverGroups();
+    // A tab for each type, the last one opened kept (the user's); what Manage hid left off, counted.
+    {
+      const hidden = new Set(this.actor.getFlag?.("dbu-ttrpg", "hiddenManeuvers") ?? []);
+      const groups = this._prepareManeuverGroups();
+      const active = groups.some(group => group.key === this.#maneuverTab) ? this.#maneuverTab : (groups[0]?.key ?? "standard");
+      context.maneuverGroups = groups.map(group => {
+        const maneuvers = group.maneuvers.map(maneuver => ({ ...maneuver, img: this.actor.items.get(maneuver.itemId)?.img ?? "",
+          noUsesLeft: Boolean(maneuver.usageLabel) && (Number(maneuver.usesLeft) <= 0) }));
+        const shown = maneuvers.filter(maneuver => !hidden.has(maneuver.itemId));
+        return { ...group, active: group.key === active, maneuvers: shown, all: maneuvers, count: shown.length,
+          hidden: maneuvers.length - shown.length };
+      });
+      const current = context.maneuverGroups.find(group => group.active);
+      context.maneuverManage = { label: current?.label ?? "", picks: (current?.all ?? []).map(maneuver => ({ itemId: maneuver.itemId,
+        name: maneuver.name, img: maneuver.img, shown: !hidden.has(maneuver.itemId) })) };
+    }
     context.techniques = this._prepareTechniques();
     context.uniqueAbilities = await this.#prepareUniqueAbilities(context.techniques);
     // Progression's one-row table (the user's): the Technique Points left once the Unique Abilities and the Signature
@@ -1705,8 +1734,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stateTriggers: windowIs === "stateTriggers",
       // And its Allies' and Minions' (or Master's) Manage windows.
       allies: windowIs === "allies", minions: windowIs === "minions", master: windowIs === "master",
-      // The Settings tab's Skill Specialties.
-      specialties: windowIs === "specialties" };
+      // The Settings tab's Skill Specialties; the Maneuvers tab's Manage.
+      specialties: windowIs === "specialties", maneuvers: windowIs === "maneuvers" };
 
     // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
     // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together. What
@@ -2197,8 +2226,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               ? `${maneuver.actionCost} ${MANEUVER_TYPES[maneuver.type].action}`
               : "—"
           }))
-      }))
-      .filter(group => group.maneuvers.length > 0);
+      }));
   }
 
   /**
@@ -6185,6 +6213,29 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const open = !row.classList.contains("trait-open");
     row.classList.toggle("trait-open", open);
     this.#openSections[`trait-${row.dataset.itemId}`] = open;
+  }
+
+  /** A type tab of the Maneuvers tab opened. */
+  static _onManeuverTab(event, target) {
+    this.#maneuverTab = target.dataset.key || "standard";
+    return this.render();
+  }
+
+  /** Manage: a Maneuver shown or hidden on its list - the Item untouched. */
+  static async _onPickManeuver(event, target) {
+    const id = target.dataset.id;
+    const hidden = new Set(this.actor.getFlag("dbu-ttrpg", "hiddenManeuvers") ?? []);
+    if (target.checked) hidden.delete(id);
+    else hidden.add(id);
+    return this.actor.setFlag("dbu-ttrpg", "hiddenManeuvers", [...hidden]);
+  }
+
+  /** Manage: every Maneuver of the open tab shown again. */
+  static async _onShowAllManeuvers() {
+    const open = new Set((this._prepareManeuverGroups().find(group => group.key === this.#maneuverTab)?.maneuvers ?? [])
+      .map(maneuver => maneuver.itemId));
+    const hidden = (this.actor.getFlag("dbu-ttrpg", "hiddenManeuvers") ?? []).filter(id => !open.has(id));
+    return this.actor.setFlag("dbu-ttrpg", "hiddenManeuvers", hidden);
   }
 
   static _onToggleManeuver(event, target) {

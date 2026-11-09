@@ -3,6 +3,9 @@
 {{! Its own tab rather than the bottom of the Combat one. Four lists of rows that each
     open to a published entry is most of a page by itself, and it was the part of the
     Combat tab a player scrolled past everything else to reach. }}
+  {{! A tab for each type (the user's): Standard, Counter, Instant, Out-of-Sequence, Modifier - the last one opened kept - and rows as
+      the Allies' and Minions' lists are; Manage hides the ones not used, without taking them away. Each row is still the Maneuver's
+      Item: dragged to the hotbar, renamed through its sheet. }}
   <section class="panel">
     <h3 class="panel-title">
       Maneuvers
@@ -10,16 +13,24 @@
               data-tooltip="Give this character any core Maneuver they are missing. New characters get them automatically.">
         Add core maneuvers
       </button>
+      {{#if editable}}
+      <button type="button" class="edit-toggle" data-action="openCombatWindow" data-window="maneuvers"
+              data-tooltip="Hide the Maneuvers of this tab you do not use - they stay yours">Manage</button>
+      {{/if}}
     </h3>
+    <div class="dbu-maneuver-tabs">
+      {{#each maneuverGroups as |group|}}
+      <button type="button" class="dbu-maneuver-tab{{#if group.active}} active{{/if}}" data-action="maneuverTab" data-key="{{group.key}}">
+        {{group.label}}<b>{{group.count}}</b>
+      </button>
+      {{/each}}
+    </div>
     {{#each maneuverGroups as |group|}}
-    <details class="maneuver-group" data-section="maneuvers-{{group.key}}"
-             {{#if group.open}}open{{/if}}>
-      <summary>
-        {{group.label}}
-        {{#if group.note}}<em>{{group.note}}</em>{{/if}}
-      </summary>
+    {{#if group.active}}
+    <div class="maneuver-group dbu-maneuver-pane" data-section="maneuvers-{{group.key}}">
+      {{#if group.note}}<p class="dbu-maneuver-note">{{group.note}}</p>{{/if}}
 
-      <ul class="maneuver-list">
+      <ul class="maneuver-list dbu-clist">
         {{#each group.maneuvers as |maneuver|}}
         {{! Draggable so it can be dropped on the hotbar, where it becomes a macro that
             uses it - the same call this row's own button makes. }}
@@ -32,6 +43,7 @@
               clicked. }}
           <div class="maneuver-head" data-action="toggleManeuver">
             <span class="maneuver-mark" aria-hidden="true"></span>
+            {{#if maneuver.img}}<img class="dbu-maneuver-img" src="{{maneuver.img}}" alt=""/>{{/if}}
 
             {{#if maneuver.playable}}
             {{! Not disabled when it cannot be played: the click is refused by name where
@@ -121,11 +133,11 @@
 
             {{! Drawn on every row, empty where there is no limit: it is the column the
                 names end against, so one that came and went would take them with it. }}
-            <span class="maneuver-uses">{{#if maneuver.usageLabel}}{{maneuver.usageLabel}}
-              &middot; {{maneuver.usesLeft}} left{{/if}}</span>
+            <span class="maneuver-uses">{{#if maneuver.usageLabel}}<span class="dbu-mchip{{#if maneuver.noUsesLeft}} out{{else}} uses{{/if}}">{{maneuver.usageLabel}}
+              &middot; {{maneuver.usesLeft}} left</span>{{/if}}</span>
             <span class="maneuver-source">{{maneuver.source}}</span>
-            <span class="maneuver-cost">{{maneuver.actionLabel}}</span>
-            <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
+            <span class="maneuver-cost dbu-mchip">{{maneuver.actionLabel}}</span>
+            <span class="maneuver-cost dbu-mchip">{{maneuver.kiCost}} KP</span>
 
             {{! A Maneuver is an Item, so its name, its description and what it costs are
                 all the player's to change - the same pencil a Talent has. }}
@@ -165,10 +177,39 @@
             {{/each}}
           </div>
         </li>
+        {{else}}
+        <li class="dbu-clist-empty">{{#if group.hidden}}All hidden - Manage shows them again.{{else}}None of this type.{{/if}}</li>
         {{/each}}
       </ul>
-    </details>
+      {{#if group.hidden}}<p class="dbu-maneuver-note">{{group.hidden}} hidden - Manage shows them again.</p>{{/if}}
+    </div>
+    {{/if}}
     {{/each}}
   </section>
+
+  {{#if combatWindow.maneuvers}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window" role="dialog" aria-modal="true">
+      <header><h3>Manage &middot; {{maneuverManage.label}}</h3></header>
+      <p class="dbu-manage-note">Ticked: shown on the list. Unticked: hidden here only - still yours, still on your hotbar, still offered where it applies.</p>
+      <div class="dbu-combat-window-body dbu-picks">
+        {{#each maneuverManage.picks as |pick|}}
+        <label class="dbu-pick{{#if pick.shown}} on{{/if}}">
+          <input type="checkbox" data-action="pickManeuver" data-id="{{pick.itemId}}" {{#if pick.shown}}checked{{/if}}
+                 {{#unless @root.editable}}disabled{{/unless}}/>
+          {{#if pick.img}}<img class="ally-img" src="{{pick.img}}" alt=""/>{{/if}}
+          {{pick.name}}
+        </label>
+        {{else}}
+        <p class="dbu-clist-empty">None of this type.</p>
+        {{/each}}
+      </div>
+      <footer>
+        <button type="button" class="dbu-manage" data-action="showAllManeuvers" {{#unless editable}}disabled{{/unless}}>Show all</button>
+        <button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button>
+      </footer>
+    </div>
+  </div>
+  {{/if}}
 
 </div>
