@@ -633,8 +633,8 @@
   align-items: baseline;
   justify-content: space-between;
   margin: 0 0 6px;
-  /* Room between a section's name and its line (the user's: they nearly touched). */
-  padding-bottom: 6px;
+  /* Room between a section's name and its line (the user's: they nearly touched - 12px, asked). */
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--dbu-border);
   font-size: 13px;
   text-transform: uppercase;
