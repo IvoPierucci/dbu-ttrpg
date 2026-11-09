@@ -7,26 +7,21 @@
       the Allies' and Minions' lists are; Manage hides the ones not used, without taking them away. Each row is still the Maneuver's
       Item: dragged to the hotbar, renamed through its sheet. }}
   <section class="panel">
-    <h3 class="panel-title">
-      Maneuvers
-      <button type="button" class="edit-toggle" data-action="grantManeuvers"
-              data-tooltip="Give this character any core Maneuver they are missing. New characters get them automatically.">
-        Add core maneuvers
-      </button>
-      {{#if editable}}
-      <button type="button" class="edit-toggle" data-action="openCombatWindow" data-window="maneuvers"
-              data-tooltip="Hide the Maneuvers of this tab you do not use - they stay yours">Manage</button>
-      {{/if}}
-    </h3>
-    {{! Typed into, every tab's rows narrowed to the names holding it - each tab counting its matches (the user's). Never submitted. }}
-    <input type="search" class="dbu-maneuver-search" data-maneuver-search placeholder="Search Maneuvers..." autocomplete="off" spellcheck="false"/>
+    <h3 class="panel-title">Maneuvers</h3>
+    {{! The type tabs, Manage at their far right; the search under them (the user's). Add core maneuvers is on the Settings tab's Debug. }}
     <div class="dbu-maneuver-tabs">
       {{#each maneuverGroups as |group|}}
       <button type="button" class="dbu-maneuver-tab{{#if group.active}} active{{/if}}" data-action="maneuverTab" data-key="{{group.key}}">
         {{group.label}}<b data-maneuver-count="{{group.key}}">{{group.count}}</b>
       </button>
       {{/each}}
+      {{#if editable}}
+      <button type="button" class="dbu-manage dbu-maneuver-manage" data-action="openCombatWindow" data-window="maneuvers"
+              data-tooltip="Hide the Maneuvers of this tab you do not use - they stay yours">Manage</button>
+      {{/if}}
     </div>
+    {{! Typed into, every tab's rows narrowed to the names holding it - each tab counting its matches (the user's). Never submitted. }}
+    <input type="search" class="dbu-maneuver-search" data-maneuver-search placeholder="Search Maneuvers..." autocomplete="off" spellcheck="false"/>
     {{#each maneuverGroups as |group|}}
     {{! Every type drawn, the open one shown: a search reaches them all. }}
     <div class="maneuver-group dbu-maneuver-pane" data-section="maneuvers-{{group.key}}" data-maneuver-pane="{{group.key}}"

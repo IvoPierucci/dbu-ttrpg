@@ -325,6 +325,9 @@
               data-tooltip="Give back the Actions and the Capacity, and clear the attacks made and the Diminishing stacks. A Combat does this on its own each round.">New round</button>
       <button type="button" data-action="resetEncounter" class="capacity-reset"
               data-tooltip="Restore maneuvers limited to once per encounter">New encounter</button>
+      {{! From the Maneuvers tab (the user's): what a character made before Maneuvers were Items is missing. }}
+      <button type="button" data-action="grantManeuvers" class="capacity-reset"
+              data-tooltip="Give this character any core Maneuver they are missing. New characters get them automatically.">Add core maneuvers</button>
       {{#if canEnterEncounter}}
       {{! For somebody who walked into an Encounter already under way: it began for
           everyone else when it began, and it begins for them now. Gone once taken, and
