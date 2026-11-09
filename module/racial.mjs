@@ -175,8 +175,10 @@ export function racialTraitLines(item) {
     }
     if (list.length && !list[list.length - 1]) out.push({ html: "", bullet: false, gap: true });
   }
-  // Its Addendum effect's text box - Roomy Biology's "Inner Room" - after its effects, folded: opened by its title (the user's).
-  if (addendum) {
+  // Its Addendum effect's text box - Roomy Biology's "Inner Room" - after its effects, folded: opened by its title (the user's). One that
+  // is an Option's alone (`addendumOption` - Artificial Warrior's Pursuit of Perfection) only where that Option is the one chosen.
+  const boxOption = String(file?.addendumOption ?? "").trim().toLowerCase();
+  if (addendum && (!boxOption || picked.some(chosen => String(chosen.name ?? "").trim().toLowerCase() === boxOption))) {
     out.push({ addendum: { title: String(file.addendumTitle ?? "Addendum"),
       lines: printedLines(addendum).map(line => ({ html: lineHtml(line), bullet: /^[*\u2022]/.test(line), gap: !line })) } });
   }

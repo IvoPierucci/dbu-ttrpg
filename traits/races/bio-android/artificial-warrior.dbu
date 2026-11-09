@@ -10,6 +10,8 @@ resourceMax: 3
 # (4) Its Option: Genetic Survivor, Genetic Aggressor, Genetic Agility or Pursuit of Perfection - each file holding its (4) and its (5).
 optionEffect: 4
 addendumTitle: Absorbed Perfection (Pursuit of Perfection)
+# Its box is that Option's alone - shown where it is the one chosen (the user's).
+addendumOption: Pursuit of Perfection
 addendum: >
   Upon gaining the Pursuit of Perfection effect for Bio-Android, work with your ARC to create a ‘Perfection Target’. A Perfection Target is a collection of characteristics that can be possessed by a particular Character (for example, Cell’s Perfection Targets would be Androids with the Enhanced Organism effect of Technological Being, the Infinite Energy effect of Energy Core, a Power Level above 10, and the Super Android Awakening). These characteristics can be anything and you can select as many features as you want, but it is recommended to have 3+ so that your targets are very specific, so that your ARC doesn’t have to be too careful when introducing Characters in the campaign.
 
