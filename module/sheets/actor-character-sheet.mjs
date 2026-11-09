@@ -3917,11 +3917,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (!list.hidden) return;
       list.hidden = false;
       box.setAttribute("aria-expanded", "true");
-      // Over the box where the scrolling window has no room under it.
-      const scroller = combo.closest(".window-content") ?? document.body;
-      const room = scroller.getBoundingClientRect();
+      // Measured against what actually cuts it off (the user's: opened upward it was cut short) - the nearest box around it that
+      // scrolls or hides what overflows, not the whole window: under the box where it fits, else on whichever side has more room,
+      // and no taller than that room.
+      let clip = combo.parentElement;
+      while (clip && (clip !== document.body)) {
+        const style = window.getComputedStyle(clip);
+        if (/(auto|scroll|hidden|clip)/.test(`${style.overflowY} ${style.overflow}`)) break;
+        clip = clip.parentElement;
+      }
+      const room = (clip ?? document.body).getBoundingClientRect();
       const at = box.getBoundingClientRect();
-      combo.classList.toggle("up", ((room.bottom - at.bottom) < list.offsetHeight) && ((at.top - room.top) > (room.bottom - at.bottom)));
+      const below = room.bottom - at.bottom - 6;
+      const above = at.top - room.top - 6;
+      list.style.maxHeight = "";
+      const wanted = Math.min(list.scrollHeight, 260);
+      const up = (below < wanted) && (above > below);
+      combo.classList.toggle("up", up);
+      list.style.maxHeight = `${Math.max(90, Math.min(260, up ? above : below))}px`;
     };
     const close = () => {
       list.hidden = true;
