@@ -9429,6 +9429,8 @@ async function respondDialog(message, respondable, { initials = new Map(), check
            of your <b>${convertible}</b> Action${(convertible === 1) ? "" : "s"} into Counter Actions</label>`
       : "";
 
+    // Balanced Defender (2): with the answer, among the Effects (the user's).
+    const balanced = balancedOption(actor, attack, answersAttack);
     const fixedTriggers = triggers.length
       ? `<div class="dbu-respond-group dbu-respond-fixed"><div class="dbu-respond-fixed-title">Triggered Effects</div>${triggerRows}</div>` : "";
     return {
@@ -9436,7 +9438,7 @@ async function respondDialog(message, respondable, { initials = new Map(), check
       top: `${resourceLine(actor)}${rollBoxHtml("", "")}${convertLine}`,
       // Two sections, as the user drew them: the Maneuvers - Dodge, the Counters, the Instants - and the Effects.
       body: `${rollSection("Maneuvers", `${dodge}${counterGroup}`)}${
-        (willing || fixedTriggers || karmaGroup) ? rollSection("Effects", `${willing}${fixedTriggers}${karmaGroup}`) : ""}`,
+        (willing || balanced || fixedTriggers || karmaGroup) ? rollSection("Effects", `${willing}${balanced}${fixedTriggers}${karmaGroup}`) : ""}`,
       roll: answersAttack ? respondRollData(actor, attack) : null,
       previews: answersAttack ? Object.fromEntries(["dodge", "strike", "wound"].map(slot => [slot,
         Object.fromEntries(triggers.map(entry => [entry.blockId, triggerPreview(actor, entry, slot, {})]))])) : {}
@@ -9576,14 +9578,16 @@ async function respondActorWindow(message, entry, { fromPicker = false, initial 
     const triggers = [...element.querySelectorAll(`input[name="trigger-${id}"]:checked`)];
     const karma = pick(element, "karma") || null;
     const instant = pick(element, "instant");
+    const balanced = element.querySelector(`input[name="balanced-${id}"]`)?.checked ?? false;
     const summary = [counter ? `${name(element.querySelector(`input[name="counter-${id}"]:checked`))}${defendOption ? ` (${optionText})` : ""}` : "",
       (instant && (instant !== "none")) ? name(element.querySelector(`input[name="instant-${id}"]:checked`)) : "",
+      balanced ? "Balanced Defender" : "",
       ...triggers.map(name), karma ? name(element.querySelector(`input[name="karma-${id}"]:checked`)) : ""].filter(Boolean).join(" &middot; ");
     return {
       actor, counter, instant, defendOption,
       flareFoundation: element.querySelector(`select[name="flareFoundation-${id}"]`)?.value || "energy",
       willing: element.querySelector(`input[name="willing-${id}"]`)?.checked ?? null,
-      karma, triggers: triggers.map(input => input.value),
+      karma, triggers: triggers.map(input => input.value), balanced,
       convert: Math.max(0, Math.min(Number(element.querySelector(`input[name="convert-${id}"]`)?.max) || 0,
         Number(element.querySelector(`input[name="convert-${id}"]`)?.value) || 0)),
       summary: summary || "Nothing"
@@ -9685,6 +9689,8 @@ async function respondActorWindow(message, entry, { fromPicker = false, initial 
         if (initial.instant) set("instant", initial.instant);
         if (initial.karma !== undefined) set("karma", initial.karma ?? "");
         for (const blockId of initial.triggers ?? []) set("trigger", blockId);
+        const balancedBox = element.querySelector(`input[name="balanced-${id}"]`);
+        if (balancedBox && !balancedBox.disabled && initial.balanced) balancedBox.checked = true;
         const willing = element.querySelector(`input[name="willing-${id}"]`);
         if (willing && (initial.willing !== null) && (initial.willing !== undefined)) willing.checked = initial.willing;
         const option = element.querySelector(`select[name="defendOpt-${id}"]`);
@@ -10747,6 +10753,9 @@ async function applyResponses(message, chosen, attack) {
     // A Karmic Effect pays for itself: the cost is the effect rather than a separate
     // step, so choosing one here is what spends the Karma Point.
     if (choice.karma) await applyKarmic(message, choice.actor, choice.karma);
+
+    // Balanced Defender (2), picked with the answer: paid and kept on the attack before it is rolled.
+    if (choice.balanced) await payBalanced(message, choice.actor);
 
     if (choice.instant && (choice.instant !== "none")) {
       await playInstant(message, choice.actor, choice.instant);
@@ -25930,37 +25939,42 @@ function weakButtons(message, attack, container) {
 
 /**
  * Balanced Defender (2): "When targeted by an Attacking Maneuver, spend 2(bT) Ki Points to increase your Defense Value and Soak
- * Value by 1(T) for the duration of that Maneuver." A button for each target who has it, before it is settled, once a Round;
- * kept on the attack (`balanced`) - on the Defense Value under their Dodge, and on their Soak Value.
+ * Value by 1(T) for the duration of that Maneuver." Picked in the target's Respond window with their answer (the user's: not a
+ * button of its own on the card), once a Round; paid as the answer is carried out (payBalanced) and kept on the attack
+ * (`balanced`) - on the Defense Value under their Dodge, and on their Soak Value.
  */
-function balancedButtons(message, attack, container) {
-  const done = (attack.balanced ?? []).filter(entry => !entry.source).map(entry => entry.uuid);
-  for (const { uuid } of attackTargets(attack)) {
-    const target = fromUuidSync(uuid);
-    if (!target?.isOwner || done.includes(uuid) || (uuid === attack.attackerUuid)
-      || (target.system?.effects?.slots?.["balanced.defender"] !== true)) continue;
-    const cost = 2 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
-    const tier = Math.max(1, Number(target.system.tierOfPower) || 1);
-    const used = target.getFlag?.(SCOPE, "balancedRound") === roundKey();
-    const short = Math.min(Number(target.system.ki?.value) || 0, Number(target.system.capacity?.remaining) || 0) < cost;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "dbu-clash-button";
-    button.textContent = `Balanced Defender - ${target.name}`;
-    button.disabled = used || short;
-    button.dataset.tooltip = used ? "Once a Combat Round." : `${cost} Ki Points: Defense Value and Soak Value +${tier} for this attack`;
-    button.addEventListener("click", async () => {
-      button.disabled = true;
-      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
-      if ((fresh.balanced ?? []).some(entry => (entry.uuid === uuid) && !entry.source) || (target.getFlag?.(SCOPE, "balancedRound") === roundKey())) return;
-      const { ki, capacity } = target.system;
-      if ((ki.value < cost) || (capacity.remaining < cost)) return ui.notifications.warn(`${target.name} cannot pay ${cost} Ki Points.`);
-      await requestActorUpdate(target, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost,
-        [`flags.${SCOPE}.balancedRound`]: roundKey() });
-      requestEdit(message, { type: "attack", attack: { ...fresh, balanced: [...(fresh.balanced ?? []), { uuid, value: tier }] } });
-    });
-    container.append(button);
-  }
+function balancedCost(actor) {
+  return { cost: 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1), tier: Math.max(1, Number(actor.system.tierOfPower) || 1),
+    used: actor.getFlag?.(SCOPE, "balancedRound") === roundKey() };
+}
+
+/** Its row in the Respond window's Effects - for a target still to answer who has it; greyed, with why, once used or short of Ki. */
+function balancedOption(actor, attack, answering) {
+  if (!answering || !attack || (actor.uuid === attack.attackerUuid) || (actor.system?.effects?.slots?.["balanced.defender"] !== true)
+    || (attack.balanced ?? []).some(entry => (entry.uuid === actor.uuid) && !entry.source)) return "";
+  const { cost, tier, used } = balancedCost(actor);
+  const short = Math.min(Number(actor.system.ki?.value) || 0, Number(actor.system.capacity?.remaining) || 0) < cost;
+  const blocked = used ? "once a Combat Round - used" : short ? `${cost} Ki Points needed` : "";
+  const esc = text => Handlebars.escapeExpression(text);
+  return `
+    <label class="dbu-respond-option dbu-respond-aside${blocked ? " dbu-respond-blocked" : ""}"
+           data-tooltip="${esc(`Spend 2(bT) Ki Points: your Defense Value and Soak Value +1(T) for this attack. Once a Combat Round.`)}">
+      <input type="checkbox" name="balanced-${actor.id}" ${blocked ? "disabled" : ""}/>
+      <span class="dbu-respond-name">Balanced Defender</span>
+      <span class="dbu-respond-source">${esc(blocked || `${cost} KP: Defense Value and Soak Value +${tier}`)}</span>
+    </label>`;
+}
+
+/** Balanced Defender picked in Respond, carried out: the Ki paid, the Round's use marked, the 1(T) kept on the attack. */
+async function payBalanced(message, actor) {
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG);
+  const { cost, tier, used } = balancedCost(actor);
+  if (!fresh || fresh.result || used || (fresh.balanced ?? []).some(entry => (entry.uuid === actor.uuid) && !entry.source)) return;
+  const { ki, capacity } = actor.system;
+  if ((ki.value < cost) || (capacity.remaining < cost)) return ui.notifications.warn(`${actor.name} cannot pay ${cost} Ki Points.`);
+  await requestActorUpdate(actor, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost,
+    [`flags.${SCOPE}.balancedRound`]: roundKey() });
+  await requestEdit(message, { type: "attack", attack: { ...fresh, balanced: [...(fresh.balanced ?? []), { uuid: actor.uuid, value: tier }] } });
 }
 
 /**
@@ -31786,9 +31800,9 @@ function readyAttacker(message, armed = []) {
 function answerOf(choice) {
   const answer = { counter: choice.counter ?? null, instant: choice.instant ?? null, defendOption: choice.defendOption ?? null,
     flareFoundation: choice.flareFoundation ?? "energy", willing: choice.willing ?? null, karma: choice.karma ?? null,
-    triggers: choice.triggers ?? [], convert: Number(choice.convert) || 0, summary: choice.summary ?? "" };
+    triggers: choice.triggers ?? [], convert: Number(choice.convert) || 0, balanced: Boolean(choice.balanced), summary: choice.summary ?? "" };
   const something = answer.counter || (answer.instant && (answer.instant !== "none")) || answer.triggers.length || answer.karma
-    || answer.willing;
+    || answer.willing || answer.balanced;
   return something ? answer : null;
 }
 
@@ -40062,8 +40076,7 @@ function renderAttack(message, html) {
   if (!result?.wound) catsPawButtons(message, attack, container);
   // Claws (2): the first Physical Attack after moving into their Melee Range, hit - the Clash (Impulsive).
   if (result) clawsButtons(message, attack, container);
-  // Balanced Defender (2): targeted - Ki for the Defense Value and Soak Value, before it is settled.
-  if (!result) balancedButtons(message, attack, container);
+  // Balanced Defender (2): in the target's Respond window now (balancedOption), not a button here.
   // Combat Observation, Dedicated Watcher: a Counter Action for 1(T) - your attack's Strike and Wound or your Defense and Soak; an
   // Ally's while Spectating.
   if (!result) observationButtons(message, attack, container);
