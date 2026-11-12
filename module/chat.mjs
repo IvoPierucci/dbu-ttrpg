@@ -4152,6 +4152,19 @@ export function registerChatHooks() {
   // A card an Instant makes goes before the Maneuver it answers (anchorNewMessage); a targeted Maneuver's card carries its use
   // (stampManeuverUse) - for the GM's Targets.
   Hooks.on("preCreateChatMessage", document => { anchorNewMessage(document); stampManeuverUse(document); });
+  // The chat is drawn before the scene is (the user's: after a restart the card offered only a stray "Dodge - Sereh", no Respond):
+  // who is on the scene's tokens decides who answers, so the cards still open are drawn again once it is there - a scene changed too.
+  Hooks.on("canvasReady", redrawOpenCards);
+}
+
+/** The last cards still waiting on an answer - an attack not yet rolled, or one that can be answered - drawn again. */
+function redrawOpenCards() {
+  const recent = (game.messages?.contents ?? []).slice(-60);
+  for (const message of recent) {
+    const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+    const open = (attack && !attack.result) || (!attack && message.getFlag(SCOPE, RESPONDABLE_FLAG));
+    if (open) ui.chat?.updateMessage?.(message)?.catch?.(error => console.error("DBU TTRPG | Redrawing a card", error));
+  }
 }
 
 /**
