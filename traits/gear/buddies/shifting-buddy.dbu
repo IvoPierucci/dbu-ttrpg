@@ -22,10 +22,10 @@ text: >
   –Effects: Your Buddy shapeshifts, turning into one of the following things until the end of
   the Combat Round:
 
-  * Weapon. Create a Weapon with a Craftsmanship Grade equal to 1/2 (rounded up) of your base
-  Tier of Power that you may immediately equip. Your Buddy isn’t automatically destroyed if hit
-  as a Weapon, but this Weapon’s Life Points are equal to your Buddy Attribute and if it is
-  destroyed, then your Buddy is destroyed.
+  * Weapon. Create a Weapon with a Craftsmanship Grade equal to 2 + your base Tier of Power that
+  you may immediately equip. Your Buddy isn’t automatically destroyed if hit as a Weapon, but this
+  Weapon’s Life Points are equal to your Buddy Attribute multiplied by 5 and if it is destroyed,
+  then your Buddy is destroyed.
 
   * Ride Buddy. Your Buddy can use the Buddy Effect of a Ride Buddy.
 
@@ -41,9 +41,10 @@ text: >
 #
 # Use, on its row, while it is Active: what it becomes, until the end of the Combat Round.
 #
-# - A Weapon: a Weapon made on the spot at Craftsmanship Grade 1/2 of the base Tier (rounded up),
-#   built on its own sheet at that Grade's Slots, and wielded if a hand is free. Its Life Points
-#   are the Buddy Attribute; if it breaks the Buddy is Destroyed. Gone at the end of the Round.
+# - A Weapon: a Weapon made on the spot at Craftsmanship Grade 2 + the base Tier (5 at most, the
+#   highest Grade there is), built on its own sheet at that Grade's Slots, and wielded if a hand is
+#   free. Its Life Points are the Buddy Attribute x5; if it breaks the Buddy is Destroyed. Gone at
+#   the end of the Round.
 # - A Ride Buddy: the Ride Buddy's Buddy Effect on its row this Round, with Flyin' or Dodgin'.
 # - An Assault Buddy: the Assault Buddy's, a Profile chosen at each use.
 #

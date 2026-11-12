@@ -4764,13 +4764,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), `encounter:shift.${item.id}`] });
       }
       if (into === "weapon") {
-        // "Create a Weapon with a Craftsmanship Grade equal to 1/2 (rounded up) of your base Tier of
-        // Power that you may immediately equip ... this Weapon's Life Points are equal to your
-        // Buddy Attribute." Built on its sheet, and gone at the end of the Combat Round.
+        // "Create a Weapon with a Craftsmanship Grade equal to 2 + your base Tier of Power that you may
+        // immediately equip ... this Weapon's Life Points are equal to your Buddy Attribute multiplied by 5"
+        // (the rules as updated, the user's). Grade 5 at most - the highest there is. Built on its sheet,
+        // and gone at the end of the Combat Round.
         const data = craftedItemFrom("weapon", actor, getTrait);
         data.name = `${item.name} (Weapon)`;
-        data.system.crafted.grade = Math.min(5, Math.max(1, Math.ceil(baseTier / 2)));
-        data.system.crafted.lifeFixed = buddyAttribute(baseTier);
+        data.system.crafted.grade = Math.min(5, Math.max(1, 2 + baseTier));
+        data.system.crafted.lifeFixed = 5 * buddyAttribute(baseTier);
         data.system.crafted.fromBuddy = item.id;
         data.system.equipped = !wieldProblem(actor.items.contents, { system: { crafted: {} } }, getTrait,
           actor.system.weaponsWielded);
