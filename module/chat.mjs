@@ -187,9 +187,12 @@ export function registerManeuverSocket() {
     // Exactly one client must act, or the same edit is applied several times - but a
     // lone GM must always be that client. Deferring to activeGM alone would drop the
     // edit entirely on the one setup where it matters most.
-    if (!game.user.isGM) return;
+    // With no GM here, the author of the card it is about - who may edit it - does it instead.
     const activeGM = game.users.activeGM;
-    if (activeGM && (activeGM !== game.user)) return;
+    if (!game.user.isGM) {
+      if (activeGM || !request?.messageId || !game.messages.get(request.messageId)?.isAuthor) return;
+    }
+    else if (activeGM && (activeGM !== game.user)) return;
 
     try {
       await applyRequest(request);
@@ -4135,8 +4138,9 @@ export function requestEdit(message, request) {
     });
   }
 
-  if (!game.users.activeGM) {
-    ui.notifications.warn("A GM must be connected for this to be recorded on the maneuver.");
+  // No GM here: the card's own author carries it out, if they are (the user's: an attack between two players should not need a GM).
+  if (!game.users.activeGM && !message.author?.active) {
+    ui.notifications.warn(`${message.author?.name ?? "Whoever made this card"} or a GM must be connected for this to be recorded on it.`);
     return;
   }
 
@@ -9086,7 +9090,13 @@ async function respondDialog(message, respondable, { initials = new Map(), check
   const movement = movementOnCard(message);
   const answered = new Set((message.getFlag(SCOPE, RESPONSES_FLAG) ?? []).map(entry => entry.actorUuid));
 
-  const entries = characters.map(actor => {
+  // A target still to answer can always answer - a Dodge costs nothing - so the button is there for them whatever else is read
+  // (the user's: a GM with several characters on the scene was left with no way to Dodge).
+  const answering = actor => Boolean(attack) && !attack.result && !endedByDuel(attack) && !duelRunning(attack)
+    && !duelSideOf(attack, actor.uuid) && attackTargets(attack).some(target => target.uuid === actor.uuid);
+  if (check && characters.some(answering)) return true;
+
+  const build = actor => {
     // Any of the people this attack reaches, not the one it was first aimed at. An
     // area attack adds to that list, and somebody added to it is being attacked as
     // much as the first one was - they were the ones who could neither Dodge nor
@@ -9443,6 +9453,23 @@ async function respondDialog(message, respondable, { initials = new Map(), check
       previews: answersAttack ? Object.fromEntries(["dodge", "strike", "wound"].map(slot => [slot,
         Object.fromEntries(triggers.map(entry => [entry.blockId, triggerPreview(actor, entry, slot, {})]))])) : {}
     };
+  };
+  // One character that cannot be read does not take the others' answers with it: said in the console, and a target among them
+  // left their Dodge.
+  const entries = characters.map(actor => {
+    try {
+      return build(actor);
+    } catch (error) {
+      console.error(`DBU TTRPG | Could not read what ${actor.name} can answer with`, error);
+      const target = answering(actor);
+      return { actor, isTarget: target, usable: target, why: "could not be read - see the console", triggers: [],
+        top: rollBoxHtml("", ""),
+        body: target ? rollSection("Maneuvers", `<label class="dbu-respond-option dbu-respond-dodge">
+           <input type="radio" name="counter-${actor.id}" value="dodge" checked/>
+           <span class="dbu-respond-name">Dodge</span>
+           <span class="dbu-respond-source">no Maneuver, no Action</span></label>`) : "",
+        roll: null, previews: {} };
+    }
   });
 
   // One character: its window. Several that can answer (the user's): a window to pick whose answer to set, each its own
