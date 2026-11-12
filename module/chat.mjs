@@ -32392,6 +32392,9 @@ async function resolveAttackWork(message, attack) {
       analysis,
       // Named, so the card says where it came from - Lock On's +2(T) was added and never said (the user's report).
       analysisNamed: analysisParts.map(signedPart),
+      // In the hover of what the Strike was worth against them, not written on the card (the user's): the Strike, each part, the distance.
+      analysisRows: analysisParts.map(part => ({ label: part.label, value: part.value })),
+      strikeBase: strike.total,
       against,
       // Said on the card, since a defence that was never rolled needs a reason beside
       // it or it looks like it was simply forgotten.
@@ -34588,7 +34591,8 @@ async function rollAttackWoundWork(message, attack) {
           alreadyConditioned: conditionAlreadyOn(attack, target) }) }].filter(p => p.value);
     const analysis = woundParts.reduce((sum, p) => sum + p.value, 0);
     // Kept, so the card names them and a Wound settled again keeps them.
-    const woundAgainst = analysis ? { woundBonus: analysis, woundNamed: woundParts.map(signedPart) } : {};
+    const woundAgainst = analysis ? { woundBonus: analysis, woundNamed: woundParts.map(signedPart),
+      woundRows: woundParts.map(part => ({ label: part.label, value: part.value })) } : {};
     const effectiveWound = defence.wound(wound.total + analysis);
 
     // A blow that lands on one of their Weapons rather than on them - a Called Shot at it, or a
@@ -39621,9 +39625,20 @@ function targetRow(attack, target) {
   // that follow are measured against it, and the reason it did not stop the first one
   // is said beside it - a defence that plainly won otherwise reads as a bug.
   if (own.answer) {
-    const why = [...(own.analysisNamed ?? []), ...(own.longRange ? ["Long Range"] : [])];
-    const note = own.forced || (why.length ? `${why.join(", ")} - Strike ${own.against} against them` : "");
-    return attackSide(label, target.name, own.answer, note);
+    // What the Strike was worth against them said; where it came from - Analysis, Lock On, the distance - in its hover (the user's:
+    // not written out on the card). A card from before the rows were kept still names them.
+    const rows = own.analysisRows;
+    if (own.forced) return attackSide(label, target.name, own.answer, own.forced);
+    if (!rows) {
+      const why = [...(own.analysisNamed ?? []), ...(own.longRange ? ["Long Range"] : [])];
+      return attackSide(label, target.name, own.answer, why.length ? `${why.join(", ")} - Strike ${own.against} against them` : "");
+    }
+    if (!rows.length && !own.longRange) return attackSide(label, target.name, own.answer);
+    const tip = maySeeRolls(fromUuidSync(attack.attackerUuid)) ? breakdownTable([
+      partLine({ label: "Strike Roll", written: String(own.strikeBase ?? ""), value: Number(own.strikeBase) || 0 }),
+      ...rows.map(partLine),
+      ...(own.longRange ? [partLine({ label: "Long Range", value: -own.longRange })] : [])], own.against) : "";
+    return attackSide(label, target.name, own.answer, `Strike ${own.against} against them`, tip);
   }
 
   // Direct Hit, Guard and Power Flare forgo the roll by choice; being Sleeping or
@@ -39701,14 +39716,15 @@ function ownsSide(side) {
 }
 
 /** One rolled side of the attack. */
-function attackSide(label, name, side, note = "") {
+function attackSide(label, name, side, note = "", noteTip = "") {
   const total = side ? rolledTotal(side) : `<span class="dbu-clash-waiting">waiting</span>`;
   const outcome = (side?.outcome && !side.succeeded)
     ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
   // Something about the row that the roll itself does not say - a defence that was
   // rolled and beaten anyway by a rule rather than by the dice.
+  const tip = noteTip ? ` data-tooltip-html="${Handlebars.escapeExpression(noteTip)}"` : "";
   const aside = note
-    ? `<span class="dbu-clash-outcome">${Handlebars.escapeExpression(note)}</span>` : "";
+    ? `<span class="dbu-clash-outcome"${tip}>${Handlebars.escapeExpression(note)}</span>` : "";
   return `
     <div class="dbu-clash-side">
       <span class="dbu-clash-name">${Handlebars.escapeExpression(name)}<em> ${label}</em></span>
@@ -39877,13 +39893,18 @@ function outcomeFor(attack, { own, uuid }) {
   // longer matches the arithmetic.
   // What was added against this one is named, and is no defence's doing (it read as "halved").
   const reduced = (effectiveWound !== wound.total + (Number(own.woundBonus) || 0)) ? " halved" : "";
-  const named = own.woundNamed?.length ? ` (${own.woundNamed.join(", ")})` : "";
+  // What was added against this one in the Wound's hover, not written out (the user's); a card from before the rows were kept names them.
+  const named = (own.woundNamed?.length && !own.woundRows) ? ` (${own.woundNamed.join(", ")})` : "";
+  const woundTip = own.woundRows?.length ? ` data-tooltip-html="${Handlebars.escapeExpression(breakdownTable([
+    partLine({ label: "Wound Roll", written: String(wound.total), value: wound.total }), ...own.woundRows.map(partLine)],
+    wound.total + (Number(own.woundBonus) || 0)))}"` : "";
   // Named separately from Soak, because it is subtracted separately: the Category note
   // sits with the Soak it applied to, and Damage Reduction stands outside it.
   const dr = reduction ? ` - DR ${reduction}` : "";
   const barred = own.barrier ? ` - ${own.barrier.name} ${own.barrier.total}` : "";
   const down = own.punchingDown ? ` + Punching Down ${own.punchingDown}` : "";
-  const detail = `Wound ${effectiveWound}${named}${reduced} - Soak ${soak}${stepped}${dr}${barred}${down}`;
+  const woundText = woundTip ? `<span class="dbu-wound-against"${woundTip}>Wound ${effectiveWound}</span>` : `Wound ${effectiveWound}`;
+  const detail = `${woundText}${named}${reduced} - Soak ${soak}${stepped}${dr}${barred}${down}`;
   return (damage <= 0) ? `${detail}: no damage` : `${detail} = ${damage} damage`;
 }
 
