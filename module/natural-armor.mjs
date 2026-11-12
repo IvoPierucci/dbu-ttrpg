@@ -12,7 +12,7 @@
  *   - Effects that refer to Natural Armor will apply only while that Natural Armor is Active."
  *
  * An Integrated piece of Armor (integrated.mjs), marked `flags.dbu-ttrpg.naturalArmor`. Its Category's Damage Reduction
- * applies whatever is worn over it - and that piece's own Category besides (the user's) (gear.mjs categoryApplies); the
+ * applies whatever is worn over it - and that piece's own Category besides, as every Active Integrated piece's does (gear.mjs categoryApplies); the
  * single layer is kept by putting Apparel on (gear.mjs equipPlan); what its owner's effects read of it is
  * `naturalArmor.apparelBonus`, nothing while it is Inactive (actor-character.mjs). Survivor's Plating is one.
  */

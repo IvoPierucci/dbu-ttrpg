@@ -950,9 +950,12 @@ export function topLayerPiece(items) {
     const at = order.indexOf(item.system?.layer ?? "");
     return (at < 0) ? order.length : at;
   };
-  // Never Natural Armor: its Category is its own whatever is worn over it (categoryApplies).
+  // Never Natural Armor: its Category is its own whatever is worn over it (categoryApplies). Any other Active Integrated piece
+  // under everything worn - "Active Integrated Apparel's Apparel Category effects stack with non-Integrated Apparel the
+  // character is wearing" - the Top only with nothing else on.
+  const integratedLast = item => (isIntegrated(item) ? 1 : 0);
   return apparelQualitiesInEffect(items).map(({ item }) => item).filter(item => !isNaturalArmor(item))
-    .sort((a, b) => rank(a) - rank(b))[0] ?? null;
+    .sort((a, b) => (integratedLast(a) - integratedLast(b)) || (rank(a) - rank(b)))[0] ?? null;
 }
 
 /** Natural Armor (natural-armor.mjs): Survivor's Plating. */
@@ -963,10 +966,12 @@ export function isNaturalArmor(item) {
 /**
  * Whether a worn piece's Category benefit applies (the user's, the rules as they are now): every Category's on whatever Layer it
  * is worn - Weights' penalties stacking - but Armor's and Combat Clothing's, the Top Layer's alone. Armor under a piece that goes on
- * over it (the Jacket's) still gives its own, the two together. Natural Armor's always.
+ * over it (the Jacket's) still gives its own, the two together. An Active Integrated piece's always - Natural Armor's among
+ * them: "Active Integrated Apparel's Apparel Category effects stack with non-Integrated Apparel the character is wearing,
+ * ignoring the Double Dip rule" (an Inactive one is not worn, so never asked).
  */
 export function categoryApplies(item, top, { getTrait = null } = {}) {
-  if (isNaturalArmor(item)) return true;
+  if (isNaturalArmor(item) || isIntegrated(item)) return true;
   const category = item?.system?.crafted?.category;
   if (category === "combat-clothing") return item === top;
   if (category === "armor") {
