@@ -244,13 +244,13 @@ function apparelPrograms(actor, report) {
     // and whatever has been written since. A part at a time, so each keeps its own name in the
     // workings.
     const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {},
-      category: categoryApplies(item, top) });
+      category: categoryApplies(item, top, { getTrait }) });
     // What its Effects may name about it: the Armor's multiplier, the Rolls its Weights
     // reach, and whether they are waived right now.
     const tokens = pieceTokens(item, actor, reading, getTrait);
     const parts = effectParts(effectsOf(item.system.crafted, getTrait))
       // "Benefits that you gain while wearing that piece of Apparel as the Top Layer."
-      .filter(part => (part.type !== "category") || categoryApplies(item, top));
+      .filter(part => (part.type !== "category") || categoryApplies(item, top, { getTrait }));
     return { item, reading, tokens, parts };
   });
   const kept = doubleDipped(worn);

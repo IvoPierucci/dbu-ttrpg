@@ -308,7 +308,7 @@ export function groundIgnored(items, getTrait) {
   const ignored = { environments: false, qualities: false };
   const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
-    const piece = pieceSlots(item.system.crafted, { getTrait, category: categoryApplies(item, top) });
+    const piece = pieceSlots(item.system.crafted, { getTrait, category: categoryApplies(item, top, { getTrait }) });
     if (piece["piece.ignoresEnvironments"] === true) ignored.environments = true;
     if (piece["piece.ignoresEnvironmentalQualities"] === true) ignored.qualities = true;
   }
@@ -421,7 +421,7 @@ export function weatherResisted(items, weatherId, getTrait, data = null) {
   let tiers = 0;
   const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
-    tiers += applySlot(pieceSlots(item.system.crafted, { getTrait, data, category: categoryApplies(item, top) }),
+    tiers += applySlot(pieceSlots(item.system.crafted, { getTrait, data, category: categoryApplies(item, top, { getTrait }) }),
       `piece.resistsWeather.${weatherId}`, 0);
   }
   return tiers;
@@ -480,7 +480,7 @@ export function spikesOf(items, getTrait, baseTier = 1) {
   const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
     const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier,
-      category: categoryApplies(item, top) });
+      category: categoryApplies(item, top, { getTrait }) });
     if (!reading?.spikes) continue;
     found.push({ item, amount: reading.bonus ?? 0 });
   }
@@ -615,7 +615,7 @@ export function apparelPenaltyPieces(items, getTrait) {
   const top = topLayerPiece(items);
   // Integrated: "ignore any initial Penalties they would normally incur" - not counted.
   const counted = apparelQualitiesInEffect(items).filter(({ item }) => !isIntegrated(item)
-    && (craftedReading(item.system.crafted, { getTrait, difficulties: {}, category: categoryApplies(item, top) })
+    && (craftedReading(item.system.crafted, { getTrait, difficulties: {}, category: categoryApplies(item, top, { getTrait }) })
       ?.countsForPenalty !== false));
   return Math.max(0, counted.length - 1);
 }
@@ -961,11 +961,20 @@ export function isNaturalArmor(item) {
 }
 
 /**
- * Whether a worn piece's Category benefit applies: the Top Layer's - and Natural Armor's always, the one worn over it
- * giving its own besides (the user's).
+ * Whether a worn piece's Category benefit applies (the user's, the rules as they are now): every Category's on whatever Layer it
+ * is worn - Weights' penalties stacking - but Armor's and Combat Clothing's, the Top Layer's alone. Armor under a piece that goes on
+ * over it (the Jacket's) still gives its own, the two together. Natural Armor's always.
  */
-export function categoryApplies(item, top) {
-  return (item === top) || isNaturalArmor(item);
+export function categoryApplies(item, top, { getTrait = null } = {}) {
+  if (isNaturalArmor(item)) return true;
+  const category = item?.system?.crafted?.category;
+  if (category === "combat-clothing") return item === top;
+  if (category === "armor") {
+    if (item === top) return true;
+    return Boolean(top?.system?.crafted) && Boolean(getTrait)
+      && (pieceSlots(top.system.crafted, { getTrait })["piece.wornOverArmor"] === true);
+  }
+  return true;
 }
 
 /**

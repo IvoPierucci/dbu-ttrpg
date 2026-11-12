@@ -2046,7 +2046,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       }
     };
     const rowOf = item => {
-      const applies = categoryApplies(item, top);
+      const applies = categoryApplies(item, top, { getTrait });
       const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier });
       const counted = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier, category: applies });
       return {
