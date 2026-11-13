@@ -9552,16 +9552,19 @@ async function respondDialog(message, respondable, { initials = new Map(), check
  * Flare's Wound - each a formula - and what Direct Hit and Guard leave of the hit, which nothing rolls.
  */
 function respondRollData(actor, attack) {
+  const balancedTier = (actor.system?.effects?.slots?.["balanced.defender"] === true) ? balancedCost(actor).tier : 0;
   const formula = key => {
     const parts = DEFENCES[key]?.parts?.(actor, attack);
     return parts ? { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor), parts: windowParts(actor, parts.map(part =>
       (DEFENCE_WORKINGS[part.label] ? { ...part, workingsKey: DEFENCE_WORKINGS[part.label] } : part))) } : null;
   };
   // Direct Hit and Guard: "Wound - Soak - DR", the Soak as it will stand and the Damage Category known before any Wound (the user's).
-  const damage = key => {
+  // `extra` on the Soak Value before the Category - Balanced Defender's 1(T), ticked (the user's), as it is added when settled.
+  const damage = (key, extra = 0) => {
     const from = resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0);
     const category = resolveDamageCategory(attack.damageCategory, (attack.damageCategoryShift ?? 0) + (DEFENCES[key]?.damageCategoryShift ?? 0));
-    const base = Number(actor.system.soakValue) || 0;
+    const own = Number(actor.system.soakValue) || 0;
+    const base = own + extra;
     const soak = DEFENCES[key].soak(Math.floor(base * (DAMAGE_CATEGORIES[category]?.soakMultiplier ?? 1)));
     const reduction = Number(actor.system.damageReduction) || 0;
     const label = (key === "guard") ? "Guard" : "Direct Hit";
@@ -9571,7 +9574,8 @@ function respondRollData(actor, attack) {
       what: `Damage if hit &middot; ${label} &middot; ${(from !== category) ? `${fromLabel} &rarr; <span class="dbu-roll-up">${toLabel}</span>` : toLabel} Category`,
       line: `<span class="dbu-formula-piece dbu-formula-base" data-tooltip="${Handlebars.escapeExpression((key === "guard")
         ? "Their Wound Roll, halved - rolled once you are hit" : "Their Wound Roll - rolled once you are hit")}">${(key === "guard") ? "Wound &divide; 2" : "Wound"}</span>`
-        + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="${Handlebars.escapeExpression(`Soak Value ${base}${
+        + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="${Handlebars.escapeExpression(`Soak Value ${own}${
+          extra ? `, +${extra} Balanced Defender` : ""}${
           (DAMAGE_CATEGORIES[category]?.soakMultiplier ?? 1) !== 1 ? `, ${toLabel} Category: ${DAMAGE_CATEGORIES[category].summary}` : ""}${
           (key === "directHit") ? ", +1/2 for Direct Hit" : ""}`)}">${soak} Soak</span>`
         + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Damage Reduction">${reduction} DR</span>`
@@ -9579,7 +9583,10 @@ function respondRollData(actor, attack) {
   };
   return {
     dodge: formula("dodge"), parry: formula("parry"), crossCounter: formula("crossCounter"),
-    crossCounterSignature: formula("crossCounterSignature"), directHit: damage("directHit"), guard: damage("guard"),
+    crossCounterSignature: formula("crossCounterSignature"),
+    // And as it stands with Balanced Defender ticked, where it can be.
+    directHit: { ...damage("directHit"), balanced: balancedTier ? damage("directHit", balancedTier) : null },
+    guard: { ...damage("guard"), balanced: balancedTier ? damage("guard", balancedTier) : null },
     powerFlare: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor), parts: windowParts(actor, [
       { label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) }
   };
@@ -9727,7 +9734,10 @@ async function respondActorWindow(message, entry, { fromPicker = false, initial 
     const slot = (key === "parry") ? "strike" : (key === "powerFlare") ? "wound" : "dodge";
     const show = (whatHtml, lineHtml) => { box.style.visibility = "visible"; what.innerHTML = whatHtml; line.innerHTML = lineHtml; };
     if (!roll || !key) { box.style.visibility = "hidden"; return; }
-    if ((key === "directHit") || (key === "guard")) return show(roll[key].what, roll[key].line);
+    if ((key === "directHit") || (key === "guard")) {
+      const shown = (element.querySelector(`input[name="balanced-${id}"]`)?.checked && roll[key].balanced) || roll[key];
+      return show(shown.what, shown.line);
+    }
     const formula = roll[key];
     if (!formula) { box.style.visibility = "hidden"; return; }
     const names = { dodge: "Dodge Roll", parry: "Strike Roll &middot; Parry", crossCounter: "Dodge Roll &middot; Cross Counter",
