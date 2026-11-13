@@ -44,7 +44,7 @@
           <div class="dbu-custom-buff-field">
             <span class="right">Total</span>
             <b class="dbu-custom-buff-total"
-               data-tooltip="{{#if buff.toggle}}A toggle: no number to it{{else}}Flat + (bT) x base Tier of Power + (T) x Tier of Power{{/if}}">{{#if buff.gone}}-{{else}}{{buff.total}}{{/if}}</b>
+               data-tooltip="{{#if buff.toggle}}A toggle: no number to it{{else}}{{#if buff.quarter}}So many quarters of the value: 1 is a quarter more of it, -2 is half of it{{else}}Flat + (bT) x base Tier of Power + (T) x Tier of Power{{/if}}{{/if}}">{{#if buff.gone}}-{{else}}{{buff.total}}{{/if}}</b>
           </div>
         </div>
         <div class="dbu-custom-buff-line second">
@@ -65,22 +65,23 @@
           <span class="dbu-custom-buff-toggle">On or off: no number to it</span>
           {{else}}
           <label class="dbu-custom-buff-field">
-            <span class="center">Flat</span>
+            <span class="center">{{#if buff.quarter}}x 1/4{{else}}Flat{{/if}}</span>
             <input type="text" class="dbu-custom-buff-number" data-custom-buff="flat" value="{{#if buff.flat}}{{buff.flat}}{{/if}}" maxlength="4"
                    placeholder="0" inputmode="numeric" autocomplete="off" {{#unless @root.editable}}disabled{{/unless}}/>
           </label>
           <label class="dbu-custom-buff-field">
             <span class="center">(bT)</span>
             <input type="text" class="dbu-custom-buff-number" data-custom-buff="perBase" value="{{#if buff.perBase}}{{buff.perBase}}{{/if}}"
-                   maxlength="4" placeholder="0" inputmode="numeric" autocomplete="off" {{#unless @root.editable}}disabled{{/unless}}
-                   data-tooltip="For each base Tier of Power"/>
+                   maxlength="4" placeholder="{{#if buff.takesBase}}0{{else}}-{{/if}}" inputmode="numeric" autocomplete="off"
+                   {{#unless @root.editable}}disabled{{/unless}} {{#unless buff.takesBase}}disabled{{/unless}}
+                   data-tooltip="{{#if buff.takesBase}}For each base Tier of Power{{else}}Not for this one: it is counted in quarters{{/if}}"/>
           </label>
           <label class="dbu-custom-buff-field">
             <span class="center">(T)</span>
             <input type="text" class="dbu-custom-buff-number" data-custom-buff="perTier" value="{{#if buff.perTier}}{{buff.perTier}}{{/if}}"
                    maxlength="4" placeholder="{{#if buff.takesTier}}0{{else}}-{{/if}}" inputmode="numeric" autocomplete="off"
                    {{#unless @root.editable}}disabled{{/unless}} {{#unless buff.takesTier}}disabled{{/unless}}
-                   data-tooltip="{{#if buff.takesTier}}For each Tier of Power{{else}}Not for this one: it is settled before the Tier of Power is. Use (bT){{/if}}"/>
+                   data-tooltip="{{#if buff.takesTier}}For each Tier of Power{{else}}{{#if buff.quarter}}Not for this one: it is counted in quarters{{else}}Not for this one: it is settled before the Tier of Power is. Use (bT){{/if}}{{/if}}"/>
           </label>
           {{/if}}
           {{#if @root.editable}}

@@ -105,7 +105,7 @@ import {
 import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
 import { gearKitIngenuity, isConsumable } from "../gear.mjs";
 import {
-  customBuffOption, customBuffSections, customBuffsToggled, customBuffTakesTier, customBuffTotal, newCustomBuff
+  customBuffOption, customBuffSections, customBuffsToggled, customBuffTakesBase, customBuffTakesTier, customBuffTotal, newCustomBuff
 } from "../custom-buffs.mjs";
 import {
   exclusiveAttributeGroups,
@@ -3402,7 +3402,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         ...buff,
         total: customBuffTotal(buff, tiers),
         toggle: option?.kind === "toggle",
+        takesBase: customBuffTakesBase(option),
         takesTier: customBuffTakesTier(option),
+        quarter: option?.kind === "quarter",
         // One this system no longer has: said, and nothing applied.
         gone: !option,
         sections: sections.map(section => ({ label: section.label,

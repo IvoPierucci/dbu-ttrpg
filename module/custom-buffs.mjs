@@ -24,6 +24,11 @@ const number = (id, label, section, slot, { split = false } = {}) => ({ id, labe
 const toggle = (id, label, section, line) => ({ id, label, section, kind: "toggle", line });
 // Dice: the number is how many of them.
 const dice = (id, label, section, slot, die) => ({ id, label, section, kind: "dice", slot, die });
+// The spreadsheet's "+-1/4" ones: the number is how many quarters of the value - 1 a quarter more of it, -2 half of it (the
+// user's). Flat alone: a quarter for each Tier is nothing the rules say. `write`: its lines, given the factor the value is
+// multiplied by and the quarters themselves.
+const quarter = (id, label, section, write, { split = false } = {}) => ({ id, label, section, kind: "quarter", write, split });
+const multiplied = (...slots) => factor => slots.map(slot => `${slot} *= ${factor};`).join("\n");
 
 /** Every option, in the spreadsheet's order within its section. */
 export const CUSTOM_BUFFS = Object.freeze([
@@ -35,13 +40,18 @@ export const CUSTOM_BUFFS = Object.freeze([
   number("tierOfPower", "ToP (Breakthrough)", "Tier of Power and dice", "tierOfPower"),
   number("dice.extra.category", "ToP Extra Dice Cat.", "Tier of Power and dice", "dice.extra.category"),
   number("dice.greater.category", "Greater Dice Category", "Tier of Power and dice", "dice.greater.category"),
-  number("dice.extra.instances", "ToP Extra Dice (All)", "Tier of Power and dice", "dice.extra.instances"),
   ...DICE.map(die => dice(`combatRolls.d${die}`, `Extra d${die} (Combat Rolls)`, "Tier of Power and dice", "combatRolls.dice", die)),
   number("charges.category", "Energy Charge Dice Category", "Tier of Power and dice", "charges.category"),
 
   number("life.max", "Max Life Points", "Life, Ki and Capacity", "life.max"),
+  quarter("life.max.quarter", "Max Life Points \u00b11/4", "Life, Ki and Capacity", multiplied("life.max")),
   number("ki.max", "Max Ki Pool", "Life, Ki and Capacity", "ki.max"),
+  quarter("ki.max.quarter", "Max Ki Pool \u00b11/4", "Life, Ki and Capacity", multiplied("ki.max")),
   number("capacity.flat", "Max Capacity", "Life, Ki and Capacity", "capacity.flat", { split: true }),
+  // "Added rather than multiplied, so two of them are a half and not a quarter twice over" (slots.mjs): the Slot the rules'
+  // own "increase your Max Capacity by 1/4" is written to.
+  quarter("capacity.quarter", "Max Capacity \u00b11/4", "Life, Ki and Capacity",
+    (factor, quarters) => `capacity.maxFraction ${quarters < 0 ? "-=" : "+="} ${Math.abs(quarters) / 4};`, { split: true }),
   number("racialLifeModifier", "Racial Life Modifier", "Life, Ki and Capacity", "racialLifeModifier"),
   number("surgency", "Surgency", "Life, Ki and Capacity", "surgency"),
   toggle("surgency.halve", "Halve Surgency", "Life, Ki and Capacity", "surgency *= 0.5;"),
@@ -68,6 +78,9 @@ export const CUSTOM_BUFFS = Object.freeze([
   number("speed.normal", "Normal Speed", "Initiative and movement", "speed.normal", { split: true }),
   number("speed.boosted", "Boosted Speed", "Initiative and movement", "speed.boosted", { split: true }),
   number("speed.all", "Both Speeds", "Initiative and movement", "speed.all", { split: true }),
+  quarter("speed.normal.quarter", "Normal Speed \u00b11/4", "Initiative and movement", multiplied("speed.normal"), { split: true }),
+  quarter("speed.boosted.quarter", "Boosted Speed \u00b11/4", "Initiative and movement", multiplied("speed.boosted"), { split: true }),
+  quarter("speed.all.quarter", "Both Speeds \u00b11/4", "Initiative and movement", multiplied("speed.normal", "speed.boosted"), { split: true }),
   toggle("speed.normal.halve", "Halve Normal Speed", "Initiative and movement", "speed.normal *= 0.5;"),
   toggle("speed.boosted.halve", "Halve Boosted Speed", "Initiative and movement", "speed.boosted *= 0.5;"),
   toggle("speed.all.halve", "Halve Both Speeds", "Initiative and movement", "speed.normal *= 0.5;\nspeed.boosted *= 0.5;"),
@@ -143,11 +156,30 @@ export function customBuffTakesTier(option) {
   return getSlot(option.slot)?.phase !== PHASES.TIER;
 }
 
+/** Whether an option takes a (bT) amount: a number or dice. A quarter is Flat alone; a toggle has no amount at all. */
+export function customBuffTakesBase(option) {
+  return ["number", "dice"].includes(option?.kind);
+}
+
 const whole = value => Math.trunc(Number(value) || 0);
 
 /** A row's three amounts as whole numbers - the (T) left out where the option does not take it. */
 function amounts(buff, option) {
-  return { flat: whole(buff?.flat), perBase: whole(buff?.perBase), perTier: customBuffTakesTier(option) ? whole(buff?.perTier) : 0 };
+  return { flat: whole(buff?.flat), perBase: customBuffTakesBase(option) ? whole(buff?.perBase) : 0,
+    perTier: customBuffTakesTier(option) ? whole(buff?.perTier) : 0 };
+}
+
+/** What a value is multiplied by for so many quarters of it: 1 is 1.25, -2 is 0.5 - never less than nothing. */
+const quarterFactor = quarters => Math.max(0, 1 + (quarters / 4));
+
+/** So many quarters, as they are said: "+1/4", "+1/2", "-3/4", "+1 1/4". */
+function quartersWritten(quarters) {
+  if (!quarters) return "0";
+  const size = Math.abs(quarters);
+  const wholes = Math.floor(size / 4);
+  const rest = size % 4;
+  const fraction = (rest === 2) ? "1/2" : rest ? `${rest}/4` : "";
+  return `${quarters > 0 ? "+" : "\u2212"}${[wholes || "", fraction].filter(Boolean).join(" ")}`;
 }
 
 /**
@@ -161,6 +193,7 @@ export function customBuffScript(buff) {
   if (option.kind === "toggle") return `[passive]\n${option.line}`;
 
   const { flat, perBase, perTier } = amounts(buff, option);
+  if (option.kind === "quarter") return flat ? `[passive]\n${option.write(quarterFactor(flat), flat)}` : "";
   const lines = [];
   for (const [value, suffix] of [[flat, ""], [perBase, "(bT)"], [perTier, "(T)"]]) {
     if (!value) continue;
@@ -182,6 +215,7 @@ export function customBuffTotal(buff, { baseTier = 1, tier = 1 } = {}) {
   if (!option) return "";
   if (option.kind === "toggle") return "On";
   const { flat, perBase, perTier } = amounts(buff, option);
+  if (option.kind === "quarter") return quartersWritten(flat);
   const total = flat + (perBase * (Number(baseTier) || 1)) + (perTier * (Number(tier) || 1));
   if (option.kind === "dice") return total > 0 ? `${total}d${option.die}` : "0";
   return total > 0 ? `+${total}` : total < 0 ? `\u2212${Math.abs(total)}` : "0";
