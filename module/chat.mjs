@@ -8835,7 +8835,9 @@ function triggerPreview(actor, entry, slot, context = {}) {
  */
 function livePreview(actor, formula, combatRoll, slot, previews, element, triggerName = "trigger") {
   const ticked = [...element.querySelectorAll(`input[name="${triggerName}"]:checked`)].map(input => previews[input.value]).filter(Boolean);
-  const spent = [...element.querySelectorAll("[data-spend]")].filter(input => input.tagName !== "SELECT").map(input => {
+  // One for a roll of its own alone (`data-slot`) - Balanced Defender's Defense Value on the Dodge, not a Parry's Strike.
+  const spent = [...element.querySelectorAll("[data-spend]")].filter(input => (input.tagName !== "SELECT")
+    && (!input.dataset.slot || (input.dataset.slot === slot))).map(input => {
     const count = (input.type === "checkbox") ? (input.checked ? 1 : 0)
       : Math.max(0, Math.min(Number(input.max) || Infinity, Number(input.value) || 0));
     return { label: input.dataset.label || input.dataset.spend, value: count * (Number(input.dataset.per) || 0) };
@@ -26020,7 +26022,8 @@ function balancedOption(actor, attack, answering) {
   return `
     <label class="dbu-respond-option dbu-respond-aside${blocked ? " dbu-respond-blocked" : ""}"
            data-tooltip="${esc(`Spend 2(bT) Ki Points: your Defense Value and Soak Value +1(T) for this attack. Once a Combat Round.`)}">
-      <input type="checkbox" name="balanced-${actor.id}" ${blocked ? "disabled" : ""}/>
+      <input type="checkbox" name="balanced-${actor.id}" ${blocked ? "disabled" : ""}
+             data-spend="balanced" data-per="${tier}" data-label="Balanced Defender" data-slot="dodge"/>
       <span class="dbu-respond-name">Balanced Defender</span>
       <span class="dbu-respond-source">${esc(blocked || `${cost} KP: Defense Value and Soak Value +${tier}`)}</span>
     </label>`;
