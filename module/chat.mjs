@@ -8276,7 +8276,7 @@ function renderInstantResponses(message, html) {
     container.append(list);
   }
 
-  if (!ownedCharacters().length) return;
+  if (!ownedCharacters().length && !ownTargetsWaiting(attack).length) return;
 
   // An attack not yet rolled (the user's): your targets ready - "✓ Ready" and Change while a side is not; every side ready, the
   // answers carried out and nothing changed now.
@@ -8300,6 +8300,22 @@ function renderInstantResponses(message, html) {
     }
   }
 
+  // A target of yours still to answer: Respond there and then - a Dodge costs nothing - asked of nothing else (the user's: as GM,
+  // Sereh's never came).
+  const respondButton = () => {
+    const respond = document.createElement("button");
+    respond.type = "button";
+    respond.className = "dbu-respond-button";
+    respond.textContent = "Respond";
+    respond.dataset.tooltip = "Play a Counter Maneuver, or trigger an effect";
+    respond.addEventListener("click", () => respondDialog(message, respondable));
+    return respond;
+  };
+  if (ownTargetsWaiting(attack).length) {
+    container.append(respondButton());
+    return;
+  }
+
   // Only where one of yours has something to play (the user's) - the Instants are the card's Instant row, not this: asked of the same
   // reckoning the window makes, the button put in its place once the answer is in.
   const spot = document.createElement("span");
@@ -8307,13 +8323,7 @@ function renderInstantResponses(message, html) {
   container.append(spot);
   respondDialog(message, respondable, { check: true }).then(any => {
     if (!any || !spot.isConnected) return spot.remove();
-    const respond = document.createElement("button");
-    respond.type = "button";
-    respond.className = "dbu-respond-button";
-    respond.textContent = "Respond";
-    respond.dataset.tooltip = "Play a Counter Maneuver, or trigger an effect";
-    respond.addEventListener("click", () => respondDialog(message, respondable));
-    spot.replaceWith(respond);
+    spot.replaceWith(respondButton());
   }).catch(error => {
     console.error("DBU TTRPG | Could not tell whether anything answers this", error);
     spot.remove();
@@ -9095,9 +9105,20 @@ function rollsOnMessage(message, actor) {
   return false;
 }
 
+/** Your characters this attack still waits on - its targets you own, not ready yet - read off the attack, not the scene's tokens. */
+function ownTargetsWaiting(attack) {
+  if (!attack || attack.result || endedByDuel(attack)) return [];
+  return attackTargets(attack).filter(target => !(attack.ready ?? []).includes(target.uuid))
+    .map(target => fromUuidSync(target.uuid)).filter(actor => actor?.isOwner && isCharacter(actor));
+}
+
 async function respondDialog(message, respondable, { initials = new Map(), check = false } = {}) {
-  const characters = ownedCharacters();
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  // The scene's tokens you own, and the targets of yours the attack waits on even where a token cannot be read (the user's: as GM,
+  // Sereh's Respond never came).
+  const onScene = ownedCharacters();
+  const characters = [...onScene, ...ownTargetsWaiting(attack).filter(actor => !onScene.some(each => each.uuid === actor.uuid))]
+    .sort((a, b) => a.name.localeCompare(b.name));
   // The other thing a Counter Maneuver can answer. Until the Blockade Maneuver, every
   // one of them met an attack aimed at the person playing it.
   const movement = movementOnCard(message);
