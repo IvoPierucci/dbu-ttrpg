@@ -1287,7 +1287,9 @@ export function atLongRange(actor, target) {
   const away = squaresAway(actor, target);
   // Unmeasurable is not far: out of combat there are no Squares, and a rule about them
   // cannot be enforced where there are none - the same answer the Melee Range gives.
-  return (away === null) ? false : (away >= (LONG_RANGE_SQUARES + (2 * sizesAboveLarge(actor))));
+  // And what an effect moves it by (`longRange.squares` - a Custom Buff's "Long Range Distance": 9 + the buff).
+  return (away === null) ? false : (away >= (LONG_RANGE_SQUARES + (2 * sizesAboveLarge(actor))
+    + (Number(actor?.system?.effects?.slots?.["longRange.squares"]?.add) || 0)));
 }
 
 /** Whether this character watches that one through Second Sight: its mark, on their own clock. */
@@ -4577,6 +4579,9 @@ export function maneuverKiCost(maneuver, declared, actor) {
     // the finished price and not one more term in it - putting it anywhere earlier lets
     // the next reduction walk straight through it.
     cost = Math.max(cost, minimumAttackKiCost(declared?.profile, actor));
+    // And what is taken off it past that floor (`attack.kiCost.uncapped` - a Custom Buff's "Ki Point Cost Attacks (no cap)"),
+    // or put on it - never below nothing.
+    if (Number(slots?.["attack.kiCost.uncapped"]?.add) || 0) cost = Math.max(0, applySlot(slots, "attack.kiCost.uncapped", cost));
   }
 
   // A Unique Ability's: "If a Unique Ability's Ki Point Cost (before modifications) is 4(T) or higher, you

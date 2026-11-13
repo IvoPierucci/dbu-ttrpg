@@ -30365,6 +30365,8 @@ export async function postAttack(actor, target, maneuver,
             + (Number(weapon?.damageCategory) || 0)
             // The Maneuver's own - Divine Attack's "has its Damage Category increased by 1 category".
             + (reflecting ? 0 : (Number(maneuver.damageCategoryShift) || 0))
+            // Every Attacking Maneuver of theirs (`attack.damageCategory` - a Custom Buff's "Attacking Damage Category").
+            + (reflecting ? 0 : (Number(actor.system.effects?.slots?.["attack.damageCategory"]?.add) || 0))
             // Overwhelming Assault's "Increase the Damage Category of that Attacking Maneuver by 1 Category".
             + ((overwhelm?.category && !reflecting) ? 1 : 0)
             // Punishing Blow's "its Damage Category increased by 1 category".

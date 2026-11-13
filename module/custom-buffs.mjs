@@ -31,6 +31,10 @@ const dice = (id, label, section, slot, die) => ({ id, label, section, kind: "di
 // multiplied by and the quarters themselves.
 const quarter = (id, label, section, write, { split = false } = {}) => ({ id, label, section, kind: "quarter", write, split });
 const multiplied = (...slots) => factor => slots.map(slot => `${slot} *= ${factor};`).join("\n");
+// Read straight off the rows, with no script: what a worn piece's own numbers are made of is worked out before any effect has
+// run, so its readers ask the rows themselves (customBuffAmounts, customBuffOn - gear.mjs).
+const direct = (id, label, section) => ({ id, label, section, kind: "number", direct: true, split: false });
+const directToggle = (id, label, section) => ({ id, label, section, kind: "toggle", direct: true, line: "" });
 
 /** Every option, in the spreadsheet's order within its section. */
 export const CUSTOM_BUFFS = Object.freeze([
@@ -74,6 +78,8 @@ export const CUSTOM_BUFFS = Object.freeze([
   number("soakValue", "Soak", "Defence", "soakValue", { split: true }),
   number("defenseValue", "Defense Value", "Defence", "defenseValue", { split: true }),
   toggle("defenseValue.halve", "Halve Defense Value", "Defence", "defenseValue *= 0.5;"),
+  direct("naturalArmor.apparelBonus", "Natural Armor Apparel Bonus", "Defence"),
+  directToggle("naturalArmor.double", "Double Natural Armor AB", "Defence"),
   number("superStacks", "Super Stacks", "Defence", "superStacks"),
   number("superStack.musclePenalty", "Muscle Penalty", "Defence", "superStack.musclePenalty"),
   number("steadfast.dice", "Steadfast Checks", "Defence", "steadfast.dice"),
@@ -92,6 +98,7 @@ export const CUSTOM_BUFFS = Object.freeze([
   number("speed.normal", "Normal Speed", "Initiative and movement", "speed.normal", { split: true }),
   number("speed.boosted", "Boosted Speed", "Initiative and movement", "speed.boosted", { split: true }),
   number("speed.all", "Both Speeds", "Initiative and movement", "speed.all", { split: true }),
+  number("longRange.squares", "Long Range Distance", "Initiative and movement", "longRange.squares"),
   quarter("speed.normal.quarter", "Normal Speed \u00b11/4", "Initiative and movement", multiplied("speed.normal"), { split: true }),
   quarter("speed.boosted.quarter", "Boosted Speed \u00b11/4", "Initiative and movement", multiplied("speed.boosted"), { split: true }),
   quarter("speed.all.quarter", "Both Speeds \u00b11/4", "Initiative and movement", multiplied("speed.normal", "speed.boosted"), { split: true }),
@@ -131,6 +138,7 @@ export const CUSTOM_BUFFS = Object.freeze([
   { id: "damageAttribute", label: "Damage Attribute", section: "Wound", kind: "number", slot: "damageAttribute.physical",
     also: ["damageAttribute.energy", "damageAttribute.magic"], split: false },
   number("damageAttribute.times", "Damage Attribute Times Applied", "Wound", "damageAttribute.times"),
+  number("attack.damageCategory", "Attacking Damage Category", "Wound", "attack.damageCategory"),
   ...[...ATTRIBUTES.map(([key, , name]) => [key, name]), ["surgency", "Surgency"]].map(([key, name]) =>
     toggle(`damageAttribute.use.${key}`, `Use Damage Attribute (${name})`, "Wound", `allow damageAttribute.use.${key};`)),
 
@@ -145,6 +153,7 @@ export const CUSTOM_BUFFS = Object.freeze([
     dice(`signature.${roll}d${die}`, `Signature d${die} (${name})`, "Signature Techniques", `signature.${roll}extraDice`, die))),
 
   number("attack.kiCost", "Ki Point Cost Attacks", "Ki Point Cost", "attack.kiCost"),
+  number("attack.kiCost.uncapped", "Ki Point Cost Attacks (no cap)", "Ki Point Cost", "attack.kiCost.uncapped"),
   number("unique.kiCost", "Ki Point Cost Unique Abilities", "Ki Point Cost", "unique.kiCost"),
   number("unique.magical.kiCost", "Ki Point Cost Unique Abilities (Magical)", "Ki Point Cost", "unique.magical.kiCost"),
   number("unique.technical.kiCost", "Ki Point Cost Unique Abilities (Technical)", "Ki Point Cost", "unique.technical.kiCost"),
@@ -186,8 +195,10 @@ export function customBuffSections() {
  * be written with (bT) but never (T): the Tier is not known yet where it is read.
  */
 export function customBuffTakesTier(option) {
-  // No option at all - one this system no longer has - takes nothing.
-  if (!option?.slot || (option.kind === "toggle")) return false;
+  // No option at all - one this system no longer has - takes nothing; nor a toggle, nor a quarter.
+  if (!["number", "dice"].includes(option?.kind)) return false;
+  // One read straight off its rows is read with the Tier known.
+  if (option.direct) return true;
   return getSlot(option.slot)?.phase !== PHASES.TIER;
 }
 
@@ -225,6 +236,8 @@ function quartersWritten(quarters) {
 export function customBuffScript(buff) {
   const option = customBuffOption(buff?.effect);
   if (!buff?.active || !option) return "";
+  // Read off the row itself, where it is needed: no script to it.
+  if (option.direct) return "";
   if (option.kind === "toggle") return `[passive]\n${option.line}`;
 
   const { flat, perBase, perTier } = amounts(buff, option);
@@ -254,6 +267,26 @@ export function customBuffTotal(buff, { baseTier = 1, tier = 1 } = {}) {
   const total = flat + (perBase * (Number(baseTier) || 1)) + (perTier * (Number(tier) || 1));
   if (option.kind === "dice") return total > 0 ? `${total}d${option.die}` : "0";
   return total > 0 ? `+${total}` : total < 0 ? `\u2212${Math.abs(total)}` : "0";
+}
+
+/**
+ * What the Active rows of one option come to between them, read straight off the rows - for what is worked out before any
+ * effect has run (a worn piece's own numbers, gear.mjs). Their three amounts, each summed.
+ */
+export function customBuffAmounts(actor, id) {
+  const sum = { flat: 0, perBase: 0, perTier: 0 };
+  for (const buff of actor?.system?.customBuffs ?? []) {
+    if (!buff?.active || (buff.effect !== id)) continue;
+    sum.flat += whole(buff.flat);
+    sum.perBase += whole(buff.perBase);
+    sum.perTier += whole(buff.perTier);
+  }
+  return sum;
+}
+
+/** Whether a row of one option is Active - a toggle read straight off the rows. */
+export function customBuffOn(actor, id) {
+  return (actor?.system?.customBuffs ?? []).some(buff => buff?.active && (buff.effect === id));
 }
 
 /** How a row is named where its effect shows - a hover, the list of what is active. */

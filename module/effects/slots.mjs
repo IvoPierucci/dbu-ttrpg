@@ -879,6 +879,13 @@ const PATTERNS = [
     doc: "How many more times the Tier of Power Extra Dice are applied to a Signature Technique's Strike and Wound Rolls, or to the one named." },
   { match: /^charges\.signatureCategory$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
     doc: "Dice Categories a Signature Technique's Energy Charges are raised by." },
+  // And three read where an attack is declared, paid for or measured: the Squares until an Opponent is at Long Range, 9 as the
+  // rules have it (maneuvers.mjs atLongRange); what is taken off an Attacking Maneuver's Ki Point Cost past its Minimum
+  // (maneuverKiCost); and the Damage Category of every Attacking Maneuver, in steps (chat.mjs, as it is declared).
+  { match: /^(longRange\.squares|attack\.kiCost\.uncapped|attack\.damageCategory)$/, phase: PHASES.CORE, kind: N, ops: ["add"],
+    valid: () => true,
+    doc: "Squares more, or fewer, until an Opponent is at Long Range; an Attacking Maneuver's Ki Point Cost, under its Minimum "
+       + "too; the Damage Category of every Attacking Maneuver, as steps." },
   { match: /^damageAttribute\.(magic|times)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "Added to the Damage Attribute of a Magic Attack; or how many more times the Damage Attribute is applied to a Wound Roll." },
   { match: /^damageAttribute\.use\.(agility|force|tenacity|scholarship|insight|magic|personality|surgency)$/, phase: PHASES.CORE,

@@ -19,6 +19,7 @@ import { PHASES } from "./effects/slots.mjs";
 import { traitAside } from "./aside.mjs";
 import { besideAnAlly } from "./allies.mjs";
 import { greedyDama, integratedProblem, integratedRoom, isIntegrated } from "./integrated.mjs";
+import { customBuffAmounts, customBuffOn } from "./custom-buffs.mjs";
 
 /**
  * The four Item Types, and which list on the Gear tab each is drawn in.
@@ -521,8 +522,11 @@ export function scriptWithPiece(script, reading, tokens = {}) {
   const perBase = Number(tokens?.apparelBonusPerBaseTier) || 0;
   // The piece's own per base Tier written in here, so the doubling is applied once - to the whole of it.
   const own = Number(reading?.perBaseTier) || 0;
-  const more = [perTier ? `${perTier}(T)` : "", perBase ? `${perBase}(bT)` : ""].filter(Boolean);
-  const bonus = more.length ? `(${own}(bT) + ${more.join(" + ")})` : `${own}(bT)`;
+  const flat = Number(tokens?.apparelBonusFlat) || 0;
+  // Each as it is written; one that lowers it - a Custom Buff's - taken off rather than added.
+  const term = (value, suffix) => (value < 0) ? ` - ${Math.abs(value)}${suffix}` : ` + ${value}${suffix}`;
+  const more = [perTier ? term(perTier, "(T)") : "", perBase ? term(perBase, "(bT)") : "", flat ? term(flat, "") : ""].filter(Boolean);
+  const bonus = more.length ? `(${own}(bT)${more.join("")})` : `${own}(bT)`;
   let text = String(script ?? "").replaceAll("$apparelBonus(bT)", (factor === 1) ? bonus : `(${bonus} * ${factor})`);
   text = text.replaceAll("$apparelBonus", String(own * factor));
   // The rest of what a piece's Effects may name about the piece, longest first so none is read
@@ -567,6 +571,8 @@ export function pieceTokens(item, wearer, reading, getTrait) {
     apparelBonusPerTier: isNaturalArmor(item) ? platingBonusPerTier(wearer, getTrait) : 0,
     // And per base Tier, by an Option chosen - Difference in Shell's King and Queen, with an Ally adjacent.
     apparelBonusPerBaseTier: isNaturalArmor(item) ? platingBonusPerBaseTier(wearer, getTrait) : 0,
+    // And whatever the Tier - a Custom Buff's Flat.
+    apparelBonusFlat: isNaturalArmor(item) ? platingBonusFlat(wearer) : 0,
     // And doubled - Insect Shell (4)'s, while its mark is had.
     apparelBonusFactor: isNaturalArmor(item) ? naturalArmorFactor(wearer) : 1
   };
@@ -582,12 +588,20 @@ export function platingBonusPerBaseTier(actor, getTrait) {
     .reduce((sum, option) => {
       if ((String(option.platingBonusWhile ?? "") === "allyBeside") && !besideAnAlly(actor)) return sum;
       return sum + (Number(option.platingBonusPerBaseTier) || 0);
-    }, 0);
+    }, 0)
+    // And a Custom Buff's "Natural Armor Apparel Bonus", its (bT) - read off its rows: the piece is read before any effect.
+    + customBuffAmounts(actor, "naturalArmor.apparelBonus").perBase;
+}
+
+/** What is added to a Natural Armor's Apparel Bonus whatever the Tier - a Custom Buff's "Natural Armor Apparel Bonus", its Flat. */
+export function platingBonusFlat(actor) {
+  return customBuffAmounts(actor, "naturalArmor.apparelBonus").flat;
 }
 
 /** What Natural Armor's Apparel Bonus is multiplied by: Insect Shell (4)'s "Double the Apparel Bonus of your Insect Shell" while marked. */
 export function naturalArmorFactor(wearer) {
-  return ((Number(wearer?.system?.conditions?.["insect-shell-doubled"]) || 0) > 0) ? 2 : 1;
+  // Or a Custom Buff's "Double Natural Armor AB" - doubled once, whichever says so.
+  return (((Number(wearer?.system?.conditions?.["insect-shell-doubled"]) || 0) > 0) || customBuffOn(wearer, "naturalArmor.double")) ? 2 : 1;
 }
 
 /**
@@ -602,7 +616,9 @@ export function platingBonusPerTier(actor, getTrait) {
     const needs = String(trait?.platingBonusPerTierWhile ?? "");
     if (needs && !((Number(actor?.system?.resources?.[needs]?.stacks) || 0) > 0)) return sum;
     return sum + (Number(trait?.platingBonusPerTier) || 0);
-  }, 0);
+  }, 0)
+    // And a Custom Buff's "Natural Armor Apparel Bonus", its (T).
+    + customBuffAmounts(actor, "naturalArmor.apparelBonus").perTier;
 }
 
 /**
