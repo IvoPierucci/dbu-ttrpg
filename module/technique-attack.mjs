@@ -327,9 +327,25 @@ export function techniqueDamageParts(attacker, attack, target, damage, { absolut
   return parts;
 }
 
+/**
+ * The Damage Attribute an attack is made with where it is not its Foundation's: the one named on it - a Weapon's, a Profile's -
+ * or the one a Custom Buff's toggle names for every attack that names none (`damageAttribute.use.<attribute>`): that Attribute's
+ * Modifier, or Surgency. Null where it is the Foundation's own.
+ */
+export function namedDamageAttribute(attacker, attack) {
+  if (attack?.damageAttribute) return attack.damageAttribute;
+  const slots = attacker?.system?.effects?.slots ?? {};
+  const key = ["agility", "force", "tenacity", "scholarship", "insight", "magic", "personality", "surgency"]
+    .find(each => slots[`damageAttribute.use.${each}`] === true);
+  if (!key) return null;
+  return { label: `${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+    value: (key === "surgency") ? (Number(attacker.system.surgency) || 0) : (Number(attacker.system.attributes?.[key]?.mod) || 0) };
+}
+
 /** The Damage Attribute this attack is made with, as a Modifier: its stand-in, or the Foundation's. */
 export function damageAttributeOf(attacker, attack) {
-  if (attack.damageAttribute) return Number(attack.damageAttribute.value) || 0;
+  const named = namedDamageAttribute(attacker, attack);
+  if (named) return Number(named.value) || 0;
   const attribute = { physical: "force", energy: "force", magic: "magic" }[attack.foundation] ?? "force";
   const mod = Number(attacker?.system?.attributes?.[attribute]?.mod) || 0;
   return attack.technique?.halfDamageAttribute ? Math.floor(mod / 2) : mod;

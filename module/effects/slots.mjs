@@ -861,6 +861,29 @@ const PATTERNS = [
        + "a Strike, Dodge or Wound Roll alone." },
   { match: /^(strike|dodge|wound)\.extraDice$/, phase: PHASES.LATE, kind: D, ops: ["add-dice"], valid: () => true,
     doc: "Dice added to every Strike, Dodge or Wound Roll - as `combatRolls.dice` is to all three." },
+  // More of a Custom Buff's, each read where the roll is made (chat.mjs): an Unarmed Attack's Strike and Wound; a Wound Roll's
+  // Critical Target and Natural Result by its Foundation; a Signature Technique's Critical Targets, its dice and its Tier of
+  // Power Extra Dice again; its Energy Charges a Category higher; the Damage Attribute of a Magic Attack, how many more times
+  // it is applied, and which Attribute it is.
+  { match: /^(strike|wound)\.unarmed$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "Added to an Unarmed Attack's Strike or Wound Roll - as `strike.armed` and `wound.armed` are to an Armed one's." },
+  { match: /^criticalTarget\.wound\.(physical|energy|magic)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "The Critical Target of the Wound Roll of an Attacking Maneuver of that Foundation - its own floor still under it." },
+  { match: /^wound\.natural\.(physical|energy|magic)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
+    doc: "Added to the Natural Result of the Wound Roll of an Attacking Maneuver of that Foundation." },
+  { match: /^criticalTarget\.signature\.(strike|wound)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "The Critical Target of a Signature Technique's Strike or Wound Roll - its own floor still under it." },
+  { match: /^signature\.((strike|wound)\.)?extraDice$/, phase: PHASES.LATE, kind: D, ops: ["add-dice"], valid: () => true,
+    doc: "Dice added to a Signature Technique's Strike and Wound Rolls, or to the one named." },
+  { match: /^dice\.extra\.times\.signature(\.(strike|wound))?$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "How many more times the Tier of Power Extra Dice are applied to a Signature Technique's Strike and Wound Rolls, or to the one named." },
+  { match: /^charges\.signatureCategory$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
+    doc: "Dice Categories a Signature Technique's Energy Charges are raised by." },
+  { match: /^damageAttribute\.(magic|times)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "Added to the Damage Attribute of a Magic Attack; or how many more times the Damage Attribute is applied to a Wound Roll." },
+  { match: /^damageAttribute\.use\.(agility|force|tenacity|scholarship|insight|magic|personality|surgency)$/, phase: PHASES.CORE,
+    kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "That Attribute's Modifier - or Surgency - is the Damage Attribute of every Attacking Maneuver that names none of its own." },
   // "Some effects may designate a Profile as a Favored Element" - `favored.elementalEarth = true;`, Telekinesis's.
   { match: /^favored\.(elemental\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,

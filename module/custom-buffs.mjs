@@ -55,6 +55,7 @@ export const CUSTOM_BUFFS = Object.freeze([
   ...ROLLS.flatMap(([roll, name]) => DICE.map(die => dice(`${roll}.d${die}`, `Extra d${die} (${name})`, "Tier of Power and dice",
     `${roll}.extraDice`, die))),
   number("charges.category", "Energy Charge Dice Category", "Tier of Power and dice", "charges.category"),
+  number("charges.signatureCategory", "Signature Energy Charge Dice Category", "Signature Techniques", "charges.signatureCategory"),
 
   number("life.max", "Max Life Points", "Life, Ki and Capacity", "life.max"),
   quarter("life.max.quarter", "Max Life Points \u00b11/4", "Life, Ki and Capacity", multiplied("life.max")),
@@ -108,8 +109,8 @@ export const CUSTOM_BUFFS = Object.freeze([
     number(`strike.${key}`, `Strike (${name})`, "Strike", `strike.${key}`, { split: true }),
     number(`criticalTarget.${key}`, `Strike CT (${name})`, "Strike", `criticalTarget.${key}`)
   ]),
-  number("strike.signature", "Signature Strike", "Strike", "strike.signature", { split: true }),
   number("strike.armed", "Armed Strike", "Strike", "strike.armed", { split: true }),
+  number("strike.unarmed", "Unarmed Strike", "Strike", "strike.unarmed", { split: true }),
 
   number("dodge", "Dodge", "Dodge", "dodge", { split: true }),
   number("criticalTarget.dodge", "Dodge CT", "Dodge", "criticalTarget.dodge"),
@@ -118,9 +119,30 @@ export const CUSTOM_BUFFS = Object.freeze([
   number("wound", "Wound (All)", "Wound", "wound", { split: true }),
   number("criticalTarget.wound", "Wound CT (All)", "Wound", "criticalTarget.wound"),
   number("wound.natural", "Wound Natural Result (All)", "Wound", "wound.natural"),
-  ...FOUNDATIONS.map(([key, name]) => number(`wound.${key}`, `Wound (${name})`, "Wound", `wound.${key}`, { split: true })),
-  number("wound.signature", "Signature Wound", "Wound", "wound.signature", { split: true }),
+  ...FOUNDATIONS.flatMap(([key, name]) => [
+    number(`wound.${key}`, `Wound (${name})`, "Wound", `wound.${key}`, { split: true }),
+    number(`criticalTarget.wound.${key}`, `Wound CT (${name})`, "Wound", `criticalTarget.wound.${key}`),
+    number(`wound.natural.${key}`, `Wound Natural Result (${name})`, "Wound", `wound.natural.${key}`)
+  ]),
   number("wound.armed", "Armed Wound", "Wound", "wound.armed", { split: true }),
+  number("wound.unarmed", "Unarmed Wound", "Wound", "wound.unarmed", { split: true }),
+  // The Damage Attribute: Force for a Physical or an Energy Attack, Magic for a Magic one - one of each written, so it lands
+  // on whichever the attack is; how many more times it is applied to the Wound Roll; and which Attribute it is.
+  { id: "damageAttribute", label: "Damage Attribute", section: "Wound", kind: "number", slot: "damageAttribute.physical",
+    also: ["damageAttribute.energy", "damageAttribute.magic"], split: false },
+  number("damageAttribute.times", "Damage Attribute Times Applied", "Wound", "damageAttribute.times"),
+  ...[...ATTRIBUTES.map(([key, , name]) => [key, name]), ["surgency", "Surgency"]].map(([key, name]) =>
+    toggle(`damageAttribute.use.${key}`, `Use Damage Attribute (${name})`, "Wound", `allow damageAttribute.use.${key};`)),
+
+  number("criticalTarget.signature.strike", "Signature CT (Strike)", "Signature Techniques", "criticalTarget.signature.strike"),
+  number("strike.signature", "Signature Strike", "Signature Techniques", "strike.signature", { split: true }),
+  number("criticalTarget.signature.wound", "Signature CT (Wound)", "Signature Techniques", "criticalTarget.signature.wound"),
+  number("wound.signature", "Signature Wound", "Signature Techniques", "wound.signature", { split: true }),
+  number("dice.extra.times.signature", "Signature Extra ToP Dice (All)", "Signature Techniques", "dice.extra.times.signature"),
+  number("dice.extra.times.signature.strike", "Signature Extra ToP Dice (Strike)", "Signature Techniques", "dice.extra.times.signature.strike"),
+  number("dice.extra.times.signature.wound", "Signature Extra ToP Dice (Wound)", "Signature Techniques", "dice.extra.times.signature.wound"),
+  ...[["", "All"], ["strike.", "Strike"], ["wound.", "Wound"]].flatMap(([roll, name]) => DICE.map(die =>
+    dice(`signature.${roll}d${die}`, `Signature d${die} (${name})`, "Signature Techniques", `signature.${roll}extraDice`, die))),
 
   number("attack.kiCost", "Ki Point Cost Attacks", "Ki Point Cost", "attack.kiCost"),
   number("unique.kiCost", "Ki Point Cost Unique Abilities", "Ki Point Cost", "unique.kiCost"),
@@ -214,7 +236,7 @@ export function customBuffScript(buff) {
       // Dice are only ever added: fewer than none of them is none.
       if (value > 0) lines.push(`${option.slot} += ${value}d${option.die}${suffix};`);
     }
-    else lines.push(`${option.slot} ${value < 0 ? "-=" : "+="} ${Math.abs(value)}${suffix};`);
+    else for (const slot of [option.slot, ...(option.also ?? [])]) lines.push(`${slot} ${value < 0 ? "-=" : "+="} ${Math.abs(value)}${suffix};`);
   }
   return lines.length ? `[passive]\n${lines.join("\n")}` : "";
 }

@@ -26,7 +26,7 @@ import { environmentOf } from "./breath.mjs";
 import { highTraitOf, isAirborne, qualitiesOf } from "./environments.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
-import { armorPiercing, damageAttributeOf, karmicSteps, linkedPick, skyAssaultWaives,
+import { armorPiercing, damageAttributeOf, namedDamageAttribute, karmicSteps, linkedPick, skyAssaultWaives,
   techniqueAttack, techniqueDamageParts, techniqueStrikeAgainst, techniqueStrikeParts,
   techniqueWoundAgainst, techniqueWoundParts } from "./technique-attack.mjs";
 import { advantageWoundParts, featureRanks, pushes, staggers, POWER_SHOT_MAX_RANKS }
@@ -11595,15 +11595,17 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     ...asDiceGroups(extraDice),
     ...standing.map(die => ({ label: die.source || "Greater dice", formula: die.formula })),
     // And what this roll alone carries - dice added to a Strike, a Dodge or a Wound, the Tier of Power's or the Greater Dice again.
-    ...(combatRoll ? rollOwnDice(actor, combatRollOf(slot)) : []),
+    ...(combatRoll ? rollOwnDice(actor, combatRollOf(slot), signatureRoll) : []),
     // Enhanced Reflexes: "apply your Greater Dice to this Dodge Roll" - ticked for it.
     ...(((slot === "dodge") && (answered?.slots?.["dodge.greaterDice"] === true))
       ? [{ label: "Greater dice", formula: actor.system.dice?.greater?.formula ?? "" }] : [])
   ].filter(group => group.formula);
 
   // What the character's own effects add to a Strike's or a Dodge's Natural Result - Drunk's L.
-  const ownNatural = ["strike", "dodge", "wound"].includes(slot)
-    ? applySlot(actor.system.effects?.slots, `${slot}.natural`, 0) : 0;
+  const ownNatural = (["strike", "dodge", "wound"].includes(slot)
+    ? applySlot(actor.system.effects?.slots, `${slot}.natural`, 0) : 0)
+    // A Wound Roll's by its Foundation (a Custom Buff's).
+    + (((slot === "wound") && foundation) ? applySlot(actor.system.effects?.slots, `wound.natural.${foundation}`, 0) : 0);
   // Evolved Right Eye: "Reduce the Critical Target for your Combat Rolls by 1" - on whatever the roll was made against,
   // never under the least a Critical Target may be unless it already was.
   // And Way of the Serene's, on a Dodge Roll alone.
@@ -11611,7 +11613,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     + ((slot === "dodge") ? (Number(actor.system.effects?.slots?.["criticalTarget.dodge"]?.add) || 0) : 0)
     // Focused Strike (1): a Strike Roll's. Injuring Wound (1): a Wound Roll's.
     + ((slot === "strike") ? (Number(actor.system.effects?.slots?.["criticalTarget.strike"]?.add) || 0) : 0)
-    + ((slot === "wound") ? (Number(actor.system.effects?.slots?.["criticalTarget.wound"]?.add) || 0) : 0)) : 0;
+    + ((slot === "wound") ? (Number(actor.system.effects?.slots?.["criticalTarget.wound"]?.add) || 0) : 0)
+    // A Wound Roll's by its Foundation, and a Signature Technique's Strike or Wound (a Custom Buff's).
+    + (((slot === "wound") && foundation) ? (Number(actor.system.effects?.slots?.[`criticalTarget.wound.${foundation}`]?.add) || 0) : 0)
+    + ((signatureRoll && combatRollOf(slot))
+      ? (Number(actor.system.effects?.slots?.[`criticalTarget.signature.${combatRollOf(slot)}`]?.add) || 0) : 0)) : 0;
   // Mimicry of the Whipping Tail (1): "Set the Critical Target for your Strike and Wound Rolls to 7" - never a higher one for it.
   const whip = combatRoll && ["strike", "wound"].includes(slot) && (actor.system.effects?.slots?.["pseudoTail.criticalSeven"] === true);
   const aimedAt = whip ? Math.min(7, criticalTarget ?? (Number(actor.system.criticalTarget) || 10))
@@ -13849,7 +13855,8 @@ async function rollMeteorWound(message, actor, hit) {
   if (hit.messageId) await message.setFlag(SCOPE, METEOR_HIT_FLAG, { ...hit, rolled: true });
   const wound = await rollSide(actor, woundParts(actor, attack), {
     extraDice: woundDice(actor, attack), criticalDice: actor.system.dice.critical.formula, combatRoll: true,
-    slot: "wound", attackingManeuver: true, criticalTarget: profileFor(attack)?.woundCriticalTarget ?? null });
+    slot: "wound", attackingManeuver: true, foundation: attack.foundation ?? "",
+    criticalTarget: profileFor(attack)?.woundCriticalTarget ?? null });
   // What was ticked for it, answered.
   const before = atMoment(actor, "before-wound", { attack: 1, damageCategory: 1 });
   if (before) spendChosen(actor, before);
@@ -18089,15 +18096,23 @@ function variableParts(attacker, attack, roll) {
     const single = Number(slots["strike.armedSingle"]?.add) || 0;
     // Innate Weaponry (2): "Increase the Strike and Wound Rolls of your Armed Attacks by 1(T)."
     const always = armed ? (Number(slots["strike.armed"]?.add) || 0) : 0;
+    // An Unarmed Attack's (a Custom Buff's) - as an Armed one's just below.
+    const bare = armed ? 0 : (Number(slots["strike.unarmed"]?.add) || 0);
     return [...((!armed && add && wielded) ? [{ label: "Variable Fighter (Unarmed)", value: add }] : []),
+      ...(bare ? [{ label: (slots["strike.unarmed"]?.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Unarmed Attack",
+        value: bare }] : []),
       ...((armed && single && (wielded === 1)) ? [{ label: "Variable Champion (1 Weapon)", value: single }] : []),
       ...(always ? [{ label: (slots["strike.armed"]?.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Armed Attack", value: always }] : [])];
   }
   const key = armed ? "variable-armed-mark" : "variable-unarmed-mark";
   // Weapon Arts (1): an Armed Attack's Wound.
   const arts = armed ? (Number(attacker.system?.effects?.slots?.["wound.armed"]?.add) || 0) : 0;
+  // An Unarmed Attack's Wound (a Custom Buff's).
+  const bareWound = armed ? 0 : (Number(attacker.system?.effects?.slots?.["wound.unarmed"]?.add) || 0);
   return [...(((Number(attacker.system?.conditions?.[key]) || 0) > 0)
     ? [{ label: `Variable Fighter (${armed ? "Armed" : "Unarmed"})`, written: "+1(T)", value: tier }] : []),
+    ...(bareWound ? [{ label: (attacker.system.effects.slots["wound.unarmed"]?.parts ?? []).map(part => part.source).filter(Boolean).join(", ")
+      || "Unarmed Attack", value: bareWound }] : []),
     ...(arts ? [{ label: (attacker.system.effects.slots["wound.armed"]?.parts ?? []).map(part => part.source).filter(Boolean).join(", ")
       || "Weapon Arts", value: arts }] : [])];
 }
@@ -30435,6 +30450,8 @@ export async function postAttack(actor, target, maneuver,
               + ((actor.system.effects?.slots?.["technician.chargeDie"] === true) ? 1 : 0)
               // Shooting Mindset (1): Healthy, a Category more.
               + (Number(actor.system.effects?.slots?.["charges.category"]?.add) || 0)
+              // A Signature Technique's alone (a Custom Buff's).
+              + ((maneuver.tags ?? []).includes("signature") ? (Number(actor.system.effects?.slots?.["charges.signatureCategory"]?.add) || 0) : 0)
               // Weapon Master (1): an Armed Attack's.
               + ((weapon && !weapon.unarmed) ? (Number(actor.system.effects?.slots?.["charges.armedCategory"]?.add) || 0) : 0)),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
@@ -32152,13 +32169,13 @@ function strikeParts(attacker, attack) {
  * The dice a Combat Roll carries beside the Base Die, by source, for its window: the Tier of Power's Extra Dice (or
  * the groups given), and any Greater Dice on every Combat Roll - what rollSide adds.
  */
-function combatDiceGroups(actor, groups = null, slot = null) {
+function combatDiceGroups(actor, groups = null, slot = null, signature = false) {
   return [
     ...(groups ?? [{ label: "Extra Dice (Tier of Power)", formula: tierDice(actor, slot) }]),
     ...[...(actor.system.effects?.slots?.["combatRolls.dice"] ?? []), ...supporterDice(actor)]
       .map(die => ({ label: die.source || "Greater Dice", formula: die.formula })),
     // Which roll it is - "strike", "dodge", "wound" - where the window knows: that roll's own dice with them.
-    ...rollOwnDice(actor, combatRollOf(slot))
+    ...rollOwnDice(actor, combatRollOf(slot), signature)
   ].filter(group => group.formula);
 }
 
@@ -32181,15 +32198,22 @@ function tierDice(actor, roll = null) {
  * What a Combat Roll carries beyond every roll's dice (`dice.<kind>.times`, `<roll>.extraDice` - a Custom Buff's): dice added
  * to a Strike, a Dodge or a Wound Roll alone, and the Tier of Power Extra Dice or the Greater Dice applied so many more times -
  * to every Combat Roll, and to this one. Each group by what gave it. The same for the roll and for its window.
+ *
+ * `signature`: a Signature Technique's Strike or Wound Roll - its own dice and its own times with them.
  */
-function rollOwnDice(actor, roll = null) {
+function rollOwnDice(actor, roll = null, signature = false) {
   const slots = actor?.system?.effects?.slots ?? {};
-  const times = kind => Math.max(0, (Number(slots[`dice.${kind}.times`]?.add) || 0)
-    + (roll ? (Number(slots[`dice.${kind}.times.${roll}`]?.add) || 0) : 0));
-  const giver = (kind, fallback) => [slots[`dice.${kind}.times`], roll ? slots[`dice.${kind}.times.${roll}`] : null]
-    .flatMap(entry => entry?.parts ?? []).map(part => part.source).find(Boolean) ?? fallback;
+  // A Signature Technique's rolls are its Strike and its Wound - no Dodge is one.
+  const technique = signature && ["strike", "wound"].includes(roll);
+  // Every Slot counting for this roll: every Combat Roll's, this roll's, and a Signature Technique's two.
+  const counted = kind => [`dice.${kind}.times`, roll ? `dice.${kind}.times.${roll}` : "",
+    ...((technique && (kind === "extra")) ? ["dice.extra.times.signature", `dice.extra.times.signature.${roll}`] : [])].filter(Boolean);
+  const times = kind => Math.max(0, counted(kind).reduce((sum, key) => sum + (Number(slots[key]?.add) || 0), 0));
+  const giver = (kind, fallback) => counted(kind).flatMap(key => slots[key]?.parts ?? []).map(part => part.source).find(Boolean) ?? fallback;
   return [
     ...(roll ? (slots[`${roll}.extraDice`] ?? []) : []).map(die => ({ label: die.source || "Extra dice", formula: die.formula })),
+    ...(technique ? [...(slots["signature.extraDice"] ?? []), ...(slots[`signature.${roll}.extraDice`] ?? [])] : [])
+      .map(die => ({ label: die.source || "Signature Technique", formula: die.formula })),
     ...Array.from({ length: times("extra") }, () => ({ label: giver("extra", "Extra Dice (Tier of Power), again"), formula: tierDice(actor, roll) })),
     ...Array.from({ length: times("greater") }, () => ({ label: giver("greater", "Greater Dice"), formula: actor?.system?.dice?.greater?.formula ?? "" }))
   ].filter(group => group.formula);
@@ -32254,6 +32278,8 @@ async function resolveAttackWork(message, attack) {
   const weakPoint = await weakPointNatural(attacker, targets.map(entry => entry.uuid), message);
   const strike = await rollSide(attacker, strikeParts(attacker, attack), {
     ...attackerOptions, slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
+    // A Signature Technique's: its own dice and Critical Target (a Custom Buff's). Its Adaptation Points are a Wound Roll's alone.
+    signatureRoll: Boolean(attack.signature),
     forceCritical: Boolean(attack.profileCritical),
     ...(chargedCritical ? { criticalTarget: 5 } : ((ownCritical || tactics) ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
       (Number(attacker.system.criticalTarget) || 10) + ownCritical - tactics) } : {})),
@@ -33430,7 +33456,8 @@ async function attackerStage(message, attack, attacker) {
     "", { combatRoll: true, attackingManeuver: true, urgent: Boolean(attack.urgentRolls), slot: "strike", confirmLabel: "Ready",
       top: `${resourceLine(attacker)}${rollAttackLine(attack, "Attacking")}`,
       formula: { what: "Strike Roll", base: DBUCharacterData.BASE_DIE,
-        dice: combatDiceGroups(attacker, null, "strike"), parts: windowParts(attacker, strikeParts(attacker, attack)) } });
+        dice: combatDiceGroups(attacker, null, "strike", Boolean(attack.signature)),
+        parts: windowParts(attacker, strikeParts(attacker, attack)) } });
   if (!ready) return;
   // What the window armed, kept on the card, so Change can put it back (the user's).
   const armed = (attacker.system.armedTalents ?? []).filter(id => !before.has(id));
@@ -33652,7 +33679,7 @@ async function woundStage(message, attack) {
       spend: hitSpendRows(attacker, questions),
       formula: Number.isFinite(attack.fixedWound) ? null : { what: `Wound Roll${category ? ` &middot; ${category} Category` : ""}`,
         base: DBUCharacterData.BASE_DIE,
-        dice: combatDiceGroups(attacker, woundDice(attacker, attack), "wound"),
+        dice: combatDiceGroups(attacker, woundDice(attacker, attack), "wound", Boolean(attack.signature)),
         parts: windowParts(attacker, woundParts(attacker, attack)) }
     });
   if (!ready) return;
@@ -33905,7 +33932,7 @@ function scholarsDice(attacker, attack) {
 
 function woundBase(attacker, attack) {
   const wound = attacker.system.combat.wound[attack.foundation] ?? 0;
-  const own = attack.damageAttribute;
+  const own = namedDamageAttribute(attacker, attack);
   const attribute = DBUCharacterData.FOUNDATIONS[attack.foundation]?.attribute;
   // The Damage Attribute the Wound already holds - its Foundation's, or Magic for Magic Warrior (2) - taken out for one named instead.
   const theirs = attacker.system.combat.woundAttribute?.[attack.foundation] ?? attacker.system.attributes?.[attribute]?.mod ?? 0;
@@ -33928,16 +33955,25 @@ function profileWoundParts(attacker, attack) {
   // Whichever Attribute the attack is made with: one standing in for the Foundation's -
   // the Hologram Projector's Personality, a Bomb's recorded Scholarship - is the Damage
   // Attribute, and it is what is applied again.
-  if (profile?.extraDamageAttribute || attack.technique?.extraDamageAttribute) {
+  // And so many more times where an effect says so (`damageAttribute.times` - a Custom Buff's "Damage Attribute Times Applied").
+  const moreTimes = Math.max(0, Number(attacker.system.effects?.slots?.["damageAttribute.times"]?.add) || 0);
+  if (profile?.extraDamageAttribute || attack.technique?.extraDamageAttribute || moreTimes) {
     const foundation = DBUCharacterData.FOUNDATIONS[attack.foundation];
-    const own = attack.damageAttribute;
+    const own = namedDamageAttribute(attacker, attack);
     const modifier = (own ? (Number(own.value) || 0)
       : (attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0))
       // Saibabrute (3)'s, raised.
       + (Number(attacker.system.effects?.slots?.[`damageAttribute.${attack.foundation}`]?.add) || 0);
-    const said = own ? own.label : foundation.label;
-    const source = profile?.extraDamageAttribute ? profile.label : "Complete Annihilation";
-    if (modifier) parts.push({ label: `${source} (${said})`, value: modifier });
+    const said = own ? own.label : (foundation?.label ?? "");
+    if (profile?.extraDamageAttribute || attack.technique?.extraDamageAttribute) {
+      const source = profile?.extraDamageAttribute ? profile.label : "Complete Annihilation";
+      if (modifier) parts.push({ label: `${source} (${said})`, value: modifier });
+    }
+    if (moreTimes && modifier) {
+      const giver = (attacker.system.effects.slots["damageAttribute.times"]?.parts ?? []).map(part => part.source).find(Boolean)
+        ?? "Damage Attribute";
+      parts.push({ label: `${giver} (${said}${moreTimes > 1 ? ` x${moreTimes}` : ""})`, value: modifier * moreTimes });
+    }
   }
 
   // Glass: "For every 2 Energy Charges applied to this Attacking Maneuver, increase its Wound Roll by 1(T)".
@@ -36028,7 +36064,7 @@ async function barrierStage(message, attack, { user, item, covers, massive }) {
     combatRoll: true,
     // A defence, as Power Flare's Wound Roll is: not marked as an Attacking Maneuver, so a Compelled defender's
     // Urgency does not reach it.
-    slot: "wound"
+    slot: "wound", foundation: chosen.foundation ?? ""
   });
   // Rolled after the Wound Roll was made - while this was being rolled: nothing taken off, and what it cost given back.
   if (tooLate()) {
