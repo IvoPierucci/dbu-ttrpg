@@ -481,7 +481,7 @@
    Advancements/Restrictions - never runs into the next (the user's). Columns of equal width had them
    overlapping. Each row centred, which staggers them like bricks.
 
-   The character sheet's order (its TABS) mirrors each row by the length of its names, six over five: the
+   The character sheet's order (its TABS) mirrors each row by the length of its names, six over seven since Custom Buffs: the
    seventh tab on starts the second row. A line break drawn after the sixth does that - an empty item as
    wide as the strip, ordered between the two rows. An Item's sheet has fewer, and the break falls after
    the last of them. */
@@ -5376,3 +5376,73 @@
 /* Manage at the far right of the Maneuvers tab's type tabs (the user's). */
 .dbu-ttrpg .dbu-maneuver-tabs { align-items: center; }
 .dbu-ttrpg .dbu-maneuver-tabs .dbu-maneuver-manage { margin-left: auto; flex: 0 0 auto; width: auto; }
+
+/* --- Custom Buffs (the user's; custom-buffs.mjs) -------------------------------------------------------
+   A list of rows, never a table: each two lines, every field under a label of its own. The amounts are four
+   characters wide at most and never grow over the Effect list beside them - each in a column of its own. */
+.dbu-ttrpg .panel-title .dbu-manage[data-action="addCustomBuff"] { margin-left: auto; text-transform: none; letter-spacing: 0; }
+.dbu-ttrpg .dbu-custom-buffs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.dbu-ttrpg .dbu-custom-buff {
+  display: grid;
+  gap: 6px;
+  padding: 6px 8px 8px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+}
+.dbu-ttrpg .dbu-custom-buff-line { display: grid; gap: 6px; align-items: end; }
+.dbu-ttrpg .dbu-custom-buff-line.first { grid-template-columns: 38px 38px minmax(0, 1fr) 52px; }
+.dbu-ttrpg .dbu-custom-buff-line.second { grid-template-columns: minmax(0, 1fr) 44px 44px 44px 18px; }
+.dbu-ttrpg .dbu-custom-buff-field { display: grid; gap: 2px; min-width: 0; margin: 0; }
+.dbu-ttrpg .dbu-custom-buff-field > span:first-child {
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--dbu-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dbu-ttrpg .dbu-custom-buff-field > span.center { text-align: center; }
+.dbu-ttrpg .dbu-custom-buff-field > span.right { text-align: right; }
+.dbu-ttrpg .dbu-custom-buff-field input[type="text"],
+.dbu-ttrpg .dbu-custom-buff-field select {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  line-height: 22px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 6px;
+  font-size: 12px;
+}
+.dbu-ttrpg .dbu-custom-buff-field input.dbu-custom-buff-number,
+.dbu-ttrpg .dbu-custom-buff-field input.dbu-custom-buff-letter { padding: 0 2px; text-align: center; }
+.dbu-ttrpg .dbu-custom-buff-field input.dbu-custom-buff-letter { text-transform: uppercase; }
+.dbu-ttrpg .dbu-custom-buff-check { height: 24px; display: flex; align-items: center; justify-content: center; }
+.dbu-ttrpg .dbu-custom-buff-check input { margin: 0; }
+.dbu-ttrpg .dbu-custom-buff-total { height: 24px; line-height: 24px; text-align: right; font-size: 12px; }
+.dbu-ttrpg .dbu-custom-buff.off .dbu-custom-buff-total { color: var(--dbu-text-dim); font-weight: normal; }
+/* A toggle has no amounts: said across the three columns they would take. */
+.dbu-ttrpg .dbu-custom-buff-toggle {
+  grid-column: 2 / span 3;
+  height: 24px;
+  line-height: 24px;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dbu-ttrpg .dbu-custom-buff-delete {
+  grid-column: 5;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--dbu-text-dim);
+  cursor: pointer;
+}
+.dbu-ttrpg .dbu-custom-buff-delete:hover { color: inherit; }
+.dbu-ttrpg .dbu-custom-buff-empty,
+.dbu-ttrpg .dbu-custom-buff-note { margin: 6px 0 0; font-size: 11px; color: var(--dbu-text-dim); }

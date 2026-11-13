@@ -10,6 +10,7 @@
 
 import { grantedUniques, uniqueScriptOf } from "../unique.mjs";
 import { traitAside } from "../aside.mjs";
+import { customBuffName, customBuffScript } from "../custom-buffs.mjs";
 import { legacyToProgram } from "./migrate.mjs";
 import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
@@ -211,7 +212,28 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
   entries.push(...environmentPrograms(actor, report));
   entries.push(...qualityPrograms(actor, report));
   entries.push(...highPrograms(actor, report));
+  entries.push(...customBuffPrograms(actor, report));
 
+  return entries;
+}
+
+/**
+ * The Custom Buffs this character has switched on (custom-buffs.mjs).
+ *
+ * Each Active row is a line of script of its own, gathered as any Trait's is and named as the row is - so what a player wrote in
+ * by hand lands on the value itself and is said in its hovers. Over everything else where two contradict (the user's).
+ */
+function customBuffPrograms(actor, report) {
+  const entries = [];
+  for (const buff of actor.system?.customBuffs ?? []) {
+    const script = customBuffScript(buff);
+    if (!script) continue;
+    const name = customBuffName(buff);
+    const { program, errors } = compile(`custom-buff:${buff.id}`, { script }, message => report(`${name}: ${message}`));
+    if (errors.length) continue;
+    entries.push({ program, priority: PRIORITY.custom, sourceId: `custom-buff:${buff.id}`, sourceUuid: null, sourceName: name,
+      level: 0, stacks: 1 });
+  }
   return entries;
 }
 

@@ -105,6 +105,9 @@ import {
 import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
 import { gearKitIngenuity, isConsumable } from "../gear.mjs";
 import {
+  customBuffOption, customBuffSections, customBuffsToggled, customBuffTakesTier, customBuffTotal, newCustomBuff
+} from "../custom-buffs.mjs";
+import {
   exclusiveAttributeGroups,
   raceOptions,
   raceSubraces,
@@ -557,6 +560,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       editItem: DBUCharacterSheet._onEditItem,
       toggleManeuver: DBUCharacterSheet._onToggleManeuver,
       maneuverTab: DBUCharacterSheet._onManeuverTab,
+      addCustomBuff: DBUCharacterSheet._onAddCustomBuff,
+      deleteCustomBuff: DBUCharacterSheet._onDeleteCustomBuff,
       pickManeuver: DBUCharacterSheet._onPickManeuver,
       showAllManeuvers: DBUCharacterSheet._onShowAllManeuvers,
       releaseGrapple: DBUCharacterSheet._onReleaseGrapple,
@@ -611,6 +616,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       template: "systems/dbu-ttrpg/templates/parts/actor-maneuvers.hbs",
       scrollable: [""]
     },
+    customBuffs: { template: "systems/dbu-ttrpg/templates/parts/actor-custom-buffs.hbs", scrollable: [""] },
     techniques: { template: "systems/dbu-ttrpg/templates/parts/actor-techniques.hbs", scrollable: [""] },
     uniqueAbilities: { template: "systems/dbu-ttrpg/templates/parts/actor-unique-abilities.hbs", scrollable: [""] },
     traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs", scrollable: [""] },
@@ -782,6 +788,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Beside the Combat tab's values rather than inside them: four lists of rows that each open
     // to a published entry is most of a page on its own.
     maneuvers: { id: "maneuvers", group: "primary", label: "Maneuvers" },
+    // What the player writes in by hand to change a value (the user's; custom-buffs.mjs) - in the second row beside the
+    // Maneuvers, the strip still breaking after the sixth.
+    customBuffs: { id: "customBuffs", group: "primary", label: "Custom Buffs" },
     // Time outside a Combat Encounter: the Adventure rules.
     adventure: { id: "adventure", group: "primary", label: "Adventure" },
     biography: { id: "biography", group: "primary", label: "Biography" },
@@ -864,6 +873,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.actor = this.actor;
     context.system = this.actor.system;
     context.tabs = this._getTabs();
+    context.customBuffs = this.#customBuffRows();
     {
       const { adventuringManeuvers, HUNGER_STAGES } = await import("../adventure.mjs");
       const hungry = Number(this.actor.system.conditions?.hunger) || 0;
@@ -3377,6 +3387,60 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data: JSON.stringify({ lvl: entry.lvl, cap, slots, pairs, before, picks, perk }) };
   }
 
+  /**
+   * The Custom Buffs tab's rows (custom-buffs.mjs): each as it is written, what it comes to on this character, and the list its
+   * Effect is picked from - under its sections, the row's own marked. A toggle has no amounts; an option settled before the
+   * Tier is takes no (T).
+   */
+  #customBuffRows() {
+    const system = this.actor.system;
+    const tiers = { baseTier: system.baseTierOfPower, tier: system.tierOfPower };
+    const sections = customBuffSections();
+    return (system.customBuffs ?? []).map(buff => {
+      const option = customBuffOption(buff.effect);
+      return {
+        ...buff,
+        total: customBuffTotal(buff, tiers),
+        toggle: option?.kind === "toggle",
+        takesTier: customBuffTakesTier(option),
+        // One this system no longer has: said, and nothing applied.
+        gone: !option,
+        sections: sections.map(section => ({ label: section.label,
+          options: section.options.map(each => ({ id: each.id, label: each.label, selected: each.id === buff.effect })) }))
+      };
+    });
+  }
+
+  /** A Custom Buff, new: empty and off, last on the list. */
+  static async _onAddCustomBuff() {
+    return this.actor.update({ "system.customBuffs": [...(this.actor.system.customBuffs ?? []).map(buff => ({ ...buff })), newCustomBuff()] });
+  }
+
+  /** A Custom Buff, taken off the list. */
+  static async _onDeleteCustomBuff(event, target) {
+    const id = target.closest("[data-buff-id]")?.dataset.buffId;
+    return this.actor.update({ "system.customBuffs": (this.actor.system.customBuffs ?? []).filter(buff => buff.id !== id)
+      .map(buff => ({ ...buff })) });
+  }
+
+  /**
+   * One field of a Custom Buff, written: the whole list again, as a list is. Active takes every row of its Group with it (the
+   * user's); an amount is a whole number of four characters at most.
+   */
+  async #writeCustomBuff(id, field, input) {
+    const buffs = (this.actor.system.customBuffs ?? []).map(buff => ({ ...buff }));
+    const buff = buffs.find(each => each.id === id);
+    if (!buff) return;
+    if (field === "active") return this.actor.update({ "system.customBuffs": customBuffsToggled(buffs, id, input.checked) });
+    if (field === "name") buff.name = String(input.value ?? "").trim();
+    else if (field === "group") buff.group = String(input.value ?? "").trim().slice(0, 1).toUpperCase();
+    else if (field === "effect") buff.effect = String(input.value ?? "");
+    else if (["flat", "perBase", "perTier"].includes(field)) {
+      buff[field] = Math.max(-999, Math.min(9999, Math.trunc(Number(String(input.value ?? "").replace(/\u2212/g, "-")) || 0)));
+    }
+    return this.actor.update({ "system.customBuffs": buffs });
+  }
+
   /** Build the tab configuration used by the "tabs" part template. */
   _getTabs() {
     const tabs = {};
@@ -3609,6 +3673,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       note.className = "panel-note duplicate-lock";
       note.textContent = `A Duplicate of ${original.name}: its Progression is theirs. Change it on ${original.name} and choose them again on Settings.`;
       progression.prepend(note);
+    }
+
+    // A Custom Buff's fields: written onto its row of the list, not submitted with the character's form.
+    for (const input of this.element.querySelectorAll("[data-custom-buff]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        this.#writeCustomBuff(input.closest("[data-buff-id]")?.dataset.buffId, input.dataset.customBuff, input);
+      });
     }
 
     // Technique Block's Signature Technique, by name: written onto its Item.

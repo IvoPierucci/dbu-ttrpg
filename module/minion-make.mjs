@@ -21,7 +21,9 @@ export const DUPLICATED_FIELDS = Object.freeze([
   "attributes", "transformationBonuses", "racialSkillRanks", "racialAttributeChoices", "racialSavingThrow", "basicAttackProfiles", "trainingBonuses",
   "rollModifiers", "diceModifiers", "capacityModifiers", "actionModifiers", "tierOfPowerModifier", "criticalTarget",
   "skillSpecializations", "skillSpecialties", "externalModifiers", "powerLevel", "race", "size", "subrace", "alignment", "progression",
-  "characterPerks", "combatPins", "combatUnpins", "debug"
+  "characterPerks", "combatPins", "combatUnpins", "debug",
+  // What was written in by hand to put their values right (custom-buffs.mjs) - theirs as the other modifiers above are.
+  "customBuffs"
 ]);
 
 /** The Apparel, Accessories and Weapons a Duplicate has of its Master's - "Duplicated Items". */

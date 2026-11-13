@@ -1171,6 +1171,21 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     }));
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
+    // --- Custom Buffs (module/custom-buffs.mjs) ---
+    // What the player writes in by hand to change a value (the user's, after the spreadsheet's "Custom Buffs and Debuffs"): a
+    // name, the option it changes, and Flat + (bT) + (T). An Active row is gathered as one more source of effects. `group`: the
+    // rows sharing a letter are switched together. A list of rows, in the order they were added.
+    schema.customBuffs = new fields.ArrayField(new fields.SchemaField({
+      id: new fields.StringField({ required: true, blank: false }),
+      name: new fields.StringField({ required: true, blank: true, initial: "" }),
+      group: new fields.StringField({ required: true, blank: true, initial: "" }),
+      active: new fields.BooleanField({ required: true, initial: false }),
+      effect: new fields.StringField({ required: true, blank: true, initial: "" }),
+      flat: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      perBase: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      perTier: new fields.NumberField({ required: true, integer: true, initial: 0 })
+    }));
+
     // --- Super Stacks ---
     // How many the character holds. Nothing grants them yet; what holding them is worth
     // is derived, and lives on `superStack` - singular, since it answers "what do your
@@ -2249,8 +2264,26 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The earliest phase: conditions may read Scores, but amounts may only use (bT),
     // which follows from Power Level alone. (T) is not settled yet.
     runPhase(this, "tier");
+    // What an effect adds to an Attribute Score - a Custom Buff's "FO Score", Magical Machine's Racial +2 moved from Force to
+    // Magic: written to `<attribute>.score` and read by nothing till now. Its Modifier, its Skills and its Saving Throws are all
+    // worked out below, from the Score as it stands here.
+    let scoresMoved = false;
+    for (const key of Object.keys(atts)) {
+      const added = slot(this, `${key}.score`);
+      if (!added) continue;
+      atts[key].score += added;
+      scoresMoved = true;
+    }
     // And held at 0 past what an effect adds to it.
     for (const key of zeroScores) atts[key].score = 0;
+    // The two rules read off a Score above, read again off the one an effect moved (nothing between here and there reads them).
+    if (scoresMoved) {
+      this.giftedStudent = {
+        skillCheck: DBUCharacterData.attributeRule(atts.scholarship.score, DBUCharacterData.GIFTED_STUDENT_SKILL_CHECK),
+        perSkillImprovement: DBUCharacterData.attributeRule(atts.scholarship.score, DBUCharacterData.GIFTED_STUDENT_TECHNIQUE_POINTS)
+      };
+      this.determination = DBUCharacterData.attributeRule(atts.personality.score, DBUCharacterData.DETERMINATION_STRESS_BONUS);
+    }
     // The Racial Life Modifier with what effects do to it - a Tier-phase Slot - settled here, so whatever reads it reads it whole ("while your
     // Racial Life Modifier is 3+", Seedling Biology's); its floor, which a Core-phase effect may lift, where the Life Points are worked out.
     this.racialLifeModifier = withEffects(this, "racialLifeModifier", this.racialLifeModifier, { min: null });

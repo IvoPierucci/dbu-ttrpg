@@ -1,0 +1,99 @@
+<div class="tab {{tabs.customBuffs.cssClass}}" data-group="primary" data-tab="customBuffs">
+
+{{! What the player writes in by hand to change a value the system did not work out for them (the user's, after the spreadsheet's
+    "Custom Buffs and Debuffs"; custom-buffs.mjs). A list of rows, never a table (the user's): each two lines, every field under a
+    label of its own - Active, Group, Name and what it comes to; then what it changes and its three amounts. A row that is Active
+    is gathered with every Trait's effects, and named in the hovers of the value it lands on.
+
+    None of these fields is the character's form's: each is written onto its row of the list (actor-character-sheet.mjs). }}
+  <section class="panel">
+    <h3 class="panel-title">
+      <span>Custom Buffs</span>
+      {{#if editable}}
+      <button type="button" class="dbu-manage" data-action="addCustomBuff" data-tooltip="A new row, empty and off">Add buff</button>
+      {{/if}}
+    </h3>
+
+    {{#unless customBuffs.length}}
+    <p class="dbu-custom-buff-empty">Nothing written in. Add a buff to change a value by hand - a bonus to a roll, a Tier of Power more,
+      half a Defense Value - and switch it on while it applies.</p>
+    {{/unless}}
+
+    <ol class="dbu-custom-buffs">
+      {{#each customBuffs as |buff|}}
+      <li class="dbu-custom-buff{{#unless buff.active}} off{{/unless}}" data-buff-id="{{buff.id}}">
+        <div class="dbu-custom-buff-line first">
+          <label class="dbu-custom-buff-field">
+            <span>Active</span>
+            <span class="dbu-custom-buff-check">
+              <input type="checkbox" data-custom-buff="active" {{#if buff.active}}checked{{/if}} {{#unless @root.editable}}disabled{{/unless}}
+                     data-tooltip="{{#if buff.group}}Every buff of Group {{buff.group}} goes on and off with it{{else}}While on, it changes the value{{/if}}"/>
+            </span>
+          </label>
+          <label class="dbu-custom-buff-field">
+            <span>Group</span>
+            <input type="text" class="dbu-custom-buff-letter" data-custom-buff="group" value="{{buff.group}}" maxlength="1" placeholder="-"
+                   autocomplete="off" spellcheck="false" {{#unless @root.editable}}disabled{{/unless}}
+                   data-tooltip="A letter: the buffs sharing it are switched on and off together"/>
+          </label>
+          <label class="dbu-custom-buff-field">
+            <span>Name</span>
+            <input type="text" data-custom-buff="name" value="{{buff.name}}" placeholder="What it is" autocomplete="off" spellcheck="false"
+                   {{#unless @root.editable}}disabled{{/unless}}/>
+          </label>
+          <div class="dbu-custom-buff-field">
+            <span class="right">Total</span>
+            <b class="dbu-custom-buff-total"
+               data-tooltip="{{#if buff.toggle}}A toggle: no number to it{{else}}Flat + (bT) x base Tier of Power + (T) x Tier of Power{{/if}}">{{#if buff.gone}}-{{else}}{{buff.total}}{{/if}}</b>
+          </div>
+        </div>
+        <div class="dbu-custom-buff-line second">
+          <label class="dbu-custom-buff-field">
+            <span>Effect</span>
+            <select data-custom-buff="effect" {{#unless @root.editable}}disabled{{/unless}}>
+              {{#if buff.gone}}<option value="{{buff.effect}}" selected>(no longer on the list)</option>{{/if}}
+              {{#each buff.sections as |section|}}
+              <optgroup label="{{section.label}}">
+                {{#each section.options as |option|}}
+                <option value="{{option.id}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
+                {{/each}}
+              </optgroup>
+              {{/each}}
+            </select>
+          </label>
+          {{#if buff.toggle}}
+          <span class="dbu-custom-buff-toggle">On or off: no number to it</span>
+          {{else}}
+          <label class="dbu-custom-buff-field">
+            <span class="center">Flat</span>
+            <input type="text" class="dbu-custom-buff-number" data-custom-buff="flat" value="{{#if buff.flat}}{{buff.flat}}{{/if}}" maxlength="4"
+                   placeholder="0" inputmode="numeric" autocomplete="off" {{#unless @root.editable}}disabled{{/unless}}/>
+          </label>
+          <label class="dbu-custom-buff-field">
+            <span class="center">(bT)</span>
+            <input type="text" class="dbu-custom-buff-number" data-custom-buff="perBase" value="{{#if buff.perBase}}{{buff.perBase}}{{/if}}"
+                   maxlength="4" placeholder="0" inputmode="numeric" autocomplete="off" {{#unless @root.editable}}disabled{{/unless}}
+                   data-tooltip="For each base Tier of Power"/>
+          </label>
+          <label class="dbu-custom-buff-field">
+            <span class="center">(T)</span>
+            <input type="text" class="dbu-custom-buff-number" data-custom-buff="perTier" value="{{#if buff.perTier}}{{buff.perTier}}{{/if}}"
+                   maxlength="4" placeholder="{{#if buff.takesTier}}0{{else}}-{{/if}}" inputmode="numeric" autocomplete="off"
+                   {{#unless @root.editable}}disabled{{/unless}} {{#unless buff.takesTier}}disabled{{/unless}}
+                   data-tooltip="{{#if buff.takesTier}}For each Tier of Power{{else}}Not for this one: it is settled before the Tier of Power is. Use (bT){{/if}}"/>
+          </label>
+          {{/if}}
+          {{#if @root.editable}}
+          <a class="dbu-custom-buff-delete" data-action="deleteCustomBuff" data-tooltip="Delete this buff"><i class="fa-solid fa-trash"></i></a>
+          {{/if}}
+        </div>
+      </li>
+      {{/each}}
+    </ol>
+
+    {{#if customBuffs.length}}
+    <p class="dbu-custom-buff-note">Total = Flat + (bT) x base Tier of Power + (T) x Tier of Power. Buffs sharing a Group letter are switched
+      on and off together. An Active buff is named in the hover of the value it changes.</p>
+    {{/if}}
+  </section>
+</div>

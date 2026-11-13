@@ -30,7 +30,10 @@ export const PRIORITY = Object.freeze({
   racial: 5,
   talent: 6,
   condition: 7,
-  unique: 8
+  unique: 8,
+  // A Custom Buff (custom-buffs.mjs): what the player wrote in by hand to put a value right - over everything else where two
+  // contradict (the user's). Not a rung of the rulebook's ladder.
+  custom: 9
 });
 
 /**
