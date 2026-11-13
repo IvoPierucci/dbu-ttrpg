@@ -2935,6 +2935,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       criticalDodge: { category: dodgeCriticalCategory, formula: categoryFormula(dodgeCriticalCategory) },
       maxCategoryIncrease: increaseLimit
     };
+    // The Tier of Power Extra Dice of a Strike, a Dodge or a Wound Roll alone, where something raises those - a Custom Buff's
+    // (custom-buffs.mjs) - with what raises them all, under the one ceiling.
+    {
+      const shared = Number(this.effects?.slots?.["dice.extra.category"]?.add) || 0;
+      for (const [roll, key] of [["strike", "extraStrike"], ["dodge", "extraDodge"], ["wound", "extraWound"]]) {
+        const own = Number(this.effects?.slots?.[`dice.extra.${roll}.category`]?.add) || 0;
+        const category = tierExtraDiceCategory(this.tierOfPower) + Math.min(Math.max(0, shared + own), increaseLimit);
+        this.dice[key] = { category, formula: categoryFormula(category) };
+      }
+    }
 
     // --- Critical and Botch ---
     // Both read the Base Die's Natural Result and nothing else, so they are two ends of

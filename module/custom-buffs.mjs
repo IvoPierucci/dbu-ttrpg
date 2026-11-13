@@ -15,6 +15,8 @@ const ATTRIBUTES = [["agility", "AG", "Agility"], ["force", "FO", "Force"], ["te
   ["scholarship", "SC", "Scholarship"], ["insight", "IN", "Insight"], ["magic", "MA", "Magic"], ["personality", "PE", "Personality"]];
 const FOUNDATIONS = [["physical", "Physical"], ["energy", "Energy"], ["magic", "Magic"]];
 const DICE = [4, 6, 8, 10];
+// The three Combat Rolls, in the spreadsheet's order.
+const ROLLS = [["dodge", "Dodge"], ["strike", "Strike"], ["wound", "Wound"]];
 
 // --- The kinds of option -------------------------------------------------------------------------------
 // A number: Flat, (bT) and (T), added to a Slot. `split`: where the spreadsheet keeps bonuses and penalties apart - a negative
@@ -39,8 +41,19 @@ export const CUSTOM_BUFFS = Object.freeze([
 
   number("tierOfPower", "ToP (Breakthrough)", "Tier of Power and dice", "tierOfPower"),
   number("dice.extra.category", "ToP Extra Dice Cat.", "Tier of Power and dice", "dice.extra.category"),
+  ...ROLLS.map(([roll, name]) => number(`dice.extra.${roll}.category`, `ToP Extra Dice Cat. (${name})`, "Tier of Power and dice",
+    `dice.extra.${roll}.category`)),
   number("dice.greater.category", "Greater Dice Category", "Tier of Power and dice", "dice.greater.category"),
+  // How many more times they are applied: to every Combat Roll, or to one of the three alone.
+  number("dice.greater.times", "Greater Dice (All)", "Tier of Power and dice", "dice.greater.times"),
+  ...ROLLS.map(([roll, name]) => number(`dice.greater.times.${roll}`, `Greater Dice (${name})`, "Tier of Power and dice",
+    `dice.greater.times.${roll}`)),
+  number("dice.extra.times", "ToP Extra Dice (All)", "Tier of Power and dice", "dice.extra.times"),
+  ...ROLLS.map(([roll, name]) => number(`dice.extra.times.${roll}`, `ToP Extra Dice (${name})`, "Tier of Power and dice",
+    `dice.extra.times.${roll}`)),
   ...DICE.map(die => dice(`combatRolls.d${die}`, `Extra d${die} (Combat Rolls)`, "Tier of Power and dice", "combatRolls.dice", die)),
+  ...ROLLS.flatMap(([roll, name]) => DICE.map(die => dice(`${roll}.d${die}`, `Extra d${die} (${name})`, "Tier of Power and dice",
+    `${roll}.extraDice`, die))),
   number("charges.category", "Energy Charge Dice Category", "Tier of Power and dice", "charges.category"),
 
   number("life.max", "Max Life Points", "Life, Ki and Capacity", "life.max"),

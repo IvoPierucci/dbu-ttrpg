@@ -850,6 +850,17 @@ const TABLE = [
  * list, so a Skill added to the data model needs no change here.
  */
 const PATTERNS = [
+  // One Combat Roll's dice alone - a Custom Buff's (custom-buffs.mjs), after the spreadsheet's "ToP Extra Dice Cat. (Strike)",
+  // "Greater Dice (Dodge)", "Extra d6 (Wound)": the Tier of Power Extra Dice of a Strike, a Dodge or a Wound Roll a Category
+  // higher (actor-character.mjs `dice.extraStrike`); those dice, or the Greater Dice, applied again to every Combat Roll or to
+  // that one; and dice added to that roll (chat.mjs rollOwnDice, where the roll is made and where its window is drawn).
+  { match: /^dice\.extra\.(strike|dodge|wound)\.category$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
+    doc: "Tier of Power Extra Dice of a Strike, Dodge or Wound Roll alone, as a category step - under the same ceiling." },
+  { match: /^dice\.(extra|greater)\.times(\.(strike|dodge|wound))?$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "How many more times the Tier of Power Extra Dice, or the Greater Dice, are applied - to every Combat Roll, or to "
+       + "a Strike, Dodge or Wound Roll alone." },
+  { match: /^(strike|dodge|wound)\.extraDice$/, phase: PHASES.LATE, kind: D, ops: ["add-dice"], valid: () => true,
+    doc: "Dice added to every Strike, Dodge or Wound Roll - as `combatRolls.dice` is to all three." },
   // "Some effects may designate a Profile as a Favored Element" - `favored.elementalEarth = true;`, Telekinesis's.
   { match: /^favored\.(elemental\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,

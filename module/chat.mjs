@@ -9555,7 +9555,7 @@ function respondRollData(actor, attack) {
   const balancedTier = (actor.system?.effects?.slots?.["balanced.defender"] === true) ? balancedCost(actor).tier : 0;
   const formula = key => {
     const parts = DEFENCES[key]?.parts?.(actor, attack);
-    return parts ? { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor), parts: windowParts(actor, parts.map(part =>
+    return parts ? { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor, null, key), parts: windowParts(actor, parts.map(part =>
       (DEFENCE_WORKINGS[part.label] ? { ...part, workingsKey: DEFENCE_WORKINGS[part.label] } : part))) } : null;
   };
   // Direct Hit and Guard: "Wound - Soak - DR", the Soak as it will stand and the Damage Category known before any Wound (the user's).
@@ -9587,7 +9587,7 @@ function respondRollData(actor, attack) {
     // And as it stands with Balanced Defender ticked, where it can be.
     directHit: { ...damage("directHit"), balanced: balancedTier ? damage("directHit", balancedTier) : null },
     guard: { ...damage("guard"), balanced: balancedTier ? damage("guard", balancedTier) : null },
-    powerFlare: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor), parts: windowParts(actor, [
+    powerFlare: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor, null, "wound"), parts: windowParts(actor, [
       { label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) }
   };
 }
@@ -11398,6 +11398,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       outcome: "normal", lines: [noteLine(`The recorded Wound Roll: ${fixedTotal}`)],
       breakdown: `Recorded Wound Roll: ${fixedTotal}` };
   }
+  // The Tier of Power Extra Dice of this roll alone, where something raises a Strike's, a Dodge's or a Wound's (a Custom
+  // Buff's): given as every roll's are, read as its own.
+  if (combatRoll && combatRollOf(slot) && (typeof extraDice === "string") && extraDice
+    && (extraDice === actor?.system?.dice?.extra?.formula)) extraDice = tierDice(actor, combatRollOf(slot));
   // Artful Strike (1): a Strike Roll's Critical Extra Dice, where an effect raises those alone.
   if ((slot === "strike") && actor?.system?.dice?.criticalStrike && (criticalDice === actor.system.dice.critical?.formula)) {
     criticalDice = actor.system.dice.criticalStrike.formula;
@@ -11590,6 +11594,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const groups = [
     ...asDiceGroups(extraDice),
     ...standing.map(die => ({ label: die.source || "Greater dice", formula: die.formula })),
+    // And what this roll alone carries - dice added to a Strike, a Dodge or a Wound, the Tier of Power's or the Greater Dice again.
+    ...(combatRoll ? rollOwnDice(actor, combatRollOf(slot)) : []),
     // Enhanced Reflexes: "apply your Greater Dice to this Dodge Roll" - ticked for it.
     ...(((slot === "dodge") && (answered?.slots?.["dodge.greaterDice"] === true))
       ? [{ label: "Greater dice", formula: actor.system.dice?.greater?.formula ?? "" }] : [])
@@ -13838,7 +13844,7 @@ async function rollMeteorWound(message, actor, hit) {
   const triggers = triggersFor(actor, ["hit", "before-wound"]);
   const ready = await prepareRoll(actor, triggers, `${attack.maneuverName} - God Meteor`, `Damage Reduction ${meteor.dr}`,
     { combatRoll: true, attackingManeuver: true, formula: { base: DBUCharacterData.BASE_DIE,
-      dice: combatDiceGroups(actor, woundDice(actor, attack)), parts: windowParts(actor, woundParts(actor, attack)) } });
+      dice: combatDiceGroups(actor, woundDice(actor, attack), "wound"), parts: windowParts(actor, woundParts(actor, attack)) } });
   if (!ready) return;
   if (hit.messageId) await message.setFlag(SCOPE, METEOR_HIT_FLAG, { ...hit, rolled: true });
   const wound = await rollSide(actor, woundParts(actor, attack), {
@@ -13986,7 +13992,7 @@ export async function askShock(actor, maneuver) {
   if (!picked || (picked === "cancel")) return null;
   const attack = shockAttack(actor, picked);
   const ready = await prepareRoll(actor, [], maneuver.name, "Off your own Life Points", { combatRoll: true,
-    formula: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor, woundDice(actor, attack)),
+    formula: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor, woundDice(actor, attack), "wound"),
       parts: windowParts(actor, woundParts(actor, attack)) } });
   return ready ? { foundation: picked } : null;
 }
@@ -32146,11 +32152,46 @@ function strikeParts(attacker, attack) {
  * The dice a Combat Roll carries beside the Base Die, by source, for its window: the Tier of Power's Extra Dice (or
  * the groups given), and any Greater Dice on every Combat Roll - what rollSide adds.
  */
-function combatDiceGroups(actor, groups = null) {
+function combatDiceGroups(actor, groups = null, slot = null) {
   return [
-    ...(groups ?? [{ label: "Extra Dice (Tier of Power)", formula: actor.system.dice?.extra?.formula ?? "" }]),
+    ...(groups ?? [{ label: "Extra Dice (Tier of Power)", formula: tierDice(actor, slot) }]),
     ...[...(actor.system.effects?.slots?.["combatRolls.dice"] ?? []), ...supporterDice(actor)]
-      .map(die => ({ label: die.source || "Greater Dice", formula: die.formula }))
+      .map(die => ({ label: die.source || "Greater Dice", formula: die.formula })),
+    // Which roll it is - "strike", "dodge", "wound" - where the window knows: that roll's own dice with them.
+    ...rollOwnDice(actor, combatRollOf(slot))
+  ].filter(group => group.formula);
+}
+
+/** Which of the three Combat Rolls a roll is, for the dice that are one's alone: a Parry's is a Strike Roll. Null for any other. */
+function combatRollOf(slot) {
+  return (slot === "parry") ? "strike" : ["strike", "dodge", "wound"].includes(slot) ? slot : null;
+}
+
+/**
+ * The Tier of Power Extra Dice of one Combat Roll: a Strike's, a Dodge's or a Wound's own where something raises those alone
+ * (actor-character.mjs `dice.extraStrike`), every roll's otherwise.
+ */
+function tierDice(actor, roll = null) {
+  const dice = actor?.system?.dice ?? {};
+  const own = { strike: dice.extraStrike, dodge: dice.extraDodge, wound: dice.extraWound }[roll];
+  return own?.formula ?? dice.extra?.formula ?? "";
+}
+
+/**
+ * What a Combat Roll carries beyond every roll's dice (`dice.<kind>.times`, `<roll>.extraDice` - a Custom Buff's): dice added
+ * to a Strike, a Dodge or a Wound Roll alone, and the Tier of Power Extra Dice or the Greater Dice applied so many more times -
+ * to every Combat Roll, and to this one. Each group by what gave it. The same for the roll and for its window.
+ */
+function rollOwnDice(actor, roll = null) {
+  const slots = actor?.system?.effects?.slots ?? {};
+  const times = kind => Math.max(0, (Number(slots[`dice.${kind}.times`]?.add) || 0)
+    + (roll ? (Number(slots[`dice.${kind}.times.${roll}`]?.add) || 0) : 0));
+  const giver = (kind, fallback) => [slots[`dice.${kind}.times`], roll ? slots[`dice.${kind}.times.${roll}`] : null]
+    .flatMap(entry => entry?.parts ?? []).map(part => part.source).find(Boolean) ?? fallback;
+  return [
+    ...(roll ? (slots[`${roll}.extraDice`] ?? []) : []).map(die => ({ label: die.source || "Extra dice", formula: die.formula })),
+    ...Array.from({ length: times("extra") }, () => ({ label: giver("extra", "Extra Dice (Tier of Power), again"), formula: tierDice(actor, roll) })),
+    ...Array.from({ length: times("greater") }, () => ({ label: giver("greater", "Greater Dice"), formula: actor?.system?.dice?.greater?.formula ?? "" }))
   ].filter(group => group.formula);
 }
 
@@ -33389,7 +33430,7 @@ async function attackerStage(message, attack, attacker) {
     "", { combatRoll: true, attackingManeuver: true, urgent: Boolean(attack.urgentRolls), slot: "strike", confirmLabel: "Ready",
       top: `${resourceLine(attacker)}${rollAttackLine(attack, "Attacking")}`,
       formula: { what: "Strike Roll", base: DBUCharacterData.BASE_DIE,
-        dice: combatDiceGroups(attacker), parts: windowParts(attacker, strikeParts(attacker, attack)) } });
+        dice: combatDiceGroups(attacker, null, "strike"), parts: windowParts(attacker, strikeParts(attacker, attack)) } });
   if (!ready) return;
   // What the window armed, kept on the card, so Change can put it back (the user's).
   const armed = (attacker.system.armedTalents ?? []).filter(id => !before.has(id));
@@ -33611,7 +33652,7 @@ async function woundStage(message, attack) {
       spend: hitSpendRows(attacker, questions),
       formula: Number.isFinite(attack.fixedWound) ? null : { what: `Wound Roll${category ? ` &middot; ${category} Category` : ""}`,
         base: DBUCharacterData.BASE_DIE,
-        dice: combatDiceGroups(attacker, woundDice(attacker, attack)),
+        dice: combatDiceGroups(attacker, woundDice(attacker, attack), "wound"),
         parts: windowParts(attacker, woundParts(attacker, attack)) }
     });
   if (!ready) return;
@@ -33842,7 +33883,7 @@ function woundDice(attacker, attack) {
     // Synthetic Muscle (2)'s, and (3)'s again.
     ...syntheticDice(attacker, attack),
     ...combatCatDice(attacker, attack),
-    { label: "Extra dice", formula: attacker.system.dice.extra.formula },
+    { label: "Extra dice", formula: tierDice(attacker, "wound") },
     { label: "Energy charges", formula: energyChargeDice(attacker, attack) },
     ...phantomEdgeDice(attacker, attack),
     ...scholarsDice(attacker, attack)
@@ -34026,7 +34067,7 @@ async function askFollowUps(attack, attacker, { plan, beatable, longRange }) {
   const count = plan.rolls + (Number(attack.technique?.followUpRolls) || 0);
   const strike = attack.result?.strike ?? {};
   // The same dice rollFollowUpStrikes rolls: the Tier of Power's Extra Dice and any Greater Dice on Combat Rolls.
-  const groups = combatDiceGroups(attacker);
+  const groups = combatDiceGroups(attacker, null, "strike");
   // The bonus is the first Strike's, so are its parts: each one that moved it, and where it came from - and the
   // Long Range penalty these pay as the first did.
   const formula = formulaHtml({ base: DBUCharacterData.BASE_DIE, dice: groups, parts: [
@@ -34220,7 +34261,7 @@ async function homingRetry(message, attack, uuid) {
   // From its window: the first Strike's parts, Homing's, and the Long Range it pays as the first did.
   const ready = await prepareRoll(attacker, [], `${attack.maneuverName} - Homing`,
     own.answer ? `Beat ${own.answer.total ?? 0}` : "", { combatRoll: true, attackingManeuver: true, formula: {
-      base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(attacker), parts: [
+      base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(attacker, null, "strike"), parts: [
         ...(attack.result?.strike?.lines ?? []).filter(entry => (entry.kind === "part") && !entry.outcome && entry.value)
           .map(entry => ({ label: entry.source, value: entry.value })),
         { label: `Homing (${misses} missed)`, value: misses * tier },
@@ -35536,7 +35577,7 @@ const DEFENCE_WORKINGS = Object.freeze({ "Defense Value": "defenseValue", "Dodge
 function defenceFormula(actor, key, attack) {
   const parts = DEFENCES[key]?.parts?.(actor, attack);
   if (!parts) return "";
-  return formulaHtml({ base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor),
+  return formulaHtml({ base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor, null, key),
     parts: windowParts(actor, parts.map(part => (DEFENCE_WORKINGS[part.label]
       ? { ...part, workingsKey: DEFENCE_WORKINGS[part.label] } : part))) });
 }
@@ -35936,7 +35977,7 @@ async function barrierStage(message, attack, { user, item, covers, massive }) {
   const label = key => key.charAt(0).toUpperCase() + key.slice(1);
   // The Wound Roll it raises, per Foundation - the one shown follows the one picked.
   const formulas = Object.fromEntries(foundations.map(key => [key, formulaHtml({ base: DBUCharacterData.BASE_DIE,
-    dice: combatDiceGroups(user),
+    dice: combatDiceGroups(user, null, "wound"),
     parts: windowParts(user, [{ label: "Wound", value: wounds[key] ?? 0, workingsKey: `wound.${key}` }]) })]));
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
@@ -39470,7 +39511,7 @@ async function defendAgainst(message, target, attack, then = chooseDefence, pres
     && (target.system.effects?.slots?.["focused.physical"] === true);
   // Power Flare's own Wound Roll - made as the attacker's is, so shown here: the Foundation's Wound and the wager.
   const flareFormula = (foundation, wager) => formulaHtml({ base: DBUCharacterData.BASE_DIE,
-    dice: combatDiceGroups(target), parts: windowParts(target, [
+    dice: combatDiceGroups(target, null, "wound"), parts: windowParts(target, [
       { label: "Wound", value: target.system.combat.wound[foundation] ?? 0, workingsKey: `wound.${foundation}` },
       { label: "Ki Wager", value: wager }]) });
 
