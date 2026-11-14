@@ -197,6 +197,9 @@ export const CUSTOM_BUFFS = Object.freeze([
   directToggle("analysis.any", "Analyzed", "Toggles"),
   // The Intuit Maneuver's whoever the Clash is against (seenBonus).
   directToggle("intuit.any", "Seen", "Toggles"),
+  // The Basic Attack Maneuver counted as the Signature Technique Maneuver - for a Trait's or a Talent's effects alone, never
+  // for a Signature Technique's own rules (the user's): what such an effect adds, takes off or asks, where it is read.
+  directToggle("basicAsSignature", "Count Basic Attack as Signature", "Toggles"),
   // The Were-Beast's Were-Traits in place of the Normal Trait, whatever the Combat Round's choice - out of an Encounter too
   // (aside.mjs).
   directToggle("wereTraits", "Get Were-Traits", "Toggles")
@@ -327,6 +330,16 @@ export function customBuffThresholdFor(system, key) {
     .reduce((sum, buff) => sum + whole(buff.flat), 0);
   const shift = rows("threshold.lower") - rows("threshold.higher");
   return shift ? keys[Math.min(keys.length - 1, Math.max(0, at + shift))] : key;
+}
+
+/**
+ * Whether that Maneuver counts as the Signature Technique Maneuver for a Trait's or a Talent's effects: the Basic Attack,
+ * while "Count Basic Attack as Signature" is switched on. Never for a Signature Technique's own rules - its Energy Charges'
+ * dice, its features, its uses.
+ */
+export function customBuffBasicIsSignature(system, maneuverId) {
+  return (maneuverId === "basic-attack")
+    && (system?.customBuffs ?? []).some(buff => buff?.active && (buff.effect === "basicAsSignature"));
 }
 
 /** Whether a row of one option is Active - a toggle read straight off the rows. */

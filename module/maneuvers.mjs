@@ -4,6 +4,7 @@ import { guidanceRangeGap } from "./guidance.mjs";
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { getTrait, printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
 import { featureAsks, withGranted } from "./signature.mjs";
+import { customBuffBasicIsSignature } from "./custom-buffs.mjs";
 
 /**
  * Maneuvers: anything that spends an Action.
@@ -4536,13 +4537,15 @@ export function maneuverKiCost(maneuver, declared, actor) {
     cost = applySlot(slots, "energyCharge.again.kiCost", cost);
   }
   // A Signature Technique's, any of them - Inherited Creativity's 1(T) off.
-  if (actor && maneuver.signature && !maneuver.signatureTechnique) cost = applySlot(slots, "signature.kiCost", cost);
+  // Or the Basic Attack, while a Custom Buff counts it as one for a Trait's or a Talent's effects - which these three are.
+  const asSignature = Boolean(maneuver.signature && !maneuver.signatureTechnique) || customBuffBasicIsSignature(actor?.system, maneuver.id);
+  if (actor && asSignature) cost = applySlot(slots, "signature.kiCost", cost);
   // And one of a Foundation - Supreme Fist's 2(T) off a Physical one.
-  if (actor && maneuver.signature && !maneuver.signatureTechnique && declared?.foundation) {
+  if (actor && asSignature && declared?.foundation) {
     cost = applySlot(slots, `signature.kiCost.${declared.foundation}`, cost);
   }
   // And one of a Favored Element's Profile - Eye of the Dragon's Way of the Elements, 2(T) off.
-  if (actor && maneuver.signature && !maneuver.signatureTechnique && favoredElement(actor, declared?.profile)) {
+  if (actor && asSignature && favoredElement(actor, declared?.profile)) {
     cost = applySlot(slots, "signature.favoredKiCost", cost);
   }
 

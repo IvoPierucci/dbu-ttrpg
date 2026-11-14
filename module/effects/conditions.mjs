@@ -13,7 +13,7 @@ import { withinAreaOfRule } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { traitAside } from "../aside.mjs";
-import { customBuffMarked, customBuffThresholdFor } from "../custom-buffs.mjs";
+import { customBuffBasicIsSignature, customBuffMarked, customBuffThresholdFor } from "../custom-buffs.mjs";
 
 /** Whether a key is a published Combat Condition - set by traits.mjs at load, to keep the import one way. */
 let isCombatCondition = () => false;
@@ -310,7 +310,9 @@ const PREDICATES = {
   },
 
   /** Is the Maneuver being declared one made through the Signature Technique Maneuver - God of Judgment's. */
-  signatureTechnique: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique),
+  // Or the Basic Attack, while a Custom Buff counts it as one.
+  signatureTechnique: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique)
+    || customBuffBasicIsSignature(scope.data, scope.context?.maneuver?.id),
 
   /** An Ultimate Signature Technique being declared - Questing Wisdom's. */
   usingUltimate: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique

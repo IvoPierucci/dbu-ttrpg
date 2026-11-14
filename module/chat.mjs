@@ -26,7 +26,7 @@ import { environmentOf } from "./breath.mjs";
 import { highTraitOf, isAirborne, qualitiesOf } from "./environments.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
-import { customBuffMarked, customBuffOn } from "./custom-buffs.mjs";
+import { customBuffBasicIsSignature, customBuffMarked, customBuffOn } from "./custom-buffs.mjs";
 import { armorPiercing, damageAttributeOf, namedDamageAttribute, karmicSteps, linkedPick, skyAssaultWaives,
   techniqueAttack, techniqueDamageParts, techniqueStrikeAgainst, techniqueStrikeParts,
   techniqueWoundAgainst, techniqueWoundParts } from "./technique-attack.mjs";
@@ -30481,7 +30481,8 @@ export async function postAttack(actor, target, maneuver,
               // Shooting Mindset (1): Healthy, a Category more.
               + (Number(actor.system.effects?.slots?.["charges.category"]?.add) || 0)
               // A Signature Technique's alone (a Custom Buff's).
-              + ((maneuver.tags ?? []).includes("signature") ? (Number(actor.system.effects?.slots?.["charges.signatureCategory"]?.add) || 0) : 0)
+              + (((maneuver.tags ?? []).includes("signature") || customBuffBasicIsSignature(actor.system, maneuver.id))
+                ? (Number(actor.system.effects?.slots?.["charges.signatureCategory"]?.add) || 0) : 0)
               // Weapon Master (1): an Armed Attack's.
               + ((weapon && !weapon.unarmed) ? (Number(actor.system.effects?.slots?.["charges.armedCategory"]?.add) || 0) : 0)),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
@@ -32188,6 +32189,11 @@ function strikeParts(attacker, attack) {
     ...(attack.homing?.bonus ? [{ label: `Homing (${attack.homing.misses} missed)`, value: attack.homing.bonus }] : []),
     // What was added to it as it was declared - Injuring Wound's.
     ...(attack.strikeExtra ?? []),
+    // A Signature Technique's Strike (`strike.signature`), on the Basic Attack a Custom Buff counts as one - a Technique's own
+    // is added where the Technique is read (technique-attack.mjs).
+    ...((customBuffBasicIsSignature(attacker.system, attack.maneuverId) && (Number(attacker.system.effects?.slots?.["strike.signature"]?.add) || 0))
+      ? [{ label: `${(attacker.system.effects.slots["strike.signature"].parts ?? []).map(part => part.source).find(Boolean) ?? "Effects"} (Signature Technique)`,
+          value: Number(attacker.system.effects.slots["strike.signature"].add) }] : []),
     // Master of Openings (1): made through the Exploit Maneuver.
     ...((attack.viaExploit && (Number(attacker.system.effects?.slots?.["strike.viaExploit"]?.add) || 0))
       ? [{ label: (attacker.system.effects.slots["strike.viaExploit"].parts ?? []).map(part => part.source).find(Boolean) ?? "Exploit",
@@ -32207,6 +32213,15 @@ function combatDiceGroups(actor, groups = null, slot = null, signature = false) 
     // Which roll it is - "strike", "dodge", "wound" - where the window knows: that roll's own dice with them.
     ...rollOwnDice(actor, combatRollOf(slot), signature)
   ].filter(group => group.formula);
+}
+
+/**
+ * Whether an attack is a Signature Technique's for a Trait's or a Talent's effects: one made through the Signature Technique
+ * Maneuver, or the Basic Attack while a Custom Buff counts it as one (custom-buffs.mjs). A Signature Technique's own rules ask
+ * `attack.signature` itself.
+ */
+function effectSignature(attacker, attack) {
+  return Boolean(attack?.signature) || customBuffBasicIsSignature(attacker?.system, attack?.maneuverId);
 }
 
 /** Which of the three Combat Rolls a roll is, for the dice that are one's alone: a Parry's is a Strike Roll. Null for any other. */
@@ -32309,7 +32324,7 @@ async function resolveAttackWork(message, attack) {
   const strike = await rollSide(attacker, strikeParts(attacker, attack), {
     ...attackerOptions, slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
     // A Signature Technique's: its own dice and Critical Target (a Custom Buff's). Its Adaptation Points are a Wound Roll's alone.
-    signatureRoll: Boolean(attack.signature),
+    signatureRoll: effectSignature(attacker, attack),
     forceCritical: Boolean(attack.profileCritical),
     ...(chargedCritical ? { criticalTarget: 5 } : ((ownCritical || tactics) ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
       (Number(attacker.system.criticalTarget) || 10) + ownCritical - tactics) } : {})),
@@ -33486,7 +33501,7 @@ async function attackerStage(message, attack, attacker) {
     "", { combatRoll: true, attackingManeuver: true, urgent: Boolean(attack.urgentRolls), slot: "strike", confirmLabel: "Ready",
       top: `${resourceLine(attacker)}${rollAttackLine(attack, "Attacking")}`,
       formula: { what: "Strike Roll", base: DBUCharacterData.BASE_DIE,
-        dice: combatDiceGroups(attacker, null, "strike", Boolean(attack.signature)),
+        dice: combatDiceGroups(attacker, null, "strike", effectSignature(attacker, attack)),
         parts: windowParts(attacker, strikeParts(attacker, attack)) } });
   if (!ready) return;
   // What the window armed, kept on the card, so Change can put it back (the user's).
@@ -33709,7 +33724,7 @@ async function woundStage(message, attack) {
       spend: hitSpendRows(attacker, questions),
       formula: Number.isFinite(attack.fixedWound) ? null : { what: `Wound Roll${category ? ` &middot; ${category} Category` : ""}`,
         base: DBUCharacterData.BASE_DIE,
-        dice: combatDiceGroups(attacker, woundDice(attacker, attack), "wound", Boolean(attack.signature)),
+        dice: combatDiceGroups(attacker, woundDice(attacker, attack), "wound", effectSignature(attacker, attack)),
         parts: windowParts(attacker, woundParts(attacker, attack)) }
     });
   if (!ready) return;
@@ -33905,7 +33920,7 @@ function twoWorldsWoundParts(attacker, attack) {
   const named = key => (slots[key]?.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects";
   const parts = [];
   const signature = Number(slots["wound.signature"]?.add) || 0;
-  if (signature && attack.technique && !attack.technique.borrowed) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
+  if (signature && ((attack.technique && !attack.technique.borrowed) || customBuffBasicIsSignature(attacker.system, attack.maneuverId))) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
   // Nameless Horde (1): "Attacking Maneuvers made through the Basic Attack Maneuver" - a 'Full Power' Technique's as well.
   const basic = Number(slots["wound.basicAttack"]?.add) || 0;
   if (basic && throughBasicAttack(attack)) parts.push({ label: `${named("wound.basicAttack")} (Basic Attack)`, value: basic });
@@ -34542,9 +34557,9 @@ async function rollAttackWoundWork(message, attack) {
     // Arcosian Genes' Genetic Aggressor: what was spent on its Strike Roll.
     strikeAdapted: Number(attack.result?.strike?.adapted) || 0,
     // Android Cybernetics (5): one Energy Charge's dice, for a Signature Technique's.
-    oneCharge: attack.signature ? energyChargeDice(attacker, { ...attack, energyCharges: 1 }) : "",
+    oneCharge: effectSignature(attacker, attack) ? energyChargeDice(attacker, { ...attack, energyCharges: 1 }) : "",
     // Earthling Genes (3): a Signature Technique's. Genetic Focus: Arcosian (3): the Tail Attack's.
-    signatureRoll: Boolean(attack.signature),
+    signatureRoll: effectSignature(attacker, attack),
     tailRoll: attack.maneuverId === "tail-attack",
     extraDice: woundDice(attacker, attack),
     criticalDice: attacker.system.dice.critical.formula,
@@ -37943,7 +37958,7 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     // Genetic Aggressor (Artificial Warrior): "If you deal Damage to an Opponent with an Attacking Maneuver" - for its maker.
     // And whether it was a Signature Technique - Earthling Genes'.
     if (areOpponents(armsUser, target)) {
-      await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid, ...(attack.signature ? { bySignature: true } : {}) });
+      await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid, ...(effectSignature(fromUuidSync(attack.attackerUuid ?? ""), attack) ? { bySignature: true } : {}) });
     }
     // Genetic Focus: Demon (5): an Adaptation Point for a Clash at them, asked, once a Round.
     if (areOpponents(armsUser, target)) await focusDemonClash(armsUser, target);
