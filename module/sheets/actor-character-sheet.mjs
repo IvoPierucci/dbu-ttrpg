@@ -105,7 +105,8 @@ import {
 import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
 import { gearKitIngenuity, isConsumable } from "../gear.mjs";
 import {
-  customBuffOption, customBuffSections, customBuffsToggled, customBuffTakesBase, customBuffTakesTier, customBuffTotal, newCustomBuff
+  CUSTOM_BUFFS, customBuffOption, customBuffOptionByText, customBuffsToggled, customBuffTakesBase, customBuffTakesTier, customBuffTotal,
+  newCustomBuff
 } from "../custom-buffs.mjs";
 import {
   exclusiveAttributeGroups,
@@ -874,6 +875,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.system = this.actor.system;
     context.tabs = this._getTabs();
     context.customBuffs = this.#customBuffRows();
+    // Every Effect a row may name, once for the tab: what its Effect box suggests as it is typed into (the user's).
+    context.customBuffEffects = CUSTOM_BUFFS.map(option => ({ label: option.label, section: option.section }));
     {
       const { adventuringManeuvers, HUNGER_STAGES } = await import("../adventure.mjs");
       const hungry = Number(this.actor.system.conditions?.hunger) || 0;
@@ -3392,14 +3395,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * The Custom Buffs tab's rows (custom-buffs.mjs): each as it is written, what it comes to on this character, and the list its
-   * Effect is picked from - under its sections, the row's own marked. A toggle has no amounts; an option settled before the
+   * The Custom Buffs tab's rows (custom-buffs.mjs): each as it is written, what it comes to on this character, and its Effect
+   * by name - typed into its box, or picked from what the box suggests. A toggle has no amounts; an option settled before the
    * Tier is takes no (T).
    */
   #customBuffRows() {
     const system = this.actor.system;
     const tiers = { baseTier: system.baseTierOfPower, tier: system.tierOfPower };
-    const sections = customBuffSections();
     return (system.customBuffs ?? []).map(buff => {
       const option = customBuffOption(buff.effect);
       return {
@@ -3411,8 +3413,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         quarter: option?.kind === "quarter",
         // One this system no longer has: said, and nothing applied.
         gone: !option,
-        sections: sections.map(section => ({ label: section.label,
-          options: section.options.map(each => ({ id: each.id, label: each.label, selected: each.id === buff.effect })) }))
+        effectLabel: option?.label ?? ""
       };
     });
   }
@@ -3440,7 +3441,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (field === "active") return this.actor.update({ "system.customBuffs": customBuffsToggled(buffs, id, input.checked) });
     if (field === "name") buff.name = String(input.value ?? "").trim();
     else if (field === "group") buff.group = String(input.value ?? "").trim().slice(0, 1).toUpperCase();
-    else if (field === "effect") buff.effect = String(input.value ?? "");
+    else if (field === "effect") {
+      // Typed, as into a spreadsheet's cell (the user's): the Effect it names - its name, or enough of it to be only one's.
+      const typed = String(input.value ?? "").trim();
+      const option = customBuffOptionByText(typed);
+      if (!option) {
+        if (typed) ui.notifications.warn(`Custom Buffs: no Effect is called "${typed}" - or more than one begins with it.`);
+        return this.render();
+      }
+      buff.effect = option.id;
+    }
     else if (["flat", "perBase", "perTier"].includes(field)) {
       buff[field] = Math.max(-999, Math.min(9999, Math.trunc(Number(String(input.value ?? "").replace(/\u2212/g, "-")) || 0)));
     }
@@ -3681,6 +3691,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       progression.prepend(note);
     }
 
+    // A Custom Buff's Effect, clicked into: all of it picked, so what is typed takes its place and the box suggests anew.
+    for (const input of this.element.querySelectorAll('input[data-custom-buff="effect"]')) {
+      input.addEventListener("focus", () => input.select());
+    }
     // A Custom Buff's fields: written onto its row of the list, not submitted with the character's form.
     for (const input of this.element.querySelectorAll("[data-custom-buff]")) {
       input.addEventListener("change", event => {

@@ -212,6 +212,25 @@ export function customBuffOption(id) {
   return BY_ID.get(String(id ?? "")) ?? null;
 }
 
+/** A label or a typed text as it is compared: its case and its spacing aside, the spreadsheet's sign written as it is typed. */
+const plainText = text => String(text ?? "").toLowerCase().replaceAll("\u00b1", "+-").replaceAll("+/-", "+-").replace(/\s+/g, " ").trim();
+
+/**
+ * The option a typed text names, as a spreadsheet's cell takes what is typed into it (the user's: "asi no tenes que buscarlo"):
+ * its label, whatever the case; or the one label that begins with it; or the one that holds it. Null where it names none - or
+ * more than one, which is no answer.
+ */
+export function customBuffOptionByText(text) {
+  const typed = plainText(text);
+  if (!typed) return null;
+  const exact = CUSTOM_BUFFS.find(option => plainText(option.label) === typed);
+  if (exact) return exact;
+  const begins = CUSTOM_BUFFS.filter(option => plainText(option.label).startsWith(typed));
+  if (begins.length === 1) return begins[0];
+  const holds = CUSTOM_BUFFS.filter(option => plainText(option.label).includes(typed));
+  return (holds.length === 1) ? holds[0] : null;
+}
+
 /** The options under their sections, in order - what the row's Effect list is drawn from. */
 export function customBuffSections() {
   const sections = [];

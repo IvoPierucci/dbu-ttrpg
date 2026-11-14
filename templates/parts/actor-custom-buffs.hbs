@@ -50,16 +50,12 @@
         <div class="dbu-custom-buff-line second">
           <label class="dbu-custom-buff-field">
             <span>Effect</span>
-            <select data-custom-buff="effect" {{#unless @root.editable}}disabled{{/unless}}>
-              {{#if buff.gone}}<option value="{{buff.effect}}" selected>(no longer on the list)</option>{{/if}}
-              {{#each buff.sections as |section|}}
-              <optgroup label="{{section.label}}">
-                {{#each section.options as |option|}}
-                <option value="{{option.id}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
-                {{/each}}
-              </optgroup>
-              {{/each}}
-            </select>
+            {{! Typed into, as a spreadsheet's cell is (the user's): its name, or enough of it to be only one's - the box suggesting
+                the Effects that hold what was typed, each with its section. }}
+            <input type="text" data-custom-buff="effect" list="dbu-custom-buff-effects-{{@root.actor.id}}" value="{{buff.effectLabel}}"
+                   placeholder="{{#if buff.gone}}(no longer on the list){{else}}Type it, or pick it{{/if}}" autocomplete="off" spellcheck="false"
+                   {{#unless @root.editable}}disabled{{/unless}}
+                   data-tooltip="Type the Effect's name - or part of it - or pick it from what is suggested"/>
           </label>
           {{#if buff.toggle}}
           <span class="dbu-custom-buff-toggle">On or off: no number to it</span>
@@ -91,6 +87,11 @@
       </li>
       {{/each}}
     </ol>
+    {{! What every row's Effect box suggests: each Effect once, with the section it is under. }}
+    <datalist id="dbu-custom-buff-effects-{{actor.id}}">
+      {{#each customBuffEffects as |effect|}}<option value="{{effect.label}}">{{effect.section}}</option>
+      {{/each}}
+    </datalist>
 
     {{#if customBuffs.length}}
     <p class="dbu-custom-buff-note">Total = Flat + (bT) x base Tier of Power + (T) x Tier of Power. Buffs sharing a Group letter are switched
