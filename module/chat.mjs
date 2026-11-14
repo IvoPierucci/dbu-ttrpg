@@ -9981,7 +9981,10 @@ async function changeHitAnswer(message, actors) {
  */
 function hitRollData(actor, attack) {
   const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  // Each by the roll it is - a Block's is a Strike Roll, a Barrier's and Power Flare's a Wound Roll - so the dice that are one
+  // roll's alone (a Custom Buff's) are in its window as they are in its roll; a Deflect's Might Clash is none of the three.
   const dice = combatDiceGroups(actor);
+  const diceOf = roll => combatDiceGroups(actor, null, roll);
   const base = DBUCharacterData.BASE_DIE;
   const charges = (Number(attack.energyCharges) || 0) + (Number(attack.powerShot) || 0);
   const soak = Number(actor.system.soakValue) || 0;
@@ -9989,9 +9992,11 @@ function hitRollData(actor, attack) {
   const wallSoak = Math.floor(soak * (DAMAGE_CATEGORIES[category]?.soakMultiplier ?? 1)) + Math.ceil(soak / 2);
   return {
     block: { what: `Strike Roll &middot; Block, with your Shield &middot; ${attack.result?.strike?.total ?? "?"} to beat`,
-      formula: { base, dice, parts: windowParts(actor, [{ label: "Strike", value: actor.system.combat?.strike ?? 0, workingsKey: "strike" }]) } },
+      formula: { base, dice: diceOf("strike"),
+        parts: windowParts(actor, [{ label: "Strike", value: actor.system.combat?.strike ?? 0, workingsKey: "strike" }]) } },
     barrier: { what: "Wound Roll &middot; Barrier &middot; taken off the Damage",
-      formula: { base, dice, parts: windowParts(actor, [{ label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) } },
+      formula: { base, dice: diceOf("wound"),
+        parts: windowParts(actor, [{ label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) } },
     wall: { what: `Damage if hit &middot; Defense Wall &middot; ${DAMAGE_CATEGORIES[category]?.label ?? ""} Category`,
       line: `<span class="dbu-formula-piece dbu-formula-base" data-tooltip="Their Wound Roll, taken in your Ally's place">Wound</span>`
         + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="${Handlebars.escapeExpression(`Soak Value ${soak}, +1/2 (rounded up) for Defense Wall`)}">${wallSoak} Soak</span>`
@@ -10000,7 +10005,8 @@ function hitRollData(actor, attack) {
       formula: { base, dice, parts: [{ label: "Might", value: Number(actor.system.might) || 0 },
         ...(charges ? [{ label: "Energy Charges and Power Shot", value: -charges * tier }] : [])] } },
     flare: { what: "Wound Roll &middot; Power Flare &middot; against their Wound",
-      formula: { base, dice, parts: windowParts(actor, [{ label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) } }
+      formula: { base, dice: diceOf("wound"),
+        parts: windowParts(actor, [{ label: "Wound", value: actor.system.combat?.wound?.energy ?? 0, workingsKey: "wound.energy" }]) } }
   };
 }
 
@@ -13182,7 +13188,9 @@ async function clashStage(message, actor) {
         ...Array.from({ length: scholar }, (_, index) => ({ name: `scholar${index + 1}`,
           label: `Scholar's Intellect: ${index ? "a 2nd" : "a"} Revenge Point, +1`, tip: "Once a Round - up to 2 Revenge Points." }))],
       formula: { base: DBUCharacterData.BASE_DIE,
-      dice: [...(kind.options?.(actor, { ...opened, ...answer }, actor.uuid)?.combatRoll ? combatDiceGroups(actor) : []),
+      // The roll its kind makes - a Strike Roll, a Dodge Roll for the one defending with it: that roll's own dice with them.
+      dice: [...(made => (made?.combatRoll ? combatDiceGroups(actor, null, made.slot ?? null) : []))(
+        kind.options?.(actor, { ...opened, ...answer }, actor.uuid)),
         ...((actor.uuid === opened.challengerUuid) && opened.challengerDice
           ? [{ label: opened.challengerDiceLabel || "Dice", formula: opened.challengerDice }] : [])],
       parts: windowParts(actor, clashParts(kind, actor, { ...opened, ...answer }, actor.uuid)
@@ -36177,7 +36185,7 @@ async function blockStage(message, attack, target, shields) {
     ...thresholdPenalty(target)
   ];
   const ready = await prepareRoll(target, [], `Block - ${shield.name}`, `Beat ${attack.result?.strike?.total ?? 0}`,
-    { combatRoll: true, formula: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(target),
+    { combatRoll: true, formula: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(target, null, "strike"),
       parts: windowParts(target, parts) } });
   if (!ready) return;
   if (!await spendActions(target, 1, "counter")) return;
