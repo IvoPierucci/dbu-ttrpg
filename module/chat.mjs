@@ -11430,7 +11430,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if (linked) {
     const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted, oneCharge, signatureRoll,
       tailRoll,
-      criticalTarget, botchUnlessCritical, naturalAdd };
+      // And which Foundation's it is: what is a Wound Roll's by its Foundation is the second roll's too.
+      criticalTarget, botchUnlessCritical, naturalAdd, foundation };
     const clone = () => ((typeof modifiers === "number") ? modifiers : modifiers.map(part => ({ ...part })));
     const first = await rollSide(actor, clone(), { ...again, collect });
     const second = await rollSide(actor, clone(), { ...again, collect: false });
@@ -18124,7 +18125,8 @@ function variableParts(attacker, attack, roll) {
     // Innate Weaponry (2): "Increase the Strike and Wound Rolls of your Armed Attacks by 1(T)."
     const always = armed ? (Number(slots["strike.armed"]?.add) || 0) : 0;
     // An Unarmed Attack's (a Custom Buff's) - as an Armed one's just below.
-    const bare = armed ? 0 : (Number(slots["strike.unarmed"]?.add) || 0);
+    // Unarmed: made with no Weapon at all - one made with another's Weapon is an Armed Attack still.
+    const bare = (!attack.weapon || attack.weapon.unarmed) ? (Number(slots["strike.unarmed"]?.add) || 0) : 0;
     return [...((!armed && add && wielded) ? [{ label: "Variable Fighter (Unarmed)", value: add }] : []),
       ...(bare ? [{ label: (slots["strike.unarmed"]?.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Unarmed Attack",
         value: bare }] : []),
@@ -18135,7 +18137,7 @@ function variableParts(attacker, attack, roll) {
   // Weapon Arts (1): an Armed Attack's Wound.
   const arts = armed ? (Number(attacker.system?.effects?.slots?.["wound.armed"]?.add) || 0) : 0;
   // An Unarmed Attack's Wound (a Custom Buff's).
-  const bareWound = armed ? 0 : (Number(attacker.system?.effects?.slots?.["wound.unarmed"]?.add) || 0);
+  const bareWound = (!attack.weapon || attack.weapon.unarmed) ? (Number(attacker.system?.effects?.slots?.["wound.unarmed"]?.add) || 0) : 0;
   return [...(((Number(attacker.system?.conditions?.[key]) || 0) > 0)
     ? [{ label: `Variable Fighter (${armed ? "Armed" : "Unarmed"})`, written: "+1(T)", value: tier }] : []),
     ...(bareWound ? [{ label: (attacker.system.effects.slots["wound.unarmed"]?.parts ?? []).map(part => part.source).filter(Boolean).join(", ")
@@ -32207,7 +32209,7 @@ function strikeParts(attacker, attack) {
  */
 function combatDiceGroups(actor, groups = null, slot = null, signature = false) {
   return [
-    ...(groups ?? [{ label: "Extra Dice (Tier of Power)", formula: tierDice(actor, slot) }]),
+    ...(groups ?? [{ label: "Extra Dice (Tier of Power)", formula: tierDice(actor, combatRollOf(slot)) }]),
     ...[...(actor.system.effects?.slots?.["combatRolls.dice"] ?? []), ...supporterDice(actor)]
       .map(die => ({ label: die.source || "Greater Dice", formula: die.formula })),
     // Which roll it is - "strike", "dodge", "wound" - where the window knows: that roll's own dice with them.

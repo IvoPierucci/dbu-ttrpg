@@ -1929,10 +1929,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     };
     // The Base Die, twice where an effect rolls it twice and keeps the higher - Masterful Strike, Masterful Dodge,
     // Critical Wound.
+    // The Tier of Power Extra Dice of that roll: a Strike's, a Dodge's or a Wound's own where something raises or lowers those
+    // alone (a Custom Buff's "ToP Extra Dice Cat. (Strike)") - what the roll itself takes (chat.mjs tierDice).
+    const extraOf = slot => ({ strike: system.dice?.extraStrike, dodge: system.dice?.extraDodge, wound: system.dice?.extraWound })[slot]?.formula
+      ?? extra;
     const diceOf = slot => {
       const twice = slots[`${slot}.baseDieTwice`] === true;
       const die = twice ? `2${baseDie.slice(1)} (higher)` : baseDie;
-      return { twice, line: `${die}${extra ? ` + ${extra}` : ""}`, short: twice ? `2${baseDie.slice(1)}↑` : baseDie };
+      return { twice, line: `${die}${extraOf(slot) ? ` + ${extraOf(slot)}` : ""}`, short: twice ? `2${baseDie.slice(1)}↑` : baseDie };
     };
     // Effects (the user's): every one of them, what lowers the roll as it is made among them - Diminishing, the Muscle
     // Penalty, a Health Threshold's - so the total is what is rolled. Its hover names each; the total's says only

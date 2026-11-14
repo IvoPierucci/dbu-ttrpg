@@ -2646,7 +2646,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // "Increase your Max Capacity by 1/4", which the Power Up Maneuver writes once per
     // stack. A fraction of the whole rather than a multiplier, so two of them are a half:
     // the rule says a quarter each, not a quarter of a quarter more.
-    const capacityFraction = Math.max(0, slot(this, "capacity.maxFraction"));
+    // Taken off as well - a Custom Buff's "Max Capacity by 1/4" at -2 is half of it - never past the whole of it.
+    const capacityFraction = Math.max(-1, slot(this, "capacity.maxFraction"));
 
     // The Ki Multiplier lands on the finished Capacity, after everything that builds
     // it up - it increases the maximum, not any one part of it.
@@ -2910,11 +2911,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // An effect can push them further, but no further than the shared ceiling.
     const increaseLimit = maxCategoryIncrease(this.baseTierOfPower);
     // Raised by an effect - Primal Rage (1)'s - under the same ceiling.
-    const extraCategory = tierExtraDiceCategory(this.tierOfPower)
-      + Math.min(Math.max(0, Number(this.effects?.slots?.["dice.extra.category"]?.add) || 0), increaseLimit);
+    // Lowered by one too - a Custom Buff's debuff - never under no die at all.
+    const extraCategory = Math.max(0, tierExtraDiceCategory(this.tierOfPower)
+      + Math.min(Number(this.effects?.slots?.["dice.extra.category"]?.add) || 0, increaseLimit));
     // The Greater Dice, raised by an effect - Arrogance (1)'s - under the same ceiling.
-    const greaterCategory = greaterDiceCategory(this.tierOfPower)
-      + Math.min(Math.max(0, Number(this.effects?.slots?.["dice.greater.category"]?.add) || 0), increaseLimit);
+    const greaterCategory = Math.max(0, greaterDiceCategory(this.tierOfPower)
+      + Math.min(Number(this.effects?.slots?.["dice.greater.category"]?.add) || 0, increaseLimit));
     // What effects raise them by - the stored modifier and `dice.critical.category` - and a Strike Roll's alone (Artful
     // Strike's), all under the one ceiling.
     const criticalRaise = this.diceModifiers.criticalCategory + (Number(this.effects?.slots?.["dice.critical.category"]?.add) || 0);
@@ -2944,7 +2946,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       const shared = Number(this.effects?.slots?.["dice.extra.category"]?.add) || 0;
       for (const [roll, key] of [["strike", "extraStrike"], ["dodge", "extraDodge"], ["wound", "extraWound"]]) {
         const own = Number(this.effects?.slots?.[`dice.extra.${roll}.category`]?.add) || 0;
-        const category = tierExtraDiceCategory(this.tierOfPower) + Math.min(Math.max(0, shared + own), increaseLimit);
+        const category = Math.max(0, tierExtraDiceCategory(this.tierOfPower) + Math.min(shared + own, increaseLimit));
         this.dice[key] = { category, formula: categoryFormula(category) };
       }
     }
