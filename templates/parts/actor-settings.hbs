@@ -133,6 +133,12 @@
       <input type="checkbox" name="system.duplicate" {{#if system.duplicate}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
       Duplicate
     </label>
+    {{! An Adversary Minion (the Adversaries page; the user's). }}
+    <label class="debug-toggle"
+           data-tooltip="Always its Act Phase, Commanded or not - Commanded, the Power Up or a Surge Out-of-Sequence instead; any Power Level, not grown with a Master's; every Adversary its Master for any effects - but a Duplicate's.">
+      <input type="checkbox" name="system.adversaryMinion" {{#if system.adversaryMinion}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
+      Adversary Minion
+    </label>
     {{#if system.duplicate}}
     {{! Whom it is a copy of (the user's): chosen, its Traits, Talents, Maneuvers, gear and Progression copied from them; its Progression
         tab locked while it is set. }}

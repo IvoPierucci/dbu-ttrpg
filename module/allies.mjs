@@ -121,7 +121,32 @@ export function masterOf(who) {
   if (own) return own;
   const lister = (globalThis.game?.actors?.contents ?? [])
     .find(other => ["character", "adversary"].includes(other.type) && Array.from(other.system?.minions ?? []).includes(actor.id));
-  return lister?.id ?? "";
+  if (lister) return lister.id;
+  // An Adversary Minion with no Master named: the first of the Adversaries, all of whom are its Master (mastersOf).
+  return mastersOf(actor)[0] ?? "";
+}
+
+/** Whether a Minion is an Adversary Minion (the Adversaries page): its Settings' box - a Duplicate never, for its Master. */
+export function isAdversaryMinion(who) {
+  const actor = actorOf(who);
+  return (actor?.type === "minion") && Boolean(actor.system?.adversaryMinion) && !actor.system?.duplicate;
+}
+
+/**
+ * Every Master a Minion has, by id: its own - or, an Adversary Minion's, "For any effects, Adversary Minions (except Duplicate
+ * Minions) consider all non-Minion Adversaries to be their Master": every Adversary in the world, its named one first.
+ */
+export function mastersOf(who) {
+  const actor = actorOf(who);
+  if (actor?.type !== "minion") return [];
+  const named = String(actor.system?.master ?? "");
+  if (!isAdversaryMinion(actor)) {
+    const one = named || (globalThis.game?.actors?.contents ?? [])
+      .find(other => ["character", "adversary"].includes(other.type) && Array.from(other.system?.minions ?? []).includes(actor.id))?.id;
+    return one ? [one] : [];
+  }
+  const adversaries = (globalThis.game?.actors?.contents ?? []).filter(other => other.type === "adversary").map(other => other.id);
+  return [...new Set([named, ...adversaries].filter(Boolean))];
 }
 
 /** A Character's Minions, by id: its own list's and every Minion naming it as its Master. None for a Minion - it has none. */
@@ -131,7 +156,10 @@ export function minionsOf(who) {
   const own = Array.from(actor.system?.minions ?? []).filter(Boolean);
   const theirs = (globalThis.game?.actors?.contents ?? [])
     .filter(other => (other.type === "minion") && (other.system?.master === actor.id)).map(other => other.id);
-  return [...new Set([...own, ...theirs])];
+  // An Adversary's: every Adversary Minion besides, each of them considering every Adversary its Master.
+  const adversaryMinions = (actor.type === "adversary") ? (globalThis.game?.actors?.contents ?? [])
+    .filter(other => isAdversaryMinion(other)).map(other => other.id) : [];
+  return [...new Set([...own, ...theirs, ...adversaryMinions])];
 }
 
 /**
@@ -142,7 +170,18 @@ export function minionsOf(who) {
  */
 export function minionGifts(who) {
   const actor = actorOf(who);
-  const master = globalThis.game?.actors?.get?.(masterOf(actor));
+  // An Adversary Minion's: every Adversary's, added together - each is its Master "for any effects".
+  if (isAdversaryMinion(actor) && (mastersOf(actor).length > 1)) {
+    const each = mastersOf(actor).map(id => minionGiftsFrom(actor, globalThis.game?.actors?.get?.(id)));
+    return each.reduce((sum, gift) => ({ combatRolls: sum.combatRolls + gift.combatRolls, soakValue: sum.soakValue + gift.soakValue,
+      wound: sum.wound + gift.wound, lifeMax: sum.lifeMax + gift.lifeMax, lifePerLevel: sum.lifePerLevel + gift.lifePerLevel,
+      allows: [...new Set([...sum.allows, ...gift.allows])] }));
+  }
+  return minionGiftsFrom(actor, globalThis.game?.actors?.get?.(masterOf(actor)));
+}
+
+/** What one Master's effects give a Minion of theirs. */
+function minionGiftsFrom(actor, master) {
   const slots = master?.system?.effects?.slots;
   const add = key => Number(slots?.[key]?.add) || 0;
   const kind = actor?.getFlag?.("dbu-ttrpg", "minionKind") ?? "";
@@ -167,6 +206,9 @@ export function minionGifts(who) {
 export function actsFreely(who) {
   const actor = actorOf(who);
   if (actor?.type !== "minion") return false;
+  // Adversary Masters: "Adversary Minions always have access to their Act Phase and do not need to be targeted by the Command
+  // Maneuver."
+  if (isAdversaryMinion(actor)) return true;
   if (actor.getFlag?.("dbu-ttrpg", "minionKind") === "goop") return true;
   const master = globalThis.game?.actors?.get?.(masterOf(actor));
   if (master?.system?.effects?.slots?.["leadership.minionActs"] !== true) return false;

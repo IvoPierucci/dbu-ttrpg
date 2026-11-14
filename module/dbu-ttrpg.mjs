@@ -501,6 +501,8 @@ Hooks.on("updateActor", async (actor, changes) => {
   for (const [master, minion] of pairs) {
     // Copy Clone's: a Duplicate of another Character, at their Power Level.
     if (!master || !minion || minion.getFlag?.("dbu-ttrpg", "copied")) continue;
+    // An Adversary Minion: "can be made at any Power Level that seems appropriate" - its own.
+    if (minion.system?.adversaryMinion && !minion.system?.duplicate) continue;
     const level = Number(master.system.powerLevel) || 1;
     if ((Number(minion.system.powerLevel) || 1) !== level) await minion.update({ "system.powerLevel": level });
   }

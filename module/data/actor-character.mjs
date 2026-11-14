@@ -1672,6 +1672,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // A Minion's kind (the user's, on its Settings tab): a Special Minion, and a Duplicate - "Duplicates ... are Special Minions".
     schema.specialMinion = new fields.BooleanField({ required: true, initial: false });
     schema.duplicate = new fields.BooleanField({ required: true, initial: false });
+    // An Adversary Minion (the Adversaries page; the user's: a box on the Minion's Settings): "always ha[s] access to their Act
+    // Phase", made "at any Power Level that seems appropriate", and - but a Duplicate - "consider[s] all non-Minion Adversaries
+    // to be their Master" for any effects (allies.mjs).
+    schema.adversaryMinion = new fields.BooleanField({ required: true, initial: false });
     // Whom a Duplicate is a copy of, by the world Actor's id - its Master, or another (Copy Clone's) - chosen on Settings for one made by
     // hand (the user's); its Progression tab locked while it is set, being that one's.
     schema.duplicateOf = new fields.StringField({ required: true, blank: true, initial: "" });

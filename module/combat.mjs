@@ -871,6 +871,8 @@ export function registerCombatHooks() {
   // a Minion over that, told to the GM.
   Hooks.on("createCombatant", async combatant => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    // Not an Adversary Minion's: "the various 'mooks', weak enemies that are typically used en masse" (the Adversaries page).
+    if (combatant.actor?.system?.adversaryMinion && !combatant.actor?.system?.duplicate) return;
     const master = game.actors?.get(masterOf(combatant.actor));
     if (!master) return;
     const ids = new Set(minionsOf(master));

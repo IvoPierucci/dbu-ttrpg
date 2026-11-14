@@ -18472,6 +18472,15 @@ export async function commandMinions(actor) {
     await requestActorUpdate(minion, { [`flags.${SCOPE}.commanded`]: roundKey(),
       "system.actionsSpent.converted": (Number(minion.system?.actionsSpent?.converted) || 0) + 1 });
   }
+  // Adversary Masters: "If an Adversary Minion is targeted by the Command Maneuver, they may use the Power Up Maneuver or a Surge of
+  // your choice as an Out-of-Sequence Maneuver instead" - said, for the table to take.
+  const { isAdversaryMinion } = await import("./allies.mjs");
+  const adversaryMinions = picked.filter(minion => isAdversaryMinion(minion));
+  if (adversaryMinions.length) {
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${
+      adversaryMinions.map(minion => escape(minion.name)).join(", ")}: Adversary Minion${(adversaryMinions.length === 1) ? "" : "s"} - the Power Up
+      Maneuver or a Surge as an Out-of-Sequence Maneuver instead.</div>` });
+  }
   if (boosted) {
     await actor.setFlag(SCOPE, "supercomputerCommandRound", roundKey());
     for (const minion of picked) {
