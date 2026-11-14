@@ -23328,6 +23328,8 @@ async function attackDurationEnds(attack) {
   }
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (!attacker?.isOwner) return;
+  // Area Wipe (a Villainous Maneuver), concluded: the Battlefield's Qualities gone, its Features said destroyed.
+  if (attack?.maneuverId === "area-wipe") await (await import("./villainous.mjs")).areaWipeConcluded(attack);
   // Oni-Raised (3): "after completing the Attacking Maneuver, set your Life Points to their lowest possible value".
   if (attack.oniDrained) await attacker.update({ "system.life.value": Number(attacker.system.life?.min) || 0 });
   // Bureaucratic Beatdown (3): "after completing the Attacking Maneuver, you leave the Undying State and have your Life Points reduced to 1

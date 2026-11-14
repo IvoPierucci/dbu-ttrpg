@@ -4822,6 +4822,17 @@ async function revertTransfiguration(actor, target, maneuver) {
  * Range - and the choice is spent once a Maneuver is made.
  */
 export async function useManeuver(actor, maneuver, options = {}) {
+  // Area Wipe (a Villainous Maneuver): every other Character in the Combat its targets - Hidden or not, however far.
+  if ((maneuver?.id === "area-wipe") && !options.targetUuid) {
+    const { areaWipeTargets } = await import("./villainous.mjs");
+    const others = areaWipeTargets(actor);
+    if (!others.length) {
+      ui.notifications.warn("Area Wipe: there is nobody else in the Combat.");
+      return false;
+    }
+    return useManeuver(actor, maneuver, { ...options, targetUuid: others[0].uuid,
+      extraTargets: [...(options.extraTargets ?? []), ...others.slice(1).map(other => ({ uuid: other.uuid, name: other.name }))] });
+  }
   // Nameless Horde (4): "if an effect allows you to use the Basic Attack Maneuver, you may instead use the Signature Technique
   // Maneuver to use a 'Full Power' Signature Technique" - which, asked; through the Signature Technique Maneuver, its limits its own.
   if (options.outOfSequence && ((maneuver?.id ?? "") === "basic-attack") && !options.techniqueId) {
@@ -5476,7 +5487,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // And the Sense: "except the Sense/Search Maneuvers". An attack aimed at several, asked again once declared - an AoE may.
     const { whyHidden, isHiddenFrom, SEARCH_MANEUVER, SENSE_MANEUVER } = await import("./hidden.mjs");
     const searching = maneuver.id === SEARCH_MANEUVER;
-    const several = maneuver.attacking && ((game.user.targets?.size ?? 0) > 1);
+    // Area Wipe's: "regardless of if they are Hidden".
+    const several = maneuver.attacking && (((game.user.targets?.size ?? 0) > 1) || (maneuver.id === "area-wipe"));
     const unseen = searching
       ? (isHiddenFrom(targetActor, actor) ? "" : `${targetActor.name} is not Hidden from ${actor.name}.`)
       : ((maneuver.id === SENSE_MANEUVER) || several) ? "" : whyHidden(actor, targetActor);
@@ -5906,7 +5918,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const unbounded = declared?.weapon?.wholeBattlefield || declared?.weapon?.telekinetic;
     // Mimicry of the Whipping Tail (2): "treat your Melee Range as if it was 2 Squares further for the duration of this Attacking Maneuver".
     const whipReach = (maneuver.fromTrait === "mimicry-of-the-whipping-tail") ? 2 : 0;
-    let outOfReach = targetActor && !maneuver.throws && !unbounded
+    // Area Wipe's: "no matter how many Squares they are away from you (even if this Attacking Maneuver is of the Physical Foundation)".
+    let outOfReach = targetActor && !maneuver.throws && !unbounded && (maneuver.id !== "area-wipe")
       && whyNotInReach(actor, targetActor, declared ?? {}, (declared?.weapon?.meleeRange ?? 0) + whipReach);
     // Elongated Tail's reach, on a Tail Attack, asked where it is what reaches.
     if (outOfReach && maneuver.tailAttack) {

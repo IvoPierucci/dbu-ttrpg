@@ -214,3 +214,39 @@ export async function actAgainEnded(combat, combatantId) {
   const extra = combatantId ? combat?.combatants?.get(combatantId) : null;
   if (extra?.getFlag?.("dbu-ttrpg", "actAgain")) await extra.delete();
 }
+
+/**
+ * Area Wipe: "an Attacking Maneuver of the Simple Profile (any Foundation) that targets all other Characters on the Battlefield
+ * regardless of if they are Hidden or no matter how many Squares they are away from you" - every other one in the Combat, once
+ * each, as targets an attack is given (use-maneuver.mjs useManeuver).
+ */
+export function areaWipeTargets(actor) {
+  const seen = new Set([actor?.uuid]);
+  const others = [];
+  for (const combatant of game.combat?.combatants ?? []) {
+    const other = combatant.actor;
+    if (!other || seen.has(other.uuid)) continue;
+    seen.add(other.uuid);
+    others.push(other);
+  }
+  return others;
+}
+
+/**
+ * Area Wipe, concluded: "Regardless of the results of the Attacking Maneuver, after concluding that Attacking Maneuver, destroy
+ * all Features in the Battlefield, and remove all Environmental Qualities from all Squares in the Battlefield." The Qualities
+ * ticked on each one's Battlefields tab taken off (the user's); the Features the ARC's, said destroyed.
+ */
+export async function areaWipeConcluded(attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker?.isOwner) return;
+  const { requestActorUpdate } = await import("./chat.mjs");
+  for (const actor of [attacker, ...areaWipeTargets(attacker)]) {
+    if (!(actor.system?.battlefield?.qualities ?? []).length) continue;
+    if (actor.isOwner) await actor.update({ "system.battlefield.qualities": [] });
+    else await requestActorUpdate(actor, { "system.battlefield.qualities": [] });
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: attacker }),
+    content: `<div class="dbu-settled-note"><b>Area Wipe</b> - every Feature in the Battlefield destroyed, and every Environmental Quality
+      removed from every Square.</div>` });
+}

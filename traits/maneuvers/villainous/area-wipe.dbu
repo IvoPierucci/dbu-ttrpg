@@ -1,0 +1,31 @@
+id: area-wipe
+name: Area Wipe
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: true
+requiresTarget: true
+usageLimit: 1/encounter
+# "Make an Attacking Maneuver of the Simple Profile (any Foundation)".
+profile: simple
+exploitable: All adjacent Opponents.
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  You lob a force of destructive energy that hits everything in the surrounding area.
+text: >
+  Area Wipe [1/Encounter]: You lob a force of destructive energy that hits everything in the surrounding area.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –KP Cost: N/A
+  –Exploitable: All Adjacent Opponents. If you take Damage from an Attacking Maneuver made through the Exploit Maneuver in response to this Attacking Maneuver, the Maneuver fails.
+  –Effect: Make an Attacking Maneuver of the Simple Profile (any Foundation) that targets all other Characters on the Battlefield regardless of if they are Hidden or no matter how many Squares they are away from you (even if this Attacking Maneuver is of the Physical Foundation).
+  Regardless of the results of the Attacking Maneuver, after concluding that Attacking Maneuver, destroy all Features in the Battlefield, and remove all Environmental Qualities from all Squares in the Battlefield.
+
+---
+
+# Every other Character in the Combat its target, Hidden or not, however far (use-maneuver.mjs, villainous.mjs areaWipeTargets);
+# concluded, every Environmental Quality ticked taken off and the Features said destroyed - the ARC's, not this system's
+# (the user's; chat.mjs attackDurationEnds).
