@@ -156,6 +156,64 @@
     </div>
   </section>
 
+  {{! An Adversary's Quickplay (the user's): switched on here, above the table - its Attributes set by the rule and its 3(bT)
+      Talents in place of the table of Power Levels. The Character Perks below as they are. }}
+  {{#if quickplay}}
+  <section class="panel dbu-quickplay">
+    <h3 class="panel-title">
+      Quickplay <span class="panel-note">in place of the Power Level table</span>
+      <label class="dbu-adversary-toggle dbu-quickplay-switch" data-tooltip="Attribute Scores set by the rule, and 3 Talents for each base Tier of Power - the Power Level table left aside">
+        <input type="checkbox" name="system.adversary.quickplay.on" {{#if quickplay.on}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/> On
+      </label>
+    </h3>
+    {{#if quickplay.on}}
+    <div class="dbu-quickplay-places">
+      {{#each quickplay.places as |place|}}
+      <label class="dbu-adversary-field">
+        <span>{{place.label}} &middot; {{place.score}}</span>
+        <select name="system.adversary.quickplay.{{place.field}}" {{#unless @root.editable}}disabled{{/unless}}>
+          {{#each place.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.name}}</option>{{/each}}
+        </select>
+      </label>
+      {{/each}}
+    </div>
+    <p class="panel-note">Power Level {{system.powerLevel}} &middot; base Tier {{quickplay.tier}} &middot; Score Limit {{quickplay.limit}}. The other three
+      at 1; the Attribute Points on the Adversary tab on top. With the Balanced Warrior Talent, the lower of Force and Magic is set to the higher.</p>
+    <h4 class="skill-group-title">Talents &middot; 3 for each base Tier of Power</h4>
+    <div class="dbu-quickplay-tiers">
+      {{#each quickplay.tiers as |tier|}}
+      <div>
+        <p class="skill-group-title">Tier {{tier.tier}}</p>
+        {{#each tier.talents as |row|}}
+        <div class="dbu-quickplay-talent">
+          <span>{{row.number}}</span>
+          <div class="dbu-combo" data-combo>
+            <input type="hidden" data-quickplay-talent="{{row.index}}" value="{{row.talent}}"/>
+            <input type="text" class="dbu-combo-input" autocomplete="off" spellcheck="false" placeholder="Choose a Talent"
+                   role="combobox" aria-expanded="false" aria-label="Talent"/>
+            <span class="dbu-combo-caret" aria-hidden="true">&#9662;</span>
+            <div class="dbu-combo-list" role="listbox" hidden>
+              <div class="dbu-combo-option dbu-combo-none" role="option" data-value="">None</div>
+              {{#each row.groups as |group|}}
+              <div class="dbu-combo-group" data-group="{{group.label}}">{{group.label}}</div>
+              {{#each group.options as |option|}}
+              <div class="dbu-combo-option{{#if option.selected}} chosen{{/if}}" role="option" data-value="{{option.value}}"
+                   data-group="{{group.label}}">{{option.label}}</div>
+              {{/each}}
+              {{/each}}
+              <div class="dbu-combo-empty" hidden>No Talent has that in its name or Category.</div>
+            </div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
+  </section>
+  {{/if}}
+
+  {{#unless quickplay.on}}
   <table class="progression-table">
     {{! Widths set here, not by the longest thing in a column: Benefits takes what is left. }}
     <colgroup>
@@ -257,6 +315,7 @@
       {{/each}}
     </tbody>
   </table>
+  {{/unless}}
 
   {{! Character Perks from anywhere: the table's Choices without a Level - where each came from, written; its TP as written. }}
   <details class="trait-group perk-group" data-section="perks" {{#if openSections.perks}}open{{/if}}>

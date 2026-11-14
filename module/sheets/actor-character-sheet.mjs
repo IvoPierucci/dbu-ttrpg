@@ -3,7 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter } from "../actor-types.mjs";
-import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, weakpointOutcome } from "../adversary.mjs";
+import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, weakpointOutcome } from "../adversary.mjs";
 import { isVillainousManeuver } from "../villainous.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { areAllies, masterOf, minionsOf } from "../allies.mjs";
@@ -923,6 +923,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         open: Boolean(this.#openSections[`maneuver-adv-${entry.id}`]) }));
     }
     context.progressionRows = this._prepareProgressionRows();
+    // An Adversary's Quickplay (adversary.mjs): its switch above the table, and - on - its four picks and its 3(bT) Talents in
+    // the table's place (the user's).
+    context.quickplay = isAdversary(this.actor) ? this.#quickplayContext() : null;
     context.characterPerks = this.#prepareCharacterPerks();
     context.allies = this.#prepareAllies();
     // A Minion (the user's Actor type): its Master on Settings, no Karma; a Character's Minions under its Allies.
@@ -3791,6 +3794,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       progression.prepend(note);
     }
 
+    // A Quickplay Talent, picked off its list: its hidden field has no name of the form's - written onto the list here.
+    for (const field of this.element.querySelectorAll("[data-quickplay-talent]")) {
+      field.addEventListener("change", event => {
+        event.stopPropagation();
+        this.#writeQuickplayTalent(Number(field.dataset.quickplayTalent), field.value);
+      });
+    }
     // A Weakpoint's fields: written onto its row of the list, not submitted with the character's form.
     for (const input of this.element.querySelectorAll("[data-weakpoint]")) {
       input.addEventListener("change", event => {
@@ -7703,6 +7713,42 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       "system.adversary.karmaRegained": true
     });
     ui.notifications.info(`${this.actor.name}: out of Karma Points - up to ${lifeBack} Life Points and ${kiBack} Ki Points regained.`);
+  }
+
+  /**
+   * The Quickplay panel: its switch; the four places and the Attribute in each, with the Score it is set to; and its Talents, a
+   * row for each of the 3(bT), grouped by the base Tier they are counted at - each the Talent Addition row's list, typed into.
+   */
+  #quickplayContext() {
+    const system = this.actor.system;
+    const quick = system.adversary?.quickplay ?? {};
+    const tier = DBUCharacterData.tierOfPowerFor(Number(system.powerLevel) || 1);
+    const set = quickplayScores({ ...system, adversary: { ...system.adversary, quickplay: { ...quick, on: true } } }, tier) ?? { limit: 0 };
+    const names = Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)
+      .map(key => [key, key.charAt(0).toUpperCase() + key.slice(1)]));
+    const place = (field, label, score) => ({ field, label, score,
+      options: Object.entries(names).map(([value, name]) => ({ value, name, selected: quick[field] === value })) });
+    const count = quickplayTalentCount(tier);
+    const talents = Array.from({ length: count }, (unused, index) => {
+      const entry = { choice: "Talent Addition", talent: quick.talents?.[index] ?? "" };
+      return { index, number: index + 1, tier: Math.floor(index / 3) + 1, talent: entry.talent, groups: talentChoicesFor(this.actor, entry) };
+    });
+    return {
+      on: Boolean(quick.on), tier, limit: set.limit,
+      places: [place("limit", "At the Score Limit", set.limit), place("threeA", "At 3/4 of it", Math.floor((set.limit * 3) / 4)),
+        place("threeB", "At 3/4 of it", Math.floor((set.limit * 3) / 4)), place("half", "At 1/2 of it", Math.floor(set.limit / 2))],
+      tiers: Array.from({ length: Math.ceil(count / 3) }, (unused, at) => ({ tier: at + 1, talents: talents.filter(each => each.tier === at + 1) }))
+    };
+  }
+
+  /** A Quickplay Talent picked: written into its place on the list, the list as long as its 3(bT). */
+  async #writeQuickplayTalent(index, value) {
+    const quick = this.actor.system.adversary?.quickplay ?? {};
+    const tier = DBUCharacterData.tierOfPowerFor(Number(this.actor.system.powerLevel) || 1);
+    const talents = Array.from({ length: quickplayTalentCount(tier) }, (unused, at) => quick.talents?.[at] ?? "");
+    if (!(index >= 0) || (index >= talents.length)) return;
+    talents[index] = String(value ?? "");
+    return this.actor.update({ "system.adversary.quickplay.talents": talents });
   }
 
   /** A Weakpoint more, empty, last on the list. */

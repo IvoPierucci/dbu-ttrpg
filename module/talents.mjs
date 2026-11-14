@@ -27,6 +27,13 @@ export const FROM_PROGRESSION = "fromProgression";
 /** What the reached Talent Addition rows name, in row order. */
 export function progressionTalentIds(system) {
   const level = Number(system?.powerLevel) || 1;
+  // An Adversary's Quickplay, on: its 3(bT) Talents in place of the table's (adversary.mjs) - the Character Perks' still.
+  const quick = system?.adversary?.quickplay;
+  if (quick?.on && (system?.parent?.type === "adversary")) {
+    return [...(quick.talents ?? []).filter(Boolean),
+      ...(system?.characterPerks ?? []).filter(perk => (perk.choice === "Talent Addition") && perk.talent
+        && ((Number(perk.lvl) || level) <= level)).map(perk => perk.talent)];
+  }
   return [...(system?.progression ?? [])
     .filter(entry => (entry.choice === "Talent Addition") && ((Number(entry.lvl) || 1) <= level) && entry.talent),
     // And each Character Perk's reached.

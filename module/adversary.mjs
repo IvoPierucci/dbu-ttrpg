@@ -209,3 +209,33 @@ export function weakpointOutcome(system, { traitName = "", conditionName = "", g
   ].filter(Boolean);
   return { buffs: switched.length ? buffs : null, lines };
 }
+
+/**
+ * Quickplay Adversaries: "Create an Adversary as you normally would, but you do not use Character Perks to define your
+ * Adversary's Talents and Attribute Scores. Instead ... Set 1 Attribute's Attribute Score to the Score Limit. Set 2 Attribute's
+ * Attribute Scores to 3/4 of the Score Limit. Set 1 Attribute's Attribute Score to 1/2 of the Score Limit. Gain 3(bT) Talents.
+ * If you want the Adversary to take the Balanced Warrior Talent, set the lower of their Force and Magic to the Attribute Score of
+ * the higher." Switched on on its Progression tab, in place of the table of Power Levels (the user's); the three not chosen at 1
+ * (the user's); the Attribute Points written on the Adversary tab still on top (the user's). Fractions rounded down.
+ *
+ * `tier`: its base Tier of Power - the Score Limit's, 8 and 3 more a Tier. Null where it is not on, or it is no Adversary.
+ */
+export function quickplayScores(system, tier, { balanced = false } = {}) {
+  const quick = system?.adversary?.quickplay;
+  if ((system?.parent?.type && (system.parent.type !== "adversary")) || !quick?.on) return null;
+  const limit = 8 + (3 * (Math.max(1, Number(tier) || 1) - 1));
+  const keys = Object.keys(system.adversary.extra ?? {});
+  const scores = Object.fromEntries(keys.map(key => [key, 1]));
+  const set = (key, value) => { if (key in scores) scores[key] = Math.max(scores[key], value); };
+  set(quick.half, Math.floor(limit / 2));
+  set(quick.threeA, Math.floor((limit * 3) / 4));
+  set(quick.threeB, Math.floor((limit * 3) / 4));
+  set(quick.limit, limit);
+  if (balanced && ("force" in scores) && ("magic" in scores)) scores.force = scores.magic = Math.max(scores.force, scores.magic);
+  return { limit, scores };
+}
+
+/** How many Talents Quickplay gives: 3(bT). */
+export function quickplayTalentCount(tier) {
+  return 3 * Math.max(1, Number(tier) || 1);
+}

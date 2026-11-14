@@ -338,7 +338,9 @@ async function shellBroken(item) {
 // whoever made the change.
 Hooks.on("updateActor", async (actor, changes, options, userId) => {
   if ((userId !== game.user.id) || !changes.system
-    || !(("progression" in changes.system) || ("powerLevel" in changes.system) || ("characterPerks" in changes.system))) return;
+    || !(("progression" in changes.system) || ("powerLevel" in changes.system) || ("characterPerks" in changes.system)
+      // An Adversary's Quickplay, switched or its Talents chosen.
+      || ("adversary" in changes.system))) return;
   const { syncProgressionTalents } = await import("./talents.mjs");
   await syncProgressionTalents(actor);
 });

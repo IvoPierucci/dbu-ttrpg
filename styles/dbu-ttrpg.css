@@ -5575,3 +5575,10 @@
 .dbu-ttrpg .dbu-adversary-weak:first-of-type { border-top: 0; }
 .dbu-ttrpg .dbu-adversary-weak input[type="text"] { width: 100%; height: 24px; box-sizing: border-box; margin: 0; font-size: 12px; }
 .dbu-ttrpg .dbu-adversary-weak .dbu-manage { height: 24px; }
+/* Quickplay, on an Adversary's Progression tab: its four picks across, its Talents by Tier in three columns. */
+.dbu-ttrpg .dbu-quickplay-switch { margin-left: auto; font-size: 12px; text-transform: none; letter-spacing: 0; }
+.dbu-ttrpg .dbu-quickplay-places { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.dbu-ttrpg .dbu-quickplay-places select { width: 100%; height: 24px; font-size: 12px; margin: 0; }
+.dbu-ttrpg .dbu-quickplay-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 12px; }
+.dbu-ttrpg .dbu-quickplay-talent { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 6px; align-items: center; margin: 0 0 4px; font-size: 12px; }
+.dbu-ttrpg .dbu-quickplay-talent .dbu-combo-input { width: 100%; height: 24px; box-sizing: border-box; padding-right: 18px; font-size: 12px; }

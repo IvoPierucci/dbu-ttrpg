@@ -12,7 +12,7 @@ import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
 import { customBuffThresholdFor } from "../custom-buffs.mjs";
-import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryGains, adversaryRanks } from "../adversary.mjs";
+import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryGains, adversaryRanks, quickplayScores } from "../adversary.mjs";
 import { craftedReading, groundIgnored, isNaturalArmor, naturalArmorFactor, platingBonusFlat, platingBonusPerBaseTier, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable,
   topLayerPiece } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
@@ -1211,6 +1211,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         what: new fields.StringField({ required: true, blank: true, initial: "" }),
         does: new fields.StringField({ required: true, blank: true, initial: "" })
       })),
+      // Quickplay (the user's: switched on on its Progression tab, in place of the table of Power Levels): which Attribute is at
+      // the Score Limit, which two at 3/4 of it and which at 1/2; and its 3(bT) Talents, by their file ids, in order.
+      quickplay: new fields.SchemaField({
+        on: new fields.BooleanField({ required: true, initial: false }),
+        limit: new fields.StringField({ required: true, blank: true, initial: "force" }),
+        threeA: new fields.StringField({ required: true, blank: true, initial: "agility" }),
+        threeB: new fields.StringField({ required: true, blank: true, initial: "tenacity" }),
+        half: new fields.StringField({ required: true, blank: true, initial: "insight" }),
+        talents: new fields.ArrayField(new fields.StringField({ required: true, blank: true, initial: "" }))
+      }),
       // Out of Karma, and the Life and Ki it regains for that taken (its button, the user's) - once, till it has Karma again.
       karmaRegained: new fields.BooleanField({ required: true, initial: false }),
       extra: new fields.SchemaField(Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)
@@ -2140,7 +2150,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // on the Tier of Power. That is what lets them come first, and it matters: an
     // effect's condition reads Scores while its amount reads Tiers, so without this the
     // two would need each other. Settling the Scores up front breaks that circle.
+    // Quickplay: the Scores it sets, in place of the table's - with Balanced Warrior's Force and Magic, where it is taken.
+    const quick = this.adversaryMade ? quickplayScores(this, DBUCharacterData.tierOfPowerFor(this.powerLevel),
+      { balanced: (this.adversary?.quickplay?.talents ?? []).includes("balanced-warrior") }) : null;
     for (const key of Object.keys(atts)) {
+      if (quick) {
+        // Character Perks and the Attribute Points written on the Adversary tab still on top (the user's).
+        atts[key].score = (quick.scores[key] ?? 1)
+          + DBUCharacterData.perksOf(this.characterPerks, "Attribute Addition", this.powerLevel)
+            .reduce((total, perk) => total + (Number(perk.attributes?.[key]) || 0), 0)
+          + adversaryExtra(this, key);
+        continue;
+      }
       atts[key].score = DBUCharacterData.attributeScore(
         this.progression, key, this.powerLevel,
         DBUCharacterData.racialIncreaseFor(this.race, this.racialAttributeChoices, key)
