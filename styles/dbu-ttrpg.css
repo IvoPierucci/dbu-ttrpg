@@ -5451,3 +5451,69 @@
 .dbu-ttrpg .dbu-custom-buff-delete:hover { color: inherit; }
 .dbu-ttrpg .dbu-custom-buff-empty,
 .dbu-ttrpg .dbu-custom-buff-note { margin: 6px 0 0; font-size: 11px; color: var(--dbu-text-dim); }
+
+/* --- The Adversary tab (the user's; adversary.mjs) -----------------------------------------------------
+   In Main's place on an Adversary's sheet. Main's own cards and lists, with the boxes an Adversary writes into: small, a
+   number of two figures at most, and never over the label beside them. */
+.dbu-ttrpg .dbu-adversary-grid {
+  display: grid;
+  grid-template-columns: 120px 40px repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+.dbu-ttrpg .dbu-adversary-field { display: grid; gap: 2px; min-width: 0; margin: 0; }
+.dbu-ttrpg .dbu-adversary-field > span:first-child {
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--dbu-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dbu-ttrpg .dbu-adversary-field b { height: 24px; line-height: 24px; font-size: 12px; white-space: nowrap; }
+.dbu-ttrpg .dbu-adversary-field small { font-size: 11px; font-weight: normal; color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-adversary-field select {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  line-height: 22px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 12px;
+}
+.dbu-ttrpg .dbu-adversary input.dbu-adversary-number {
+  width: 34px;
+  height: 22px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 2px;
+  font-size: 12px;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.dbu-ttrpg .dbu-adversary input.dbu-adversary-number::-webkit-outer-spin-button,
+.dbu-ttrpg .dbu-adversary input.dbu-adversary-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* An Attribute's points: what its Progression gives, and the box beside it. */
+.dbu-ttrpg .dbu-adversary-extra {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+  white-space: nowrap;
+}
+.dbu-ttrpg .dbu-adversary-used.over { color: var(--dbu-life); }
+/* A Skill's Ranks, written: where Main only says them. */
+.dbu-ttrpg .dbu-adversary .skill input.dbu-adversary-rank { flex: 0 0 26px; width: 26px; height: 18px; font-size: 11px; }
+.dbu-ttrpg .dbu-adversary-more { flex: 0 0 auto; font-size: 9px; color: var(--dbu-text-dim); }
+/* Two columns of Skills, so a name is read whole beside its box; a name kept to its own room. */
+.dbu-ttrpg .dbu-adversary .skill-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dbu-ttrpg .dbu-adversary button.skill-label { display: block; min-width: 0; height: auto; min-height: 0; }
+/* A Required Skill with no Ranks: its name and its Bonus greyed, the box it is given Ranks in left clear. */
+.dbu-ttrpg .dbu-adversary .skill-untrained { opacity: 1; }
+.dbu-ttrpg .dbu-adversary .skill-untrained .skill-name,
+.dbu-ttrpg .dbu-adversary .skill-untrained .skill-bonus,
+.dbu-ttrpg .dbu-adversary .skill-untrained .skill-crit { opacity: 0.5; }

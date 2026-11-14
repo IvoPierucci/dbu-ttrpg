@@ -4252,7 +4252,7 @@ export function whyNoAngelDuplicate(actor, maneuver, target = null, cannot = () 
  */
 export function whyNotCopyClone(actor, maneuver, target) {
   if (uniqueLibraryOf(actor, maneuver) !== "copy-clone") return null;
-  if (!target || !["character", "minion"].includes(target.type)) return `${maneuver.name}: target a Character.`;
+  if (!target || !["character", "minion", "adversary"].includes(target.type)) return `${maneuver.name}: target a Character.`;
   if (atLongRange(actor, target)) return `${maneuver.name}: ${target.name} is at Long Range.`;
   if ((Number(target.system?.tierOfPower) || 1) > (Number(actor.system?.tierOfPower) || 1)) {
     return `${maneuver.name}: ${target.name}'s Tier of Power is higher than ${actor.name}'s.`;

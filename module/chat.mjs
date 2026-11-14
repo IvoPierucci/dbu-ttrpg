@@ -26528,7 +26528,7 @@ export async function wieldShape(actor, itemId) {
   const { whyNotWithinMelee } = await import("./maneuvers.mjs");
   const seen = new Set([actor.uuid]);
   const near = (canvas?.tokens?.placeables ?? []).map(token => token.actor).filter(other => {
-    if (!other || seen.has(other.uuid) || !["character", "minion"].includes(other.type)) return false;
+    if (!other || seen.has(other.uuid) || !["character", "minion", "adversary"].includes(other.type)) return false;
     seen.add(other.uuid);
     return !whyNotWithinMelee(other, actor, "wield");
   });

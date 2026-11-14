@@ -65,6 +65,8 @@ Hooks.once("init", () => {
   CONFIG.Actor.dataModels.character = DBUCharacterData;
   // A Minion is a Character with its own rules (the rulebook's Minion Rules) - the same model, which reads its type.
   CONFIG.Actor.dataModels.minion = DBUCharacterData;
+  // And an Adversary (the Adversaries page; adversary.mjs): the same model again, which reads its type.
+  CONFIG.Actor.dataModels.adversary = DBUCharacterData;
 
   // "Their place in Initiative is directly after their Master, in the order among Initiative, of their Initiative Value."
   CONFIG.Combat.documentClass = class DBUCombat extends CONFIG.Combat.documentClass {
@@ -120,7 +122,7 @@ Hooks.once("init", () => {
   const DocumentSheetConfig = foundry.applications.apps.DocumentSheetConfig;
   DocumentSheetConfig.unregisterSheet(foundry.documents.Actor, "core", foundry.appv1.sheets.ActorSheet);
   DocumentSheetConfig.registerSheet(foundry.documents.Actor, "dbu-ttrpg", DBUCharacterSheet, {
-    types: ["character", "minion"],
+    types: ["character", "minion", "adversary"],
     makeDefault: true,
     label: "DBU Character Sheet"
   });

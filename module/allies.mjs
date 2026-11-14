@@ -120,7 +120,7 @@ export function masterOf(who) {
   const own = String(actor.system?.master ?? "");
   if (own) return own;
   const lister = (globalThis.game?.actors?.contents ?? [])
-    .find(other => (other.type === "character") && Array.from(other.system?.minions ?? []).includes(actor.id));
+    .find(other => ["character", "adversary"].includes(other.type) && Array.from(other.system?.minions ?? []).includes(actor.id));
   return lister?.id ?? "";
 }
 

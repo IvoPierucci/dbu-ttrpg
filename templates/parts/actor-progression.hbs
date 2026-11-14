@@ -195,7 +195,7 @@
             <select name="system.progression.{{row.index}}.choice">
               <option value="Character Perk" {{#if (eq row.entry.choice "Character Perk")}}selected{{/if}}>Character Perk</option>
               <option value="Attribute Addition" {{#if (eq row.entry.choice "Attribute Addition")}}selected{{/if}}>Attribute Addition</option>
-              <option value="Skill Improvement" {{#if (eq row.entry.choice "Skill Improvement")}}selected{{/if}}>Skill Improvement</option>
+              {{#if row.offerSkill}}<option value="Skill Improvement" {{#if (eq row.entry.choice "Skill Improvement")}}selected{{/if}}>Skill Improvement</option>{{/if}}
               <option value="Talent Addition" {{#if (eq row.entry.choice "Talent Addition")}}selected{{/if}}>Talent Addition</option>
             </select>
           {{/if}}
@@ -304,7 +304,7 @@
             <select name="system.characterPerks.{{perk.index}}.choice" data-perk-choice>
               <option value="" {{#unless perk.entry.choice}}selected{{/unless}}>Choose&hellip;</option>
               <option value="Attribute Addition" {{#if (eq perk.entry.choice "Attribute Addition")}}selected{{/if}}>Attribute Addition</option>
-              <option value="Skill Improvement" {{#if (eq perk.entry.choice "Skill Improvement")}}selected{{/if}}>Skill Improvement</option>
+              {{#if perk.offerSkill}}<option value="Skill Improvement" {{#if (eq perk.entry.choice "Skill Improvement")}}selected{{/if}}>Skill Improvement</option>{{/if}}
               <option value="Talent Addition" {{#if (eq perk.entry.choice "Talent Addition")}}selected{{/if}}>Talent Addition</option>
             </select>
           </td>

@@ -1,12 +1,13 @@
 /**
  * The kinds of Actor that are Characters: a Character, and a Minion - "Minions are classified as Characters that are
  * controlled by another Character, known as that Minion's Master" (the rulebook's Minion Rules; the user's: an Actor type of
- * its own). Everything a Character does a Minion does, but where its own rules say otherwise. No imports, so it is read from
- * anywhere.
+ * its own). Everything a Character does a Minion does, but where its own rules say otherwise. And an Adversary (the
+ * rulebook's Adversaries page; the user's: an Actor type of its own too) - the opponents the ARC plays, made as a Character is
+ * and then given what adversary.mjs holds. No imports, so it is read from anywhere.
  */
 
 /** The Actor types that are Characters. */
-export const CHARACTER_TYPES = Object.freeze(["character", "minion"]);
+export const CHARACTER_TYPES = Object.freeze(["character", "minion", "adversary"]);
 
 /** Whether an Actor - or what a token stands for - is a Character, a Minion included. */
 export function isCharacter(actor) {
@@ -39,4 +40,17 @@ export function isDuplicate(actor) {
 export function commandedNow(actor) {
   const now = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
   return actor?.getFlag?.("dbu-ttrpg", "commanded") === now;
+}
+
+/** Whether an Actor is an Adversary (the Adversaries page): the ARC's, with a Category and a PCC of its own. */
+export function isAdversary(actor) {
+  return actor?.type === "adversary";
+}
+
+/**
+ * A Player Character (Adversary Categories): "Player Characters refer to any non-Minion Characters controlled by a player" -
+ * a Character that is neither a Minion nor an Adversary (the user's).
+ */
+export function isPlayerCharacter(actor) {
+  return actor?.type === "character";
 }

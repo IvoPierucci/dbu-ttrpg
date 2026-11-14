@@ -1,0 +1,112 @@
+<div class="tab dbu-adversary {{tabs.adversary.cssClass}}" data-group="primary" data-tab="adversary">
+
+{{! An Adversary's own tab, in Main's place on its sheet (the user's; adversary.mjs): its Category and PCC with what the
+    Adversary Table gives for them; then what Main held - the Attributes and the Skills, rolled from here - each with the box
+    an Adversary writes into: Attribute Points over its Progression's, and Skill Ranks, as many as the ARC deems fit.
+    No tables (the user's): every field under a label of its own, the number boxes small. }}
+  <section class="panel">
+    <h3 class="panel-title">Adversary Category</h3>
+    <div class="dbu-adversary-grid">
+      <label class="dbu-adversary-field" data-tooltip="Standard: overcome without a tremendous effort. Elite: a major threat, a 'Mid-Boss'. Villain: the final opponent of a storyline.">
+        <span>Category</span>
+        <select name="system.adversary.category" {{#unless editable}}disabled{{/unless}}>
+          {{#each adversary.categories as |category|}}
+          <option value="{{category.value}}" {{#if category.selected}}selected{{/if}}>{{category.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+      <label class="dbu-adversary-field" data-tooltip="Player Character Count: how many Player Characters this Adversary is intended to fight - not always how many players there are">
+        <span>PCC</span>
+        <input type="number" class="dbu-adversary-number" name="system.adversary.pcc" value="{{adversary.pcc}}" min="1" step="1"
+               {{#unless editable}}disabled{{/unless}}/>
+      </label>
+      <div class="dbu-adversary-field" data-tooltip="Added to its Maximum Life Points for each Power Level reached">
+        <span>Max LP per PL</span><b>+{{adversary.lifePerLevel}} <small>(+{{adversary.lifeTotal}})</small></b>
+      </div>
+      <div class="dbu-adversary-field" data-tooltip="Added to its Maximum Ki Points for each Power Level reached">
+        <span>Max KP per PL</span><b>+{{adversary.kiPerLevel}} <small>(+{{adversary.kiTotal}})</small></b>
+      </div>
+      <div class="dbu-adversary-field" data-tooltip="Attribute Points more at Character Creation for each base Tier of Power reached: written into the boxes below">
+        <span>AP per base ToP</span><b>{{#if adversary.pointsPerTier}}+{{adversary.pointsPerTier}} <small>({{adversary.points}})</small>{{else}}-{{/if}}</b>
+      </div>
+      <div class="dbu-adversary-field" data-tooltip="How many Villainous Traits its Category gives">
+        <span>Villainous Traits</span><b>{{#if adversary.traits}}{{adversary.traits}}{{else}}-{{/if}}</b>
+      </div>
+    </div>
+  </section>
+
+  {{! Main's Attributes: rolled from its name, its Modifier and what that is made of - and the Attribute Points written over what
+      the Progression gives. Never stopped at the Score Limit; the table's count is said, and said louder once passed. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Attributes
+      <span class="panel-note dbu-adversary-used{{#if adversary.over}} over{{/if}}"
+            data-tooltip="Attribute Points written into the boxes, of those the Adversary Table gives. More may be written: an Adversary is not held to them.">{{adversary.used}} of {{adversary.points}} extra points used</span>
+    </h3>
+    <div class="attributes-grid">
+      {{#each adversary.attributes as |attribute|}}
+      <div class="attribute-card">
+        <button type="button" class="attribute-name" data-action="rollAttribute" data-attribute="{{attribute.key}}"
+                data-tooltip="Roll 1d10 + Modifier">{{attribute.key}}</button>
+        <div class="attribute-mod" data-tooltip-html="{{attribute.workings}}">{{attribute.mod}}</div>
+        <label class="dbu-adversary-extra" data-tooltip="Its Score, {{attribute.score}}: {{attribute.from}} from its Progression and race, and the Attribute Points written here">
+          <span>{{attribute.from}} +</span>
+          <input type="number" class="dbu-adversary-number" name="system.adversary.extra.{{attribute.key}}" value="{{attribute.extra}}"
+                 min="0" step="1" {{#unless @root.editable}}disabled{{/unless}}/>
+        </label>
+      </div>
+      {{/each}}
+    </div>
+  </section>
+
+  {{! Main's Skills, rolled from here - and each one's Ranks written: "Adversaries do not gain Skill Improvements, but ... can
+      have any number of Skill Ranks that you deem fit". What comes from elsewhere - its race - is said beside the box. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Skills
+      <span class="panel-note">Bonus = 1/2 Attribute Score + 2 per Rank &middot; Ranks written here, without a cap</span>
+    </h3>
+
+    {{#each adversary.skillGroups as |group|}}
+    <div class="skill-group">
+      <h4 class="skill-group-title">{{group.label}}</h4>
+      <ul class="skill-list">
+        {{#each group.skills as |skill|}}
+        <li class="skill {{#if skill.untrained}}skill-untrained{{/if}}">
+          <span class="skill-name">
+            {{#if skill.untrained}}
+              <span class="skill-label">{{skill.label}}</span>
+            {{else}}
+              <button type="button" class="skill-label rollable" data-action="rollSkill"
+                      data-skill="{{skill.key}}" data-tooltip="Roll this Skill">{{skill.label}}</button>
+            {{/if}}
+            {{#if skill.required}}<span class="skill-flag" data-tooltip="Required: cannot be rolled without at least one Rank">R</span>{{/if}}
+          </span>
+
+          {{#if skill.specialties}}
+          <span class="skill-specialties">
+            {{#each skill.specialties as |specialty|}}
+            <label class="skill-specialty" data-tooltip="{{specialty.label}} Specialty">
+              <input type="checkbox" data-action="toggleSpecialty" data-skill="{{skill.key}}" data-specialty="{{specialty.value}}"
+                     {{#if specialty.held}}checked{{/if}}/>{{specialty.label}}</label>
+            {{/each}}
+          </span>
+          {{else if skill.encompassing}}
+          <input type="text" class="skill-specialization" placeholder="specialisation"
+                 name="system.skillSpecializations.{{skill.key}}" value="{{skill.specialization}}"/>
+          {{/if}}
+
+          {{#if skill.more}}<span class="dbu-adversary-more" data-tooltip="Ranks from elsewhere - its race, its Progression, an effect - besides those written">+{{skill.more}}</span>{{/if}}
+          <input type="number" class="dbu-adversary-number dbu-adversary-rank" name="system.adversary.ranks.{{skill.key}}"
+                 value="{{skill.written}}" min="0" step="1" data-tooltip="Ranks" aria-label="{{skill.label}} Ranks"
+                 {{#unless @root.editable}}disabled{{/unless}}/>
+          <span class="skill-bonus" data-tooltip-html="{{skill.workings}}">{{numberFormat skill.roll decimals=0 sign=true}}</span>
+          <span class="skill-crit {{#if skill.criticalLowered}}skill-crit-lowered{{/if}}" data-tooltip="Critical Target">({{skill.critical}}+)</span>
+        </li>
+        {{/each}}
+      </ul>
+    </div>
+    {{/each}}
+  </section>
+
+</div>

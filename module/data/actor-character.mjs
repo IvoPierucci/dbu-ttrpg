@@ -12,6 +12,7 @@ import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
 import { customBuffThresholdFor } from "../custom-buffs.mjs";
+import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryGains, adversaryRanks } from "../adversary.mjs";
 import { craftedReading, groundIgnored, isNaturalArmor, naturalArmorFactor, platingBonusFlat, platingBonusPerBaseTier, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable,
   topLayerPiece } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
@@ -1188,6 +1189,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       perTier: new fields.NumberField({ required: true, integer: true, initial: 0 })
     }));
 
+    // --- An Adversary's own (module/adversary.mjs) ---
+    // Read only on an Actor of the Adversary type (the user's). Its Category and PCC - what the Adversary Table's benefits are
+    // counted from; the Attribute Points written over its Progression's, an Attribute; and its Skill Ranks, a Skill, as many as
+    // the ARC deems fit. Each a field of its own: a SchemaField keeps what it declares, and nothing else.
+    schema.adversary = new fields.SchemaField({
+      category: new fields.StringField({ required: true, blank: false, initial: "standard", choices: Object.keys(ADVERSARY_CATEGORIES) }),
+      pcc: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),
+      extra: new fields.SchemaField(Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)
+        .map(key => [key, new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })]))),
+      ranks: new fields.SchemaField(Object.fromEntries(Object.keys(DBUCharacterData.SKILLS)
+        .map(key => [key, new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })])))
+    });
+
     // --- Super Stacks ---
     // How many the character holds. Nothing grants them yet; what holding them is worth
     // is derived, and lives on `superStack` - singular, since it answers "what do your
@@ -2055,6 +2069,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // A Minion (the rulebook's Minion Rules, the user's Actor type): read by every rule that treats one apart.
     this.minion = this.parent?.type === "minion";
+    // An Adversary (the Adversaries page, the user's Actor type), and what the Adversary Table gives it for its Category and
+    // PCC (adversary.mjs) - nothing, on any other Actor.
+    this.adversaryMade = this.parent?.type === "adversary";
+    this.adversaryGains = adversaryGains(this, { made: this.adversaryMade });
     // Special Minions: "Special Minions ignore the Weakness, Single Attack, Thresholds, and Ki Points & Capacity rules for
     // Minions" - a Duplicate one of them. What those four ask: a Minion that is neither.
     this.typicalMinion = this.minion && !this.specialMinion && !this.duplicate;
@@ -2100,7 +2118,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       )
         // And every Character Perk's Attribute Addition.
         + DBUCharacterData.perksOf(this.characterPerks, "Attribute Addition", this.powerLevel)
-          .reduce((total, perk) => total + (Number(perk.attributes?.[key]) || 0), 0);
+          .reduce((total, perk) => total + (Number(perk.attributes?.[key]) || 0), 0)
+        // And an Adversary's: the Attribute Points written on its own tab, over these.
+        + (this.adversaryMade ? adversaryExtra(this, key) : 0);
     }
     // More than a Minion's Tuffle: "Each time you gain a Skill Improvement by converting a Character Perk gained from your Power Levels, you gain 1
     // Attribute Point to spend on one of the following Attributes: Insight, Personality, or Scholarship" - written in that row's own cells
@@ -2177,7 +2197,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const ranks = [...this.racialRanksHad(), ...(this.progression ?? [])
       .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
       .flatMap(entry => this.rowSkillRanks(entry)),
-      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? [])];
+      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? []),
+      // And an Adversary's, written on its own tab.
+      ...(this.adversaryMade ? adversaryRanks(this) : [])];
     const early = {
       attributes: this.attributes,
       skills: Object.fromEntries(Object.keys(this.skillTable).map(key =>
@@ -2518,7 +2540,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
         .flatMap(entry => this.rowSkillRanks(entry)),
       // And every Character Perk's Skill Improvement.
-      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? [])
+      ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? []),
+      // And an Adversary's, written on its own tab: "any number of Skill Ranks that you deem fit".
+      ...(this.adversaryMade ? adversaryRanks(this) : [])
     ];
 
     const rankCap = DBUCharacterData.skillRankCap(this.tierOfPower);
@@ -2581,7 +2605,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         })) : null,
         // A Required Skill with no Ranks cannot be rolled at all - it always fails.
         untrained: Boolean(skill.required) && (ranks === 0),
-        overCap: ranks > rankCap
+        // An Adversary's never: "even ignoring the usual limit applied by their base Tier of Power".
+        overCap: (ranks > rankCap) && !this.adversaryMade
       }];
     }));
 
@@ -2596,7 +2621,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       tenacityScore: atts.tenacity.score,
       // Without what was gained not retroactively.
       racialLifeModifier: this.racialLifeModifier - (Number(this.lifeModifierGained) || 0),
-      lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel")
+      // And an Adversary's "Max LP per PL": "for each Power Level reached".
+      lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel") + this.adversaryGains.lifePerLevel
     });
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
     // Life Points (Minion Rules): "set their Maximum Life Points to 1/4 (rounded up) of what it would usually be."
@@ -2619,7 +2645,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     this.ki.max = DBUCharacterData.maxKi({
       powerLevel: this.powerLevel,
-      kiPerLevelBonus: this.transformationBonuses.kiPerLevel + slot(this, "ki.perLevel")
+      // And an Adversary's "Max KP per PL".
+      kiPerLevelBonus: this.transformationBonuses.kiPerLevel + slot(this, "ki.perLevel") + this.adversaryGains.kiPerLevel
     });
     this.ki.max = Math.max(0, withEffects(this, "ki.max", this.ki.max));
     // Ki Points & Capacity (Minion Rules): "the typical Capacity Rate for their Power Level but set their Maximum Ki Points to

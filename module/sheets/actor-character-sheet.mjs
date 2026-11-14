@@ -2,7 +2,8 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
-import { isCharacter } from "../actor-types.mjs";
+import { isAdversary, isCharacter } from "../actor-types.mjs";
+import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed } from "../adversary.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
@@ -611,6 +612,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     header: { template: "systems/dbu-ttrpg/templates/parts/actor-header.hbs" },
     tabs: { template: "systems/dbu-ttrpg/templates/parts/sheet-tabs.hbs" },
     main: { template: "systems/dbu-ttrpg/templates/parts/actor-main.hbs", scrollable: [""] },
+    // An Adversary's own tab, in Main's place on its sheet (the user's) - one or the other is drawn (_configureRenderOptions).
+    adversary: { template: "systems/dbu-ttrpg/templates/parts/actor-adversary.hbs", scrollable: [""] },
     combat: { template: "systems/dbu-ttrpg/templates/parts/actor-combat.hbs", scrollable: [""] },
     maneuvers: {
       template: "systems/dbu-ttrpg/templates/parts/actor-maneuvers.hbs",
@@ -773,6 +776,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   // stylesheet's (`.sheet-tabs`); the order here is the order they are placed in.
   static TABS = {
     main: { id: "main", group: "primary", label: "Main" },
+    // In Main's place on an Adversary's sheet, and on no other (the user's): one of the two is on the strip (_getTabs), so
+    // it breaks after its sixth as before.
+    adversary: { id: "adversary", group: "primary", label: "Adversary" },
     combat: { id: "combat", group: "primary", label: "Combat" },
     // The Techniques this character built, on a tab of their own - with what they cost in
     // Technique Points.
@@ -1557,6 +1563,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       max: capacity.max
     });
     context.skillGroups = this._prepareSkillGroups(context.workings);
+    // An Adversary's own tab (adversary.mjs): its Category and what the Adversary Table gives for it, and Main's Attributes and
+    // Skills with the boxes it writes into.
+    context.isAdversary = isAdversary(this.actor);
+    if (context.isAdversary) context.adversary = this.#adversaryContext(context);
     // A tab for each type, the last one opened kept (the user's); what Manage hid left off, counted.
     {
       const hidden = new Set(this.actor.getFlag?.("dbu-ttrpg", "hiddenManeuvers") ?? []);
@@ -1580,7 +1590,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     {
       const total = Number(this.actor.system.techniquePoints) || 0;
       const spent = context.uniqueAbilities?.together ?? 0;
-      context.tpSummary = { total, spent, left: total - spent, over: spent > total,
+      // An Adversary's are never overspent: "have an unlimited number of Technique Points".
+      context.tpSummary = { total, spent, left: total - spent, over: (spent > total) && !isAdversary(this.actor),
         unique: context.uniqueAbilities?.spent ?? 0, techniques: context.techniques?.spent ?? 0 };
     }
     // Delayed's Imminent on this character: a mark, not a Combat Condition.
@@ -3005,9 +3016,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           name: `system.progression.${index}.skillRanks.${slot}`,
           value: entry.skillRanks[slot] ?? ""
         })),
+        // "Adversaries do not gain Skill Improvements": not offered on an Adversary's row, but where one is chosen already.
+        offerSkill: !isAdversary(this.actor) || isSkillImprovement,
         // The Benefits cell's button: what was chosen, said - and what its window needs.
-        benefit: isAttributeAddition ? DBUCharacterSheet.#attributeBenefit(entry, scoresBeforeRow[index])
-          : isSkillImprovement ? DBUCharacterSheet.#skillBenefit(entry, ranksBeforeRow[index], SKILLS, false, this.#minionMade()) : null
+        benefit: this.#unlimited(isAttributeAddition ? DBUCharacterSheet.#attributeBenefit(entry, scoresBeforeRow[index])
+          : isSkillImprovement ? DBUCharacterSheet.#skillBenefit(entry, ranksBeforeRow[index], SKILLS, false, this.#minionMade()) : null)
       };
     });
   }
@@ -3052,8 +3065,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           name: `system.characterPerks.${index}.skillRanks.${slot}`,
           value: entry.skillRanks?.[slot] ?? ""
         })),
-        benefit: (entry.choice === "Attribute Addition") ? DBUCharacterSheet.#attributeBenefit(at, before.scores, true)
-          : (entry.choice === "Skill Improvement") ? DBUCharacterSheet.#skillBenefit(at, before.ranks, SKILLS, true) : null
+        offerSkill: !isAdversary(this.actor) || (entry.choice === "Skill Improvement"),
+        benefit: this.#unlimited((entry.choice === "Attribute Addition") ? DBUCharacterSheet.#attributeBenefit(at, before.scores, true)
+          : (entry.choice === "Skill Improvement") ? DBUCharacterSheet.#skillBenefit(at, before.ranks, SKILLS, true) : null)
       };
     });
   }
@@ -3191,7 +3205,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const rows = master ? [{ id: master.id, name: master.name, img: master.img, unknown: master.unknown, on: true, locked: Boolean(master.theirs),
       note: master.theirs ? "from their list" : "" }] : [];
     const others = (game.actors?.contents ?? [])
-      .filter(actor => (actor.type === "character") && (actor.id !== master?.id) && actor.testUserPermission(game.user, "OBSERVER")
+      .filter(actor => ["character", "adversary"].includes(actor.type) && (actor.id !== master?.id) && actor.testUserPermission(game.user, "OBSERVER")
         && (minionsOf(actor).length < minionCaps(actor).outside))
       .map(actor => ({ id: actor.id, name: actor.name, img: actor.img ?? "", on: false }));
     return [...rows, ...others.sort((a, b) => a.name.localeCompare(b.name))];
@@ -3251,7 +3265,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (this.actor.type !== "minion") return;
     if (masterOf(this.actor)) return ui.notifications.warn(`${this.actor.name} already has a Master.`);
     const offered = (game.actors?.contents ?? [])
-      .filter(actor => (actor.type === "character") && actor.testUserPermission(game.user, "OBSERVER")
+      .filter(actor => ["character", "adversary"].includes(actor.type) && actor.testUserPermission(game.user, "OBSERVER")
         // Limited Control: a Character with room for one more.
         && (minionsOf(actor).length < minionCaps(actor).outside))
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -3359,6 +3373,50 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return key.charAt(0).toUpperCase() + key.slice(1);
   }
 
+  /** The cap a Benefits window is told where there is none - an Adversary's. */
+  static NO_CAP = 999;
+
+  /**
+   * A row's Benefits on an Adversary's sheet: never over a cap (the user's: its sheet neither warns nor stops) - "Adversaries
+   * are not limited by the Attribute Score Limit", and its Ranks ignore "the usual limit applied by their base Tier of Power".
+   * Any other sheet's, as it is.
+   */
+  #unlimited(benefit) {
+    if (!benefit || !isAdversary(this.actor)) return benefit;
+    return { ...benefit, over: false, data: JSON.stringify({ ...JSON.parse(benefit.data), cap: DBUCharacterSheet.NO_CAP }) };
+  }
+
+  /**
+   * The Adversary tab (adversary.mjs): the Categories, the PCC and what the Adversary Table gives for them - each benefit and
+   * what it comes to on this Adversary; Main's Attribute cards, each with the Attribute Points written over its Progression's;
+   * and Main's Skills, each with the Ranks written and those it has from elsewhere.
+   */
+  #adversaryContext(context) {
+    const system = this.actor.system;
+    const gains = system.adversaryGains;
+    const level = Number(system.powerLevel) || 1;
+    const points = gains.pointsPerTier * (Number(system.baseTierOfPower) || 1);
+    const used = adversaryExtraUsed(system);
+    return {
+      categories: Object.entries(ADVERSARY_CATEGORIES).map(([value, category]) => ({ value, label: category.label,
+        selected: value === gains.category })),
+      pcc: gains.pcc,
+      lifePerLevel: gains.lifePerLevel, lifeTotal: gains.lifePerLevel * level,
+      kiPerLevel: gains.kiPerLevel, kiTotal: gains.kiPerLevel * level,
+      pointsPerTier: gains.pointsPerTier, points, used, over: used > points,
+      traits: gains.traits,
+      attributes: context.attributeCards.map(card => {
+        const extra = adversaryExtra(system, card.key);
+        const score = Number(system.attributes[card.key]?.score) || 0;
+        return { ...card, extra, score, from: score - extra };
+      }),
+      skillGroups: context.skillGroups.map(group => ({ ...group, skills: group.skills.map(skill => {
+        const written = Math.max(0, Number(system.adversary?.ranks?.[skill.key]) || 0);
+        return { ...skill, written, more: Math.max(0, (Number(skill.ranks) || 0) - written) };
+      }) }))
+    };
+  }
+
   /**
    * An Attribute Addition row's Benefits: "+1 Agility, +1 Force" or "+2 Magic", whether any Score passes this row's cap
    * (8 at Tier 1, 3 more each Tier), and for its window the two picks and the Scores going into the row.
@@ -3447,10 +3505,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.actor.update({ "system.customBuffs": buffs });
   }
 
+  /** The tab an Adversary's sheet has in Main's place, and the one every other sheet has not: which is left off this one. */
+  get #tabLeftOff() {
+    return isAdversary(this.actor) ? "main" : "adversary";
+  }
+
+  /** Main or the Adversary tab, never both: the part of the one left off is not drawn at all. */
+  _configureRenderOptions(options) {
+    super._configureRenderOptions(options);
+    if (Array.isArray(options.parts)) options.parts = options.parts.filter(part => part !== this.#tabLeftOff);
+  }
+
   /** Build the tab configuration used by the "tabs" part template. */
   _getTabs() {
     const tabs = {};
+    // An Adversary's sheet opens on its own tab, where another's opens on Main.
+    if (this.tabGroups.primary === this.#tabLeftOff) this.tabGroups.primary = isAdversary(this.actor) ? "adversary" : "main";
     for (const [key, tab] of Object.entries(this.constructor.TABS)) {
+      if (key === this.#tabLeftOff) continue;
       tabs[key] = {
         ...tab,
         active: this.tabGroups[tab.group] === key,
@@ -3898,7 +3970,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const drawAttributes = () => {
       title.textContent = "Attribute Addition";
-      sub.textContent = `${levelText()}Score cap ${data.cap}`;
+      sub.textContent = `${levelText()}${(data.cap >= DBUCharacterSheet.NO_CAP) ? "No Score cap" : `Score cap ${data.cap}`}`;
       body.innerHTML = [0, 1].map(slot => `<div><div class="dbu-benefit-label">${slot ? "Second" : "First"} +1</div>
         <div class="dbu-benefit-row attributes">${attributes.map(({ key, abbr, name }) => {
           const from = (Number(data.before?.[key]) || 0) + ((picks[1 - slot] === key) ? 1 : 0);
@@ -3912,7 +3984,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const counts = counted(picks);
       const pairTaken = Object.values(counts).filter(n => n > 1).length >= (Number(data.pairs) || 0);
       title.textContent = data.title ?? "Skill Improvement";
-      sub.textContent = `${levelText()}Rank cap ${data.cap} · ${picks.length} of ${data.slots} Ranks`;
+      sub.textContent = `${levelText()}${(data.cap >= DBUCharacterSheet.NO_CAP) ? "No Rank cap" : `Rank cap ${data.cap}`} · ${picks.length} of ${data.slots} Ranks`;
       body.innerHTML = attributes.map(({ key: attribute, name: attributeName }) => {
         const list = skills.filter(skill => skill.attribute === attribute);
         if (!list.length) return "";

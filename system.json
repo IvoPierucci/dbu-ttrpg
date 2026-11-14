@@ -54,7 +54,8 @@
   "documentTypes": {
     "Actor": {
       "character": {},
-      "minion": {}
+      "minion": {},
+      "adversary": {}
     },
     "Item": {
       "talent": {},
