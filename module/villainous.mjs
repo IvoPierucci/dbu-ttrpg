@@ -108,6 +108,11 @@ export async function villainousBefore(actor, maneuver) {
     if (!who?.system?.defeated) return void ui.notifications.warn("Get Up!: target a Defeated Opponent.") ?? null;
     return { who };
   }
+  if (maneuver.id === "planet-burst") {
+    const why = planetBurstRefused(actor);
+    if (why) return void ui.notifications.warn(why) ?? null;
+    return { stamina: Number(actor.system.narrativeStamina?.value) || 0 };
+  }
   if (maneuver.id === "act-again") {
     const combat = game.combat;
     const ended = combat?.previous?.combatantId ? combat.combatants.get(combat.previous.combatantId) : null;
@@ -118,10 +123,22 @@ export async function villainousBefore(actor, maneuver) {
   return {};
 }
 
-/** Once its card is made: what it does. */
-export async function villainousAfter(actor, maneuver, plan = {}) {
+/** Once its card is made: what it does. `card`, its chat card where it has one. */
+export async function villainousAfter(actor, maneuver, plan = {}, card = null) {
   const escape = Handlebars.escapeExpression;
   const say = text => ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${text}</div>` });
+  if (maneuver.id === "planet-burst") {
+    // "KP Cost: Equal to your Narrative Stamina" - all of this Round's, paid; and its "1/2 of PCC number of Power Shot stacks",
+    // each 2(T) on its Wound Roll, put on its attack (its PCC Energy Charges came with it, use-maneuver.mjs).
+    await actor.update({ "system.narrativeStamina.value": 0 });
+    const attack = card?.getFlag?.("dbu-ttrpg", "attack");
+    if (!attack) return;
+    const stacks = Math.floor((Number(actor.system.adversaryGains?.pcc) || 1) / 2);
+    const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+    const { requestEdit } = await import("./chat.mjs");
+    return requestEdit(card, { type: "attack", attack: { ...attack, planetBurst: true, powerShotRanks: stacks,
+      woundExtra: [...(attack.woundExtra ?? []), ...(stacks ? [{ label: "Power Shot", written: `+${2 * stacks}(T)`, value: 2 * stacks * tier }] : [])] } });
+  }
   if (maneuver.id === "one-man-army") {
     const { useManeuver } = await import("./use-maneuver.mjs");
     // "use a Standard Maneuver with an Action Cost of 1 Action as an Instant Maneuver" - the 2 Adversary Actions spent once it is.
@@ -249,4 +266,23 @@ export async function areaWipeConcluded(attack) {
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: attacker }),
     content: `<div class="dbu-settled-note"><b>Area Wipe</b> - every Feature in the Battlefield destroyed, and every Environmental Quality
       removed from every Square.</div>` });
+}
+
+/**
+ * Planet Burst: why it cannot be used now, or "" - an Elite's or a Villain's, with this Round's Narrative Stamina whole (the user's:
+ * its price is all the Stamina gained as the Round started, and none of it may have been spent).
+ */
+export function planetBurstRefused(actor) {
+  const stamina = Number(actor?.system?.narrativeStamina?.value) || 0;
+  const most = Number(actor?.system?.narrativeStamina?.max) || 0;
+  if (!actor?.system?.adversaryNarrative || !most) return "Planet Burst: its price is Narrative Stamina - an Elite's or a Villain's, not in a 1-on-1 Duel.";
+  if (stamina < most) return `Planet Burst: its price is this Round's whole Narrative Stamina, ${most} - ${most - stamina} of it spent already.`;
+  return "";
+}
+
+/** Planet Burst's targets: "as if you made an Attacking Maneuver that targeted all of them" - every Player Character in the Combat. */
+export function planetBurstTargets() {
+  const seen = new Set();
+  return (game.combat?.combatants?.contents ?? []).map(combatant => combatant.actor)
+    .filter(actor => actor && isPlayerCharacter(actor) && !seen.has(actor.uuid) && seen.add(actor.uuid));
 }

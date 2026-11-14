@@ -4608,7 +4608,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
     // but never less than half what the Profile lists. Last because it is a floor under
     // the finished price and not one more term in it - putting it anywhere earlier lets
     // the next reduction walk straight through it.
-    cost = Math.max(cost, minimumAttackKiCost(declared?.profile, actor));
+    // Not Planet Burst's: its price is its Narrative Stamina, its Profile's none (villainous.mjs).
+    if (maneuver.id !== "planet-burst") cost = Math.max(cost, minimumAttackKiCost(declared?.profile, actor));
     // And what is taken off it past that floor (`attack.kiCost.uncapped` - a Custom Buff's "Ki Point Cost Attacks (no cap)"),
     // or put on it - never below nothing.
     if (Number(slots?.["attack.kiCost.uncapped"]?.add) || 0) cost = Math.max(0, applySlot(slots, "attack.kiCost.uncapped", cost));

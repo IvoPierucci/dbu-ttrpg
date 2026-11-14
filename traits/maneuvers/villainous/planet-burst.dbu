@@ -1,0 +1,32 @@
+id: planet-burst
+name: Planet Burst
+type: standard
+actionCost: 3
+kiCost: 0
+attacking: true
+requiresTarget: true
+usageLimit: 1/round
+encounterLimit: 2
+# "In that case, this is treated as an Attacking Maneuver of the Mega Flare profile with PCC Energy Charges and 1/2 of PCC number of
+# Power Shot stacks applied to it." Its price is its Narrative Stamina, not the Profile's (villainous.mjs).
+profile: megaFlare
+kiCostCoversProfile: true
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  Channeling your strength into the planet beneath your feet, you cause untold devastation.
+text: >
+  Planet Burst [1/Round, 2/Encounter]: Channeling your strength into the planet beneath your feet, you cause untold devastation.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 3 Actions
+  –KP Cost: Equal to your Narrative Stamina
+  –Exploitable: N/A
+  –Effect: Unleash an attack that will destroy the planet the Battlefield is currently on, or, if you are in space, a nearby planet of your choice. When using this Maneuver, Player Characters can initiate a Duel Maneuver in response to this as if you made an Attacking Maneuver that targeted all of them. In that case, this is treated as an Attacking Maneuver of the Mega Flare profile with PCC Energy Charges and 1/2 of PCC number of Power Shot stacks applied to it.
+  If the Characters lose this Duel Maneuver, they will take the Damage as usual, but the planet will also be destroyed.
+
+---
+
+# The user's: its attack card in full - a Mega Flare at every Player Character in the Combat, answered with the Duel as any attack
+# is; with no Duel, the planet is destroyed and nobody takes Damage (villainous.mjs, chat.mjs renderAttack).

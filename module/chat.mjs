@@ -40292,6 +40292,8 @@ function renderAttack(message, html) {
         + `${Handlebars.escapeExpression(attack.attackerName)} may cancel it for another (Disarming Demeanor).`
       : attack.icCancelled
       ? "Cancelled - Instantaneous Control: its Actions and Ki Points regained, its uses not counted."
+      : attack.planetGone
+      ? "Planet Burst: no Player Character answered with a Duel - the planet is destroyed, and nobody takes Damage."
       : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `
         + `${Handlebars.escapeExpression(attack.maneuverName)} fails, and its Action and Ki are regained.`
@@ -40299,7 +40301,7 @@ function renderAttack(message, html) {
   container.append(card);
   card.querySelector(".dbu-gm-targets")?.addEventListener("click", () => targetsWindow(message));
   if (attack.unitedFailed || attack.punished || attack.divineCancelled || attack.godBindCancelled
-    || attack.disarmingSwapped || attack.icCancelled) return;
+    || attack.disarmingSwapped || attack.icCancelled || attack.planetGone) return;
   disarmingSwapButtons(message, html, attack);
   unansweredDodges(message, html, attack);
   dimensionalHoleButtons(message, html, attack);
@@ -40403,6 +40405,17 @@ function renderAttack(message, html) {
     // Ready and not every side yet (the user's): "✓ Ready" and Change.
     if (attacker?.isOwner && (attack.ready ?? []).includes(attack.attackerUuid) && !attackIsReady(attack)) {
       container.append(readyRow(() => changeAttacker(message, attacker)));
+    }
+    // Planet Burst (a Villainous Maneuver), answered by no Duel (the user's): nothing rolled - the planet destroyed, no Damage.
+    if (attack.planetBurst && attacker?.isOwner && !attack.duel) {
+      const gone = document.createElement("button");
+      gone.type = "button";
+      gone.className = "dbu-clash-button";
+      gone.textContent = "No Duel - the planet is destroyed";
+      gone.dataset.tooltip = "No Player Character answered with the Duel Maneuver: the planet is destroyed, and nobody takes Damage";
+      gone.addEventListener("click", () => requestEdit(message, { type: "attack", attack: { ...attack, planetGone: true } }));
+      container.append(gone);
+      return;
     }
     if (attacker?.isOwner && !(attack.ready ?? []).includes(attack.attackerUuid)) {
       const ready = document.createElement("button");

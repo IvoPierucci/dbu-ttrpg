@@ -4822,6 +4822,23 @@ async function revertTransfiguration(actor, target, maneuver) {
  * Range - and the choice is spent once a Maneuver is made.
  */
 export async function useManeuver(actor, maneuver, options = {}) {
+  // Planet Burst (a Villainous Maneuver): a Mega Flare at every Player Character in the Combat, with PCC Energy Charges.
+  if ((maneuver?.id === "planet-burst") && !options.targetUuid) {
+    const { planetBurstRefused, planetBurstTargets } = await import("./villainous.mjs");
+    const why = planetBurstRefused(actor);
+    if (why) {
+      ui.notifications.warn(why);
+      return false;
+    }
+    const pcs = planetBurstTargets();
+    if (!pcs.length) {
+      ui.notifications.warn("Planet Burst: there is no Player Character in the Combat.");
+      return false;
+    }
+    return useManeuver(actor, maneuver, { ...options, targetUuid: pcs[0].uuid,
+      extraTargets: [...(options.extraTargets ?? []), ...pcs.slice(1).map(other => ({ uuid: other.uuid, name: other.name }))],
+      extraCharges: (Number(options.extraCharges) || 0) + (Number(actor.system.adversaryGains?.pcc) || 1) });
+  }
   // Area Wipe (a Villainous Maneuver): every other Character in the Combat its targets - Hidden or not, however far.
   if ((maneuver?.id === "area-wipe") && !options.targetUuid) {
     const { areaWipeTargets } = await import("./villainous.mjs");
@@ -5488,7 +5505,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const { whyHidden, isHiddenFrom, SEARCH_MANEUVER, SENSE_MANEUVER } = await import("./hidden.mjs");
     const searching = maneuver.id === SEARCH_MANEUVER;
     // Area Wipe's: "regardless of if they are Hidden".
-    const several = maneuver.attacking && (((game.user.targets?.size ?? 0) > 1) || (maneuver.id === "area-wipe"));
+    const several = maneuver.attacking && (((game.user.targets?.size ?? 0) > 1) || ["area-wipe", "planet-burst"].includes(maneuver.id));
     const unseen = searching
       ? (isHiddenFrom(targetActor, actor) ? "" : `${targetActor.name} is not Hidden from ${actor.name}.`)
       : ((maneuver.id === SENSE_MANEUVER) || several) ? "" : whyHidden(actor, targetActor);
@@ -5919,7 +5936,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Mimicry of the Whipping Tail (2): "treat your Melee Range as if it was 2 Squares further for the duration of this Attacking Maneuver".
     const whipReach = (maneuver.fromTrait === "mimicry-of-the-whipping-tail") ? 2 : 0;
     // Area Wipe's: "no matter how many Squares they are away from you (even if this Attacking Maneuver is of the Physical Foundation)".
-    let outOfReach = targetActor && !maneuver.throws && !unbounded && (maneuver.id !== "area-wipe")
+    let outOfReach = targetActor && !maneuver.throws && !unbounded && !["area-wipe", "planet-burst"].includes(maneuver.id)
       && whyNotInReach(actor, targetActor, declared ?? {}, (declared?.weapon?.meleeRange ?? 0) + whipReach);
     // Elongated Tail's reach, on a Tail Attack, asked where it is what reaches.
     if (outOfReach && maneuver.tailAttack) {
@@ -7170,7 +7187,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // under it.
   await recordManeuverType(actor, outOfSequence ? "outOfSequence" : maneuver.type, { messageId: card?.id,
     maneuverId: maneuver.through?.id ?? maneuver.id, profile: declared?.profile ?? "" });
-  if (villainPlan) await villainousAfter(actor, maneuver, villainPlan);
+  if (villainPlan) await villainousAfter(actor, maneuver, villainPlan, card);
   // Reserved Combatant (3): a Unique Ability that is no attack - its duration over with its card.
   if (!declared && ((Number(actor.system.conditions?.["reserved-mark"]) || 0) > 0)) {
     await (await import("./chat.mjs")).reservedEnds(null, actor);
