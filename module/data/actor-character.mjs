@@ -11,6 +11,7 @@ import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
+import { customBuffThresholdFor } from "../custom-buffs.mjs";
 import { craftedReading, groundIgnored, isNaturalArmor, naturalArmorFactor, platingBonusFlat, platingBonusPerBaseTier, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable,
   topLayerPiece } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
@@ -136,7 +137,8 @@ function perThreshold(data, key) {
   const per = data.effects?.slots?.[`${key}.perThreshold`];
   if (!per?.add) return { value: 0, parts: [] };
   const keys = Object.keys(DBUCharacterData.THRESHOLDS);
-  const at = keys.indexOf(DBUCharacterData.thresholdKey(data.life.value, data.life.max, data.typicalMinion));
+  // As an effect finds them - so many Health Thresholds higher or lower where a Custom Buff says so.
+  const at = keys.indexOf(customBuffThresholdFor(data, DBUCharacterData.thresholdKey(data.life.value, data.life.max, data.typicalMinion)));
   const below = keys.filter((each, index) => (index <= at) && DBUCharacterData.THRESHOLDS[each].counts).length;
   const value = per.add * below;
   const source = (per.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects";

@@ -886,6 +886,12 @@ const PATTERNS = [
     valid: () => true,
     doc: "Squares more, or fewer, until an Opponent is at Long Range; an Attacking Maneuver's Ki Point Cost, under its Minimum "
        + "too; the Damage Category of every Attacking Maneuver, as steps." },
+  // A Custom Buff's "Ki Point Cost Multiplier", "Duel Clash Bonus" and "Might for Clashes" (the user's): every Maneuver's Ki
+  // Point Cost once more for each - 1 the double, 2 the triple (maneuvers.mjs maneuverKiCost); the Dice Score of your side of a
+  // Duel's Clash (chat.mjs rollDuelClash); and of a Might Clash - a roll against another's, never a Might Check against a
+  // Difficulty (clashParts).
+  { match: /^(maneuvers\.kiCost\.times|clash\.duel|clash\.might)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "How many more times every Maneuver's Ki Point Cost is paid; added to your Duel Clashes; added to your Might Clashes." },
   // "Ignore all penalties to your Wound Rolls" - a Custom Buff's "No Wound Penalties", beside the Strike's and the Dodge's
   // (Masterful Strike's, Masterful Dodge's; chat.mjs strikePenaltiesIgnored).
   { match: /^wound\.ignorePenalties$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,

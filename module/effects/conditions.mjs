@@ -13,7 +13,7 @@ import { withinAreaOfRule } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { traitAside } from "../aside.mjs";
-import { customBuffMarked } from "../custom-buffs.mjs";
+import { customBuffMarked, customBuffThresholdFor } from "../custom-buffs.mjs";
 
 /** Whether a key is a published Combat Condition - set by traits.mjs at load, to keep the import one way. */
 let isCombatCondition = () => false;
@@ -366,11 +366,12 @@ const PREDICATES = {
     // Divine Physique (3): Superior, and Healthy as well for every effect of theirs - so below nothing.
     if ((scope.data?.effects?.slots?.["threshold.healthyInSuperior"] === true)
       && ((Number(scope.data?.states?.superior) || 0) > 0)) return false;
-    return (wanted > 0) && (keys.indexOf(scope.data?.threshold?.key ?? "healthy") >= wanted);
+    // As an effect finds them: so many Health Thresholds higher or lower where a Custom Buff says so (custom-buffs.mjs).
+    return (wanted > 0) && (keys.indexOf(customBuffThresholdFor(scope.data, scope.data?.threshold?.key ?? "healthy")) >= wanted);
   },
 
   /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
-  trulyHealthy: scope => (scope.data?.threshold?.key ?? "healthy") === "healthy",
+  trulyHealthy: scope => customBuffThresholdFor(scope.data, scope.data?.threshold?.key ?? "healthy") === "healthy",
 
   /** No Character in the Combat Encounter larger than you - King's Stature's "the highest Size Category". */
   largestInEncounter: scope => {

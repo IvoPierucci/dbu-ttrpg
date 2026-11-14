@@ -11900,7 +11900,8 @@ function clashParts(kind, actor, clash, uuid) {
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
     ...combatCatClash(actor, clash, uuid), ...disguisedClash(actor, clash, uuid),
-    ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid),
+    ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...mightClashBonus(actor, clash),
+    ...bagClashBonus(actor, clash, uuid),
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
     ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid),
     ...fairyClashBonus(actor, clash, uuid), ...ogreClashBonus(actor, clash, uuid)];
@@ -11923,6 +11924,20 @@ function ogreLendOpen(actor, clash, skill) {
 function ogreClashBonus(actor, clash, uuid) {
   const lent = (clash?.ogreLent ?? []).find(entry => entry.uuid === uuid);
   return lent ? [{ label: `Skilled Ogre (${lent.name}'s Skill Bonus)`, value: Number(lent.value) || 0 }] : [];
+}
+
+/** Every Might Clash of theirs (`clash.might` - a Custom Buff's "Might for Clashes"): a roll against another's, which a Clash is. */
+function mightClashBonus(actor, clash) {
+  const slot = actor?.system?.effects?.slots?.["clash.might"];
+  if ((clash?.category !== "might") || !(Number(slot?.add) || 0)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Might Clash", value: Number(slot.add), written: slotWritten(slot) }];
+}
+
+/** Their side of a Duel's Clash (`clash.duel` - a Custom Buff's "Duel Clash Bonus"). */
+function duelClashBonus(actor) {
+  const slot = actor?.system?.effects?.slots?.["clash.duel"];
+  if (!(Number(slot?.add) || 0)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Duel Clash", value: Number(slot.add) }];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -35199,7 +35214,8 @@ function terrifyPenalty(actor, clash, uuid) {
 function seenBonus(actor, target, family) {
   if (!actor || !target) return [];
 
-  const theirs = (actor.system.timed ?? []).some(entry =>
+  // Or a Custom Buff's "Seen": the Intuit Maneuver's bonus whoever the Clash is against (the user's).
+  const theirs = customBuffOn(actor, "intuit.any") || (actor.system.timed ?? []).some(entry =>
     (entry?.kind === "condition") && (entry.key === "seen") && (entry.on === target.uuid));
   if (!theirs) return [];
 
@@ -37345,10 +37361,10 @@ async function rollDuelClash(message, attack) {
   const critical = (actor, target) => (Number.isFinite(target)
     ? Math.min(target, Number(actor.system.criticalTarget) || target) : null);
   const [mine, theirs] = await Promise.all([
-    rollSide(attacker, [...duelSideRows(attack, "attacker"), ...wagers("attacker")], {
+    rollSide(attacker, [...duelSideRows(attack, "attacker"), ...wagers("attacker"), ...duelClashBonus(attacker)], {
       extraDice: attacker.system.dice.extra.formula, criticalDice: attacker.system.dice.critical.formula,
       criticalTarget: critical(attacker, profileFor(attack)?.woundCriticalTarget) }),
-    rollSide(initiator, [...duelSideRows(attack, "defender"), ...wagers("defender")], {
+    rollSide(initiator, [...duelSideRows(attack, "defender"), ...wagers("defender"), ...duelClashBonus(initiator)], {
       extraDice: initiator.system.dice.extra.formula, criticalDice: initiator.system.dice.critical.formula,
       criticalTarget: critical(initiator, duel.initiating?.woundCriticalTarget) })
   ]);

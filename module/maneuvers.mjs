@@ -4608,6 +4608,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // Life Points instead, through `spendLifeWager`.
   // Straining Time Freeze: "Increase the Ki Point Cost of all Maneuvers during your Frozen Turn by 2(T)."
   if (actor?.getFlag?.("dbu-ttrpg", "frozenTurn")?.straining) cost += 2 * Math.max(1, actor.system?.tierOfPower ?? 1);
+  // A Custom Buff's "Ki Point Cost Multiplier" (the user's): the cost once more for each - 1 the double, 2 the triple - of
+  // every Maneuver, on the price as everything else left it. Never the wager chosen on top; never below nothing.
+  const again = Number(slots?.["maneuvers.kiCost.times"]?.add) || 0;
+  if (again) cost = Math.max(0, cost + Math.floor(Math.max(0, cost) * again));
   // Last Resort (2): "you do not have to pay the Ki Point Cost for that instance" - its cost, not the wager chosen on top.
   if (declared?.lastResort) cost = 0;
   // Spiritual Warrior (5): the Basic Attack's, the wager still paid.

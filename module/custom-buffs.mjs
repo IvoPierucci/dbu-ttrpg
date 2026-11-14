@@ -35,6 +35,8 @@ const multiplied = (...slots) => factor => slots.map(slot => `${slot} *= ${facto
 // run, so its readers ask the rows themselves (customBuffAmounts, customBuffOn - gear.mjs).
 const direct = (id, label, section) => ({ id, label, section, kind: "number", direct: true, split: false });
 const directToggle = (id, label, section) => ({ id, label, section, kind: "toggle", direct: true, line: "" });
+// A count read straight off the rows: Flat alone - so many Health Thresholds is not a thing a Tier multiplies.
+const count = (id, label, section) => ({ id, label, section, kind: "number", direct: true, flatOnly: true, split: false });
 // A mark held on by hand, without the Maneuver that gives it (the user's): had for every effect that asks - its own rule
 // gathered, `hasCondition` answering yes - and never written to the character, so switching the row off is all it takes.
 const mark = (key, label) => ({ id: `mark.${key}`, label, section: "Toggles", kind: "toggle", direct: true, line: "", mark: key });
@@ -86,6 +88,10 @@ export const CUSTOM_BUFFS = Object.freeze([
   number("superStacks", "Super Stacks", "Defence", "superStacks"),
   number("superStack.musclePenalty", "Muscle Penalty", "Defence", "superStack.musclePenalty"),
   number("steadfast.dice", "Steadfast Checks", "Defence", "steadfast.dice"),
+  // For effects alone - a Trait's, a Talent's "below the Injured Health Threshold" - never the Threshold's own penalties,
+  // which are a rule and not an effect (the user's): the Threshold they are in, counted so many steps up or down.
+  count("threshold.higher", "Also count as X Thresholds Higher", "Defence"),
+  count("threshold.lower", "Also count as X Thresholds Lower", "Defence"),
   number("stressBonus", "Stress Bonus", "Defence", "stressBonus"),
   number("size.steps", "Size Category", "Defence", "size.steps"),
 
@@ -111,6 +117,9 @@ export const CUSTOM_BUFFS = Object.freeze([
 
   number("combatRolls", "Combat Rolls", "Combat Rolls", "combatRolls", { split: true }),
   number("might", "Might", "Combat Rolls", "might"),
+  // A roll of Might against another's - never a Might Check against a Difficulty (the user's).
+  number("clash.might", "Might for Clashes", "Combat Rolls", "clash.might"),
+  number("clash.duel", "Duel Clash Bonus", "Combat Rolls", "clash.duel"),
 
   number("strike", "Strike (All)", "Strike", "strike", { split: true }),
   number("criticalTarget.strike", "Strike CT (All)", "Strike", "criticalTarget.strike"),
@@ -157,6 +166,8 @@ export const CUSTOM_BUFFS = Object.freeze([
 
   number("attack.kiCost", "Ki Point Cost Attacks", "Ki Point Cost", "attack.kiCost"),
   number("attack.kiCost.uncapped", "Ki Point Cost Attacks (no cap)", "Ki Point Cost", "attack.kiCost.uncapped"),
+  // Every Maneuver's cost once more for each: 1 the double, 2 the triple (the user's).
+  number("maneuvers.kiCost.times", "Ki Point Cost Multiplier", "Ki Point Cost", "maneuvers.kiCost.times"),
   number("unique.kiCost", "Ki Point Cost Unique Abilities", "Ki Point Cost", "unique.kiCost"),
   number("unique.magical.kiCost", "Ki Point Cost Unique Abilities (Magical)", "Ki Point Cost", "unique.magical.kiCost"),
   number("unique.technical.kiCost", "Ki Point Cost Unique Abilities (Technical)", "Ki Point Cost", "unique.technical.kiCost"),
@@ -184,6 +195,8 @@ export const CUSTOM_BUFFS = Object.freeze([
   mark("rooted", "Rooted"),
   // The Analysis Maneuver's bonus whoever the attack is aimed at (chat.mjs analysisBonus).
   directToggle("analysis.any", "Analyzed", "Toggles"),
+  // The Intuit Maneuver's whoever the Clash is against (seenBonus).
+  directToggle("intuit.any", "Seen", "Toggles"),
   // The Were-Beast's Were-Traits in place of the Normal Trait, whatever the Combat Round's choice - out of an Encounter too
   // (aside.mjs).
   directToggle("wereTraits", "Get Were-Traits", "Toggles")
@@ -214,14 +227,14 @@ export function customBuffSections() {
 export function customBuffTakesTier(option) {
   // No option at all - one this system no longer has - takes nothing; nor a toggle, nor a quarter.
   if (!["number", "dice"].includes(option?.kind)) return false;
-  // One read straight off its rows is read with the Tier known.
-  if (option.direct) return true;
+  // One read straight off its rows is read with the Tier known - unless it is a count, Flat alone.
+  if (option.direct) return !option.flatOnly;
   return getSlot(option.slot)?.phase !== PHASES.TIER;
 }
 
 /** Whether an option takes a (bT) amount: a number or dice. A quarter is Flat alone; a toggle has no amount at all. */
 export function customBuffTakesBase(option) {
-  return ["number", "dice"].includes(option?.kind);
+  return ["number", "dice"].includes(option?.kind) && !option.flatOnly;
 }
 
 const whole = value => Math.trunc(Number(value) || 0);
@@ -299,6 +312,21 @@ export function customBuffAmounts(actor, id) {
     sum.perTier += whole(buff.perTier);
   }
   return sum;
+}
+
+/**
+ * The Health Threshold an effect finds a character in, given the one they are in: so many steps down the line - "Also count
+ * as X Thresholds Lower" - or up it. For effects alone: the Threshold's own penalties are a rule, and read the real one (the
+ * user's). `system`: the character's own data, which is what an effect's condition is asked of.
+ */
+export function customBuffThresholdFor(system, key) {
+  const keys = ["healthy", "bruised", "injured", "critical"];
+  const at = keys.indexOf(String(key ?? "healthy"));
+  if (at < 0) return key;
+  const rows = id => (system?.customBuffs ?? []).filter(buff => buff?.active && (buff.effect === id))
+    .reduce((sum, buff) => sum + whole(buff.flat), 0);
+  const shift = rows("threshold.lower") - rows("threshold.higher");
+  return shift ? keys[Math.min(keys.length - 1, Math.max(0, at + shift))] : key;
 }
 
 /** Whether a row of one option is Active - a toggle read straight off the rows. */
