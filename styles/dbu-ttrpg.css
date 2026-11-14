@@ -5421,6 +5421,11 @@
 .dbu-ttrpg .dbu-custom-buff-check input { margin: 0; }
 .dbu-ttrpg .dbu-custom-buff-total { height: 24px; line-height: 24px; text-align: right; font-size: 12px; }
 .dbu-ttrpg .dbu-custom-buff.off .dbu-custom-buff-total { color: var(--dbu-text-dim); font-weight: normal; }
+/* The Effect: a list typed into, as a Talent Addition row's is - the box as the row's other boxes, room left for its caret. */
+.dbu-ttrpg .dbu-custom-buff-field .dbu-combo .dbu-combo-input { padding-right: 18px; cursor: pointer; }
+.dbu-ttrpg .dbu-custom-buff-field .dbu-combo .dbu-combo-input:disabled { cursor: default; }
+.dbu-ttrpg .dbu-custom-buff-field .dbu-combo .dbu-combo-input:focus { cursor: text; border-color: var(--dbu-accent); box-shadow: none; }
+.dbu-ttrpg .dbu-custom-buff-field .dbu-combo .dbu-combo-list { font-size: 12px; }
 /* A toggle has no amounts: said across the three columns they would take. */
 .dbu-ttrpg .dbu-custom-buff-toggle {
   grid-column: 2 / span 3;

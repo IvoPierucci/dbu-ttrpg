@@ -48,15 +48,29 @@
           </div>
         </div>
         <div class="dbu-custom-buff-line second">
-          <label class="dbu-custom-buff-field">
+          {{! Not a label: a click on the list would be the box's, and open it again. }}
+          <div class="dbu-custom-buff-field">
             <span>Effect</span>
-            {{! Typed into, as a spreadsheet's cell is (the user's): its name, or enough of it to be only one's - the box suggesting
-                the Effects that hold what was typed, each with its section. }}
-            <input type="text" data-custom-buff="effect" list="dbu-custom-buff-effects-{{@root.actor.id}}" value="{{buff.effectLabel}}"
-                   placeholder="{{#if buff.gone}}(no longer on the list){{else}}Type it, or pick it{{/if}}" autocomplete="off" spellcheck="false"
-                   {{#unless @root.editable}}disabled{{/unless}}
-                   data-tooltip="Type the Effect's name - or part of it - or pick it from what is suggested"/>
-          </label>
+            {{! A list typed into, as a Talent Addition row's is (the user's): the box shows the Effect chosen, letters narrow the
+                list under it (by name or section), a pick writes the hidden field the row is written from. }}
+            <div class="dbu-combo" data-combo>
+              <input type="hidden" data-custom-buff="effect" value="{{buff.effect}}"/>
+              <input type="text" class="dbu-combo-input" autocomplete="off" spellcheck="false"
+                     placeholder="{{#if buff.gone}}(no longer on the list){{else}}Choose an Effect{{/if}}"
+                     role="combobox" aria-expanded="false" aria-label="Effect" {{#unless @root.editable}}disabled{{/unless}}/>
+              <span class="dbu-combo-caret" aria-hidden="true">&#9662;</span>
+              <div class="dbu-combo-list" role="listbox" hidden>
+                {{#each buff.sections as |section|}}
+                <div class="dbu-combo-group" data-group="{{section.label}}">{{section.label}}</div>
+                {{#each section.options as |option|}}
+                <div class="dbu-combo-option{{#if option.selected}} chosen{{/if}}" role="option" data-value="{{option.id}}"
+                     data-group="{{section.label}}">{{option.label}}</div>
+                {{/each}}
+                {{/each}}
+                <div class="dbu-combo-empty" hidden>No Effect has that in its name or section.</div>
+              </div>
+            </div>
+          </div>
           {{#if buff.toggle}}
           <span class="dbu-custom-buff-toggle">On or off: no number to it</span>
           {{else}}
@@ -87,11 +101,6 @@
       </li>
       {{/each}}
     </ol>
-    {{! What every row's Effect box suggests: each Effect once, with the section it is under. }}
-    <datalist id="dbu-custom-buff-effects-{{actor.id}}">
-      {{#each customBuffEffects as |effect|}}<option value="{{effect.label}}">{{effect.section}}</option>
-      {{/each}}
-    </datalist>
 
     {{#if customBuffs.length}}
     <p class="dbu-custom-buff-note">Total = Flat + (bT) x base Tier of Power + (T) x Tier of Power. Buffs sharing a Group letter are switched

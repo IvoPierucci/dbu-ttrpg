@@ -105,8 +105,7 @@ import {
 import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
 import { gearKitIngenuity, isConsumable } from "../gear.mjs";
 import {
-  CUSTOM_BUFFS, customBuffOption, customBuffOptionByText, customBuffsToggled, customBuffTakesBase, customBuffTakesTier, customBuffTotal,
-  newCustomBuff
+  customBuffOption, customBuffSections, customBuffsToggled, customBuffTakesBase, customBuffTakesTier, customBuffTotal, newCustomBuff
 } from "../custom-buffs.mjs";
 import {
   exclusiveAttributeGroups,
@@ -875,8 +874,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.system = this.actor.system;
     context.tabs = this._getTabs();
     context.customBuffs = this.#customBuffRows();
-    // Every Effect a row may name, once for the tab: what its Effect box suggests as it is typed into (the user's).
-    context.customBuffEffects = CUSTOM_BUFFS.map(option => ({ label: option.label, section: option.section }));
     {
       const { adventuringManeuvers, HUNGER_STAGES } = await import("../adventure.mjs");
       const hungry = Number(this.actor.system.conditions?.hunger) || 0;
@@ -3395,13 +3392,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * The Custom Buffs tab's rows (custom-buffs.mjs): each as it is written, what it comes to on this character, and its Effect
-   * by name - typed into its box, or picked from what the box suggests. A toggle has no amounts; an option settled before the
-   * Tier is takes no (T).
+   * The Custom Buffs tab's rows (custom-buffs.mjs): each as it is written, what it comes to on this character, and the list its
+   * Effect is picked from - typed into, as a Talent Addition row's is (the user's), under its sections, the row's own marked.
+   * A toggle has no amounts; an option settled before the Tier is takes no (T).
    */
   #customBuffRows() {
     const system = this.actor.system;
     const tiers = { baseTier: system.baseTierOfPower, tier: system.tierOfPower };
+    const sections = customBuffSections();
     return (system.customBuffs ?? []).map(buff => {
       const option = customBuffOption(buff.effect);
       return {
@@ -3413,7 +3411,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         quarter: option?.kind === "quarter",
         // One this system no longer has: said, and nothing applied.
         gone: !option,
-        effectLabel: option?.label ?? ""
+        sections: sections.map(section => ({ label: section.label,
+          options: section.options.map(each => ({ id: each.id, label: each.label, selected: each.id === buff.effect })) }))
       };
     });
   }
@@ -3441,16 +3440,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (field === "active") return this.actor.update({ "system.customBuffs": customBuffsToggled(buffs, id, input.checked) });
     if (field === "name") buff.name = String(input.value ?? "").trim();
     else if (field === "group") buff.group = String(input.value ?? "").trim().slice(0, 1).toUpperCase();
-    else if (field === "effect") {
-      // Typed, as into a spreadsheet's cell (the user's): the Effect it names - its name, or enough of it to be only one's.
-      const typed = String(input.value ?? "").trim();
-      const option = customBuffOptionByText(typed);
-      if (!option) {
-        if (typed) ui.notifications.warn(`Custom Buffs: no Effect is called "${typed}" - or more than one begins with it.`);
-        return this.render();
-      }
-      buff.effect = option.id;
-    }
+    // Picked off its list (`#bindCombo`): the hidden field holds the Effect's id.
+    else if (field === "effect") buff.effect = String(input.value ?? "");
     else if (["flat", "perBase", "perTier"].includes(field)) {
       buff[field] = Math.max(-999, Math.min(9999, Math.trunc(Number(String(input.value ?? "").replace(/\u2212/g, "-")) || 0)));
     }
@@ -3691,10 +3682,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       progression.prepend(note);
     }
 
-    // A Custom Buff's Effect, clicked into: all of it picked, so what is typed takes its place and the box suggests anew.
-    for (const input of this.element.querySelectorAll('input[data-custom-buff="effect"]')) {
-      input.addEventListener("focus", () => input.select());
-    }
     // A Custom Buff's fields: written onto its row of the list, not submitted with the character's form.
     for (const input of this.element.querySelectorAll("[data-custom-buff]")) {
       input.addEventListener("change", event => {
@@ -3733,7 +3720,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       }
     }
 
-    // A Talent Addition row's list, typed into (`[data-combo]`).
+    // A list typed into (`[data-combo]`): a Talent Addition row's, a Custom Buff's Effect.
     for (const combo of this.element.querySelectorAll("[data-combo]")) DBUCharacterSheet.#bindCombo(combo);
 
     // A Character Perk's Choice changed: what it held cleared, its TP set to what the Choice gives (15 for a Skill Improvement)
@@ -4029,7 +4016,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * A list typed into - a Talent Addition row's. The box shows what is chosen; focused, the whole list opens under it (over it,
+   * A list typed into - a Talent Addition row's, a Custom Buff's Effect. The box shows what is chosen; focused, the whole list opens under it (over it,
    * where there is no room below), and each letter narrows it to the names - or the Categories - holding them, those letters
    * marked. A click, or Enter on the one marked by the arrows, writes the hidden field and submits it as the row's change; Escape
    * or a click away closes it and puts the chosen name back.
@@ -4061,7 +4048,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       }
     };
     const draw = typed => {
-      const query = String(typed ?? "").trim().toLowerCase();
+      // The spreadsheet's sign as a keyboard types it ("+-1/4", a Custom Buff's).
+      const query = String(typed ?? "").trim().toLowerCase().replace("+/-", "\u00b1").replace("+-", "\u00b1");
       const groupHit = new Set(groups.filter(group => group.dataset.group.toLowerCase().includes(query)).map(group => group.dataset.group));
       shown = [];
       for (const option of options) {
@@ -4106,6 +4094,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       list.hidden = false;
       box.setAttribute("aria-expanded", "true");
       place();
+      // Opened on the one chosen, as a list is: a long list is not read from its top to find it.
+      paint();
     };
     // Scrolled while open, it would float away from its box: closed instead - not by scrolling the list itself.
     const onScroll = event => {
