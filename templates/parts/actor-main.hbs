@@ -1,6 +1,6 @@
 <div class="tab {{tabs.main.cssClass}}" data-group="primary" data-tab="main">
 
-  <!-- Attributes. Score comes from the progression table; only Bonus is editable. -->
+  <!-- Attributes. The Score comes from the progression table; what raises a Modifier by hand is a Custom Buff's (the user's). -->
   <section class="panel">
     <h3 class="panel-title">
       Attributes
@@ -13,29 +13,13 @@
                 data-tooltip="Roll 1d10 + Modifier">{{attribute.key}}</button>
         {{! The Modifier and what it is made of. }}
         <div class="attribute-mod" data-tooltip-html="{{attribute.workings}}">{{attribute.mod}}</div>
-        <div class="attribute-detail">
-          <label class="field">
-            <em>Bonus</em>
-            <input type="number" name="system.attributes.{{attribute.key}}.bonus" value="{{attribute.bonus}}"/>
-          </label>
-        </div>
       </div>
       {{/each}}
     </div>
   </section>
 
-  <!-- Aptitudes, all derived from the Attribute Modifiers/Scores. -->
-  <section class="panel">
-    <h3 class="panel-title">Aptitudes</h3>
-    <div class="stat-grid">
-      {{! Might, Soak, Damage Reduction, Initiative and the Speeds are on the Combat tab (the user's). }}
-      <div class="stat"><em>Surgency</em><span data-tooltip-html="{{workings.surgency}}">{{system.surgency}}</span></div>
-      <div class="stat" data-tooltip="Your Scholarship Modifier when you create or modify an Item, without any bonus from Enhancements and Forms.">
-        <em>Ingenuity</em><span>{{system.ingenuity}}</span></div>
-      <div class="stat" data-tooltip="A Stress Test is 1d10 plus this. Power Level + 1, less one per Steadfast failure.">
-        <em>Stress Bonus</em><span data-tooltip-html="{{workings.stressBonus}}">{{system.stressBonus}}</span></div>
-    </div>
-  </section>
+  {{! The Aptitudes are no longer here (the user's): Surgency and the Stress Bonus are on the Combat tab with the rest of
+      them, Ingenuity on the Gear tab. }}
 
   <!-- Skills. Ranks come from the Skill Improvement rows in the Progression tab. -->
   <section class="panel">

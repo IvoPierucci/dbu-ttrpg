@@ -187,6 +187,10 @@
         <div class="stat"><em>Melee Reach</em><span data-tooltip-html="{{workings.meleeRange}}">{{aptitudes.reach.value}}</span></div>
         <div class="stat"><em>Speed</em><span>{{system.speed.normal}} sq.</span></div>
         <div class="stat"><em>Speed (Boosted)</em><span>{{system.speed.boosted}} sq.</span></div>
+        {{! From Main's Aptitudes (the user's): here with the others. }}
+        <div class="stat"><em>Surgency</em><span data-tooltip-html="{{workings.surgency}}">{{system.surgency}}</span></div>
+        <div class="stat" data-tooltip="A Stress Test is 1d10 plus this. Power Level + 1, less one per Steadfast failure.">
+          <em>Stress Bonus</em><span data-tooltip-html="{{workings.stressBonus}}">{{system.stressBonus}}</span></div>
       </div>
 
       {{! God Ki's Divine Ki to the Capacity's left, the two sharing the row; without it the Capacity has the row (the user's). }}

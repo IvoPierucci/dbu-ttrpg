@@ -968,7 +968,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.attributeCards = Object.entries(this.actor.system.attributes).map(([key, attribute]) => ({
       key,
       mod: attribute.mod,
-      bonus: attribute.bonus,
       workings: context.workings[`${key}.mod`]
     }));
 

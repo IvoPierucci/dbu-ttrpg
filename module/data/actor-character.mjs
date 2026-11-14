@@ -2488,11 +2488,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     runPhase(this, "mods");
 
     for (const key of Object.keys(atts)) {
-      // Modifier defaults to the Score, adjusted by any Bonus from effects/Transformations.
-      atts[key].mod = withEffects(this, `${key}.mod`, atts[key].score + atts[key].bonus, {
+      // The Modifier is the Score, and what effects make of it. The Bonus once written by hand on Main is no longer counted
+      // (the user's: "ahora que existe custom buffs se hara por ahi" - Custom Buffs' "AG Modifier" and its like); the field is
+      // kept so an old character still loads, and read by nothing.
+      atts[key].mod = withEffects(this, `${key}.mod`, atts[key].score, {
         parts: [
-          { label: "Score", value: atts[key].score },
-          { label: "Bonus", value: atts[key].bonus }
+          { label: "Score", value: atts[key].score }
         ]
       });
     }
