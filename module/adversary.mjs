@@ -103,3 +103,42 @@ export function adversaryEncounterStart(system) {
 export function adversaryEncounterEnd() {
   return { "system.karma": 0, "system.adversary.karmaRegained": false, "system.adversary.duel": false, "system.narrativeStamina.value": 0 };
 }
+
+/**
+ * The Narrative Stamina an Adversary has to spend now: "a resource that can be used in the place of Ki Points, and when you
+ * take Damage, you can reduce your Narrative Stamina by any amount to reduce how many Life Points you lose by an equal
+ * amount." What is left of this Round's - none on an Actor that is no Adversary.
+ */
+export function staminaLeft(actor) {
+  if (actor?.type !== "adversary") return 0;
+  return Math.max(0, Math.floor(Number(actor.system?.narrativeStamina?.value) || 0));
+}
+
+/**
+ * The Health Thresholds a hit may knock them through, as lines on their Life Points (the user's: marked in the Damage window,
+ * "para evitar pasar por ellos"): each one's name and the most Life Points that are already in it - a quarter of 400 is 100,
+ * and at 100 they are Injured. `thresholds`: the model's own table, each with the fraction it is above.
+ */
+export function thresholdLines(max, thresholds) {
+  return Object.values(thresholds).filter(each => Number.isFinite(each.above) && (each.above > 0))
+    .map(each => ({ label: lineLabel(each, thresholds), at: Math.floor((Number(max) || 0) * each.above), fraction: each.above }));
+}
+
+/** The Threshold under a line: the one whose own line is the next one down - Healthy's line, at a half, is Bruised's top. */
+function lineLabel(line, thresholds) {
+  const below = Object.values(thresholds).filter(each => each.above < line.above).sort((a, b) => b.above - a.above)[0];
+  return below?.label ?? "";
+}
+
+/**
+ * The Narrative Stamina that keeps a hit from knocking them through the next Health Threshold down: the least that leaves them
+ * above its line - never more than the Damage or than they have. 0 where the hit crosses none, or where nothing they have
+ * would stop it (then `enough` is false).
+ */
+export function staminaToStay(life, max, damage, stamina, thresholds) {
+  const line = thresholdLines(max, thresholds).map(each => each.at).filter(at => life > at).sort((a, b) => b - a)[0];
+  if (line === undefined) return { needed: 0, enough: true };
+  const needed = Math.max(0, damage - (life - line - 1));
+  const most = Math.min(stamina, damage);
+  return { needed: Math.min(needed, most), enough: needed <= most };
+}

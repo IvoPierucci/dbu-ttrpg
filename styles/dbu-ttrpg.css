@@ -5529,3 +5529,26 @@
 .dbu-ttrpg .dbu-adversary-toggle input { margin: 0; }
 .dbu-ttrpg .dbu-adversary-regain { margin-left: auto; }
 .dbu-ttrpg .dbu-adversary-regain:disabled { opacity: 0.5; cursor: default; }
+/* Narrative Stamina in the Damage window: how much to spend, and their Life with the Health Thresholds marked. */
+.dbu-stamina-spend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.dbu-stamina-spend label { display: flex; align-items: center; gap: 6px; margin: 0; }
+.dbu-stamina-spend input[type="number"] { width: 52px; height: 24px; text-align: center; }
+.dbu-stamina-have { opacity: 0.7; }
+.dbu-stamina-lost { margin-left: auto; }
+.dbu-stamina-bar {
+  position: relative;
+  height: 16px;
+  margin: 20px 0 20px;
+  border: 1px solid var(--dbu-border-strong, #555);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
+}
+.dbu-stamina-bar i { position: absolute; top: 0; bottom: 0; left: 0; }
+.dbu-stamina-after { background: var(--dbu-life, #c0392b); }
+.dbu-stamina-loss { background: var(--dbu-life, #c0392b); opacity: 0.35; }
+.dbu-stamina-line { position: absolute; top: -16px; bottom: -3px; width: 0; border-left: 1px dashed currentColor; opacity: 0.85; }
+.dbu-stamina-line em { position: absolute; top: 0; left: 3px; font-style: normal; font-size: 10px; line-height: 12px; white-space: nowrap; }
+.dbu-stamina-says { font-size: 12px; }
+/* The lowest line's name under the bar: the two lowest lines sit close, and their names would run into each other. */
+.dbu-stamina-line:last-child { top: -3px; bottom: -16px; }
+.dbu-stamina-line:last-child em { top: auto; bottom: 0; }

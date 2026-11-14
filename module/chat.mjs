@@ -1,5 +1,6 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { commandedNow, isCharacter, isMinion, typicalMinion } from "./actor-types.mjs";
+import { staminaLeft, staminaToStay, thresholdLines } from "./adversary.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
 import { entryEffectLine } from "./racial.mjs";
@@ -10238,7 +10239,9 @@ function dealDamageChoices(target, own) {
   const taken = DAMAGE_MOMENTS.taken.flatMap(moment => unarmedTriggers(target, moment));
   const none = DAMAGE_MOMENTS.none.flatMap(moment => unarmedTriggers(target, moment));
   const unique = list => [...new Map(list.map(entry => [entry.blockId, entry])).values()];
-  return { before, taken: unique(taken), none: unique(none), any: Boolean(before.length || taken.length || none.length) };
+  // An Adversary's Narrative Stamina, against a hit that costs Life Points: how much of it to spend is theirs to choose.
+  const stamina = ((Number(own?.damage) || 0) > 0) ? staminaLeft(target) : 0;
+  return { before, taken: unique(taken), none: unique(none), stamina, any: Boolean(before.length || taken.length || none.length || stamina) };
 }
 
 /**
@@ -10259,7 +10262,25 @@ async function dealDamageWindow(message, target, attack) {
       <span class="dbu-respond-name">${esc(entry.sourceName)}</span>
       <span class="dbu-respond-source">${esc(triggerText(entry))}</span></label>`;
   const halfSoak = Math.floor((Number(target.system.soakValue) || 0) / 2);
-  const body = `${choices.before.length ? rollSection("Before the Damage", choices.before.map(entry => row(entry, "before")).join("")) : ""}${
+  // Narrative Stamina (the user's): what they have, a box for how much of it to spend - any mix of it and Life Points - the
+  // Life Points lost for it, and their Life with the Health Thresholds marked, to see whether the hit knocks them through one.
+  const lines = thresholdLines(max, DBUCharacterData.THRESHOLDS);
+  const staminaMost = Math.min(choices.stamina, Number(own.damage) || 0);
+  const staminaSection = choices.stamina ? `<div data-stamina>${rollSection("Narrative Stamina", `<div class="dbu-stamina-spend">
+      <label><span>Stamina to spend</span><input type="number" name="stamina" value="0" min="0" max="${staminaMost}" step="1"/></label>
+      <span class="dbu-stamina-have">of ${choices.stamina}</span>
+      <span class="dbu-stamina-lost">Life Points lost <b data-lost>${own.damage}</b></span>
+      <button type="button" class="dbu-manage" data-stay data-tooltip="The least Narrative Stamina that keeps this hit from knocking them through the next Health Threshold">Stay above the line</button>
+    </div>
+    <div class="dbu-stamina-bar"><i class="dbu-stamina-after" data-after></i><i class="dbu-stamina-loss" data-loss></i>${
+      lines.map(line => `<span class="dbu-stamina-line" style="left: ${line.fraction * 100}%" data-tooltip="${esc(line.label)} at ${line.at} Life Points or fewer"><em>${esc(line.label)} ${line.at}</em></span>`).join("")}</div>
+    <div class="dbu-stamina-says" data-says></div>`)}</div>` : "";
+  const thresholdOf = value => DBUCharacterData.THRESHOLDS[DBUCharacterData.thresholdKey(value, max, typicalMinion(target))]?.label ?? "";
+  const staminaIn = element => {
+    const typed = Math.floor(Number(element.querySelector('input[name="stamina"]')?.value) || 0);
+    return Math.max(0, Math.min(staminaMost, typed));
+  };
+  const body = `${staminaSection}${choices.before.length ? rollSection("Before the Damage", choices.before.map(entry => row(entry, "before")).join("")) : ""}${
     choices.taken.length ? `<div data-taken>${rollSection("On taking Damage", choices.taken.map(entry => row(entry, "taken")).join(""))}</div>` : ""}${
     choices.none.length ? `<div data-none>${rollSection("On taking no Damage", choices.none.map(entry => row(entry, "none")).join(""))}</div>` : ""}`;
   const top = `<div class="dbu-roll-resources"><span>Life <b>${life}</b> / ${max}</span><span>Soak <b>${own.soak ?? target.system.soakValue ?? 0}</b></span>
@@ -10267,9 +10288,24 @@ async function dealDamageWindow(message, target, attack) {
   const redraw = element => {
     const cancelled = Boolean(element.querySelector('input[name="before"]:checked'));
     const damage = cancelled ? 0 : (Number(own.damage) || 0);
+    // What the Narrative Stamina spent takes off the Life Points lost - the Damage itself as it was.
+    const spent = damage ? staminaIn(element) : 0;
+    const lost = Math.max(0, damage - spent);
+    const staminaBox = element.querySelector("[data-stamina]");
+    if (staminaBox) {
+      staminaBox.classList.toggle("dbu-respond-blocked", !damage);
+      staminaBox.querySelector("[data-lost]").textContent = lost;
+      const after = Math.max(0, life - lost);
+      const share = value => `${max ? Math.max(0, Math.min(100, (value / max) * 100)) : 0}%`;
+      Object.assign(staminaBox.querySelector("[data-after]").style, { width: share(after) });
+      Object.assign(staminaBox.querySelector("[data-loss]").style, { left: share(after), width: share(Math.max(0, life) - after) });
+      const stays = thresholdOf(life) === thresholdOf(life - lost);
+      staminaBox.querySelector("[data-says]").innerHTML = `${esc(thresholdOf(life))} &rarr; <span class="${stays ? "dbu-roll-good" : "dbu-roll-bad"}">${
+        esc(thresholdOf(life - lost))}</span> &middot; ${after} Life Points left${spent ? ` &middot; ${choices.stamina - spent} Narrative Stamina left` : ""}`;
+    }
     const box = element.querySelector(".dbu-roll-box");
-    box.querySelector(".dbu-roll-what").innerHTML = `Damage &middot; ${esc(category)} Category &middot; Life ${life} &rarr; ${damage
-      ? `<span class="dbu-roll-bad">${life - damage}</span>` : `<span class="dbu-roll-good">${life}</span>`}`;
+    box.querySelector(".dbu-roll-what").innerHTML = `Damage &middot; ${esc(category)} Category &middot; Life ${life} &rarr; ${lost
+      ? `<span class="dbu-roll-bad">${life - lost}</span>` : `<span class="dbu-roll-good">${life}</span>`}${spent ? ` &middot; ${spent} off it in Narrative Stamina` : ""}`;
     const wound = Number(own.effectiveWound ?? attack.result?.wound?.total) || 0;
     box.querySelector(".dbu-roll-line").innerHTML = `<span class="dbu-formula-piece dbu-formula-base" data-tooltip="Their Wound Roll">${wound}</span>`
       + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Soak Value, as the Damage Category leaves it">${own.soak ?? 0} Soak</span>`
@@ -10290,10 +10326,18 @@ async function dealDamageWindow(message, target, attack) {
     content: rollWindowHtml({ top, body }),
     render: (event, dialog) => {
       dialog.element.querySelectorAll("input").forEach(input => input.addEventListener("change", () => redraw(dialog.element)));
+      dialog.element.querySelector('input[name="stamina"]')?.addEventListener("input", () => redraw(dialog.element));
+      dialog.element.querySelector("[data-stay]")?.addEventListener("click", () => {
+        const stay = staminaToStay(life, max, Number(own.damage) || 0, choices.stamina, DBUCharacterData.THRESHOLDS);
+        dialog.element.querySelector('input[name="stamina"]').value = stay.needed;
+        if (!stay.enough) ui.notifications.info(`${target.name}: all the Narrative Stamina there is does not keep this hit above the line.`);
+        redraw(dialog.element);
+      });
       redraw(dialog.element);
     },
     buttons: [
       { action: "confirm", label: "Take Damage", default: true, callback: (event, button, dialog) => ({
+        stamina: staminaIn(dialog.element),
         before: [...dialog.element.querySelectorAll('input[name="before"]:checked')].map(input => input.value),
         after: [...dialog.element.querySelectorAll('input[name="taken"]:checked, input[name="none"]:checked')].map(input => input.value) }) },
       { action: "cancel", label: "Close" }
@@ -10307,7 +10351,11 @@ async function dealDamageWindow(message, target, attack) {
   if (chosen.after.length) {
     await target.update({ "system.armedTalents": [...new Set([...(target.system.armedTalents ?? []), ...chosen.after])] });
   }
-  return dealAttackDamage(message, target, attack, { damageOverride, answered: [...DAMAGE_MOMENTS.taken, ...DAMAGE_MOMENTS.none, "light-damage"] });
+  // Narrative Stamina spent on it: gone, and that many Life Points fewer lost - nothing of it where the Damage was cancelled.
+  const absorbed = chosen.before.length ? 0 : Math.min(Number(chosen.stamina) || 0, staminaLeft(target));
+  if (absorbed) await target.update({ "system.narrativeStamina.value": staminaLeft(target) - absorbed });
+  return dealAttackDamage(message, target, attack, { damageOverride, absorbed,
+    answered: [...DAMAGE_MOMENTS.taken, ...DAMAGE_MOMENTS.none, "light-damage"] });
 }
 
 /**
@@ -37727,10 +37775,10 @@ function featureNote(profile, attack = null) {
  * Deal Damage's (the user's): the Damage as its window left it - nothing, where "Before the Damage" cancelled it - and the Moments it
  * answered not asked again: what was left unticked there was declined.
  */
-async function dealAttackDamage(message, target, attack, { damageOverride = null, answered = [] } = {}) {
+async function dealAttackDamage(message, target, attack, { damageOverride = null, absorbed = 0, answered = [] } = {}) {
   offersAnswered.moments = new Set(answered);
   try {
-    return await applyAttackDamage(message, target, attack, { damageOverride });
+    return await applyAttackDamage(message, target, attack, { damageOverride, absorbed });
   } finally {
     offersAnswered.moments = new Set();
   }
@@ -37739,7 +37787,7 @@ async function dealAttackDamage(message, target, attack, { damageOverride = null
 /** The Moments a Deal Damage window answered, while its Damage is applied - offered no second time. */
 const offersAnswered = { moments: new Set() };
 
-async function applyAttackDamage(message, target, attack, { damageOverride = null } = {}) {
+async function applyAttackDamage(message, target, attack, { damageOverride = null, absorbed = 0 } = {}) {
   const own = targetResult(attack, target.uuid);
   if (!own || own.applied) return;
   // Delayed: "instead of your Opponent taking any Damage, keep a record of the Dice Score of your
@@ -37786,7 +37834,9 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
 
   // Floored at zero for everyone except whoever has been granted otherwise - the Undying
   // State being the one thing in the rules that grants it.
-  const settled = target.system.life.value - damage;
+  // An Adversary's Narrative Stamina spent on it (`absorbed`): "reduce how many Life Points you lose by an equal amount" - off
+  // the Life Points alone. The Damage is as it was for whatever asks whether, or how much, was dealt.
+  const settled = target.system.life.value - Math.max(0, damage - Math.max(0, Number(absorbed) || 0));
   const floor = target.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled);
   const wasDefeated = Boolean(target.system.defeated);
 
