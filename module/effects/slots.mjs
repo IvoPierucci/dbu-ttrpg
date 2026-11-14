@@ -886,6 +886,10 @@ const PATTERNS = [
     valid: () => true,
     doc: "Squares more, or fewer, until an Opponent is at Long Range; an Attacking Maneuver's Ki Point Cost, under its Minimum "
        + "too; the Damage Category of every Attacking Maneuver, as steps." },
+  // "Ignore all penalties to your Wound Rolls" - a Custom Buff's "No Wound Penalties", beside the Strike's and the Dodge's
+  // (Masterful Strike's, Masterful Dodge's; chat.mjs strikePenaltiesIgnored).
+  { match: /^wound\.ignorePenalties$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "Every penalty to a Wound Roll left off it, and what effects took off the Wound the sheet carries given back." },
   { match: /^damageAttribute\.(magic|times)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "Added to the Damage Attribute of a Magic Attack; or how many more times the Damage Attribute is applied to a Wound Roll." },
   { match: /^damageAttribute\.use\.(agility|force|tenacity|scholarship|insight|magic|personality|surgency)$/, phase: PHASES.CORE,

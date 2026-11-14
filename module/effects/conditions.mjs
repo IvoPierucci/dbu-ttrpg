@@ -13,6 +13,7 @@ import { withinAreaOfRule } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { traitAside } from "../aside.mjs";
+import { customBuffMarked } from "../custom-buffs.mjs";
 
 /** Whether a key is a published Combat Condition - set by traits.mjs at load, to keep the import one way. */
 let isCombatCondition = () => false;
@@ -273,7 +274,8 @@ const PREDICATES = {
   },
 
   /** Do you have a named Combat Condition. */
-  hasCondition: (scope, name) => Boolean(scope.data?.conditions?.[String(name).toLowerCase()]),
+  // Or a mark a Custom Buff holds on by hand - Hyped, Rooted (custom-buffs.mjs).
+  hasCondition: (scope, name) => Boolean(scope.data?.conditions?.[String(name).toLowerCase()]) || customBuffMarked(scope.data, name),
 
   /**
    * Is the Item carrying this effect meant for whoever is wearing it - the Eyeglasses'

@@ -35,6 +35,9 @@ const multiplied = (...slots) => factor => slots.map(slot => `${slot} *= ${facto
 // run, so its readers ask the rows themselves (customBuffAmounts, customBuffOn - gear.mjs).
 const direct = (id, label, section) => ({ id, label, section, kind: "number", direct: true, split: false });
 const directToggle = (id, label, section) => ({ id, label, section, kind: "toggle", direct: true, line: "" });
+// A mark held on by hand, without the Maneuver that gives it (the user's): had for every effect that asks - its own rule
+// gathered, `hasCondition` answering yes - and never written to the character, so switching the row off is all it takes.
+const mark = (key, label) => ({ id: `mark.${key}`, label, section: "Toggles", kind: "toggle", direct: true, line: "", mark: key });
 
 /** Every option, in the spreadsheet's order within its section. */
 export const CUSTOM_BUFFS = Object.freeze([
@@ -169,7 +172,21 @@ export const CUSTOM_BUFFS = Object.freeze([
   number("skills.family.knowledge", "Knowledge", "Skills", "skills.family.knowledge"),
   ...[["medicine", "Medicine"], ["perception", "Perception"], ["performance", "Performance"], ["persuasion", "Persuasion"],
     ["pilot", "Pilot"], ["stealth", "Stealth"], ["survival", "Survival"], ["thievery", "Thievery"], ["useMagic", "Use Magic"]
-  ].map(([key, name]) => number(`skill.${key}`, name, "Skills", `skill.${key}`))
+  ].map(([key, name]) => number(`skill.${key}`, name, "Skills", `skill.${key}`)),
+
+  // Every penalty to that roll left off (the user's: all of them, a toggle and no number) - the flags Masterful Strike and
+  // Masterful Dodge already answer to, and a Wound Roll's beside them (chat.mjs strikePenaltiesIgnored).
+  toggle("strike.noPenalties", "No Strike Penalties", "Toggles", "allow strike.ignorePenalties;"),
+  toggle("dodge.noPenalties", "No Dodge Penalties", "Toggles", "allow dodge.ignorePenalties;"),
+  toggle("wound.noPenalties", "No Wound Penalties", "Toggles", "allow wound.ignorePenalties;"),
+  // Hyped by the Hype Maneuver or not; Rooted, the Arboreal's, without its own effects.
+  mark("hyped", "Hyped"),
+  mark("rooted", "Rooted"),
+  // The Analysis Maneuver's bonus whoever the attack is aimed at (chat.mjs analysisBonus).
+  directToggle("analysis.any", "Analyzed", "Toggles"),
+  // The Were-Beast's Were-Traits in place of the Normal Trait, whatever the Combat Round's choice - out of an Encounter too
+  // (aside.mjs).
+  directToggle("wereTraits", "Get Were-Traits", "Toggles")
 ]);
 
 const BY_ID = new Map(CUSTOM_BUFFS.map(option => [option.id, option]));
@@ -287,6 +304,19 @@ export function customBuffAmounts(actor, id) {
 /** Whether a row of one option is Active - a toggle read straight off the rows. */
 export function customBuffOn(actor, id) {
   return (actor?.system?.customBuffs ?? []).some(buff => buff?.active && (buff.effect === id));
+}
+
+/**
+ * The marks a row holds on by hand - "hyped", "rooted" - read off the character's own data, which is what an effect's condition
+ * is asked of.
+ */
+export function customBuffMarks(system) {
+  return (system?.customBuffs ?? []).filter(buff => buff?.active).map(buff => customBuffOption(buff.effect)?.mark).filter(Boolean);
+}
+
+/** Whether a row holds that mark on. */
+export function customBuffMarked(system, key) {
+  return customBuffMarks(system).includes(String(key ?? "").toLowerCase());
 }
 
 /** How a row is named where its effect shows - a hover, the list of what is active. */

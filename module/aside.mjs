@@ -17,7 +17,10 @@ export function traitAside(item, items, actor = item?.parent) {
   if (flags.wereTrait || flags.normalTrait) {
     const chosen = actor?.getFlag?.("dbu-ttrpg", "wereChoice");
     const round = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
-    const were = (chosen?.round === round) && (chosen.kind === "were");
+    // Or a Custom Buff's "Get Were-Traits" switched on: the Were-Traits whatever the Round's choice, out of an Encounter too.
+    // Read off its rows - no imports here.
+    const forced = Array.from(actor?.system?.customBuffs ?? []).some(buff => buff?.active && (buff.effect === "wereTraits"));
+    const were = forced || ((chosen?.round === round) && (chosen.kind === "were"));
     if (flags.wereTrait && !were) return "were";
     if (flags.normalTrait && were) return "normal";
   }

@@ -10,7 +10,7 @@
 
 import { grantedUniques, uniqueScriptOf } from "../unique.mjs";
 import { traitAside } from "../aside.mjs";
-import { customBuffName, customBuffScript } from "../custom-buffs.mjs";
+import { customBuffMarks, customBuffName, customBuffScript } from "../custom-buffs.mjs";
 import { legacyToProgram } from "./migrate.mjs";
 import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
@@ -928,7 +928,11 @@ function conditionPrograms(actor, report) {
   const entries = [];
   const ignored = conditionsIgnored(actor);
 
-  for (const [key, stacks] of Object.entries(actor.system?.conditions ?? {})) {
+  // With the marks a Custom Buff holds on by hand - Hyped, Rooted - as if they were had: one stack, their own rule gathered.
+  const held = { ...(actor.system?.conditions ?? {}) };
+  for (const key of customBuffMarks(actor.system)) if (!((Number(held[key]) || 0) > 0)) held[key] = 1;
+
+  for (const [key, stacks] of Object.entries(held)) {
     const count = Number(stacks) || 0;
     if (count <= 0) continue;
 

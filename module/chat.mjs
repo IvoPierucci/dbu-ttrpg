@@ -26,6 +26,7 @@ import { environmentOf } from "./breath.mjs";
 import { highTraitOf, isAirborne, qualitiesOf } from "./environments.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
+import { customBuffMarked, customBuffOn } from "./custom-buffs.mjs";
 import { armorPiercing, damageAttributeOf, namedDamageAttribute, karmicSteps, linkedPick, skyAssaultWaives,
   techniqueAttack, techniqueDamageParts, techniqueStrikeAgainst, techniqueStrikeParts,
   techniqueWoundAgainst, techniqueWoundParts } from "./technique-attack.mjs";
@@ -4284,18 +4285,28 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
  * mark is held: every part that takes something off left off, and what effects took off the Strike value the sheet carries
  * (`strike`, a Foundation's, a Parry's - Impaired's, a Health Threshold's) given back as a line of its own. Long Range is
  * left off where it is measured (chat.mjs resolveAttack).
+ *
+ * And a Custom Buff's "No Strike / Dodge / Wound Penalties" (the user's: every penalty of that roll, a toggle) - the same two
+ * flags, and a Wound Roll's of its own: what effects took off the Wound, and off its Foundation's, given back.
  */
-function strikePenaltiesIgnored(actor, slot, parts) {
+function strikePenaltiesIgnored(actor, slot, parts, foundation = "") {
   const slots = actor?.system?.effects?.slots ?? {};
   const taken = key => (slots[key]?.parts ?? []).filter(part => (part.op === "add") && (Number(part.value) < 0))
     .reduce((sum, part) => sum + Number(part.value), 0);
+  // Named for what left them off: the Custom Buff's row where it is one, the Talent's mark otherwise.
+  const named = (id, otherwise) => customBuffOn(actor, id) ? "Custom Buff (penalties ignored)" : otherwise;
+  if ((slot === "wound") && (slots["wound.ignorePenalties"] === true)) {
+    const back = -(taken("wound") + (foundation ? taken(`wound.${foundation}`) : 0));
+    return [...parts.filter(part => !(Number(part.value) < 0)),
+      ...(back > 0 ? [{ label: named("wound.noPenalties", "Wound penalties ignored"), value: back }] : [])];
+  }
   // Masterful Dodge (2): "Until the start of your next turn, ignore all penalties to your Dodge Rolls." Every part that takes
   // something off left off - what effects write to `dodge` among them, a row each - and what they took off the Defense Value
   // under it given back.
   if ((slot === "dodge") && (slots["dodge.ignorePenalties"] === true)) {
     const back = -taken("defenseValue");
     return [...parts.filter(part => !(Number(part.value) < 0)),
-      ...(back > 0 ? [{ label: "Masterful Dodge (penalties ignored)", value: back }] : [])];
+      ...(back > 0 ? [{ label: named("dodge.noPenalties", "Masterful Dodge (penalties ignored)"), value: back }] : [])];
   }
   if ((slot !== "strike") || (slots["strike.ignorePenalties"] !== true)) return parts;
   // The Slots a value carried on a Strike Roll was made through: a Parry's is the Physical Strike's, a Foundation's the shared one's.
@@ -4304,7 +4315,7 @@ function strikePenaltiesIgnored(actor, slot, parts) {
   const back = parts.filter(part => part.workingsKey)
     .reduce((sum, part) => sum - through(part.workingsKey).reduce((each, key) => each + taken(key), 0), 0);
   return [...parts.filter(part => !(Number(part.value) < 0)),
-    ...(back > 0 ? [{ label: "Masterful Strike (penalties ignored)", value: back }] : [])];
+    ...(back > 0 ? [{ label: named("strike.noPenalties", "Masterful Strike (penalties ignored)"), value: back }] : [])];
 }
 
 /**
@@ -11434,7 +11445,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
   const parts = strikePenaltiesIgnored(actor, slot,
-    [...((typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers), ...multiFormRow(actor, combatRoll)]);
+    [...((typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers), ...multiFormRow(actor, combatRoll)],
+    foundation);
 
   // Asked before the dice are picked up, because an effect that sets the Base Die
   // replaces the roll rather than adjusting it: rolling a d10 and then throwing the
@@ -26916,7 +26928,8 @@ export async function uproot(actor) {
  * for that Clash by 2(T)." The Clash opened at you that moves you won - the Thrust's (or one marked `movesLoser`).
  */
 function rootedClashBonus(actor, clash, uuid) {
-  if ((uuid !== clash?.defenderUuid) || !((Number(actor?.system?.conditions?.rooted) || 0) > 0)
+  // Rooted, or held Rooted by a Custom Buff's toggle.
+  if ((uuid !== clash?.defenderUuid) || !(((Number(actor?.system?.conditions?.rooted) || 0) > 0) || customBuffMarked(actor?.system, "rooted"))
     || (actor.system?.effects?.slots?.["arboreal.rootedClash"] !== true) || !(clash.thrust || clash.movesLoser)) return [];
   return [{ label: "Rooted (Arboreal)", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
 }
@@ -35216,7 +35229,8 @@ function seenBonus(actor, target, family) {
 function analysisBonus(actor, target) {
   if (!actor || !target) return [];
 
-  const theirs = (actor.system.timed ?? []).some(entry =>
+  // Or a Custom Buff's "Analyzed": the bonus whoever the attack is aimed at (the user's).
+  const theirs = customBuffOn(actor, "analysis.any") || (actor.system.timed ?? []).some(entry =>
     (entry?.kind === "condition") && (entry.key === "analyzed") && (entry.on === target.uuid));
   if (!theirs) return [];
 
