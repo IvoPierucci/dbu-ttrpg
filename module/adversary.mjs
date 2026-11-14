@@ -142,3 +142,48 @@ export function staminaToStay(life, max, damage, stamina, thresholds) {
   const most = Math.min(stamina, damage);
   return { needed: Math.min(needed, most), enough: needed <= most };
 }
+
+/**
+ * Narrative Stamina "can be used in the place of Ki Points": what of it is there to pay Ki with now - an Elite's or a
+ * Villain's, not in a 1-on-1 Duel ("ignore the rules of Narrative Stamina"). 0 for anyone else.
+ */
+export function staminaForKi(actor) {
+  return actor?.system?.adversaryNarrative ? staminaLeft(actor) : 0;
+}
+
+/**
+ * Whether the window an attack is declared in asks if the Narrative Stamina pays (the user's: "Ask", as Divine Ki is asked) -
+ * the sheet set to Ask, and Stamina there to pay with. Set to Auto, it pays without asking.
+ */
+export function asksStamina(actor) {
+  return (actor?.system?.adversary?.staminaMode === "ask") && (staminaForKi(actor) > 0);
+}
+
+/**
+ * Narrative Stamina paying Ki in its place (the user's: every Ki Point spent - "todo gasto de Ki"), as the write that pays is
+ * made. A payment is told by what every payment in this system writes at once: Ki Points down, and the Capacity spent up by
+ * it. That is not a Ki Point drained by an Opponent, nor one set by hand on the sheet - neither touches the Capacity - and
+ * neither is paid in its place. What it pays is taken off the Ki Points lost and off the Capacity spent (Stamina is not Ki,
+ * and the Capacity counts Ki); the rest is paid in Ki. Not where the write says so (`dbuNoStamina`: Ask, answered no), nor where
+ * it sets the Stamina itself.
+ *
+ * Read off a preUpdateActor hook (dbu-ttrpg.mjs): `changes` is changed in place, flat keys or nested alike.
+ */
+export function payKiWithStamina(actor, changes, options = {}) {
+  if (options?.dbuNoStamina) return 0;
+  const has = key => (key in changes) || (foundry.utils.getProperty(changes, key) !== undefined);
+  const get = key => ((key in changes) ? changes[key] : foundry.utils.getProperty(changes, key));
+  const set = (key, value) => { if (key in changes) changes[key] = value; else foundry.utils.setProperty(changes, key, value); };
+  if (!has("system.ki.value") || !has("system.capacity.spent") || has("system.narrativeStamina.value")) return 0;
+  const kiNow = Number(actor.system?.ki?.value) || 0;
+  const spentNow = Number(actor.system?.capacity?.spent) || 0;
+  const paid = kiNow - (Number(get("system.ki.value")) || 0);
+  const counted = (Number(get("system.capacity.spent")) || 0) - spentNow;
+  if ((paid <= 0) || (counted <= 0)) return 0;
+  const taken = Math.min(paid, staminaForKi(actor));
+  if (taken <= 0) return 0;
+  set("system.ki.value", kiNow - paid + taken);
+  set("system.capacity.spent", spentNow + Math.max(0, counted - taken));
+  set("system.narrativeStamina.value", staminaLeft(actor) - taken);
+  return taken;
+}

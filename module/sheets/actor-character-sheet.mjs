@@ -3420,6 +3420,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         capacityOver: Number(system.capacity?.over) || 0,
         staminaPercent: DBUCharacterSheet.#percentFull({ value: Number(system.narrativeStamina?.value) || 0,
           max: Number(system.narrativeStamina?.max) || 0 }),
+        staminaMode: system.adversary?.staminaMode ?? "auto",
         canRegain: gains.narrative && !(Number(system.karma) || 0) && !system.adversary?.karmaRegained,
         regained: Boolean(system.adversary?.karmaRegained)
       },

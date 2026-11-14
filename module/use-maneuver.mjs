@@ -6654,6 +6654,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (maneuver.godStrike) maneuver = { ...maneuver, godManeuver: false };
   // A God Maneuver's Ki Wager is "two different instances of paying": paid apart, as any Ki Points are (spendManeuverCost).
   if (maneuver.godManeuver && wagered) maneuver = { ...maneuver, wagerApart: wagered };
+  // An Adversary asked whether its Narrative Stamina pays, and answering no (adversary.mjs asksStamina): paid in Ki alone.
+  if (declared && (declared.payStamina === false)) maneuver = { ...maneuver, noStamina: true };
   if (!fromStore && !await spendManeuverCost(actor, maneuver, moving.fromSelf)) return false;
   // And God Strike its own price apart: 1/4 of the Profile it applies, in Divine Ki - the attack's given back without it.
   const godPart = crossing ? 0 : godStrikeCost(maneuver, actor);

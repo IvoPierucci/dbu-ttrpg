@@ -5552,3 +5552,4 @@
 /* The lowest line's name under the bar: the two lowest lines sit close, and their names would run into each other. */
 .dbu-stamina-line:last-child { top: -3px; bottom: -16px; }
 .dbu-stamina-line:last-child em { top: auto; bottom: 0; }
+.dbu-ttrpg .dbu-adversary-toggle select { height: 22px; margin: 0; padding: 0 4px; font-size: 12px; width: auto; }

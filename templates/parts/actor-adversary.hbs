@@ -144,6 +144,13 @@
       </div>
     </div>
     <div class="dbu-adversary-row">
+      <label class="dbu-adversary-toggle" data-tooltip="Narrative Stamina in place of Ki Points: Auto pays with it without asking; Ask asks in the window an attack is declared in (as Divine Ki is) - and pays as Auto where nothing asks">
+        <span>Stamina for Ki</span>
+        <select name="system.adversary.staminaMode" {{#unless editable}}disabled{{/unless}}>
+          <option value="auto" {{#if (eq adversary.combat.staminaMode "auto")}}selected{{/if}}>Auto</option>
+          <option value="ask" {{#if (eq adversary.combat.staminaMode "ask")}}selected{{/if}}>Ask</option>
+        </select>
+      </label>
       <label class="dbu-adversary-toggle" data-tooltip="A 1-on-1 Duel under way: no Narrative Stamina, and a Counter Action in place of the Adversary Actions - till another Character targets either of you, or the Player Character is Defeated">
         <input type="checkbox" name="system.adversary.duel" {{#if adversary.combat.duel}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
         1-on-1 Duel

@@ -1202,6 +1202,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // A 1-on-1 Duel under way (the Villainous Maneuver's; the user's: a toggle): "you ignore the rules of Narrative
       // Stamina and One-Man Army" - none of the one, a Counter Action as anyone's in place of the other.
       duel: new fields.BooleanField({ required: true, initial: false }),
+      // Narrative Stamina in place of Ki Points (the user's): "auto" pays with it without asking; "ask" asks in the window an
+      // attack is declared in, as Divine Ki is asked - and pays as "auto" where no window asks.
+      staminaMode: new fields.StringField({ required: true, blank: false, initial: "auto", choices: ["auto", "ask"] }),
       // Out of Karma, and the Life and Ki it regains for that taken (its button, the user's) - once, till it has Karma again.
       karmaRegained: new fields.BooleanField({ required: true, initial: false }),
       extra: new fields.SchemaField(Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)

@@ -5,6 +5,7 @@ import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { getTrait, printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
 import { featureAsks, withGranted } from "./signature.mjs";
 import { customBuffBasicIsSignature } from "./custom-buffs.mjs";
+import { asksStamina, staminaForKi, staminaLeft } from "./adversary.mjs";
 
 /**
  * Maneuvers: anything that spends an Action.
@@ -2722,8 +2723,12 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
     return true;
   }
 
-  if (ki.value < cost) {
-    ui.notifications.warn(`${actor.name} needs ${cost} Ki Points for ${maneuver.name} and has ${ki.value}.`);
+  // An Adversary's Narrative Stamina pays in Ki's place as the write is made (adversary.mjs payKiWithStamina): counted with
+  // the Ki Points here - but not where the window asked and it was not to (`noStamina`).
+  const stamina = maneuver?.noStamina ? 0 : staminaForKi(actor);
+  if ((ki.value + stamina) < cost) {
+    ui.notifications.warn(`${actor.name} needs ${cost} Ki Points for ${maneuver.name} and has ${ki.value}${
+      stamina ? ` and ${stamina} Narrative Stamina` : ""}.`);
     return false;
   }
 
@@ -2736,12 +2741,19 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
     return false;
   }
 
+  const staminaBefore = staminaLeft(actor);
   await actor.update({
     "system.ki.value": ki.value - cost,
     "system.capacity.spent": capacity.spent + fromCapacity
-  });
+  }, { dbuNoStamina: Boolean(maneuver?.noStamina) });
+  // What the Stamina paid of it, so cancelling it gives that back to the Stamina and not to the Ki Points.
+  const fromStamina = Math.max(0, staminaBefore - staminaLeft(actor));
+  if (fromStamina) STAMINA_PAID.set(`${actor.uuid}:${maneuver.id ?? maneuver.name}`, fromStamina);
   return true;
 }
+
+/** What an Adversary's Narrative Stamina last paid of a Maneuver, so taking it back gives back Stamina. */
+const STAMINA_PAID = new Map();
 
 /** Give back the Ki Points a Maneuver cost, when it is cancelled before resolving. */
 /** What was last paid in Divine Ki for a Maneuver, so taking it back gives back Divine Ki. */
@@ -2771,14 +2783,20 @@ export async function refundManeuverCost(actor, maneuver) {
   }
   const cost = maneuver.kiCost ?? 0;
   if (cost <= 0) return;
+  // The Narrative Stamina that paid part of it, back to the Stamina; the rest back to the Ki Points and the Capacity.
+  const key = `${actor.uuid}:${maneuver.id ?? maneuver.name}`;
+  const fromStamina = Math.min(cost, STAMINA_PAID.get(key) ?? 0);
+  STAMINA_PAID.delete(key);
+  const fromKi = cost - fromStamina;
 
   // Never refund past the pool's maximum, or cancelling would be a way to heal Ki.
-  const restored = Math.min(actor.system.ki.max, actor.system.ki.value + cost);
+  const restored = Math.min(actor.system.ki.max, actor.system.ki.value + fromKi);
   await actor.update({
     "system.ki.value": restored,
     // The Capacity it used is released too, or a cancelled Maneuver would still
     // count against what may be spent this round.
-    "system.capacity.spent": Math.max(0, actor.system.capacity.spent - cost)
+    "system.capacity.spent": Math.max(0, actor.system.capacity.spent - fromKi),
+    ...(fromStamina ? { "system.narrativeStamina.value": staminaLeft(actor) + fromStamina } : {})
   });
 }
 
@@ -3796,7 +3814,8 @@ export function maxKiWager(actor, advantages = []) {
     ? Number.POSITIVE_INFINITY
     : Math.floor(capacity.max / 2);
 
-  return Math.max(0, Math.min(half, capacity.remaining, ki.value, wagerShareCap(actor)));
+  // An Adversary's Narrative Stamina pays a wager as any Ki Points (adversary.mjs): counted with them.
+  return Math.max(0, Math.min(half, capacity.remaining, ki.value + staminaForKi(actor), wagerShareCap(actor)));
 }
 
 /** Discarded Divinity's: no Ki Wager past a share of the Max Capacity (rounded down) - Infinity where nothing says so. */
@@ -4012,6 +4031,10 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
     <label class="dbu-wager" data-tooltip="God Ki: the wager paid in Divine Ki Points (${Number(actor.system.divineKi.value) || 0} left), at half its Capacity - its own instance of paying, whatever pays the KP Cost.">
       <input type="checkbox" name="wagerFromDivine"/>
       <span>Wager Divine Ki</span>
+    </label>` : ""}${asksStamina(actor) ? `
+    <label class="dbu-wager" data-tooltip="Narrative Stamina in place of Ki Points (${staminaForKi(actor)} left): the KP Cost and the Ki Wager, as far as it goes - the rest in Ki Points.">
+      <input type="checkbox" name="payStamina"/>
+      <span>Pay with Narrative Stamina</span>
     </label>` : ""}`;
 
   const chosen = await foundry.applications.api.DialogV2.wait({
@@ -4049,7 +4072,9 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
           const kiWager = Number.isFinite(typed)
             ? Math.min(Math.max(typed, floor), ceiling)
             : floor;
-          return { profile, kiWager, wagerFromLife, wagerFromDivine };
+          // Asked (adversary.mjs asksStamina): whether its Narrative Stamina pays - not asked, it does.
+          const payStamina = !asksStamina(actor) || Boolean(dialog.element.querySelector('input[name="payStamina"]')?.checked);
+          return { profile, kiWager, wagerFromLife, wagerFromDivine, payStamina };
         }
       },
       { action: "cancel", label: "Cancel" }

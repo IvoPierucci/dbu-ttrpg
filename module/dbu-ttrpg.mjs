@@ -21,6 +21,7 @@ import { coreManeuverItems, registerHotbarDrop, registerMacroApi } from "./use-m
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
 import { loadManeuvers } from "./maneuvers.mjs";
 import { getTrait, loadTraits } from "./effects/traits.mjs";
+import { payKiWithStamina } from "./adversary.mjs";
 import { registerCombatHooks, registerBreathHooks, registerDefeatHooks, registerWornBreathHooks, registerRacialLifeHooks }
   from "./combat.mjs";
 import { registerConditionHooks } from "./conditions.mjs";
@@ -159,6 +160,8 @@ Hooks.once("init", () => {
   // A Duplicate Minion's token crossed by its gray "DUPLICATE" band.
   registerTokenMarks();
   registerBreathHooks();
+  // An Adversary's Narrative Stamina, paying Ki Points in their place as each payment is written (adversary.mjs).
+  Hooks.on("preUpdateActor", (actor, changes, options) => { payKiWithStamina(actor, changes, options); });
   registerWornBreathHooks();
   registerConditionHooks();
 });
