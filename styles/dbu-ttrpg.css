@@ -5517,3 +5517,15 @@
 .dbu-ttrpg .dbu-adversary .skill-untrained .skill-name,
 .dbu-ttrpg .dbu-adversary .skill-untrained .skill-bonus,
 .dbu-ttrpg .dbu-adversary .skill-untrained .skill-crit { opacity: 0.5; }
+/* In Combat: four across, each under its label; a stepper's buttons to either side of its number. */
+.dbu-ttrpg .dbu-adversary-grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dbu-ttrpg .dbu-adversary-step { display: flex; align-items: center; gap: 4px; height: 24px; }
+.dbu-ttrpg .dbu-adversary-step b { min-width: 16px; text-align: center; }
+.dbu-ttrpg .dbu-adversary input.dbu-adversary-number.wide { width: 42px; }
+.dbu-ttrpg .dbu-adversary-field > span:first-child i { font-style: normal; opacity: 0.7; }
+.dbu-ttrpg .dbu-adversary-over { color: var(--dbu-life); }
+.dbu-ttrpg .dbu-adversary-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; }
+.dbu-ttrpg .dbu-adversary-toggle { display: flex; align-items: center; gap: 4px; margin: 0; white-space: nowrap; }
+.dbu-ttrpg .dbu-adversary-toggle input { margin: 0; }
+.dbu-ttrpg .dbu-adversary-regain { margin-left: auto; }
+.dbu-ttrpg .dbu-adversary-regain:disabled { opacity: 0.5; cursor: default; }

@@ -109,4 +109,50 @@
     {{/each}}
   </section>
 
+  {{! Adversaries in Combat - an Elite's and a Villain's, a Standard one none of it: Narrative Stamina, this Round's; the
+      Adversary Actions One-Man Army gives in a Counter Action's place; its Villainous Karma; and its Capacity, ignored, with
+      what is spent against its Maximum still counted. The same on the Combat tab (the user's). }}
+  {{#if adversary.combat.narrative}}
+  <section class="panel">
+    <h3 class="panel-title">In Combat <span class="panel-note">also on the Combat tab</span></h3>
+    <div class="dbu-adversary-grid four">
+      <div class="dbu-adversary-field" data-tooltip="Gained as each Combat Round starts, lost as it ends. Spent in place of Ki Points; and taken off the Life Points a hit would cost, as many as you choose.">
+        <span>Narrative Stamina</span>
+        <span class="dbu-adversary-step">
+          <button type="button" class="stack-step" data-action="stepStamina" data-step="-1" data-tooltip="1 less">&minus;</button>
+          <input type="number" class="dbu-adversary-number wide" name="system.narrativeStamina.value" value="{{adversary.combat.stamina}}" min="0"
+                 aria-label="Narrative Stamina" {{#unless editable}}disabled{{/unless}}/>
+          <span class="dbu-capacity-of">/ {{adversary.combat.staminaMax}}</span>
+          <button type="button" class="stack-step" data-action="stepStamina" data-step="1" data-tooltip="1 more">+</button>
+        </span>
+      </div>
+      <div class="dbu-adversary-field" data-tooltip="One-Man Army: in place of 1 Counter Action, its PCC a Combat Round - spent as Counter Actions are, and as Actions for a Villainous Maneuver">
+        <span>{{#if adversary.combat.active}}Adversary Actions{{else}}Counter Actions{{/if}}</span>
+        <b>{{adversary.combat.actionsLeft}} <small>/ {{adversary.combat.actions}}</small></b>
+      </div>
+      <div class="dbu-adversary-field" data-tooltip="Given as a Combat Encounter starts - its PCC a Villain's, half of it an Elite's - and lost as it ends. No limit to it.">
+        <span>Villainous Karma</span>
+        <span class="dbu-adversary-step">
+          <button type="button" class="stack-step" data-action="stepKarma" data-step="-1" data-tooltip="Spend one">&minus;</button>
+          <b>{{adversary.combat.karma}}</b>
+          <button type="button" class="stack-step" data-action="stepKarma" data-step="1" data-tooltip="Gain one">+</button>
+        </span>
+      </div>
+      <div class="dbu-adversary-field" data-tooltip="Without Capacity: ignored, never refusing a cost. What is spent this Round is still counted against its Maximum - a guide, and what a Duel Maneuver heeds.">
+        <span>Capacity <i>ignored</i></span>
+        <b class="{{#if adversary.combat.capacityOver}}dbu-adversary-over{{/if}}">{{adversary.combat.capacitySpent}} <small>/ {{adversary.combat.capacityMax}}</small>{{#if adversary.combat.capacityOver}} <small class="dbu-adversary-over">over by {{adversary.combat.capacityOver}}</small>{{/if}}</b>
+      </div>
+    </div>
+    <div class="dbu-adversary-row">
+      <label class="dbu-adversary-toggle" data-tooltip="A 1-on-1 Duel under way: no Narrative Stamina, and a Counter Action in place of the Adversary Actions - till another Character targets either of you, or the Player Character is Defeated">
+        <input type="checkbox" name="system.adversary.duel" {{#if adversary.combat.duel}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
+        1-on-1 Duel
+      </label>
+      {{#if adversary.combat.duel}}<span class="panel-note">no Narrative Stamina, 1 Counter Action</span>{{/if}}
+      <button type="button" class="dbu-manage dbu-adversary-regain" data-action="adversaryRegain" {{#unless adversary.combat.canRegain}}disabled{{/unless}}
+              data-tooltip="{{#if adversary.combat.regained}}Taken: once, till it has Karma Points again{{else}}Out of Karma Points: regain 1/4 of its Maximum Life Points and Ki Points{{/if}}">Out of Karma: regain 1/4</button>
+    </div>
+  </section>
+  {{/if}}
+
 </div>

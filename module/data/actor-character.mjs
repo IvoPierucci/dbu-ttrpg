@@ -896,6 +896,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** "You cannot gain more than 6 Counter Actions in a single Combat Round." */
   static MAX_COUNTER_ACTIONS = 6;
 
+  /** What is left of a Capacity that is ignored - an Elite or Villain Adversary's: more than anything costs. */
+  static NO_CAPACITY_LIMIT = 999999;
+
   /** Breakthrough: the current Tier of Power may exceed the Base Tier by at most this. */
   static BREAKTHROUGH_LIMIT = 2;
 
@@ -1196,10 +1199,22 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     schema.adversary = new fields.SchemaField({
       category: new fields.StringField({ required: true, blank: false, initial: "standard", choices: Object.keys(ADVERSARY_CATEGORIES) }),
       pcc: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),
+      // A 1-on-1 Duel under way (the Villainous Maneuver's; the user's: a toggle): "you ignore the rules of Narrative
+      // Stamina and One-Man Army" - none of the one, a Counter Action as anyone's in place of the other.
+      duel: new fields.BooleanField({ required: true, initial: false }),
+      // Out of Karma, and the Life and Ki it regains for that taken (its button, the user's) - once, till it has Karma again.
+      karmaRegained: new fields.BooleanField({ required: true, initial: false }),
       extra: new fields.SchemaField(Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)
         .map(key => [key, new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })]))),
       ranks: new fields.SchemaField(Object.fromEntries(Object.keys(DBUCharacterData.SKILLS)
         .map(key => [key, new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })])))
+    });
+    // Narrative Stamina (Adversaries in Combat): "At the start of each Combat Round, gain Narrative Stamina equal to the amount
+    // listed on the Adversary Category Table above. You lose all Narrative Stamina at the end of each Combat Round." What is
+    // left of this Round's; its most is worked out (`narrativeStamina.max`). Not a Resource: those are emptied as an Encounter
+    // begins, and this is given as its first Round does.
+    schema.narrativeStamina = new fields.SchemaField({
+      value: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
     });
 
     // --- Super Stacks ---
@@ -1363,8 +1378,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Not a Resource, despite looking like one: Resources are lost when an Encounter
     // ends, and Karma is carried through a campaign. Moved by hand, since it is earned
     // by roleplay - which is not something the system can judge.
+    // No ceiling written here: an Adversary's has none ("they have no limit on Karma Points"). A Character's is held to
+    // KARMA_MAX where it is given (the sheet's stepper).
     schema.karma = new fields.NumberField({
-      required: true, integer: true, initial: 2, min: 0, max: DBUCharacterData.KARMA_MAX
+      required: true, integer: true, initial: 2, min: 0
     });
 
     // --- Energy Charges ---
@@ -2073,6 +2090,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // PCC (adversary.mjs) - nothing, on any other Actor.
     this.adversaryMade = this.parent?.type === "adversary";
     this.adversaryGains = adversaryGains(this, { made: this.adversaryMade });
+    // "Adversaries of the Villain or Elite Adversary Categories ... also benefit from the following rules": Narrative Stamina
+    // and One-Man Army - but in a 1-on-1 Duel, which "ignore[s] the rules of Narrative Stamina and One-Man Army".
+    this.adversaryNarrative = this.adversaryGains.narrative && !this.adversary?.duel;
     // Special Minions: "Special Minions ignore the Weakness, Single Attack, Thresholds, and Ki Points & Capacity rules for
     // Minions" - a Duplicate one of them. What those four ask: a Minion that is neither.
     this.typicalMinion = this.minion && !this.specialMinion && !this.duplicate;
@@ -2686,6 +2706,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     this.capacity.max = Math.max(0, Math.floor(baseCapacity * capacityMultiplier));
     this.capacity.remaining = Math.max(0, this.capacity.max - this.capacity.spent);
+    // Without Capacity: "Adversaries should be allowed to ignore the rules on Capacity entirely" - an Elite's and a Villain's
+    // always (the user's); a Standard one keeps it. Its Maximum stays worked out and shown, and what is spent against it stays
+    // counted (the user's: so an ARC sees how far past it they are, and for a Duel Maneuver) - `over`; only what is left to
+    // spend has no end, so nothing that asks "is there Capacity for this" refuses.
+    if (this.adversaryGains.narrative) {
+      this.capacity.ignored = true;
+      this.capacity.over = Math.max(0, this.capacity.spent - this.capacity.max);
+      this.capacity.remaining = DBUCharacterData.NO_CAPACITY_LIMIT;
+    }
+    // Narrative Stamina's most, a Round: "PCC*6(bT)" an Elite's, "PCC*12(bT)" a Villain's.
+    if (this.narrativeStamina) {
+      this.narrativeStamina.max = this.adversaryNarrative ? this.adversaryGains.staminaPerTier * (Number(this.baseTierOfPower) || 1) : 0;
+    }
 
     // Actions available each Combat Round. An effect can take Actions away, but never
     // past zero.
@@ -2702,8 +2735,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // Steady Momentum (2): this Combat Round's.
         + steadyActionsNow(this)),
       // "You cannot gain more than 6 Counter Actions in a single Combat Round."
-      counter: Math.min(DBUCharacterData.MAX_COUNTER_ACTIONS, Math.max(0, withEffects(this, "actions.counter",
-        (this.minion ? 0 : DBUCharacterData.BASE_COUNTER_ACTIONS) + this.actionModifiers.counter))
+      // One-Man Army: "Instead of 1 Counter Action, Elite and Villain Adversaries gain PCC Adversary Actions at the start of
+      // each Combat Round. Adversary Actions can be spent as if they were Counter Actions" - this pool, begun at the PCC, and
+      // never cut short of it by the Counter Actions' own ceiling.
+      counter: Math.min(Math.max(DBUCharacterData.MAX_COUNTER_ACTIONS, this.adversaryNarrative ? this.adversaryGains.pcc : 0),
+        Math.max(0, withEffects(this, "actions.counter",
+        (this.minion ? 0 : (this.adversaryNarrative ? this.adversaryGains.pcc : DBUCharacterData.BASE_COUNTER_ACTIONS))
+          + this.actionModifiers.counter))
         // Precognition: "you gain 1 Counter Action to use during their turn".
         + (this.foresight?.active ? 1 : 0)
         // And every Standard Action converted into one this Round - less those made Actions.

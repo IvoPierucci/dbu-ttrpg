@@ -584,6 +584,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stepCondition: DBUCharacterSheet._onStepCondition,
       useConditionAbility: DBUCharacterSheet._onUseConditionAbility,
       stepKarma: DBUCharacterSheet._onStepKarma,
+      adversaryRegain: DBUCharacterSheet._onAdversaryRegain,
+      stepStamina: DBUCharacterSheet._onStepStamina,
       justTakeIt: DBUCharacterSheet._onJustTakeIt,
       toggleDefeated: DBUCharacterSheet._onToggleDefeated,
       geneticDonors: DBUCharacterSheet._onGeneticDonors,
@@ -1890,7 +1892,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Capacity, set by hand as well as by the Maneuvers that spend it.
     context.capacity = { spent: system.capacity?.spent ?? 0, max: system.capacity?.max ?? 0,
-      remaining: system.capacity?.remaining ?? 0 };
+      remaining: system.capacity?.remaining ?? 0,
+      // An Elite's or a Villain's, ignored: what is spent still counted against its Maximum, and said once past it.
+      ignored: Boolean(system.capacity?.ignored), over: Number(system.capacity?.over) || 0 };
 
     // The Health Thresholds as the user's sheet has them: a box per Threshold, ticked when its Steadfast Check was passed.
     const keys = Object.keys(DBUCharacterData.THRESHOLDS);
@@ -3405,6 +3409,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       kiPerLevel: gains.kiPerLevel, kiTotal: gains.kiPerLevel * level,
       pointsPerTier: gains.pointsPerTier, points, used, over: used > points,
       traits: gains.traits,
+      // What an Elite or a Villain has in combat (Adversaries in Combat) - a Standard one none of it. `active`: not in a
+      // 1-on-1 Duel, which sets Narrative Stamina and One-Man Army aside.
+      combat: {
+        narrative: gains.narrative, active: Boolean(system.adversaryNarrative), duel: Boolean(system.adversary?.duel),
+        stamina: Number(system.narrativeStamina?.value) || 0, staminaMax: Number(system.narrativeStamina?.max) || 0,
+        actions: Number(system.actions?.counter) || 0, actionsLeft: Number(system.actions?.counterLeft) || 0,
+        karma: Number(system.karma) || 0,
+        capacitySpent: Number(system.capacity?.spent) || 0, capacityMax: Number(system.capacity?.max) || 0,
+        capacityOver: Number(system.capacity?.over) || 0,
+        staminaPercent: DBUCharacterSheet.#percentFull({ value: Number(system.narrativeStamina?.value) || 0,
+          max: Number(system.narrativeStamina?.max) || 0 }),
+        canRegain: gains.narrative && !(Number(system.karma) || 0) && !system.adversary?.karmaRegained,
+        regained: Boolean(system.adversary?.karmaRegained)
+      },
       attributes: context.attributeCards.map(card => {
         const extra = adversaryExtra(system, card.key);
         const score = Number(system.attributes[card.key]?.score) || 0;
@@ -7578,9 +7596,39 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onStepKarma(event, target) {
     const step = Number(target.dataset.step) || 0;
     const wanted = (this.actor.system.karma ?? 0) + step;
+    // An Adversary's has no limit ("they have no limit on Karma Points") - and Karma again, what running out of it gives may
+    // be taken anew.
+    if (isAdversary(this.actor)) {
+      return this.actor.update({ "system.karma": Math.max(0, wanted), ...((wanted > 0) ? { "system.adversary.karmaRegained": false } : {}) });
+    }
     return this.actor.update({
       "system.karma": Math.min(DBUCharacterData.KARMA_MAX, Math.max(0, wanted))
     });
+  }
+
+  /**
+   * Villainous Karma, run out: "Once an Adversary runs out of Karma Points, an Adversary regains Life and Ki Points equal to
+   * 1/4 of their Maximum Life and Ki Points" - on its button (the user's), rounded down, once till it has Karma again.
+   */
+  static async _onAdversaryRegain() {
+    const system = this.actor.system;
+    if (!system.adversaryGains?.narrative || ((Number(system.karma) || 0) > 0) || system.adversary?.karmaRegained) return;
+    const life = system.life ?? {};
+    const ki = system.ki ?? {};
+    const lifeBack = Math.floor((Number(life.max) || 0) / 4);
+    const kiBack = Math.floor((Number(ki.max) || 0) / 4);
+    await this.actor.update({
+      "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + lifeBack),
+      "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + kiBack),
+      "system.adversary.karmaRegained": true
+    });
+    ui.notifications.info(`${this.actor.name}: out of Karma Points - up to ${lifeBack} Life Points and ${kiBack} Ki Points regained.`);
+  }
+
+  /** Narrative Stamina, stepped by hand: never under nothing; over this Round's is the ARC's to allow. */
+  static async _onStepStamina(event, target) {
+    const now = Number(this.actor.system.narrativeStamina?.value) || 0;
+    return this.actor.update({ "system.narrativeStamina.value": Math.max(0, now + (Number(target.dataset.step) || 0)) });
   }
 
   /** Unlock or re-lock the Combat tab's tracking values. */

@@ -11,7 +11,8 @@
  */
 
 import { actsFreely, areAllies, areOpponents, masterOf, minionsOf, opponentsCountAsAllies } from "./allies.mjs";
-import { commandedNow, isCharacter } from "./actor-types.mjs";
+import { commandedNow, isAdversary, isCharacter } from "./actor-types.mjs";
+import { adversaryEncounterEnd, adversaryEncounterStart } from "./adversary.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
@@ -319,7 +320,10 @@ export function newRoundFor(actor) {
     // with the round exactly as the Diminishing counts do.
     "system.basicAttackProfiles": [],
     "system.usedManeuvers": (actor.system.usedManeuvers ?? [])
-      .filter(entry => !entry.startsWith("round:"))
+      .filter(entry => !entry.startsWith("round:")),
+    // Narrative Stamina: "At the start of each Combat Round, gain Narrative Stamina equal to the amount listed ... You lose all
+    // Narrative Stamina at the end of each Combat Round" - last Round's gone and this Round's given, in one.
+    ...(isAdversary(actor) ? { "system.narrativeStamina.value": Number(actor.system.narrativeStamina?.max) || 0 } : {})
   };
 }
 
@@ -373,7 +377,9 @@ async function startEncounter(combat) {
       // Nobody starts an Encounter already being held.
       ...NOT_GRAPPLING,
       // Every Resource is lost when an Encounter ends, so one starts with none - but the ones that keep.
-      "system.resources": replaceObject(keptResources(actor.system.resources))
+      "system.resources": replaceObject(keptResources(actor.system.resources)),
+      // Villainous Karma: an Adversary's, given as the Encounter begins.
+      ...(isAdversary(actor) ? adversaryEncounterStart(actor.system) : {})
     }, { dbuEncounterStart: true });
     await stopCharging(actor);
     if (regulated) {
@@ -924,6 +930,8 @@ function followerSkips(actor) {
  * "for the remainder of the Combat Encounter" - Arrogant Declaration's - outlived that button).
  */
 export async function endEncounterFor(actor) {
+  // "Adversaries lose all remaining Karma Points at the end of each Combat Encounter" - and what was its Rounds' with them.
+  if (isAdversary(actor)) await actor.update(adversaryEncounterEnd());
   // A False Moon stands no longer than the Combat Encounter it was made in - Lasting Moon's included.
   const { falseMoonGone } = await import("./chat.mjs");
   for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.fakeMoon)) {

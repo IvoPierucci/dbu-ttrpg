@@ -195,6 +195,24 @@
 
       {{! God Ki's Divine Ki to the Capacity's left, the two sharing the row; without it the Capacity has the row (the user's). }}
       <div class="dbu-capacity-row">
+      {{! An Elite's or a Villain's Narrative Stamina, to the Capacity's left as Divine Ki is: the same as on its own tab. }}
+      {{#if adversary.combat.narrative}}
+      <div class="dbu-capacity dbu-stamina"
+           data-tooltip="Narrative Stamina: gained as each Combat Round starts, lost as it ends. Spent in place of Ki Points; and taken off the Life Points a hit would cost.">
+        <div class="dbu-capacity-head">
+          <em>Narrative Stamina</em>
+          <span class="dbu-capacity-edit">
+            <button type="button" class="stack-step" data-action="stepStamina" data-step="-1" data-tooltip="1 less">&minus;</button>
+            {{! Said, not written, here: its box is on the Adversary tab - one field of a name to a form. }}
+            <b>{{adversary.combat.stamina}}</b>
+            <span class="dbu-capacity-of">/ {{adversary.combat.staminaMax}}</span>
+            <button type="button" class="stack-step" data-action="stepStamina" data-step="1" data-tooltip="1 more">+</button>
+          </span>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width: {{adversary.combat.staminaPercent}}%"></div></div>
+        <span class="dbu-capacity-left">{{#if adversary.combat.duel}}None in a 1-on-1 Duel{{else}}This Combat Round's{{/if}} &middot; Karma {{adversary.combat.karma}}</span>
+      </div>
+      {{/if}}
       {{#if system.divineKi.active}}
       <div class="dbu-capacity dbu-divine"
            data-tooltip="God Ki's Divine Ki Points: spent in place of Ki Points while ticked - all of a price or none, at half its Capacity">
@@ -227,7 +245,7 @@
           </span>
         </div>
         <div class="meter"><div class="meter-fill" style="width: {{capacityPercent}}%"></div></div>
-        <span class="dbu-capacity-left">{{capacity.remaining}} left this round</span>
+        <span class="dbu-capacity-left{{#if capacity.over}} dbu-adversary-over{{/if}}">{{#if capacity.ignored}}Ignored &middot; {{#if capacity.over}}over by {{capacity.over}}{{else}}within it{{/if}}{{else}}{{capacity.remaining}} left this round{{/if}}</span>
       </div>
       </div>
     </div>
@@ -480,8 +498,8 @@
             {{/if}}
           </div>
 
-          <div class="stat" data-tooltip="Counter Actions left this round, of what each round gives you">
-            <em>Counter Actions</em>
+          <div class="stat" data-tooltip="{{#if adversary.combat.active}}Adversary Actions left this round, of its PCC: spent as Counter Actions are (One-Man Army){{else}}Counter Actions left this round, of what each round gives you{{/if}}">
+            <em>{{#if adversary.combat.active}}Adversary Actions{{else}}Counter Actions{{/if}}</em>
             {{#if combatEditMode}}
             <input type="number" data-action-type="counter" value="{{system.actions.counter}}" min="0"/>
             {{else}}

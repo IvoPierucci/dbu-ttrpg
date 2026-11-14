@@ -78,3 +78,28 @@ export function adversaryRanks(system) {
   return Object.entries(system?.adversary?.ranks ?? {})
     .flatMap(([key, ranks]) => Array(Math.max(0, Math.floor(Number(ranks) || 0))).fill(key));
 }
+
+/**
+ * Villainous Karma: "Adversaries do not gain Karma Points at Character Creation, but instead, they have no limit on Karma
+ * Points and at the start of each Combat Encounter, a Villain-Category Adversary gains PCC Karma Points, and an
+ * Elite-Category Adversary gains 1/2 of PCC Karma Points (min. 1)" - rounded down. A Standard one has none (the user's).
+ */
+export function adversaryKarma(system) {
+  const gains = adversaryGains(system);
+  if (gains.category === "villain") return gains.pcc;
+  if (gains.category === "elite") return Math.max(1, Math.floor(gains.pcc / 2));
+  return 0;
+}
+
+/**
+ * What a Combat Encounter beginning gives an Adversary, and what its ending takes: its Villainous Karma, and - "Adversaries
+ * lose all remaining Karma Points at the end of each Combat Encounter" - none of it left, its Narrative Stamina gone with the
+ * Round it was for, and a 1-on-1 Duel over. The fields a document update takes.
+ */
+export function adversaryEncounterStart(system) {
+  return { "system.karma": adversaryKarma(system), "system.adversary.karmaRegained": false };
+}
+
+export function adversaryEncounterEnd() {
+  return { "system.karma": 0, "system.adversary.karmaRegained": false, "system.adversary.duel": false, "system.narrativeStamina.value": 0 };
+}
