@@ -1,0 +1,24 @@
+id: stop-wasting-my-time
+name: "Stop Wasting My Time"
+type: outOfSequence
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/encounter
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  Annoyed by your enemy’s weakness, you demand they stop holding back their full power.
+text: >
+  "Stop Wasting My Time" [1/Encounter]: Annoyed by your enemy’s weakness, you demand they stop holding back their full power.
+  –Maneuver Type: Out-of-Sequence
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: This Maneuver can only be used at the start of an Opponent’s turn. They may use the Transformation Maneuver as an Out-of-Sequence Maneuver. If they do, you may apply Legend Realized.
+
+---
+
+# Waits for the Transformations (the user's: written, and left for when they are built).

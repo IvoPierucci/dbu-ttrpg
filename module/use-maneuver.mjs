@@ -7,6 +7,7 @@
  * and this system has already been bitten by that once.
  */
 
+import { adversaryActionsFor, isVillainousManeuver, villainousAfter, villainousBefore } from "./villainous.mjs";
 import { areAllies, areOpponents } from "./allies.mjs";
 import { isCharacter } from "./actor-types.mjs";
 import { favoredChoiceOf } from "./data/item-maneuver.mjs";
@@ -197,6 +198,8 @@ function canAffordActions(actor, maneuver) {
   const { kind, amount } = actionCostOf(maneuver);
   if (amount <= 0) return true;
   if (actionsWithin(actor, kind) >= amount) return true;
+  // A Villainous Maneuver's Action Cost in Adversary Actions (villainous.mjs).
+  if (isVillainousManeuver(maneuver) && actor.system?.adversaryNarrative && ((Number(actor.system.actions?.counterLeft) || 0) >= amount)) return true;
 
   ui.notifications.warn(
     `${actor.name} has no ${kind} Actions left this round for ${maneuver.name}.`
@@ -324,13 +327,18 @@ function permitted(actor, maneuver) {
     [maneuver.attacking, "attackingManeuvers", "Attacking Maneuvers"],
     [(maneuver.tags ?? []).includes("signature") || Boolean(maneuver.godFinisher), "signatureTechniques", "Signature Techniques"],
     [(maneuver.tags ?? []).includes("uniqueAbility") && !feralBestial, "uniqueAbilities", "Unique Abilities"],
-    // Statstick (3): "Special Maneuvers (except the Soar Maneuver)".
-    [Boolean(maneuver.special) && (maneuver.id !== "soar"), "specialManeuvers", "Special Maneuvers"],
     [(maneuver.tags ?? []).includes("transformation"), "transformations", "Transformations"]
   ].find(([applies, flag]) => applies && !permits(slots, flag));
 
   if (refused) {
     ui.notifications.warn(`${actor.name} cannot use ${refused[2]} right now.`);
+    return false;
+  }
+
+  // Statstick (3): "You cannot use any Unique Abilities or Special Maneuvers (except the Soar Maneuver)" - its own mark, so the
+  // Soar is still open where the Special Maneuvers' ban (the Spectator State's) would shut it.
+  if (maneuver.special && (maneuver.id !== "soar") && (slots?.["statstick.noSpecial"] === true)) {
+    ui.notifications.warn(`${actor.name} cannot use Special Maneuvers but the Soar (Statstick).`);
     return false;
   }
 
@@ -2686,6 +2694,11 @@ const TARGET_SIDE = Object.freeze({
 /** Take the Actions, once the Maneuver has actually committed. */
 async function payActions(actor, maneuver, spent = null) {
   const { kind, amount } = actionCostOf(maneuver, spent);
+  // "For Villainous Maneuvers, you may use your Adversary Actions as if they were Actions for their Action Cost."
+  if ((kind === "standard") && await adversaryActionsFor(actor, maneuver, amount, actionsWithin(actor, "standard"))) {
+    await spendActions(actor, amount, "counter");
+    return;
+  }
   // Quick Sleep's: "reduce the Action Cost by 1" - the Actions chosen still what the Maneuver does with (the user's).
   await spendActions(actor, Math.max(0, amount - (Number(maneuver.actionDiscount) || 0)), kind);
 }
@@ -6443,6 +6456,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       return false;
     }
 
+  // A Villainous Maneuver's own questions, before anything is paid; what it does once its card is made (villainous.mjs).
+  let villainPlan = null;
+  if (isVillainousManeuver(maneuver)) {
+    villainPlan = await villainousBefore(actor, maneuver);
+    if (!villainPlan) return false;
+  }
+
   // "Certain Maneuvers that can be applied onto other Maneuvers you are doing." Asked
   // last of the questions that can still be walked away from, and paid first of the
   // things that are paid - so whatever a Modifier does is in place before the Maneuver it
@@ -7137,6 +7157,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // under it.
   await recordManeuverType(actor, outOfSequence ? "outOfSequence" : maneuver.type, { messageId: card?.id,
     maneuverId: maneuver.through?.id ?? maneuver.id, profile: declared?.profile ?? "" });
+  if (villainPlan) await villainousAfter(actor, maneuver, villainPlan);
   // Reserved Combatant (3): a Unique Ability that is no attack - its duration over with its card.
   if (!declared && ((Number(actor.system.conditions?.["reserved-mark"]) || 0) > 0)) {
     await (await import("./chat.mjs")).reservedEnds(null, actor);
@@ -7930,8 +7951,9 @@ export async function importCoreManeuvers() {
  * that updating a Core Maneuver has to reach every character - which is what the reload
  * button is for.
  */
-export function coreManeuverItems() {
+export function coreManeuverItems({ adversary = false } = {}) {
   return allManeuvers()
-    .filter(m => (m.source === "Core Rule") || !m.source)
+    // And an Adversary's Villainous Maneuvers, "that all Adversaries have access to".
+    .filter(m => (m.source === "Core Rule") || !m.source || (adversary && (m.source === "Villainous Maneuver")))
     .map(maneuverItemFrom);
 }

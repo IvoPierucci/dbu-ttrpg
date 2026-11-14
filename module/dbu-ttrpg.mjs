@@ -542,7 +542,7 @@ Hooks.on("preCreateActor", (actor, data, options, userId) => {
   // one be dragged to the hotbar, and what makes room in the same list for the
   // Signature Techniques and Unique Abilities bought per character.
   if (!actor.items.size) {
-    const starting = coreManeuverItems();
+    const starting = coreManeuverItems({ adversary: actor.type === "adversary" });
     if (starting.length) actor.updateSource({ items: starting });
   }
 });

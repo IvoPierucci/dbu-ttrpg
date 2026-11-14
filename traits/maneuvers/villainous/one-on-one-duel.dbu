@@ -1,0 +1,26 @@
+id: one-on-one-duel
+name: 1-on-1 Duel
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/encounter
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  You focus your attacks on a single person, intent on reducing enemy numbers.
+text: >
+  1-on-1 Duel [1/Encounter]: You focus your attacks on a single person, intent on reducing enemy numbers.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: Target a Player Character and request a 1-on-1 Battle. If they agree, then until another Character targets you (or that Character) with a Maneuver or effect (except through the 1st effect of the Spectator State) or until that Player Character is Defeated, you ignore the rules of Narrative Stamina and One-Man Army.
+  If you defeat a Player Character that agreed to a 1-on-1 Duel, regain Life and Ki Points equal to 1/4 (rounded up) of their Maximums and then regain the use of this Villainous Maneuver.
+
+---
+
+# Their answer asked of the ARC; agreed, the Adversary tab's 1-on-1 Duel switched on (the user's), its end the table's
+# (villainous.mjs).

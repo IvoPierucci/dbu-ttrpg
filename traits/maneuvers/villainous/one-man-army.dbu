@@ -1,0 +1,24 @@
+id: one-man-army
+name: One-Man Army
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  Spend 2 Adversary Actions to use a Standard Maneuver with an Action Cost of 1 Action as an Instant Maneuver.
+text: >
+  One-Man Army: Spend 2 Adversary Actions to use a Standard Maneuver with an Action Cost of 1 Action as an Instant Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: Spend 2 Adversary Actions to use a Standard Maneuver with an Action Cost of 1 Action as an Instant Maneuver.
+
+---
+
+# The user's: One-Man Army's second sentence made an Instant Maneuver of its own, with no limit a Round, its text as given -
+# a window of the Standard Maneuvers of 1 Action it has, the one picked used as an Instant (villainous.mjs).

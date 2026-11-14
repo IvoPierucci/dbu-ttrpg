@@ -1,0 +1,25 @@
+id: act-again
+name: Act Again
+type: outOfSequence
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  Why should you allow those pitiful fools to act unimpeded?
+text: >
+  Act Again [1/Round]: Why should you allow those pitiful fools to act unimpeded?
+  –Maneuver Type: Out-of-Sequence
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: This Villainous Maneuver can only be used in response to another Character ending their turn. Take an additional turn, its place in the Initiative Order being right after the turn of the Character that ended their turn. During this turn, you cannot spend any normal Actions, but you can spend your Adversary Actions as if they were Actions for your Maneuvers.
+
+---
+
+# Offered on the card of the turn that begins as another's ends (the user's: there is no end-of-turn card); taken, the turn is
+# put in the Initiative Order right there (villainous.mjs).

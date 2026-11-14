@@ -1,0 +1,27 @@
+id: insta-kill
+name: Insta-Kill
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+# A Minion targeted, or a Buddy picked - a Buddy is an Item, not a token to target (villainous.mjs).
+requiresTarget: false
+usageLimit: 1/encounter
+exploitable: All adjacent Opponents.
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  You eliminate one of those pesky weaklings that stands before you with nary a thought.
+text: >
+  Insta-Kill [1/Encounter]: You eliminate one of those pesky weaklings that stands before you with nary a thought.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –KP Cost: N/A
+  –Exploitable: All Adjacent Opponents. If you take Damage from an Attacking Maneuver made through the Exploit Maneuver in response to this Attacking Maneuver, the Maneuver fails.
+  –Effect: Target a Minion (except a Special Minion that is not a Duplicate Minion) or Buddy. That Minion or Buddy dies.
+
+---
+
+# Said, not done (the user's): the Minion or Buddy dies at the table's word (villainous.mjs).

@@ -38525,6 +38525,24 @@ function renderMoment(message, html) {
     buttons.append(blast);
   }
 
+  // Act Again (a Villainous Maneuver): another's turn ended, this one beginning - offered to an Adversary who has it.
+  if (card.moment === "start-of-turn") {
+    import("./villainous.mjs").then(({ actAgainOffers }) => actAgainOffers(card)).then(offers => {
+      for (const { actor, maneuver } of offers) {
+        const again = document.createElement("button");
+        again.type = "button";
+        again.className = "dbu-clash-button";
+        again.textContent = `Act Again - ${actor.name}`;
+        again.dataset.tooltip = "A turn more, right after the one that ended: no normal Actions in it, Adversary Actions spent as Actions. Once a Round.";
+        again.addEventListener("click", async () => {
+          const { useManeuver } = await import("./use-maneuver.mjs");
+          await useManeuver(actor, maneuver, { outOfSequence: true });
+        });
+        buttons.append(again);
+      }
+    });
+  }
+
   for (const actor of momentAnswerers(card)) {
     const apply = document.createElement("button");
     apply.type = "button";

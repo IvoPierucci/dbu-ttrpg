@@ -750,6 +750,8 @@ export function registerCombatHooks() {
     // Actor rather than the one in the sidebar it was made from.
     const leaving = (previous?.combatantId && (previous.combatantId !== handedOn))
       ? combat.combatants.get(previous.combatantId)?.actor : null;
+    // Act Again's turn over: gone from the Initiative Order, once its end is answered below (villainous.mjs).
+    const actAgainOver = combat.combatants.get(previous?.combatantId ?? "")?.getFlag?.("dbu-ttrpg", "actAgain") ? previous.combatantId : "";
     if (leaving) await foresee(combat, leaving, false);
     // Binding: "For every Turn that an Opponent ends with the Pinned Combat Condition through the effects of your
     // Binding" - counted on the mark, read by their Might Clash.
@@ -848,6 +850,7 @@ export function registerCombatHooks() {
       return;
     }
     if (arriving) await foresee(combat, arriving, true);
+    if (actAgainOver) await (await import("./villainous.mjs")).actAgainEnded(combat, actAgainOver);
     if ((isCharacter(arriving)) && !await beginTurn(arriving)) {
       return combat.nextTurn();
     }
@@ -859,6 +862,8 @@ export function registerCombatHooks() {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
     const actor = combatant.actor;
     if (!combatant.parent?.started || !isCharacter(actor) || (actor.type === "minion")) return;
+    // Act Again's turn taken off is not its Adversary leaving: it is still in the Encounter.
+    if (combatant.getFlag?.("dbu-ttrpg", "actAgain")) return;
     await dismissDuplicates(duplicatesOf(actor));
   });
 

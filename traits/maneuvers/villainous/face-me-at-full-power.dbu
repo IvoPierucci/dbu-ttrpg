@@ -1,0 +1,24 @@
+id: face-me-at-full-power
+name: "Face Me at Full Power"
+type: outOfSequence
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  No longer content with showing off, you unleash your true might in an effort to start closing the fight.
+text: >
+  "Face Me at Full Power" [1/Encounter]: No longer content with showing off, you unleash your true might in an effort to start closing the fight.
+  –Maneuver Type: Out-of-Sequence
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: This Maneuver can only be used at the start of a Combat Round. Use the Transformation Maneuver as an Out-of-Sequence Maneuver, then remove all Combat Conditions you are suffering from (except Pinned or Suffocating).
+
+---
+
+# Waits for the Transformations (the user's: written, and left for when they are built).

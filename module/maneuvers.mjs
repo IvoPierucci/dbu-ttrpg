@@ -3599,6 +3599,8 @@ export function whyNotSpecial(actor, maneuver) {
   if (!permits(slots, `maneuver.${maneuver.id}`)) {
     return `Something is keeping ${actor.name} from using ${maneuver.name}.`;
   }
+  // A Villainous Maneuver: "a form of Special Maneuver that all Adversaries have access to".
+  if ((maneuver.source === "Villainous Maneuver") && (actor?.type === "adversary")) return null;
   if (openedWithoutGear(actor, maneuver)) return null;
   // Assimilation (3): a Goop of its holder's.
   if ((maneuver.id === "absorb") && goopAbsorbs(actor)) return null;

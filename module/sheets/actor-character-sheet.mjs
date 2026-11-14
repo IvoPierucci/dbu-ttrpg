@@ -4,6 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter } from "../actor-types.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, weakpointOutcome } from "../adversary.mjs";
+import { isVillainousManeuver } from "../villainous.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
@@ -2177,13 +2178,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // The row is where a player reads what their own Modifier does, and what it says it
       // applies to.
       { key: "modifier", playable: false,
-        note: "Applied to another Maneuver as you use that one" }
+        note: "Applied to another Maneuver as you use that one" },
+      // An Adversary's Villainous Maneuvers, a tab of their own (the user's).
+      ...(isAdversary(this.actor) ? [{ key: "villainous", label: "Villainous", playable: true,
+        note: "Every Adversary's - their Action Cost paid in Actions or Adversary Actions" }] : [])
     ];
 
     return groups
       .map(group => ({
         ...group,
-        label: MANEUVER_TYPES[group.key].label,
+        label: group.label ?? MANEUVER_TYPES[group.key].label,
         // Open unless the player has closed it. Rendered rather than restored after the
         // fact, so the section never changes height once the scroll has been set.
         open: this.#openSections[`maneuvers-${group.key}`] ?? true,
@@ -2191,7 +2195,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // and Unique Abilities are bought per character, so they could never have lived
         // in one.
         maneuvers: this.#ownedManeuvers()
-          .filter(maneuver => maneuver.type === group.key)
+          .filter(maneuver => ((group.key === "villainous") ? isVillainousManeuver(maneuver)
+            : ((maneuver.type === group.key) && !isVillainousManeuver(maneuver))))
           // Signature Techniques have a tab of their own - and so do Unique Abilities.
           .filter(maneuver => !(maneuver.signature && !maneuver.signatureTechnique))
           .filter(maneuver => !(maneuver.tags ?? []).includes("uniqueAbility"))
@@ -4297,7 +4302,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .filter(item => item.type === "maneuver")
       .map(item => item.system.maneuverId || item.name));
 
-    const missing = coreManeuverItems()
+    const missing = coreManeuverItems({ adversary: isAdversary(this.actor) })
       .filter(entry => !held.has(entry.system.maneuverId) && !held.has(entry.name));
 
     if (!missing.length) {

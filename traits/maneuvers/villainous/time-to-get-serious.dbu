@@ -1,0 +1,24 @@
+id: time-to-get-serious
+name: Time to Get Serious
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  You’ve had enough- it’s time to stop fooling around and show those weaklings your full power.
+text: >
+  Time to Get Serious [1/Encounter]: You’ve had enough- it’s time to stop fooling around and show those weaklings your full power.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: Spend 1 Karma Point. Remove all Combat Conditions you are suffering from (except Suffocating), end any Grapple you are in as the Grappled, and then, apply Legend Realized.
+
+---
+
+# villainous.mjs.

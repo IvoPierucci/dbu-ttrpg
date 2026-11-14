@@ -1,0 +1,25 @@
+id: get-up
+name: Get Up!
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+source: Villainous Maneuver
+# A Villainous Maneuver (the Adversaries page): "a form of Special Maneuver that all Adversaries have access to" - every
+# Adversary's, given with its sheet and on the Maneuvers tab's Villainous tab; what it does, villainous.mjs.
+special: true
+description: >
+  I’m not done with you yet!
+text: >
+  Get Up! [1/Round]: I’m not done with you yet!
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Effect: Target a Defeated Opponent. They stop being Defeated and have their Life Points set to 1/10th of their Maximum Life Points. This effect counts for Will to Survive (see – Damage & Recovery).
+  You cannot target this Opponent with an Attacking Maneuver until the end of their next turn.
+
+---
+
+# villainous.mjs.

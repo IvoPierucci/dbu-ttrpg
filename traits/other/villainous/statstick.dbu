@@ -16,6 +16,7 @@ combatRolls += 1(T);
 soakValue += 1(T);
 # (2) The Adversary Table's Max LP and KP per PL, twice (actor-character.mjs).
 allow statstick.double;
-# (3) The Soar Maneuver alone of the Special Maneuvers (use-maneuver.mjs).
+# (3) The Soar Maneuver alone of the Special Maneuvers (use-maneuver.mjs) - its own mark: the Special Maneuvers' ban would
+# shut the Soar as well.
 forbid uniqueAbilities;
-forbid specialManeuvers;
+allow statstick.noSpecial;
