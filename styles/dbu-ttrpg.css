@@ -5563,3 +5563,15 @@
 .dbu-villainous-add { display: grid; gap: 6px; }
 .dbu-villainous-own { display: grid; gap: 2px; }
 .dbu-villainous-own textarea { width: 100%; min-height: 80px; }
+/* A Weakpoint: what it is, what hitting it does, its button and its bin - on one line. */
+.dbu-ttrpg .dbu-adversary-weak {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto 18px;
+  gap: 8px;
+  align-items: end;
+  padding: 4px 0;
+  border-top: 1px solid var(--dbu-border);
+}
+.dbu-ttrpg .dbu-adversary-weak:first-of-type { border-top: 0; }
+.dbu-ttrpg .dbu-adversary-weak input[type="text"] { width: 100%; height: 24px; box-sizing: border-box; margin: 0; font-size: 12px; }
+.dbu-ttrpg .dbu-adversary-weak .dbu-manage { height: 24px; }

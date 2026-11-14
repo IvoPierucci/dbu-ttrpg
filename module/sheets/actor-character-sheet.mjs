@@ -3,7 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter } from "../actor-types.mjs";
-import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed } from "../adversary.mjs";
+import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, weakpointOutcome } from "../adversary.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
@@ -588,6 +588,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useConditionAbility: DBUCharacterSheet._onUseConditionAbility,
       stepKarma: DBUCharacterSheet._onStepKarma,
       adversaryRegain: DBUCharacterSheet._onAdversaryRegain,
+      addWeakpoint: DBUCharacterSheet._onAddWeakpoint,
+      deleteWeakpoint: DBUCharacterSheet._onDeleteWeakpoint,
+      weakpointHit: DBUCharacterSheet._onWeakpointHit,
       stepStamina: DBUCharacterSheet._onStepStamina,
       justTakeIt: DBUCharacterSheet._onJustTakeIt,
       toggleDefeated: DBUCharacterSheet._onToggleDefeated,
@@ -3419,6 +3422,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       kiPerLevel: gains.kiPerLevel, kiTotal: gains.kiPerLevel * level,
       pointsPerTier: gains.pointsPerTier, points, used, over: used > points,
       traits: gains.traits,
+      weakpoints: (system.adversary?.weakpoints ?? []).map(weak => ({ ...weak })),
       // What an Elite or a Villain has in combat (Adversaries in Combat) - a Standard one none of it. `active`: not in a
       // 1-on-1 Duel, which sets Narrative Stamina and One-Man Army aside.
       combat: {
@@ -3782,6 +3786,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       progression.prepend(note);
     }
 
+    // A Weakpoint's fields: written onto its row of the list, not submitted with the character's form.
+    for (const input of this.element.querySelectorAll("[data-weakpoint]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        this.#writeWeakpoint(input.closest("[data-weakpoint-id]")?.dataset.weakpointId, input.dataset.weakpoint, input.value);
+      });
+    }
     // A Custom Buff's fields: written onto its row of the list, not submitted with the character's form.
     for (const input of this.element.querySelectorAll("[data-custom-buff]")) {
       input.addEventListener("change", event => {
@@ -7687,6 +7698,72 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       "system.adversary.karmaRegained": true
     });
     ui.notifications.info(`${this.actor.name}: out of Karma Points - up to ${lifeBack} Life Points and ${kiBack} Ki Points regained.`);
+  }
+
+  /** A Weakpoint more, empty, last on the list. */
+  static async _onAddWeakpoint() {
+    const list = (this.actor.system.adversary?.weakpoints ?? []).map(weak => ({ ...weak }));
+    return this.actor.update({ "system.adversary.weakpoints": [...list, { id: foundry.utils.randomID(), what: "", does: "" }] });
+  }
+
+  /** A Weakpoint taken off the list. */
+  static async _onDeleteWeakpoint(event, target) {
+    const id = target.closest("[data-weakpoint-id]")?.dataset.weakpointId;
+    return this.actor.update({ "system.adversary.weakpoints": (this.actor.system.adversary?.weakpoints ?? [])
+      .filter(weak => weak.id !== id).map(weak => ({ ...weak })) });
+  }
+
+  /** One field of a Weakpoint, written onto its row - the whole list again, as a list is. */
+  async #writeWeakpoint(id, field, value) {
+    const list = (this.actor.system.adversary?.weakpoints ?? []).map(weak => ({ ...weak }));
+    const weak = list.find(each => each.id === id);
+    if (!weak || !["what", "does"].includes(field)) return;
+    weak[field] = String(value ?? "").trim();
+    return this.actor.update({ "system.adversary.weakpoints": list });
+  }
+
+  /**
+   * A Weakpoint hit (the user's): a window of what follows - a Villainous Trait switched off, a Combat Condition applied, a group
+   * of Custom Buffs switched on - each chosen there, or none; done, and said in the chat with what the Weakpoint is.
+   */
+  static async _onWeakpointHit(event, target) {
+    const id = target.closest("[data-weakpoint-id]")?.dataset.weakpointId;
+    const weak = (this.actor.system.adversary?.weakpoints ?? []).find(each => each.id === id);
+    if (!weak) return;
+    const escape = Handlebars.escapeExpression;
+    const traits = ownedVillainousTraits(this.actor).filter(item => !item.getFlag("dbu-ttrpg", "villainousOff"));
+    const conditions = combatConditionsFor(this.actor).filter(condition => !(Number(condition.stacks) > 0));
+    const groups = [...new Set((this.actor.system.customBuffs ?? []).map(buff => String(buff.group ?? "").toUpperCase()).filter(Boolean))].sort();
+    const select = (name, label, options, tip) => `<label class="dbu-respond-option" data-tooltip="${escape(tip)}">
+      <span class="dbu-respond-name">${escape(label)}</span><select name="${name}"><option value="">None</option>${options}</select></label>`;
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Weakpoint hit` }, position: { width: 420 },
+      content: `<p class="dbu-respond-hint">${escape(weak.what || "A Weakpoint")}${weak.does ? ` &middot; ${escape(weak.does)}` : ""}</p>
+        ${select("trait", "Villainous Trait off", traits.map(item => `<option value="${item.id}">${escape(item.name)}</option>`).join(""),
+          "Had, and doing nothing from now on")}
+        ${select("condition", "Combat Condition", conditions.map(condition => `<option value="${escape(condition.key)}">${escape(condition.name)}</option>`).join(""),
+          "Applied to this Adversary")}
+        ${select("group", "Custom Buffs on", groups.map(letter => `<option value="${letter}">Group ${letter}</option>`).join(""),
+          "Every row of that group switched on - written beforehand, to weaken its Attributes or other values")}
+        <p class="dbu-respond-hint">Removing a Transformation, or keeping it from one, waits for the Transformations.</p>`,
+      buttons: [
+        { action: "hit", label: "Weakpoint hit", default: true, callback: (ev, button, dialog) => ({
+          trait: dialog.element.querySelector('[name="trait"]').value, condition: dialog.element.querySelector('[name="condition"]').value,
+          group: dialog.element.querySelector('[name="group"]').value }) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!chosen || (typeof chosen !== "object")) return;
+    const item = traits.find(each => each.id === chosen.trait);
+    const condition = conditions.find(each => each.key === chosen.condition);
+    const outcome = weakpointOutcome(this.actor.system, { traitName: item?.name ?? "", conditionName: condition?.name ?? "", group: chosen.group });
+    if (item) await item.setFlag("dbu-ttrpg", "villainousOff", true);
+    if (condition) await setCondition(this.actor, condition.key, 1);
+    if (outcome.buffs) await this.actor.update({ "system.customBuffs": outcome.buffs });
+    return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="dbu-settled-note"><b>Weakpoint hit</b> - ${escape(weak.what || "a Weakpoint")}.${
+        outcome.lines.length ? ` ${outcome.lines.map(escape).join(" ")}` : ""}</div>` });
   }
 
   /** Narrative Stamina, stepped by hand: never under nothing; over this Round's is the ARC's to allow. */

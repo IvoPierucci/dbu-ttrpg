@@ -187,3 +187,25 @@ export function payKiWithStamina(actor, changes, options = {}) {
   set("system.narrativeStamina.value", staminaLeft(actor) - taken);
   return taken;
 }
+
+/**
+ * A Weakpoint hit (the user's: a window of what may follow, each chosen there) - "Once a Weakpoint's condition has been hit, you
+ * can use it to: Remove Adversary Transformations. Prevent an Adversary from entering/staying in a very powerful Transformation.
+ * Remove a Villainous Trait. Apply Combat Conditions. Weaken their Attributes or other values." Those this system has: a
+ * Villainous Trait switched off, a Combat Condition applied, and a group of Custom Buffs switched on - written beforehand, to
+ * weaken what the ARC wants weakened. The Transformations wait for them.
+ *
+ * What it makes of the choices: the Custom Buffs as they stand once that group's rows are on, and the lines said in the chat.
+ */
+export function weakpointOutcome(system, { traitName = "", conditionName = "", group = "" } = {}) {
+  const letter = String(group ?? "").trim().toUpperCase();
+  const buffs = (system?.customBuffs ?? []).map(buff => ({ ...buff }));
+  const switched = letter ? buffs.filter(buff => String(buff.group ?? "").toUpperCase() === letter) : [];
+  for (const buff of switched) buff.active = true;
+  const lines = [
+    traitName ? `${traitName} switched off.` : "",
+    conditionName ? `${conditionName} applied.` : "",
+    switched.length ? `Custom Buffs of group ${letter} switched on: ${switched.map(buff => buff.name || "unnamed").join(", ")}.` : ""
+  ].filter(Boolean);
+  return { buffs: switched.length ? buffs : null, lines };
+}
