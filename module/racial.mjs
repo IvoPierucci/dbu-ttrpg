@@ -468,6 +468,7 @@ function replacedTraitOf(file, race) {
  */
 export const OTHER_GROUPS = Object.freeze({
   evolution: "Evolution · Arcosian",
+  villainous: "Villainous",
   vocation: "Vocation",
   bestial: "Bestial",
   monstrous: "Monstrous",
@@ -520,6 +521,44 @@ export function otherGroupName(group) {
   return OTHER_GROUPS[key] ?? (key.charAt(0).toUpperCase() + key.slice(1));
 }
 
+/**
+ * Villainous Traits (the Adversaries page): an Adversary's, by its Category - the page's examples, files in
+ * traits/other/villainous/, and those of the ARC's own making, a name and a text (the user's). Kept apart from the Other
+ * Traits' list and picker: theirs is a list of its own, above the Racial Traits and on the Adversary tab.
+ */
+export const VILLAINOUS = "villainous";
+
+/** Whether a racial Item is a Villainous Trait. */
+export function isVillainous(item) {
+  return (item?.system?.other === VILLAINOUS) || (getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.owner === VILLAINOUS);
+}
+
+/** The Villainous Traits an Adversary has, in the order they were gained. */
+export function ownedVillainousTraits(actor) {
+  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && isVillainous(item))
+    .sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0));
+}
+
+/** The page's example Villainous Traits, for the picker, by name. */
+export function villainousTraitFiles() {
+  return traitsOfKind("other").filter(trait => trait.owner === VILLAINOUS).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * A Villainous Trait of the ARC's own (the user's): "make dynamic Villainous Traits that fit your specific Adversary" - its name
+ * and its text, nothing it does by itself: its numbers are written as Custom Buffs.
+ */
+export async function addCustomVillainousTrait(actor, name, text) {
+  const title = String(name ?? "").trim();
+  if (!title) return null;
+  const body = String(text ?? "").trim();
+  const [made] = await actor.createEmbeddedDocuments("Item", [{ name: title, type: RACIAL_TYPE,
+    img: "icons/sundries/books/book-red-exclamation.webp",
+    flags: { "dbu-ttrpg": { villainousCustom: true } },
+    system: { description: body, text: body ? `${title}: ${body}` : title, script: "", other: VILLAINOUS } }]);
+  return made ?? null;
+}
+
 /** Whether a racial Item is an Other Trait - Evolution, Bestial, Monstrous - by its group or its file's folder. */
 export function isOtherTrait(item) {
   return Boolean(item?.system?.other) || (getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.kind === "other");
@@ -529,7 +568,7 @@ export function isOtherTrait(item) {
 export function ownedOtherTraits(actor) {
   const group = item => item.system?.other || getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.owner || "";
   const rank = item => { const at = Object.keys(OTHER_GROUPS).indexOf(group(item)); return (at < 0) ? 99 : at; };
-  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && isOtherTrait(item))
+  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && isOtherTrait(item) && !isVillainous(item))
     .sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
 }
 
@@ -537,7 +576,9 @@ export function ownedOtherTraits(actor) {
 export function otherTraitsInOrder() {
   const rank = trait => { const at = Object.keys(OTHER_GROUPS).indexOf(trait.owner ?? ""); return (at < 0) ? 99 : at; };
   // Not an Option of one - Bestial Build's Thick Hide - which is chosen as that one is gained.
-  return traitsOfKind("other").filter(trait => !trait.optionOf).sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
+  // Nor a Villainous Trait: an Adversary's, offered on its own (villainousTraitFiles).
+  return traitsOfKind("other").filter(trait => !trait.optionOf && (trait.owner !== VILLAINOUS))
+    .sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
 }
 
 /** A label as a choice's value: "Enormous" -> "enormous". */

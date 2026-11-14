@@ -5553,3 +5553,13 @@
 .dbu-stamina-line:last-child { top: -3px; bottom: -16px; }
 .dbu-stamina-line:last-child em { top: auto; bottom: 0; }
 .dbu-ttrpg .dbu-adversary-toggle select { height: 22px; margin: 0; padding: 0 4px; font-size: 12px; width: auto; }
+/* Villainous Traits: a row each on the Adversary tab; one switched off greyed, there and on the Traits tab. */
+.dbu-ttrpg .dbu-adversary-trait { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--dbu-border); font-size: 12px; }
+.dbu-ttrpg .dbu-adversary-trait:first-of-type { border-top: 0; }
+.dbu-ttrpg .dbu-adversary-trait small { color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-adversary-trait .trait-arm { margin-left: auto; }
+.dbu-ttrpg .dbu-adversary-trait.off .dbu-adversary-trait-name,
+.dbu-ttrpg .dbu-villainous-off .trait-name { opacity: 0.5; text-decoration: line-through; }
+.dbu-villainous-add { display: grid; gap: 6px; }
+.dbu-villainous-own { display: grid; gap: 2px; }
+.dbu-villainous-own textarea { width: 100%; min-height: 80px; }

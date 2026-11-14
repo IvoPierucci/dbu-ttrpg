@@ -1,0 +1,17 @@
+id: second-phase
+name: Second Phase
+description: >
+  There’s more to fighting you than anyone can possibly realize; you keep your true power hidden to use against those fools who dare to oppose you.
+text: >
+  Second Phase: There’s more to fighting you than anyone can possibly realize; you keep your true power hidden to use against those fools who dare to oppose you.
+  (1)-[Passive]: You cannot enter your Transformation with the highest Tier of Power Requirement until you trigger the second effect of Second Phase.
+  (2)-[Triggered/Defeated]: Regain Life Points equal to 1/2 of your Maximum Life Points and stop being Defeated. Then, you may use the Transformation Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1), and (2)'s Transformation Maneuver, wait for the Transformations (the user's).
+
+# (2) Defeated - once an Encounter, as the Triggered/Defeated Keyword is (the user's): half the Maximum Life Points back, before the
+# Defeat is settled, so it is not.
+[triggered/defeated, effect 2]
+life.value += floor(life.max / 2);

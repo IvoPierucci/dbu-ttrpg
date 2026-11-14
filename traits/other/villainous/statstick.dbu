@@ -1,0 +1,21 @@
+id: statstick
+name: Statstick
+description: >
+  You have no need for fancy tricks, because your raw strength is enough to mow down your enemies.
+text: >
+  Statstick: You have no need for fancy tricks, because your raw strength is enough to mow down your enemies.
+  (1)-[Passive]: Increase your Combat Rolls and Soak Value by 1(T).
+  (2)-[Passive]: Double the amount of Maximum Life and Ki Points you gain due to your Adversary Category.
+  (3)-[Passive]: You cannot use any Unique Abilities or Special Maneuvers (except the Soar Maneuver).
+
+---
+
+[passive]
+# (1)
+combatRolls += 1(T);
+soakValue += 1(T);
+# (2) The Adversary Table's Max LP and KP per PL, twice (actor-character.mjs).
+allow statstick.double;
+# (3) The Soar Maneuver alone of the Special Maneuvers (use-maneuver.mjs).
+forbid uniqueAbilities;
+forbid specialManeuvers;

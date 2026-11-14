@@ -1,0 +1,16 @@
+id: arrogant-unstoppable-mark
+name: Arrogant and Unstoppable
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Arrogant and Unstoppable (2)'s, till the start of your next turn.
+combatCondition: no
+source: Villainous Trait
+description: >
+  Arrogant and Unstoppable (2): in the Healthy Health Threshold for all of your effects until the start of your next turn.
+text: >
+  Arrogant and Unstoppable (2): You may treat yourself as if you are in the Healthy Health Threshold for all of your effects until the start of your next turn.
+
+---
+
+[passive]
+allow threshold.asHealthy;

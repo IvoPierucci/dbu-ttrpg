@@ -324,6 +324,8 @@ function permitted(actor, maneuver) {
     [maneuver.attacking, "attackingManeuvers", "Attacking Maneuvers"],
     [(maneuver.tags ?? []).includes("signature") || Boolean(maneuver.godFinisher), "signatureTechniques", "Signature Techniques"],
     [(maneuver.tags ?? []).includes("uniqueAbility") && !feralBestial, "uniqueAbilities", "Unique Abilities"],
+    // Statstick (3): "Special Maneuvers (except the Soar Maneuver)".
+    [Boolean(maneuver.special) && (maneuver.id !== "soar"), "specialManeuvers", "Special Maneuvers"],
     [(maneuver.tags ?? []).includes("transformation"), "transformations", "Transformations"]
   ].find(([applies, flag]) => applies && !permits(slots, flag));
 

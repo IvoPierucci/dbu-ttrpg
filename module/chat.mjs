@@ -21746,6 +21746,21 @@ async function askSizeMatters(actor, everyone) {
   return Boolean(yes);
 }
 
+/**
+ * Wild Swings (2), a Villainous Trait's: "[Triggered, 2/Round]: If you use an Attacking Maneuver, it becomes an Absolute Attack." Asked,
+ * twice a Round - counted where it is taken.
+ */
+async function askWildSwings(actor) {
+  if (actor?.system?.effects?.slots?.["wildSwings.absolute"] !== true) return false;
+  const used = actor.getFlag?.(SCOPE, "wildSwings");
+  const count = (used?.round === roundKey()) ? (Number(used.count) || 0) : 0;
+  if (count >= 2) return false;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Wild Swings` },
+    content: `<p data-tooltip="Twice a Round - ${2 - count} left">Make this an Absolute Attack?</p>`, rejectClose: false });
+  if (yes) await actor.setFlag(SCOPE, "wildSwings", { round: roundKey(), count: count + 1 });
+  return Boolean(yes);
+}
+
 /** Hefty Muscle (2): "When making an Attacking Maneuver, you may declare that it is an Absolute Attack." Asked, once a Round. */
 async function askHeftyAbsolute(actor) {
   if ((actor?.system?.effects?.slots?.["hefty.absolute"] !== true) || (actor.getFlag?.(SCOPE, "heftyRound") === roundKey())) return false;
@@ -30233,7 +30248,9 @@ export async function postAttack(actor, target, maneuver,
       && (actor.system.effects?.slots?.["herculean.ultimate"] === true))
     || (!reflecting && maneuver.attacking && await askSizeMatters(actor, everyone))
     // Hefty Muscle (2): "you may declare that it is an Absolute Attack".
-    || (!reflecting && maneuver.attacking && await askHeftyAbsolute(actor)));
+    || (!reflecting && maneuver.attacking && await askHeftyAbsolute(actor))
+    // Wild Swings (2): "If you use an Attacking Maneuver, it becomes an Absolute Attack" - Triggered, twice a Round.
+    || (!reflecting && maneuver.attacking && await askWildSwings(actor)));
   // Distant Explosion: "select a Square occupied by an Opponent to be the Target Square" - theirs.
   if (technique?.area?.centredOnTarget) technique.area.centreName = target.name;
   // Volatile Explosion with its Sphere on the user: they are inside it, so they are a target, hit.
@@ -38078,7 +38095,10 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     if (armsUser.uuid === target.uuid) {
       if (knockedThrough) await reducedMomentum(target);
     }
-    else if (knockedFor) await bonusMomentum(armsUser, `${target.name} through a Health Threshold`);
+    // Dauntless (1): "Characters do not gain Bonus Momentum from knocking you through a Health Threshold".
+    else if (knockedFor && (target.system.effects?.slots?.["dauntless.noBonus"] !== true)) {
+      await bonusMomentum(armsUser, `${target.name} through a Health Threshold`);
+    }
     else if (target.system.minion && (floor <= 0)) await bonusMomentum(armsUser, `${target.name}, a Minion, Defeated`);
   }
   // Aggressive Taunt counts the attacks that dealt Damage to an Opponent on their maker's turn.

@@ -8,6 +8,7 @@ import DBUCharacterData from "../data/actor-character.mjs";
 import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
+import { addCustomVillainousTrait, ownedVillainousTraits, villainousTraitFiles } from "../racial.mjs";
 import { factorName, addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
@@ -447,6 +448,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleTrait: DBUCharacterSheet._onToggleTrait,
       addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
       addOtherTrait: DBUCharacterSheet._onAddOtherTrait,
+      addVillainousTrait: DBUCharacterSheet._onAddVillainousTrait,
+      toggleVillainous: DBUCharacterSheet._onToggleVillainous,
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
@@ -720,7 +723,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   // Anything not named here starts closed - States and Combat Conditions among them,
   // which is what keeps a long checklist from taking over the Combat tab. The Maneuver
   // groups default the other way, in _prepareManeuverGroups.
-  #openSections = { racialTraits: true, otherTraits: true, talents: true };
+  #openSections = { villainousTraits: true, racialTraits: true, otherTraits: true, talents: true };
 
   /** ApplicationV2 does not wire drag and drop itself; each sheet binds its own. */
   #dragDrop = this.options.dragDrop.map(config => new foundry.applications.ux.DragDrop.implementation({
@@ -1557,6 +1560,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.specialties = this.#specialtyGroups();
     // Evolution, Bestial and Monstrous Traits: the same rows, in a list of their own (the user's).
     context.otherTraits = this.#racialTraitChoices(triggered, ownedOtherTraits(this.actor));
+    // An Adversary's Villainous Traits: the same rows, a list of their own above the Racial Traits and on the Adversary tab
+    // (the user's) - each switched on and off, one of the ARC's own said as such.
+    context.villainousTraits = isAdversary(this.actor) ? this.#racialTraitChoices(triggered, ownedVillainousTraits(this.actor))
+      .map(entry => ({ ...entry, off: Boolean(entry.item.flags?.["dbu-ttrpg"]?.villainousOff),
+        custom: Boolean(entry.item.flags?.["dbu-ttrpg"]?.villainousCustom) })) : [];
+    context.villainousOf = { have: context.villainousTraits.length, allowed: Number(this.actor.system.adversaryGains?.traits) || 0 };
+    context.villainousOf.over = context.villainousOf.have > context.villainousOf.allowed;
     context.isGM = game.user.isGM;
 
     const { capacity } = this.actor.system;
@@ -6734,6 +6744,59 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!item) return;
     await item.unsetFlag("dbu-ttrpg", "bestialOff");
     await bestialLimit(this.actor, item);
+  }
+
+  /**
+   * A Villainous Trait (the Adversaries page): one of its examples, or one of the ARC's own - a name and a text (the user's). How
+   * many its Category gives is said, never held to.
+   */
+  static async _onAddVillainousTrait() {
+    if (!this.isEditable) return;
+    const had = new Set(Array.from(this.actor.items).map(item => item.flags?.["dbu-ttrpg"]?.sourceId).filter(Boolean));
+    const escape = Handlebars.escapeExpression;
+    const files = villainousTraitFiles();
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Add Villainous Trait` }, position: { width: 420 },
+      content: `<div class="dbu-villainous-add">
+        <label class="dbu-respond-option"><span class="dbu-respond-name">Villainous Trait</span>
+          <select name="trait">${files.map(trait => `<option value="${escape(trait.id)}" ${had.has(trait.id) ? "disabled" : ""}
+            title="${escape(trait.description ?? "")}">${escape(trait.name)}${had.has(trait.id) ? " (had)" : ""}</option>`).join("")}
+            <option value="custom">Your own - a name and its text</option></select></label>
+        <label class="dbu-villainous-own"><span>Name</span><input type="text" name="name" placeholder="Lord of the Frozen Throne"/></label>
+        <label class="dbu-villainous-own"><span>Text</span><textarea name="text" rows="5"
+          placeholder="(1)-[Passive]: ... Its numbers are written as Custom Buffs."></textarea></label></div>`,
+      render: (event, dialog) => {
+        const root = dialog.element;
+        const select = root.querySelector('select[name="trait"]');
+        const show = () => root.querySelectorAll(".dbu-villainous-own").forEach(label => { label.hidden = select.value !== "custom"; });
+        select.addEventListener("change", show);
+        show();
+      },
+      buttons: [
+        { action: "add", label: "Add", default: true, callback: (event, button, dialog) => ({
+          trait: dialog.element.querySelector('select[name="trait"]').value,
+          name: dialog.element.querySelector('input[name="name"]').value,
+          text: dialog.element.querySelector('textarea[name="text"]').value }) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!picked || (typeof picked !== "object")) return;
+    if (picked.trait === "custom") {
+      if (!String(picked.name ?? "").trim()) return ui.notifications.warn("A Villainous Trait of your own needs a name.");
+      return addCustomVillainousTrait(this.actor, picked.name, picked.text);
+    }
+    const trait = files.find(entry => entry.id === picked.trait);
+    if (!trait || had.has(trait.id)) return;
+    return addRacialTrait(this.actor, trait);
+  }
+
+  /** A Villainous Trait switched off or on (the user's) - had, and doing nothing while off. */
+  static async _onToggleVillainous(event, target) {
+    if (!this.isEditable) return;
+    const item = this.actor.items.get(target.dataset.itemId ?? "");
+    if (!item) return;
+    return item.setFlag("dbu-ttrpg", "villainousOff", !item.getFlag("dbu-ttrpg", "villainousOff"));
   }
 
   static async _onAddOtherTrait() {

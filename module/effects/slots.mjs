@@ -456,6 +456,9 @@ const TABLE = [
        + "stops the card offering one." },
   { key: "uniqueAbilities", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Using a Unique Ability." },
+  // Statstick (3): "You cannot use any ... Special Maneuvers (except the Soar Maneuver)".
+  { key: "specialManeuvers", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Using a Special Maneuver - the Soar Maneuver always (use-maneuver.mjs)." },
   { key: "nonPhysicalAttacks", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Attacking Maneuvers of any Attack Type other than Physical." },
   // "You cannot use ... Ki Wagers, or any Profile aside from Simple (Physical)" - the
@@ -534,6 +537,9 @@ const TABLE = [
   // Employed for Size (Afterlife Officials (4)): the same.
   { key: "employed.sizeAsLarge", phase: PHASES.TIER, kind: F, ops: ["allow", "set"],
     doc: "Large for the Defense Value from the Size Category and for Punching Up, at Enormous or larger (Employed for Size's)." },
+  // Arrogant and Unstoppable (2): "treat yourself as if you are in the Healthy Health Threshold for all of your effects".
+  { key: "threshold.asHealthy", phase: PHASES.TIER, kind: F, ops: ["allow", "set"],
+    doc: "Healthy wherever an effect of yours asks the Health Threshold (conditions.mjs belowThreshold, trulyHealthy)." },
   { key: "threshold.healthyInSuperior", phase: PHASES.TIER, kind: F, ops: ["allow", "set"],
     doc: "In the Superior State, Healthy as well wherever an effect asks the Health Threshold (conditions.mjs belowThreshold)." },
   { key: "actions.perRound", phase: PHASES.CORE, kind: N, ops: NUMERIC,
@@ -850,6 +856,10 @@ const TABLE = [
  * list, so a Skill added to the data model needs no change here.
  */
 const PATTERNS = [
+  // The Villainous Traits' (traits/other/villainous/): Statstick (2)'s Adversary Table twice (actor-character.mjs); Dauntless (1)'s
+  // no Bonus Momentum for knocking them through (chat.mjs); Wild Swings (2)'s Absolute Attack, asked (chat.mjs askWildSwings).
+  { match: /^(statstick\.double|dauntless\.noBonus|wildSwings\.absolute)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    valid: () => true, doc: "A Villainous Trait's: read where it applies." },
   // One Combat Roll's dice alone - a Custom Buff's (custom-buffs.mjs), after the spreadsheet's "ToP Extra Dice Cat. (Strike)",
   // "Greater Dice (Dodge)", "Extra d6 (Wound)": the Tier of Power Extra Dice of a Strike, a Dodge or a Wound Roll a Category
   // higher (actor-character.mjs `dice.extraStrike`); those dice, or the Greater Dice, applied again to every Combat Roll or to

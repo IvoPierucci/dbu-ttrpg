@@ -2645,7 +2645,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // Without what was gained not retroactively.
       racialLifeModifier: this.racialLifeModifier - (Number(this.lifeModifierGained) || 0),
       // And an Adversary's "Max LP per PL": "for each Power Level reached".
-      lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel") + this.adversaryGains.lifePerLevel
+      // Statstick (2): "Double the amount of Maximum Life and Ki Points you gain due to your Adversary Category."
+      lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel")
+        + (this.adversaryGains.lifePerLevel * ((this.effects?.slots?.["statstick.double"] === true) ? 2 : 1))
     });
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
     // Life Points (Minion Rules): "set their Maximum Life Points to 1/4 (rounded up) of what it would usually be."
@@ -2669,7 +2671,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.ki.max = DBUCharacterData.maxKi({
       powerLevel: this.powerLevel,
       // And an Adversary's "Max KP per PL".
-      kiPerLevelBonus: this.transformationBonuses.kiPerLevel + slot(this, "ki.perLevel") + this.adversaryGains.kiPerLevel
+      kiPerLevelBonus: this.transformationBonuses.kiPerLevel + slot(this, "ki.perLevel")
+        + (this.adversaryGains.kiPerLevel * ((this.effects?.slots?.["statstick.double"] === true) ? 2 : 1))
     });
     this.ki.max = Math.max(0, withEffects(this, "ki.max", this.ki.max));
     // Ki Points & Capacity (Minion Rules): "the typical Capacity Rate for their Power Level but set their Maximum Ki Points to

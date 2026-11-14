@@ -1,0 +1,32 @@
+id: dauntless
+name: Dauntless
+# (3)'s count: the Health Thresholds knocked through this Combat Encounter, a quarter of the Maximum Life Points each.
+resource: dauntless
+# Three Health Thresholds there are to be knocked through.
+resourceMax: 3
+resourceInternal: true
+description: >
+  Nothing fazes you, making it difficult for your enemies to get a read on how to defeat you.
+text: >
+  Dauntless: Nothing fazes you, making it difficult for your enemies to get a read on how to defeat you.
+  (1)-[Passive]: Characters do not gain Bonus Momentum from knocking you through a Health Threshold and you cannot suffer from Reduced Momentum.
+  (2)-[Passive]: Increase your Maximum Life Points by 1/4.
+  (3)-[Automatic/Threshold]: Reduce your Maximum Life Points by 1/4.
+
+---
+
+[passive]
+# (1) No Bonus Momentum for whoever knocks you through (chat.mjs, where it is given), and no Reduced Momentum of your own.
+allow dauntless.noBonus;
+allow momentum.noReduced;
+# (2) A quarter more; (3) a quarter less for each Health Threshold knocked through this Encounter (the user's: cumulative) - the
+# first back to the Maximum it was, the second to 3/4 of it. In one: (5 - n) quarters of it.
+if (hasResource("dauntless")) {
+    life.max *= (5 - dauntless.stacks) / 4;
+} else {
+    life.max *= 1.25;
+}
+
+# (3) Knocked through a Health Threshold: a quarter of the Maximum less, for the rest of the Encounter.
+[automatic/threshold, effect 3]
+dauntless.stacks += 1;

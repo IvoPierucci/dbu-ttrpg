@@ -1,0 +1,12 @@
+id: narrative-transformation
+name: Narrative Transformation
+description: >
+  You are able to transform without any stress at all, allowing you to focus on reducing your enemies to ashes.
+text: >
+  Narrative Transformation: You are able to transform without any stress at all, allowing you to focus on reducing your enemies to ashes.
+  (1)-[Passive]: Select a Form or Transformation Line you possess. You do not need to roll Stress Tests for that Transformation or Transformation Line unless you are using another Transformation in conjunction with them.
+  (2)-[Triggered, 1/Encounter]: Double the amount of Life and Ki Points regained through Legend Realized.
+
+---
+
+# Both effects wait for the Transformations (the user's: written, and left for when they are built).

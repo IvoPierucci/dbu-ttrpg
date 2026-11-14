@@ -365,6 +365,8 @@ const PREDICATES = {
   belowThreshold: (scope, name) => {
     const keys = ["healthy", "bruised", "injured", "critical"];
     const wanted = keys.indexOf(String(name).toLowerCase());
+    // Arrogant and Unstoppable (2): Healthy "for all of your effects" - so below nothing.
+    if (scope.data?.effects?.slots?.["threshold.asHealthy"] === true) return false;
     // Divine Physique (3): Superior, and Healthy as well for every effect of theirs - so below nothing.
     if ((scope.data?.effects?.slots?.["threshold.healthyInSuperior"] === true)
       && ((Number(scope.data?.states?.superior) || 0) > 0)) return false;
@@ -373,7 +375,8 @@ const PREDICATES = {
   },
 
   /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
-  trulyHealthy: scope => customBuffThresholdFor(scope.data, scope.data?.threshold?.key ?? "healthy") === "healthy",
+  trulyHealthy: scope => (scope.data?.effects?.slots?.["threshold.asHealthy"] === true)
+    || (customBuffThresholdFor(scope.data, scope.data?.threshold?.key ?? "healthy") === "healthy"),
 
   /** No Character in the Combat Encounter larger than you - King's Stature's "the highest Size Category". */
   largestInEncounter: scope => {

@@ -109,6 +109,29 @@
     {{/each}}
   </section>
 
+  {{! Its Villainous Traits (the user's): the same Items as on the Traits tab, above the Racial Traits there - switched on and off
+      here, unfolded to their text there. How many its Category gives is said, never held to. }}
+  {{#if adversary.traits}}
+  <section class="panel">
+    <h3 class="panel-title">
+      Villainous Traits
+      <span class="panel-note{{#if villainousOf.over}} dbu-adversary-over{{/if}}">{{villainousOf.have}} of {{villainousOf.allowed}}</span>
+      {{#if editable}}<button type="button" class="dbu-manage" data-action="addVillainousTrait">Add Villainous Trait</button>{{/if}}
+    </h3>
+    {{#each villainousTraits as |entry|}}
+    <div class="dbu-adversary-trait{{#if entry.off}} off{{/if}}">
+      <span class="dbu-adversary-trait-name" data-tooltip="{{entry.item.system.description}}">{{entry.item.name}}</span>
+      <small>{{#if entry.custom}}your own &middot; text only{{else}}Villainous{{/if}}</small>
+      <button type="button" class="trait-arm{{#unless entry.off}} active{{/unless}}" data-action="toggleVillainous" data-item-id="{{entry.item.id}}"
+              {{#unless @root.editable}}disabled{{/unless}}>{{#if entry.off}}Off{{else}}On{{/if}}</button>
+      {{#if @root.editable}}<a class="dbu-custom-buff-delete" data-action="toggleRacialTrait" data-item-id="{{entry.item.id}}" data-tooltip="Remove this Villainous Trait"><i class="fa-solid fa-trash"></i></a>{{/if}}
+    </div>
+    {{else}}
+    <p class="panel-note">None yet: add one of the page's examples, or one of your own.</p>
+    {{/each}}
+  </section>
+  {{/if}}
+
   {{! Adversaries in Combat - an Elite's and a Villain's, a Standard one none of it: Narrative Stamina, this Round's; the
       Adversary Actions One-Man Army gives in a Counter Action's place; its Villainous Karma; and its Capacity, ignored, with
       what is spent against its Maximum still counted. The same on the Combat tab (the user's). }}

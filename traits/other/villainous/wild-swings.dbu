@@ -1,0 +1,17 @@
+id: wild-swings
+name: Wild Swings
+description: >
+  You can attack with seemingly-limitless power, unhindered by the need to gather your strength.
+text: >
+  Wild Swings: You can attack with seemingly-limitless power, unhindered by the need to gather your strength.
+  (1)-[Passive]: Reduce your Strike Rolls by 2(bT), but increase your Wound Rolls by 3(T).
+  (2)-[Triggered, 2/Round]: If you use an Attacking Maneuver, it becomes an Absolute Attack.
+
+---
+
+[passive]
+# (1)
+strike -= 2(bT);
+wound += 3(T);
+# (2) Asked as an Attacking Maneuver is used, twice a Round (chat.mjs askWildSwings).
+allow wildSwings.absolute;

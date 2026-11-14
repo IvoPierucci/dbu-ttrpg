@@ -13,6 +13,8 @@
 export function traitAside(item, items, actor = item?.parent) {
   const flags = item?.flags?.["dbu-ttrpg"] ?? {};
   const list = Array.from(items ?? []);
+  // A Villainous Trait switched off - by hand, or by a Weakpoint hit: had, and doing nothing (the user's).
+  if (flags.villainousOff) return "villainous";
   if (flags.bestialOff && list.some(other => other.id === flags.bestialOff)) return "bestial";
   if (flags.wereTrait || flags.normalTrait) {
     const chosen = actor?.getFlag?.("dbu-ttrpg", "wereChoice");

@@ -1,0 +1,28 @@
+id: desperate-adversary
+name: Desperate Adversary
+description: >
+  When you’re hit, all you feel is an ever-increasing rage.
+text: >
+  Desperate Adversary: When you’re hit, all you feel is an ever-increasing rage.
+  (1)-[Passive]: For each Health Threshold you are below, increase your Combat Rolls by 1(T), but reduce your Soak Value by 1(T).
+  (2)-[Triggered/Threshold]: Gain 1 Counter Action.
+
+---
+
+[passive]
+# (1) Below Healthy is one, below Bruised two, below Injured three (Health Thresholds are lines). The Soak Value is settled before
+# the Health Threshold is, so its part is written per Threshold below (actor-character.mjs perThreshold), as Traces of Majin's.
+soakValue.perThreshold -= 1(T);
+if (belowThreshold("bruised")) {
+    combatRolls += 1(T);
+}
+if (belowThreshold("injured")) {
+    combatRolls += 1(T);
+}
+if (belowThreshold("critical")) {
+    combatRolls += 1(T);
+}
+
+# (2) Knocked through a Health Threshold: a Counter Action this Round. Triggered - its button.
+[triggered/threshold, startsTriggered, effect 2]
+actions.counterGained += 1;

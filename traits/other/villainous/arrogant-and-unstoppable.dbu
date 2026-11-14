@@ -1,0 +1,23 @@
+id: arrogant-and-unstoppable
+name: Arrogant and Unstoppable
+description: >
+  Your power is so great that none can think to oppose you.
+text: >
+  Arrogant and Unstoppable: Your power is so great that none can think to oppose you.
+  (1)-[Passive]: While in the Healthy Health Threshold, increase your Combat Rolls, Soak Value, and Might by 2(T).
+  (2)-[Triggered/Power, 1/Encounter]: You may treat yourself as if you are in the Healthy Health Threshold for all of your effects until the start of your next turn.
+
+---
+
+[passive]
+# (1) Healthy - or counted as Healthy by (2), which every effect asking the Health Threshold reads (conditions.mjs belowThreshold).
+if (!belowThreshold("bruised")) {
+    combatRolls += 2(T);
+    soakValue += 2(T);
+    might += 2(T);
+}
+
+# (2) Using the Power Up Maneuver, once an Encounter: Healthy for all of your effects till the start of your next turn - its mark.
+[triggered/power, 1/encounter, effect 2]
+gain("arrogant-unstoppable-mark");
+expires("arrogant-unstoppable-mark", start-of-next-turn);
