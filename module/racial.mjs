@@ -108,6 +108,27 @@ export function optionGroupsOf(trait) {
     || (optionEffectOf(option, trait) === group.effect)) })).filter(group => group.options.length);
 }
 
+/**
+ * An Option's own printed lines, shown under its Option effect: its file's, but for those its Trait prints under a Choice
+ * effect - Artificial Warrior's Options each carry their (5) too, which is shown under the (5) alone (the user's).
+ */
+function optionOwnLines(option, lines) {
+  const squash = text => String(text).replace(/^[*\u2022]\s*/, "").replace(/\s+/g, " ").trim();
+  const underChoice = new Set();
+  for (let at = 0, inChoice = false; at < lines.length; at++) {
+    if (/^\(\d+\)-/.test(lines[at])) inChoice = /^\(\d+\)-\[Choice\]/.test(lines[at]);
+    else if (inChoice && /^[*\u2022]/.test(lines[at])) underChoice.add(squash(lines[at]));
+  }
+  // Its file's lines are one paragraph, read as one printed line: what the Choice prints is taken out of it.
+  const own = printedLines(option?.text ?? "");
+  const kept = own.map(line => {
+    let text = squash(line);
+    for (const each of underChoice) if (each && (text !== each) && text.includes(each)) text = text.replace(each, " ").replace(/\s+/g, " ").trim();
+    return underChoice.has(text) ? "" : text;
+  }).filter(Boolean);
+  return kept.length ? kept : own;
+}
+
 /** One printed line as HTML: escaped, its links made links. */
 function lineHtml(text) {
   return Handlebars.escapeExpression(text).replace(LINK, (whole, label, url) =>
@@ -164,7 +185,7 @@ export function racialTraitLines(item) {
     if (option) {
       // Only this Option effect's own - Technological Being has two (the user's).
       for (const chosen of picked.filter(each => optionBelongs(each, item, Number(/\d+/.exec(option[1])[0])))) {
-        out.push({ html: lineHtml(`*${printedLines(chosen.text).join(" ")}`), bullet: true, gap: false });
+        out.push({ html: lineHtml(`*${optionOwnLines(chosen, lines).join(" ")}`), bullet: true, gap: false });
       }
     }
     else {
@@ -203,7 +224,7 @@ export function effectLineOf(item, n) {
   if (!kind || !picked.length) return plainText(line);
   if (kind[2] !== "Choice") {
     return plainText(`${kind[1]}: ${picked.filter(option => optionBelongs(option, item, number))
-      .map(option => printedLines(option.text).join(" ")).join(" ")}`);
+      .map(option => optionOwnLines(option, lines).join(" ")).join(" ")}`);
   }
   const bullets = lines.slice(at + 1).filter(each => /^[*\u2022]/.test(each))
     .map(each => each.replace(/^[*\u2022]\s*/, ""))
