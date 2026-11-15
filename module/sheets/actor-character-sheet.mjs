@@ -1606,9 +1606,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.villainousOf.over = context.villainousOf.have > context.villainousOf.allowed;
     context.isGM = game.user.isGM;
 
+    // The header's Capacity bar (the user's): full as the Round starts, emptied by what is spent - as Ki's is.
     const { capacity } = this.actor.system;
     context.capacityPercent = DBUCharacterSheet.#percentFull({
-      value: capacity.spent,
+      value: (Number(capacity.max) || 0) - (Number(capacity.spent) || 0),
       max: capacity.max
     });
     context.skillGroups = this._prepareSkillGroups(context.workings);
@@ -1943,6 +1944,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Capacity, set by hand as well as by the Maneuvers that spend it.
     context.capacity = { spent: system.capacity?.spent ?? 0, max: system.capacity?.max ?? 0,
       remaining: system.capacity?.remaining ?? 0,
+      // What is left of it this Round, as the header says it (the user's) - below 0 for an Elite or a Villain past it.
+      left: (Number(system.capacity?.max) || 0) - (Number(system.capacity?.spent) || 0),
       // An Elite's or a Villain's, ignored: what is spent still counted against its Maximum, and said once past it.
       ignored: Boolean(system.capacity?.ignored), over: Number(system.capacity?.over) || 0 };
 
@@ -3854,6 +3857,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         event.stopPropagation();
         const item = this.actor.items.get(input.dataset.itemId);
         item?.update({ [`system.unique.kept.${input.dataset.uniqueKept}`]: Math.max(0, Math.floor(Number(input.value) || 0)) });
+      });
+    }
+
+    // The header's Capacity, said as what is left (the user's) while it is kept as what was spent: unnamed, so the form never writes what
+    // is left as spent - written here as the Maximum less what was typed, a whole number, never below 0.
+    for (const field of this.element.querySelectorAll("[data-capacity-left]")) {
+      field.addEventListener("change", event => {
+        event.stopPropagation();
+        const max = Number(this.actor.system.capacity?.max) || 0;
+        return this.actor.update({ "system.capacity.spent": Math.max(0, max - Math.floor(Number(field.value) || 0)) });
       });
     }
 
