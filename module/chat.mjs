@@ -238,10 +238,13 @@ function applyRequest(request) {
     case "moment": return applyMoment(request.messageId, request.moment);
     case "cure": return applyCure(request.messageId, request.cure);
     case "scan": return applyScan(request.messageId, request.scan);
-    // A stack left unplaced, placed from its button (renderPlaceStack).
+    // A stack left unplaced, placed from its button (renderPlaceStack): marked, and the message gone once every one on it is (the user's).
     case "stackPlaced": {
       const message = game.messages.get(request.messageId);
-      return message?.setFlag(SCOPE, "stacksPlaced", [...new Set([...(message.getFlag(SCOPE, "stacksPlaced") ?? []), Number(request.index) || 0])]);
+      if (!message) return null;
+      const placed = [...new Set([...(message.getFlag(SCOPE, "stacksPlaced") ?? []), Number(request.index) || 0])];
+      if (placed.length >= (Number(message.getFlag(SCOPE, "unplacedCount")) || 1)) return message.delete();
+      return message.setFlag(SCOPE, "stacksPlaced", placed);
     }
     case "spikes": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, SPIKE_FLAG, request.spikes);
@@ -6187,7 +6190,7 @@ async function curePoison(message, cure) {
  */
 /**
  * A stack left unplaced - its question closed or run out (moments-runtime.mjs unplacedLine): "Place it" asks again where it goes
- * and places it, for whoever owns the character; placed, the line says so (the user's).
+ * and places it, for whoever owns the character; placed, the line says so - and every one placed, the message is deleted (the user's).
  */
 function renderPlaceStack(message, html) {
   const placed = message.getFlag(SCOPE, "stacksPlaced") ?? [];

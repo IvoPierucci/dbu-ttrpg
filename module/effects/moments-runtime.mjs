@@ -167,14 +167,19 @@ async function runPass(actor, moment, definition, entries, context, mode, quiet 
   const regained = pools ? regainedLines(actor, slots, pools) : [];
   // A verb that did nothing because the player chose nothing - Patient Sniper's "None" - leaves its use unspent.
   const declined = new Set();
-  // A stack asked where to go and not answered (gainOneOf): a line with a button to place it, beside what was regained.
+  // A stack asked where to go and not answered (gainOneOf): a message of its own with a button to place it - gone from the chat
+  // once every stack on it is placed (the user's).
   const unplaced = [];
   for (const call of scope.queue) {
     const result = await runVerb(actor, call, context);
     if (result === UNSPENT) declined.add(call.verb);
     if (result?.unplaced) unplaced.push(result.unplaced);
   }
-  regained.push(...unplaced.map((each, at) => unplacedLine(actor, each, at)));
+  if (unplaced.length) {
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="dbu-check"><ul class="dbu-auto-list">${unplaced.map((each, at) => unplacedLine(actor, each, at)).join("")}</ul></div>`,
+      flags: { "dbu-ttrpg": { unplacedCount: unplaced.length } } });
+  }
   const counted = declined.size ? spent.filter(use => !callsAny(entries, use, declined)) : spent;
 
   await recordUses(actor, counted, definition, context, spent);
@@ -1140,8 +1145,8 @@ async function recordUses(actor, spent, definition, context, disarmed = spent) {
 export const UNSPENT = "unspent";
 
 /**
- * A stack left unplaced, as a line in the chat: whose, and a button that asks again where it goes and places it - for whoever
- * owns the character (chat.mjs renderPlaceStack). Its index tells it from another on the same message.
+ * A stack left unplaced, as a line of its own message: whose, and a button that asks again where it goes and places it - for
+ * whoever owns the character (chat.mjs renderPlaceStack). Its index tells it from another on the same message.
  */
 export function unplacedLine(actor, { names = [], source = "" }, at = 0) {
   const escape = Handlebars.escapeExpression;
