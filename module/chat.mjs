@@ -39939,6 +39939,40 @@ function attackerRow(attack) {
     </div>`;
 }
 
+/** What the Strike was worth against one target past the roll itself: each part (Analysis, Lock On...) and the distance. */
+function againstLines(own) {
+  return [...(own?.analysisRows ?? []).map(partLine),
+    ...(own?.longRange ? [partLine({ label: "Long Range", value: -own.longRange })] : [])];
+}
+
+/** Said on a target's line where the Strike was worth more or less against them than it rolled - which way, not how much. */
+function strikeAgainstNote(moved) {
+  return (moved > 0) ? "Higher Strike against them" : (moved < 0) ? "Lower Strike against them" : "";
+}
+
+/**
+ * Whether what the Strike is worth against its target goes in the Strike itself (the user's): one target, so the Strike
+ * against them is the Strike - Lock On's 2(T) summed into it and shown in its hover, nothing said on the target's line.
+ * Several, and it differs from one to the next: said on each line.
+ */
+function strikeFolded(attack) {
+  const targets = attackTargets(attack);
+  if ((targets.length !== 1) || attack.techniqueBlocked || !attack.result?.strike?.lines) return false;
+  const own = targetResult(attack, targets[0].uuid);
+  return Boolean(own && !own.forced && Array.isArray(own.analysisRows) && (own.analysisRows.length || own.longRange));
+}
+
+/** The attacker's Strike as the card shows it: with one target, what it was worth against them (strikeFolded). */
+function strikeShown(attack) {
+  const strike = attack.result?.strike;
+  if (!strike || !strikeFolded(attack)) return strike;
+  const extra = againstLines(targetResult(attack, attackTargets(attack)[0].uuid));
+  const summed = (Number(strike.total) || 0) + extra.reduce((sum, line) => sum + (Number(line.value) || 0), 0);
+  // Floored at nothing, as what it is worth against them is (resolveAttack).
+  const total = Math.max(0, summed);
+  return { ...strike, total, lines: [...strike.lines, ...extra, ...((total !== summed) ? [noteLine(`Floored at ${total}`)] : [])] };
+}
+
 /**
  * A target's line on the card. Named from the moment the attack is declared: who has
  * to answer is worth knowing before they do, and until now the card said nothing.
@@ -39966,20 +40000,24 @@ function targetRow(attack, target) {
   // that follow are measured against it, and the reason it did not stop the first one
   // is said beside it - a defence that plainly won otherwise reads as a bug.
   if (own.answer) {
-    // What the Strike was worth against them said; where it came from - Analysis, Lock On, the distance - in its hover (the user's:
-    // not written out on the card). A card from before the rows were kept still names them.
+    // Whether the Strike was worth more or less against them said, never what it came to - that is the attacker's roll, and
+    // only their Observers see it (the user's: "Higher Strike against them"). Where it came from - Analysis, Lock On, the
+    // distance - in its hover, for those Observers. With one target there is nothing to tell apart: it is in the Strike's
+    // own total and hover (strikeShown), and nothing is said here.
     const rows = own.analysisRows;
     if (own.forced) return attackSide(label, target.name, own.answer, own.forced);
+    if (strikeFolded(attack)) return attackSide(label, target.name, own.answer);
     if (!rows) {
-      const why = [...(own.analysisNamed ?? []), ...(own.longRange ? ["Long Range"] : [])];
-      return attackSide(label, target.name, own.answer, why.length ? `${why.join(", ")} - Strike ${own.against} against them` : "");
+      // A card from before the rows were kept.
+      const moved = (Number(own.against) || 0) - (Number(attack.result?.strike?.total) || 0);
+      return attackSide(label, target.name, own.answer, strikeAgainstNote(moved));
     }
     if (!rows.length && !own.longRange) return attackSide(label, target.name, own.answer);
-    const tip = maySeeRolls(fromUuidSync(attack.attackerUuid)) ? breakdownTable([
+    const moved = (Number(own.against) || 0) - (Number(own.strikeBase) || 0);
+    const tip = (moved && maySeeRolls(fromUuidSync(attack.attackerUuid))) ? breakdownTable([
       partLine({ label: "Strike Roll", written: String(own.strikeBase ?? ""), value: Number(own.strikeBase) || 0 }),
-      ...rows.map(partLine),
-      ...(own.longRange ? [partLine({ label: "Long Range", value: -own.longRange })] : [])], own.against) : "";
-    return attackSide(label, target.name, own.answer, `Strike ${own.against} against them`, tip);
+      ...againstLines(own)], own.against) : "";
+    return attackSide(label, target.name, own.answer, strikeAgainstNote(moved), tip);
   }
 
   // Direct Hit, Guard and Power Flare forgo the roll by choice; being Sleeping or
@@ -40280,7 +40318,7 @@ function renderAttack(message, html) {
           : ""}${featureNote(profileFor(attack), attack)}</span>
     </div>
     ${result
-      ? (result.strike ? attackSide("Strike", attack.attackerName, result.strike)
+      ? (result.strike ? attackSide("Strike", attack.attackerName, strikeShown(attack))
         : `<div class="dbu-respond-hint">No Strike Roll: ${Handlebars.escapeExpression(attack.fromDuel
           ? `${attack.attackerName} won the Duel` : "hit automatically")}</div>`)
       : attackerRow(attack)}
