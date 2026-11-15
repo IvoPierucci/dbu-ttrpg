@@ -107,6 +107,7 @@ import {
 } from "../technique.mjs";
 import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
 import { gearKitIngenuity, isConsumable } from "../gear.mjs";
+import { SHEET_TYPES, changeActorType, sheetTypeLabel } from "../change-type.mjs";
 import {
   customBuffOption, customBuffSections, customBuffsToggled, customBuffTakesBase, customBuffTakesTier, customBuffTotal, newCustomBuff
 } from "../custom-buffs.mjs";
@@ -578,6 +579,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       addSpecialty: DBUCharacterSheet._onAddSpecialty,
       removeSpecialty: DBUCharacterSheet._onRemoveSpecialty,
       keepSpecialty: DBUCharacterSheet._onKeepSpecialty,
+      changeSheetType: DBUCharacterSheet._onChangeSheetType,
+      keepSheetType: DBUCharacterSheet._onKeepSheetType,
       closeCombatWindow: DBUCharacterSheet._onCloseCombatWindow,
       pinCombat: DBUCharacterSheet._onPinCombat,
       setThresholdCheck: DBUCharacterSheet._onSetThresholdCheck,
@@ -675,6 +678,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   /** The added Specialty asked about before it is taken off, having Ranks - its id, or none. */
   #specialtyConfirm = null;
+  /** The kind this sheet is about to be turned into, asked before it is (the Settings tab's Sheet type). */
+  #typeConfirm = null;
 
   /** The Maneuvers tab's type tab open (the user's) - kept for this character while the world is open. */
   get #maneuverTab() {
@@ -1014,6 +1019,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // table running an Encounter without one still has an Encounter, and this is the
     // only door to its start for them.
     context.canEnterEncounter = !this.actor.system.enteredEncounter;
+    // The Settings tab's Sheet type: the ARC's, turning this sheet into another kind with everything it has.
+    context.sheetType = game.user?.isGM ? {
+      name: this.actor.name,
+      current: sheetTypeLabel(this.actor.type),
+      options: Object.entries(SHEET_TYPES).filter(([key]) => key !== this.actor.type).map(([key, label]) => ({ key, label })),
+      confirm: this.#typeConfirm ? { key: this.#typeConfirm, label: sheetTypeLabel(this.#typeConfirm) } : null
+    } : null;
     // What is left of each pool right now. Derived rather than stored: what is stored
     // is what has been spent, so the sheet cannot drift from what the rules allow.
     context.actionsLeft = {
@@ -7900,6 +7912,34 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** Not taken off after all. */
   static _onKeepSpecialty() {
     this.#specialtyConfirm = null;
+    return this.render();
+  }
+
+  /**
+   * Turn this sheet into another kind (change-type.mjs): asked first, then done. The sheet is closed and opened again, because
+   * which tabs it has is the kind's - an Adversary's in Main's place.
+   */
+  static async _onChangeSheetType(event, target) {
+    if (!game.user?.isGM) return;
+    if (!target.dataset.sure) {
+      const type = this.element?.querySelector("[data-sheet-type]")?.value;
+      if (!SHEET_TYPES[type] || (type === this.actor.type)) return;
+      this.#typeConfirm = type;
+      return this.render();
+    }
+    const type = this.#typeConfirm;
+    this.#typeConfirm = null;
+    const actor = this.actor;
+    await this.close();
+    const refused = await changeActorType(actor, type);
+    if (refused) ui.notifications.warn(refused);
+    else ui.notifications.info(`${actor.name} is now ${sheetTypeLabel(type)}.`);
+    return actor.sheet?.render(true);
+  }
+
+  /** Not turned into another kind after all. */
+  static _onKeepSheetType() {
+    this.#typeConfirm = null;
     return this.render();
   }
 

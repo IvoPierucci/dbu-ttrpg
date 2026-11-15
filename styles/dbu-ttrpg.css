@@ -5588,3 +5588,8 @@
 .dbu-ttrpg .dbu-quickplay-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 12px; }
 .dbu-ttrpg .dbu-quickplay-talent { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 6px; align-items: center; margin: 0 0 4px; font-size: 12px; }
 .dbu-ttrpg .dbu-quickplay-talent .dbu-combo-input { width: 100%; height: 24px; box-sizing: border-box; padding-right: 18px; font-size: 12px; }
+
+/* The Settings tab's Sheet type (the user's): the kind to turn this sheet into, and the button. */
+.dbu-ttrpg .dbu-sheet-type-row { display: flex; align-items: center; gap: 6px; }
+.dbu-ttrpg .dbu-sheet-type-row select { flex: 0 1 160px; height: 24px; font-size: 12px; }
+.dbu-ttrpg .dbu-sheet-type-row button { flex: 0 0 auto; width: auto; height: 24px; line-height: 22px; padding: 0 10px; font-size: 12px; }
