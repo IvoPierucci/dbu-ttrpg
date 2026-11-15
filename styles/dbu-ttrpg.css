@@ -715,12 +715,14 @@
 /* An Adversary's Capacity, ignored but counted: past its Maximum, said in the warning colour. */
 .dbu-ttrpg .dbu-pool-capacity.over .dbu-pool-values { color: #e8796f; }
 
+/* Centred a little high (the user's, seen in Foundry): room under Life's bar for Critical's name below where the line over it ends. */
 .dbu-ttrpg .dbu-pool-bars {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 3px;
+  padding-bottom: 6px;
 }
 
 .dbu-ttrpg .dbu-pool-bar {
@@ -739,6 +741,9 @@
   max-width: 100%;
   transition: width 0.2s ease;
 }
+
+/* Ki's bar level with Life's: the Capacity's under it would centre the two of them higher - the 10px is the Capacity's bar and its gap. */
+.dbu-ttrpg .dbu-pool-ki .dbu-pool-bars { padding-top: 10px; }
 
 .dbu-ttrpg .dbu-pool-life .dbu-pool-bar > i { background: var(--dbu-life); }
 .dbu-ttrpg .dbu-pool-ki .dbu-pool-bar > i { background: var(--dbu-ki); }
@@ -765,7 +770,8 @@
   white-space: nowrap;
 }
 
-.dbu-ttrpg .dbu-pool-line.low { top: -3px; bottom: -12px; }
+/* Its name under the 3px the other lines reach below the bar, so Injured's line never runs into it. */
+.dbu-ttrpg .dbu-pool-line.low { top: -3px; bottom: -15px; }
 .dbu-ttrpg .dbu-pool-line.low em { top: auto; bottom: 0; }
 
 /* Chosen or derived here; the header only reports them. */
