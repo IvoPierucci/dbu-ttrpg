@@ -3452,15 +3452,16 @@ function profileOption(profile, maneuver, actor, state, limits = {}, { value = p
     : onlySimple(actor, profile.id) ? "Simple only" : PROFILE_SPENT_LABEL;
   const selected = state.first && !refused;
   if (selected) state.onFirst();
+  const cost = profileOptionCost(maneuver, profile.id, actor);
 
   return `<label class="dbu-profile-option${refused ? " dbu-profile-spent" : ""}"
       ${refused ? `data-tooltip="${Handlebars.escapeExpression(refused)}"` : ""}>
-    <input type="radio" name="profile" value="${Handlebars.escapeExpression(value)}"${profile.wagerFromLife ? " data-life" : ""}
+    <input type="radio" name="profile" value="${Handlebars.escapeExpression(value)}" data-cost="${cost}"${profile.wagerFromLife ? " data-life" : ""}
            ${selected ? "checked" : ""} ${refused ? "disabled" : ""}/>
     <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(label)}</span>
     ${refused ? `<em class="dbu-profile-spent-note">${note}</em>` : ""}
     <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
-    <span class="dbu-profile-cost">${profileOptionCost(maneuver, profile.id, actor)} KP</span>
+    <span class="dbu-profile-cost">${cost} KP</span>
   </label>`;
 }
 
@@ -3957,6 +3958,76 @@ function profileTabs(maneuver, foundations, actor, pool, shut) {
   });
 }
 
+/**
+ * Your pools in the attack's window, now and after it (the user's, 2026-11-15): Ki and Capacity always; Life where Wager Life Points
+ * is ticked; Divine Ki with God Ki; Narrative Stamina for an Elite or a Villain. What they hold is written on the box; what the
+ * Profile picked, the wager and the boxes ticked leave of them is worked out as the window changes (bindAttackPools), paid as
+ * spendManeuverCost and spendLifeWager pay: a KP Cost in Divine Ki - a God Maneuver's, or the sheet's Spend Divine Ki with enough of
+ * it - and a Divine Ki wager at half their Capacity, each rounded up; Narrative Stamina first for what Ki pays (Auto, or Ask and
+ * ticked), off the Capacity too. A number short goes red, nothing said (the user's); an ignored Capacity never does.
+ */
+function attackPoolsHtml(maneuver, actor) {
+  const system = actor?.system;
+  if (!system) return "";
+  const divine = system.divineKi ?? {};
+  const capacityCost = Number.isFinite(maneuver?.capacityCost) ? maneuver.capacityCost : "";
+  const data = {
+    ki: Number(system.ki?.value) || 0, kiMax: Number(system.ki?.max) || 0,
+    cap: (Number(system.capacity?.max) || 0) - (Number(system.capacity?.spent) || 0), capMax: Number(system.capacity?.max) || 0,
+    capIgnored: system.capacity?.ignored ? 1 : 0, capCost: capacityCost,
+    life: Number(system.life?.value) || 0, lifeMax: Number(system.life?.max) || 0,
+    divine: divine.active ? (Number(divine.value) || 0) : "", divineMax: Number(divine.max) || 0,
+    divineUse: (divine.active && divine.use) ? 1 : 0, god: maneuver?.godManeuver ? 1 : 0,
+    stamina: staminaForKi(actor) || "", staminaMax: Number(system.narrativeStamina?.max) || 0,
+    staminaAuto: (staminaForKi(actor) > 0) && !asksStamina(actor) ? 1 : 0,
+    // An attack with nothing to pick still costs what it costs.
+    fixedCost: maneuver?.profile ? "" : maneuverKiCost(maneuver, {}, actor)
+  };
+  const attrs = Object.entries(data).map(([key, value]) => `data-${key.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}="${value}"`).join(" ");
+  return `<div class="dbu-attack-pools" data-attack-pools ${attrs}></div>`;
+}
+
+/** The pools kept as the window changes: the Profile picked, the wager typed, a box ticked, a tab opened. */
+function bindAttackPools(root) {
+  const box = root?.querySelector("[data-attack-pools]");
+  if (!box) return;
+  const d = box.dataset;
+  const num = key => Number(d[key]) || 0;
+  const has = key => d[key] !== "";
+  const ticked = name => {
+    const input = root.querySelector(`input[name="${name}"]`);
+    return Boolean(input?.checked) && !input.closest("[hidden]");
+  };
+  const pool = (cls, label, now, after, max, of = "", short = after < 0) =>
+    `<span class="dbu-attack-pool ${cls}${short ? " short" : ""}"><em>${label}</em>${now}<span class="dbu-attack-arrow">&rarr;</span>`
+    + `<b>${after}</b><span class="dbu-attack-of">/ ${max}${of}</span></span>`;
+  const draw = () => {
+    const picked = root.querySelector('input[name="profile"]:checked');
+    const cost = picked ? (Number(picked.dataset.cost) || 0) : num("fixedCost");
+    const typed = Math.floor(Number(root.querySelector('input[name="kiWager"]')?.value));
+    const wager = Number.isFinite(typed) ? Math.max(0, typed) : 0;
+    const lifeOn = ticked("wagerFromLife");
+    const divineWager = !lifeOn && has("divine") && ticked("wagerFromDivine");
+    const costInDivine = has("divine") && (cost > 0) && (Boolean(num("god")) || (Boolean(num("divineUse")) && (num("divine") >= cost)));
+    let kiSpend = (costInDivine ? 0 : cost) + ((lifeOn || divineWager) ? 0 : wager);
+    const staminaPays = has("stamina") && (Boolean(num("staminaAuto")) || ticked("payStamina"));
+    const fromStamina = staminaPays ? Math.min(num("stamina"), kiSpend) : 0;
+    kiSpend -= fromStamina;
+    const capCost = has("capCost") ? num("capCost") : cost;
+    const capSpend = Math.max(0, (costInDivine ? Math.ceil(capCost / 2) : capCost) + (divineWager ? Math.ceil(wager / 2) : wager) - fromStamina);
+    const ignored = Boolean(num("capIgnored"));
+    let html = pool("ki", "Ki", num("ki"), num("ki") - kiSpend, num("kiMax"))
+      + pool("capacity", "Capacity", num("cap"), num("cap") - capSpend, num("capMax"), ignored ? " left &middot; ignored" : " left",
+        !ignored && ((num("cap") - capSpend) < 0));
+    if (lifeOn) html += pool("life", "Life", num("life"), num("life") - wager, num("lifeMax"));
+    if (has("divine")) html += pool("divine", "Divine Ki", num("divine"), num("divine") - (costInDivine ? cost : 0) - (divineWager ? wager : 0), num("divineMax"));
+    if (has("stamina")) html += pool("stamina", "Stamina", num("stamina"), num("stamina") - fromStamina, num("staminaMax"));
+    box.innerHTML = html;
+  };
+  for (const type of ["input", "change", "click"]) root.addEventListener(type, draw);
+  draw();
+}
+
 /** The Foundation tabs last chosen from, by character - the Maneuvers list's way. */
 const PROFILE_TABS = new Map();
 
@@ -4111,8 +4182,8 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${maneuver.name} - ${noProfile ? "Ki Wager" : "Profile"}` },
-    content: `${wager}${body}`,
-    render: (event, dialog) => bindProfileTabs(dialog.element),
+    content: `${attackPoolsHtml(maneuver, actor)}${wager}${body}`,
+    render: (event, dialog) => { bindProfileTabs(dialog.element); bindAttackPools(dialog.element); },
     buttons: [
       {
         action: "confirm",

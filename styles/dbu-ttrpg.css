@@ -1053,6 +1053,32 @@
   color: var(--dbu-chat-dim);
 }
 
+/* Your pools in the attack's window, now and after it, in the header's colours; one short, its number red. */
+.dbu-attack-pools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 8px;
+  padding: 5px 8px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dbu-attack-pools:empty { display: none; }
+.dbu-attack-pool { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+.dbu-attack-pool em { font-style: normal; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+.dbu-attack-pool.ki em { color: #64aef0; }
+.dbu-attack-pool.capacity em { color: #f5c542; }
+.dbu-attack-pool.life em { color: #ec7363; }
+.dbu-attack-pool.divine em { color: #c9b6ff; }
+.dbu-attack-pool.stamina em { color: #f0a35e; }
+.dbu-attack-arrow, .dbu-attack-of { color: var(--dbu-chat-dim); }
+.dbu-attack-of { font-size: 11px; }
+.dbu-attack-pool b { color: #fff; }
+.dbu-attack-pool.short b { color: #ec7363; }
+
 /* The Ki Wager above the Profiles; Wager Life Points beside it, only while a Profile allowing it is picked. */
 .dbu-wager.dbu-wager-top { margin-top: 0; }
 .dbu-wager-ki { display: inline-flex; align-items: center; gap: 6px; }
