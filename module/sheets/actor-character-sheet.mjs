@@ -583,7 +583,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       closeCombatWindow: DBUCharacterSheet._onCloseCombatWindow,
       pinCombat: DBUCharacterSheet._onPinCombat,
       setThresholdCheck: DBUCharacterSheet._onSetThresholdCheck,
-      stepCapacity: DBUCharacterSheet._onStepCapacity,
       toggleCondition: DBUCharacterSheet._onToggleCondition,
       toggleState: DBUCharacterSheet._onToggleState,
       stepState: DBUCharacterSheet._onStepState,
@@ -3855,14 +3854,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         event.stopPropagation();
         const item = this.actor.items.get(input.dataset.itemId);
         item?.update({ [`system.unique.kept.${input.dataset.uniqueKept}`]: Math.max(0, Math.floor(Number(input.value) || 0)) });
-      });
-    }
-
-    // The header's Capacity: unnamed, as the Combat tab's is the form's - written here, a whole number, never below 0.
-    for (const field of this.element.querySelectorAll("[data-header-capacity]")) {
-      field.addEventListener("change", event => {
-        event.stopPropagation();
-        return this.actor.update({ "system.capacity.spent": Math.max(0, Math.floor(Number(field.value) || 0)) });
       });
     }
 
@@ -8004,12 +7995,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const key = target.dataset.threshold;
     if (!(key in (this.actor.system.thresholdChecks ?? {}))) return;
     return this.actor.update({ [`system.thresholdChecks.${key}`]: target.checked ? "pass" : "fail" });
-  }
-
-  /** The Capacity spent this round, a Ki at a time - by hand, without a Maneuver (the user's). */
-  static async _onStepCapacity(event, target) {
-    const spent = Number(this.actor.system.capacity?.spent) || 0;
-    return this.actor.update({ "system.capacity.spent": Math.max(0, spent + (Number(target.dataset.step) || 0)) });
   }
 
   /**

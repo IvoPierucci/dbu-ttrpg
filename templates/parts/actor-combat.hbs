@@ -193,9 +193,9 @@
           <em>Stress Bonus</em><span data-tooltip-html="{{workings.stressBonus}}">{{system.stressBonus}}</span></div>
       </div>
 
-      {{! God Ki's Divine Ki to the Capacity's left, the two sharing the row; without it the Capacity has the row (the user's). }}
+      {{! An Elite's or a Villain's Narrative Stamina and God Ki's Divine Ki, sharing a row. The Capacity is the header's now (the user's). }}
       <div class="dbu-capacity-row">
-      {{! An Elite's or a Villain's Narrative Stamina, to the Capacity's left as Divine Ki is: the same as on its own tab. }}
+      {{! An Elite's or a Villain's Narrative Stamina: the same as on its own tab. }}
       {{#if adversary.combat.narrative}}
       <div class="dbu-capacity dbu-stamina"
            data-tooltip="Narrative Stamina: gained as each Combat Round starts, lost as it ends. Spent in place of Ki Points; and taken off the Life Points a hit would cost.">
@@ -230,23 +230,6 @@
       </div>
       {{/if}}
 
-      {{! The most Ki that may be spent within one Combat Round - set by hand too, without a Maneuver (the user's). }}
-      <div class="dbu-capacity" data-tooltip="Ki spendable per Combat Round. Refills when the round turns over.">
-        <div class="dbu-capacity-head">
-          <em>Capacity</em>
-          <span class="dbu-capacity-edit">
-            <button type="button" class="stack-step" data-action="stepCapacity" data-step="-1"
-                    data-tooltip="Give back 1 Ki of Capacity">&minus;</button>
-            <input type="number" name="system.capacity.spent" value="{{capacity.spent}}" min="0"
-                   aria-label="Ki spent this round"/>
-            <span class="dbu-capacity-of">/ {{capacity.max}}</span>
-            <button type="button" class="stack-step" data-action="stepCapacity" data-step="1"
-                    data-tooltip="Spend 1 Ki of Capacity">+</button>
-          </span>
-        </div>
-        <div class="meter"><div class="meter-fill" style="width: {{capacityPercent}}%"></div></div>
-        <span class="dbu-capacity-left{{#if capacity.over}} dbu-adversary-over{{/if}}">{{#if capacity.ignored}}Ignored &middot; {{#if capacity.over}}over by {{capacity.over}}{{else}}within it{{/if}}{{else}}{{capacity.remaining}} left this round{{/if}}</span>
-      </div>
       </div>
     </div>
   </div>

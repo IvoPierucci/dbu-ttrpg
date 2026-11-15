@@ -58,13 +58,13 @@
               <span class="computed-value">{{system.ki.max}}</span>
             </span>
           </span>
-          {{! The Combat tab has the same Capacity, named there: this one has no name, so the form never gets it twice, and writes it on
-              its own (actor-character-sheet.mjs, data-header-capacity). }}
+          {{! The Capacity's only place (the user's: off the Combat tab) - the Ki spent this Combat Round, typed by hand too. An Elite's or a
+              Villain's ignored but counted: past its Maximum, said in the warning colour and on hover. }}
           <span class="dbu-pool-pair dbu-pool-capacity{{#if capacity.over}} over{{/if}}"
-                data-tooltip="Ki spent this Combat Round out of its Capacity. Refills when the round turns over.">
+                data-tooltip="{{#if capacity.ignored}}Ignored, and counted: {{#if capacity.over}}over by {{capacity.over}}{{else}}within it{{/if}}{{else}}Ki spent this Combat Round out of its Capacity: {{capacity.remaining}} left. Refills when the round turns over.{{/if}}">
             <em class="dbu-pool-name">Capacity</em>
             <span class="dbu-pool-values">
-              <input type="number" data-header-capacity value="{{capacity.spent}}" min="0" aria-label="Ki spent this round"/>
+              <input type="number" name="system.capacity.spent" value="{{capacity.spent}}" min="0" aria-label="Ki spent this round"/>
               <span class="resource-sep">/</span>
               <span class="computed-value">{{capacity.max}}</span>
             </span>
