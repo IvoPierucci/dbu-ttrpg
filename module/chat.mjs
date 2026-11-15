@@ -23412,7 +23412,8 @@ async function oniBreak(attacker, target) {
 function namekianFocusParts(actor, otherUuid) {
   const focus = actor?.getFlag?.(SCOPE, "namekianFocus");
   if (!focus || !otherUuid || (focus.uuid !== otherUuid) || (focus.round !== roundKey())) return [];
-  return [{ label: `Namekian-Raised (${focus.name})`, written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  // Named by what chose them - Neo-Tuffle-Raised's is Namekian-Raised's own (namekianFocus).
+  return [{ label: `${focus.source || "Namekian-Raised"} (${focus.name})`, written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
 }
 
 /** Tension a Vocation's effects may spend: Tension, and Konatsian-Raised's Inherited Tension "as if it was Tension". */
@@ -28530,6 +28531,17 @@ async function lightDamageAnswer(target, damage) {
     ...offered.map(entry => ({ value: entry.blockId, label: `Take no Damage - ${entry.sourceName}` })),
     { value: "take", label: "Take it" }]);
   return offered.find(entry => entry.blockId === picked) ?? null;
+}
+
+/**
+ * A Parry's Strike, against the one attacking: what raises your Strike Rolls - or your Combat Rolls - against one Opponent raises it
+ * too (the user's: Lock On's 2(T) and Neo-Tuffle-Raised's 1(T) with it). Lock On's Target; an Analyzed Opponent; Precognition's;
+ * Tuffle Superiority's Inferior, Namekian- or Neo-Tuffle-Raised's Opponent, the Inferior Specimen, Onboard Computer's Strike.
+ */
+function parryAgainst(actor, attacker) {
+  if (!actor || !attacker || (actor.uuid === attacker.uuid)) return [];
+  return [...lockOnParts(actor, attacker), ...analysisBonus(actor, attacker), ...foresightBonus(actor, attacker),
+    ...inferiorParts(actor, attacker, "strike")];
 }
 
 /** Lock On's "Increase your Strike and Wound Rolls against your Target by 2(T)". */
@@ -35648,7 +35660,9 @@ const DEFENCES = {
       ...supportParts(actor, fromUuidSync(attack?.attackerUuid ?? "")),
       // Hidden from the attacker: 2(bT).
       ...hiddenRollParts(actor, fromUuidSync(attack?.attackerUuid ?? "")),
-      ...zenCounterParts(actor, attack)
+      ...zenCounterParts(actor, attack),
+      // What raises your Strike against them raises it here: a Parry's is a Strike, against the one attacking (the user's).
+      ...parryAgainst(actor, fromUuidSync(attack?.attackerUuid ?? ""))
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.parry.parts(actor, attack),
       // Zen Counter (1): the Parry's Natural Result.
