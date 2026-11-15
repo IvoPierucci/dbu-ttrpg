@@ -2413,6 +2413,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       this.baseTierOfPower + DBUCharacterData.BREAKTHROUGH_LIMIT,
       Math.max(1, this.baseTierOfPower + this.tierOfPowerModifier + slot(this, "tierOfPower"))
     );
+    // The Tier of Power a Ki Point Cost's (T) is counted at. Breakthrough: "When you temporarily increase your Tier of Power, you do
+    // not increase your Ki Point Costs" - so never above the Base Tier; lowered, it follows (the user's report: a Custom Buff's
+    // "ToP (Breakthrough)" was raising every Maneuver's price).
+    this.kiCostTier = Math.min(this.tierOfPower, this.baseTierOfPower);
 
     // Natural Armor, as its owner's effects read it - Survivor's Plating's Apparel Bonus: "Effects that refer to Natural
     // Armor will apply only while that Natural Armor is Active" - and not broken, which is as good as not there.

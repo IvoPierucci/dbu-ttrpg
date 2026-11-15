@@ -36,7 +36,7 @@ import { advantageWoundParts, featureRanks, pushes, staggers, POWER_SHOT_MAX_RAN
 import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine, foldSheetParts,
          fromOutcome, withoutOutcome, breakdownTable, breakdownText, formulaHtml, workingsTable } from "./breakdown.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
-import {
+import { kiCostTier,
   DAMAGE_CATEGORIES,
   DEFEND_OPTIONS,
   INTERVENE_OPTIONS,
@@ -20766,7 +20766,7 @@ function renderFakeDeath(message, html) {
     container.append(button);
   }
   if (offer.like) {
-    const ki = offer.like.kiPerTier * Math.max(1, target.system.tierOfPower ?? 1);
+    const ki = offer.like.kiPerTier * kiCostTier(target);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dbu-clash-button";
@@ -27714,7 +27714,7 @@ async function takeFloatMirror(message, actor, item) {
   const { definitionOf } = await import("./use-maneuver.mjs");
   const maneuver = definitionOf(item);
   if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${actor.name}: Float Mirror is once a Combat Encounter.`);
-  const ki = 8 * Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const ki = 8 * kiCostTier(actor);
   if ((Number(actor.system.ki?.value) || 0) < ki) return ui.notifications.warn(`${actor.name} needs ${ki} Ki for Float Mirror.`);
   if (!await spendActions(actor, 1, "counter")) return;
   if (!await spendManeuverCost(actor, { name: "Float Mirror" }, ki)) return;

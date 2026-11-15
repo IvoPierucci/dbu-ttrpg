@@ -28,6 +28,15 @@ export const FUNCTIONS = {
  * (a State's level, an Aspect's level on that Transformation), and the Moment's context
  * when the effect is reactive.
  */
+/**
+ * The Tier of Power a (T) is counted at: the current one - but a Ki Point Cost's (`scope.kiCost`, interpreter.mjs) at no more
+ * than the Base Tier. Breakthrough: "When you temporarily increase your Tier of Power, you do not increase your Ki Point Costs."
+ */
+function tierFor(scope, fallback = 0) {
+  if (scope?.kiCost && Number.isFinite(scope.data?.kiCostTier)) return scope.data.kiCostTier;
+  return scope?.data?.tierOfPower ?? fallback;
+}
+
 export function resolveAmount(amount, scope) {
   if (amount == null) return 0;
 
@@ -36,7 +45,7 @@ export function resolveAmount(amount, scope) {
       return amount.value ?? 0;
 
     case "perTier":
-      return (amount.value ?? 0) * (scope.data?.tierOfPower ?? 0);
+      return (amount.value ?? 0) * tierFor(scope);
 
     case "perBaseTier":
       return (amount.value ?? 0) * (scope.data?.baseTierOfPower ?? 0);
@@ -49,7 +58,7 @@ export function resolveAmount(amount, scope) {
 
     case "level": {
       const level = scope.level ?? 0;
-      if (amount.scale === "T") return level * (scope.data?.tierOfPower ?? 0);
+      if (amount.scale === "T") return level * tierFor(scope);
       if (amount.scale === "bT") return level * (scope.data?.baseTierOfPower ?? 0);
       if (amount.scale === "WT") {
         return level * feltWeatherTier(scope.data);

@@ -3732,7 +3732,7 @@ async function askSustain(actor, maneuver) {
   const from = MAGNITUDES.indexOf("standard");
   const ranks = Number(actor.system.skills?.[sphere.sphereStepsSkill]?.ranks) || 0;
   const steps = Math.max(0, Math.min(ranks - (Number(sphere.sphereStepsPast) || 0), MAGNITUDES.length - 1 - from));
-  const perStep = (Number(sphere.sphereStepKiPerTier) || 0) * Math.max(1, actor.system.tierOfPower ?? 1);
+  const perStep = (Number(sphere.sphereStepKiPerTier) || 0) * (await import("./maneuvers.mjs")).kiCostTier(actor);
   const options = [{ value: "", text: "Only you" },
     ...Array.from({ length: steps + 1 }, (_, step) => ({ value: String(step),
       text: `${label(MAGNITUDES[from + step])} Sphere${step ? ` (+${step * perStep} KP)` : ""}` }))];

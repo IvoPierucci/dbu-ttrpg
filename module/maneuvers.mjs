@@ -1094,7 +1094,7 @@ async function askPowerOfMovement(actor, maneuver) {
     || (maneuver.advantages ?? []).includes("charging-assault")) return maneuver;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.("dbu-ttrpg", "powerOfMovementRound") === round) return maneuver;
-  const ki = 2 * Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const ki = 2 * kiCostTier(actor);
   if ((Number(actor.system.ki?.value) || 0) < ki) return maneuver;
   const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Power of Movement` },
     content: `<p data-tooltip="Once a Round">${ki} Ki: Charging Assault on this attack?</p>`, rejectClose: false });
@@ -4095,10 +4095,21 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
  * are alternatives rather than additions: a Maneuver states its price one way or the
  * other.
  */
+/**
+ * The Tier of Power a Ki Point Cost is counted at. Breakthrough: "When you temporarily increase your Tier of Power, you do not
+ * increase your Ki Point Costs" - the current Tier, but never above the Base Tier (actor-character.mjs kiCostTier).
+ */
+export function kiCostTier(actor) {
+  const system = actor?.system;
+  const own = Number(system?.kiCostTier);
+  if (Number.isFinite(own) && own > 0) return own;
+  return Math.max(1, Math.min(Number(system?.tierOfPower) || 1, Number(system?.baseTierOfPower) || Number(system?.tierOfPower) || 1));
+}
+
 function surchargeKiCost(maneuver, profileId, actor) {
   if (!profileId) return 0;
   const perTier = maneuver.profileSurcharge?.[profileId] ?? 0;
-  return perTier * (actor?.system?.tierOfPower ?? 1);
+  return perTier * kiCostTier(actor);
 }
 
 function baseKiCost(maneuver, actor) {
@@ -4108,9 +4119,9 @@ function baseKiCost(maneuver, actor) {
   if (maneuver.kiCostPerBaseTier) {
     return (maneuver.kiCostPerBaseTier * (actor?.system?.baseTierOfPower ?? 1)) + grown;
   }
-  // "2(T)" - the Tier of Power, which a Breakthrough raises and the Base Tier does not.
+  // "2(T)" - at the Tier a Ki Point Cost is counted at: a Breakthrough does not raise it (kiCostTier).
   if (maneuver.kiCostPerTier) {
-    return maneuver.kiCostPerTier * (actor?.system?.tierOfPower ?? 1);
+    return maneuver.kiCostPerTier * kiCostTier(actor);
   }
   return maneuver.kiCost ?? 0;
 }
@@ -4474,7 +4485,7 @@ export function profileListedKiCost(profileId, actor) {
   const profile = PROFILES[profileId];
   if (!profile) return 0;
 
-  const tier = actor?.system?.tierOfPower ?? 1;
+  const tier = kiCostTier(actor);
   return (profile.kiCost ?? 0) + ((profile.kiCostPerTier ?? 0) * tier);
 }
 
@@ -4489,7 +4500,7 @@ export function profileKiCost(profileId, maneuver, actor) {
   const profile = PROFILES[profileId];
   if (!profile) return 0;
 
-  const tier = actor?.system?.tierOfPower ?? 1;
+  const tier = kiCostTier(actor);
   const discount = (maneuver?.signature && profile.signatureDiscountPerTier)
     ? profile.signatureDiscountPerTier * tier
     : 0;
@@ -4595,13 +4606,13 @@ export function maneuverKiCost(maneuver, declared, actor) {
     // this Maneuver is reduced by 1(T)" - a discount on the use, which may go under the Profile.
     const features = declared?.advantages ?? maneuver.advantages ?? [];
     if (features.includes("back-flip") && features.includes("charging-assault")) {
-      cost -= (actor.system?.tierOfPower ?? 1);
+      cost -= kiCostTier(actor);
     }
     // Overwhelming Assault: "Reduce the Ki Point Cost for that Attacking Maneuver by 4(T)" - held to the Minimum below.
-    if (declared?.overwhelm?.ki) cost -= 4 * Math.max(1, actor.system?.tierOfPower ?? 1);
+    if (declared?.overwhelm?.ki) cost -= 4 * kiCostTier(actor);
     // Multi-Type Master: the one it handed over - 1(T) off for each of Multi-Type Attacker's stacks on its Foundation.
     if (declared?.foundation && (actor.getFlag?.("dbu-ttrpg", "multiTypeMasterNext") === roundNow())) {
-      cost -= (Number(actor.getFlag?.("dbu-ttrpg", "multiType")?.[declared.foundation]) || 0) * Math.max(1, actor.system?.tierOfPower ?? 1);
+      cost -= (Number(actor.getFlag?.("dbu-ttrpg", "multiType")?.[declared.foundation]) || 0) * kiCostTier(actor);
     }
 
     // Minimum Ki Point Cost, applied last: the price is whatever everything did to it,
@@ -4619,7 +4630,7 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // cannot reduce it below 1/2 of its Ki Point Cost."
   if ((maneuver.tags ?? []).includes("uniqueAbility")) {
     const listed = baseKiCost(maneuver, actor);
-    const tier = actor?.system?.tierOfPower ?? 1;
+    const tier = kiCostTier(actor);
     // An Advancement's change to it - Efficient Barrier's 2(T) off - still held to the floor below.
     cost += (Number(maneuver.kiCostPerTierChange) || 0) * Math.max(1, tier);
     // Unique Monstrosity (2): "Reduce the Ki Point Cost of the Unique Ability you chose for the first effect of Unique Monstrosity by
@@ -4638,7 +4649,7 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // Unless it is paid in Life, which is not Ki: Elemental (Dark) takes it out of the
   // Life Points instead, through `spendLifeWager`.
   // Straining Time Freeze: "Increase the Ki Point Cost of all Maneuvers during your Frozen Turn by 2(T)."
-  if (actor?.getFlag?.("dbu-ttrpg", "frozenTurn")?.straining) cost += 2 * Math.max(1, actor.system?.tierOfPower ?? 1);
+  if (actor?.getFlag?.("dbu-ttrpg", "frozenTurn")?.straining) cost += 2 * kiCostTier(actor);
   // A Custom Buff's "Ki Point Cost Multiplier" (the user's): the cost once more for each - 1 the double, 2 the triple - of
   // every Maneuver, on the price as everything else left it. Never the wager chosen on top; never below nothing.
   const again = Number(slots?.["maneuvers.kiCost.times"]?.add) || 0;

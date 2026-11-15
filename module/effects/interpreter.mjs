@@ -182,10 +182,13 @@ function run(statements, scope) {
         // Not worked out in a phase it cannot land in: what it reads may not be settled yet there - Powerful Physique's
         // Force Modifier read before the Modifiers are, and reported as missing.
         if (!reachesPhase([s], scope)) break;
+        // A Ki Point Cost's (T) at no more than the Base Tier: "When you temporarily increase your Tier of Power, you do not
+        // increase your Ki Point Costs" (Breakthrough; amounts.mjs).
+        const at = /kiCost/i.test(String(s.slot)) ? { ...scope, kiCost: true } : scope;
         const value = (slot.kind === KINDS.DICE)
-          ? resolveDice(s.amount, scope)
-          : resolveAmount(s.amount, scope);
-        scope.collect(slot, s.op, value, slot.kind, writtenAmount(s.amount, side => resolveAmount(side, scope), scope.level));
+          ? resolveDice(s.amount, at)
+          : resolveAmount(s.amount, at);
+        scope.collect(slot, s.op, value, slot.kind, writtenAmount(s.amount, side => resolveAmount(side, at), scope.level));
         break;
       }
 
