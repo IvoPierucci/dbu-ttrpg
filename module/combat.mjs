@@ -842,15 +842,19 @@ export function registerCombatHooks() {
       if (!(Number(current?.round) > Number(previous?.round)) && arrivingId) await keepTurnWith(combat, arrivingId);
     }
 
+    // Read before Act Again's turn is taken off: Foundry puts the turn back on the same Combatant after, not at once.
     const arriving = combat.combatant?.actor;
-    // Jump Start (2): a turn taken up again after the one that jumped in front of it - begun already, not begun again.
+    const arrivingId = combat.combatant?.id;
+    // Act Again's turn over: gone from the Initiative Order - before a turn taken up again after it returns below.
+    if (actAgainOver) await (await import("./villainous.mjs")).actAgainEnded(combat, actAgainOver);
+    // Jump Start (2): a turn taken up again after the one that jumped in front of it - begun already, not begun again. And
+    // the one Act Again's turn cut into (villainous.mjs).
     const resumed = combat.getFlag?.("dbu-ttrpg", "turnResumed");
-    if (resumed && (combat.combatant?.id === resumed)) {
+    if (resumed && (arrivingId === resumed)) {
       await combat.unsetFlag("dbu-ttrpg", "turnResumed");
       return;
     }
     if (arriving) await foresee(combat, arriving, true);
-    if (actAgainOver) await (await import("./villainous.mjs")).actAgainEnded(combat, actAgainOver);
     if ((isCharacter(arriving)) && !await beginTurn(arriving)) {
       return combat.nextTurn();
     }

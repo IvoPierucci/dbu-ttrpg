@@ -190,10 +190,18 @@ export async function villainousAfter(actor, maneuver, plan = {}, card = null) {
     const after = Number(ended.initiative) || 0;
     const next = combat.turns[combat.turns.findIndex(turn => turn.id === ended.id) + 1];
     const initiative = (next && Number.isFinite(Number(next.initiative))) ? (after + Number(next.initiative)) / 2 : after - 0.5;
+    const current = combat.combatant;
     const [made] = await combat.createEmbeddedDocuments("Combatant", [{ actorId: actor.id, tokenId: token?.id ?? null,
       sceneId: token?.parent?.id ?? canvas?.scene?.id ?? null, initiative, flags: { "dbu-ttrpg": { actAgain: true } } }]);
-    const at = combat.turns.findIndex(turn => turn.id === made?.id);
-    if (at >= 0) await combat.update({ turn: at });
+    if (made) {
+      // As Jump Start's turn is put in (chat.mjs applyJumpStart): the turn it cuts into - begun already, its card out - is not
+      // ended by it, and is taken up again after it, not begun a second time (`turnResumed`, combat.mjs). Moved to it with no
+      // turn change told, and begun here.
+      if (current && (current.id !== made.id)) await combat.setFlag("dbu-ttrpg", "turnResumed", current.id);
+      const { keepTurnWith, beginTurnOf } = await import("./combat.mjs");
+      await keepTurnWith(combat, made.id);
+      await beginTurnOf(combat, actor);
+    }
     return say(`<b>Act Again</b> - ${escape(actor.name)} takes a turn more, after ${escape(ended.name)}'s: no normal Actions in it, its Adversary
       Actions spent as Actions.`);
   }
