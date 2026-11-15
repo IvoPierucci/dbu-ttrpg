@@ -6870,10 +6870,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await actor.update({ "system.battlefield.highEnvironment": soarTo });
   }
   // Winged Beast (4): "If you use the Soar Maneuver, you may use any Standard Maneuver with an Action Cost of 1 Action immediately
-  // afterwards as an Out-of-Sequence Maneuver" - its button on the sheet, till one is used or the Round ends; once a Round.
+  // afterwards as an Out-of-Sequence Maneuver" - the Maneuvers tab's Out of Sequence turned on at 1 Action; once a Round.
   if (maneuver.soars && (actor.system.effects?.slots?.["winged.afterSoar"] === true)) {
     const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-    if (actor.getFlag?.("dbu-ttrpg", "wingedRound") !== round) await actor.setFlag("dbu-ttrpg", "wingedSoared", round);
+    if (actor.getFlag?.("dbu-ttrpg", "wingedRound") !== round) {
+      await actor.update({ ...outOfSequenceGranted(1), "flags.dbu-ttrpg.wingedRound": round });
+    }
   }
 
   // Declared, now that it is certain to happen. An effect answering this reads the
@@ -7738,10 +7740,40 @@ export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}
   }
   // A Signature Technique is used through the Signature Technique Maneuver, which is what costs
   // the Action and carries the [1/Round] - with this one already picked.
-  if ((item.system.tags ?? []).includes("signature") && !item.system.signatureTechnique) {
-    return useTechnique(actor, item.id, { atFeature });
-  }
-  return useManeuver(actor, definitionOf(item), { atFeature });
+  const technique = (item.system.tags ?? []).includes("signature") && !item.system.signatureTechnique;
+  const door = technique ? actor.items.find(each => (each.type === "maneuver") && each.system.signatureTechnique) : item;
+  // The Out of Sequence toggle on, and this one within its Actions: used out of sequence, and the toggle goes off.
+  const mode = outOfSequenceMode(actor);
+  const outOfSequence = Boolean(door) && fitsOutOfSequence(definitionOf(door), mode);
+  const used = technique ? await useTechnique(actor, item.id, { atFeature, outOfSequence })
+    : await useManeuver(actor, definitionOf(item), { atFeature, outOfSequence });
+  if (used && outOfSequence) await actor.setFlag("dbu-ttrpg", OOS_MODE, { on: false, actions: mode.actions });
+  return used;
+}
+
+/**
+ * The Maneuvers tab's Out of Sequence (the user's, 2026-11-15), in place of a button on each Maneuver: a toggle in its Manage
+ * window and a box beside it - the most Actions a Maneuver may cost to be used so. On, the next Standard Maneuver used within it
+ * is used out of sequence ("OOS" on its row), and the toggle goes off. It is the table's, never refused: anyone turns it on, and
+ * an effect that gives an Out-of-Sequence Maneuver turns it on at 1 (`outOfSequenceGranted`).
+ */
+export const OOS_MODE = "outOfSequenceMode";
+
+/** The toggle and its Actions, as the character holds them. */
+export function outOfSequenceMode(actor) {
+  const mode = actor?.getFlag?.("dbu-ttrpg", OOS_MODE) ?? {};
+  return { on: mode.on === true, actions: Math.max(1, Math.floor(Number(mode.actions) || 1)) };
+}
+
+/** Whether a Maneuver is used out of sequence with the toggle as it is: a Standard Maneuver of that many Actions or fewer. */
+export function fitsOutOfSequence(maneuver, mode) {
+  if (!mode?.on || (maneuver?.type !== "standard") || maneuver.actionCostOpen) return false;
+  return Math.max(Number(maneuver.actionCost) || 0, Number(maneuver.actionCostMax) || 0) <= mode.actions;
+}
+
+/** The update an effect giving an Out-of-Sequence Maneuver makes: the toggle on, its box at that many Actions. */
+export function outOfSequenceGranted(actions = 1) {
+  return { [`flags.dbu-ttrpg.${OOS_MODE}`]: { on: true, actions } };
 }
 
 /**

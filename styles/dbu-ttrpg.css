@@ -5381,6 +5381,14 @@
 .dbu-ttrpg .dbu-mchip { padding: 0 5px; border: 1px solid #6c6078; border-radius: 3px; font-size: 10px; white-space: nowrap; }
 .dbu-ttrpg .dbu-mchip.uses { border-color: #4f8a62; }
 .dbu-ttrpg .dbu-mchip.out { border-color: #8a4f4f; color: #e0a0a0; }
+/* Manage's Out of Sequence on: "OOS" on the rows within its Actions, where their buttons were. */
+.dbu-ttrpg .maneuver-oos { flex: none; border-color: #4a76b0; color: #9cc0ef; font-weight: bold; }
+
+/* Manage's Out of Sequence: the toggle, and the most Actions beside it, on one line. */
+.dbu-ttrpg .dbu-oos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+.dbu-ttrpg .dbu-oos label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; }
+.dbu-ttrpg .dbu-oos-toggle { font-weight: bold; }
+.dbu-ttrpg .dbu-oos-actions input[type="number"] { flex: none; width: 3.5ch; height: 24px; padding: 0 2px; text-align: center; }
 
 /* An Item's icon in a Manage window - the Maneuvers' - square, not a portrait's circle. */
 .dbu-ttrpg .ally-picks .ally-img.dbu-item-img { border-radius: 3px; }

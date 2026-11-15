@@ -17,9 +17,8 @@ text: >
 [passive]
 # (1)
 techniquePoints.perSkillImprovement += 3;
-# (2) An OOS button on each Standard Maneuver of 1 Action on the Maneuvers tab: 2 Demonic Power, once a Round, under the
-# Instant rule - the Maneuver played out of sequence (actor-character-sheet.mjs _onCreativeOutOfSequence).
-allow demonicPower.outOfSequence;
+# (2) The Maneuvers tab's Out of Sequence, turned on by hand in its Manage window (the user's: in place of a button on each
+# Maneuver); the 2 stacks of Demonic Power and the once a Round, the table's.
 # (3) A box in the Signature Technique's declaration: 1 Demonic Power for the Condition Advantage on it, its Combat
 # Condition asked - once a Round (use-maneuver.mjs).
 allow signature.conditionByPower;

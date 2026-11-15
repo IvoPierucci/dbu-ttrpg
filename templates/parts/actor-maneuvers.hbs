@@ -17,7 +17,7 @@
       {{/each}}
       {{#if editable}}
       <button type="button" class="dbu-manage dbu-maneuver-manage" data-action="openCombatWindow" data-window="maneuvers"
-              data-tooltip="Hide the Maneuvers of this tab you do not use - they stay yours">Manage</button>
+              data-tooltip="Out of Sequence, and hiding the Maneuvers you do not use">Manage</button>
       {{/if}}
     </div>
     {{! Typed into, every tab's rows narrowed to the names holding it - each tab counting its matches (the user's). Never submitted. }}
@@ -104,25 +104,14 @@
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="As an Instant Maneuver - Burrowing Beast in Cover, Underwater Beast Underwater (1/Round each)">Instant</button>
             {{/if}}
-            {{#if maneuver.majinOutOfSequence}}
-            <button type="button" class="maneuver-control" data-action="majinOutOfSequence"
-                    data-item-id="{{maneuver.itemId}}"
-                    data-tooltip="Genetic Focus: Majins: out of sequence, after its Healing Surge">Out of Sequence</button>
-            {{/if}}
-            {{#if maneuver.wingedOutOfSequence}}
-            <button type="button" class="maneuver-control" data-action="wingedOutOfSequence"
-                    data-item-id="{{maneuver.itemId}}"
-                    data-tooltip="Winged Beast: out of sequence, right after the Soar (1/Round)">Out of Sequence</button>
-            {{/if}}
             {{#if maneuver.glassInstant}}
             <button type="button" class="maneuver-control" data-action="glassInstant"
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="Glass Combat: as an Instant Maneuver, during your turn on a Glass Square - ending on one (1/Round)">Instant</button>
             {{/if}}
-            {{#if maneuver.creativeOutOfSequence}}
-            <button type="button" class="maneuver-control" data-action="creativeOutOfSequence"
-                    data-item-id="{{maneuver.itemId}}"
-                    data-tooltip="Demonic Creativity: out of sequence, as an Instant Maneuver, for 2 stacks of Demonic Power (1/Round)">OOS</button>
+            {{#if maneuver.outOfSequence}}
+            {{! Manage's Out of Sequence on, and this one within its Actions: used now, it is used out of sequence. }}
+            <span class="maneuver-oos dbu-mchip" data-tooltip="Out of Sequence: used now, it is used out of sequence - and the toggle goes off">OOS</span>
             {{/if}}
             {{else}}
             {{! Reactive: it is played from the message of the attack it answers. }}
@@ -176,19 +165,46 @@
           </div>
         </li>
         {{else}}
-        <li class="dbu-clist-empty">{{#if group.hidden}}All hidden - Manage shows them again.{{else}}None of this type.{{/if}}</li>
+        <li class="dbu-clist-empty">{{#if group.hidden}}All hidden - Manage, Hide Maneuvers shows them again.{{else}}None of this type.{{/if}}</li>
         {{/each}}
       </ul>
       <p class="dbu-maneuver-note" data-maneuver-nomatch hidden>No Maneuver of this type has that in its name.</p>
-      {{#if group.hidden}}<p class="dbu-maneuver-note">{{group.hidden}} hidden - Manage shows them again.</p>{{/if}}
+      {{#if group.hidden}}<p class="dbu-maneuver-note">{{group.hidden}} hidden - Manage, Hide Maneuvers shows them again.</p>{{/if}}
     </div>
     {{/each}}
   </section>
 
+  {{! Manage (the user's): Out of Sequence - a toggle and the most Actions a Maneuver may cost - and Hide Maneuvers, the list that
+      was here, in a window of its own. }}
   {{#if combatWindow.maneuvers}}
   <div class="dbu-combat-overlay">
     <div class="dbu-combat-window" role="dialog" aria-modal="true">
-      <header><h3>Manage &middot; {{maneuverManage.label}}</h3></header>
+      <header><h3>Manage &middot; Maneuvers</h3></header>
+      <div class="dbu-combat-window-body dbu-oos">
+        <label class="dbu-oos-toggle">
+          <input type="checkbox" name="flags.dbu-ttrpg.outOfSequenceMode.on" {{#if maneuverManage.outOfSequence.on}}checked{{/if}}
+                 {{#unless editable}}disabled{{/unless}}/>
+          Out of Sequence
+        </label>
+        <label class="dbu-oos-actions">Up to
+          <input type="number" name="flags.dbu-ttrpg.outOfSequenceMode.actions" value="{{maneuverManage.outOfSequence.actions}}" min="1" max="9"
+                 step="1" {{#unless editable}}disabled{{/unless}}/>
+          Actions</label>
+      </div>
+      <p class="dbu-manage-note">On: the next Standard Maneuver of that many Actions or fewer is used out of sequence - "OOS" on its row - and this
+        goes off. An effect that gives you an Out-of-Sequence Maneuver turns it on at 1.</p>
+      <footer>
+        <button type="button" class="dbu-manage" data-action="openCombatWindow" data-window="maneuverHide">Hide Maneuvers</button>
+        <button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button>
+      </footer>
+    </div>
+  </div>
+  {{/if}}
+
+  {{#if combatWindow.maneuverHide}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window" role="dialog" aria-modal="true">
+      <header><h3>Hide Maneuvers &middot; {{maneuverManage.label}}</h3></header>
       <p class="dbu-manage-note">Ticked: shown on the list. Unticked: hidden here only - still yours, still on your hotbar, still offered where it applies.</p>
       <div class="dbu-combat-window-body dbu-picks ally-picks">
         {{#each maneuverManage.picks as |pick|}}
@@ -204,6 +220,7 @@
       </div>
       <footer>
         <button type="button" class="dbu-manage" data-action="showAllManeuvers" {{#unless editable}}disabled{{/unless}}>Show all</button>
+        <button type="button" class="dbu-manage" data-action="openCombatWindow" data-window="maneuvers">Back</button>
         <button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button>
       </footer>
     </div>

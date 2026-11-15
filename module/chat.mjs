@@ -795,8 +795,8 @@ async function heartOfEvilKnock(attacker, target) {
 
 /**
  * Genetic Focus: Majins (6): "If you use a Healing Surge, maximize your Adaptation Points. Then, you may use any Standard Maneuver with an
- * Action Cost of 1 Action as an Out-of-Sequence Maneuver." Asked, once an Encounter; the Maneuver an "Out of Sequence" button on the
- * Maneuvers tab this Round (`focusMajinOOS`), Winged Beast's way.
+ * Action Cost of 1 Action as an Out-of-Sequence Maneuver." Asked, once an Encounter; the Maneuvers tab's Out of Sequence turned on at
+ * 1 Action (use-maneuver.mjs outOfSequenceGranted), Winged Beast's way.
  */
 async function focusMajinSurge(actor) {
   const encounter = game.combat?.id ?? "none";
@@ -809,12 +809,13 @@ async function focusMajinSurge(actor) {
   if ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Majins`,
     [{ value: "yes", label: "Use" }, { value: "no", label: "Close" }], { text })) !== "yes") return;
   const had = Number(actor.system.resources?.adaptation?.stacks) || 0;
-  await requestActorUpdate(actor, { [`flags.${SCOPE}.focusMajinEncounter`]: encounter, [`flags.${SCOPE}.focusMajinOOS`]: roundKey() });
+  const { outOfSequenceGranted } = await import("./use-maneuver.mjs");
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.focusMajinEncounter`]: encounter, ...outOfSequenceGranted(1) });
   if (most) {
     await setResource(actor, "adaptation", most);
     if (most > had) await (await import("./effects/moments-runtime.mjs")).stacksGained(actor, ["adaptation"], { adaptation: most - had });
   }
-  ui.notifications.info(`${actor.name}: Genetic Focus: Majins - a Standard Maneuver of 1 Action out of sequence, from the Maneuvers tab.`);
+  ui.notifications.info(`${actor.name}: Genetic Focus: Majins - Out of Sequence on, for a Standard Maneuver of 1 Action, on the Maneuvers tab.`);
 }
 
 /**

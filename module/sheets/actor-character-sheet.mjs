@@ -85,7 +85,9 @@ import {
   definitionOf,
   delayedManeuver,
   escapeGrapple,
+  fitsOutOfSequence,
   importCoreManeuvers,
+  outOfSequenceMode,
   releaseGrapple,
   useBuddyAttack,
   useOwnedManeuver
@@ -458,8 +460,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       signatureInstant: DBUCharacterSheet._onSignatureInstant,
       glassInstant: DBUCharacterSheet._onGlassInstant,
       burrowInstant: DBUCharacterSheet._onBurrowInstant,
-      wingedOutOfSequence: DBUCharacterSheet._onWingedOutOfSequence,
-      majinOutOfSequence: DBUCharacterSheet._onMajinOutOfSequence,
       spiritInstant: DBUCharacterSheet._onSpiritInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
       flipInstant: DBUCharacterSheet._onFlipInstant,
@@ -468,7 +468,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       desperateInstant: DBUCharacterSheet._onDesperateInstant,
       desperateSupport: DBUCharacterSheet._onDesperateSupport,
       hateInstant: DBUCharacterSheet._onHateInstant,
-      creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
       useGrantedUnique: DBUCharacterSheet._onUseGrantedUnique,
@@ -1612,7 +1611,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       });
       const current = context.maneuverGroups.find(group => group.active);
       context.maneuverManage = { label: current?.label ?? "", picks: (current?.all ?? []).map(maneuver => ({ itemId: maneuver.itemId,
-        name: maneuver.name, img: maneuver.img, shown: !hidden.has(maneuver.itemId) })) };
+        name: maneuver.name, img: maneuver.img, shown: !hidden.has(maneuver.itemId) })), outOfSequence: outOfSequenceMode(this.actor) };
     }
     context.techniques = this._prepareTechniques();
     context.uniqueAbilities = await this.#prepareUniqueAbilities(context.techniques);
@@ -1809,7 +1808,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // And its Allies' and Minions' (or Master's) Manage windows.
       allies: windowIs === "allies", minions: windowIs === "minions", master: windowIs === "master",
       // The Settings tab's Skill Specialties; the Maneuvers tab's Manage.
-      specialties: windowIs === "specialties", maneuvers: windowIs === "maneuvers" };
+      specialties: windowIs === "specialties", maneuvers: windowIs === "maneuvers",
+      // Its Hide Maneuvers, a window of its own opened from it (the user's).
+      maneuverHide: windowIs === "maneuverHide" };
 
     // Chosen in Manage - or there unasked (`byDefault`) and not taken off.
     // Its entry on hover laid out as printed - a line an effect, its paragraphs kept (the user's) - not run together. What
@@ -2265,19 +2266,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
                 && !((Number(this.actor.system.battlefield?.highEnvironment) || 0) > 0))
               // Mimicry of Bestial Movement (3): "You may use the Movement Maneuver as an Instant Maneuver" - once a Round.
               || (this.actor.system.effects?.slots?.["movement.pseudoInstant"] === true)),
-            // Winged Beast (4): the Soar just used - a Standard Maneuver of 1 Action, out of sequence.
-            // Genetic Focus: Majins (6): after its Healing Surge, a Standard Maneuver of 1 Action out of sequence - this Round.
-            majinOutOfSequence: (maneuver.type === "standard") && (Number(maneuver.actionCost) === 1) && !maneuver.actionCostOpen
-              && !(maneuver.actionCostMax > 1)
-              && (this.actor.getFlag("dbu-ttrpg", "focusMajinOOS") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`),
-            wingedOutOfSequence: (this.actor.system.effects?.slots?.["winged.afterSoar"] === true) && (maneuver.type === "standard")
-              && (Number(maneuver.actionCost) === 1) && !maneuver.actionCostOpen && !(maneuver.actionCostMax > 1)
-              && (this.actor.getFlag("dbu-ttrpg", "wingedSoared") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`),
-            // Demonic Creativity: "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an
-            // Action Cost of 1 as an Out-of-Sequence Maneuver."
-            creativeOutOfSequence: (this.actor.system.effects?.slots?.["demonicPower.outOfSequence"] === true)
-              && (maneuver.type === "standard") && (Number(maneuver.actionCost) === 1) && !maneuver.actionCostOpen
-              && !(maneuver.actionCostMax > 1),
+            // The Manage window's Out of Sequence on, and this one within its Actions: "OOS" where its buttons were - used now, it
+            // is used out of sequence (the user's, in place of Genetic Focus: Majins', Winged Beast's and Demonic Creativity's buttons).
+            outOfSequence: fitsOutOfSequence(maneuver, outOfSequenceMode(this.actor)),
             // Off the group, unless the Maneuver has a reason of its own to be here.
             playable: (group.playable || this.#playableAlone(maneuver))
               && !this.#playedThrough(maneuver)
@@ -8074,35 +8065,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * as ever, and the 2 stacks paid once it is used.
    */
   /**
-   * Demonic Creativity (2): "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an Action
-   * Cost of 1 as an Out-of-Sequence Maneuver." Once a Round, under the Instant rule - and, used, it holds you as an Instant
-   * does; the Maneuver played out of sequence, the 2 stacks paid once it is.
-   */
-  static async _onCreativeOutOfSequence(event, target) {
-    const item = this.actor.items.get(target.dataset.itemId);
-    if (!item || (this.actor.system.effects?.slots?.["demonicPower.outOfSequence"] !== true)) return;
-    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-    if (this.actor.getFlag("dbu-ttrpg", "creativeRound") === round) {
-      return ui.notifications.warn(`${this.actor.name}: Demonic Creativity was used this Combat Round.`);
-    }
-    if ((Number(this.actor.system.resources?.demonicpower?.stacks) || 0) < 2) {
-      return ui.notifications.warn(`${this.actor.name} needs 2 stacks of Demonic Power for this.`);
-    }
-    const { whyNotAnotherInstant } = await import("../maneuvers.mjs");
-    const held = whyNotAnotherInstant(this.actor);
-    if (held) return ui.notifications.warn(held);
-    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
-    if (!await useManeuver(this.actor, definitionOf(item), { outOfSequence: true })) return;
-    const resources = { ...(this.actor.system.resources ?? {}) };
-    const left = (Number(resources.demonicpower?.stacks) || 0) - 2;
-    if (left > 0) resources.demonicpower = { ...resources.demonicpower, stacks: left };
-    else delete resources.demonicpower;
-    const { replaceObject } = await import("../conditions.mjs");
-    return this.actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.creativeRound": round,
-      "system.instantPlayed": { held: true, messageId: "", turn: (await import("../maneuvers.mjs")).instantTurnKey() } });
-  }
-
-  /**
    * Glass Combat (3): "During your turn, if you are occupying a Square that has the Glass Environmental Quality, you may use
    * the Movement Maneuver as an Instant Maneuver." Once a Round; ending on Glass, the player's.
    */
@@ -8144,26 +8106,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant", ...((flag === "pseudoMoveRound") ? { pseudoInstant: true } : {}) })) return;
     return this.actor.setFlag("dbu-ttrpg", flag, round);
-  }
-
-  /** Genetic Focus: Majins (6): a Standard Maneuver of 1 Action out of sequence, after its Healing Surge - one. */
-  static async _onMajinOutOfSequence(event, target) {
-    const item = this.actor.items.get(target.dataset.itemId);
-    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-    if (!item || (this.actor.getFlag("dbu-ttrpg", "focusMajinOOS") !== round)) return;
-    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
-    if (!await useManeuver(this.actor, definitionOf(item), { outOfSequence: true })) return;
-    return this.actor.unsetFlag("dbu-ttrpg", "focusMajinOOS");
-  }
-
-  /** Winged Beast (4): a Standard Maneuver of 1 Action right after the Soar, out of sequence - once a Round. */
-  static async _onWingedOutOfSequence(event, target) {
-    const item = this.actor.items.get(target.dataset.itemId);
-    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-    if (!item || (this.actor.getFlag("dbu-ttrpg", "wingedSoared") !== round)) return;
-    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
-    if (!await useManeuver(this.actor, definitionOf(item), { outOfSequence: true })) return;
-    return this.actor.update({ "flags.dbu-ttrpg.wingedRound": round, "flags.dbu-ttrpg.-=wingedSoared": null });
   }
 
   static async _onGlassInstant(event, target) {
