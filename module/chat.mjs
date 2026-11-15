@@ -197,7 +197,8 @@ export function registerManeuverSocket() {
     else if (activeGM && (activeGM !== game.user)) return;
 
     try {
-      await applyRequest(request);
+      // One card's edits one after another, in the order they came (queuedEdit).
+      await queuedEdit(request?.messageId, () => applyRequest(request));
     }
     catch (error) {
       // A refused edit here leaves the player who asked for it staring at a card that
@@ -206,6 +207,25 @@ export function registerManeuverSocket() {
       ui.notifications.error("DBU TTRPG | A relayed edit failed. See the console.");
     }
   });
+}
+
+/**
+ * The edits relayed for one card, carried out one after another in the order they came (the user's report: a player's Counter
+ * Maneuver - the Defend, the Afterimage Technique - answered as a Dodge). A player's answer reaches the GM as two edits sent at
+ * once: its defence written on the card, then "this answer is done", which reads the card again to roll it. Carried out side by
+ * side, the second read the card before the first was written, and wrote it back without the defence - which is a Dodge.
+ *
+ * Only the relayed edits wait here, never one made by the GM's own hand: an edit carried out inside a queued one makes edits of
+ * its own on the same card, and waiting for the queue it is in would wait forever.
+ */
+const editQueues = new Map();
+export function queuedEdit(messageId, work) {
+  const key = String(messageId ?? "");
+  const before = editQueues.get(key) ?? Promise.resolve();
+  const next = before.catch(() => null).then(work);
+  editQueues.set(key, next);
+  next.catch(() => null).finally(() => { if (editQueues.get(key) === next) editQueues.delete(key); });
+  return next;
 }
 
 /** Carry out one relayed edit. Shared with the direct path, which needs the same map. */
