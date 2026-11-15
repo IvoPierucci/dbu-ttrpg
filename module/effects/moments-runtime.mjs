@@ -167,9 +167,14 @@ async function runPass(actor, moment, definition, entries, context, mode, quiet 
   const regained = pools ? regainedLines(actor, slots, pools) : [];
   // A verb that did nothing because the player chose nothing - Patient Sniper's "None" - leaves its use unspent.
   const declined = new Set();
+  // A stack asked where to go and not answered (gainOneOf): a line with a button to place it, beside what was regained.
+  const unplaced = [];
   for (const call of scope.queue) {
-    if ((await runVerb(actor, call, context)) === UNSPENT) declined.add(call.verb);
+    const result = await runVerb(actor, call, context);
+    if (result === UNSPENT) declined.add(call.verb);
+    if (result?.unplaced) unplaced.push(result.unplaced);
   }
+  regained.push(...unplaced.map((each, at) => unplacedLine(actor, each, at)));
   const counted = declined.size ? spent.filter(use => !callsAny(entries, use, declined)) : spent;
 
   await recordUses(actor, counted, definition, context, spent);
@@ -858,12 +863,15 @@ async function runVerb(actor, call, context) {
       const chosen = (open.length === 1) ? open[0] : await askPlayerChoice(actor,
         `${actor.name}: ${definitions[open[0]].source || "a stack"}`,
         open.map(name => ({ value: name, label: definitions[name].label })));
-      if (!chosen) return;
+      // Not answered - closed, or its two minutes run out on the player's client: the stack left unplaced, said in the chat with a
+      // button that asks again (the user's: Born for Battle (2)'s, applied by the GM, lost without a word).
+      if (!chosen) return { unplaced: { names: args.map(name => String(name).toLowerCase()), source: definitions[open[0]].source || "" } };
       const next = { ...held, [chosen]: { stacks: (Number(held[chosen]?.stacks) || 0) + 1,
         max: Math.max(Number(held[chosen]?.max) || 0, resourceCeiling(definitions[chosen], actor)) } };
       const { replaceObject } = await import("../conditions.mjs");
       await actor.update({ "system.resources": replaceObject(next) });
-      return stacksGained(actor, [chosen]);
+      await stacksGained(actor, [chosen]);
+      return { placed: chosen };
     }
 
     case "surge": {
@@ -1130,6 +1138,17 @@ async function recordUses(actor, spent, definition, context, disarmed = spent) {
 
 /** What a verb answers when the player chose nothing, so its use is not counted (runPass). */
 export const UNSPENT = "unspent";
+
+/**
+ * A stack left unplaced, as a line in the chat: whose, and a button that asks again where it goes and places it - for whoever
+ * owns the character (chat.mjs renderPlaceStack). Its index tells it from another on the same message.
+ */
+export function unplacedLine(actor, { names = [], source = "" }, at = 0) {
+  const escape = Handlebars.escapeExpression;
+  const what = source ? `${escape(source)}: a stack` : "A stack";
+  return `<li class="dbu-unplaced">${what} not placed <button type="button" class="dbu-place-stack" data-place-index="${at}" `
+    + `data-place-actor="${escape(actor.uuid)}" data-place-names="${escape(names.join(","))}">Place it</button></li>`;
+}
 
 /** A verb run by name from outside a script - Alternative Warrior Race (4)'s `gainOneOf`, on an attack's card. */
 export function runVerbNamed(actor, verb, args = [], context = {}) {

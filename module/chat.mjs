@@ -238,6 +238,11 @@ function applyRequest(request) {
     case "moment": return applyMoment(request.messageId, request.moment);
     case "cure": return applyCure(request.messageId, request.cure);
     case "scan": return applyScan(request.messageId, request.scan);
+    // A stack left unplaced, placed from its button (renderPlaceStack).
+    case "stackPlaced": {
+      const message = game.messages.get(request.messageId);
+      return message?.setFlag(SCOPE, "stacksPlaced", [...new Set([...(message.getFlag(SCOPE, "stacksPlaced") ?? []), Number(request.index) || 0])]);
+    }
     case "spikes": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, SPIKE_FLAG, request.spikes);
     case "meteor": return game.messages.get(request.messageId)
@@ -4395,6 +4400,7 @@ export function checkCard({ parts, total, outcome, owner = null, lines = null })
  */
 function onRenderChatMessage(message, html) {
   renderCriticalButton(message, html);
+  renderPlaceStack(message, html);
   renderSkillClash(message, html);
   renderAttack(message, html);
   renderMoment(message, html);
@@ -6179,6 +6185,32 @@ async function curePoison(message, cure) {
  * looking - making it a guarantee would mean whispering every roll, which would take the
  * results away from the table too.
  */
+/**
+ * A stack left unplaced - its question closed or run out (moments-runtime.mjs unplacedLine): "Place it" asks again where it goes
+ * and places it, for whoever owns the character; placed, the line says so (the user's).
+ */
+function renderPlaceStack(message, html) {
+  const placed = message.getFlag(SCOPE, "stacksPlaced") ?? [];
+  for (const button of html.querySelectorAll("button.dbu-place-stack")) {
+    const index = Number(button.dataset.placeIndex) || 0;
+    if (placed.includes(index)) {
+      button.replaceWith(Object.assign(document.createElement("span"), { className: "dbu-placed", textContent: "- placed" }));
+      continue;
+    }
+    const actor = fromUuidSync(button.dataset.placeActor ?? "");
+    if (!actor?.isOwner) { button.remove(); continue; }
+    button.addEventListener("click", async event => {
+      event.preventDefault();
+      button.disabled = true;
+      const { runVerbNamed } = await import("./effects/moments-runtime.mjs");
+      const result = await runVerbNamed(actor, "gainOneOf", String(button.dataset.placeNames ?? "").split(",").filter(Boolean));
+      // Not answered again: the button back, for another go.
+      if (result?.unplaced) { button.disabled = false; return; }
+      await requestEdit(message, { type: "stackPlaced", index });
+    });
+  }
+}
+
 function hidePrivateBreakdowns(message, html) {
   let hidden = false;
 
