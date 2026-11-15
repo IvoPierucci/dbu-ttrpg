@@ -7602,9 +7602,16 @@ export async function declareCharge(actor, { foundation = "" } = {}) {
     return true;
   }
 
-  // Only an Attacking Maneuver can be fed, and only one the character actually has.
+  // Only an Attacking Maneuver can be fed, and only one the character can use (the user's: every one carried was offered) - as the
+  // Maneuvers tab lists them: not a Special Maneuver nothing has opened, nor a Trait's own effect while the Trait is not on them. Nor
+  // the Signature Technique Maneuver itself: a charge is the Technique's, its own Item (chargeOfFoundation).
+  const { traitActive } = await import("./conditions.mjs");
   const options = actor.items
-    .filter(item => (item.type === "maneuver") && item.system.attacking)
+    .filter(item => (item.type === "maneuver") && item.system.attacking && !item.system.signatureTechnique)
+    .filter(item => {
+      const definition = definitionOf(item);
+      return !(definition.fromTrait && !traitActive(actor, definition.fromTrait)) && !whyNotSpecial(actor, definition);
+    })
     .map(item => ({ id: item.id, name: item.name }));
 
   if (!options.length) {
