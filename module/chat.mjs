@@ -803,9 +803,11 @@ async function focusMajinSurge(actor) {
   if ((actor?.system?.effects?.slots?.["focusMajins.surge"] !== true) || (actor.getFlag?.(SCOPE, "focusMajinEncounter") === encounter)) return;
   const { resourceLimits } = await import("./effects/traits.mjs");
   const most = Number(resourceLimits(actor).adaptation) || 0;
-  if ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Majins - a Healing Surge`, [
-    { value: "yes", label: `Adaptation Points to their Maximum (${most}), then a Standard Maneuver of 1 Action out of sequence (1/Encounter)` },
-    { value: "no", label: "Not now" }])) !== "yes") return;
+  // The (6) as printed above two buttons, Use and Close - not its whole text on a button (the user's).
+  const { traitEffectLine } = await import("./racial.mjs");
+  const text = traitEffectLine(actor, "genetic-focus-majins", 6);
+  if ((await askPlayerChoice(actor, `${actor.name}: Genetic Focus: Majins`,
+    [{ value: "yes", label: "Use" }, { value: "no", label: "Close" }], { text })) !== "yes") return;
   const had = Number(actor.system.resources?.adaptation?.stacks) || 0;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.focusMajinEncounter`]: encounter, [`flags.${SCOPE}.focusMajinOOS`]: roundKey() });
   if (most) {
@@ -8631,22 +8633,23 @@ export const CHOICE_QUERY = "dbu-ttrpg.choose";
  * A choice an effect asks the character's player for - Born for Battle's "Strike, Dodge, or Wound (you decide)" - asked of
  * them wherever the effect runs (a Round turning over runs on the GM's client). The value chosen, or null.
  */
-export async function askPlayerChoice(actor, title, options, { per = 0 } = {}) {
-  if (askScript) return askScript.choice({ title, options, per });
+export async function askPlayerChoice(actor, title, options, { per = 0, text = "" } = {}) {
+  if (askScript) return askScript.choice({ title, options, per, text });
   const player = playerOf(actor);
   if (!player) return null;
-  if (player === game.user) return showChoice({ title, options });
-  try { return await player.query(CHOICE_QUERY, { title, options }, { timeout: 120000 }); }
+  if (player === game.user) return showChoice({ title, options, text });
+  try { return await player.query(CHOICE_QUERY, { title, options, text }, { timeout: 120000 }); }
   catch (error) {
     console.warn(`DBU TTRPG | ${actor.name}'s choice could not be asked`, error);
     return null;
   }
 }
 
-/** The choice itself, on the player's client: one button each. */
-export async function showChoice({ title, options }) {
+/** The choice itself, on the player's client: one button each - and above them, where it is given, the effect's line as printed. */
+export async function showChoice({ title, options, text = "" }) {
   const chosen = await foundry.applications.api.DialogV2.wait({
-    classes: ["dbu-dialog"], window: { title }, content: "",
+    classes: ["dbu-dialog"], window: { title },
+    content: text ? `<p class="dbu-choice-text">${Handlebars.escapeExpression(text)}</p>` : "",
     buttons: options.map(option => ({ action: option.value, label: option.label })),
     rejectClose: false
   });

@@ -3180,6 +3180,16 @@
   color: var(--dbu-chat-text);
   font-weight: bold;
   transition: background 120ms ease, border-color 120ms ease;
+  /* A long label wraps inside its button instead of running out of it. */
+  white-space: normal;
+  height: auto;
+  min-height: var(--button-size, 2rem);
+}
+
+/* An effect's printed line, above a choice's buttons. */
+.application.dbu-dialog .dbu-choice-text {
+  margin: 0 0 0.25rem;
+  line-height: 1.4;
 }
 
 .application.dbu-dialog .form-footer > button:hover,
