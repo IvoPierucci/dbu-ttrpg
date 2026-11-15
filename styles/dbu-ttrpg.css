@@ -586,18 +586,18 @@
   margin: 0 0 6px;
 }
 
+/* No frame and no ground of its own (the user's: a round picture showed the square around it) - only its 96px square. */
 .dbu-ttrpg .dbu-portrait {
   flex: 0 0 96px;
   width: 96px;
   height: 96px;
   box-sizing: border-box;
-  border: 1px solid var(--dbu-border);
-  border-radius: 4px;
-  background: #0f0f10;
+  border: 0;
+  background: none;
   overflow: hidden;
 }
 
-/* The whole picture, never cropped: what it does not fill is the frame's own dark. */
+/* The whole picture, never cropped: what it does not fill shows the sheet behind it. */
 .dbu-ttrpg .dbu-portrait .profile-img {
   display: block;
   width: 100%;
