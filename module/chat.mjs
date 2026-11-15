@@ -10330,6 +10330,12 @@ async function dealDamageWindow(message, target, attack) {
     box.querySelector(".dbu-roll-line").innerHTML = `<span class="dbu-formula-piece dbu-formula-base" data-tooltip="Their Wound Roll">${wound}</span>`
       + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Soak Value, as the Damage Category leaves it">${own.soak ?? 0} Soak</span>`
       + ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Damage Reduction">${own.reduction ?? 0} DR</span>`
+      // What the attack card's line has past them (damageDetail): a Barrier's Dice Score off, Punching Down's 1d6(T) on - in the
+      // Damage already, and left out here, so the sum read short of it (the user's: a Gigantic Shapeshift "no está ganando punching down").
+      + (own.barrier ? ` &minus; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="${esc(own.barrier.name)}: the Damage reduced by its Dice Score">${
+        Number(own.barrier.total) || 0} ${esc(own.barrier.name)}</span>` : "")
+      + (own.punchingDown ? ` + <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Punching Down: 1d6(T), the target 2+ Size Categories smaller">${
+        own.punchingDown} Punching Down</span>` : "")
       + ` = ${damage ? `<span class="dbu-roll-bad">${damage}</span>` : `${cancelled ? `<s>${own.damage}</s> ` : ""}<span class="dbu-roll-good">0</span>`}`;
     // Nothing taken: what answers taking it is gone, and what answers being hit for none comes in (the user's).
     const takenBox = element.querySelector("[data-taken]");
