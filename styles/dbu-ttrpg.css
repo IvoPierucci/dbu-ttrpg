@@ -795,6 +795,25 @@
   min-width: 130px;
 }
 
+/* A value read, not set, among the fields that make it - Progression's Stress Bonus: a box like the field beside it, a little dimmer. */
+.dbu-ttrpg .character-fields .dbu-readout-box {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-width: 4em;
+  height: var(--input-height, 28px);
+  padding: 0 8px;
+  border: 1px solid var(--input-border-color, var(--dbu-border));
+  border-radius: 4px;
+  background: var(--input-background-color, rgba(0, 0, 0, 0.25));
+  color: var(--dbu-text);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.85;
+  cursor: help;
+}
+
 /* A derived value sitting among the fields that produce it. */
 .dbu-ttrpg .character-readout {
   display: flex;

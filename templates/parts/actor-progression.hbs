@@ -46,11 +46,11 @@
                {{#if powerLevelFromMaster}}disabled data-tooltip="Growing Minions: a Power Level each time its Master gains one - its Master's"{{/if}}/>
       </label>
 
-      {{! The Stress Bonus, from the Combat tab (the user's, 2026-11-15): Power Level + 1, beside it - read here, not set. }}
-      <div class="character-readout" data-tooltip="A Stress Test is 1d10 plus this. Power Level + 1, less one per Steadfast failure.">
-        <em>Stress Bonus</em>
-        <span class="computed-value" data-tooltip-html="{{workings.stressBonus}}">{{system.stressBonus}}</span>
-      </div>
+      {{! The Stress Bonus, from the Combat tab (the user's, 2026-11-15): Power Level + 1, beside it - read here, not set. A box as the Power
+          Level's is, and one hover over the whole of it: what it is, then how it is made (the user's: two, by where the mouse was). }}
+      <label class="dbu-readout" data-tooltip-html="<p>A Stress Test is 1d10 plus this.</p>{{workings.stressBonus}}">Stress Bonus
+        <span class="dbu-readout-box">{{system.stressBonus}}</span>
+      </label>
 
       {{! ToP Mod and Crit Target are on the Settings tab (the user's); the Technique Points in the table below. }}
     </div>
