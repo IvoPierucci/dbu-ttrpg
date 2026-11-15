@@ -3144,7 +3144,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
     : picked;
   if (!declared) return null;
 
-  const { profile, kiWager, wagerFromLife = false, wagerFromDivine = false } = declared;
+  const { profile, kiWager, wagerFromLife = false, wagerFromDivine = false, foundation: tabFoundation = "" } = declared;
 
   // What this attack carries from the Signature Technique side: whatever the Maneuver
   // was built with, plus whatever the Profile hands out. Blitz grants Charging Assault
@@ -3187,7 +3187,11 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const available = pinned ? [pinned] : PROFILES[profile].foundations;
   const shut = shutFoundations(actor, foundations);
 
-  const foundation = (available.length === 1)
+  // The Foundation tab the Profile was chosen under answers it (the user's, 2026-11-15): a Multi-Foundation Profile is made with the
+  // Foundation being looked at, never asked after it.
+  const foundation = (tabFoundation && available.includes(tabFoundation))
+    ? tabFoundation
+    : (available.length === 1)
     ? available[0]
     : await pick(
         `${maneuver.name} - ${PROFILES[profile].label} Profile`,
@@ -3436,7 +3440,7 @@ export async function askFeatures(maneuver, actor, advantages) {
  * @param {{first: boolean, onFirst: function}} state  whether this row is the one that
  *        starts selected, and how to say that it took the slot
  */
-function profileOption(profile, maneuver, actor, state, limits = {}) {
+function profileOption(profile, maneuver, actor, state, limits = {}, { value = profile.id, label = profile.label } = {}) {
   // What this attack was granted under comes first. A Profile refused because the grant
   // forbids it is refused for a different reason than one already spent, and the note
   // beside it says which - "spent" against a Profile nobody has spent reads as a bug.
@@ -3451,9 +3455,9 @@ function profileOption(profile, maneuver, actor, state, limits = {}) {
 
   return `<label class="dbu-profile-option${refused ? " dbu-profile-spent" : ""}"
       ${refused ? `data-tooltip="${Handlebars.escapeExpression(refused)}"` : ""}>
-    <input type="radio" name="profile" value="${profile.id}"
+    <input type="radio" name="profile" value="${Handlebars.escapeExpression(value)}"${profile.wagerFromLife ? " data-life" : ""}
            ${selected ? "checked" : ""} ${refused ? "disabled" : ""}/>
-    <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
+    <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(label)}</span>
     ${refused ? `<em class="dbu-profile-spent-note">${note}</em>` : ""}
     <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
     <span class="dbu-profile-cost">${profileOptionCost(maneuver, profile.id, actor)} KP</span>
@@ -3937,6 +3941,88 @@ export function minimumKiWager(actor, maneuver = null) {
 }
 
 /**
+ * The attack Profile picker's tabs (the user's, 2026-11-15): one per Foundation, as the Maneuvers list has one per type. In each, the
+ * Multi-Foundation Profiles first - named with the tab's Foundation in front, "Energy Simple", and made with it - then the
+ * Foundation's own. A Profile a Maneuver pins to one Foundation is in that tab alone. A Foundation shut to the character keeps its
+ * tab, greyed with why, offering its Favored Elements only - none, and it does not open.
+ */
+function profileTabs(maneuver, foundations, actor, pool, shut) {
+  const pinnedOf = id => maneuver.profileFoundation?.[id] ?? "";
+  return Object.keys(foundations ?? {}).map(key => {
+    const fits = profile => (pinnedOf(profile.id) ? (pinnedOf(profile.id) === key) : (profile.foundations ?? []).includes(key))
+      && (!shut[key] || favoredElement(actor, profile.id));
+    const multi = pool.filter(profile => ((profile.foundations ?? []).length > 1) && fits(profile));
+    const own = pool.filter(profile => ((profile.foundations ?? []).length === 1) && fits(profile));
+    return { key, label: foundations[key]?.label ?? key, multi, own, count: multi.length + own.length, reason: shut[key] ?? "" };
+  });
+}
+
+/** The Foundation tabs last chosen from, by character - the Maneuvers list's way. */
+const PROFILE_TABS = new Map();
+
+/** The tab that opens: the one last chosen from, where it still offers something; else the first that does. */
+function openProfileTab(actor, tabs) {
+  const last = PROFILE_TABS.get(actor?.uuid ?? "");
+  return (tabs.find(tab => (tab.key === last) && tab.count) ?? tabs.find(tab => tab.count) ?? tabs[0])?.key ?? "";
+}
+
+/** The tabs and their panes, the first Profile that can be chosen in the open one selected. */
+function profileTabsHtml(tabs, active, maneuver, actor, limits) {
+  const esc = text => Handlebars.escapeExpression(text ?? "");
+  let checked = false;
+  const strip = tabs.map(tab => {
+    const tip = tab.reason || FOUNDATION_NOTES[tab.key] || "";
+    return `<button type="button" class="dbu-profile-tab${(tab.key === active) ? " active" : ""}${tab.reason ? " dbu-profile-tab-shut" : ""}"
+      data-profile-tab="${tab.key}"${tip ? ` data-tooltip="${esc(tip)}"` : ""}${tab.count ? "" : " disabled"}>${esc(tab.label)}<b>${tab.count}</b></button>`;
+  }).join("");
+  const panes = tabs.map(tab => {
+    const state = { first: (tab.key === active) && !checked, onFirst: () => { checked = true; } };
+    const rows = (list, prefix) => list.map(profile => {
+      const row = profileOption(profile, maneuver, actor, state, limits,
+        { value: `${tab.key}|${profile.id}`, label: prefix ? `${tab.label} ${profile.label}` : profile.label });
+      state.first = (tab.key === active) && !checked;
+      return row;
+    }).join("");
+    return `<div class="dbu-profile-pane" data-profile-pane="${tab.key}"${(tab.key === active) ? "" : " hidden"}>
+      ${tab.multi.length ? `<div class="dbu-profile-sub">Any Foundation &middot; made as ${esc(tab.label)}</div>${rows(tab.multi, true)}` : ""}
+      ${tab.own.length ? `<div class="dbu-profile-sub">${esc(tab.label)}</div>${rows(tab.own, false)}` : ""}
+      ${tab.count ? "" : `<p class="dbu-profile-none">${esc(tab.reason || "None yet.")}</p>`}
+    </div>`;
+  }).join("");
+  return `<div class="dbu-profile-tabs">${strip}</div><div class="dbu-profile-picker">${panes}</div>`;
+}
+
+/**
+ * The picker's tabs at work in the dialog: a tab shows its pane, keeping the Profile picked if it is there and else picking that pane's
+ * first one; Wager Life Points shown while a Profile allowing it is the one picked (unchecked when hidden).
+ */
+function bindProfileTabs(root) {
+  if (!root) return;
+  const life = root.querySelector("[data-wager-life]");
+  const syncLife = () => {
+    if (!life || ("always" in life.dataset)) return;
+    life.hidden = !("life" in (root.querySelector('input[name="profile"]:checked')?.dataset ?? {}));
+    if (life.hidden) { const box = life.querySelector("input"); if (box) box.checked = false; }
+  };
+  for (const tab of root.querySelectorAll("[data-profile-tab]")) {
+    tab.addEventListener("click", event => {
+      event.preventDefault();
+      const key = tab.dataset.profileTab;
+      for (const each of root.querySelectorAll("[data-profile-tab]")) each.classList.toggle("active", each === tab);
+      for (const pane of root.querySelectorAll("[data-profile-pane]")) pane.hidden = pane.dataset.profilePane !== key;
+      const pane = root.querySelector(`[data-profile-pane="${key}"]`);
+      if (pane && !pane.querySelector('input[name="profile"]:checked')) {
+        const first = pane.querySelector('input[name="profile"]:not(:disabled)');
+        if (first) first.checked = true;
+      }
+      syncLife();
+    });
+  }
+  root.addEventListener("change", event => { if (event.target?.name === "profile") syncLife(); });
+  syncLife();
+}
+
+/**
  * Declare the attack's Profile and its Ki Wager together, since both are settled at
  * the same moment - and both are paid for at the same moment too.
  *
@@ -3950,32 +4036,12 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   // a hand-written Signature Technique can be - still has a wager to declare. There is
   // simply nothing to choose between, so only the wager is asked.
   const noProfile = !maneuver.profile;
-  let checked = false;
 
   const shut = shutFoundations(actor, foundations);
-
-  const sections = groups.map(group => {
-    // A shut Foundation still offers its Favored Elements.
-    const open = shut[group.key] ? group.profiles.filter(profile => favoredElement(actor, profile.id)) : group.profiles;
-    if (!open.length) return profileSection(group, "", shut);
-
-    // The first Profile that can actually be chosen starts selected, so confirming
-    // straight away is always a valid choice - and never lands on a spent one.
-    const items = open.map(profile => profileOption(profile, maneuver, actor, {
-      first: !checked,
-      onFirst: () => { checked = true; }
-    }, limits)).join("");
-
-    // Groups that hold something open by default; empty and shut ones do not open.
-    return profileSection(group, items, shut[group.key] ? { ...shut, [group.key]: "" } : shut);
-  }).join("");
-
-  const body = noProfile
-    ? ""
-    : fixed
-    ? `<p class="dbu-profile-fixed"><strong>${Handlebars.escapeExpression(fixed.label)}</strong>
-        &middot; ${DAMAGE_CATEGORIES[fixed.damageCategory].label}</p>`
-    : `<div class="dbu-profile-picker">${sections}</div>`;
+  const tabs = profileTabs(maneuver, foundations, actor, fixed ? [{ id: maneuver.profile, ...fixed }] : groups.flatMap(group => group.profiles),
+    shut);
+  const active = openProfileTab(actor, tabs);
+  const body = noProfile ? "" : profileTabsHtml(tabs, active, maneuver, actor, limits);
 
   // Wagered Ki is added to the Wound Roll and comes out of Capacity, so the ceiling
   // is the lower of the rule's half-Capacity limit and what can actually be paid.
@@ -4019,17 +4085,20 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
     ? capped(maxLifeWager(actor, [...features, "full-wager"]))
     : 0;
 
+  // On top of the Profiles (the user's, 2026-11-15), and Wager Life Points beside it - shown while a Profile allowing it is the one
+  // picked, or always where the attack's second or applied Profile allows it (the dialog's render).
   const wager = `
-    <label class="dbu-wager">
-      <span>Ki Wager</span>
-      <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${Math.max(wagerMax, lifeMax, fullMax, fullLifeMax)}"/>
+    <div class="dbu-wager dbu-wager-top">
+      <label class="dbu-wager-ki"><span>Ki Wager</span>
+        <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${Math.max(wagerMax, lifeMax, fullMax, fullLifeMax)}"/></label>${lifeWager ? `
+      <label class="dbu-wager-life" data-wager-life${second?.wagerFromLife ? " data-always" : ""}
+             data-tooltip="Spend Life Points instead of Ki Points. It still comes out of your Capacity. Max ${lifeMax}.">
+        <input type="checkbox" name="wagerFromLife"/>
+        <span>Wager Life Points</span>
+      </label>` : ""}
       <em>${wagerMin ? `at least ${wagerMin}, ` : ""}max ${wagerMax}${
         fullMax > wagerMax ? ` (${fullMax} with Full Wager)` : ""}, added to the Wound Roll</em>
-    </label>${lifeWager ? `
-    <label class="dbu-wager" data-tooltip="Spend Life Points instead of Ki Points. It still comes out of your Capacity. Max ${lifeMax}.">
-      <input type="checkbox" name="wagerFromLife"/>
-      <span>Wager Life Points</span>
-    </label>` : ""}${actor?.system?.divineKi?.active ? `
+    </div>${actor?.system?.divineKi?.active ? `
     <label class="dbu-wager" data-tooltip="God Ki: the wager paid in Divine Ki Points (${Number(actor.system.divineKi.value) || 0} left), at half its Capacity - its own instance of paying, whatever pays the KP Cost.">
       <input type="checkbox" name="wagerFromDivine"/>
       <span>Wager Divine Ki</span>
@@ -4042,18 +4111,18 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${maneuver.name} - ${noProfile ? "Ki Wager" : "Profile"}` },
-    content: `${body}${wager}`,
+    content: `${wager}${body}`,
+    render: (event, dialog) => bindProfileTabs(dialog.element),
     buttons: [
       {
         action: "confirm",
         label: "Confirm",
         callback: (event, button, dialog) => {
-          const profile = noProfile
-            ? ""
-            : fixed
-            ? maneuver.profile
-            : dialog.element.querySelector('input[name="profile"]:checked')?.value;
+          // "energy|simple": the Foundation tab it was chosen under, and the Profile.
+          const [foundation = "", picked = ""] = noProfile ? [] : String(dialog.element.querySelector('input[name="profile"]:checked')?.value ?? "").split("|");
+          const profile = noProfile ? "" : picked;
           if (!noProfile && !profile) return null;
+          if (foundation) PROFILE_TABS.set(actor?.uuid ?? "", foundation);
 
           // Clamped here as well as on the input: `min` on a number field is advice to
           // the browser, not a guarantee, and a typed number gets through it.
@@ -4076,7 +4145,7 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
             : floor;
           // Asked (adversary.mjs asksStamina): whether its Narrative Stamina pays - not asked, it does.
           const payStamina = !asksStamina(actor) || Boolean(dialog.element.querySelector('input[name="payStamina"]')?.checked);
-          return { profile, kiWager, wagerFromLife, wagerFromDivine, payStamina };
+          return { profile, kiWager, wagerFromLife, wagerFromDivine, payStamina, ...(foundation ? { foundation } : {}) };
         }
       },
       { action: "cancel", label: "Cancel" }

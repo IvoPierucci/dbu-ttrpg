@@ -988,6 +988,78 @@
   padding-right: 4px;
 }
 
+/* The attack's picker (the user's, 2026-11-15): a tab per Foundation, as the Maneuvers list has a tab per type - its name and how
+   many Profiles it offers; a shut Foundation's greyed, its reason on hover. */
+.dbu-profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.application.dbu-dialog .dbu-profile-tab {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  line-height: 1.5;
+  padding: 1px 10px;
+  font-size: 12px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dbu-chat-dim);
+}
+
+.application.dbu-dialog .dbu-profile-tab b {
+  margin-left: 5px;
+  font-size: 11px;
+  color: var(--dbu-chat-text);
+}
+
+.application.dbu-dialog .dbu-profile-tab.active {
+  border-color: var(--dbu-chat-accent);
+  color: var(--dbu-chat-text);
+  background: rgba(223, 226, 136, 0.12);
+}
+
+.application.dbu-dialog .dbu-profile-tab-shut { opacity: 0.55; }
+.application.dbu-dialog .dbu-profile-tab:disabled { cursor: not-allowed; }
+
+/* A tab's Profiles: the Multi-Foundation ones under "Any Foundation", then the Foundation's own, each under a small heading. */
+.dbu-profile-pane {
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+}
+
+.dbu-profile-pane[hidden] { display: none; }
+
+.dbu-profile-sub {
+  padding: 3px 8px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dbu-chat-dim);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dbu-profile-sub + .dbu-profile-option { border-top: 0; }
+
+.dbu-profile-none {
+  margin: 0;
+  padding: 6px 8px;
+  font-style: italic;
+  color: var(--dbu-chat-dim);
+}
+
+/* The Ki Wager above the Profiles; Wager Life Points beside it, only while a Profile allowing it is picked. */
+.dbu-wager.dbu-wager-top { margin-top: 0; }
+.dbu-wager-ki { display: inline-flex; align-items: center; gap: 6px; }
+.dbu-wager-life { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; }
+.dbu-wager-life[hidden] { display: none; }
+.dbu-wager .dbu-wager-life input { width: auto; }
+
 .dbu-profile-group {
   margin-bottom: 4px;
   border: 1px solid rgba(128, 128, 128, 0.35);
