@@ -304,6 +304,24 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       unbuilt: !sig.profile
     };
 
+    // A printed text as lines: one entry a printed line, a blank one a paragraph break, the bullets the text's own.
+    const printed = text => {
+      const lines = String(text ?? "").split("\n").map(line => line.trim())
+        .map(line => (line ? { text: line, bullet: /^[*•]/.test(line) } : { gap: true }));
+      while (lines[0]?.gap) lines.shift();
+      while (lines.at(-1)?.gap) lines.pop();
+      return lines;
+    };
+    // What was chosen, its text at the foot of Sig Creation (the user's): the Profile; the Super Profile, a Dramatic Finisher's;
+    // the Second Profile, Multi-Profile's.
+    const chosenTexts = [
+      sig.profile && PROFILES[sig.profile] ? { title: "Profile", name: PROFILES[sig.profile].label, lines: printed(PROFILES[sig.profile].text) } : null,
+      dramatic && SUPER_PROFILES[sig.superProfile]
+        ? { title: "Super Profile", name: SUPER_PROFILES[sig.superProfile].label, lines: printed(SUPER_PROFILES[sig.superProfile].text) } : null,
+      multi && PROFILES[sig.secondProfile]
+        ? { title: "Second Profile", name: PROFILES[sig.secondProfile].label, lines: printed(PROFILES[sig.secondProfile].text) } : null
+    ].filter(entry => entry?.lines.length);
+
     // The features on it, each with what it costs and anything wrong with it.
     const rows = sig.features.map((entry, index) => {
       const def = featureDef(entry.id);
@@ -356,6 +374,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       fromTransformation: sig.fromTransformation,
       freeTP: sig.freeTP,
       reading,
+      chosenTexts,
       rows,
       groups: [group("Advantages", catalogue.advantages), group("Disadvantages", catalogue.disadvantages)],
       script: this.item.system.script,

@@ -1,6 +1,14 @@
 <div class="tab {{tabs.features.cssClass}}" data-group="primary" data-tab="features">
   {{#if technique}}
   <section class="panel">
+    {{! What it costs, on top (the user's): its price on the left, its TP on the right. }}
+    <div class="technique-totals">
+      <span data-tooltip="Profile {{technique.reading.profileKi}}(T) + Technique {{technique.reading.techniqueKi}}(T) (1/5 of its TP, rounded up){{#if technique.reading.superKi}} + Super Profile {{technique.reading.superKi}}(T){{/if}}">
+        KP: <b>{{technique.reading.totalPerTier}}(T)</b> = {{technique.reading.total}} at Tier {{technique.reading.tier}}</span>
+      <span data-tooltip="8 (4 with the Simple Profile), plus its Advantages, less its Disadvantages, never under that start; +4 for an Ultimate">
+        TP: <b>{{technique.reading.tp}}</b> / {{technique.reading.cap}}{{#if technique.reading.free}}
+        <span data-tooltip="What the character pays for it: its TP less the Free TP">&middot; {{technique.reading.charged}} from the character</span>{{/if}}</span>
+    </div>
     {{! The search stays on top; what is added goes under it. }}
     <div class="gear-add-quality">
       <div class="gear-quality-search-row">
@@ -57,7 +65,6 @@
     {{else}}
     <p class="tab-placeholder">None.</p>
     {{/each}}
-    <p class="technique-total">TP: <b>{{technique.reading.tp}}</b> / {{technique.reading.cap}}</p>
   </section>
   {{/if}}
 </div>

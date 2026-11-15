@@ -2,6 +2,14 @@
   {{#if technique}}
   <section class="panel">
     <h3 class="panel-title">Sig Creation</h3>
+    {{! What it costs, on top (the user's): its price on the left, its TP on the right. }}
+    <div class="technique-totals">
+      <span data-tooltip="Profile {{technique.reading.profileKi}}(T) + Technique {{technique.reading.techniqueKi}}(T) (1/5 of its TP, rounded up){{#if technique.reading.superKi}} + Super Profile {{technique.reading.superKi}}(T){{/if}}">
+        KP: <b>{{technique.reading.totalPerTier}}(T)</b> = {{technique.reading.total}} at Tier {{technique.reading.tier}}</span>
+      <span data-tooltip="8 (4 with the Simple Profile), plus its Advantages, less its Disadvantages, never under that start; +4 for an Ultimate">
+        TP: <b>{{technique.reading.tp}}</b> / {{technique.reading.cap}}{{#if technique.reading.free}}
+        <span data-tooltip="What the character pays for it: its TP less the Free TP">&middot; {{technique.reading.charged}} from the character</span>{{/if}}</span>
+    </div>
     <div class="technique-grid">
       <label data-tooltip="Super, Ultimate (+4 TP, once per Combat Encounter) or Dramatic Finisher (an Ultimate with a Super Profile)">
         <em>Level</em>
@@ -57,24 +65,29 @@
         <input type="checkbox" name="system.signature.fromTransformation" {{#if technique.fromTransformation}}checked{{/if}}/>
       </label>
     </div>
-  </section>
-
-  <section class="panel">
-    <h3 class="panel-title">Cost</h3>
     {{#if technique.reading.unbuilt}}
     <p class="tab-placeholder">Choose a Foundation and a Profile.</p>
     {{/if}}
-    <div class="technique-reading">
-      <div data-tooltip="8 (4 with the Simple Profile), plus its Advantages, less its Disadvantages, never under that start; +4 for an Ultimate">
-        TP: <b>{{technique.reading.tp}}</b> / {{technique.reading.cap}}{{#if technique.reading.free}}
-        <span data-tooltip="What the character pays for it: its TP less the Free TP">&middot; {{technique.reading.charged}} from the character</span>{{/if}}</div>
-      <div data-tooltip="Profile {{technique.reading.profileKi}}(T) + Technique {{technique.reading.techniqueKi}}(T) (1/5 of its TP, rounded up){{#if technique.reading.superKi}} + Super Profile {{technique.reading.superKi}}(T){{/if}}">
-        KP: <b>{{technique.reading.totalPerTier}}(T)</b> = {{technique.reading.total}} at Tier {{technique.reading.tier}}</div>
-    </div>
     {{#if technique.reading.over}}<p class="gear-warning">{{technique.reading.over}}</p>{{/if}}
     {{#if technique.reading.superProblem}}<p class="gear-warning">{{technique.reading.superProblem}}</p>{{/if}}
     {{#if technique.reading.godProblem}}<p class="gear-warning">{{technique.reading.godProblem}}</p>{{/if}}
     {{#if technique.reading.encounterProblem}}<p class="gear-warning">{{technique.reading.encounterProblem}}</p>{{/if}}
   </section>
+
+  {{! What was chosen, its text at the foot (the user's): the Profile, the Super Profile, the Second Profile. }}
+  {{#each technique.chosenTexts as |entry|}}
+  <section class="panel">
+    <h3 class="panel-title">{{entry.title}} <span class="panel-note">{{entry.name}}</span></h3>
+    <div class="technique-feature-text">
+      {{#each entry.lines as |line|}}
+      {{#if line.gap}}
+      <div class="dbu-entry-break"></div>
+      {{else}}
+      <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>
+      {{/if}}
+      {{/each}}
+    </div>
+  </section>
+  {{/each}}
   {{/if}}
 </div>

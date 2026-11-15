@@ -368,9 +368,15 @@
   gap: 2px;
 }
 
-.dbu-ttrpg .technique-reading {
+/* What a Signature Technique costs, on top of Sig Creation and of Adv & Disadv: its KP on the left, its TP on the right. */
+.dbu-ttrpg .technique-totals {
   display: flex;
-  gap: 24px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--dbu-border);
 }
 
 .dbu-ttrpg .technique-ranks {
