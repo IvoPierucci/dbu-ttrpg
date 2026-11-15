@@ -3645,10 +3645,21 @@ export function whyNotSpecial(actor, maneuver) {
  * `allow maneuver.<id>` - so, as a Special Maneuver an effect hands over, it is open while that effect says so. Read by
  * the sheet (a closed one is not listed), the Maneuver's own door and out of sequence, as whyNotSpecial is.
  */
+/**
+ * The God Maneuvers ticked on the Settings tab's Debug (the user's, 2026-11-15): open as an effect's grant would open them - for
+ * what nothing written grants yet - the God Ki State still asked.
+ */
+export const DEBUG_GOD_MANEUVERS = "debugGodManeuvers";
+
+export function debugGodManeuvers(actor) {
+  const held = actor?.getFlag?.("dbu-ttrpg", DEBUG_GOD_MANEUVERS);
+  return Array.isArray(held) ? held : [];
+}
+
 function whyNotGod(actor, maneuver) {
   const slots = actor?.system?.effects?.slots;
   if (!permits(slots, `maneuver.${maneuver.id}`)) return `Something is keeping ${actor.name} from using ${maneuver.name}.`;
-  if (!granted(slots, `maneuver.${maneuver.id}`)) {
+  if (!granted(slots, `maneuver.${maneuver.id}`) && !debugGodManeuvers(actor).includes(maneuver.id)) {
     return `${actor.name} has not been granted ${maneuver.name}. A God Maneuver is gained through an effect.`;
   }
   if (!actor?.system?.divineKi?.active) return `${maneuver.name} is a God Maneuver: only in the God Ki State.`;

@@ -51,7 +51,7 @@ import {
 } from "../conditions.mjs";
 import { actionsLeft, actionsWithin, convertActions, convertibleActions, isTheirTurn, newRoundFor, spendActions }
   from "../combat.mjs";
-import { instantHeld, instantTurnKey, whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
+import { DEBUG_GOD_MANEUVERS, debugGodManeuvers, instantHeld, instantTurnKey, whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
 import { baseDieLine, breakdownTable, contributionLine, extraDiceLine, partLine, noteLine, floorLine, skillWorkingsTable,
          fromOutcome, workingsTable, atRollTime, saveClashBonuses } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
@@ -582,6 +582,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       changeSheetType: DBUCharacterSheet._onChangeSheetType,
       keepSheetType: DBUCharacterSheet._onKeepSheetType,
       closeCombatWindow: DBUCharacterSheet._onCloseCombatWindow,
+      toggleDebugGod: DBUCharacterSheet._onToggleDebugGod,
       pinCombat: DBUCharacterSheet._onPinCombat,
       setThresholdCheck: DBUCharacterSheet._onSetThresholdCheck,
       toggleCondition: DBUCharacterSheet._onToggleCondition,
@@ -1606,6 +1607,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.villainousOf = { have: context.villainousTraits.length, allowed: Number(this.actor.system.adversaryGains?.traits) || 0 };
     context.villainousOf.over = context.villainousOf.have > context.villainousOf.allowed;
     context.isGM = game.user.isGM;
+    // Debug's God Maneuvers (the user's, 2026-11-15): every God Maneuver the character carries - not one a Trait's own effect is,
+    // Golden Fruit's - ticked where Debug opens it, marked where an effect already grants it.
+    if (this.#combatWindow === "godManeuvers") {
+      const ticked = debugGodManeuvers(this.actor);
+      const slots = this.actor.system.effects?.slots ?? {};
+      context.godManeuverPicks = this.actor.items
+        .filter(item => (item.type === "maneuver") && item.system.godManeuver && !item.system.fromTrait)
+        .map(item => {
+          const id = item.system.maneuverId || item.id;
+          const byEffect = (slots[`maneuver.${id}`] === true) || (slots[`maneuver.${id}`]?.allow === true);
+          return { id, name: item.name, img: item.img, ticked: ticked.includes(id), byEffect };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     // The header's Capacity bar (the user's): full as the Round starts, emptied by what is spent - as Ki's is.
     const { capacity } = this.actor.system;
@@ -1831,6 +1846,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       resources: windowIs === "resources", conditions: windowIs === "conditions",
       // The Settings tab's States' Triggered / Automatic, in the same window over the sheet (the user's).
       stateTriggers: windowIs === "stateTriggers",
+      // Debug's God Maneuvers (the user's).
+      godManeuvers: windowIs === "godManeuvers",
       // And its Allies' and Minions' (or Master's) Manage windows.
       allies: windowIs === "allies", minions: windowIs === "minions", master: windowIs === "master",
       // The Settings tab's Skill Specialties; the Maneuvers tab's Manage.
@@ -7986,6 +8003,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static _onKeepSheetType() {
     this.#typeConfirm = null;
     return this.render();
+  }
+
+  /** Debug's God Maneuvers: one opened or closed, as an effect's grant would - the God Ki State still asked. */
+  static async _onToggleDebugGod(event, target) {
+    const id = target.dataset.id;
+    if (!id) return;
+    const held = debugGodManeuvers(this.actor);
+    const next = target.checked ? [...new Set([...held, id])] : held.filter(each => each !== id);
+    return this.actor.setFlag("dbu-ttrpg", DEBUG_GOD_MANEUVERS, next);
   }
 
   /** Closed: the button, Escape, or a click beside it. The Turn State's Edit locks again with it. */

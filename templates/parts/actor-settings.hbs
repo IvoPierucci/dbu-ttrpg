@@ -200,6 +200,29 @@
   </section>
   {{/if}}
 
+  {{#if combatWindow.godManeuvers}}
+  <div class="dbu-combat-overlay">
+    <div class="dbu-combat-window" role="dialog" aria-modal="true">
+      <header><h3>God Maneuvers &middot; Debug</h3></header>
+      <p class="dbu-manage-note">Ticked: open to this character, usable while in the God Ki State. One an effect already grants is open
+        whatever is ticked here.</p>
+      <div class="dbu-combat-window-body dbu-picks ally-picks">
+        {{#each godManeuverPicks as |pick|}}
+        <label class="dbu-pick{{#if pick.ticked}} on{{/if}}{{#if pick.byEffect}} on{{/if}}"{{#if pick.byEffect}} data-tooltip="Granted by an effect"{{/if}}>
+          <input type="checkbox" data-action="toggleDebugGod" data-id="{{pick.id}}"
+                 {{#if pick.ticked}}checked{{/if}}{{#if pick.byEffect}} checked disabled{{/if}}{{#unless @root.editable}} disabled{{/unless}}/>
+          {{#if pick.img}}<img class="ally-img dbu-item-img" src="{{pick.img}}" alt=""/>{{/if}}
+          {{pick.name}}{{#if pick.byEffect}} <em class="dbu-pick-note">by an effect</em>{{/if}}
+        </label>
+        {{else}}
+        <p class="dbu-clist-empty">No God Maneuver on this character - Add core maneuvers gives them.</p>
+        {{/each}}
+      </div>
+      <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
+    </div>
+  </div>
+  {{/if}}
+
   {{#if combatWindow.stateTriggers}}
   <div class="dbu-combat-overlay">
     <div class="dbu-combat-window" role="dialog" aria-modal="true">
@@ -361,6 +384,9 @@
       {{! From the Maneuvers tab (the user's): what a character made before Maneuvers were Items is missing. }}
       <button type="button" data-action="grantManeuvers" class="capacity-reset"
               data-tooltip="Give this character any core Maneuver they are missing. New characters get them automatically.">Add core maneuvers</button>
+      {{! Which God Maneuvers this character has, for what nothing written grants yet - usable in the God Ki State (the user's). }}
+      <button type="button" data-action="openCombatWindow" data-window="godManeuvers" class="capacity-reset"
+              data-tooltip="Choose which God Maneuvers this character has access to - usable while in the God Ki State.">God Maneuvers</button>
       {{#if canEnterEncounter}}
       {{! For somebody who walked into an Encounter already under way: it began for
           everyone else when it began, and it begins for them now. Gone once taken, and
