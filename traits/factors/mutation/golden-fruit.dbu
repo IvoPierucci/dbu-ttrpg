@@ -19,6 +19,8 @@ text: >
 [passive]
 # (1) Its own Maneuver, on the Maneuvers tab (maneuvers/golden-fruit-first-effect.dbu) - paid in Divine Ki, only in God Ki.
 allow maneuver.golden-fruit-first-effect;
+# (3)'s God Ki State, a way into it: its Divine Ki on the header before it is entered (actor-character.mjs divineKi.access).
+allow godKi.access;
 
 # (2) Automatic by default, its Triggered/Automatic button.
 [triggered/start-of-turn, effect 2]

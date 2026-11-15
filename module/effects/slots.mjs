@@ -1019,7 +1019,8 @@ const PATTERNS = [
   // Something granted rather than permitted - set true by `allow`, read as granted: "You can sense God Ki" (God Ki's
   // Concealment cannot win outright against it), and Skill of the Watcher's (5) Power Up out of sequence, offered after
   // an Exploit's Damage or a Defend's none.
-  { match: /^(sense\.godKi|powerUp\.afterExploitOrDefend|surgency\.magic|exploit\.onNoDamage|combatRecovery\.flowOfCombat|freedom\.turnStart)$/,
+  // And a way into the God Ki State (`godKi.access`), which shows its Divine Ki on the header before it is entered (the user's).
+  { match: /^(sense\.godKi|godKi\.access|powerUp\.afterExploitOrDefend|surgency\.magic|exploit\.onNoDamage|combatRecovery\.flowOfCombat|freedom\.turnStart)$/,
     phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
     doc: "Sensing God Ki; the Power Up offered after an Exploit's Damage or a Defend's none; Surgency from the Magic "
        + "Modifier where higher (Cosmic Efficiency); the Exploit offered when an attack left you without Damage, and "

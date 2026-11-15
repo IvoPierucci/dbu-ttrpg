@@ -2719,6 +2719,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     if (this.divineKi) {
       this.divineKi.max = Math.floor(this.ki.max / 2);
       this.divineKi.active = (Number(this.states?.["god-ki"]) || 0) > 0;
+      // A way into it, though not in it yet (the user's, 2026-11-15): an effect that enters it says so (`allow godKi.access;` -
+      // Golden Fruit's); a Transformation with the God Ki Aspect will. Its Divine Ki on the header then; paying with it, in it alone.
+      this.divineKi.access = this.divineKi.active || (this.effects?.slots?.["godKi.access"] === true);
     }
 
     // Doubled on the finished pool, for the same reason.

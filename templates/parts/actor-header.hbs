@@ -48,19 +48,20 @@
         </div>
       </div>
 
-      {{! Ki and the Capacity by their names; in the God Ki State - however it came - Divine Ki between them, and the three named short to
-          fit: KP, DKP, Cap, the whole name on hover (the user's, 2026-11-15). }}
-      <div class="dbu-pool dbu-pool-ki{{#if system.divineKi.active}} has-divine{{/if}}">
+      {{! Ki and the Capacity by their names; with a way into the God Ki State - an effect or a Transformation's, in it or not yet -
+          Divine Ki between them, and the three named short to fit: KP, DKP, Cap, the whole name on hover (the user's, 2026-11-15). Paying
+          with it, the Maneuvers tab's, is the State's alone. }}
+      <div class="dbu-pool dbu-pool-ki{{#if system.divineKi.access}} has-divine{{/if}}">
         <div class="dbu-pool-top">
           <span class="dbu-pool-pair">
-            <em class="dbu-pool-name"{{#if system.divineKi.active}} data-tooltip="Ki Points">KP{{else}}>Ki Points{{/if}}</em>
+            <em class="dbu-pool-name"{{#if system.divineKi.access}} data-tooltip="Ki Points">KP{{else}}>Ki Points{{/if}}</em>
             <span class="dbu-pool-values">
               <input type="number" name="system.ki.value" value="{{system.ki.value}}" min="0"/>
               <span class="resource-sep">/</span>
               <span class="computed-value">{{system.ki.max}}</span>
             </span>
           </span>
-          {{#if system.divineKi.active}}
+          {{#if system.divineKi.access}}
           {{! From the Combat tab (the user's): its Points here, whether they pay on the Maneuvers tab. }}
           <span class="dbu-pool-pair dbu-pool-divine">
             <em class="dbu-pool-name" data-tooltip="Divine Ki Points">DKP</em>
@@ -76,7 +77,7 @@
               counted: past its Maximum, below 0, said in the warning colour and on hover. }}
           <span class="dbu-pool-pair dbu-pool-capacity{{#if capacity.over}} over{{/if}}"
                 data-tooltip="{{#if capacity.ignored}}Ignored, and counted: {{#if capacity.over}}over by {{capacity.over}}{{else}}within it{{/if}}{{else}}Capacity left this Combat Round: {{capacity.spent}} Ki spent of it. Full again when the round turns over.{{/if}}">
-            <em class="dbu-pool-name"{{#if system.divineKi.active}} data-tooltip="Capacity">Cap{{else}}>Capacity{{/if}}</em>
+            <em class="dbu-pool-name"{{#if system.divineKi.access}} data-tooltip="Capacity">Cap{{else}}>Capacity{{/if}}</em>
             <span class="dbu-pool-values">
               <input type="number" data-capacity-left value="{{capacity.left}}" step="1" aria-label="Capacity left this round"/>
               <span class="resource-sep">/</span>
@@ -86,7 +87,7 @@
         </div>
         <div class="dbu-pool-bars">
           <div class="dbu-pool-bar"><i style="width: {{kiPercent}}%"></i></div>
-          {{#if system.divineKi.active}}<div class="dbu-pool-bar dbu-pool-divbar"><i style="width: {{divineKiPercent}}%"></i></div>{{/if}}
+          {{#if system.divineKi.access}}<div class="dbu-pool-bar dbu-pool-divbar"><i style="width: {{divineKiPercent}}%"></i></div>{{/if}}
           <div class="dbu-pool-bar dbu-pool-capbar"><i style="width: {{capacityPercent}}%"></i></div>
         </div>
       </div>
