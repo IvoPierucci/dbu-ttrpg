@@ -694,24 +694,33 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** What the Maneuvers tab's search holds, kept through a render. */
   #maneuverQuery = "";
 
-  /** The Maneuvers tab's search: every tab's rows narrowed to the names holding it, each tab's count its matches. */
+  /**
+   * The Maneuvers tab's search, over every Maneuver of yours and not the open tab's alone (the user's): typed into, each type with a
+   * match is shown under its name - those hidden by Hide Maneuvers too - and each tab counts its matches. Emptied, the open tab again.
+   */
   #applyManeuverSearch() {
     const root = this.element;
     if (!root) return;
     const query = this.#maneuverQuery.trim().toLowerCase();
+    let found = 0;
     for (const pane of root.querySelectorAll("[data-maneuver-pane]")) {
       let shown = 0;
       for (const row of pane.querySelectorAll("li.maneuver")) {
         const name = String(row.querySelector("[data-maneuver-name]")?.dataset.maneuverName ?? "").toLowerCase();
-        const hit = !query || name.includes(query);
+        const hit = query ? name.includes(query) : !row.hasAttribute("data-manage-hidden");
         row.hidden = !hit;
         if (hit) shown++;
       }
+      found += shown;
       const count = root.querySelector(`[data-maneuver-count="${pane.dataset.maneuverPane}"]`);
       if (count) count.textContent = String(shown);
-      const none = pane.querySelector("[data-maneuver-nomatch]");
-      if (none) none.hidden = !query || (shown > 0);
+      pane.hidden = query ? !shown : !pane.hasAttribute("data-maneuver-active");
+      for (const title of pane.querySelectorAll("[data-maneuver-pane-title]")) title.hidden = !query;
+      // What speaks of the tab alone - its note, "None of this type", "N hidden" - not while searching.
+      for (const note of pane.querySelectorAll("[data-maneuver-tabonly]")) note.hidden = Boolean(query);
     }
+    const none = root.querySelector("[data-maneuver-noresult]");
+    if (none) none.hidden = !query || (found > 0);
   }
 
   /**
@@ -1606,8 +1615,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         const maneuvers = group.maneuvers.map(maneuver => ({ ...maneuver, img: this.actor.items.get(maneuver.itemId)?.img ?? "",
           noUsesLeft: Boolean(maneuver.usageLabel) && (Number(maneuver.usesLeft) <= 0) }));
         const shown = maneuvers.filter(maneuver => !hidden.has(maneuver.itemId));
-        return { ...group, active: group.key === active, maneuvers: shown, all: maneuvers, count: shown.length,
-          hidden: maneuvers.length - shown.length };
+        // Every one drawn - those hidden by Hide Maneuvers marked, and shown only to a search, which reaches all of yours (the user's).
+        return { ...group, active: group.key === active, all: maneuvers, count: shown.length, hidden: maneuvers.length - shown.length,
+          maneuvers: maneuvers.map(maneuver => ({ ...maneuver, manageHidden: hidden.has(maneuver.itemId) })) };
       });
       const current = context.maneuverGroups.find(group => group.active);
       context.maneuverManage = { label: current?.label ?? "", picks: (current?.all ?? []).map(maneuver => ({ itemId: maneuver.itemId,

@@ -20,20 +20,24 @@
               data-tooltip="Out of Sequence, and hiding the Maneuvers you do not use">Manage</button>
       {{/if}}
     </div>
-    {{! Typed into, every tab's rows narrowed to the names holding it - each tab counting its matches (the user's). Never submitted. }}
+    {{! Typed into, every Maneuver of yours searched, not the open tab's alone: each type with a match shown under its name, each tab
+        counting its matches (the user's). Never submitted. }}
     <input type="search" class="dbu-maneuver-search" data-maneuver-search placeholder="Search Maneuvers..." autocomplete="off" spellcheck="false"/>
     {{#each maneuverGroups as |group|}}
     {{! Every type drawn, the open one shown: a search reaches them all. }}
     <div class="maneuver-group dbu-maneuver-pane" data-section="maneuvers-{{group.key}}" data-maneuver-pane="{{group.key}}"
-         {{#unless group.active}}hidden{{/unless}}>
-      {{#if group.note}}<p class="dbu-maneuver-note">{{group.note}}</p>{{/if}}
+         {{#if group.active}}data-maneuver-active{{else}}hidden{{/if}}>
+      {{! Its type's name over its matches, while searching all of them (the user's). }}
+      <h4 class="dbu-maneuver-pane-title" data-maneuver-pane-title hidden>{{group.label}}</h4>
+      {{#if group.note}}<p class="dbu-maneuver-note" data-maneuver-tabonly>{{group.note}}</p>{{/if}}
 
       <ul class="maneuver-list dbu-clist">
         {{#each group.maneuvers as |maneuver|}}
         {{! Draggable so it can be dropped on the hotbar, where it becomes a macro that
             uses it - the same call this row's own button makes. }}
+        {{! One hidden by Hide Maneuvers is drawn hidden: a search still finds it. }}
         <li class="maneuver {{#if maneuver.exhausted}}maneuver-exhausted{{/if}}{{#if maneuver.unaffordable}} maneuver-unaffordable{{/if}}{{#if maneuver.open}} maneuver-open{{/if}}"
-            data-item-id="{{maneuver.itemId}}" draggable="true">
+            data-item-id="{{maneuver.itemId}}" draggable="true"{{#if maneuver.manageHidden}} data-manage-hidden hidden{{/if}}>
 
           {{! The whole row opens it, bar the two things on it that do something else.
               ApplicationV2 dispatches a click to the nearest [data-action], so the name
@@ -164,14 +168,15 @@
             {{/each}}
           </div>
         </li>
-        {{else}}
-        <li class="dbu-clist-empty">{{#if group.hidden}}All hidden - Manage, Hide Maneuvers shows them again.{{else}}None of this type.{{/if}}</li>
         {{/each}}
+        {{#unless group.count}}
+        <li class="dbu-clist-empty" data-maneuver-tabonly>{{#if group.hidden}}All hidden - Manage, Hide Maneuvers shows them again.{{else}}None of this type.{{/if}}</li>
+        {{/unless}}
       </ul>
-      <p class="dbu-maneuver-note" data-maneuver-nomatch hidden>No Maneuver of this type has that in its name.</p>
-      {{#if group.hidden}}<p class="dbu-maneuver-note">{{group.hidden}} hidden - Manage, Hide Maneuvers shows them again.</p>{{/if}}
+      {{#if group.hidden}}<p class="dbu-maneuver-note" data-maneuver-tabonly>{{group.hidden}} hidden - Manage, Hide Maneuvers shows them again.</p>{{/if}}
     </div>
     {{/each}}
+    <p class="dbu-maneuver-note" data-maneuver-noresult hidden>No Maneuver of yours has that in its name.</p>
   </section>
 
   {{! Manage (the user's): Out of Sequence - a toggle and the most Actions a Maneuver may cost - and Hide Maneuvers, the list that

@@ -5373,6 +5373,9 @@
 .dbu-ttrpg .dbu-maneuver-tab b { margin-left: 5px; font-size: 11px; color: var(--dbu-text); }
 .dbu-ttrpg .dbu-maneuver-tab.active { border-color: var(--dbu-accent, #c9a24a); color: var(--dbu-text); background: rgba(201, 162, 74, 0.15); }
 .dbu-ttrpg .dbu-maneuver-note { margin: 0 0 6px; font-size: 11px; font-style: italic; opacity: 0.75; }
+/* A type's name over its matches, while the search reaches every type. */
+.dbu-ttrpg .dbu-maneuver-pane-title { margin: 8px 0 2px; padding: 0; border: 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8; }
+.dbu-ttrpg .dbu-maneuver-pane-title[hidden] { display: none; }
 .dbu-ttrpg .dbu-maneuver-pane .maneuver-list.dbu-clist { margin: 0; padding: 4px 6px; list-style: none; }
 .dbu-ttrpg .dbu-maneuver-pane .maneuver { border: 0; border-bottom: 1px dashed var(--dbu-border); margin: 0; background: transparent; }
 .dbu-ttrpg .dbu-maneuver-pane .maneuver:last-child { border-bottom: 0; }
