@@ -1,72 +1,79 @@
-<header class="sheet-header flexrow">
-  <img class="profile-img" src="{{actor.img}}" data-action="editImage" data-edit="img"
-       title="{{actor.name}}" height="100" width="100"/>
+{{! The header (the user's design, 2026-11-15): no taller than its square portrait - the name with Race, Level, BToP and ToP beside it,
+    then Life with its Health Thresholds marked, and Ki with the Capacity under it. Life red, Ki blue, Capacity yellow. }}
+<header class="sheet-header dbu-header">
+  {{! The whole picture, square, never cropped. It opens a FilePicker via the editImage action. }}
+  <div class="dbu-portrait">
+    <img class="profile-img" src="{{actor.img}}" data-action="editImage" data-edit="img" title="{{actor.name}}"/>
+  </div>
 
-  <div class="header-fields flexcol">
-    <input class="character-name" name="name" type="text" value="{{actor.name}}" placeholder="Character Name"/>
-
-    {{! Everything here is read-only: these are chosen or derived in Progression. }}
-    <div class="header-traits">
-      <span class="header-field">
-        <em>Race</em>
-        <span class="computed-value">{{#if raceName}}{{raceName}}{{else}}&mdash;{{/if}}</span>
-      </span>
-
-      {{#if subraceName}}
-      <span class="header-field">
-        <em>Subrace</em>
-        <span class="computed-value">{{subraceName}}</span>
-      </span>
-      {{/if}}
-
-      <span class="header-field">
-        <em>Level</em>
-        <span class="computed-value">{{system.powerLevel}}</span>
-      </span>
-
-      <span class="header-field" data-tooltip="Base Tier of Power, from Power Level alone">
-        <em>BToP</em>
-        <span class="computed-value">{{system.baseTierOfPower}}</span>
-      </span>
-
-      <span class="header-field" data-tooltip="Current Tier of Power. Breakthrough caps it at BToP + 2.">
-        <em>ToP</em>
-        <span class="computed-value">{{system.tierOfPower}}</span>
-      </span>
-
-      <span class="header-field threshold-{{system.threshold.key}}"
-            data-tooltip="Health Threshold. Each failed Steadfast Check costs 1(bT) on Combat Rolls and 1 Stress Bonus.">
-        <em>Health</em>
-        <span class="computed-value">{{system.threshold.label}}
-          {{#if system.threshold.failures}}<span class="subvalue">{{system.threshold.failures}} failed</span>{{/if}}
-        </span>
-      </span>
+  <div class="dbu-header-fields">
+    <div class="dbu-header-name">
+      <input class="character-name" name="name" type="text" value="{{actor.name}}" placeholder="Character Name"/>
+      {{! Read-only: chosen or derived in Progression. }}
+      <div class="dbu-header-traits">
+        <span class="header-field"><em>Race</em> <span class="computed-value">{{#if raceName}}{{raceName}}{{else}}&mdash;{{/if}}</span></span>
+        {{#if subraceName}}
+        <span class="header-field"><em>Subrace</em> <span class="computed-value">{{subraceName}}</span></span>
+        {{/if}}
+        <span class="header-field"><em>Level</em> <span class="computed-value">{{system.powerLevel}}</span></span>
+        <span class="header-field" data-tooltip="Base Tier of Power, from Power Level alone"><em>BToP</em> <span class="computed-value">{{system.baseTierOfPower}}</span></span>
+        <span class="header-field" data-tooltip="Current Tier of Power. Breakthrough caps it at BToP + 2."><em>ToP</em> <span class="computed-value">{{system.tierOfPower}}</span></span>
+      </div>
     </div>
 
-    <div class="header-pools">
-      <div class="resource-card resource-life">
-        <label>Life Points
-          {{#if system.defeated}}
-          <button type="button" class="dbu-defeated-toggle" data-action="toggleDefeated"
-                  data-tooltip="Defeated - on as you fall, off with Will to Survive. Click: back up (Life to 1 above the least), Will to Survive neither spent nor needed.">Defeated</button>
-          {{/if}}
-        </label>
-        <div class="resource-values">
-          <input type="number" name="system.life.value" value="{{system.life.value}}" min="0"/>
-          <span class="resource-sep">/</span>
-          <span class="computed-value">{{system.life.max}}</span>
+    <div class="dbu-header-pools">
+      <div class="dbu-pool dbu-pool-life">
+        <div class="dbu-pool-top">
+          <em class="dbu-pool-name">Life Points
+            {{#if system.defeated}}
+            <button type="button" class="dbu-defeated-toggle" data-action="toggleDefeated"
+                    data-tooltip="Defeated - on as you fall, off with Will to Survive. Click: back up (Life to 1 above the least), Will to Survive neither spent nor needed.">Defeated</button>
+            {{/if}}
+          </em>
+          <span class="dbu-pool-values">
+            <input type="number" name="system.life.value" value="{{system.life.value}}" min="0"/>
+            <span class="resource-sep">/</span>
+            <span class="computed-value">{{system.life.max}}</span>
+          </span>
         </div>
-        <div class="meter"><div class="meter-fill" style="width: {{lifePercent}}%"></div></div>
+        {{! A dashed line where each Health Threshold begins, its name and Life Points by it - the lowest of several under the bar. }}
+        <div class="dbu-pool-bars">
+          <div class="dbu-pool-bar">
+            <i style="width: {{lifePercent}}%"></i>
+            {{#each lifeLines as |line|}}
+            <span class="dbu-pool-line{{#if line.low}} low{{/if}}" style="left: {{line.percent}}%"
+                  data-tooltip="{{line.label}} at {{line.at}} Life Points or fewer"><em>{{line.label}} {{line.at}}</em></span>
+            {{/each}}
+          </div>
+        </div>
       </div>
 
-      <div class="resource-card resource-ki">
-        <label>Ki Points</label>
-        <div class="resource-values">
-          <input type="number" name="system.ki.value" value="{{system.ki.value}}" min="0"/>
-          <span class="resource-sep">/</span>
-          <span class="computed-value">{{system.ki.max}}</span>
+      <div class="dbu-pool dbu-pool-ki">
+        <div class="dbu-pool-top">
+          <span class="dbu-pool-pair">
+            <em class="dbu-pool-name">Ki Points</em>
+            <span class="dbu-pool-values">
+              <input type="number" name="system.ki.value" value="{{system.ki.value}}" min="0"/>
+              <span class="resource-sep">/</span>
+              <span class="computed-value">{{system.ki.max}}</span>
+            </span>
+          </span>
+          {{! The Combat tab has the same Capacity, named there: this one has no name, so the form never gets it twice, and writes it on
+              its own (actor-character-sheet.mjs, data-header-capacity). }}
+          <span class="dbu-pool-pair dbu-pool-capacity{{#if capacity.over}} over{{/if}}"
+                data-tooltip="Ki spent this Combat Round out of its Capacity. Refills when the round turns over.">
+            <em class="dbu-pool-name">Capacity</em>
+            <span class="dbu-pool-values">
+              <input type="number" data-header-capacity value="{{capacity.spent}}" min="0" aria-label="Ki spent this round"/>
+              <span class="resource-sep">/</span>
+              <span class="computed-value">{{capacity.max}}</span>
+            </span>
+          </span>
         </div>
-        <div class="meter"><div class="meter-fill" style="width: {{kiPercent}}%"></div></div>
+        <div class="dbu-pool-bars">
+          <div class="dbu-pool-bar"><i style="width: {{kiPercent}}%"></i></div>
+          <div class="dbu-pool-bar dbu-pool-capbar"><i style="width: {{capacityPercent}}%"></i></div>
+        </div>
       </div>
       {{! Divine Ki is on the Combat tab, beside the Capacity (the user's). }}
     </div>

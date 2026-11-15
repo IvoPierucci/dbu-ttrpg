@@ -577,6 +577,197 @@
   gap: 6px;
 }
 
+/* The header as the user designed it (2026-11-15): no taller than its 96px square portrait. The name's row - the name, then Race, Level,
+   BToP and ToP beside it - and under it Life and Ki side by side: each its name and numbers on one line, its bars centred under them. */
+.dbu-ttrpg .dbu-header {
+  display: flex;
+  gap: 10px;
+  height: 96px;
+  margin: 0 0 6px;
+}
+
+.dbu-ttrpg .dbu-portrait {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+  box-sizing: border-box;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: #0f0f10;
+  overflow: hidden;
+}
+
+/* The whole picture, never cropped: what it does not fill is the frame's own dark. */
+.dbu-ttrpg .dbu-portrait .profile-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border: 0;
+  border-radius: 0;
+}
+
+.dbu-ttrpg .dbu-header-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dbu-ttrpg .dbu-header-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 26px;
+}
+
+.dbu-ttrpg .dbu-header-name .character-name {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  margin: 0;
+  padding: 0 6px;
+  font-size: 16px;
+}
+
+.dbu-ttrpg .dbu-header-traits {
+  display: flex;
+  flex: none;
+  gap: 12px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.dbu-ttrpg .dbu-header-pools {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+}
+
+.dbu-ttrpg .dbu-pool {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 3px 7px 0;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: var(--dbu-panel);
+}
+
+.dbu-ttrpg .dbu-pool-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 20px;
+}
+
+.dbu-ttrpg .dbu-pool-pair {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Each pool's name in its own colour - Life red, Ki blue, Capacity yellow - its bar the same. */
+.dbu-ttrpg .dbu-pool-name {
+  display: flex;
+  align-items: center;
+  font-style: normal;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.dbu-ttrpg .dbu-pool-life .dbu-pool-name { color: #ec7363; }
+.dbu-ttrpg .dbu-pool-ki .dbu-pool-name { color: #64aef0; }
+.dbu-ttrpg .dbu-pool-ki .dbu-pool-capacity .dbu-pool-name { color: #f5c542; }
+
+.dbu-ttrpg .dbu-pool-values {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* As narrow as three or four digits: Ki and Capacity share one line. */
+.dbu-ttrpg .dbu-header .dbu-pool-values input[type="number"] {
+  flex: none;
+  box-sizing: border-box;
+  width: calc(4ch + 8px);
+  height: 20px;
+  margin: 0;
+  padding: 0 2px;
+  font-size: 13px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.dbu-ttrpg .dbu-header .dbu-pool-values input[type="number"]::-webkit-inner-spin-button,
+.dbu-ttrpg .dbu-header .dbu-pool-values input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* An Adversary's Capacity, ignored but counted: past its Maximum, said in the warning colour. */
+.dbu-ttrpg .dbu-pool-capacity.over .dbu-pool-values { color: #e8796f; }
+
+.dbu-ttrpg .dbu-pool-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.dbu-ttrpg .dbu-pool-bar {
+  position: relative;
+  height: 9px;
+  border: 1px solid var(--dbu-border-strong);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dbu-ttrpg .dbu-pool-bar > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  max-width: 100%;
+  transition: width 0.2s ease;
+}
+
+.dbu-ttrpg .dbu-pool-life .dbu-pool-bar > i { background: var(--dbu-life); }
+.dbu-ttrpg .dbu-pool-ki .dbu-pool-bar > i { background: var(--dbu-ki); }
+.dbu-ttrpg .dbu-pool-capbar { height: 5px; }
+.dbu-ttrpg .dbu-pool-ki .dbu-pool-capbar > i { background: #f5c542; }
+
+/* A Health Threshold's line, as the Damage window draws it: its name and Life Points over the bar, the lowest of several under it. */
+.dbu-ttrpg .dbu-pool-line {
+  position: absolute;
+  top: -12px;
+  bottom: -3px;
+  width: 0;
+  border-left: 1px dashed currentColor;
+  opacity: 0.85;
+}
+
+.dbu-ttrpg .dbu-pool-line em {
+  position: absolute;
+  top: 0;
+  left: 3px;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 10px;
+  white-space: nowrap;
+}
+
+.dbu-ttrpg .dbu-pool-line.low { top: -3px; bottom: -12px; }
+.dbu-ttrpg .dbu-pool-line.low em { top: auto; bottom: 0; }
+
 /* Chosen or derived here; the header only reports them. */
 .dbu-ttrpg .character-fields {
   display: flex;
@@ -4102,7 +4293,8 @@
 }
 
 /* The Life Points card's Defeated toggle: on while Defeated; clicked, back up. */
-.dbu-ttrpg .resource-card > label .dbu-defeated-toggle {
+.dbu-ttrpg .resource-card > label .dbu-defeated-toggle,
+.dbu-ttrpg .dbu-pool-name .dbu-defeated-toggle {
   margin-left: 0.4em;
   padding: 0 0.4em;
   font-size: 0.8em;

@@ -2,8 +2,8 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
-import { isAdversary, isCharacter } from "../actor-types.mjs";
-import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, weakpointOutcome } from "../adversary.mjs";
+import { isAdversary, isCharacter, typicalMinion } from "../actor-types.mjs";
+import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
 import { isVillainousManeuver } from "../villainous.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { areAllies, masterOf, minionsOf } from "../allies.mjs";
@@ -972,6 +972,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }));
     // Bar widths, since Handlebars cannot divide.
     context.lifePercent = DBUCharacterSheet.#percentFull(this.actor.system.life);
+    // The header's Life bar (the user's design): a line where each Health Threshold begins, its name and Life Points - a typical Minion's
+    // one, Injured at a quarter (thresholdKey) - the lowest of several drawn under the bar, where its name would run into the next one's.
+    {
+      const max = Number(this.actor.system.life?.max) || 0;
+      const lines = typicalMinion(this.actor)
+        ? [{ label: DBUCharacterData.THRESHOLDS.injured.label, at: Math.floor(max * DBUCharacterData.THRESHOLDS.bruised.above),
+          fraction: DBUCharacterData.THRESHOLDS.bruised.above }]
+        : thresholdLines(max, DBUCharacterData.THRESHOLDS);
+      const lowest = Math.min(...lines.map(line => line.fraction));
+      context.lifeLines = max ? lines.map(line => ({ ...line, percent: line.fraction * 100, low: (lines.length > 1) && (line.fraction === lowest) })) : [];
+    }
     context.kiPercent = DBUCharacterSheet.#percentFull(this.actor.system.ki);
     context.divineKiPercent = DBUCharacterSheet.#percentFull(this.actor.system.divineKi ?? {});
     // Wound is per Foundation, so the labels come from the same config the values do.
@@ -3844,6 +3855,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         event.stopPropagation();
         const item = this.actor.items.get(input.dataset.itemId);
         item?.update({ [`system.unique.kept.${input.dataset.uniqueKept}`]: Math.max(0, Math.floor(Number(input.value) || 0)) });
+      });
+    }
+
+    // The header's Capacity: unnamed, as the Combat tab's is the form's - written here, a whole number, never below 0.
+    for (const field of this.element.querySelectorAll("[data-header-capacity]")) {
+      field.addEventListener("change", event => {
+        event.stopPropagation();
+        return this.actor.update({ "system.capacity.spent": Math.max(0, Math.floor(Number(field.value) || 0)) });
       });
     }
 
