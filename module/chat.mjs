@@ -6189,6 +6189,11 @@ function hidePrivateBreakdowns(message, html) {
     hidden = true;
   }
 
+  // A number of theirs said in a line - what an effect gave back (moments-runtime.mjs regainedLines): kept to whoever may watch them.
+  for (const number of html.querySelectorAll("[data-private-of]")) {
+    if (!maySeeRolls(fromUuidSync(number.dataset.privateOf))) number.remove();
+  }
+
   // Foundry's own expandable dice breakdown, on a plain roll message. Those carry no
   // card of ours, so the flag is what says whose roll it was.
   const check = message.getFlag(SCOPE, CHECK_FLAG);

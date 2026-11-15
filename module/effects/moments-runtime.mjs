@@ -161,7 +161,10 @@ async function runPass(actor, moment, definition, entries, context, mode, quiet 
   }
   if (!spent.length) return nothing;
 
+  // Life and Ki as they were, to say what the effects gave back once it is written (the user's).
+  const pools = quiet ? null : { life: Number(actor.system.life?.value) || 0, ki: Number(actor.system.ki?.value) || 0 };
   await writeStateful(actor, slots);
+  const regained = pools ? regainedLines(actor, slots, pools) : [];
   // A verb that did nothing because the player chose nothing - Patient Sniper's "None" - leaves its use unspent.
   const declined = new Set();
   for (const call of scope.queue) {
@@ -171,7 +174,7 @@ async function runPass(actor, moment, definition, entries, context, mode, quiet 
 
   await recordUses(actor, counted, definition, context, spent);
   // Quiet where the caller says what it did on a card of its own - a Maneuver's Life and Ki, by source (chat.mjs gainsHtml).
-  if (!quiet) await announce(actor, entries, spent, moment);
+  if (!quiet) await announce(actor, entries, spent, moment, regained);
 
   return { slots, fired: spent.length };
 }
@@ -1162,13 +1165,40 @@ function momentAvailable(actor, definition, context) {
  * guess which Trait did it. Triggered effects are left out: the player armed those, and
  * the roll they belong to already names them in its breakdown.
  */
-async function announce(actor, entries, spent, moment) {
+/**
+ * What an effect gave back, said (the user's: Primitive Durability's Life and Legendary Saiyan's Ki on a stack of Battle Born
+ * were regained and nowhere told) - "Primitive Durability: 6 Life Points regained", by what wrote it, as much as it came to
+ * once capped. The number to whoever may watch the character (chat.mjs hidePrivateBreakdowns, `data-private-of`); the rest
+ * read that it was regained.
+ */
+export function regainedLines(actor, slots, before) {
+  const esc = text => globalThis.Handlebars?.escapeExpression?.(text ?? "") ?? String(text ?? "");
+  const lines = [];
+  for (const [key, pool, label] of [["life.value", "life", "Life Points"], ["ki.value", "ki", "Ki Points"]]) {
+    if (!(key in (slots ?? {}))) continue;
+    const gained = (Number(actor.system?.[pool]?.value) || 0) - (Number(before?.[pool]) || 0);
+    if (gained <= 0) continue;
+    const names = [...new Set((slots[key]?.parts ?? []).filter(part => (part.op === "add") && (Number(part.value) > 0))
+      .map(part => part.source).filter(Boolean))];
+    lines.push(`<li>${esc(names.join(", ") || "An effect")}: <span data-private-of="${esc(actor.uuid)}">${gained} </span>${label} regained</li>`);
+  }
+  return lines;
+}
+
+/** What fired by itself, said - and what it gave back (regainedLines), in the same message: one, not two. */
+async function announce(actor, entries, spent, moment, regained = []) {
   const byId = new Map(entries.map(entry => [entry.blockId, entry]));
 
   const fired = spent
     .map(use => byId.get(`${use.sourceId}#${use.block}`))
     .filter(entry => entry?.program?.blocks?.[0]?.mode === "automatic");
-  if (!fired.length) return;
+  if (!fired.length) {
+    if (!regained.length) return;
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="dbu-check"><ul class="dbu-auto-list">${regained.join("")}</ul></div>`
+    });
+  }
 
   const lines = fired
     .map(entry => `<li>${Handlebars.escapeExpression(entry.sourceName)}</li>`)
@@ -1179,6 +1209,7 @@ async function announce(actor, entries, spent, moment) {
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-check">`
       + `<div class="dbu-check-parts">Automatic &middot; ${Handlebars.escapeExpression(label)}</div>`
-      + `<ul class="dbu-auto-list">${lines}</ul></div>`
+      + `<ul class="dbu-auto-list">${lines}</ul>`
+      + (regained.length ? `<ul class="dbu-auto-list">${regained.join("")}</ul>` : "") + `</div>`
   });
 }
