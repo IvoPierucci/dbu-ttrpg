@@ -17,7 +17,7 @@ import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stat
 import { grantedUniques } from "../unique.mjs";
 import { getTrait, printedLines, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
-import { entryTip, minionCaps } from "../maneuvers.mjs";
+import { entryTip, LONG_RANGE_SQUARES, minionCaps, sizesAboveLarge } from "../maneuvers.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
@@ -1933,7 +1933,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         ? `Your Size Category right now. Built as ${built}: an effect has moved it.`
         : "Your Size Category right now - what an effect changes, not the one chosen in Progression." },
       // "Counted in Squares beyond the ones you are touching": 0 is the adjacent Squares, one away.
-      reach: { value: `${(Number(system.meleeRange) || 0) + 1} sq.` }
+      reach: { value: `${(Number(system.meleeRange) || 0) + 1} sq.` },
+      longRange: this.#longRangeBox()
     };
 
     // The Steadfast Check, in the Health Threshold's title: its die, its bonus, what it needs.
@@ -4016,6 +4017,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** How full a resource pool is, as a 0-100 width for its meter. */
+  /**
+   * The Long Range box (the user's): from how many Squares away an attack is at Long Range - 9, 2 more for each Size Category after
+   * Large, and what an effect moves it by (a Custom Buff's "Long Range Distance") - as maneuvers.mjs atLongRange counts it.
+   */
+  #longRangeBox() {
+    const sized = 2 * sizesAboveLarge(this.actor);
+    const moved = Number(this.actor.system.effects?.slots?.["longRange.squares"]?.add) || 0;
+    const squares = LONG_RANGE_SQUARES + sized + moved;
+    const parts = [`${LONG_RANGE_SQUARES} Squares`, sized ? `+${sized} for its Size` : "", moved ? `${(moved > 0) ? "+" : ""}${moved} by an effect` : ""]
+      .filter(Boolean).join(", ");
+    const ignored = this.actor.system.effects?.slots?.["longRange.ignore"] === true;
+    return { value: `${squares}+ sq.`,
+      tip: `An attack from ${squares} Squares away or more is at Long Range: ${parts}.${ignored ? " Its penalty is ignored by an effect." : ""}` };
+  }
+
   static #percentFull({ value, max }) {
     if (!max) return 0;
     return Math.min(100, Math.max(0, Math.round((value / max) * 100)));

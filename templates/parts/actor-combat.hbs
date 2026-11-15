@@ -158,14 +158,10 @@
       </div>
 
       <h3 class="dbu-side-title">Aptitudes</h3>
+      {{! In pairs, as the user's sheet has them (2026-11-15): Might | Initiative, Soak Value | Damage Reduction side by side, Current
+          Size | Surgency, Melee Reach | Long Range, the two Speeds. The Diminishing counters are the Turn State's; the Stress Bonus is
+          Progression's. }}
       <div class="dbu-box-grid">
-        <div class="stat" data-tooltip="{{aptitudes.dimOffense.tip}}">
-          {{! What it costs beside the count, on its line - a line under it made the row taller than the rest (the user's). }}
-          <em>Dim. Offense</em><span>{{aptitudes.dimOffense.value}}{{#if aptitudes.dimOffense.note}}<i class="dbu-inline-note">{{aptitudes.dimOffense.note}}</i>{{/if}}</span>
-        </div>
-        <div class="stat" data-tooltip="{{aptitudes.dimDefense.tip}}">
-          <em>Dim. Defense</em><span>{{aptitudes.dimDefense.value}}{{#if aptitudes.dimDefense.note}}<i class="dbu-inline-note">{{aptitudes.dimDefense.note}}</i>{{/if}}</span>
-        </div>
         {{! Rolled from its name, as the Saving Throws and Initiative are (the user's). }}
         <div class="stat">
           <button type="button" class="stat-roll" data-action="rollMight"
@@ -184,13 +180,13 @@
           <span data-tooltip-html="{{workings.damageReduction}}">{{system.damageReduction}}</span>
         </div>
         <div class="stat" data-tooltip="{{aptitudes.size.tip}}"><em>Current Size</em><span>{{aptitudes.size.value}}</span></div>
-        <div class="stat"><em>Melee Reach</em><span data-tooltip-html="{{workings.meleeRange}}">{{aptitudes.reach.value}}</span></div>
-        <div class="stat"><em>Speed</em><span>{{system.speed.normal}} sq.</span></div>
-        <div class="stat"><em>Speed (Boosted)</em><span>{{system.speed.boosted}} sq.</span></div>
         {{! From Main's Aptitudes (the user's): here with the others. }}
         <div class="stat"><em>Surgency</em><span data-tooltip-html="{{workings.surgency}}">{{system.surgency}}</span></div>
-        <div class="stat" data-tooltip="A Stress Test is 1d10 plus this. Power Level + 1, less one per Steadfast failure.">
-          <em>Stress Bonus</em><span data-tooltip-html="{{workings.stressBonus}}">{{system.stressBonus}}</span></div>
+        <div class="stat"><em>Melee Reach</em><span data-tooltip-html="{{workings.meleeRange}}">{{aptitudes.reach.value}}</span></div>
+        {{! From this many Squares on, an attack is at Long Range (maneuvers.mjs atLongRange) - the user's: a box of its own. }}
+        <div class="stat" data-tooltip="{{aptitudes.longRange.tip}}"><em>Long Range</em><span>{{aptitudes.longRange.value}}</span></div>
+        <div class="stat"><em>Speed</em><span>{{system.speed.normal}} sq.</span></div>
+        <div class="stat"><em>Speed (Boosted)</em><span>{{system.speed.boosted}} sq.</span></div>
       </div>
 
       {{! An Elite's or a Villain's Narrative Stamina and God Ki's Divine Ki, sharing a row. The Capacity is the header's now (the user's). }}
@@ -494,8 +490,7 @@
             {{/if}}
           </div>
 
-          {{! Wear accrued within a Combat Round; it clears when the round turns over. The Diminishing it costs is among the
-              Aptitudes now (the user's). }}
+          {{! Wear accrued within a Combat Round; it clears when the round turns over. }}
           <div class="stat"
                data-tooltip="Attacking Maneuvers made this round. Each one after the third costs a stack, and each stack reduces your Strike Rolls by 1(bT).">
             <em>Attacks this round</em>
@@ -504,6 +499,15 @@
             {{else}}
             <span>{{system.attacksThisRound}}</span>
             {{/if}}
+          </div>
+
+          {{! The Diminishing it costs, and what being aimed at costs - here from the Aptitudes (the user's, 2026-11-15). What each costs
+              beside the count, on its line. }}
+          <div class="stat" data-tooltip="{{aptitudes.dimOffense.tip}}">
+            <em>Dim. Offense</em><span>{{aptitudes.dimOffense.value}}{{#if aptitudes.dimOffense.note}}<i class="dbu-inline-note">{{aptitudes.dimOffense.note}}</i>{{/if}}</span>
+          </div>
+          <div class="stat" data-tooltip="{{aptitudes.dimDefense.tip}}">
+            <em>Dim. Defense</em><span>{{aptitudes.dimDefense.value}}{{#if aptitudes.dimDefense.note}}<i class="dbu-inline-note">{{aptitudes.dimDefense.note}}</i>{{/if}}</span>
           </div>
 
           {{! Two a Combat Round, and the count resets with the round like the one above. }}
