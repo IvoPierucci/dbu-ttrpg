@@ -713,14 +713,10 @@ export function registerCombatHooks() {
     if (followerSkips(first)) return combat.nextTurn();
   });
 
-  // Foundry has a hook of its own for this, and it says which way the round moved.
-  // Inferring it from a turn change worked but missed the case the tracker offers most
-  // readily - stepping a round back, which must not hand out a fresh set of Actions.
-  Hooks.on("combatRound", async (combat, updateData, options) => {
-    if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
-    if (options?.direction !== 1) return;
-    await startRound(combat);
-  });
+  // A new Combat Round is begun in `combatTurnChange` below, not in Foundry's `combatRound`: that one is called on the client
+  // that moved the Round alone, and before the Round is written - so a player ending the Round's last turn moved it on their
+  // own client, where the GM's handler never ran, and nothing began it (the user's report: Actions and Capacity not given back,
+  // Born for Battle's window never asked). A turn change reaches every client once the Round is written.
 
   Hooks.on("combatTurnChange", async (combat, previous, current) => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
@@ -841,6 +837,10 @@ export function registerCombatHooks() {
       await left.unsetFlag("dbu-ttrpg", "foreseen");
       if (!(Number(current?.round) > Number(previous?.round)) && arrivingId) await keepTurnWith(combat, arrivingId);
     }
+
+    // A new Combat Round: begun by the GM once it is written, whoever moved it - after the last turn of the one before has ended,
+    // before the first of this one begins. Stepping a Round back begins none, and hands out no fresh Actions.
+    if (Number(current?.round) > Number(previous?.round)) await startRound(combat);
 
     // Read before Act Again's turn is taken off: Foundry puts the turn back on the same Combatant after, not at once.
     const arriving = combat.combatant?.actor;
