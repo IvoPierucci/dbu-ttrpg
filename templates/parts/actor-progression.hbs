@@ -51,6 +51,12 @@
       <label class="dbu-readout" data-tooltip-html="<p>A Stress Test is 1d10 plus this.</p>{{workings.stressBonus}}">Stress Bonus
         <span class="dbu-readout-box">{{system.stressBonus}}</span>
       </label>
+      {{! Without a race the Scores' row is not drawn: the Score cap said here instead. }}
+      {{#unless racialGrants}}
+      <label class="dbu-readout" data-tooltip="Score cap at ToP {{system.tierOfPower}}: the most an Attribute Score may be.">Score cap
+        <span class="dbu-readout-box">{{system.attributeScoreCap}}</span>
+      </label>
+      {{/unless}}
 
       {{! ToP Mod and Crit Target are on the Settings tab (the user's); the Technique Points in the table below. }}
     </div>
@@ -136,7 +142,9 @@
         <thead>
           <tr>
             <th scope="col" rowspan="2">Level</th>
-            <th scope="colgroup" colspan="{{attributeColumns.length}}" class="dbu-score-group">Attribute Scores</th>
+            {{! The Score cap here, by the Scores it caps - from Main (the user's, 2026-11-15). }}
+            <th scope="colgroup" colspan="{{attributeColumns.length}}" class="dbu-score-group"
+                data-tooltip="Score cap at ToP {{system.tierOfPower}}: {{system.attributeScoreCap}}">Attribute Scores <span class="dbu-score-cap">&middot; cap {{system.attributeScoreCap}}</span></th>
             <th scope="col" rowspan="2" data-tooltip="Left after the Unique Abilities and the Signature Techniques">TP Left</th>
             <th scope="col" rowspan="2" data-tooltip="Every Technique Point granted up to your Power Level">Total TP</th>
           </tr>

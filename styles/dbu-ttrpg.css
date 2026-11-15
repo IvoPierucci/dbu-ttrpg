@@ -5954,3 +5954,129 @@
 .dbu-ttrpg .dbu-sheet-type-row { display: flex; align-items: center; gap: 6px; }
 .dbu-ttrpg .dbu-sheet-type-row select { flex: 0 1 160px; height: 24px; font-size: 12px; }
 .dbu-ttrpg .dbu-sheet-type-row button { flex: 0 0 auto; width: auto; height: 24px; line-height: 22px; padding: 0 10px; font-size: 12px; }
+
+/* --- Main (the user's design, 2026-11-15) ---------------------------------------------------------------------------------------
+   The Attributes' Modifiers as seven cards, each rolled from itself; the Skills in a block per Attribute, two columns, the Ranks as
+   pips. The Score cap is Progression's, in its Scores' heading. */
+.dbu-ttrpg .dbu-main-attributes {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dbu-ttrpg .dbu-main-attribute {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 4px 9px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 6px;
+  background: var(--dbu-panel);
+  box-shadow: none;
+  color: var(--dbu-text);
+  cursor: pointer;
+}
+
+.dbu-ttrpg .dbu-main-attribute:hover { border-color: var(--dbu-accent); text-shadow: none; }
+
+.dbu-ttrpg .dbu-main-attribute-name {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-main-attribute:hover .dbu-main-attribute-name { color: var(--dbu-accent); }
+.dbu-ttrpg .dbu-main-attribute-mod { font-size: 26px; font-weight: bold; line-height: 1.05; }
+
+.dbu-ttrpg .dbu-main-die {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+  opacity: 0;
+}
+
+.dbu-ttrpg .dbu-main-attribute:hover .dbu-main-die { opacity: 1; }
+
+.dbu-ttrpg .dbu-main-skills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.dbu-ttrpg .dbu-main-column { display: grid; gap: 8px; min-width: 0; }
+
+.dbu-ttrpg .dbu-main-block {
+  margin: 0;
+  border: 1px solid var(--dbu-border);
+  border-radius: 6px;
+  background: var(--dbu-panel);
+  overflow: hidden;
+}
+
+.dbu-ttrpg .dbu-main-block > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--dbu-border);
+  background: var(--dbu-panel-raised);
+}
+
+.dbu-ttrpg .dbu-main-block > header b {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .dbu-main-block > header span { font-size: 11px; color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-main-block > header strong { color: var(--dbu-text); }
+.dbu-ttrpg .dbu-main-rows { margin: 0; padding: 0; list-style: none; }
+
+.dbu-ttrpg .dbu-main-row {
+  display: block;
+  padding: 3px 8px;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dbu-ttrpg .dbu-main-row:first-child { border-top: 0; }
+.dbu-ttrpg .dbu-main-line { display: flex; align-items: center; gap: 6px; }
+.dbu-ttrpg .dbu-main-sub { display: flex; flex-wrap: wrap; gap: 2px 8px; padding: 2px 0 1px; font-size: 11px; }
+
+.dbu-ttrpg .dbu-main-pips { display: inline-flex; flex: none; gap: 2px; text-align: left; }
+
+.dbu-ttrpg .dbu-main-pips i {
+  width: 7px;
+  height: 7px;
+  border: 1px solid #6a6a6a;
+  border-radius: 50%;
+}
+
+.dbu-ttrpg .dbu-main-pips i.on { background: var(--dbu-accent); border-color: var(--dbu-accent); }
+.dbu-ttrpg .dbu-main-pips i.over { border-color: var(--dbu-life); }
+.dbu-ttrpg .dbu-main-pips i.on.over { background: var(--dbu-life); }
+
+.dbu-ttrpg .dbu-main-bonus {
+  flex: 0 0 32px;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.dbu-ttrpg .dbu-main-row .skill-crit { flex: 0 0 30px; text-align: right; }
+
+/* Progression's Scores heading carries the cap now. */
+.dbu-ttrpg .dbu-score-cap { color: var(--dbu-accent); font-weight: 600; }

@@ -33,6 +33,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC,
   apparelPenaltyPieces, categoryApplies, doffBonusFor, qualityEntries, wornAccessories, ACCESSORIES_WORN } from "../gear.mjs";
 import { isIntegrated } from "../integrated.mjs";
+import { skillColumns } from "../skill-blocks.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -1613,6 +1614,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       max: capacity.max
     });
     context.skillGroups = this._prepareSkillGroups(context.workings);
+    // The Main tab's blocks (the user's, 2026-11-15): in the Attributes' order, Craft's and Knowledge's folded while alike, the Ranks
+    // as pips up to the cap, each block with its Attribute's Modifier (skill-blocks.mjs). The Adversary tab keeps the groups.
+    context.skillColumns = skillColumns(context.skillGroups, this.actor.system.skillRankCap,
+      Object.fromEntries(Object.entries(this.actor.system.attributes).map(([key, attribute]) => [key, attribute.mod])));
     // An Adversary's own tab (adversary.mjs): its Category and what the Adversary Table gives for it, and Main's Attributes and
     // Skills with the boxes it writes into.
     context.isAdversary = isAdversary(this.actor);
