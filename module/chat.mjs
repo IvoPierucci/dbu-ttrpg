@@ -21677,6 +21677,12 @@ async function copyTechnique(actor, copyFrom) {
   const data = source.toObject();
   delete data._id;
   data.name = `${source.name} (Copied)`;
+  // A Unique Ability copied - Advanced Learner's - Free, and its Advancements: access till the Encounter ends, no TP of yours spent on
+  // it; paid only if kept as the Encounter ends (combat.mjs). A Signature Technique copied is counted out of the TP otherwise.
+  if (data.system?.unique) {
+    data.system.unique.free = true;
+    data.system.unique.advancements = (data.system.unique.advancements ?? []).map(entry => ({ ...entry, free: true }));
+  }
   data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}),
     copied: { from: fromUuidSync(copyFrom.actorUuid)?.name ?? "", fromUuid: copyFrom.actorUuid, combat: game.combat?.id ?? "" },
     fromQuickLearner: true } };

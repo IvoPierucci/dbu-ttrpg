@@ -1031,9 +1031,12 @@ export async function endEncounterFor(actor) {
           ? { "system.unique.tpChange": (Number(item.system.unique?.tpChange) || 0) - 3 }
           : { "system.signature.freeTP": (Number(item.system.signature?.freeTP) || 0) + 3 })
         : {};
+      // A Unique Ability kept: its TP Cost yours now - Free no more, nor its Advancements (copied Free, chat.mjs copyTechnique).
+      const paid = (item.system?.tags ?? []).includes("uniqueAbility") ? { "system.unique.free": false,
+        "system.unique.advancements": (item.system.unique?.advancements ?? []).map(entry => ({ ...entry, free: false })) } : {};
       // Whose it was, kept - Quick Thinking (2) has it count as Copied still (Neko Mimicry's (5) reads whose).
       await item.update({ name: item.name.replace(/ \(Copied\)$/, ""), "flags.dbu-ttrpg.keptCopy": item.getFlag("dbu-ttrpg", "copied"),
-        "flags.dbu-ttrpg.-=copied": null, ...off });
+        "flags.dbu-ttrpg.-=copied": null, ...paid, ...off });
     }
     else await actor.deleteEmbeddedDocuments("Item", [item.id]);
   }
