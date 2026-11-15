@@ -7,7 +7,15 @@
       the Allies' and Minions' lists are; Manage hides the ones not used, without taking them away. Each row is still the Maneuver's
       Item: dragged to the hotbar, renamed through its sheet. }}
   <section class="panel">
-    <h3 class="panel-title">Maneuvers</h3>
+    <h3 class="panel-title">Maneuvers
+      {{#if system.divineKi.active}}
+      {{! God Ki: "you may use your Divine Ki Points as if they were normal Ki Points" - all of a price or none, at half its Capacity
+          (maneuvers.mjs spendManeuverCost) - from the Combat tab (the user's, 2026-11-15). }}
+      <label class="dbu-divine-pay" data-tooltip="Divine Ki Points in place of Ki Points: all of a price or none, at half its Capacity">
+        Pay with Divine Ki Points <input type="checkbox" name="system.divineKi.use" {{checked system.divineKi.use}}/>
+      </label>
+      {{/if}}
+    </h3>
     {{! The type tabs, Manage at their far right; the search under them (the user's). Add core maneuvers is on the Settings tab's Debug. }}
     <div class="dbu-maneuver-tabs">
       {{#each maneuverGroups as |group|}}

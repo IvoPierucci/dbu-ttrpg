@@ -745,6 +745,34 @@
 /* Ki's bar level with Life's: the Capacity's under it would centre the two of them higher - the 10px is the Capacity's bar and its gap. */
 .dbu-ttrpg .dbu-pool-ki .dbu-pool-bars { padding-top: 10px; }
 
+/* God Ki's Divine Ki (the user's, 2026-11-15): DKP between KP and Cap, a red of its own - not Life's - its bar between Ki's and the
+   Capacity's in size. Three pairs on the line: narrower fields and gaps, so three digits each still fit. With it the three bars are
+   centred together. */
+.dbu-ttrpg .dbu-pool-ki .dbu-pool-divine .dbu-pool-name { color: #f06292; }
+.dbu-ttrpg .dbu-pool-divbar { height: 7px; }
+.dbu-ttrpg .dbu-pool-ki .dbu-pool-bar.dbu-pool-divbar > i { background: #c2185b; }
+.dbu-ttrpg .dbu-pool-ki.has-divine .dbu-pool-bars { padding-top: 0; }
+.dbu-ttrpg .dbu-pool-ki.has-divine .dbu-pool-top { gap: 4px; }
+.dbu-ttrpg .dbu-pool-ki.has-divine .dbu-pool-pair { gap: 3px; }
+.dbu-ttrpg .dbu-pool-ki.has-divine .dbu-pool-values { gap: 2px; font-size: 12px; }
+.dbu-ttrpg .dbu-header .dbu-pool-ki.has-divine .dbu-pool-values input[type="number"] { width: calc(3ch + 6px); font-size: 12px; padding: 0 1px; }
+
+/* The Maneuvers tab's "Pay with Divine Ki Points", at its title's right. */
+.dbu-ttrpg .panel-title .dbu-divine-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 0 auto;
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--dbu-text-dim);
+  cursor: pointer;
+}
+
+.dbu-ttrpg .panel-title .dbu-divine-pay input { margin: 0; }
+
 .dbu-ttrpg .dbu-pool-life .dbu-pool-bar > i { background: var(--dbu-life); }
 .dbu-ttrpg .dbu-pool-ki .dbu-pool-bar > i { background: var(--dbu-ki); }
 .dbu-ttrpg .dbu-pool-capbar { height: 5px; }
