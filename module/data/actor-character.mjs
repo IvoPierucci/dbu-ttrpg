@@ -1266,7 +1266,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       noFusedTechnique: new fields.BooleanField({ required: true, initial: false }),
       // Minion Fusion: "If a Minion fuses with another Minion, the resultant Fusion is also a Minion" - both Masters its.
       minion: new fields.BooleanField({ required: true, initial: false }),
-      masters: new fields.ArrayField(new fields.StringField({ required: true, blank: false }))
+      masters: new fields.ArrayField(new fields.StringField({ required: true, blank: false })),
+      // The Metamoran Fusion Dance with one Check failed: "plump" or "frail" (fusion-dance.mjs) - "" fused any other way.
+      dance: new fields.StringField({ required: true, blank: true, initial: "", choices: ["", "plump", "frail"] })
     });
     // Narrative Stamina (Adversaries in Combat): "At the start of each Combat Round, gain Narrative Stamina equal to the amount
     // listed on the Adversary Category Table above. You lose all Narrative Stamina at the end of each Combat Round." What is

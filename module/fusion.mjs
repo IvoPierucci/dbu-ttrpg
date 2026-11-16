@@ -153,6 +153,8 @@ export function fusionContext(actor, lookups) {
         karma: entry.minion ? null : (Number(now?.system?.karma) || 0) };
     }),
     hasFused: fused.length > 0,
+    // The Metamoran Fusion Dance gone wrong (fusion-dance.mjs): said beside its Method.
+    dance: ({ plump: "Plump Fusion", frail: "Frail Fusion" })[fusion.dance] ?? "",
     methods: [{ value: "", label: "-", selected: !method },
       ...Object.entries(FUSION_METHODS).map(([value, each]) => ({ value, label: each.label, selected: value === fusion.method }))],
     method: method ? { ...method, temporary: method.type === "temporary", traitName: lookups.trait(method.trait)?.name ?? "",

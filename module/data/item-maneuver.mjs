@@ -694,6 +694,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         meteor: new fields.BooleanField({ required: true, initial: false }),
         /** Life Points regained by another - Healing Hands' (chat.mjs postHealing). */
         heals: new fields.BooleanField({ required: true, initial: false }),
+        /** Fused with whoever answers it, or four Allies at once - the Metamoran Fusion Dance's (fusion-dance.mjs). */
+        fusionDance: new fields.BooleanField({ required: true, initial: false }),
         /** A Wound Roll of the Simple Profile off your own Life Points - Holstein Shock's (chat.mjs postShock). */
         selfShock: new fields.BooleanField({ required: true, initial: false }),
         /** A Clash at everyone in a Sphere, losers given a Combat Condition - Illusion's (chat.mjs postIllusion). */

@@ -1,0 +1,39 @@
+id: metamoran-fusion-dance
+name: Metamoran Fusion Dance
+uaType: technical
+prerequisite: 2+ Skill Ranks in Performance
+tpCost: 15
+type: standard
+actionCost: 3
+kiCost: 0
+# "Target an Ally within your Melee Range who is of the same Power Level as you and within 1 Size Category of you until the start of
+# your next turn" - your targeted token, refused before anything is paid where it is not one (Holding Back's stacks lowering the
+# Power Level compared); kept on you till your next turn begins. "If that Ally also targets you with the Metamoran Fusion Dance" -
+# both Performance Checks rolled on a card, each by whoever plays that Character; at least one made, a Fuse button: the Metamorese
+# Fusion Method, Plump or Frail by its 1d4 where one failed (fusion-dance.mjs).
+fusionDance: true
+source: Core Rule
+description: >
+  An Ally in your Melee Range, at your Power Level and within 1 Size Category, who targets you with it too: both make a Master
+  Performance Check - the Metamorese Fusion Method if both succeed; Plump or Frail if only one does. Passive: Performance Checks 1 higher.
+text: >
+  Metamoran Fusion Dance: You can perform a special dance which, when performed perfectly with a compatible partner, allows you to fuse with them.
+  –Ability Type: Technical
+  –Prerequisites: 2+ Skill Ranks in Performance
+  –TP Cost: 15
+  –KP Cost: N/A
+  –Maneuver Type: Standard
+  –Action Cost: 3 Actions
+  –Minions: N/A
+  –Passive Bonus: Increase your Performance Skill Checks by 1.
+  –Effect: Target an Ally within your Melee Range who is of the same Power Level as you and within 1 Size Category of you until the start of your next turn. For each stack of Holding Back a Character possesses, treat their Power Level as if it was 1 lower for this effect. If that Ally also targets you with the Metamoran Fusion Dance, both Characters make a Performance Skill Check with a Difficulty Category of Master. If you are not the same Size Category as your target, increase the Performance Skill Check’s Difficulty Category by 1 for both Characters.
+  Gain the following benefits depending on the results of both Characters:
+  Both Succeed: Both Characters combine using the Metamorese Fusion Method.
+  Both Fail: Nothing happens.
+  One Succeeds, One Fails: Both Characters combine using the Metamorese Fusion Method but roll a 1d4, if the result is 2~4 the Fusion becomes Plump, and if your result is a 1, the Fusion becomes Frail. Both Plump and Frail Fusions are in their Normal State, cannot possess Fusion Modifiers, and cannot use the Transformation Maneuver, Signature Technique Maneuver or any Unique Abilities. Additionally, Plump Fusions have their Agility Modifier halved, and Frail Fusions have their Agility, Tenacity, Force and Magic Modifiers halved.
+
+---
+
+# "Increase your Performance Skill Checks by 1" - flat, not (T).
+[passive]
+skill.performance.bonus += 1;

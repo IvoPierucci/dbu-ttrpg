@@ -2842,6 +2842,7 @@ function makeDefinition(item) {
     finishSign: item.system.unique?.finishSign === true,
     meteor: item.system.unique?.meteor === true,
     heals: item.system.unique?.heals === true,
+    fusionDance: item.system.unique?.fusionDance === true,
     selfShock: item.system.unique?.selfShock === true,
     illusion: item.system.unique?.illusion === true,
     smashes: item.system.unique?.smashes === true,
@@ -5675,6 +5676,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let finishing = null;
   let meteorTargets = null;
   let healing = null;
+  let dancing = null;
   let shocking = null;
   let illusioning = null;
   let smashing = null;
@@ -6237,6 +6239,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     if (maneuver.heals) {
       healing = await askHeal(actor, maneuver);
       if (!healing) return false;
+    }
+
+    // Metamoran Fusion Dance: whom - your targeted Ally, or with Five-Way Fusion four Allies - refused where it may not be.
+    if (maneuver.fusionDance) {
+      dancing = await (await import("./fusion-dance.mjs")).askDance(actor, maneuver);
+      if (!dancing) return false;
     }
 
     // God Meteor: "Every Character (except the user of this Unique Ability) within a Destructive Sphere AoE centered on
@@ -7158,6 +7166,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postShock(actor, maneuver, shocking)
     : (maneuver.heals && healing)
     ? await (await import("./chat.mjs")).postHealing(actor, maneuver, healing)
+    : (maneuver.fusionDance && dancing)
+    ? await (await import("./fusion-dance.mjs")).postDance(actor, maneuver, dancing)
     : (maneuver.meteor && meteorTargets)
     ? await (await import("./chat.mjs")).postMeteor(actor, maneuver, meteorTargets.uuids)
     : (maneuver.finishSign && finishing)

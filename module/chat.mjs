@@ -2,6 +2,7 @@ import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "
 import { commandedNow, isCharacter, isMinion, isVehicle, typicalMinion } from "./actor-types.mjs";
 import { calledShotShelter, vehicleDodgeOf, vehicleTargets } from "./vehicle-crew.mjs";
 import { hasRace, karmaAvailable, racesOf } from "./fusion.mjs";
+import { DANCE_CARD, DANCE_SIDE, danceFuse, danceMishap, danceOutcome, danceRoll, settleDanceSide } from "./fusion-dance.mjs";
 import { staminaLeft, staminaToStay, thresholdLines } from "./adversary.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
@@ -262,6 +263,9 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, SUMMON_FLAG, request.summon);
     case "tornado": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, TORNADO_FLAG, request.tornado);
+    // The Metamoran Fusion Dance's card: a side's Check, its 1d4, the Fusion made (fusion-dance.mjs) - its own flags only.
+    case "fusionDance": return [DANCE_CARD, DANCE_SIDE.a, DANCE_SIDE.b].includes(request.flag)
+      ? game.messages.get(request.messageId)?.setFlag(SCOPE, request.flag, request.value) : null;
     case "answerFor": return answerFor(fromUuidSync(request.actorUuid ?? ""), request.moment, request.context ?? {});
     case "uniqueClashWon": {
       const message = game.messages.get(request.messageId);
@@ -4441,6 +4445,7 @@ function onRenderChatMessage(message, html) {
   renderBind(message, html);
   renderVolleyball(message, html);
   renderLifeforce(message, html);
+  renderDance(message, html);
   renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
@@ -5996,7 +6001,10 @@ const CARD_SETTLERS = {
   get gamble() { return [GAMBLE_FLAG, unsettleGamble, settleGamble]; },
   get crystal() { return [CRYSTAL_FLAG, unsettleCrystal, settleCrystal]; },
   get forge() { return [FORGE_FLAG, unsettleForge, settleForge]; },
-  get toss() { return [TOSS_FLAG, unsettleToss, settleToss]; }
+  get toss() { return [TOSS_FLAG, unsettleToss, settleToss]; },
+  // The Metamoran Fusion Dance's two Checks, each on its own (fusion-dance.mjs) - nothing to take back but the result written.
+  get danceA() { return [DANCE_SIDE.a, () => null, (message, made, success, total) => settleDanceSide(message, "a", success, total)]; },
+  get danceB() { return [DANCE_SIDE.b, () => null, (message, made, success, total) => settleDanceSide(message, "b", success, total)]; }
 };
 
 /** A card's Check its window was closed on: the Roll button it leaves, and what that rolls. */
@@ -21124,6 +21132,55 @@ export async function lifeforceOnManeuver(actor, maneuverId) {
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${stacks} Lifeforce lost.</div>`,
     flags: { [SCOPE]: { [LIFEFORCE_FLAG]: { actorUuid: actor.uuid, stacks, kept: false } } } });
+}
+
+/**
+ * The Metamoran Fusion Dance's card (fusion-dance.mjs): each one's Performance Check - its total to whoever may watch them, a Roll
+ * button to whoever plays one not yet rolled - then what they make: nothing, or a Fuse button for either's player; its 1d4 once rolled.
+ */
+function renderDance(message, html) {
+  const card = message.getFlag(SCOPE, DANCE_CARD);
+  if (!card) return;
+  const container = html.querySelector(".message-content") ?? html;
+  const done = {};
+  for (const side of ["a", "b"]) {
+    done[side] = message.getFlag(SCOPE, DANCE_SIDE[side])?.done ?? null;
+    const dancer = fromUuidSync(card[side]);
+    const row = document.createElement("div");
+    row.className = "dbu-settled-note";
+    const result = done[side] ? ` - ${(maySeeRolls(dancer) && Number.isFinite(done[side].total)) ? `${done[side].total}, ` : ""}${
+      done[side].success ? "made" : "failed"}` : "";
+    row.textContent = `${card[`${side}Name`]}: Performance, ${DBUCharacterData.DIFFICULTIES[card.dc?.[side]]?.label ?? card.dc?.[side]}${result}`;
+    container.append(row);
+    if (!done[side] && dancer?.isOwner) {
+      const roll = document.createElement("button");
+      roll.type = "button";
+      roll.className = "dbu-clash-button";
+      roll.textContent = `Roll: ${card[`${side}Name`]}`;
+      roll.addEventListener("click", () => danceRoll(message, side));
+      container.append(roll);
+    }
+  }
+  const outcome = danceOutcome(done.a, done.b);
+  if (!outcome) return;
+  const said = document.createElement("div");
+  said.className = "dbu-settled-note";
+  said.textContent = (outcome === "none") ? "Both failed: nothing happens."
+    : `${(outcome === "both") ? "Both made" : "One made, one failed"}: the Metamorese Fusion Method${card.d4
+      ? ` - 1d4: ${card.d4}, ${(danceMishap(card.d4) === "frail") ? "Frail" : "Plump"}` : ((outcome === "one") ? " - 1d4: Plump or Frail" : "")}${
+      card.fused ? ` - ${card.fused}` : ""}.`;
+  container.append(said);
+  if ((outcome === "none") || card.fused) return;
+  if (!game.user.isGM && ![card.a, card.b].some(uuid => fromUuidSync(uuid)?.isOwner)) return;
+  const fuseButton = document.createElement("button");
+  fuseButton.type = "button";
+  fuseButton.className = "dbu-clash-button";
+  fuseButton.textContent = "Fuse";
+  fuseButton.addEventListener("click", async () => {
+    fuseButton.disabled = true;
+    try { await danceFuse(message); } finally { fuseButton.disabled = false; }
+  });
+  container.append(fuseButton);
 }
 
 /** Keep them: a Karma Point, and the stacks back. */

@@ -503,11 +503,13 @@ export const OTHER_GROUPS = Object.freeze({
   "pseudo-bestial": "Pseudo-Bestial · Wild Child",
   // A Fusion's: given as it is fused (fusion-make.mjs), never picked.
   "fusion-method": "Fusion Method",
-  "fusion-modifier": "Fusion Modifier"
+  "fusion-modifier": "Fusion Modifier",
+  // A Fusion of the Metamoran Fusion Dance gone wrong: Plump or Frail (fusion-dance.mjs).
+  "fusion-dance": "Fusion Dance"
 });
 
-/** The Other Traits' groups given by fusing - its Method Trait, its Fusion Modifiers - never offered in the picker. */
-export const FUSION_TRAIT_GROUPS = Object.freeze(["fusion-method", "fusion-modifier"]);
+/** The Other Traits' groups given by fusing - its Method Trait, its Fusion Modifiers, Plump or Frail - never offered in the picker. */
+export const FUSION_TRAIT_GROUPS = Object.freeze(["fusion-method", "fusion-modifier", "fusion-dance"]);
 
 /**
  * Bestial Limit: "You cannot benefit from more than 4 Bestial Traits at any one time. If an effect would give you access to an

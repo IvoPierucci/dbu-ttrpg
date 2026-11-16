@@ -144,7 +144,7 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
     "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills", "clashSaves", "clashDefenderSaves",
     "togglesState", "exploitable"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepHalf", "fakesDeath", "fakeMoon", "moonRounds", "finishSign", "floods", "meteor", "requiresState", "heals", "selfShock", "illusion", "smashes", "debilitates", "judoToss", "upkeepKiPerBaseTier", "avatarSize", "lullaby", "enhances", "mindControl", "mindReading", "multiForm", "paraPara", "petrifies", "portals", "positionChange", "punisherGuard", "seals", "secondSight", "shapeshift", "solarFlare", "spiritSword", "stardust", "kamikaze", "techniqueBlock", "telekinesis", "telepathy", "explosiveWeb", "timeFreeze", "tornado", "trapAttack", "warpedEvolution", "summonsWeather", "worldForging", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "shiftsEnvironment", "kiPerAction", "explodes", "waves", "barrier", "binds", "bluffs", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepHalf", "fakesDeath", "fakeMoon", "moonRounds", "finishSign", "floods", "meteor", "requiresState", "heals", "fusionDance", "selfShock", "illusion", "smashes", "debilitates", "judoToss", "upkeepKiPerBaseTier", "avatarSize", "lullaby", "enhances", "mindControl", "mindReading", "multiForm", "paraPara", "petrifies", "portals", "positionChange", "punisherGuard", "seals", "secondSight", "shapeshift", "solarFlare", "spiritSword", "stardust", "kamikaze", "techniqueBlock", "telekinesis", "telepathy", "explosiveWeb", "timeFreeze", "tornado", "trapAttack", "warpedEvolution", "summonsWeather", "worldForging", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "shiftsEnvironment", "kiPerAction", "explodes", "waves", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -233,6 +233,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         floods: String(definition.floods ?? ""),
         meteor: definition.meteor === true,
         heals: definition.heals === true,
+        fusionDance: definition.fusionDance === true,
         selfShock: definition.selfShock === true,
         illusion: definition.illusion === true,
         smashes: definition.smashes === true,

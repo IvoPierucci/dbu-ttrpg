@@ -14,7 +14,9 @@ text: >
 ---
 
 [passive]
-# (1) The table's: the Metamoran Fusion Dance is not built.
+# (1) The Metamoran Fusion Dance's Performance Check at Expert, where the one you dance with is your Partner (fusion-dance.mjs
+# danceDifficulty) - a Size Category apart, one more.
+allow sync.danceExpert;
 # (2) Your Partner's Power Up or Transformation, within your Melee Range: the same, out of sequence, offered to you on its
 # card - once an Encounter, counted when taken (chat.mjs superiorSyncOffers).
 allow sync.followPower;

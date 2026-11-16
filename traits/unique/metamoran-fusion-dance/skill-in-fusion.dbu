@@ -1,0 +1,16 @@
+id: skill-in-fusion
+name: Skill in Fusion
+advancement: true
+prerequisite: 4+ Skill Ranks in Performance
+tpCost: 5
+# "You may target any Character with the Metamoran Fusion Dance, regardless of their Size Category and Power Level" - neither asked
+# of whom you target; nor that they be an Ally ("any Character").
+danceAnyone: true
+source: Core Rule
+description: >
+  The Metamoran Fusion Dance at any Character, whatever their Size Category and Power Level.
+text: >
+  Skill in Fusion: You’re so skilled at the art of Fusion that you are able to fuse with almost anyone.
+  –Prerequisites: 4+ Skill Ranks in Performance
+  –TP Cost: 5
+  –Effect: You may target any Character with the Metamoran Fusion Dance, regardless of their Size Category and Power Level.

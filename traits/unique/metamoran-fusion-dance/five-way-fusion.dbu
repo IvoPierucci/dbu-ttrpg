@@ -1,0 +1,18 @@
+id: five-way-fusion
+name: Five-Way Fusion
+advancement: true
+prerequisite: N/A
+tpCost: 30
+# "You may target 4 Allies instead ... within a Large Sphere AoE (centered on you)" - ticked in its window, who is inside the table's;
+# then "all Characters combine using the Maxi Fusion Fusion Method immediately without making a Performance Skill Check".
+danceFive: true
+source: Core Rule
+description: >
+  The Metamoran Fusion Dance at 4 Allies within a Large Sphere around you: no answer, no Power Level asked, no Check - the five
+  combine by the Maxi Fusion Method at once.
+text: >
+  Five-Way Fusion: Combining the full power of 5 different warriors, you fuse into the ultimate powerhouse.
+  –Prerequisites: N/A
+  –TP Cost: 30
+  –Effect: Instead of targeting a single Ally through the effects of the Metamoran Fusion Dance, you may target 4 Allies instead. Those Allies may be within a Large Sphere AoE (centered on you) instead of being within your Melee Range.
+  If you target 4 Allies with the Metamoran Fusion Dance, the other Characters do not need to also target you with the Metamoran Fusion Dance, can have a different Power Level than you, and all Characters combine using the Maxi Fusion Fusion Method immediately without making a Performance Skill Check.

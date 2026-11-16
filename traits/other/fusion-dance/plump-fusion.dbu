@@ -1,0 +1,20 @@
+id: plump-fusion
+name: Plump Fusion
+# The Metamoran Fusion Dance with one Check made and one failed, its 1d4 a 2~4: given as the Fusion is fused (fusion-make.mjs), never
+# picked by hand; gone as it is fused again any other way.
+fusionDance: plump
+description: >
+  A Fusion of the Metamoran Fusion Dance gone halfway wrong: no Fusion Modifiers, no Transformation, Signature Technique or Unique
+  Ability, its Agility Modifier halved.
+text: >
+  One Succeeds, One Fails: Both Characters combine using the Metamorese Fusion Method but roll a 1d4, if the result is 2~4 the Fusion becomes Plump, and if your result is a 1, the Fusion becomes Frail. Both Plump and Frail Fusions are in their Normal State, cannot possess Fusion Modifiers, and cannot use the Transformation Maneuver, Signature Technique Maneuver or any Unique Abilities. Additionally, Plump Fusions have their Agility Modifier halved, and Frail Fusions have their Agility, Tenacity, Force and Magic Modifiers halved.
+
+---
+
+# "In their Normal State" - the table's, till Transformations are built. "Cannot possess Fusion Modifiers": none asked as it is fused,
+# and none chosen on its Fusion tab (fusion-make.mjs).
+[passive]
+forbid transformations;
+forbid signatureTechniques;
+forbid uniqueAbilities;
+agility.mod *= 0.5;

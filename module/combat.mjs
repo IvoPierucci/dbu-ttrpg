@@ -467,6 +467,8 @@ async function beginTurn(actor) {
   if (actor.getFlag?.("dbu-ttrpg", "noCounterUntilTurn")) await actor.unsetFlag("dbu-ttrpg", "noCounterUntilTurn");
   // Lock On's Target: "until the start of your next turn" - this one; its start may pick another.
   if (actor.getFlag?.("dbu-ttrpg", "lockOn")) await actor.unsetFlag("dbu-ttrpg", "lockOn");
+  // The Metamoran Fusion Dance's target: "until the start of your next turn" - this one (fusion-dance.mjs).
+  if (actor.getFlag?.("dbu-ttrpg", "fusionDance")) await actor.unsetFlag("dbu-ttrpg", "fusionDance");
 
   // Fired before anything is decided, because something may skip the turn as it begins
   // rather than for as long as it lasts - the Determined State ends and costs you the
@@ -999,6 +1001,8 @@ export async function endEncounterFor(actor) {
     "system.resources": replaceObject(keptResources(actor.system.resources)),
     // Wild Child's access to its Pseudo-Bestial Traits, with it.
     "flags.dbu-ttrpg.-=pseudoAccess": null,
+    // The Metamoran Fusion Dance's target (fusion-dance.mjs).
+    "flags.dbu-ttrpg.-=fusionDance": null,
     "system.defeatsEscaped": 0,
     "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
     // The next Encounter is a different one, and begins for them again.

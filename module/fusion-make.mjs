@@ -338,6 +338,8 @@ export async function applyFusion(fusion, plan, first) {
     "system.fusion.powerLevel": plan.powerLevel,
     "system.fusion.minion": plan.minion,
     "system.fusion.masters": plan.masters,
+    // The Metamoran Fusion Dance's Plump or Frail - none, fused any other way.
+    "system.fusion.dance": plan.dance ?? "",
     "system.fusion.tpGained": combinationTP(plan.bT, { noFusedTechnique: kept.noFusedTechnique, dominant: modifiers.includes("dominant-personality") }),
     "system.race": plan.lead?.race ?? "",
     "system.subrace": plan.lead?.subrace ?? "",
@@ -349,7 +351,7 @@ export async function applyFusion(fusion, plan, first) {
   }
   await fusion.update(update);
   // Its Method Trait and its Fusion Modifiers, as Traits of its own.
-  await syncFusionTraits(fusion, plan.method, modifiers, balanced);
+  await syncFusionTraits(fusion, plan.method, modifiers, balanced, plan.dance ?? "");
   // "A Fusion is a completely new Character and thus has all of their Life and Ki Points" - but 1 above Bruised's line where every
   // Fused Character was below Injured's.
   const lifeMax = Number(fusion.system.life?.max) || 0;
@@ -481,9 +483,11 @@ async function askModifiers(actors, method, { current = [], balanced = [], racia
  * Its Method Trait and its Fusion Modifiers, as Traits of its own: those no longer had taken away, the rest made - Balanced Fusion's
  * with its two Attributes written in, made again where they changed.
  */
-export async function syncFusionTraits(fusion, method, modifiers = [], balanced = []) {
+export async function syncFusionTraits(fusion, method, modifiers = [], balanced = [], dance = fusion?.system?.fusion?.dance ?? "") {
   const { getTrait } = await import("./effects/traits.mjs");
-  const wanted = [FUSION_METHODS[method]?.trait, ...modifiers].filter(id => id && getTrait(id));
+  // And the Metamoran Fusion Dance's Plump or Frail (traits/other/fusion-dance/).
+  const danceTrait = ({ plump: "plump-fusion", frail: "frail-fusion" })[dance] ?? "";
+  const wanted = [FUSION_METHODS[method]?.trait, ...modifiers, danceTrait].filter(id => id && getTrait(id));
   const balancedKey = balanced.join(",");
   const had = Array.from(fusion.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.[FUSION_TRAIT]);
   const stale = had.filter(item => { const id = item.flags["dbu-ttrpg"].sourceId;
@@ -513,6 +517,10 @@ export async function chooseModifiers(fusion) {
   const had = fusion.system.fusion?.fused ?? [];
   const actors = had.map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
   if (!actors.length || (actors.length < had.length)) return ui.notifications.warn(`${fusion.name}: its Fused Characters are needed to see their Prerequisites.`);
+  // The Metamoran Fusion Dance's Plump or Frail: "cannot possess Fusion Modifiers".
+  if (fusion.system.fusion?.dance) {
+    return ui.notifications.warn(`${fusion.name} is a ${(fusion.system.fusion.dance === "frail") ? "Frail" : "Plump"} Fusion: it cannot possess Fusion Modifiers.`);
+  }
   const method = fusion.system.fusion?.method ?? "";
   const racialCount = Array.from(fusion.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.[FUSED_RACIAL]).length;
   const asked = await askModifiers(actors, method, { current: fusion.system.fusion?.modifiers ?? [],
@@ -862,7 +870,7 @@ export async function askFusedTechnique(fusion) {
 }
 
 /** Fused, by whoever may - the GM making the Actor for a player who may not (chat.mjs relay). */
-async function fuse(actors, method, name, fusion = null) {
+async function fuse(actors, method, name, fusion = null, { dance = "" } = {}) {
   const existing = fusion ?? existingFusion(actors.map(actor => actor.uuid), method);
   // Said before anything is asked, not after.
   if (existing && !existing.isOwner) return ui.notifications.warn(`${existing.name} is not yours to fuse.`);
@@ -876,14 +884,17 @@ async function fuse(actors, method, name, fusion = null) {
   // Its Fusion Modifiers: chosen the first time; fused again, "you may change 1".
   const kept = existing?.system?.fusion ?? {};
   const racialCount = first ? racial.length : Array.from(existing.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.[FUSED_RACIAL]).length;
-  const modifiers = await askModifiers(actors, method, { current: first ? [] : (kept.modifiers ?? []), balanced: kept.balanced ?? [],
-    racialCount, repeating: !first });
+  // A Plump or Frail one of the Metamoran Fusion Dance "cannot possess Fusion Modifiers": none asked.
+  const modifiers = dance ? { modifiers: [], balanced: [] } : await askModifiers(actors, method, { current: first ? [] : (kept.modifiers ?? []),
+    balanced: kept.balanced ?? [], racialCount, repeating: !first });
   if (modifiers === null) return null;
   // A Talent more than one of them has, with different choices: whose the Fusion keeps (the user's).
   const talentPicks = await askTalentChoices(actors, existing);
   if (talentPicks === null) return null;
   const plan = fusionPlan(actors, method, { modifiers: modifiers.modifiers, talentPicks });
   plan.balanced = modifiers.balanced;
+  // Plump or Frail - or neither, fused any other way.
+  plan.dance = dance;
   // In place of the Fused Characters' Apparel, the Method's.
   plan.items = await methodItems(actors, method, plan.items);
   if (plan.items === null) return null;
@@ -905,8 +916,11 @@ async function fuse(actors, method, name, fusion = null) {
   return requestMakeFusion(plan, name);
 }
 
-/** Fused by an effect that names with whom and how - Tuffle Fusion (2)'s Parasitic Fusion: asked first, then as any Fuse. */
-export async function fuseTogether(actors, method) {
+/**
+ * Fused by an effect that names with whom and how - Tuffle Fusion (2)'s Parasitic Fusion, the Metamoran Fusion Dance's Metamorese (its
+ * `dance`: Plump or Frail) and Five-Way Fusion's Maxi: asked first, then as any Fuse.
+ */
+export async function fuseTogether(actors, method, { dance = "" } = {}) {
   const all = actors.filter(Boolean);
   if (all.some(isFusion)) return ui.notifications.warn("A Fusion cannot be a Fused Character for another Fusion.");
   const existing = existingFusion(all.map(actor => actor.uuid), method);
@@ -915,7 +929,7 @@ export async function fuseTogether(actors, method) {
     content: `<p>${all.map(actor => foundry.utils.escapeHTML(actor.name)).join(" and ")}: ${existing
       ? `fuse again into ${foundry.utils.escapeHTML(existing.name)}?` : "make their Fusion?"}</p>`, rejectClose: false }).catch(() => false);
   if (!ok) return null;
-  return fuse(all, method, all.map(actor => actor.name).join(" + "), existing);
+  return fuse(all, method, all.map(actor => actor.name).join(" + "), existing, { dance });
 }
 
 /** The Settings tab's Fuse: this Character and the ones picked, by the Method picked - a new Fusion, or theirs fused again. */
