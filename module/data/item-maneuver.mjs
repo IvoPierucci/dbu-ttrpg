@@ -621,6 +621,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         fullPower: new fields.BooleanField({ required: true, initial: false }),
         /** A Ki Point Cost per Tier the Technique has as listed, whatever its build makes of it - High Power Rush's 7(T). 0 for none. */
         fixedKiPerTier: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        /** Ki Points per Tier taken off its Ki Point Cost - a Fused Technique's "Reduce the Ki Point Cost ... by 4(T)". 0 for none. */
+        kiPerTierOff: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /**
          * TP this Technique does not take from the character - Power Level 1's "20 TP to spend on
          * one Signature Technique". Its TP, its cap and its KP are unchanged: only what the

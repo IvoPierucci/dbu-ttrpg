@@ -59,6 +59,8 @@ export function signatureOf(item) {
     // Nameless Horde (4)'s 'Full Power' Techniques: given, no Technique Points (full-power.mjs) - and one's Ki Point Cost as listed.
     fullPower: Boolean(sig.fullPower),
     fixedKiPerTier: Math.max(0, Number(sig.fixedKiPerTier) || 0),
+    // A Fused Technique's 4(T) off its Ki Point Cost (fusion-make.mjs).
+    kiPerTierOff: Math.max(0, Number(sig.kiPerTierOff) || 0),
     // Inherited Creativity's: made for the Combat Encounter alone - no Technique Points, no Disadvantages.
     encounterOnly: Boolean(item?.flags?.["dbu-ttrpg"]?.encounterTechnique),
     freeTP: Math.max(0, Math.floor(Number(sig.freeTP) || 0)),
@@ -230,7 +232,9 @@ export function techniqueKiPerTier(sig, slots = null) {
   if (Number(sig?.fixedKiPerTier) > 0) return Number(sig.fixedKiPerTier) - profileKiPerTier(sig.profile);
   const x = Math.ceil(techniqueTP(sig, slots) / 5);
   const own = Math.max(0, x - (4 * ranksOf(sig, "efficiency")) + (4 * ranksOf(sig, "inefficiency")));
-  return own + (sig.superProfile ? superProfileKiPerTier(sig.superProfile, sig.secondProfile) : 0);
+  // A Fused Technique's "Reduce the Ki Point Cost of the base Signature Technique by 4(T)" - never below its Profile's.
+  return Math.max(0, own + (sig.superProfile ? superProfileKiPerTier(sig.superProfile, sig.secondProfile) : 0)
+    - (Number(sig.kiPerTierOff) || 0));
 }
 
 /** The Profile's own listed price per Tier, for the sheet. */

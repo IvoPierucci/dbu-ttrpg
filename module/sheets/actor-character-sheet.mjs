@@ -619,6 +619,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       editImage: DBUCharacterSheet._onEditImage,
       fuseAgain: DBUCharacterSheet._onFuseAgain,
       fuseWith: DBUCharacterSheet._onFuseWith,
+      fusedTechnique: DBUCharacterSheet._onFusedTechnique,
       openFused: DBUCharacterSheet._onOpenFused,
       connectRemoteVehicle: DBUCharacterSheet._onConnectRemoteVehicle,
       remotePilot: DBUCharacterSheet._onRemotePilot
@@ -2446,7 +2447,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Neither a Copied one nor a Genetic Donor's (Genetic Catalogue) is paid for with your TP.
     // Nor a Fusion's, taken from its Fused Characters: they come Free (the user's).
     const built = items.filter(isBuiltTechnique).filter(item => !item.getFlag?.("dbu-ttrpg", "copied") && !item.getFlag?.("dbu-ttrpg", "genetic")
-      && !item.getFlag?.("dbu-ttrpg", "fusedCopy"))
+      && !item.getFlag?.("dbu-ttrpg", "fusedCopy") && !item.getFlag?.("dbu-ttrpg", "fusedTechnique"))
       .map(signatureOfTechnique);
     // Nor Nameless Horde (4)'s 'Full Power' ones, given rather than made.
     const counted = built.filter(sig => !sig.fromTransformation && !sig.fullPower);
@@ -5683,6 +5684,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** A Fused Character's sheet, opened from a Fusion's tab. */
   static _onOpenFused(event, target) {
     return fromUuidSync(target.dataset.uuid ?? "")?.sheet?.render(true);
+  }
+
+  /** A Fusion's Fused Technique made - its guided window - or none for 5(bT) more Technique Points (fusion-make.mjs). */
+  static async _onFusedTechnique() {
+    if (!this.isEditable) return;
+    const { askFusedTechnique } = await import("../fusion-make.mjs");
+    return askFusedTechnique(this.actor);
   }
 
   /** Settings' Fuse: this Character and others, by a Fusion Method - a new Fusion, or theirs fused again (fusion-make.mjs). */

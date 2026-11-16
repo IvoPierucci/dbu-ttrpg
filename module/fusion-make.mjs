@@ -323,6 +323,133 @@ async function askRacialTraits(actors) {
   return choices.filter(each => picked.includes(each.key));
 }
 
+// --- The Fused Technique ---------------------------------------------------------------------------------------------------------
+//
+// "At creation, Fusions gain an Ultimate Signature Technique known as a Fused Technique": two Signature Techniques of different Fused
+// Characters, one the base - a copy, "remove all Disadvantages" - with the other's Advantages it qualifies for ("You may choose to
+// ignore the TP Limit"), a Super Profile (Complete Annihilation, a 'Super' one that lists the base's Profile, or Multi-Profile with the
+// other's), "Reduce the Ki Point Cost ... by 4(T)", renamed. Or none: "You may choose not to create a Fused Technique to gain an
+// additional 5(bT) Technique Points instead." A guided window (the user's).
+
+/** The flag the Fused Technique carries: kept as the Fusion is fused again, none of its Technique Points spent on it. */
+export const FUSED_TECHNIQUE = "fusedTechnique";
+
+/** A Fusion's copies of its Fused Characters' Signature Techniques, with whose each was. */
+export function fusedTechniques(fusion) {
+  return Array.from(fusion?.items ?? []).filter(item => (item.type === "maneuver") && item.flags?.["dbu-ttrpg"]?.[FUSED_COPY]
+    && (item.system?.tags ?? []).includes("signature") && !item.system?.signatureTechnique)
+    .map(item => ({ item, from: item.flags["dbu-ttrpg"][FUSED_FROM] ?? "" }));
+}
+
+/** The Super Profiles a Fused Technique may take, by its base's Profile: Complete Annihilation, its 'Super' one, Multi-Profile. */
+export function fusedSuperProfiles(baseProfile, superProfiles) {
+  return Object.entries(superProfiles).filter(([id, entry]) => (id === "complete-annihilation") || (id === "multi-profile")
+    || (/super/i.test(entry.label) && (entry.prerequisite === `profile:${baseProfile}`)))
+    .map(([value, entry]) => ({ value, label: entry.label }));
+}
+
+/**
+ * The Fused Technique's data, from its base and the other: the base copied with no Disadvantage, the other's Advantages picked added
+ * (ranks summed, no more than the most it may have), an Ultimate with its Super Profile, 4(T) off its Ki Point Cost, named.
+ *
+ * @param {object} base      the base Technique's Item
+ * @param {object} other     the other Technique's Item
+ * @param {object} choice    { advantages: [ids], superProfile, name }
+ * @param {object} lookups   { featureDef(id), maxRanks(def) }
+ */
+export function buildFusedTechnique(base, other, { advantages = [], superProfile = "", name = "" } = {}, lookups) {
+  const data = base.toObject();
+  delete data._id;
+  const sig = data.system.signature ?? {};
+  const advantage = id => lookups.featureDef(id)?.owner !== "disadvantages";
+  const features = (sig.features ?? []).filter(entry => advantage(entry.id)).map(entry => ({ ...entry }));
+  for (const entry of (other.system?.signature?.features ?? []).filter(each => advantages.includes(each.id) && advantage(each.id))) {
+    const had = features.find(each => each.id === entry.id);
+    const most = lookups.maxRanks(lookups.featureDef(entry.id));
+    if (had) had.ranks = Math.min(most, (Number(had.ranks) || 1) + (Number(entry.ranks) || 1));
+    else features.push({ ...entry });
+  }
+  data.system.signature = { ...sig, features, level: "ultimate", superProfile,
+    secondProfile: (superProfile === "multi-profile") ? (other.system?.signature?.profile ?? "") : "", kiPerTierOff: 4 };
+  data.name = String(name || "").trim() || `${base.name} (Fused)`;
+  const own = { ...(data.flags?.["dbu-ttrpg"] ?? {}) };
+  delete own[FUSED_COPY];
+  delete own[FUSED_FROM];
+  data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...own, [FUSED_TECHNIQUE]: true } };
+  return data;
+}
+
+/** Its Technique Points written again: 10(bT), 15(bT) with no Fused Technique, Dominant Personality's double. */
+async function rewriteTP(fusion, noFusedTechnique) {
+  const lead = leadFused(fusion.system.fusion?.fused ?? []);
+  return combinationTP(lead ? baseTierFor(lead.powerLevel) : 1,
+    { noFusedTechnique, dominant: (fusion.system.fusion?.modifiers ?? []).includes("dominant-personality") });
+}
+
+/** The guided window: which two, which the base, which Advantages, which Super Profile, its name - or none. */
+export async function askFusedTechnique(fusion) {
+  if (!fusion?.isOwner) return null;
+  const { featureDef, maxRanks } = await import("./technique.mjs");
+  const { SUPER_PROFILES } = await import("./maneuvers.mjs");
+  const escape = foundry.utils.escapeHTML;
+  const all = fusedTechniques(fusion);
+  const sources = new Set(all.map(each => each.from));
+  const none = async () => {
+    await fusion.update({ "system.fusion.noFusedTechnique": true, "system.fusion.fusedTechnique": "",
+      "system.fusion.tpGained": await rewriteTP(fusion, true) });
+    ui.notifications.info(`${fusion.name}: no Fused Technique - 5(bT) more Technique Points.`);
+    return null;
+  };
+  const options = all.map(each => `<option value="${each.item.id}">${escape(each.item.name)} (${escape(fromUuidSync(each.from)?.name ?? "?")})</option>`).join("");
+  const first = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${fusion.name}: Fused Technique` },
+    content: (sources.size >= 2)
+      ? `<p class="dbu-respond-hint">"Select 2 Signature Techniques, each one must be from a different Fused Character" - one the base.</p>
+        <label class="dbu-wager"><span>Base</span><select name="base">${options}</select></label>
+        <label class="dbu-wager"><span>The other</span><select name="other">${options}</select></label>`
+      : "<p>It needs Signature Techniques of two different Fused Characters: none to make.</p>",
+    buttons: [
+      ...((sources.size >= 2) ? [{ action: "next", label: "Next", default: true,
+        callback: (event, button) => ({ base: button.form.elements.base.value, other: button.form.elements.other.value }) }] : []),
+      { action: "none", label: "No Fused Technique (+5(bT) TP)" },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  }).catch(() => null);
+  if (first === "none") return none();
+  if (!first || (typeof first !== "object")) return null;
+  const base = all.find(each => each.item.id === first.base);
+  const other = all.find(each => each.item.id === first.other);
+  if (!base || !other || (base.from === other.from)) {
+    ui.notifications.warn("The two must be of different Fused Characters.");
+    return null;
+  }
+  const extra = (other.item.system?.signature?.features ?? []).filter(entry => featureDef(entry.id)?.owner !== "disadvantages");
+  const supers = fusedSuperProfiles(base.item.system?.signature?.profile ?? "", SUPER_PROFILES);
+  const second = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${fusion.name}: Fused Technique` },
+    content: `<p class="dbu-respond-hint">${escape(base.item.name)}, with no Disadvantage, and of ${escape(other.item.name)}'s Advantages:</p>
+      <div class="dbu-picks">${extra.map(entry => `<label class="dbu-pick"><input type="checkbox" name="adv" value="${entry.id}" checked/> ${
+        escape(featureDef(entry.id)?.name ?? entry.id)}${(Number(entry.ranks) > 1) ? ` (${entry.ranks} ranks)` : ""}</label>`).join("") || "<p>None.</p>"}</div>
+      <label class="dbu-wager"><span>Super Profile</span><select name="super">${supers.map(entry =>
+        `<option value="${entry.value}">${escape(entry.label)}</option>`).join("")}</select></label>
+      <label class="dbu-wager"><span>Its name</span><input type="text" name="name" value="${escape(base.item.name)}"/></label>
+      <p class="dbu-respond-hint">An Ultimate Signature Technique, 4(T) off its Ki Point Cost. The TP Limit may be ignored.</p>`,
+    buttons: [{ action: "make", label: "Make it", default: true, callback: (event, button) => ({
+      advantages: Array.from(button.form.querySelectorAll('input[name="adv"]:checked')).map(input => input.value),
+      superProfile: button.form.elements.super.value, name: button.form.elements.name.value }) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  }).catch(() => null);
+  if (!second || (typeof second !== "object")) return null;
+  const data = buildFusedTechnique(base.item, other.item, second, { featureDef, maxRanks });
+  const old = fusion.system.fusion?.fusedTechnique ? fusion.items.get(fusion.system.fusion.fusedTechnique) : null;
+  if (old) await old.delete();
+  const [made] = await fusion.createEmbeddedDocuments("Item", [data]);
+  await fusion.update({ "system.fusion.fusedTechnique": made?.id ?? "", "system.fusion.noFusedTechnique": false,
+    "system.fusion.tpGained": await rewriteTP(fusion, false) });
+  return made;
+}
+
 /** Fused, by whoever may - the GM making the Actor for a player who may not (chat.mjs relay). */
 async function fuse(actors, method, name, fusion = null) {
   const existing = fusion ?? existingFusion(actors.map(actor => actor.uuid), method);
@@ -337,9 +464,15 @@ async function fuse(actors, method, name, fusion = null) {
     if (!existing.isOwner) return ui.notifications.warn(`${existing.name} is not yours to fuse.`);
     await applyFusion(existing, plan, first);
     ui.notifications.info(`${existing.name}: ${first ? "fused" : "fused again - recalculated from its Fused Characters"}.`);
+    // "At creation, Fusions gain ... a Fused Technique" - asked now; fused again, it keeps its own.
+    if (first) await askFusedTechnique(existing);
     return existing;
   }
-  if (game.user.isGM || game.user.can?.("ACTOR_CREATE")) return createFusion(plan, name);
+  if (game.user.isGM || game.user.can?.("ACTOR_CREATE")) {
+    const made = await createFusion(plan, name);
+    if (made) await askFusedTechnique(made);
+    return made;
+  }
   if (!game.users.activeGM) return ui.notifications.warn("A GM must be connected to make the Fusion.");
   const { requestMakeFusion } = await import("./chat.mjs");
   return requestMakeFusion(plan, name);

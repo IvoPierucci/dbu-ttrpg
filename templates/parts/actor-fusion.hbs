@@ -73,7 +73,9 @@
     {{else if f.tp.none}}
     <p class="dbu-vehicle-empty">No Fused Technique: 5(bT) more Technique Points.</p>
     {{else}}
-    <p class="dbu-vehicle-empty">No Fused Technique yet.</p>
+    <div class="dbu-fusion-row"><span class="dbu-fusion-name dbu-vehicle-empty">No Fused Technique yet.</span>
+      {{#if @root.editable}}{{#if f.hasFused}}<button type="button" class="dbu-vehicle-add" data-action="fusedTechnique"
+              data-tooltip="Two Signature Techniques of different Fused Characters made one - or none, for 5(bT) more Technique Points">Create</button>{{/if}}{{/if}}</div>
     {{/if}}
   </div>
 

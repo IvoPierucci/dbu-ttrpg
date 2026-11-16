@@ -265,7 +265,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
         || (actor?.system?.effects?.slots?.[profile.accessSlot] === true))
       .map(([value, profile]) => ({ value, label: `${profile.label} (${profile.kiCostPerTier ?? 0}(T))`,
         chosen: value === sig.profile }));
-    const dramatic = sig.level === "dramatic";
+    // A Fused Technique (fusion-make.mjs) keeps its Super Profile though it is an Ultimate: "Apply ... Super Profile".
+    const dramatic = (sig.level === "dramatic") || Boolean(this.item.getFlag?.("dbu-ttrpg", "fusedTechnique"));
     // Both lists are always drawn, closed where they do not apply, so nothing on the tab moves when
     // the Level or the Super Profile changes.
     const superProfiles = Object.entries(SUPER_PROFILES).map(([value, entry]) => ({ value, label: entry.label,
@@ -567,7 +568,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       if (now.profile && now.foundation && !(PROFILES[now.profile]?.foundations ?? []).includes(now.foundation)) {
         foundry.utils.setProperty(submitData, "system.signature.profile", "");
       }
-      if (now.level !== "dramatic") {
+      if ((now.level !== "dramatic") && !this.item.getFlag?.("dbu-ttrpg", "fusedTechnique")) {
         foundry.utils.setProperty(submitData, "system.signature.superProfile", "");
         foundry.utils.setProperty(submitData, "system.signature.secondProfile", "");
       }
