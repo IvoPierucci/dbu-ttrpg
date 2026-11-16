@@ -1,0 +1,30 @@
+id: maximum-metamorese
+name: Maximum Metamorese
+# The Maxi Fusion's Method Trait: given as a Fusion is fused by that Method (fusion-make.mjs), never picked by hand.
+fusionMethod: maxi
+# (1)'s 2 Actions, held through the Encounter it begins - Maxi Fusion's Round Limit is 1, its splitting the table's.
+resource: maximetamorese
+resourceMax: 1
+resourceInternal: true
+description: >
+  Pushing the power of Metamorese Fusion to its absolute limit, you become unstoppable, but only for a brief time.
+text: >
+  Maximum Metamorese: Pushing the power of Metamorese Fusion to its absolute limit, you become unstoppable, but only for a brief time.
+  (1)-[Automatic/Start of Combat Encounter]: Gain 2 Actions. Then, you may use the Transformation Maneuver as an Out-of-Sequence Maneuver to enter the Ultra Fusion Legendary Form (see — Ultra Fusion).
+  (2)-[Automatic/Start of Combat Encounter]: Instead of gaining the Apparel of the Fused Characters, this Fusion gains and equips the Metamoran Clothing (see — Metamorese Fusion Method). The Metamoran Clothing gains the Divine Apparel Special Apparel Quality.
+  (3)-[Passive]: You automatically succeed on any and all Stress Tests.
+
+---
+
+[passive]
+# (1) Its 2 Actions.
+if (hasResource("maximetamorese")) {
+    actions.standard += 2;
+}
+# (1) Then the Ultra Fusion Legendary Form, out of sequence: waits on the Transformations, not built yet.
+# (2) The Metamoran Clothing, with Divine Apparel, made and worn as the Fusion is fused (fusion-make.mjs).
+# (3) Read where the Stress Test is rolled (chat.mjs postTransformation).
+allow stress.autoSucceed;
+
+[automatic/start-of-encounter, effect 1]
+maximetamorese.stacks += 1;

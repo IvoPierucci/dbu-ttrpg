@@ -1,0 +1,22 @@
+id: synergistic-fusion
+name: Synergistic Fusion
+# A Fusion Modifier: chosen as a Fusion is fused (fusion-make.mjs), never picked by hand. Its Prerequisite is shown there, never enforced.
+fusionModifier: true
+description: >
+  Your Fused Characters are so synchronized that you are able to tap into even greater latent power dwelling deep within you.
+text: >
+  Synergistic Fusion: Your Fused Characters are so synchronized that you are able to tap into even greater latent power dwelling deep within you.
+  (1)-[Prerequisite]: Your Fused Characters had 2+1(bT) or more Talents that were the same.
+  (2)-[Passive]: Increase your Attribute Modifiers (AG/FO/TE/MA) by 1(T).
+  (3)-[Passive]: Increase your Power Level by 3 (see — Fusion Power Level). Recalculate your Fusion’s base Tier of Power, Life Points, Ki Points, and Capacity.
+
+---
+
+[passive]
+# (2)
+agility.mod += 1(T);
+force.mod += 1(T);
+tenacity.mod += 1(T);
+magic.mod += 1(T);
+# (3) Read where the Fusion Power Level is worked out (fusion.mjs fusionPowerLevel) - its base Tier of Power, Life, Ki and Capacity
+# from it.

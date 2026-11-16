@@ -24,7 +24,7 @@
   <div class="dbu-fusion-panel">
     <h3 class="dbu-side-title">Fusion Method
       <span class="panel-note">
-        <select name="system.fusion.method" {{#unless @root.editable}}disabled{{/unless}}>
+        <select name="system.fusion.method" {{#unless @root.editable}}disabled{{/unless}}{{#if f.hasFused}} disabled data-tooltip="Chosen as it is fused"{{/if}}>
           {{#each f.methods as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
         </select>
         {{#if f.method}}<span class="dbu-fusion-tag">{{#if f.method.temporary}}Temporary &middot; {{f.method.rounds}} Round{{#unless (eq f.method.rounds 1)}}s{{/unless}}{{else}}Lasting{{/if}} &middot; {{f.method.fusedSaid}} Fused</span>{{/if}}
@@ -37,9 +37,12 @@
   </div>
 
   <div class="dbu-fusion-panel">
-    <h3 class="dbu-side-title">Fusion Modifiers <span class="panel-note">{{f.modifiers.chosen.length}} of {{f.modifiers.allowed}}</span></h3>
+    <h3 class="dbu-side-title">Fusion Modifiers <span class="panel-note">{{f.modifiers.chosen.length}} of {{f.modifiers.allowed}}
+      {{#if @root.editable}}{{#if f.hasFused}}<button type="button" class="dbu-vehicle-add" data-action="fusionModifiers"
+              data-tooltip="Each Prerequisite shown met or not - never refused">Choose</button>{{/if}}{{/if}}</span></h3>
     {{#each f.modifiers.chosen as |modifier|}}
-    <div class="dbu-fusion-row"><span class="dbu-fusion-name">{{modifier.name}}</span></div>
+    <div class="dbu-fusion-row"><span class="dbu-fusion-name">{{modifier.name}}</span>{{#if modifier.balanced}}<span class="dbu-vehicle-note">{{modifier.balanced}}</span>{{/if}}
+      <span class="dbu-vehicle-note">on the Traits tab</span></div>
     {{else}}
     <p class="dbu-vehicle-empty">None chosen.</p>
     {{/each}}

@@ -955,6 +955,11 @@ export async function endEncounterFor(actor) {
     const { setCondition } = await import("./conditions.mjs");
     await setCondition(actor, "from-the-stars-mark", 0);
   }
+  // Merged Tuffle (1)'s, with the Encounter.
+  if ((Number(actor.system.conditions?.["merged-tuffle-mark"]) || 0) > 0) {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "merged-tuffle-mark", 0);
+  }
   // All-Out Start (2)'s, with the Encounter.
   if (actor.getFlag?.("dbu-ttrpg", "allOutUntil")) {
     const { setCondition } = await import("./conditions.mjs");

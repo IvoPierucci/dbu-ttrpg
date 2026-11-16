@@ -1,0 +1,20 @@
+id: merged-tuffle-second-effect
+name: 2nd effect of Merged Tuffle
+type: standard
+actionCost: 1
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+surge: true
+surgeKind: healing
+fromTrait: merged-tuffle
+fromEffect: 2
+source: Core Rule
+description: >
+  Merged Tuffle's second effect, as a Maneuver: a Healing Surge for 1 Action.
+text: >
+  (2)-[1/Round]: As a Standard Action with an Action Cost of 1 Action, you may use a Healing Surge.
+
+---
+
+# Namekian Genes (2)'s shape: owned by every character, in the list only while Merged Tuffle is had (`fromTrait`).

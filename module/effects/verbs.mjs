@@ -296,6 +296,24 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Jump Start (2): your turn now, your Initiative above everyone's for this Round (chat.mjs jumpStart)."
   },
+  gainKarma: {
+    args: [1, 1],
+    doc: "Gain that many Karma Points - never past the most a Character may hold (Metamoran Style (5); karma.mjs gainKarma)."
+  },
+  oneActionOutOfSequence: {
+    args: [0, 0],
+    doc: "A Maneuver of yours with an Action Cost of 1 Action, picked, out of sequence (Metamoran Style (4); fusion-traits.mjs)."
+  },
+  bioFusionGrow: {
+    args: [0, 0],
+    doc: "Bio-Fusion (1): asked, the base Size Category 1 above the largest among the Fused Characters - or 2, with 3+ of them "
+       + "(fusion-traits.mjs)."
+  },
+  mergedTuffleForgo: {
+    args: [0, 0],
+    doc: "Merged Tuffle (1): asked, the Fused Characters' Apparel taken off for Combat Rolls and Damage Reduction 2(bT) "
+       + "(fusion-traits.mjs)."
+  },
   allOutTransform: {
     args: [0, 0],
     doc: "All-Out Start (1): the Transformation out of sequence (chat.mjs allOutTransform)."

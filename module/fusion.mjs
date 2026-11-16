@@ -138,7 +138,9 @@ export function fusionContext(actor, lookups) {
       ...Object.entries(FUSION_METHODS).map(([value, each]) => ({ value, label: each.label, selected: value === fusion.method }))],
     method: method ? { ...method, temporary: method.type === "temporary", traitName: lookups.trait(method.trait)?.name ?? "",
       fusedSaid: (method.fused[0] === method.fused[1]) ? String(method.fused[0]) : `${method.fused[0]}~${method.fused[1]}` } : null,
-    modifiers: { allowed: modifiersAllowed(fusion.method), chosen: (fusion.modifiers ?? []).map(id => ({ id, name: lookups.trait(id)?.name ?? id })) },
+    modifiers: { allowed: modifiersAllowed(fusion.method), chosen: (fusion.modifiers ?? []).map(id => ({ id, name: lookups.trait(id)?.name ?? id,
+      // Balanced Fusion's 'Balanced Attributes'.
+      balanced: (id === "balanced-fusion") ? (fusion.balanced ?? []).map(key => key.charAt(0).toUpperCase() + key.slice(1)).join(", ") : "" })) },
     power: {
       powerLevel: Number(fusion.powerLevel) || 1,
       bT: lead ? baseTierFor(lead.powerLevel) : 1,

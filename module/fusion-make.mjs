@@ -9,7 +9,7 @@
 
 import DBUCharacterData from "./data/actor-character.mjs";
 import { isCharacter, isFusion, isMinion } from "./actor-types.mjs";
-import { FUSION_METHODS, baseTierFor, fusionPowerLevel, leadFused } from "./fusion.mjs";
+import { FUSION_METHODS, baseTierFor, fusionPowerLevel, leadFused, modifiersAllowed } from "./fusion.mjs";
 import { isVillainous } from "./racial.mjs";
 
 /** The flags an Item copied onto a Fusion carries: taken again as it is fused again; its Racial Traits, chosen once and kept. */
@@ -156,6 +156,7 @@ export function fusionPlan(actors, method, { modifiers = [] } = {}) {
   const allMinions = fused.length > 0 && fused.every(each => each.minion);
   return {
     method,
+    modifiers: [...modifiers],
     fused,
     scores: highestScores(actors),
     ranks: highestRanks(actors),
@@ -208,10 +209,13 @@ export async function applyFusion(fusion, plan, first) {
   const items = [...plan.items, ...(first ? (plan.racial ?? []) : [])];
   if (items.length) await fusion.createEmbeddedDocuments("Item", items);
   const kept = fusion.system.fusion ?? {};
-  const modifiers = kept.modifiers ?? [];
+  const modifiers = plan.modifiers ?? kept.modifiers ?? [];
+  const balanced = plan.balanced ?? kept.balanced ?? [];
   const update = {
     "system.fusion.fused": plan.fused,
     "system.fusion.method": plan.method,
+    "system.fusion.modifiers": modifiers,
+    "system.fusion.balanced": balanced,
     "system.fusion.scores": plan.scores,
     "system.fusion.ranks": plan.ranks,
     "system.fusion.races": plan.races,
@@ -228,6 +232,8 @@ export async function applyFusion(fusion, plan, first) {
     update["system.alignment"] = plan.lead?.alignment ?? 0;
   }
   await fusion.update(update);
+  // Its Method Trait and its Fusion Modifiers, as Traits of its own.
+  await syncFusionTraits(fusion, plan.method, modifiers, balanced);
   // "A Fusion is a completely new Character and thus has all of their Life and Ki Points" - but 1 above Bruised's line where every
   // Fused Character was below Injured's.
   const lifeMax = Number(fusion.system.life?.max) || 0;
@@ -235,6 +241,175 @@ export async function applyFusion(fusion, plan, first) {
   await fusion.update({ "system.life.value": plan.allBelowInjured ? Math.min(lifeMax, bruisedLine + 1) : lifeMax,
     "system.ki.value": Number(fusion.system.ki?.max) || 0 });
   return fusion;
+}
+
+// --- Fusion Methods & Modifiers -------------------------------------------------------------------------------------------------
+//
+// "Fusion Methods grant additional Traits known as Method Traits" and "Fusion Modifiers are gained upon a Fusion being created ...
+// Temporary. You can select up to 2 Fusion Modifiers that your Fusion meets the Prerequisite of. Lasting. You can select a Fusion
+// Modifier" - files of their own (traits/other/fusion-method/, fusion-modifier/), given to it as Traits as it is fused. Picked in a
+// window as it is fused, each Prerequisite shown met or not, never refused (the user's); fused again, "you may change 1 Fusion
+// Modifier", said where more are.
+
+/** The Fusion Modifiers, in the page's order. */
+export const FUSION_MODIFIERS = Object.freeze(["balanced-fusion", "dominant-personality", "enhanced-fusion", "fused-transformation",
+  "power-of-friendship", "shared-heritage", "synergistic-fusion", "the-mightiest-fusion"]);
+
+/** The flag a Fusion's Method Trait and Fusion Modifiers carry - kept as it is fused again, changed with them. */
+export const FUSION_TRAIT = "fusionTrait";
+
+const ATTRIBUTES = Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS);
+const titled = key => key.charAt(0).toUpperCase() + key.slice(1);
+
+/** Balanced Fusion (1): "Attributes of which the Fused Character's Attribute Score for those respective Attributes is equal or within 1". */
+export function balancedAttributes(actors) {
+  return ATTRIBUTES.filter(key => {
+    const scores = actors.map(actor => Number(actor.system?.attributes?.[key]?.score) || 0);
+    return scores.length && ((Math.max(...scores) - Math.min(...scores)) <= 1);
+  });
+}
+
+/**
+ * Each Fusion Modifier's Prerequisite, of these Fused Characters: met (true), not (false), or the table's to say (null - what waits on
+ * the Transformations), and why.
+ *
+ * @param {Actor[]} actors
+ * @param {object} lookups  { racialCount, bT, partnerOf(actor), rivalOf(actor) }
+ */
+export function modifierChecks(actors, { racialCount = 0, bT = 1, partnerOf = () => null, rivalOf = () => null } = {}) {
+  const balanced = balancedAttributes(actors);
+  const levels = actors.map(actor => Number(actor.system?.powerLevel) || 0);
+  const top = Math.max(0, ...levels);
+  const nonMinions = actors.filter(actor => !isMinion(actor)).length;
+  const races = new Set(actors.map(actor => String(actor.system?.race ?? "")));
+  const talentSets = actors.map(actor => new Set(Array.from(actor.items ?? []).filter(item => item.type === "talent")
+    .map(item => item.flags?.["dbu-ttrpg"]?.sourceId || item.name)));
+  const shared = talentSets.length ? [...talentSets[0]].filter(key => talentSets.every(set => set.has(key))).length : 0;
+  const pair = (actors.length === 2) ? actors : null;
+  const mutual = ask => Boolean(pair) && (ask(pair[0])?.uuid === pair[1].uuid) && (ask(pair[1])?.uuid === pair[0].uuid);
+  const waits = { ok: null, why: "Waits on the Transformations: the table's to say." };
+  return {
+    "balanced-fusion": { ok: balanced.length >= 2,
+      why: balanced.length ? `Within 1 of each other: ${balanced.map(titled).join(", ")}.` : "No Attribute within 1 among them." },
+    "dominant-personality": { ok: (nonMinions === 1) || (levels.filter(level => level === top).length === 1),
+      why: (nonMinions === 1) ? "1 Non-Minion Fused Character." : `Highest Power Level ${top}${(levels.filter(level => level === top).length === 1) ? ", one alone" : ", shared"}.` },
+    "enhanced-fusion": waits,
+    "fused-transformation": waits,
+    "power-of-friendship": { ok: mutual(partnerOf), why: pair ? "Each the other's 'Partner' (Synchronized Combatant (1))." : "2 Fused Characters only." },
+    "shared-heritage": { ok: (races.size === 1) && (racialCount < 7),
+      why: `${(races.size === 1) ? "All of one Race" : `${races.size} Races`}; ${racialCount} Racial Trait${(racialCount === 1) ? "" : "s"} (less than 7).` },
+    "synergistic-fusion": { ok: shared >= (2 + bT), why: `${shared} Talent${(shared === 1) ? "" : "s"} the same; 2+1(bT) = ${2 + bT}.` },
+    "the-mightiest-fusion": { ok: mutual(rivalOf), why: pair ? "Each the other's 'Rival' (Chosen Rival (1))." : "2 Fused Characters only." }
+  };
+}
+
+/** What is off in a pick of Modifiers - said, never refused. */
+export function modifierWarnings(picked, method, { was = null } = {}) {
+  const said = [];
+  const allowed = modifiersAllowed(method);
+  if (picked.length > allowed) said.push(`${picked.length} Fusion Modifiers: ${FUSION_METHODS[method]?.type === "temporary" ? "up to 2 (Temporary)" : "1 (Lasting)"}.`);
+  if (Array.isArray(was)) {
+    const changed = picked.filter(id => !was.includes(id)).length + was.filter(id => !picked.includes(id)).length;
+    if (changed > 2) said.push("Repeating Fusions: \"you may change 1 Fusion Modifier\".");
+  }
+  return said;
+}
+
+/**
+ * The window: each Fusion Modifier, its Prerequisite met or not, and Balanced Fusion's two 'Balanced Attributes'.
+ *
+ * @returns {Promise<{ modifiers: string[], balanced: string[] }|null>}
+ */
+async function askModifiers(actors, method, { current = [], balanced = [], racialCount = 0, repeating = false } = {}) {
+  const { getTrait } = await import("./effects/traits.mjs");
+  const { partnerOf, rivalOf } = await import("./effects/conditions.mjs");
+  const lead = leadFused(actors.map(snapshotOf));
+  const checks = modifierChecks(actors, { racialCount, bT: lead ? baseTierFor(lead.powerLevel) : 1, partnerOf, rivalOf });
+  const escape = foundry.utils.escapeHTML;
+  const mark = ok => (ok === true) ? "&#10003;" : (ok === false) ? "&#10007;" : "?";
+  const even = balancedAttributes(actors);
+  const offered = even.length >= 2 ? even : ATTRIBUTES;
+  const select = (name, at) => `<select name="${name}">${offered.map(key => `<option value="${key}" ${((balanced[at] ?? offered[at]) === key) ? "selected" : ""}>${
+    titled(key)}</option>`).join("")}</select>`;
+  const rows = FUSION_MODIFIERS.map(id => `<label class="dbu-pick" data-tooltip="${escape(checks[id].why)}"><input type="checkbox" name="modifier" value="${id}"
+    ${current.includes(id) ? "checked" : ""}/> ${mark(checks[id].ok)} ${escape(getTrait(id)?.name ?? id)} <em class="dbu-pick-note">${escape(checks[id].why)}</em></label>`).join("");
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Fusion: Fusion Modifiers" },
+    content: `<p class="dbu-respond-hint">${escape(FUSION_METHODS[method]?.label ?? "")}: ${(modifiersAllowed(method) === 2) ? "up to 2" : "1"} Fusion
+      Modifier${(modifiersAllowed(method) === 2) ? "s" : ""} it meets the Prerequisite of${repeating ? " - fused again, \"you may change 1 Fusion Modifier\"" : ""}.</p>
+      <div class="dbu-picks">${rows}</div>
+      <label class="dbu-wager"><span>Balanced Attributes</span>${select("balanced1", 0)}${select("balanced2", 1)}</label>
+      <p class="dbu-vq-warning" data-modifier-warning></p>`,
+    buttons: [{ action: "ok", label: "Take these", default: true, callback: (event, button) => ({
+      modifiers: Array.from(button.form.querySelectorAll('input[name="modifier"]:checked')).map(input => input.value),
+      balanced: [button.form.elements.balanced1.value, button.form.elements.balanced2.value] }) },
+      { action: "cancel", label: "Cancel" }],
+    render: (event, dialog) => {
+      const root = dialog.element;
+      const say = () => {
+        const now = Array.from(root.querySelectorAll('input[name="modifier"]:checked')).map(input => input.value);
+        const line = root.querySelector("[data-modifier-warning]");
+        if (line) line.textContent = modifierWarnings(now, method, { was: repeating ? current : null }).join(" ");
+      };
+      for (const input of root.querySelectorAll('input[name="modifier"]')) input.addEventListener("change", say);
+      say();
+    },
+    rejectClose: false
+  }).catch(() => null);
+  if (!picked || (typeof picked !== "object")) return null;
+  if (picked.balanced[0] === picked.balanced[1]) picked.balanced = [picked.balanced[0], offered.find(key => key !== picked.balanced[0]) ?? picked.balanced[0]];
+  return picked;
+}
+
+/**
+ * Its Method Trait and its Fusion Modifiers, as Traits of its own: those no longer had taken away, the rest made - Balanced Fusion's
+ * with its two Attributes written in, made again where they changed.
+ */
+export async function syncFusionTraits(fusion, method, modifiers = [], balanced = []) {
+  const { getTrait } = await import("./effects/traits.mjs");
+  const wanted = [FUSION_METHODS[method]?.trait, ...modifiers].filter(id => id && getTrait(id));
+  const balancedKey = balanced.join(",");
+  const had = Array.from(fusion.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.[FUSION_TRAIT]);
+  const stale = had.filter(item => { const id = item.flags["dbu-ttrpg"].sourceId;
+    return !wanted.includes(id) || ((id === "balanced-fusion") && (item.flags["dbu-ttrpg"].balanced !== balancedKey)); });
+  if (stale.length) await fusion.deleteEmbeddedDocuments("Item", stale.map(item => item.id));
+  const keep = new Set(had.filter(item => !stale.includes(item)).map(item => item.flags["dbu-ttrpg"].sourceId));
+  const { racialItemFrom } = await import("./racial.mjs");
+  const made = [];
+  for (const id of wanted.filter(each => !keep.has(each))) {
+    const built = await racialItemFrom(getTrait(id), fusion);
+    if (!built) continue;
+    const data = built.data;
+    data.flags["dbu-ttrpg"][FUSION_TRAIT] = true;
+    if (id === "balanced-fusion") {
+      data.flags["dbu-ttrpg"].balanced = balancedKey;
+      data.system.script = String(data.system.script ?? "").replaceAll("$balanced1", balanced[0] ?? "agility")
+        .replaceAll("$balanced2", balanced[1] ?? "force");
+    }
+    made.push(data);
+  }
+  if (made.length) await fusion.createEmbeddedDocuments("Item", made);
+}
+
+/** The Fusion tab's Choose: its Fusion Modifiers picked again, and what they change worked out again. */
+export async function chooseModifiers(fusion) {
+  if (!fusion?.isOwner) return null;
+  const had = fusion.system.fusion?.fused ?? [];
+  const actors = had.map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  if (!actors.length || (actors.length < had.length)) return ui.notifications.warn(`${fusion.name}: its Fused Characters are needed to see their Prerequisites.`);
+  const method = fusion.system.fusion?.method ?? "";
+  const racialCount = Array.from(fusion.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.[FUSED_RACIAL]).length;
+  const asked = await askModifiers(actors, method, { current: fusion.system.fusion?.modifiers ?? [],
+    balanced: fusion.system.fusion?.balanced ?? [], racialCount });
+  if (!asked) return null;
+  const power = fusionPowerLevel(had, { synergistic: asked.modifiers.includes("synergistic-fusion") });
+  const lead = leadFused(had);
+  await fusion.update({ "system.fusion.modifiers": asked.modifiers, "system.fusion.balanced": asked.balanced,
+    "system.fusion.powerLevel": power.powerLevel,
+    "system.fusion.tpGained": combinationTP(lead ? baseTierFor(lead.powerLevel) : 1,
+      { noFusedTechnique: fusion.system.fusion?.noFusedTechnique, dominant: asked.modifiers.includes("dominant-personality") }) });
+  await syncFusionTraits(fusion, method, asked.modifiers, asked.balanced);
+  return asked;
 }
 
 /** A new Fusion's Actor, made with its owners - by the GM where the player may not make Actors (chat.mjs "makeFusion"). */
@@ -454,12 +629,21 @@ export async function askFusedTechnique(fusion) {
 async function fuse(actors, method, name, fusion = null) {
   const existing = fusion ?? existingFusion(actors.map(actor => actor.uuid), method);
   const first = !existing || !(existing.system.fusion?.fused ?? []).length;
-  const plan = fusionPlan(actors, method, { modifiers: existing?.system?.fusion?.modifiers ?? [] });
+  let racial = [];
   if (first) {
     const picked = await askRacialTraits(actors);
     if (picked === null) return null;
-    plan.racial = racialItems(actors, picked);
+    racial = racialItems(actors, picked);
   }
+  // Its Fusion Modifiers: chosen the first time; fused again, "you may change 1".
+  const kept = existing?.system?.fusion ?? {};
+  const racialCount = first ? racial.length : Array.from(existing.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.[FUSED_RACIAL]).length;
+  const modifiers = await askModifiers(actors, method, { current: first ? [] : (kept.modifiers ?? []), balanced: kept.balanced ?? [],
+    racialCount, repeating: !first });
+  if (modifiers === null) return null;
+  const plan = fusionPlan(actors, method, { modifiers: modifiers.modifiers });
+  plan.balanced = modifiers.balanced;
+  if (first) plan.racial = racial;
   if (existing) {
     if (!existing.isOwner) return ui.notifications.warn(`${existing.name} is not yours to fuse.`);
     await applyFusion(existing, plan, first);

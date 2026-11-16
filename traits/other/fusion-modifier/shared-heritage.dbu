@@ -1,0 +1,25 @@
+id: shared-heritage
+name: Shared Heritage
+# A Fusion Modifier: chosen as a Fusion is fused (fusion-make.mjs), never picked by hand. Its Prerequisite is shown there, never enforced.
+fusionModifier: true
+description: >
+  You are a paragon of your race, stronger than any other of your kind.
+text: >
+  Shared Heritage: You are a paragon of your race, stronger than any other of your kind.
+  (1)-[Prerequisite]: Your Fused Characters are all of the same Race and you have less than 7 Racial Traits.
+  (2)-[Passive]: Double your Racial Life Modifier.
+  (3)-[Passive]: Increase your Attribute Modifiers (AG/FO/TE/MA) by 1(T).
+  (4)-[Passive]: Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess.
+
+---
+
+[passive]
+# (2)
+racialLifeModifier *= 2;
+# (3)
+agility.mod += 1(T);
+force.mod += 1(T);
+tenacity.mod += 1(T);
+magic.mod += 1(T);
+# (4) For each Fused Character - counted where the Fused Technique's Wound Roll is made (chat.mjs).
+wound.fusedTechnique += 2(T);

@@ -620,6 +620,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       fuseAgain: DBUCharacterSheet._onFuseAgain,
       fuseWith: DBUCharacterSheet._onFuseWith,
       fusedTechnique: DBUCharacterSheet._onFusedTechnique,
+      fusionModifiers: DBUCharacterSheet._onFusionModifiers,
       openFused: DBUCharacterSheet._onOpenFused,
       connectRemoteVehicle: DBUCharacterSheet._onConnectRemoteVehicle,
       remotePilot: DBUCharacterSheet._onRemotePilot
@@ -5684,6 +5685,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** A Fused Character's sheet, opened from a Fusion's tab. */
   static _onOpenFused(event, target) {
     return fromUuidSync(target.dataset.uuid ?? "")?.sheet?.render(true);
+  }
+
+  /** A Fusion's Fusion Modifiers chosen again - their Prerequisites shown, never enforced (fusion-make.mjs). */
+  static async _onFusionModifiers() {
+    if (!this.isEditable) return;
+    const { chooseModifiers } = await import("../fusion-make.mjs");
+    return chooseModifiers(this.actor);
   }
 
   /** A Fusion's Fused Technique made - its guided window - or none for 5(bT) more Technique Points (fusion-make.mjs). */

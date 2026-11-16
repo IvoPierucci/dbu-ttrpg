@@ -531,6 +531,17 @@ const TABLE = [
     doc: "Large for the Defense Value from the Size Category and for Punching Up, at Enormous or larger (Giant Gene (2), (3))." },
   { key: "tremendous.size", phase: PHASES.TIER, kind: F, ops: ["allow", "set"],
     doc: "Large for the Defense Value from the Size Category, greater than Large; for an Opponent's Punching Up (Tremendous Lord (1))." },
+  // Fusion Methods & Modifiers (traits/other/fusion-method/, fusion-modifier/).
+  { key: "stress.autoSucceed", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Every Stress Test passed, whatever it rolls (Maximum Metamorese (3); chat.mjs postTransformation)." },
+  { key: "stress.rescue", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "A Stress Test failed may be passed instead, once a Combat Encounter (Divine Fusion Method (5); chat.mjs postTransformation)." },
+  { key: "wound.fusedTechnique", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Added to the Fused Technique's Wound Roll once for each Fused Character (Shared Heritage (4); chat.mjs twoWorldsWoundParts)." },
+  { key: "fusion.ownPartner", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Its own Partner (Power of Friendship (3); effects/conditions.mjs partnerOf)." },
+  { key: "fusion.ownRival", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Its own Rival (The Mightiest Fusion (3); effects/conditions.mjs rivalOf)." },
   // Employed for Size (Afterlife Officials (4)): the same.
   { key: "employed.sizeAsLarge", phase: PHASES.TIER, kind: F, ops: ["allow", "set"],
     doc: "Large for the Defense Value from the Size Category and for Punching Up, at Enormous or larger (Employed for Size's)." },

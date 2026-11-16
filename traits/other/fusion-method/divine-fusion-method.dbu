@@ -1,0 +1,34 @@
+id: divine-fusion-method
+name: Divine Fusion Method
+# The Potara Fusion's Method Trait: given as a Fusion is fused by that Method (fusion-make.mjs), never picked by hand.
+fusionMethod: potara
+# (2) Read where the Apparel Penalty is counted (gear.mjs ignoresApparelPenalties).
+ignoresApparelPenalties: true
+description: >
+  The divine nature of these earrings awakens the latent power within your component characters, creating a fount of unprecedented strength.
+text: >
+  Divine Fusion Method: The divine nature of these earrings awakens the latent power within your component characters, creating a fount of unprecedented strength.
+  (1)-[Automatic/Start of Combat Encounter]: Instead of gaining the Apparel of the Fused Characters, this Fusion gains a combined version of their Apparel. For each layer of Apparel worn by the Fused Characters, select one of those Apparel pieces and apply any qualifying Apparel Qualities from the other Fused Character’s Apparel of the same Layer.
+  (2)-[Passive]: Ignore all Apparel Penalties.
+  (3)-[Passive]: While you are in the God Ki Special State, increase your Wound Rolls and Damage Reduction by 2(bT).
+  (4)-[Passive]: Increase your Maximum Life Points by 2 for each Power Level reached.
+  (5)-[Triggered, 1/Encounter]: If you fail a Stress Test, you may choose to instead have succeeded at that Stress Test.
+  (6)-[Triggered/Start of Turn, 1/Encounter]: You may use the Transformation Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) The combined Apparel, made as the Fusion is fused - in place of the Fused Characters' (fusion-make.mjs).
+# (3)
+if (inState("god-ki")) {
+    wound += 2(bT);
+    damageReduction += 2(bT);
+}
+# (4) "for each Power Level reached" - its Fusion Power Level.
+life.perLevel += 2;
+# (5) A Stress Test failed: "Succeed instead" asked as it fails, once an Encounter (chat.mjs postTransformation).
+allow stress.rescue;
+
+# (6) On your turn's card, ticked - never Automatic: the Transformation out of sequence (chat.mjs allOutTransform).
+[triggered/start-of-turn, 1/encounter, outOfSequence, effect 6]
+allOutTransform();

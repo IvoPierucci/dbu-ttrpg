@@ -126,5 +126,19 @@ export async function spendKarma(actor, effect) {
   return cost;
 }
 
+/**
+ * "Gain N Karma Points" - an effect's (Metamoran Style (5)'s): never past the most a Character may hold; an Adversary has no most.
+ */
+export async function gainKarma(actor, amount) {
+  if (!actor || !(amount > 0)) return;
+  const { isAdversary } = await import("./actor-types.mjs");
+  const now = Number(actor.system.karma) || 0;
+  const most = isAdversary(actor) ? Infinity : DBUCharacterData.KARMA_MAX;
+  const then = Math.min(most, now + amount);
+  if (then === now) return void ui.notifications?.info(`${actor.name} holds as many Karma Points as they may.`);
+  await actor.update({ "system.karma": then });
+  ui.notifications?.info(`${actor.name}: ${then - now} Karma Point${((then - now) === 1) ? "" : "s"} gained.`);
+}
+
 /** The greatest a character can hold, so the sheet and the schema agree. */
 export const KARMA_MAX = DBUCharacterData.KARMA_MAX;

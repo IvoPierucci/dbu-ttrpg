@@ -621,6 +621,12 @@ export function platingBonusPerTier(actor, getTrait) {
     + customBuffAmounts(actor, "naturalArmor.apparelBonus").perTier;
 }
 
+/** Whether a Trait held says "Ignore all Apparel Penalties" - its file's `ignoresApparelPenalties` header (the Fusion Methods'). */
+export function ignoresApparelPenalties(items, getTrait) {
+  return Array.from(items ?? []).some(item => (item.type === "racial")
+    && Boolean(getTrait?.(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.ignoresApparelPenalties));
+}
+
 /**
  * The Apparel Penalty: "For each piece of Apparel you are wearing after the first, reduce your
  * Combat Rolls by 1/2 of your base Tier of Power (rounded up)." Counted over the pieces that
@@ -628,6 +634,8 @@ export function platingBonusPerTier(actor, getTrait) {
  * there at all for it, by the table's ruling - and the first of those is free.
  */
 export function apparelPenaltyPieces(items, getTrait) {
+  // Divine Fusion Method (2), Fusion of Fusion Methods (2): "Ignore all Apparel Penalties."
+  if (ignoresApparelPenalties(items, getTrait)) return 0;
   const top = topLayerPiece(items);
   // Integrated: "ignore any initial Penalties they would normally incur" - not counted.
   const counted = apparelQualitiesInEffect(items).filter(({ item }) => !isIntegrated(item)

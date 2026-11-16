@@ -1,0 +1,18 @@
+id: merged-tuffle-mark
+name: Merged Tuffle
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Merged Tuffle (1)'s, the Fused Characters' Apparel forgone as the Encounter began - gone with it
+# (fusion-traits.mjs mergedTuffleForgo; combat.mjs endEncounterFor).
+combatCondition: no
+source: Core Rule
+description: >
+  Merged Tuffle: the Fused Characters' Apparel forgone - Combat Rolls and Damage Reduction 2(bT) higher.
+text: >
+  Merged Tuffle (1): Instead of gaining the Fused Character's Apparel, you may choose to forgo it to increase your Combat Rolls and Damage Reduction by 2(bT).
+
+---
+
+[passive]
+combatRolls += 2(bT);
+damageReduction += 2(bT);

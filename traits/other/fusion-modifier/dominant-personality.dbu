@@ -1,0 +1,19 @@
+id: dominant-personality
+name: Dominant Personality
+# A Fusion Modifier: chosen as a Fusion is fused (fusion-make.mjs), never picked by hand. Its Prerequisite is shown there, never enforced.
+fusionModifier: true
+description: >
+  One of the Fused Characters remains in control of your Fusion.
+text: >
+  Dominant Personality: One of the Fused Characters remains in control of your Fusion.
+  (1)-[Prerequisite]: You only have 1 Non-Minion Fused Character, or 1 Fused Character has a higher Power Level than every other Fused Character
+  (2)-[Passive]: Double the amount of Technique Points gained through Character Combination.
+  (3)-[Passive]: Reduce the Ki Point Cost of all Attacking Maneuvers and Unique Abilities by 2(T).
+
+---
+
+[passive]
+# (2) Read where its Technique Points are worked out (fusion-make.mjs combinationTP).
+# (3)
+attack.kiCost -= 2(T);
+unique.kiCost -= 2(T);

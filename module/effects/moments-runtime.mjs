@@ -466,6 +466,10 @@ async function runVerb(actor, call, context) {
     case "lionsHeart": return (await import("../chat.mjs")).lionsHeart(actor);
     case "adamantineStrike": return (await import("../chat.mjs")).adamantineStrike(actor);
     case "allOutTransform": return (await import("../chat.mjs")).allOutTransform(actor);
+    case "gainKarma": return (await import("../karma.mjs")).gainKarma(actor, Number(args[0]) || 0);
+    case "oneActionOutOfSequence": return (await import("../fusion-traits.mjs")).oneActionOutOfSequence(actor);
+    case "bioFusionGrow": return (await import("../fusion-traits.mjs")).bioFusionGrow(actor);
+    case "mergedTuffleForgo": return (await import("../fusion-traits.mjs")).mergedTuffleForgo(actor);
     case "allOutStart": return (await import("../chat.mjs")).allOutStart(actor);
     case "jumpStartPower": return (await import("../chat.mjs")).jumpStartPower(actor);
     case "jumpStart": return (await import("../chat.mjs")).jumpStart(actor);

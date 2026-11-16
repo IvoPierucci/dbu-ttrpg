@@ -101,6 +101,8 @@ export function twinWielded(items) {
  * is your Partner." The world's Actor, or null.
  */
 export function partnerOf(actor) {
+  // Power of Friendship (3): "This Fusion is its own Partner."
+  if (actor?.system?.effects?.slots?.["fusion.ownPartner"] === true) return actor;
   return mutualChoice(actor, "synchronized-combatants");
 }
 
@@ -118,6 +120,8 @@ export function bondOf(actor) {
 
 /** Chosen Rival (1): "If that Character has also chosen you through this effect, that Character is your Rival." */
 export function rivalOf(actor) {
+  // The Mightiest Fusion (3): "This Fusion is its own Rival".
+  if (actor?.system?.effects?.slots?.["fusion.ownRival"] === true) return actor;
   return mutualChoice(actor, "chosen-rival");
 }
 

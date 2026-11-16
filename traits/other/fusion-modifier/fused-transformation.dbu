@@ -1,0 +1,20 @@
+id: fused-transformation
+name: Fused Transformation
+# A Fusion Modifier: chosen as a Fusion is fused (fusion-make.mjs), never picked by hand. Its Prerequisite is shown there, never enforced.
+fusionModifier: true
+description: >
+  Your disparate experiences with the transformations at your command allow you to empower those transformations shared by your Fused Characters.
+text: >
+  Fused Transformation: Your disparate experiences with the transformations at your command allow you to empower those transformations shared by your Fused Characters.
+  (1)-[Prerequisite, Ruling]: All of the Fused Characters have access to the same Form. Any Forms that are possessed by all Fused Characters are known as the ‘Fused Form’.
+  (2)-[Passive]: If your Fused Form is in a Transformation Line with higher Stages, you gain access to those higher Stages if your base Tier of Power meets their Tier of Power Requirement.
+  (3)-[Passive]: Ignore the reduction to your Stress Bonus from Health Threshold Penalties when attempting to enter a Fused Form or while in a Fused Form (but no other Transformation).
+  (4)-[Passive]: Increase the Attribute Modifier Bonus (AG/FO/TE/MA) of your Fused Form by an amount depending on the type of Form for that Transformation:
+
+  Alternate Form: 1(T)
+  Legendary Form: 2(T)
+
+---
+
+[passive]
+# (2), (3) and (4) wait on the Transformations - Forms, Lines, Stages - not built yet: the table's until then.

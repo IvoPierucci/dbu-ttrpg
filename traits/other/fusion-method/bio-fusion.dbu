@@ -1,0 +1,30 @@
+id: bio-fusion
+name: Bio-Fusion
+# The Merge Fusion's Method Trait: given as a Fusion is fused by that Method (fusion-make.mjs), never picked by hand.
+fusionMethod: merge
+# (1)'s Size Categories grown this Encounter.
+resource: biofusion
+resourceMax: 7
+resourceInternal: true
+description: >
+  Your increased mass grants you incredible strength and durability.
+text: >
+  Bio-Fusion: Your increased mass grants you incredible strength and durability.
+  (1)-[Triggered/Start of Combat Encounter]: You may increase your base Size Category to 1 Size Category larger than the largest base Size Category among your Fused Characters. If this Fusion has 3+ Fused Characters, this increase to base Size Category may be 2 Size Categories larger instead.
+  (2)-[Passive]: If your Size Category is greater than Large, for calculating the bonus/penalty to your Defense Value from your Size Category, and for the effects of your Opponent’s Punching Up, you are considered to be of the Large Size Category.
+
+---
+
+[passive]
+# (1) The Size Categories it grew by, for the Encounter.
+if (hasResource("biofusion")) {
+    size.steps += biofusion.stacks;
+}
+# (2) Tremendous Lord (1)'s same words: read where the Size's Defense Value is (actor-character.mjs) and where an Opponent's Punching
+# Up is (chat.mjs punchingUp).
+allow tremendous.size;
+
+# (1) Entering the Encounter, asked: 1 Size Category above the largest base Size Category among the Fused Characters - 1 or 2 with 3+
+# of them (fusion-traits.mjs bioFusionGrow).
+[triggered/start-of-encounter, effect 1]
+bioFusionGrow();

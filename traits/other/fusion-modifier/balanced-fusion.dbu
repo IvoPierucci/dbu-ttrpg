@@ -1,0 +1,23 @@
+id: balanced-fusion
+name: Balanced Fusion
+# A Fusion Modifier: chosen as a Fusion is fused (fusion-make.mjs), never picked by hand. Its Prerequisite is shown there, never enforced.
+# (1) Its 'Balanced Attributes', chosen there and written in for $balanced1 and $balanced2.
+fusionModifier: true
+description: >
+  Through specializing in different things, your Fused Characters even out to create a more balanced Fusion.
+text: >
+  Balanced Fusion: Through specializing in different things, your Fused Characters even out to create a more balanced Fusion.
+  (1)-[Prerequisite, Ruling]: Your Fused Characters must have 2+ Attributes of which the Fused Character’s Attribute Score for those respective Attributes is equal or within 1 of each other. Select 2 of those Attributes to become your ‘Balanced Attributes’.
+  (2)-[Passive]: Increase the Attribute Modifier of your Balanced Attributes by 2(bT).
+  (2)-[Triggered/Start of Turn]: Regain 3(bT) Ki Points.
+
+---
+
+[passive]
+# (2)
+$balanced1.mod += 2(bT);
+$balanced2.mod += 2(bT);
+
+# (2) "Regain 3(bT) Ki Points." Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 2]
+ki.value += 3(bT);

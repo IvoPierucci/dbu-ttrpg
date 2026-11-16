@@ -1,0 +1,20 @@
+id: fusion-of-fusion-methods
+name: Fusion of Fusion Methods
+# The EX Fusion's Method Trait: given as a Fusion is fused by that Method (fusion-make.mjs), never picked by hand.
+fusionMethod: ex
+# (2) Read where the Apparel Penalty is counted (gear.mjs ignoresApparelPenalties).
+ignoresApparelPenalties: true
+description: >
+  With the synchronous dance of the Metamorans and a unique accessory like the Potara Earrings, you are able to create a powerful, lasting new form.
+text: >
+  Fusion of Fusion Methods: With the synchronous dance of the Metamorans and a unique accessory like the Potara Earrings, you are able to create a powerful, lasting new form.
+  (1)-[Automatic/Start of Combat Encounter]: Instead of gaining the Apparel of the Fused Characters, this Fusion gains a combined version of their Apparel. For each layer of Apparel worn by the Fused Characters, select one of those Apparel pieces and apply any qualifying Apparel Qualities from the other Fused Character’s Apparel of the same Layer.
+  (2)-[Passive]: Ignore all Apparel Penalties.
+  (3)-[Passive]: Increase your Stress Bonus by 1.
+
+---
+
+[passive]
+# (1) The combined Apparel, made as the Fusion is fused - in place of the Fused Characters' (fusion-make.mjs).
+# (3)
+stressBonus += 1;

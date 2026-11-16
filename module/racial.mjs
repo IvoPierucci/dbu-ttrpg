@@ -493,8 +493,14 @@ export const OTHER_GROUPS = Object.freeze({
   vocation: "Vocation",
   bestial: "Bestial",
   monstrous: "Monstrous",
-  "pseudo-bestial": "Pseudo-Bestial · Wild Child"
+  "pseudo-bestial": "Pseudo-Bestial · Wild Child",
+  // A Fusion's: given as it is fused (fusion-make.mjs), never picked.
+  "fusion-method": "Fusion Method",
+  "fusion-modifier": "Fusion Modifier"
 });
+
+/** The Other Traits' groups given by fusing - its Method Trait, its Fusion Modifiers - never offered in the picker. */
+export const FUSION_TRAIT_GROUPS = Object.freeze(["fusion-method", "fusion-modifier"]);
 
 /**
  * Bestial Limit: "You cannot benefit from more than 4 Bestial Traits at any one time. If an effect would give you access to an
@@ -598,7 +604,8 @@ export function otherTraitsInOrder() {
   const rank = trait => { const at = Object.keys(OTHER_GROUPS).indexOf(trait.owner ?? ""); return (at < 0) ? 99 : at; };
   // Not an Option of one - Bestial Build's Thick Hide - which is chosen as that one is gained.
   // Nor a Villainous Trait: an Adversary's, offered on its own (villainousTraitFiles).
-  return traitsOfKind("other").filter(trait => !trait.optionOf && (trait.owner !== VILLAINOUS))
+  // Nor a Fusion's Method Trait or Fusion Modifier: given as it is fused (fusion-make.mjs).
+  return traitsOfKind("other").filter(trait => !trait.optionOf && (trait.owner !== VILLAINOUS) && !FUSION_TRAIT_GROUPS.includes(trait.owner))
     .sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
 }
 

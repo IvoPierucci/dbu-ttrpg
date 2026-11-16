@@ -34208,6 +34208,12 @@ function twoWorldsWoundParts(attacker, attack) {
   const parts = [];
   const signature = Number(slots["wound.signature"]?.add) || 0;
   if (signature && ((attack.technique && !attack.technique.borrowed) || customBuffBasicIsSignature(attacker.system, attack.maneuverId))) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
+  // Shared Heritage (4): "Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess."
+  const fusedWound = Number(slots["wound.fusedTechnique"]?.add) || 0;
+  const fusedCount = (attacker.system.fusion?.fused ?? []).length;
+  if (fusedWound && fusedCount && attacker.items?.get?.(attack.technique?.itemId ?? "")?.flags?.["dbu-ttrpg"]?.fusedTechnique) {
+    parts.push({ label: `${named("wound.fusedTechnique")} (Fused Technique, ${fusedCount} Fused)`, value: fusedWound * fusedCount });
+  }
   // Nameless Horde (1): "Attacking Maneuvers made through the Basic Attack Maneuver" - a 'Full Power' Technique's as well.
   const basic = Number(slots["wound.basicAttack"]?.add) || 0;
   if (basic && throughBasicAttack(attack)) parts.push({ label: `${named("wound.basicAttack")} (Basic Attack)`, value: basic });
@@ -39578,6 +39584,17 @@ export async function legendRealized(actor) {
  * Transformation ... If you fail, you suffer from Stress Exhaustion." Entering - and what entering does - is the
  * table's until Transformations exist; Stress Exhaustion is applied. The roll itself only to who may see it.
  */
+/** Divine Fusion Method (5): a Stress Test failed, passed instead - asked, once a Combat Encounter. Whether it was. */
+async function stressRescue(actor, name) {
+  if (actor?.system?.effects?.slots?.["stress.rescue"] !== true) return false;
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.(SCOPE, "stressRescue") === encounter) return false;
+  if ((await askPlayerChoice(actor, `${actor.name}: the Stress Test for ${name} failed`,
+    [{ value: "pass", label: "Succeed instead (Divine Fusion Method, 1/Encounter)" }, { value: "keep", label: "Keep the failure" }])) !== "pass") return false;
+  await actor.setFlag(SCOPE, "stressRescue", encounter);
+  return true;
+}
+
 export async function postTransformation(actor, maneuver, into, actionsSpent = 1) {
   const speaker = ChatMessage.getSpeaker({ actor });
   const said = String(maneuver.says ?? "").trim()
@@ -39592,9 +39609,13 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
   const formula = [DBUCharacterData.BASE_DIE, ...into.parts.map(part => `${part.value < 0 ? "-" : "+"} ${Math.abs(part.value)}`)]
     .join(" ");
   const roll = await new Roll(formula).evaluate();
+  // Maximum Metamorese (3): "You automatically succeed on any and all Stress Tests."
+  const automatic = actor.system.effects?.slots?.["stress.autoSucceed"] === true;
   await roll.toMessage({ speaker, whisper: whisperTo(actor),
-    flavor: `${into.name}: Stress Test - ${roll.total} against ${into.requirement}` });
-  if (roll.total >= into.requirement) {
+    flavor: `${into.name}: Stress Test - ${roll.total} against ${into.requirement}${automatic ? " - passed automatically (Maximum Metamorese)" : ""}` });
+  // Divine Fusion Method (5): "If you fail a Stress Test, you may choose to instead have succeeded at that Stress Test" - once an Encounter.
+  const rescued = !automatic && (roll.total < into.requirement) && await stressRescue(actor, into.name);
+  if (automatic || rescued || (roll.total >= into.requirement)) {
     const card = await ChatMessage.create({ speaker,
       content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(enters)}</div>` });
     if (into.form) await legendRealizedByForm(actor, into.name);

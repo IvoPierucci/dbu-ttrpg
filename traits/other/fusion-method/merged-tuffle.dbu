@@ -1,0 +1,20 @@
+id: merged-tuffle
+name: Merged Tuffle
+# The Parasitic Fusion's Method Trait: given as a Fusion is fused by that Method (fusion-make.mjs), never picked by hand.
+fusionMethod: parasitic
+description: >
+  The combination of your powers allows you to withstand punishment neither of your constituent characters could have shrugged off alone.
+text: >
+  Merged Tuffle: The combination of your powers allows you to withstand punishment neither of your constituent characters could have shrugged off alone.
+  (1)-[Triggered/Start of Combat Encounter]: Instead of gaining the Fused Character’s Apparel, you may choose to forgo it to increase your Combat Rolls and Damage Reduction by 2(bT).
+  (2)-[1/Round]: As a Standard Action with an Action Cost of 1 Action, you may use a Healing Surge.
+
+---
+
+[passive]
+# (1) Its Combat Rolls and Damage Reduction: Merged Tuffle's mark's, for the Encounter (conditions/merged-tuffle-mark.dbu).
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/merged-tuffle-second-effect.dbu).
+
+# (1) Entering the Encounter, asked: the Fused Characters' Apparel taken off for it (fusion-traits.mjs mergedTuffleForgo).
+[triggered/start-of-encounter, effect 1]
+mergedTuffleForgo();

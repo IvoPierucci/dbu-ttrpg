@@ -1,0 +1,19 @@
+id: the-mightiest-fusion
+name: The Mightiest Fusion
+# A Fusion Modifier: chosen as a Fusion is fused (fusion-make.mjs), never picked by hand. Its Prerequisite is shown there, never enforced.
+fusionModifier: true
+description: >
+  By knowing each other inside and out due to their intense rivalry, your Fused Characters are able to cover each others’ weaknesses, creating the strongest warrior possible.
+text: >
+  The Mightiest Fusion: By knowing each other inside and out due to their intense rivalry, your Fused Characters are able to cover each others’ weaknesses, creating the strongest warrior possible.
+  (1)-[Prerequisite]: This Fusion was created with 2 Fused Characters and those Fused Characters have declared the other Fused Character as their ‘Rival’ through the first effect of the Chosen Rival Talent.
+  (2)-[Passive]: Increase your Tier of Power by 1 (see — Breakthrough).
+  (3)-[Passive]: This Fusion is its own Rival, and benefits from the second and third effects of the Chosen Rival Talent.
+
+---
+
+[passive]
+# (2) "see - Breakthrough": never more than two above its base Tier.
+tierOfPower += 1;
+# (3) Its own Rival, wherever a Rival is asked for (effects/conditions.mjs rivalOf) - Chosen Rival's second and third effects with it.
+allow fusion.ownRival;
