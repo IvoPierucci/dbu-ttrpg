@@ -11,6 +11,7 @@ import { registerRacialHooks } from "./racial.mjs";
 import { registerIntegratedHooks } from "./integrated.mjs";
 import { registerNaturalArmorHooks } from "./natural-armor.mjs";
 import { registerAssimilationHooks } from "./assimilation.mjs";
+import { registerKiFusionHooks } from "./fusion-of-ki.mjs";
 import { registerTokenMarks } from "./token-marks.mjs";
 import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
 import DBUManeuverData from "./data/item-maneuver.mjs";
@@ -170,6 +171,7 @@ Hooks.once("init", () => {
   registerIntegratedHooks();
   registerNaturalArmorHooks();
   registerAssimilationHooks();
+  registerKiFusionHooks();
   // A Duplicate Minion's token crossed by its gray "DUPLICATE" band.
   registerTokenMarks();
   registerBreathHooks();
@@ -370,7 +372,9 @@ function conduitRefresh() {
   const actors = new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor));
   const everyone = [...actors].some(actor => Array.from(actor?.items ?? []).some(item => READ_BY_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)));
   for (const actor of actors) {
-    if (!actor || (!everyone && !Array.from(actor.items ?? []).some(item => READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)))) continue;
+    // The Fusion of Ki: beside your Linked Character (4), and their Attribute Scores (3) - read off them too.
+    if (!actor || (!everyone && !actor.getFlag?.("dbu-ttrpg", "fusionOfKi")
+      && !Array.from(actor.items ?? []).some(item => READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)))) continue;
     actor.reset();
     if (actor.sheet?.rendered) actor.sheet.render();
   }

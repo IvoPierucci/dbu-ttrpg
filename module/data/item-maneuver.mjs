@@ -116,6 +116,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       divineMovement: new fields.BooleanField({ required: true, initial: false }),
       /** Divine Roar: a Might Clash against everyone in a Destructive Sphere around you. */
       divineRoar: new fields.BooleanField({ required: true, initial: false }),
+      /** Energy Synchronize: your targeted Ally your Linked Character; both made each other theirs, the Fusion of Ki (fusion-of-ki.mjs). */
+      energySync: new fields.BooleanField({ required: true, initial: false }),
       /** God Bind: a Might Clash at an Opponent in your Melee Range; won, Pinned while kept. */
       godBind: new fields.BooleanField({ required: true, initial: false }),
       /** God Strike, and the Profile selected "upon gaining access" - asked at the first use, kept here. */

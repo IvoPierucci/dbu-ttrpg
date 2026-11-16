@@ -2773,6 +2773,7 @@ function makeDefinition(item) {
     godManeuver: item.system.godManeuver,
     divineMovement: item.system.divineMovement,
     divineRoar: item.system.divineRoar,
+    energySync: Boolean(item.system.energySync),
     godBind: item.system.godBind,
     encounterLimit: Number(item.system.encounterLimit) || 0,
     toss: item.system.toss,
@@ -4945,7 +4946,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
                                                     outOfSequence = false, targetUuid = "",
                                                     presetThrown = null, volleyball = null, meteor = "",
                                                     portal = false, combo = false, spiritSword = null,
-                                                    extraTargets = [], armedAs = "", extraCharges = 0 } = {}) {
+                                                    extraTargets = [], armedAs = "", extraCharges = 0,
+                                                    kiLinkTo = "" } = {}) {
   if (!actor || !maneuver) return false;
   // Expert Pilot (4): "[1/Round]: Use the Ride Maneuver as an Instant Maneuver" - asked first, as it changes what it is (vehicles.mjs).
   if (maneuver.id === "ride") maneuver = await rideAsInstant(actor, maneuver);
@@ -5677,6 +5679,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let meteorTargets = null;
   let healing = null;
   let dancing = null;
+  let syncing = null;
   let shocking = null;
   let illusioning = null;
   let smashing = null;
@@ -6245,6 +6248,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     if (maneuver.fusionDance) {
       dancing = await (await import("./fusion-dance.mjs")).askDance(actor, maneuver);
       if (!dancing) return false;
+    }
+
+    // Energy Synchronize: whom - the one answered from its card, your targeted Ally, or the one who made you theirs.
+    if (maneuver.energySync) {
+      syncing = await (await import("./fusion-of-ki.mjs")).askSync(actor, maneuver, { kiLinkTo });
+      if (!syncing) return false;
     }
 
     // God Meteor: "Every Character (except the user of this Unique Ability) within a Destructive Sphere AoE centered on
@@ -7168,6 +7177,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postHealing(actor, maneuver, healing)
     : (maneuver.fusionDance && dancing)
     ? await (await import("./fusion-dance.mjs")).postDance(actor, maneuver, dancing)
+    : (maneuver.energySync && syncing)
+    ? await (await import("./fusion-of-ki.mjs")).postSync(actor, maneuver, syncing)
     : (maneuver.meteor && meteorTargets)
     ? await (await import("./chat.mjs")).postMeteor(actor, maneuver, meteorTargets.uuids)
     : (maneuver.finishSign && finishing)
@@ -7992,6 +8003,7 @@ export function maneuverItemFrom(definition) {
       godManeuver: Boolean(definition.godManeuver),
       divineMovement: Boolean(definition.divineMovement),
       divineRoar: Boolean(definition.divineRoar),
+      energySync: Boolean(definition.energySync),
       godBind: Boolean(definition.godBind),
       godStrike: Boolean(definition.godStrike),
       godFinisher: Boolean(definition.godFinisher),

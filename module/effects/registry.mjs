@@ -18,6 +18,7 @@ import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { shelteredBy } from "../vehicle-crew.mjs";
 import { lightLevelOf } from "../light.mjs";
+import { attributeShareScript } from "../fusion-of-ki.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, categoryApplies, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
   topLayerPiece, wieldedWeapons, formScript, activeForm, buddiesOf, buddyScript,
@@ -206,6 +207,7 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
   entries.push(...drainPrograms(actor, report));
   entries.push(...karmaPrograms(report));
   entries.push(...statePrograms(actor, report));
+  entries.push(...kiFusionPrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
   entries.push(...battlefieldPrograms(actor, report));
   entries.push(...coverPrograms(actor, report));
@@ -526,6 +528,22 @@ function karmaPrograms(report) {
  * rather than unlocking a second effect worth +1(T), which is why the level travels with
  * the entry instead of being folded into the amounts.
  */
+/**
+ * Fusion of Ki (3): "Increase your Attribute Modifiers by 1/4 (rounded up) of the Attribute Scores of those same Attributes from your
+ * Linked Character" - read off them at every preparation, named after them in the hovers.
+ */
+function kiFusionPrograms(actor, report) {
+  const link = actor.getFlag?.("dbu-ttrpg", "fusionOfKi");
+  if (!link?.uuid || !((Number(actor.system?.states?.["fusion-of-ki"]) || 0) > 0)) return [];
+  const partner = globalThis.fromUuidSync?.(link.uuid) ?? null;
+  const script = attributeShareScript(partner);
+  if (!script) return [];
+  const { program, errors } = compile("state:fusion-of-ki:shares", { script }, message => report(`Fusion of Ki: ${message}`));
+  if (errors.length) return [];
+  return [{ program, priority: PRIORITY.state, sourceId: "state:fusion-of-ki:shares", sourceUuid: null,
+    sourceName: `Fusion of Ki (${partner?.name ?? link.name})`, level: 1, stacks: 1 }];
+}
+
 function statePrograms(actor, report) {
   const entries = [];
 

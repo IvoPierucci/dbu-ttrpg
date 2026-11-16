@@ -2798,6 +2798,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Or always, Power Battery's: "you always benefit from Ki Multiplier ... even when you are not in a Form".
     const kiMultiplied = this.debug.kiMultiplier || (this.effects?.slots?.["kiMultiplier.always"] === true);
     if (kiMultiplied) this.ki.max *= DBUCharacterData.KI_MULTIPLIER_KI;
+    // Fusion of Ki (1): "Until you leave this State, both Linked Characters use the Maximum Linked Ki Points ... for their Maximum
+    // Ki Point Pool" - the two summed as it was entered, kept on each (fusion-of-ki.mjs).
+    const kiLinked = this.parent?.getFlag?.("dbu-ttrpg", "fusionOfKi");
+    if (kiLinked && ((Number(this.states?.["fusion-of-ki"]) || 0) > 0) && (Number(kiLinked.max) > 0)) this.ki.max = Number(kiLinked.max);
 
     // Capacity: the ceiling on Ki spent within one Combat Round. Flat bonuses land
     // before the multiplier, so a doubling effect doubles them too.

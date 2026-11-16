@@ -590,6 +590,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "allyInAreaOfRule", "allyRuled",
   // On a Square adjacent to your Partner, an Ally (Synchronized Combatants').
   "besidePartner",
+  // On a Square adjacent to your Linked Character (the Fusion of Ki's).
+  "besideKiLink",
   // Two Weapons wielded or more of one Weapon Category (Twin Weapon Specialist's).
   "twinWeapons",
   // No Apparel worn; a piece of yours destroyed this Combat Encounter (Furious Flex's, Naturist's).

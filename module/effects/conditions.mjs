@@ -159,6 +159,13 @@ function besidePartner(self) {
   return besideChosen(self, partnerOf(self), { ally: true });
 }
 
+/** Fusion of Ki (4): "While you and your Linked Character are on adjacent Squares" - their tokens, side by side. */
+function besideKiLink(self) {
+  const link = self?.getFlag?.("dbu-ttrpg", "fusionOfKi");
+  const other = link?.uuid ? (globalThis.fromUuidSync?.(link.uuid) ?? null) : null;
+  return besideChosen(self, other);
+}
+
 /** Two tokens on Squares adjacent - one an Ally of the other, where asked. */
 function besideChosen(self, other, { ally = false } = {}) {
   const mine = self?.getActiveTokens?.(false, true)?.[0];
@@ -470,6 +477,7 @@ const PREDICATES = {
    * scene (allies.mjs).
    */
   besidePartner: scope => besidePartner(scope.data?.parent),
+  besideKiLink: scope => besideKiLink(scope.data?.parent),
   rivalOpponent: scope => rivalSide(scope.data?.parent) === "opponent",
   rivalAlly: scope => rivalSide(scope.data?.parent) === "ally",
   rivalOnlyAlly: scope => rivalOnlyAlly(scope.data?.parent),

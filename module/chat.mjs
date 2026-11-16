@@ -3,6 +3,7 @@ import { commandedNow, isCharacter, isMinion, isVehicle, typicalMinion } from ".
 import { calledShotShelter, vehicleDodgeOf, vehicleTargets } from "./vehicle-crew.mjs";
 import { hasRace, karmaAvailable, racesOf } from "./fusion.mjs";
 import { DANCE_CARD, DANCE_SIDE, danceFuse, danceMishap, danceOutcome, danceRoll, settleDanceSide } from "./fusion-dance.mjs";
+import { renderKiSync } from "./fusion-of-ki.mjs";
 import { staminaLeft, staminaToStay, thresholdLines } from "./adversary.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
@@ -266,6 +267,8 @@ function applyRequest(request) {
     // The Metamoran Fusion Dance's card: a side's Check, its 1d4, the Fusion made (fusion-dance.mjs) - its own flags only.
     case "fusionDance": return [DANCE_CARD, DANCE_SIDE.a, DANCE_SIDE.b].includes(request.flag)
       ? game.messages.get(request.messageId)?.setFlag(SCOPE, request.flag, request.value) : null;
+    // The Fusion of Ki entered or left: both Characters changed, which only the GM may (fusion-of-ki.mjs).
+    case "kiFusion": return runKiFusion(request.op, request.a, request.b);
     case "answerFor": return answerFor(fromUuidSync(request.actorUuid ?? ""), request.moment, request.context ?? {});
     case "uniqueClashWon": {
       const message = game.messages.get(request.messageId);
@@ -501,6 +504,24 @@ function renderArmsHit(message, html) {
       (Number(target.system.diminishingDefense) || 0) + target.system.diminishing.defense.perAttack });
   });
   (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/**
+ * The Fusion of Ki entered by two Characters, or left by one and so by both: carried out by the GM, who may change both - asked of
+ * them where this client is not theirs.
+ */
+async function runKiFusion(op, aUuid, bUuid) {
+  const { enterKiFusion, endKiFusion } = await import("./fusion-of-ki.mjs");
+  const a = fromUuidSync(aUuid ?? "");
+  if (op === "enter") return enterKiFusion(a, fromUuidSync(bUuid ?? ""));
+  if (op === "end") return endKiFusion(a);
+  return null;
+}
+
+export function requestKiFusion(op, aUuid, bUuid = "") {
+  if (game.user.isGM) return runKiFusion(op, aUuid, bUuid);
+  if (!game.users.activeGM) return void ui.notifications.warn("The Fusion of Ki needs a GM connected: both Characters change.");
+  game.socket.emit(CHANNEL, { type: "kiFusion", op, a: aUuid, b: bUuid });
 }
 
 export function requestActorUpdate(actor, changes) {
@@ -4446,6 +4467,7 @@ function onRenderChatMessage(message, html) {
   renderVolleyball(message, html);
   renderLifeforce(message, html);
   renderDance(message, html);
+  renderKiSync(message, html);
   renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
@@ -37663,8 +37685,10 @@ async function submitDuelWager(message, actor) {
   if (!side) return;
   const primary = duelParticipants(attack).find(entry => entry.uuid === actor.uuid)?.primary ?? false;
   // Teamwork (1): joined through the United Attack, twice the 1/10th.
-  const teamworked = !primary && (actor.system?.effects?.slots?.["united.doubleWager"] === true)
-    && [...(attack.duel.united ?? []), ...(attack.united ?? [])].some(entry => entry.uuid === actor.uuid);
+  // Fusion of Ki (5): joined your Linked Character's with its box ticked, "double the effects of ... Wager" too.
+  const joined = [...(attack.duel.united ?? []), ...(attack.united ?? [])].filter(entry => entry.uuid === actor.uuid);
+  const teamworked = !primary && (joined.length > 0)
+    && ((actor.system?.effects?.slots?.["united.doubleWager"] === true) || joined.some(entry => entry.kiFused));
   // Duel Wager: the two who roll may wager more.
   const raised = primary ? duelSideWager(attack, side) : [];
   const cap = duelWagerCap(actor, { primary, doubled: teamworked, bonus: raised.reduce((sum, row) => sum + row.value, 0) });

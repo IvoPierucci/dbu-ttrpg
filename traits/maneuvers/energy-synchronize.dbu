@@ -1,0 +1,29 @@
+id: energy-synchronize
+name: Energy Synchronize
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# A Special Maneuver: open where an effect grants it (`allow maneuver.energy-synchronize;` - which effect does, the user is finding).
+# Your targeted Ally - or the one who made you theirs, answering - your Linked Character till the Encounter ends (an actor flag,
+# fusion-of-ki.mjs postSync). Their answer is a button on its card for whoever plays them: 2 Standard Actions, then this
+# Maneuver out of sequence (answerSync). Both made each other theirs: the Fusion of Ki Special State for both, carried out by the
+# GM, who may change both (chat.mjs requestKiFusion).
+special: true
+energySync: true
+source: Core Rule
+description: >
+  Target an Ally: your Linked Character until the end of the Combat Encounter. Once both of you have used it on each other, the
+  two of you enter the Fusion of Ki Special State.
+text: >
+  Energy Synchronize Maneuver [1/Encounter]: You match and combine your life energy with a partner, allowing you to share your power.
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –Minions: N/A
+  –KP Cost: N/A
+  –Effect: Target an Ally; they become your Linked Character until the end of the Combat Encounter. In response, your Linked
+  Character can spend 2 Standard Actions to use the Energy Synchronize Maneuver if they have access to it as an Out-of-Sequence
+  Maneuver. Once both you and your Ally have used the Energy Synchronize Maneuver with each other as your Linked Characters, the
+  two of you enter the Fusion of Ki Special State for 3 Combat Rounds or until the Linked Ki Points are reduced to 0.

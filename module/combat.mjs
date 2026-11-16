@@ -985,6 +985,9 @@ export async function endEncounterFor(actor) {
   for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.finishTechnique)) {
     await item.update({ "system.unique.finishTechnique": "" });
   }
+  // The Fusion of Ki, with the Encounter its Linked Characters were for: left by both, half the Linked Ki Points each (fusion-of-ki.mjs) -
+  // before the Instant Recovery below reads the Ki Points.
+  if (actor.getFlag?.("dbu-ttrpg", "fusionOfKi")) await (await import("./chat.mjs")).requestKiFusion("end", actor.uuid);
   // Instant Recovery (Damage & Recovery): "After you have overcome a Combat Encounter ... regain 1/10th of your Maximum Life
   // Points and Ki Point Pool" - rounded down.
   const lifeNow = Number(actor.system.life?.value) || 0;
@@ -1003,6 +1006,8 @@ export async function endEncounterFor(actor) {
     "flags.dbu-ttrpg.-=pseudoAccess": null,
     // The Metamoran Fusion Dance's target (fusion-dance.mjs).
     "flags.dbu-ttrpg.-=fusionDance": null,
+    // Energy Synchronize: "your Linked Character until the end of the Combat Encounter" (fusion-of-ki.mjs).
+    "flags.dbu-ttrpg.-=kiLink": null,
     "system.defeatsEscaped": 0,
     "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
     // The next Encounter is a different one, and begins for them again.

@@ -226,6 +226,11 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   // once a Round, a box; adjacent, as every United Attack is.
   const relyOpen = !free && !syncOpen && !rageOpen && (joiner.system?.effects?.slots?.["teamReliance.freeUnited"] === true) && Boolean(leader)
     && (joiner.getFlag?.("dbu-ttrpg", "relianceUnitedRound") !== round);
+  // Fusion of Ki (5): "If you use the United Attack Maneuver in response to their Linked Character's Attacking Maneuver, double the
+  // effects of Additional Power and Wager" - Triggered, once a Round: a box.
+  const kiLink = joiner.getFlag?.("dbu-ttrpg", "fusionOfKi");
+  const kiFusedOpen = Boolean(leader) && (kiLink?.uuid === leader.uuid) && ((Number(joiner.system?.states?.["fusion-of-ki"]) || 0) > 0)
+    && (joiner.getFlag?.("dbu-ttrpg", "kiFusionUnitedRound") !== round);
   const refused = whyNotUnite(joiner, attack, attacker, { actionsLeft: (free || syncOpen || rageOpen || relyOpen) ? () => 1 : actionsLeft });
   if (refused) {
     ui.notifications.warn(refused);
@@ -254,8 +259,10 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   // Joining a Duel: the wager is the one each Duel Clash asks for, not one made now.
   const cap = duel ? 0 : unitedWagerCap(joiner);
   const teamwork = teamworkOpen(joiner);
-  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork, syncOpen, rageOpen, relyOpen });
+  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork, syncOpen, rageOpen, relyOpen,
+    kiFusedOpen });
   if (!answer) return null;
+  const kiFused = kiFusedOpen && Boolean(answer.kiFused);
 
   const choice = answer.itemId ? choices.find(entry => entry.technique.itemId === answer.itemId) : null;
   if (choice?.why) {
@@ -263,11 +270,15 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
     return null;
   }
   const cost = choice ? choice.cost : profileCost;
-  const wager = Math.max(0, Math.min(Number(answer.wager) || 0, cap));
+  const wager = Math.max(0, Math.min(Number(answer.wager) || 0, cap * (kiFused ? 2 : 1)));
 
   // What the Advantages it brings ask at declaration, answered by whoever brings them - before
   // anything is paid, so putting it away costs nothing.
   const bonus = unitedWoundBonus(joiner, attack.foundation);
+  if (kiFused) {
+    bonus.value *= 2;
+    bonus.modifier *= 2;
+  }
   const existing = [...(attack.technique?.features ?? attack.advantages ?? [])];
   const added = choice ? unitedAdditions(existing, answer.picked ?? {}, baseTier) : [];
   let answers = {};
@@ -290,6 +301,7 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   if (synced) await joiner.setFlag("dbu-ttrpg", "superiorUnitedEncounter", encounter);
   if (raged) await joiner.setFlag("dbu-ttrpg", "dragonRageRound", round);
   if (relied) await joiner.setFlag("dbu-ttrpg", "relianceUnitedRound", round);
+  if (kiFused) await joiner.setFlag("dbu-ttrpg", "kiFusionUnitedRound", round);
   await recordManeuverUse(joiner, united);
   // Teamwork (2)'s once a Round, spent.
   const teamworkBonus = (teamwork && answer.teamwork) ? Math.max(1, Number(joiner.system?.tierOfPower) || 1) : 0;
@@ -324,6 +336,8 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
     attributeLabel: (bonus.attribute === "magic") ? "Magic" : "Force",
     // Teamwork (2): their Strike and Wound, 1(T) of yours.
     ...(teamworkBonus ? { teamwork: teamworkBonus } : {}),
+    // Fusion of Ki (5): doubled - its Wager on each Duel Clash too (chat.mjs).
+    ...(kiFused ? { kiFused: true } : {}),
     advantages: added,
     answers,
     // Final Chance's Life, on the wager - not Ki, so not given back as Ki at a Duel's start.
@@ -333,7 +347,7 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
 
 /** The question: how they join, what they bring, what they wager. */
 async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork = false, syncOpen = false, rageOpen = false,
-  relyOpen = false }) {
+  relyOpen = false, kiFusedOpen = false }) {
   const ways = [
     `<label class="dbu-technique"><input type="radio" name="way" value="" checked/>
       <span class="dbu-technique-name">${escape(attack.profileLabel ?? "Same Profile")}</span>
@@ -362,8 +376,8 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, t
       <div class="dbu-technique-picker">${ways}</div>
       ${advantages ? `<p class="dbu-respond-hint dbu-list-label"
         data-tooltip="Only those of the Technique you use.">Advantages (up to ${baseTier} ranks)</p>${advantages}` : ""}
-      ${cap ? `<label class="dbu-wager"><span>Ki Wager (max ${cap})</span>
-        <input type="number" name="wager" value="0" min="0" max="${cap}"/></label>`
+      ${cap ? `<label class="dbu-wager"><span>Ki Wager (max ${cap}${kiFusedOpen ? `, ${cap * 2} with Fusion of Ki` : ""})</span>
+        <input type="number" name="wager" value="0" min="0" max="${cap * (kiFusedOpen ? 2 : 1)}"/></label>`
         : `<p class="dbu-respond-hint">In a Duel you wager on each Duel Clash instead.</p>`}
       ${teamwork ? `<label class="dbu-wager" data-tooltip="Their Strike and Wound Rolls 1(T) higher for this Attacking Maneuver. 1/Round.">
         <input type="checkbox" name="teamwork" checked/> <span>Teamwork</span></label>` : ""}
@@ -372,7 +386,9 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, t
       ${rageOpen ? `<label class="dbu-wager" data-tooltip="Dragon Lord's Rage: join a Studied Ally without spending an Action. 1/Round.">
         <input type="checkbox" name="raged"/> <span>No Action</span></label>` : ""}
       ${relyOpen ? `<label class="dbu-wager" data-tooltip="Team Reliance: join an adjacent Ally without spending an Action. 1/Round.">
-        <input type="checkbox" name="relied"/> <span>No Action</span></label>` : ""}`,
+        <input type="checkbox" name="relied"/> <span>No Action</span></label>` : ""}
+      ${kiFusedOpen ? `<label class="dbu-wager" data-tooltip="Fusion of Ki: joining your Linked Character's attack, Additional Power and the Wager doubled. 1/Round.">
+        <input type="checkbox" name="kiFused" checked/> <span>Fusion of Ki: double</span></label>` : ""}`,
     buttons: [
       { action: "confirm", label: "Join",
         callback: (event, button, dialog) => {
@@ -387,7 +403,8 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, t
             teamwork: Boolean(root.querySelector('input[name="teamwork"]')?.checked),
             synced: Boolean(root.querySelector('input[name="synced"]')?.checked),
             raged: Boolean(root.querySelector('input[name="raged"]')?.checked),
-            relied: Boolean(root.querySelector('input[name="relied"]')?.checked) };
+            relied: Boolean(root.querySelector('input[name="relied"]')?.checked),
+            kiFused: Boolean(root.querySelector('input[name="kiFused"]')?.checked) };
         } },
       { action: "cancel", label: "Cancel" }
     ],

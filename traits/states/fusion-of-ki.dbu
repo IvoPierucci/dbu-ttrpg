@@ -1,0 +1,54 @@
+id: fusion-of-ki
+name: Fusion of Ki
+kind: state
+# A Special State (the user's terminology): "You can only enter the Fusion of Ki State through the effects of the Energy
+# Synchronize Special Maneuver" - entered by it alone (fusion-of-ki.mjs), never offered on the sheet.
+specialState: true
+description: >
+  Two Linked Characters' energies combined: one Ki pool between them, the other's Attribute Scores feeding your Modifiers, and
+  Combat Rolls 1(T) higher side by side.
+text: >
+  The Fusion of Ki is a state of being with a concept similar to Fusion, but instead of combining two Characters, only their
+  energies are combined. Combining energies in such a manner is a last resort for most fighters, as it risks exhausting both
+  combatants. This is a very powerful technique that eliminates the weakness of Fusion (the reduction of allied combatants) while
+  benefiting from its increased power, albeit for a very limited time.
+
+  You can only enter the Fusion of Ki State through the effects of the Energy Synchronize Special Maneuver.
+
+  (1)-[Automatic/Fusion of Ki]: Add together the Maximum Ki Point Pool and current Ki Point Pool of both Linked Characters – these
+  are now known as the Maximum Linked Ki points and Linked Ki Points respectively. Until you leave this State, both Linked
+  Characters use the Maximum Linked Ki Points and Linked Ki Points for their Maximum Ki Point Pool and Ki Point Pool respectively.
+
+  (2)-[Permanent, Automatic]: Upon leaving this State, halve the Linked Ki Points. The Ki Point Pool of both Linked Characters
+  becomes equal to that number of Ki Points. Additionally, if either of the Linked Characters are in a Transformation, they must
+  make a Stress Test. If they fail the Stress Test, they gain the Stress Exhaustion Combat Condition until the end of their next turn.
+
+  (3)-[Passive]: Increase your Attribute Modifiers by 1/4 (rounded up) of the Attribute Scores of those same Attributes from your
+  Linked Character.
+
+  (4)-[Passive]: While you and your Linked Character are on adjacent Squares, increase your Combat Rolls by 1(T).
+
+  (5)-[Triggered, 1/Round]: If you use the United Attack Maneuver in response to their Linked Character’s Attacking Maneuver,
+  double the effects of Additional Power and Wager.
+
+  (6)-[Triggered/Fusion of Ki]: If your Linked Character is in the God Ki Special State and you are not, enter the God Ki Special
+  State while you are in the Fusion of Ki State.
+
+---
+
+# Entered for 3 Combat Rounds, the Round it is entered in the first - as Limited's Rounds count (the user's) - or till the Linked
+# Ki Points reach 0; left any other way too (Defeat, Stress Exhaustion, by hand), both leave it. All of it carried out by the GM,
+# who may change both Characters (fusion-of-ki.mjs).
+# (1) Both Pools summed as it is entered and kept on each (flag fusionOfKi): the Maximum read off it (actor-character.mjs), every
+#     change to one's Ki Points written on the other's.
+# (2) Left: half of the Linked Ki Points (rounded down) each. The Stress Test of one in a Transformation: said on its card -
+#     Transformations are not in this system yet.
+# (3) 1/4 of the Linked Character's Scores, rounded up, on your Modifiers - read off them (registry.mjs kiFusionPrograms).
+# (5) In the United Attack window: a box, once a Combat Round (united-attack.mjs).
+# (6) Automatic: entered with it, left with it.
+
+[passive]
+# (4) On a Square adjacent to your Linked Character's - read again as a token moves.
+if (besideKiLink) {
+    combatRolls += 1(T);
+}
