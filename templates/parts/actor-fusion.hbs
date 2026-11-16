@@ -28,7 +28,12 @@
           {{#each f.methods as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
         </select>
         {{#if f.method}}<span class="dbu-fusion-tag">{{#if f.method.temporary}}Temporary &middot; {{f.method.rounds}} Round{{#unless (eq f.method.rounds 1)}}s{{/unless}}{{else}}Lasting{{/if}} &middot; {{f.method.fusedSaid}} Fused</span>{{/if}}
-        {{#if f.dance}}<span class="dbu-fusion-tag" data-tooltip="The Metamoran Fusion Dance with one Check failed: no Fusion Modifiers, Transformation, Signature Technique or Unique Ability">{{f.dance}}</span>{{/if}}
+        {{#if f.danceable}}
+        <select data-fusion-dance {{#unless @root.editable}}disabled{{/unless}}
+          data-tooltip="Complete, or Plump or Frail - the Metamoran Fusion Dance with one Check failed: no Fusion Modifiers, Transformation, Signature Technique or Unique Ability">
+          {{#each f.dances as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
+        </select>
+        {{else if f.dance}}<span class="dbu-fusion-tag">{{f.dance}}</span>{{/if}}
       </span>
     </h3>
     {{#if f.method}}

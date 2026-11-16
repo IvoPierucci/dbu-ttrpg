@@ -153,8 +153,12 @@ export function fusionContext(actor, lookups) {
         karma: entry.minion ? null : (Number(now?.system?.karma) || 0) };
     }),
     hasFused: fused.length > 0,
-    // The Metamoran Fusion Dance gone wrong (fusion-dance.mjs): said beside its Method.
+    // A Metamorese Fusion's result (the user's): Complete, or the Metamoran Fusion Dance gone wrong - Plump or Frail (fusion-dance.mjs),
+    // a select beside its Method; by any other Method, said only if somehow set.
     dance: ({ plump: "Plump Fusion", frail: "Frail Fusion" })[fusion.dance] ?? "",
+    danceable: fusion.method === "metamorese",
+    dances: [["", "Complete"], ["plump", "Plump"], ["frail", "Frail"]]
+      .map(([value, label]) => ({ value, label, selected: value === (fusion.dance ?? "") })),
     methods: [{ value: "", label: "-", selected: !method },
       ...Object.entries(FUSION_METHODS).map(([value, each]) => ({ value, label: each.label, selected: value === fusion.method }))],
     method: method ? { ...method, temporary: method.type === "temporary", traitName: lookups.trait(method.trait)?.name ?? "",

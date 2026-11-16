@@ -21166,7 +21166,7 @@ function renderDance(message, html) {
   const said = document.createElement("div");
   said.className = "dbu-settled-note";
   said.textContent = (outcome === "none") ? "Both failed: nothing happens."
-    : `${(outcome === "both") ? "Both made" : "One made, one failed"}: the Metamorese Fusion Method${card.d4
+    : `${(outcome === "both") ? "Both made" : "One made, one failed"}: the Metamorese Fusion Method${(outcome === "both") ? " - Complete" : ""}${card.d4
       ? ` - 1d4: ${card.d4}, ${(danceMishap(card.d4) === "frail") ? "Frail" : "Plump"}` : ((outcome === "one") ? " - 1d4: Plump or Frail" : "")}${
       card.fused ? ` - ${card.fused}` : ""}.`;
   container.append(said);

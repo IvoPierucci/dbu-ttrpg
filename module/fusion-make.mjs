@@ -511,6 +511,31 @@ export async function syncFusionTraits(fusion, method, modifiers = [], balanced 
   if (made.length) await fusion.createEmbeddedDocuments("Item", made);
 }
 
+/**
+ * The Fusion tab's Metamorese result (the user's): Complete, Plump or Frail - set by hand as by the Metamoran Fusion Dance. Plump or
+ * Frail "cannot possess Fusion Modifiers": any it had taken off, and what they changed worked out again; Complete again, chosen anew.
+ */
+export async function setDance(fusion, dance) {
+  if (!fusion?.isOwner) return null;
+  const value = ["plump", "frail"].includes(dance) ? dance : "";
+  const kept = fusion.system.fusion ?? {};
+  const update = { "system.fusion.dance": value };
+  let modifiers = kept.modifiers ?? [];
+  let balanced = kept.balanced ?? [];
+  if (value && modifiers.length) {
+    modifiers = [];
+    balanced = [];
+    const had = kept.fused ?? [];
+    const lead = leadFused(had);
+    Object.assign(update, { "system.fusion.modifiers": [], "system.fusion.balanced": [],
+      "system.fusion.powerLevel": fusionPowerLevel(had, { synergistic: false }).powerLevel,
+      "system.fusion.tpGained": combinationTP(lead ? baseTierFor(lead.powerLevel) : 1, { noFusedTechnique: kept.noFusedTechnique, dominant: false }) });
+  }
+  await fusion.update(update);
+  await syncFusionTraits(fusion, kept.method ?? "", modifiers, balanced, value);
+  return value;
+}
+
 /** The Fusion tab's Choose: its Fusion Modifiers picked again, and what they change worked out again. */
 export async function chooseModifiers(fusion) {
   if (!fusion?.isOwner) return null;

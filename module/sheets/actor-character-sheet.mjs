@@ -3871,6 +3871,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       });
     }
 
+    // A Metamorese Fusion's result - Complete, Plump or Frail (the user's) - with its Trait and Fusion Modifiers (fusion-make.mjs setDance).
+    for (const select of this.element.querySelectorAll("select[data-fusion-dance]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        const { setDance } = await import("../fusion-make.mjs");
+        return setDance(this.actor, select.value);
+      });
+    }
+
     // A Duplicate's original, chosen (the user's): asked first, then copied onto it - its own Traits and the rest replaced.
     for (const select of this.element.querySelectorAll("[data-duplicate-of]")) {
       select.addEventListener("change", async event => {
