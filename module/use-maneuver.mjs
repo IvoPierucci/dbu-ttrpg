@@ -38,7 +38,7 @@ import {
   paidSince,
   godStrikeCost,
   squaresAway,
-  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotWeaponShape, whyNotAtMaster, whyNotCopyClone, whyNoMinionRoom, minionRoom,
+  whyNotAnotherAbsolute, whyNotMinionAttack, whyNotMinionManeuver, whyNotWeaponShape, whyNotAtMaster, whyNotCopyClone, whyNotCopyingFusion, whyNoMinionRoom, minionRoom,
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
@@ -5490,6 +5490,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type);
     return true;
+  }
+
+  // Copy Being, which names nobody to the system: "Target a Character (except a Fusion)" - whoever is targeted (Copy Clone's below).
+  const copyingFusion = whyNotCopyingFusion(actor, maneuver, Array.from(game.user?.targets ?? []).map(token => token.actor));
+  if (copyingFusion) {
+    ui.notifications.warn(copyingFusion);
+    return false;
   }
 
   // The target is resolved before anything is paid, so a Maneuver that cannot be aimed

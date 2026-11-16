@@ -766,6 +766,19 @@ async function fuse(actors, method, name, fusion = null) {
   return requestMakeFusion(plan, name);
 }
 
+/** Fused by an effect that names with whom and how - Tuffle Fusion (2)'s Parasitic Fusion: asked first, then as any Fuse. */
+export async function fuseTogether(actors, method) {
+  const all = actors.filter(Boolean);
+  if (all.some(isFusion)) return ui.notifications.warn("A Fusion cannot be a Fused Character for another Fusion.");
+  const existing = existingFusion(all.map(actor => actor.uuid), method);
+  const ok = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+    window: { title: `${FUSION_METHODS[method]?.label ?? "Fusion"}` },
+    content: `<p>${all.map(actor => foundry.utils.escapeHTML(actor.name)).join(" and ")}: ${existing
+      ? `fuse again into ${foundry.utils.escapeHTML(existing.name)}?` : "make their Fusion?"}</p>`, rejectClose: false }).catch(() => false);
+  if (!ok) return null;
+  return fuse(all, method, all.map(actor => actor.name).join(" + "), existing);
+}
+
 /** The Settings tab's Fuse: this Character and the ones picked, by the Method picked - a new Fusion, or theirs fused again. */
 export async function fuseFrom(character) {
   if (isFusion(character)) return ui.notifications.warn("A Fusion cannot be a Fused Character for another Fusion.");

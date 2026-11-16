@@ -56,7 +56,8 @@ export function allKarmicEffects() {
  * where a greyed one with a reason reads as a rule.
  */
 export function karmicOptionsFor(actor, message = null) {
-  const karma = actor.system.karma ?? 0;
+  // A Fusion's: the most any one of its Karma pools holds - it pays from one (spendKarma).
+  const karma = Math.max(...karmaPools(actor).map(pool => pool.karma));
   const already = message?.getFlag("dbu-ttrpg", APPLIED)?.[actor.id] ?? null;
 
   return allKarmicEffects().map(effect => {
@@ -116,14 +117,48 @@ export async function spendKarma(actor, effect) {
     cost = answer;
   }
 
-  const karma = actor.system.karma ?? 0;
+  // A Fusion: "The Fusion can use the Karma Points of all of the Fused Characters" - from which, asked (the user's).
+  const pool = await karmaSource(actor, cost, effect.name);
+  if (pool === undefined) return null;
+  const from = pool ?? actor;
+  const karma = from.system.karma ?? 0;
   if (karma < cost) {
-    ui.notifications.warn(`${actor.name} does not have ${cost} Karma Points.`);
+    ui.notifications.warn(`${from.name} does not have ${cost} Karma Points.`);
     return null;
   }
 
-  await actor.update({ "system.karma": Math.max(0, karma - cost) });
+  if (from === actor) await actor.update({ "system.karma": Math.max(0, karma - cost) });
+  else {
+    const { requestActorUpdate } = await import("./chat.mjs");
+    await requestActorUpdate(from, { "system.karma": Math.max(0, karma - cost) });
+  }
   return cost;
+}
+
+/**
+ * Whose Karma Points a Fusion's are: its own (Metamoran Style's, gained as a Fusion) and each of its Fused Characters' - "The Fusion
+ * can use the Karma Points of all of the Fused Characters" - not a Minion's, who holds none.
+ */
+export function karmaPools(actor) {
+  const own = [{ actor, name: `${actor?.name ?? ""} (its own)`, karma: Number(actor?.system?.karma) || 0 }];
+  if (actor?.type !== "fusion") return own;
+  const fused = (actor.system.fusion?.fused ?? []).filter(entry => !entry.minion).map(entry => globalThis.fromUuidSync?.(entry.uuid))
+    .filter(Boolean).map(other => ({ actor: other, name: other.name, karma: Number(other.system?.karma) || 0 }));
+  return [...own, ...fused];
+}
+
+/** Which pays: null for the actor itself, another Actor, or undefined where backed out of. Asked of a Fusion where more than one could. */
+async function karmaSource(actor, cost, what) {
+  if (actor?.type !== "fusion") return null;
+  const able = karmaPools(actor).filter(pool => pool.karma >= cost);
+  if (!able.length) return null;
+  if (able.length === 1) return (able[0].actor === actor) ? null : able[0].actor;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const picked = await askPlayerChoice(actor, `${actor.name}: ${what ?? "Karma"} - whose Karma Point${(cost === 1) ? "" : "s"}?`,
+    able.map((pool, at) => ({ value: String(at), label: `${pool.name}: ${pool.karma}` })));
+  const chosen = able[Number(picked)];
+  if (!chosen || (picked === null) || (picked === undefined) || (picked === "")) return undefined;
+  return (chosen.actor === actor) ? null : chosen.actor;
 }
 
 /**

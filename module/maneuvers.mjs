@@ -4453,6 +4453,8 @@ export function whyNoAngelDuplicate(actor, maneuver, target = null, cannot = () 
  * whose Tier of Power is higher than yours." Why not this one, or null. A Fusion is not in this system yet - the table's.
  */
 export function whyNotCopyClone(actor, maneuver, target) {
+  // Copy Clone and Copy Being: "Target a Character (except a Fusion)".
+  if (whyNotCopyingFusion(actor, maneuver, [target])) return whyNotCopyingFusion(actor, maneuver, [target]);
   if (uniqueLibraryOf(actor, maneuver) !== "copy-clone") return null;
   if (!target || !["character", "minion", "adversary"].includes(target.type)) return `${maneuver.name}: target a Character.`;
   if (atLongRange(actor, target)) return `${maneuver.name}: ${target.name} is at Long Range.`;
@@ -4460,6 +4462,13 @@ export function whyNotCopyClone(actor, maneuver, target) {
     return `${maneuver.name}: ${target.name}'s Tier of Power is higher than ${actor.name}'s.`;
   }
   return null;
+}
+
+/** Copy Clone and Copy Being: "Target a Character (except a Fusion)" - a Fusion among those aimed at, refused. */
+export function whyNotCopyingFusion(actor, maneuver, targets = []) {
+  if (!["copy-clone", "copy-being"].includes(uniqueLibraryOf(actor, maneuver))) return null;
+  const fusion = targets.find(target => target?.type === "fusion");
+  return fusion ? `${maneuver.name}: ${fusion.name} is a Fusion - "Target a Character (except a Fusion)".` : null;
 }
 
 /** A Duplicate: "Duplicate Minions also cannot ... target their Master with any Unique Ability or Special Maneuver". */

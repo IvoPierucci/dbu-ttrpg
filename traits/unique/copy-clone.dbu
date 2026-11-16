@@ -7,7 +7,7 @@ type: standard
 actionCost: 1
 kiCostPerBaseTier: 8
 # The Character targeted - not at Long Range, no higher a Tier of Power (maneuvers.mjs whyNotCopyClone) - copied into a Duplicate
-# Minion of yours, made beside you (chat.mjs copyClone). A Fusion, not in this system yet, the table's.
+# Minion of yours, made beside you (chat.mjs copyClone). Never a Fusion (maneuvers.mjs whyNotCopyingFusion).
 requiresTarget: true
 source: Core Rule
 description: >

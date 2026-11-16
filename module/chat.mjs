@@ -27543,7 +27543,11 @@ async function settleTuffleFusion(message, clash) {
       reason: "Win and you enter a Fusion with them.", tuffleFusion: { applied: false, stage: 2, willing } });
   }
   const control = willing.every(Boolean) ? "its control by the usual rules" : `controlled solely by ${actor.name}`;
-  return settledNote(message, `Tuffle Fusion: ${actor.name} and ${target.name} enter a Fusion (the Parasitic Fusion Method) - ${control}.`);
+  await settledNote(message, `Tuffle Fusion: ${actor.name} and ${target.name} enter a Fusion (the Parasitic Fusion Method) - ${control}.`);
+  // The Fusion itself made, or theirs fused again - asked of whoever settled it (fusion-make.mjs); its place on the map, the table's.
+  if (!actor.isOwner && !game.user.isGM) return;
+  const { fuseTogether } = await import("./fusion-make.mjs");
+  return fuseTogether([actor, target], "parasitic");
 }
 
 /**
