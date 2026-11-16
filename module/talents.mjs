@@ -64,11 +64,14 @@ export async function syncProgressionTalents(actor) {
   const wanted = new Set(progressionTalentIds({ powerLevel: actor.system.powerLevel, progression: fixed,
     characterPerks: actor.system.characterPerks }));
 
-  const ours = item => adopted.has(item.id) || Boolean(item.flags?.["dbu-ttrpg"]?.[FROM_PROGRESSION]);
+  // A Fusion's copies of its Fused Characters' Talents are theirs, not this tab's - a Fusion has no Progression (fusion-make.mjs),
+  // and the copy still carries the flag of the row that gave it to them.
+  const fusedCopy = item => Boolean(item.flags?.["dbu-ttrpg"]?.fusedCopy);
+  const ours = item => !fusedCopy(item) && (adopted.has(item.id) || Boolean(item.flags?.["dbu-ttrpg"]?.[FROM_PROGRESSION]));
   const removed = owned.filter(item => ours(item) && !wanted.has(sourceOf(item))).map(item => item.id);
   const kept = owned.filter(item => !removed.includes(item.id));
   // Held already, not by a Racial Trait - the tab's from now on.
-  const adopt = kept.filter(item => wanted.has(sourceOf(item)) && !ours(item) && !item.flags?.["dbu-ttrpg"]?.fromTrait)
+  const adopt = kept.filter(item => wanted.has(sourceOf(item)) && !ours(item) && !item.flags?.["dbu-ttrpg"]?.fromTrait && !fusedCopy(item))
     .map(item => item.id);
   const held = new Set(kept.map(sourceOf));
   // What a Talent asks as it is gained - Elementalist's Elemental Profile - asked of whoever made the change; backed out of,
@@ -116,8 +119,9 @@ export function orphanTalents(items) {
   const list = Array.from(items ?? []);
   const held = new Set(list.filter(item => item.type === "racial")
     .flatMap(item => [item.id, item.flags?.["dbu-ttrpg"]?.sourceId].filter(Boolean)));
+  // A Fusion's copies come from its Fused Characters, not from a row or a Trait of its own: never orphans (fusion-make.mjs).
   return list.filter(item => (item.type === "talent") && !item.flags?.["dbu-ttrpg"]?.[FROM_PROGRESSION]
-    && !held.has(item.flags?.["dbu-ttrpg"]?.fromTrait ?? ""));
+    && !item.flags?.["dbu-ttrpg"]?.fusedCopy && !held.has(item.flags?.["dbu-ttrpg"]?.fromTrait ?? ""));
 }
 
 /**
