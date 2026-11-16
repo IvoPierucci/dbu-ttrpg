@@ -116,6 +116,8 @@ export function opponentsCountAsAllies(who) {
  */
 export function masterOf(who) {
   const actor = actorOf(who);
+  // Minion Fusion: "both Masters may serve as the Master for the Fusion" - the first of them, where one is asked for.
+  if ((actor?.type === "fusion") && actor.system?.fusion?.minion) return String(actor.system.fusion.masters?.[0] ?? "");
   if (actor?.type !== "minion") return "";
   const own = String(actor.system?.master ?? "");
   if (own) return own;

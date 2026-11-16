@@ -387,6 +387,11 @@
       {{! Which God Maneuvers this character has, for what nothing written grants yet - usable in the God Ki State (the user's). }}
       <button type="button" data-action="openCombatWindow" data-window="godManeuvers" class="capacity-reset"
               data-tooltip="Choose which God Maneuvers this character has access to - usable while in the God Ki State.">God Maneuvers</button>
+      {{! Fusion (the user's): with whom and by which Method - a new Fusion, or theirs fused again. Not a Fusion's own. }}
+      {{#unless isFusion}}
+      <button type="button" data-action="fuseWith" class="capacity-reset"
+              data-tooltip="Fuse with other Characters by a Fusion Method: a new Fusion, or the one they make fused again (recalculated).">Fuse</button>
+      {{/unless}}
       {{#if canEnterEncounter}}
       {{! For somebody who walked into an Encounter already under way: it began for
           everyone else when it began, and it begins for them now. Gone once taken, and

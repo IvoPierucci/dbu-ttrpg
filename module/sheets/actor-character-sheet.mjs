@@ -618,6 +618,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       deleteReputation: DBUCharacterSheet._onDeleteReputation,
       editImage: DBUCharacterSheet._onEditImage,
       fuseAgain: DBUCharacterSheet._onFuseAgain,
+      fuseWith: DBUCharacterSheet._onFuseWith,
       openFused: DBUCharacterSheet._onOpenFused,
       connectRemoteVehicle: DBUCharacterSheet._onConnectRemoteVehicle,
       remotePilot: DBUCharacterSheet._onRemotePilot
@@ -2443,7 +2444,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Quick Learner's Copied Techniques are not the character's: none of their TP, and not counted among their own.
     // Neither a Copied one nor a Genetic Donor's (Genetic Catalogue) is paid for with your TP.
-    const built = items.filter(isBuiltTechnique).filter(item => !item.getFlag?.("dbu-ttrpg", "copied") && !item.getFlag?.("dbu-ttrpg", "genetic"))
+    // Nor a Fusion's, taken from its Fused Characters: they come Free (the user's).
+    const built = items.filter(isBuiltTechnique).filter(item => !item.getFlag?.("dbu-ttrpg", "copied") && !item.getFlag?.("dbu-ttrpg", "genetic")
+      && !item.getFlag?.("dbu-ttrpg", "fusedCopy"))
       .map(signatureOfTechnique);
     // Nor Nameless Horde (4)'s 'Full Power' ones, given rather than made.
     const counted = built.filter(sig => !sig.fromTransformation && !sig.fullPower);
@@ -5680,6 +5683,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** A Fused Character's sheet, opened from a Fusion's tab. */
   static _onOpenFused(event, target) {
     return fromUuidSync(target.dataset.uuid ?? "")?.sheet?.render(true);
+  }
+
+  /** Settings' Fuse: this Character and others, by a Fusion Method - a new Fusion, or theirs fused again (fusion-make.mjs). */
+  static async _onFuseWith() {
+    if (!this.isEditable) return;
+    const { fuseFrom } = await import("../fusion-make.mjs");
+    return fuseFrom(this.actor);
   }
 
   /** Fuse, or Fuse again (recalculate): the Fusion made or taken again from its Fused Characters (fusion-make.mjs). */

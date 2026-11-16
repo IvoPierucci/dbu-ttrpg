@@ -2611,7 +2611,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       .reduce((total, entry) => total + entry.technique, 0)
       // And each Character Perk's reached, as written on it.
       + DBUCharacterData.perksOf(this.characterPerks, "", this.powerLevel)
-        .reduce((total, perk) => total + Math.max(0, Number(perk.technique) || 0), 0);
+        .reduce((total, perk) => total + Math.max(0, Number(perk.technique) || 0), 0)
+      // A Fusion's: what Character Combination gave it - "10(bT) Technique Points to create new Signature Techniques or gain
+      // Unique Abilities/Advancements" (fusion-make.mjs).
+      + (this.fusionMade ? Math.max(0, Number(this.fusion?.tpGained) || 0) : 0);
 
     // Attribute Score cap for the current Tier of Power: 8 at ToP 1, +3 per tier after.
     // The published table only lists ToP 1-5 (8/11/14/17/20); the formula holds beyond

@@ -1,6 +1,7 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { commandedNow, isCharacter, isMinion, isVehicle, typicalMinion } from "./actor-types.mjs";
 import { calledShotShelter, vehicleDodgeOf, vehicleTargets } from "./vehicle-crew.mjs";
+import { hasRace } from "./fusion.mjs";
 import { staminaLeft, staminaToStay, thresholdLines } from "./adversary.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
@@ -287,6 +288,8 @@ function applyRequest(request) {
     case "tokens": return game.scenes.get(request.sceneId)?.updateEmbeddedDocuments("Token", request.updates ?? [], request.options ?? {});
     // A Vehicle made by the Create Maneuver of a player who may not make Actors (vehicles.mjs makeVehicle).
     case "makeVehicle": return Actor.create(request.data);
+    // A Fusion made for a player who may not make Actors, with what they answered (fusion-make.mjs).
+    case "makeFusion": return import("./fusion-make.mjs").then(make => make.createFusion(request.plan, request.name));
     // A Vehicle put in a Capsule, its tokens taken off; thrown out of one, its token made (vehicles.mjs).
     case "deleteTokens": return game.scenes.get(request.sceneId)?.deleteEmbeddedDocuments("Token", request.ids ?? []);
     case "vehicleToken": return placeVehicleToken(game.scenes.get(request.sceneId), fromUuidSync(request.vehicleUuid ?? ""), request.at);
@@ -15629,6 +15632,13 @@ export function requestVehicleToken(scene, vehicle, at) {
   return null;
 }
 
+/** A Fusion made by the GM, for a player who may not make Actors - with everything they answered (fusion-make.mjs). */
+export function requestMakeFusion(plan, name) {
+  game.socket.emit(CHANNEL, { type: "makeFusion", plan, name });
+  ui.notifications.info(`${name}: the GM makes it.`);
+  return null;
+}
+
 /** A Vehicle's Actor made by the GM - the Create Maneuver's, for a player who may not make Actors (vehicles.mjs). */
 export function requestMakeVehicle(data) {
   game.socket.emit(CHANNEL, { type: "makeVehicle", data });
@@ -18142,7 +18152,7 @@ export function unifyRefusal(actor, aimed) {
   // Genetic Focus: Shadow Dragon (4): "your Race is considered to be Shadow Dragon for the effects of the Unify Maneuver".
   const raceOf = who => (who?.system?.effects?.slots?.["unify.asShadowDragon"] === true) ? "shadow-dragon" : String(who?.system?.race ?? "");
   if (!aimed.length) return "Target the one to Unify with first.";
-  const androids = (slots["unify.androids"] === true) && (String(actor.system.race ?? "") === "android");
+  const androids = (slots["unify.androids"] === true) && hasRace(actor, "android");
   const wide = androids && aimed.every(other => (String(other.system?.race ?? "") === "android")
     && (other.system?.effects?.slots?.["unify.androids"] === true));
   if (aimed.length > (wide ? 2 : 1)) return wide ? "Up to 2 Androids." : "Only one to Unify with - target one.";
@@ -27506,7 +27516,7 @@ export async function tuffleFusion(actor, target) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const why = !target ? "Tuffle Fusion: target a Character first."
     : (target.uuid === actor.uuid) ? "Tuffle Fusion: another Character."
-    : ((target.system?.race !== "neo-tuffle") || (target.system?.subrace !== "parasite")) ? `${target.name} is no Parasite Neo-Tuffle.`
+    : !hasRace(target, "neo-tuffle", "parasite") ? `${target.name} is no Parasite Neo-Tuffle.`
     : whyNotWithinMelee(actor, target, "Tuffle Fusion");
   if (why) {
     ui.notifications.warn(why);
