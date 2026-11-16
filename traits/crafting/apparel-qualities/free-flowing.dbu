@@ -1,0 +1,26 @@
+id: free-flowing
+name: Free Flowing
+kind: crafting
+# The Metamoran Clothing's own (the Fusion Methods & Modifiers page): never crafted, it comes with that piece of Apparel, made as a
+# Fusion is fused by Metamorese or Maxi Fusion (fusion-make.mjs).
+special: true
+slots: 1
+source: Fusion Methods & Modifiers
+description: >
+  Strike and Wound Rolls higher by the Apparel Bonus.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Increase your Strike and Wound Rolls by the Apparel Bonus. This piece of Apparel cannot be destroyed nor replaced through the effects of Battle Uniform (apply the Qualities – except Combat Ready – from that Battle Uniform to this piece of Apparel while you are in that Transformation).
+text: >
+  Free Flowing: These clothes flow around your form like a cloud, allowing you to move effortlessly.
+  –Effects: Increase your Strike and Wound Rolls by the Apparel Bonus. This piece of Apparel cannot be destroyed nor replaced through the effects of Battle Uniform (apply the Qualities – except Combat Ready – from that Battle Uniform to this piece of Apparel while you are in that Transformation).
+
+---
+
+# Its Apparel Bonus, on both.
+[passive]
+strike += $apparelBonus(bT);
+wound += $apparelBonus(bT);
+# Not destroyed nor replaced by a Battle Uniform, and its Qualities taken on: waits on the Transformations - Battle Uniform is an
+# Aspect of theirs, not built yet.

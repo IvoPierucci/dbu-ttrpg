@@ -11,6 +11,7 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import { isCharacter, isFusion, isMinion } from "./actor-types.mjs";
 import { FUSION_METHODS, baseTierFor, fusionPowerLevel, leadFused, modifiersAllowed } from "./fusion.mjs";
 import { isVillainous } from "./racial.mjs";
+import { APPAREL_LAYERS, GEAR_ICON, composeEffects, gearItemFrom, qualityInactive } from "./gear.mjs";
 
 /** The flags an Item copied onto a Fusion carries: taken again as it is fused again; its Racial Traits, chosen once and kept. */
 export const FUSED_COPY = "fusedCopy";
@@ -412,6 +413,106 @@ export async function chooseModifiers(fusion) {
   return asked;
 }
 
+// --- The Methods' Apparel -------------------------------------------------------------------------------------------------------
+//
+// Metamoran Style (1) and Maximum Metamorese (2): "Instead of gaining the Apparel of the Fused Characters, this Fusion gains and equips
+// the Metamoran Clothing" - Divine Apparel with it for Maxi. Divine Fusion Method (1) and Fusion of Fusion Methods (1): "a combined
+// version of their Apparel. For each layer ... select one of those Apparel pieces and apply any qualifying Apparel Qualities from the
+// other Fused Character's Apparel of the same Layer" - a window, a Layer at a time (the user's). Made as it is fused, by the system (the
+// user's); Merged Tuffle's, forgone or not as the Encounter begins (fusion-traits.mjs).
+
+/** The flag the Methods' Apparel carries - with the copies', so it is made again as the Fusion is fused again. */
+export const METHOD_APPAREL = "methodApparel";
+
+/** Whether an Item's data is a piece of Apparel. */
+const isApparel = data => (data?.type === "gear") && (data.system?.itemType === "apparel");
+
+/** "Metamoran Clothing - Category: Combat Clothing, Grade: High, Accessories: Sash" - Durable, Free Flowing, Stretching; worn. */
+export function metamoranClothing(getTrait, { divine = false } = {}) {
+  const qualities = ["durable", "free-flowing", "stretching", ...(divine ? ["divine-apparel"] : [])]
+    .map(id => ({ id, slots: 0, choice: "", on: false, name: "", free: true, granted: false }));
+  // Grade 5: the High Apparel Bonus.
+  const crafted = { kind: "apparel", category: "combat-clothing", grade: 5, size: "", qualities };
+  const flags = { "dbu-ttrpg": { [FUSED_COPY]: true, [METHOD_APPAREL]: true } };
+  const sash = getTrait("sash");
+  return [
+    { name: "Metamoran Clothing", type: "gear", img: GEAR_ICON, flags,
+      system: { gearId: "", itemType: "apparel", equipped: true, layer: "top",
+        crafted: { ...crafted, effects: composeEffects(crafted, "", { getTrait }), breakLost: 0, destroyed: false } } },
+    ...(sash ? [foundry.utils.mergeObject(gearItemFrom(sash), { flags, system: { equipped: true } }, { inplace: false })] : [])
+  ];
+}
+
+/** The Apparel the Fused Characters wear, a Layer at a time: { top: [{ actor, item }], ... }. */
+export function wornLayers(actors) {
+  return Object.fromEntries(Object.keys(APPAREL_LAYERS).map(layer => [layer, actors.flatMap(actor => Array.from(actor.items ?? [])
+    .filter(item => isApparel(item) && item.system?.equipped && (item.system?.layer === layer)).map(item => ({ actor, item })))]));
+}
+
+/**
+ * The combined Apparel: for each Layer worn, the piece picked - its uuid in `picks`, the first where none is - with every Quality of the
+ * other pieces of that Layer it qualifies for and does not have; worn on that Layer.
+ */
+export function combinedApparel(actors, picks, getTrait) {
+  const out = [];
+  for (const [layer, worn] of Object.entries(wornLayers(actors))) {
+    if (!worn.length) continue;
+    const base = worn.find(each => each.item.uuid === picks?.[layer]) ?? worn[0];
+    const data = base.item.toObject();
+    delete data._id;
+    const crafted = foundry.utils.deepClone(data.system.crafted ?? {});
+    crafted.qualities = [...(crafted.qualities ?? [])];
+    for (const other of worn.filter(each => each !== base)) {
+      for (const entry of (other.item.system?.crafted?.qualities ?? [])) {
+        if (crafted.qualities.some(had => had.id === entry.id)) continue;
+        const tried = { ...crafted, qualities: [...crafted.qualities, { ...entry }] };
+        if (!qualityInactive(entry, tried, getTrait)) crafted.qualities.push({ ...entry });
+      }
+    }
+    crafted.effects = composeEffects(crafted, crafted.effects ?? "", { getTrait });
+    data.system.crafted = crafted;
+    data.system.equipped = true;
+    data.system.layer = layer;
+    data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), [FUSED_COPY]: true,
+      [FUSED_FROM]: base.actor.uuid, [METHOD_APPAREL]: true } };
+    out.push(data);
+  }
+  return out;
+}
+
+/** Potara and EX: which piece of each Layer worn by more than one is the one kept. Null where backed out of. */
+async function askCombinedApparel(actors) {
+  const layers = Object.entries(wornLayers(actors)).filter(([, worn]) => worn.length > 1);
+  if (!layers.length) return {};
+  const escape = foundry.utils.escapeHTML;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Fusion: combined Apparel" },
+    content: `<p class="dbu-respond-hint">"For each layer of Apparel worn by the Fused Characters, select one of those Apparel pieces and apply any
+      qualifying Apparel Qualities from the other Fused Character's Apparel of the same Layer."</p>
+      ${layers.map(([layer, worn]) => `<label class="dbu-wager"><span>${APPAREL_LAYERS[layer].label} Layer</span><select name="${layer}">${worn.map(each =>
+        `<option value="${escape(each.item.uuid)}">${escape(each.item.name)} (${escape(each.actor.name)})</option>`).join("")}</select></label>`).join("")}`,
+    buttons: [{ action: "ok", label: "Combine", default: true, callback: (event, button) =>
+      Object.fromEntries(layers.map(([layer]) => [layer, button.form.elements[layer].value])) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  }).catch(() => null);
+  return (picked && (typeof picked === "object")) ? picked : null;
+}
+
+/** What the Fusion is given in place of the Fused Characters' Apparel, by its Method - asked where it asks. Null where backed out of. */
+async function methodItems(actors, method, items) {
+  const { getTrait } = await import("./effects/traits.mjs");
+  if ((method === "metamorese") || (method === "maxi")) {
+    return [...items.filter(data => !isApparel(data)), ...metamoranClothing(getTrait, { divine: method === "maxi" })];
+  }
+  if ((method === "potara") || (method === "ex")) {
+    const picks = await askCombinedApparel(actors);
+    if (picks === null) return null;
+    return [...items.filter(data => !isApparel(data)), ...combinedApparel(actors, picks, getTrait)];
+  }
+  return items;
+}
+
 /** A new Fusion's Actor, made with its owners - by the GM where the player may not make Actors (chat.mjs "makeFusion"). */
 async function makeFusionActor(plan, name) {
   return Actor.create({ name, type: "fusion", img: plan.fused[0]?.img || undefined, ownership: ownersOf(plan.fused.map(each => each.uuid)),
@@ -643,6 +744,9 @@ async function fuse(actors, method, name, fusion = null) {
   if (modifiers === null) return null;
   const plan = fusionPlan(actors, method, { modifiers: modifiers.modifiers });
   plan.balanced = modifiers.balanced;
+  // In place of the Fused Characters' Apparel, the Method's.
+  plan.items = await methodItems(actors, method, plan.items);
+  if (plan.items === null) return null;
   if (first) plan.racial = racial;
   if (existing) {
     if (!existing.isOwner) return ui.notifications.warn(`${existing.name} is not yours to fuse.`);
