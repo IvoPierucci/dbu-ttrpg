@@ -20,6 +20,45 @@ export const FUSED_RACIAL = "fusedRacial";
 /** Where it came from, on what is copied: the Fused Character's uuid. */
 export const FUSED_FROM = "fusedFrom";
 
+/** And which of their Items it was a copy of - so what one gave another (`grantedBy`) still says so on the Fusion. */
+export const COPIED_ID = "copiedId";
+
+/** A document id, made here so a copy's is known before it is made. */
+function freshId() {
+  const made = globalThis.foundry?.utils?.randomID?.(16);
+  if (made) return made;
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length: 16 }, () => letters[Math.floor(Math.random() * letters.length)]).join("");
+}
+
+/** A copy's data: an id of its own, and whose Item of theirs it was. */
+function copyOf(item, actor, flags = {}) {
+  const data = item.toObject();
+  data._id = freshId();
+  data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), ...flags, [FUSED_FROM]: actor.uuid,
+    [COPIED_ID]: item.id } };
+  return data;
+}
+
+/**
+ * What one of their Items gave another - a Trait's Weapon, a Talent's Gene, a Racial Trait's Talent - given by the giver's copy on
+ * the Fusion: `grantedBy` pointed at it, among the copies made now and those it keeps (its Racial Traits). Where the giver was not
+ * copied, left as it was.
+ */
+export function relinkCopies(items, kept = []) {
+  const key = (from, id) => `${from ?? ""}|${id ?? ""}`;
+  const ids = new Map([
+    ...kept.map(item => [key(item.flags?.["dbu-ttrpg"]?.[FUSED_FROM], item.flags?.["dbu-ttrpg"]?.[COPIED_ID]), item.id]),
+    ...items.map(data => [key(data.flags?.["dbu-ttrpg"]?.[FUSED_FROM], data.flags?.["dbu-ttrpg"]?.[COPIED_ID]), data._id])
+  ].filter(([at, id]) => id && !at.endsWith("|")));
+  for (const data of items) {
+    const own = data.flags?.["dbu-ttrpg"];
+    const giver = own?.grantedBy ? ids.get(key(own[FUSED_FROM], own.grantedBy)) : null;
+    if (giver) own.grantedBy = giver;
+  }
+  return items;
+}
+
 /** A Fused Character as the Fusion keeps it: who, their Power Level, Race, base Size, Alignment, whether a Minion. */
 export function snapshotOf(actor) {
   const source = actor._source?.system ?? {};
@@ -98,8 +137,7 @@ export function copiedItems(actors) {
   for (const actor of actors) {
     for (const item of Array.from(actor.items ?? [])) {
       if (coreManeuver(item) || raceTrait(item)) continue;
-      const data = item.toObject();
-      delete data._id;
+      const data = copyOf(item, actor, { [FUSED_COPY]: true });
       if (item.type === "talent") {
         const key = item.flags?.["dbu-ttrpg"]?.sourceId || item.name;
         if (talents.has(key)) continue;
@@ -116,7 +154,6 @@ export function copiedItems(actors) {
         }
       }
       else if (!["gear", "racial"].includes(item.type)) continue;
-      data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), [FUSED_COPY]: true, [FUSED_FROM]: actor.uuid } };
       out.push(data);
     }
   }
@@ -129,10 +166,7 @@ export function racialItems(actors, picked) {
     const actor = actors.find(each => each.uuid === choice.from);
     const item = actor?.items?.get?.(choice.id);
     if (!item) return null;
-    const data = item.toObject();
-    delete data._id;
-    data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), [FUSED_RACIAL]: true, [FUSED_FROM]: actor.uuid } };
-    return data;
+    return copyOf(item, actor, { [FUSED_RACIAL]: true });
   }).filter(Boolean);
 }
 
@@ -207,8 +241,11 @@ export function existingFusion(fusedUuids, method) {
 export async function applyFusion(fusion, plan, first) {
   const old = Array.from(fusion.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.[FUSED_COPY]).map(item => item.id);
   if (old.length) await fusion.deleteEmbeddedDocuments("Item", old);
-  const items = [...plan.items, ...(first ? (plan.racial ?? []) : [])];
-  if (items.length) await fusion.createEmbeddedDocuments("Item", items);
+  const items = [...plan.items, ...(first ? (plan.racial ?? []) : [])].map(data => ({ ...data, _id: data._id || freshId() }));
+  // What gave what among them still does: each copy's id known before it is made, kept as it is made.
+  const keptRacial = first ? [] : Array.from(fusion.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.[FUSED_RACIAL]);
+  relinkCopies(items, keptRacial);
+  if (items.length) await fusion.createEmbeddedDocuments("Item", items, { keepId: true });
   const kept = fusion.system.fusion ?? {};
   const modifiers = plan.modifiers ?? kept.modifiers ?? [];
   const balanced = plan.balanced ?? kept.balanced ?? [];
@@ -651,6 +688,7 @@ export function buildFusedTechnique(base, other, { advantages = [], superProfile
   const own = { ...(data.flags?.["dbu-ttrpg"] ?? {}) };
   delete own[FUSED_COPY];
   delete own[FUSED_FROM];
+  delete own[COPIED_ID];
   data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...own, [FUSED_TECHNIQUE]: true } };
   return data;
 }
@@ -729,6 +767,8 @@ export async function askFusedTechnique(fusion) {
 /** Fused, by whoever may - the GM making the Actor for a player who may not (chat.mjs relay). */
 async function fuse(actors, method, name, fusion = null) {
   const existing = fusion ?? existingFusion(actors.map(actor => actor.uuid), method);
+  // Said before anything is asked, not after.
+  if (existing && !existing.isOwner) return ui.notifications.warn(`${existing.name} is not yours to fuse.`);
   const first = !existing || !(existing.system.fusion?.fused ?? []).length;
   let racial = [];
   if (first) {
@@ -749,7 +789,6 @@ async function fuse(actors, method, name, fusion = null) {
   if (plan.items === null) return null;
   if (first) plan.racial = racial;
   if (existing) {
-    if (!existing.isOwner) return ui.notifications.warn(`${existing.name} is not yours to fuse.`);
     await applyFusion(existing, plan, first);
     ui.notifications.info(`${existing.name}: ${first ? "fused" : "fused again - recalculated from its Fused Characters"}.`);
     // "At creation, Fusions gain ... a Fused Technique" - asked now; fused again, it keeps its own.

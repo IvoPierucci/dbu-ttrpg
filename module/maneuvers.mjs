@@ -4450,7 +4450,7 @@ export function whyNoAngelDuplicate(actor, maneuver, target = null, cannot = () 
 
 /**
  * Copy Clone: "Target a Character (except a Fusion) on the Battlefield who is not at Long Range ... You cannot target a Character
- * whose Tier of Power is higher than yours." Why not this one, or null. A Fusion is not in this system yet - the table's.
+ * whose Tier of Power is higher than yours." Why not this one, or null. Never a Fusion (whyNotCopyingFusion).
  */
 export function whyNotCopyClone(actor, maneuver, target) {
   // Copy Clone and Copy Being: "Target a Character (except a Fusion)".

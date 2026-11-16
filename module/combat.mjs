@@ -960,6 +960,12 @@ export async function endEncounterFor(actor) {
     const { setCondition } = await import("./conditions.mjs");
     await setCondition(actor, "merged-tuffle-mark", 0);
   }
+  // And the Fused Characters' Apparel it forwent for it, worn again (fusion-traits.mjs mergedTuffleForgo).
+  const forgone = Array.from(actor.items ?? []).filter(item => item.flags?.["dbu-ttrpg"]?.mergedTuffleLayer);
+  if (forgone.length) {
+    await actor.updateEmbeddedDocuments("Item", forgone.map(item => ({ _id: item.id, "system.equipped": true,
+      "system.layer": item.flags["dbu-ttrpg"].mergedTuffleLayer, "flags.dbu-ttrpg.mergedTuffleLayer": "" })));
+  }
   // All-Out Start (2)'s, with the Encounter.
   if (actor.getFlag?.("dbu-ttrpg", "allOutUntil")) {
     const { setCondition } = await import("./conditions.mjs");

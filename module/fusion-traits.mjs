@@ -89,7 +89,9 @@ export async function mergedTuffleForgo(actor) {
     { value: "keep", label: "Keep their Apparel" }])) !== "forgo") return unspent();
   const worn = Array.from(actor.items ?? []).filter(item => (item.type === "gear") && (item.system?.itemType === "apparel")
     && item.system?.equipped && item.flags?.["dbu-ttrpg"]?.fusedCopy);
-  if (worn.length) await actor.updateEmbeddedDocuments("Item", worn.map(item => ({ _id: item.id, "system.equipped": false, "system.layer": "" })));
+  // Forgone for the Encounter: worn again on its Layer as it ends (combat.mjs endEncounterFor).
+  if (worn.length) await actor.updateEmbeddedDocuments("Item", worn.map(item => ({ _id: item.id, "system.equipped": false, "system.layer": "",
+    "flags.dbu-ttrpg.mergedTuffleLayer": String(item.system.layer || "top") })));
   const { setCondition } = await import("./conditions.mjs");
   await setCondition(actor, "merged-tuffle-mark", 1);
 }
