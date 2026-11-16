@@ -170,13 +170,16 @@ function coreManeuver(item) {
   return (item.type === "maneuver") && (String(item.system?.source ?? "") === "Core Rule");
 }
 
-/** Whether a Racial Trait Item is a race's own (Primary, Secondary, Subrace) - not an Other, Factor or Villainous Trait. */
+/**
+ * Whether a Racial Trait Item is one a Fusion chooses among: a race's own (Primary, Secondary, Subrace) or a Factor Trait - "Factor Traits
+ * count as the type of Racial Trait they replaced" (the user's): Secondary, or Primary where it replaces one (From Goop), its file's
+ * `importance`. Not an Other or Villainous Trait, nor one another Trait gave.
+ */
 function raceTrait(item) {
-  return (item.type === "racial") && !item.system?.factor && !item.system?.other && !isVillainous(item)
-    && !item.flags?.["dbu-ttrpg"]?.grantedBy;
+  return (item.type === "racial") && !item.system?.other && !isVillainous(item) && !item.flags?.["dbu-ttrpg"]?.grantedBy;
 }
 
-/** The Racial Traits a Fusion may choose among: every Fused Character's, each once, Primary / Secondary / Subrace. */
+/** The Racial Traits a Fusion may choose among: every Fused Character's, each once, Primary / Secondary / Subrace - Factor Traits as theirs. */
 export function racialChoices(actors) {
   const seen = new Map();
   for (const actor of actors) {
@@ -184,10 +187,24 @@ export function racialChoices(actors) {
       const key = item.flags?.["dbu-ttrpg"]?.sourceId || item.name;
       if (seen.has(key)) continue;
       const group = item.system?.subrace ? "subrace" : (String(item.system?.importance ?? "") === "primary") ? "primary" : "secondary";
-      seen.set(key, { key, id: item.id, from: actor.uuid, fromName: actor.name, name: item.name, group });
+      seen.set(key, { key, id: item.id, from: actor.uuid, fromName: actor.name, name: item.name, group, factor: Boolean(item.system?.factor) });
     }
   }
   return [...seen.values()];
+}
+
+/**
+ * What a Racial Trait not chosen gave its Fused Character - Bestial Traits, a Talent, a Majin-Dama... (its `grantedBy`) - left off the
+ * Fusion with it; what a chosen one gave comes. `chosen`: "fusedFrom|copiedId" of the Racial Traits it has.
+ */
+export function withoutUnchosenGrants(items, actors, chosen) {
+  return items.filter(data => {
+    const flags = data.flags?.["dbu-ttrpg"] ?? {};
+    if (!flags.grantedBy) return true;
+    const actor = actors.find(each => each.uuid === flags.fusedFrom);
+    const giver = actor?.items?.get?.(flags.grantedBy);
+    return !giver || !raceTrait(giver) || chosen.has(`${flags.fusedFrom}|${flags.grantedBy}`);
+  });
 }
 
 /** "A Fusion cannot possess more than 7 Racial Traits. Select up to 4 Primary Traits (minimum 2)" - what is off, said (never refused). */
@@ -202,8 +219,8 @@ export function racialWarnings(picked) {
 
 /**
  * The Items copied onto a Fusion: "all Talents, ... Signature Techniques, and Unique Abilities (including any Advancements)" - each
- * once (two of one Talent are one, Double Dip) - "any Apparel, Accessories, Weapons, and any other Items", and their Other and Factor
- * Traits; not their Core Maneuvers. A Signature Technique or Unique Ability copied comes Free (the user's): none of the Fusion's
+ * once (two of one Talent are one, Double Dip) - "any Apparel, Accessories, Weapons, and any other Items", and their Other Traits; not
+ * their Core Maneuvers, nor their Racial and Factor Traits - those are chosen (askRacialTraits). A Signature Technique or Unique Ability copied comes Free (the user's): none of the Fusion's
  * Technique Points spent on it.
  */
 export function copiedItems(actors, { talentPicks = {} } = {}) {
@@ -745,14 +762,19 @@ async function askRacialTraits(actors) {
   const choices = racialChoices(actors);
   if (!choices.length) return [];
   const escape = foundry.utils.escapeHTML;
+  // A row each: its box and name, whose it is to the right - a Factor Trait marked so (it counts as what it replaced).
   const group = key => choices.filter(each => each.group === key).map(each => `<label class="dbu-pick"><input type="checkbox" name="trait"
-    value="${escape(each.key)}" data-group="${each.group}"/> ${escape(each.name)} <em class="dbu-pick-note">${escape(each.fromName)}</em></label>`).join("");
-  const section = (key, label) => (choices.some(each => each.group === key) ? `<h4>${label}</h4><div class="dbu-picks">${group(key)}</div>` : "");
+    value="${escape(each.key)}" data-group="${each.group}"/><span class="dbu-pick-name">${escape(each.name)}</span><span class="dbu-pick-note">${
+    each.factor ? "Factor &middot; " : ""}${escape(each.fromName)}</span></label>`).join("");
+  // Each group under a small heading with its count, kept as boxes are ticked.
+  const section = (key, label, rule) => (choices.some(each => each.group === key)
+    ? `<p class="dbu-pick-group">${label}<span data-count="${key}"></span><em>${rule}</em></p><div class="dbu-picks">${group(key)}</div>` : "");
   const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: "Fusion: Racial Traits" },
     content: `<p class="dbu-respond-hint">"A Fusion cannot possess more than 7 Racial Traits. Select up to 4 Primary Traits (minimum 2) ... for the
       remaining Racial Traits you may select any of the Secondary Racial Traits or Subrace Racial Traits."</p>
-      ${section("primary", "Primary")}${section("secondary", "Secondary")}${section("subrace", "Subrace")}
+      ${section("primary", "Primary", "2 to 4")}${section("secondary", "Secondary", "")}${section("subrace", "Subrace", "")}
+      <p class="dbu-pick-total" data-racial-total></p>
       <p class="dbu-vq-warning" data-racial-warning></p>`,
     buttons: [{ action: "ok", label: "Take these", default: true, callback: (event, button) =>
       Array.from(button.form.querySelectorAll('input[name="trait"]:checked')).map(input => input.value) },
@@ -764,6 +786,9 @@ async function askRacialTraits(actors) {
           .map(input => choices.find(each => each.key === input.value)).filter(Boolean);
         const line = root.querySelector("[data-racial-warning]");
         if (line) line.textContent = racialWarnings(now).join(" ");
+        for (const count of root.querySelectorAll("[data-count]")) count.textContent = ` ${now.filter(each => each.group === count.dataset.count).length}`;
+        const total = root.querySelector("[data-racial-total]");
+        if (total) total.textContent = `${now.length} of 7 Racial Traits`;
       };
       for (const input of root.querySelectorAll('input[name="trait"]')) input.addEventListener("change", say);
       say();
@@ -931,6 +956,11 @@ async function fuse(actors, method, name, fusion = null, { dance } = {}) {
   plan.balanced = modifiers.balanced;
   // Plump or Frail - or neither, fused any other way.
   plan.dance = dance;
+  // What a Racial or Factor Trait it did not take gave them, left off with it.
+  const flagsOf = item => item.flags?.["dbu-ttrpg"] ?? {};
+  const chosenRacial = new Set((first ? racial : Array.from(existing.items ?? []).filter(item => flagsOf(item)[FUSED_RACIAL]))
+    .map(item => `${flagsOf(item).fusedFrom}|${flagsOf(item).copiedId}`));
+  plan.items = withoutUnchosenGrants(plan.items, actors, chosenRacial);
   // In place of the Fused Characters' Apparel, the Method's.
   plan.items = await methodItems(actors, method, plan.items);
   if (plan.items === null) return null;
