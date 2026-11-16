@@ -2684,7 +2684,8 @@ export const ACTION_TYPES = Object.freeze(["standard", "counter"]);
 export async function spendManeuverCost(actor, maneuver, costOverride = null) {
   // A Vehicle's Pilot: "When using the Movement Maneuver or an Attacking Maneuver as a Pilot, use the Vehicle's Ki Points instead of
   // your own" - and its Capacity, the Ki Wager with them (the user's). Paid by it (vehicles.mjs), through the GM where it is not theirs.
-  const vehicle = (maneuver?.attacking || maneuver?.movement || maneuver?.profile) ? pilotedBy(actor) : null;
+  // The Energy Charge Maneuver too (the user's): it feeds the Vehicle's attack.
+  const vehicle = (maneuver?.attacking || maneuver?.movement || maneuver?.profile || maneuver?.charge) ? pilotedBy(actor) : null;
   if (vehicle) return (await import("./vehicles.mjs")).spendVehicleCost(actor, vehicle, maneuver, costOverride ?? maneuver.kiCost ?? 0);
   const capacityCost = Number.isFinite(maneuver?.capacityCost) ? maneuver.capacityCost : null;
   const cost = costOverride ?? maneuver.kiCost ?? 0;

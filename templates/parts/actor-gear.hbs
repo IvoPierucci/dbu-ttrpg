@@ -251,8 +251,18 @@
                 data-item-id="{{row.itemId}}"
                 data-tooltip="Target the one to scan first.">Scan</button>
         {{/if}}
-        {{#if row.remote}}
+        {{#if row.remoteVehicle}}
+        <span class="gear-type" data-tooltip="Remote Controlled: Piloted from afar">&rarr; {{row.remoteVehicle}}</span>
+        <button type="button" class="gear-act" data-action="remotePilot" data-item-id="{{row.itemId}}"
+                data-tooltip="As if you were its Pilot - not while it has another">{{#if row.remotePiloting}}Stop Piloting{{else}}Pilot it{{/if}}</button>
+        <button type="button" class="gear-act" data-action="connectRemoteVehicle" data-item-id="{{row.itemId}}"
+                data-tooltip="Connect it to another Vehicle, or to an Item">Change</button>
+        {{else if row.remote}}
         <span class="gear-type">{{#if row.connectedName}}&rarr; {{row.connectedName}}{{else}}not connected{{/if}}</span>
+        {{#if row.remoteControl}}
+        <button type="button" class="gear-act" data-action="connectRemoteVehicle" data-item-id="{{row.itemId}}"
+                data-tooltip="Connect it to a Vehicle with the Remote Controlled Quality">Vehicle</button>
+        {{/if}}
         {{#if row.canTrigger}}
         <button type="button" class="gear-act" data-action="remoteGear"
                 data-item-id="{{row.itemId}}"

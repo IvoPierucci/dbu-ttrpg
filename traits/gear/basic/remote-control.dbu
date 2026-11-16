@@ -43,6 +43,6 @@ text: >
 #
 # --- What is not built ---------------------------------------------------------------------------
 #
-# Vehicles and Battle Jackets are not in this system yet, so there is nothing of theirs to
-# connect to - and piloting from afar, and "you cannot use this effect if the Vehicle or
-# Battle Jacket has a Pilot", wait with them.
+# A Vehicle with the Remote Controlled Quality is connected from this row (vehicles.mjs), and
+# Piloted from afar - its Pilot in every way but not in it - while it has no other Pilot ("You
+# cannot use this effect if the Vehicle ... has a Pilot"). Battle Jackets are not built yet.

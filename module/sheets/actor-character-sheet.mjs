@@ -614,7 +614,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stepReputation: DBUCharacterSheet._onStepReputation,
       renameReputation: DBUCharacterSheet._onRenameReputation,
       deleteReputation: DBUCharacterSheet._onDeleteReputation,
-      editImage: DBUCharacterSheet._onEditImage
+      editImage: DBUCharacterSheet._onEditImage,
+      connectRemoteVehicle: DBUCharacterSheet._onConnectRemoteVehicle,
+      remotePilot: DBUCharacterSheet._onRemotePilot
     },
     form: {
       submitOnChange: true
@@ -1444,6 +1446,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         breaksAt: Number(item.system.scan?.breaksAt) || 0,
         // A Remote Control, what it is connected to, and whether that can be set off now.
         remote: remoteKinds(item, getTrait).length > 0,
+        // And a Vehicle it may be connected to - the Remote Control's own (vehicles.mjs): which, and whether it Pilots it now.
+        remoteControl: item.system.gearId === "remote-control",
+        remoteVehicle: (item.system.gearId === "remote-control") ? (fromUuidSync(item.getFlag?.("dbu-ttrpg", "remoteVehicle") || "")?.name ?? "") : "",
+        remotePiloting: (item.system.gearId === "remote-control")
+          && (fromUuidSync(item.getFlag?.("dbu-ttrpg", "remoteVehicle") || "")?.system?.crew?.pilot === this.actor.uuid),
         connectedName: remotesAll(item, getTrait)
           ? `every ${remoteKinds(item, getTrait).map(kind => getTrait(kind)?.name ?? kind).join(", ")}`
           : DBUCharacterSheet.#connectedName(item, gearItems),
@@ -5633,6 +5640,29 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * "For a Bomb, you can spend 1 Action to trigger that Bomb." A Bomb set to Remote
    * Controlled, placed, and still the character's.
    */
+  /** A Remote Control connected to a Vehicle with Remote Controlled, or back to its Items (vehicles.mjs). */
+  static async _onConnectRemoteVehicle(event, target) {
+    const remote = this.actor.items.get(target.dataset.itemId);
+    if (!remote) return;
+    const { remoteVehicles, REMOTE_VEHICLE } = await import("../vehicles.mjs");
+    const vehicles = remoteVehicles();
+    const { askPlayerChoice } = await import("../chat.mjs");
+    const picked = await askPlayerChoice(this.actor, `${remote.name}: connect`, [
+      ...vehicles.map(vehicle => ({ value: vehicle.uuid, label: vehicle.name })),
+      { value: "none", label: "No Vehicle - its Items" }]);
+    if (!picked) return;
+    if (picked === "none") return remote.unsetFlag("dbu-ttrpg", REMOTE_VEHICLE);
+    return remote.setFlag("dbu-ttrpg", REMOTE_VEHICLE, picked);
+  }
+
+  /** Piloting the Vehicle a Remote Control is connected to, from afar - or no longer (vehicles.mjs). */
+  static async _onRemotePilot(event, target) {
+    const remote = this.actor.items.get(target.dataset.itemId);
+    if (!remote) return;
+    const said = await (await import("../vehicles.mjs")).toggleRemotePilot(this.actor, remote);
+    if (said) ui.notifications.info(said);
+  }
+
   static async _onRemoteGear(event, target) {
     const remote = this.actor.items.get(target.dataset.itemId);
     const gearOwned = this.actor.items.filter(owned => owned.type === "gear");

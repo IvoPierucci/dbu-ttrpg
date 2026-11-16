@@ -5,23 +5,27 @@
  * The Crew is kept on the Vehicle (`system.crew`: a Pilot's uuid and the Passengers'), so this looks through the world's Vehicles.
  */
 
-/** The Vehicle a character is in, and as what: { vehicle, role: "pilot" | "passenger" }, or null. */
+/**
+ * The Vehicle a character is in, and as what: { vehicle, role: "pilot" | "passenger" }, or null. Not one they Pilot by a Remote
+ * Control - they are not in it.
+ */
 export function vehicleHolding(actor) {
   const uuid = actor?.uuid;
   if (!uuid) return null;
   for (const vehicle of Array.from(globalThis.game?.actors ?? [])) {
     if (vehicle?.type !== "vehicle") continue;
     const crew = vehicle.system?.crew ?? {};
-    if (crew.pilot === uuid) return { vehicle, role: "pilot" };
+    if ((crew.pilot === uuid) && !crew.remote) return { vehicle, role: "pilot" };
     if ((crew.passengers ?? []).includes(uuid)) return { vehicle, role: "passenger" };
   }
   return null;
 }
 
-/** The Vehicle a character is Piloting, or null. */
+/** The Vehicle a character is Piloting - in it, or from afar by a Remote Control - or null. */
 export function pilotedVehicle(actor) {
-  const held = vehicleHolding(actor);
-  return (held?.role === "pilot") ? held.vehicle : null;
+  const uuid = actor?.uuid;
+  if (!uuid) return null;
+  return Array.from(globalThis.game?.actors ?? []).find(vehicle => (vehicle?.type === "vehicle") && (vehicle.system?.crew?.pilot === uuid)) ?? null;
 }
 
 /** Whether a Vehicle has a Vehicle Quality, by its file's id without the "vehicle-". */

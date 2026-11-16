@@ -7,7 +7,8 @@
       <span class="dbu-vehicle-role pilot">Pilot</span>
       <img src="{{crew.pilot.img}}" alt=""/>
       <span class="dbu-vehicle-crew-name">{{crew.pilot.name}}</span>
-      {{#if crew.seatNeeded}}<span class="dbu-vehicle-crew-note">Pilot Seat: {{crew.seat}}</span>{{/if}}
+      {{#if crew.pilot.remote}}<span class="dbu-vehicle-crew-note">From afar, by a Remote Control</span>
+      {{else if crew.seatNeeded}}<span class="dbu-vehicle-crew-note">Pilot Seat: {{crew.seat}}</span>{{/if}}
       <a data-action="openCrew" data-uuid="{{crew.pilot.uuid}}" data-tooltip="Open their sheet"><i class="fas fa-up-right-from-square"></i></a>
     </div>
     {{/if}}

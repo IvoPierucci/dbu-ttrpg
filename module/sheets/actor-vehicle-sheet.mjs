@@ -77,7 +77,8 @@ export default class DBUVehicleSheet extends HandlebarsApplicationMixin(ActorShe
     };
     const pilot = system.crew.pilot ? member(system.crew.pilot, "Pilot") : null;
     const passengers = (system.crew.passengers ?? []).map(uuid => member(uuid, "Passenger"));
-    context.crew = { pilot, passengers, inside: (pilot ? 1 : 0) + passengers.length, squares: reading.size.squares,
+    if (pilot) pilot.remote = Boolean(system.crew.remote);
+    context.crew = { pilot, passengers, inside: ((pilot && !pilot.remote) ? 1 : 0) + passengers.length, squares: reading.size.squares,
       seatNeeded: this.#seatNeeded(), seat: this.#seatName(system.pilotSeat) };
     context.aptitudes = [
       { label: "Speed", value: `${reading.speed.normal} sq.`, tip: reading.workings.speed },

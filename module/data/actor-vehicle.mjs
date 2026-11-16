@@ -38,6 +38,8 @@ export default class DBUVehicleData extends foundry.abstract.TypeDataModel {
       // Who is in it: one Pilot and its Passengers, by uuid (the Ride Maneuver's).
       crew: new fields.SchemaField({
         pilot: new fields.StringField({ required: true, blank: true, initial: "" }),
+        // Its Pilot Pilots it from afar, by a Remote Control (Remote Controlled) - not in it.
+        remote: new fields.BooleanField({ required: true, initial: false }),
         passengers: new fields.ArrayField(new fields.StringField({ required: true, blank: false }))
       }),
       description: new fields.HTMLField({ required: true, blank: true, initial: "" })

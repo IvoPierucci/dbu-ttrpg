@@ -5,7 +5,7 @@ slots: 2
 source: Vehicles
 needsSizeAtLeast: gigantic
 needsGrade: 3
-waits: Clonal Vehicles are the table's for now.
+waits: Its Clonal Vehicles are the table's (the user's).
 # Its entry as the Vehicles page prints it, word for word.
 text: >
   Colony Ship: This Vehicle houses other, smaller vehicles such as fighter jets or escape pods. (Inspired directly

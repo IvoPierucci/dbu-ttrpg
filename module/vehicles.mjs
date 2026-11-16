@@ -264,13 +264,16 @@ export function registerVehicleHooks() {
     if (userId !== game.user.id) return;
     if (actor.type === "vehicle") {
       if (!foundry.utils.hasProperty(change, "system.crew") || !hasVehicleQuality(actor, "hikou")) return;
-      const pilot = actorAt(actor.system.crew?.pilot);
+      // A Pilot from afar is not where it is.
+      const pilot = actor.system.crew?.remote ? null : actorAt(actor.system.crew?.pilot);
       if (pilot) await skyForPassengers(actor, Number(pilot.system?.battlefield?.highEnvironment) || 0);
       return;
     }
     if (!foundry.utils.hasProperty(change, "system.battlefield.highEnvironment")) return;
     const vehicle = pilotedBy(actor);
-    if (vehicle && hasVehicleQuality(vehicle, "hikou")) await skyForPassengers(vehicle, Number(actor.system.battlefield?.highEnvironment) || 0);
+    if (vehicle && !vehicle.system.crew?.remote && hasVehicleQuality(vehicle, "hikou")) {
+      await skyForPassengers(vehicle, Number(actor.system.battlefield?.highEnvironment) || 0);
+    }
   });
   Hooks.on("preCreateActor", (actor, data) => {
     if (actor.type !== "vehicle") return;
@@ -336,25 +339,35 @@ export function vehicleOf(actor) {
   if (!actor?.uuid) return null;
   for (const vehicle of allVehicles()) {
     const crew = vehicle.system?.crew ?? {};
-    if (crew.pilot === actor.uuid) return { vehicle, role: "pilot" };
+    // Not one Piloting it by a Remote Control: they are not in it.
+    if ((crew.pilot === actor.uuid) && !crew.remote) return { vehicle, role: "pilot" };
     if ((crew.passengers ?? []).includes(actor.uuid)) return { vehicle, role: "passenger" };
   }
   return null;
 }
 
-/** Whether a character is Piloting a Vehicle - the Vehicle, or null. */
+/** Whether a character is Piloting a Vehicle - in it, or from afar by a Remote Control - the Vehicle, or null. */
 export function pilotedBy(actor) {
-  const inside = vehicleOf(actor);
-  return (inside?.role === "pilot") ? inside.vehicle : null;
+  if (!actor?.uuid) return null;
+  return allVehicles().find(vehicle => vehicle.system?.crew?.pilot === actor.uuid) ?? null;
 }
 
-/** The crew a change leaves: who is Pilot, who are Passengers - one actor moved, added or taken out. */
+/**
+ * The crew a change leaves: who is Pilot, who are Passengers - one actor moved, added or taken out. Piloted from afar while its
+ * Pilot is the same one; anybody else at its controls is in it.
+ */
 export function crewWith(crew, uuid, role) {
   const passengers = (crew?.passengers ?? []).filter(each => each !== uuid);
   let pilot = (crew?.pilot === uuid) ? "" : (crew?.pilot ?? "");
   if (role === "pilot") pilot = uuid;
   if (role === "passenger") passengers.push(uuid);
-  return { pilot, passengers };
+  return { pilot, passengers, remote: Boolean(crew?.remote) && Boolean(pilot) && (pilot === crew?.pilot) };
+}
+
+/** Who is in it: its Passengers, and its Pilot unless they Pilot it from afar. */
+export function aboard(vehicle) {
+  const crew = vehicle?.system?.crew ?? {};
+  return [...((crew.pilot && !crew.remote) ? [crew.pilot] : []), ...(crew.passengers ?? [])];
 }
 
 /** A token's first one on a scene - an Actor's, or the token given. */
@@ -577,6 +590,10 @@ export async function doRide(actor, maneuver, plan) {
   const willing = await askPlayerChoice(pilot, `${actor.name} wants ${vehicle.name}'s controls`,
     [{ value: "yes", label: "Let them Pilot" }, { value: "no", label: "Refuse - a Clash" }],
     { text: `${actor.name} attempts to become the Pilot. Willing, you swap Squares; not, a Clash (Physical Strike vs Physical Strike/Dodge).` });
+  if ((willing === "yes") && crew.remote) {
+    await takeControls(vehicle, actor, scene, crewWith(crewWith(crew, pilot.uuid, null), actor.uuid, "pilot"));
+    return `${pilot.name} lets ${actor.name} take ${vehicle.name}'s controls from afar.`;
+  }
   if (willing === "yes") {
     await writeCrew(vehicle, crewWith(crewWith(crew, pilot.uuid, "passenger"), actor.uuid, "pilot"));
     const a = tokenDocOf(actor, scene);
@@ -647,6 +664,13 @@ export async function settleRideClash(clash, challengerWon) {
   const scene = globalThis.canvas?.scene ?? null;
   const said = [];
   let crew = vehicle.system.crew;
+  // Its Pilot from afar loses the controls and nothing else: they are not in it.
+  const fromAfar = Boolean(crew.remote) && (crew.pilot === defender.uuid);
+  if (challengerWon && fromAfar) {
+    await takeControls(vehicle, challenger, scene, crewWith(crewWith(crew, defender.uuid, null), challenger.uuid, "pilot"));
+    return `${challenger.name} takes ${vehicle.name}'s controls from ${defender.name}'s Remote Control.`;
+  }
+  if (!challengerWon && fromAfar) return `${defender.name} keeps ${vehicle.name}'s controls.`;
   if (challengerWon) {
     crew = crewWith(crewWith(crew, defender.uuid, "passenger"), challenger.uuid, "pilot");
     said.push(`${challenger.name} takes ${vehicle.name}'s controls.`);
@@ -692,8 +716,7 @@ export function registerCrewHooks() {
       const dx = token.x - from.x;
       const dy = token.y - from.y;
       if (!dx && !dy) return;
-      const crew = token.actor.system.crew;
-      const updates = [crew.pilot, ...(crew.passengers ?? [])].map(uuid => tokenDocOf(actorAt(uuid), scene)).filter(Boolean)
+      const updates = aboard(token.actor).map(uuid => tokenDocOf(actorAt(uuid), scene)).filter(Boolean)
         .map(member => ({ _id: member.id, x: member.x + dx, y: member.y + dy }));
       if (updates.length) await moveTokens(scene, updates);
       return;
@@ -733,11 +756,15 @@ export function whyNotPiloting(actor, vehicle, maneuver) {
   return "";
 }
 
-/** "You cannot use the Soar Maneuver while in a Vehicle" - a Passenger never, its Pilot only with Hikou. */
+/**
+ * "You cannot use the Soar Maneuver while in a Vehicle" - a Passenger never, its Pilot only with Hikou. A Pilot from afar is bound
+ * as any Pilot: "spend your Actions as if you are Piloting a Vehicle".
+ */
 export function whyNotInVehicle(actor, maneuver) {
+  const piloted = pilotedBy(actor);
+  if (piloted) return whyNotPiloting(actor, piloted, maneuver);
   const inside = vehicleOf(actor);
   if (!inside) return "";
-  if (inside.role === "pilot") return whyNotPiloting(actor, inside.vehicle, maneuver);
   return (maneuver?.id === "soar") ? `${actor.name} is in ${inside.vehicle.name}: no Soar Maneuver in a Vehicle.` : "";
 }
 
@@ -921,7 +948,7 @@ export async function energyShield(vehicle) {
  */
 async function vehicleDestroyed(vehicle) {
   const loss = Math.floor((Number(vehicle.system.life?.max) || 0) / 4);
-  const crew = [vehicle.system.crew?.pilot, ...(vehicle.system.crew?.passengers ?? [])].map(actorAt).filter(Boolean);
+  const crew = aboard(vehicle).map(actorAt).filter(Boolean);
   const { reduceLifePoints } = await import("./chat.mjs");
   for (const member of crew) await reduceLifePoints(member, loss, { reason: `${vehicle.name} destroyed` });
   await globalThis.ChatMessage?.create({
@@ -1173,6 +1200,55 @@ export async function throwVehicle(actor, capsule) {
     await requestVehicleToken(scene, vehicle, toPixels(scene, spot));
   }
   return `${actor.name} throws ${capsule.name}, and ${vehicle.name} appears${spot ? " beside them" : " - place it on the map by hand"}.`;
+}
+
+// --- Remote Controlled -----------------------------------------------------------------------------------------------------------
+//
+// "This Vehicle can be connected to and controlled with a Remote" - the Remote Control: "select an Item (Bomb/Collar/Vehicle/Battle
+// Jacket) you possess for it to be connected to ... allowing you to spend your Actions as if you are Piloting a Vehicle ... that can
+// be controlled with this Remote Control ... You cannot use this effect if the Vehicle or Battle Jacket has a Pilot." Connected on the
+// Remote Control's row (`remoteVehicle`); its Pilot from afar a Pilot in every way (the user's) - paying with it, bound as one, its
+// Dodge Roll theirs - but not in it: never moved with it, nor hurt as it is destroyed, nor sheltered by it.
+
+/** The flag a Remote Control connected to a Vehicle carries: its uuid. */
+export const REMOTE_VEHICLE = "remoteVehicle";
+
+/** The Vehicles a Remote Control may be connected to: those with Remote Controlled the player can see. */
+export function remoteVehicles() {
+  return allVehicles().filter(vehicle => vehicle.visible !== false && hasVehicleQuality(vehicle, "remote-controlled"));
+}
+
+/** The Vehicle a Remote Control is connected to, or null. */
+export function remoteVehicleOf(remote) {
+  return actorAt(remote?.getFlag?.("dbu-ttrpg", REMOTE_VEHICLE) ?? "");
+}
+
+/** Why it may not be Piloted from afar right now, or "". */
+export function whyNotRemote(actor, vehicle) {
+  if (!vehicle) return "It is connected to no Vehicle.";
+  if (!hasVehicleQuality(vehicle, "remote-controlled")) return `${vehicle.name} has no Remote Controlled Quality.`;
+  if (vehicle.system.crew?.pilot && (vehicle.system.crew.pilot !== actor.uuid)) return `${vehicle.name} has a Pilot: "You cannot use this effect if the Vehicle ... has a Pilot."`;
+  return whyNotPilot(actor, vehicle);
+}
+
+/** Piloting it from afar begun, or ended. What happened, said. */
+export async function toggleRemotePilot(actor, remote) {
+  const vehicle = remoteVehicleOf(remote);
+  const crew = vehicle?.system?.crew ?? {};
+  if (vehicle && (crew.pilot === actor.uuid) && crew.remote) {
+    await writeCrew(vehicle, { pilot: "", passengers: [...(crew.passengers ?? [])], remote: false });
+    return `${actor.name} stops Piloting ${vehicle.name} from afar.`;
+  }
+  const why = whyNotRemote(actor, vehicle);
+  if (why) {
+    globalThis.ui?.notifications?.warn(why);
+    return null;
+  }
+  // Out of any other Vehicle's controls first - one Vehicle Piloted at a time.
+  const other = pilotedBy(actor);
+  if (other && (other !== vehicle)) await writeCrew(other, crewWith(other.system.crew, actor.uuid, null));
+  await writeCrew(vehicle, { pilot: actor.uuid, passengers: [...(crew.passengers ?? [])], remote: true });
+  return `${actor.name} Pilots ${vehicle.name} from afar, by ${remote.name}.`;
 }
 
 /** The Actor a uuid names, if it can be had without waiting - a Vehicle's Creator, its Pilot and Passengers. */
