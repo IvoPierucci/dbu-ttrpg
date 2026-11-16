@@ -26,7 +26,9 @@
   </div>
 
   <div class="dbu-vehicle-panel">
-    <h3 class="dbu-side-title">Aptitudes <span class="panel-note">Output {{reading.output}} &middot; Tier {{reading.tier}}</span></h3>
+    <h3 class="dbu-side-title">Aptitudes <span class="panel-note">Output {{reading.output}} &middot; Tier {{reading.tier}}
+      <button type="button" class="dbu-vehicle-add" data-action="collide"
+              data-tooltip="It hit a Feature, the ground, or the Characters targeted: Collision Damage">Collision</button></span></h3>
     <div class="dbu-box-grid dbu-vehicle-aptitudes">
       {{#each aptitudes as |aptitude|}}
       <div class="stat"><em>{{aptitude.label}}</em><span data-tooltip-html="{{aptitude.tip}}">{{aptitude.value}}</span></div>

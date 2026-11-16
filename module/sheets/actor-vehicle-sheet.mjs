@@ -27,7 +27,8 @@ export default class DBUVehicleSheet extends HandlebarsApplicationMixin(ActorShe
       buildWeapon: DBUVehicleSheet._onBuildWeapon,
       openCrew: DBUVehicleSheet._onOpenCrew,
       pickSeat: DBUVehicleSheet._onPickSeat,
-      tuneUp: DBUVehicleSheet._onTuneUp
+      tuneUp: DBUVehicleSheet._onTuneUp,
+      collide: DBUVehicleSheet._onCollide
     },
     form: { submitOnChange: true }
   };
@@ -105,7 +106,9 @@ export default class DBUVehicleSheet extends HandlebarsApplicationMixin(ActorShe
         chooses: Array.from({ length: quality.choose }, (each, at) => ({
           at,
           options: [{ value: "", label: "-", selected: !quality.choices[at] },
-            ...environments.map(option => ({ ...option, selected: option.value === quality.choices[at] }))]
+            ...(quality.chooseWeapon
+              ? weapons.map(item => ({ value: String(item.getFlag("dbu-ttrpg", VEHICLE_WEAPON)), label: item.name }))
+              : environments).map(option => ({ ...option, selected: option.value === quality.choices[at] }))]
         })),
         weaponRows: Array.from({ length: quality.weapons }, (each, at) => {
           const weapon = weapons.find(item => Number(item.getFlag("dbu-ttrpg", VEHICLE_WEAPON)) === at);
@@ -358,6 +361,12 @@ export default class DBUVehicleSheet extends HandlebarsApplicationMixin(ActorShe
     const level = Math.min(MAX_VEHICLE_LEVEL, Math.max(1, Number(owner.system.powerLevel) || 1));
     await this.actor.update({ "system.vehicleLevel": level });
     ui.notifications.info(`${this.actor.name} Tuned Up to Vehicle Level ${level}, ${owner.name}'s Power Level.`);
+  }
+
+  /** Collision: what it hit, and the Collision Damage (vehicles.mjs). */
+  static async _onCollide() {
+    const { vehicleCollision } = await import("../vehicles.mjs");
+    return vehicleCollision(this.actor);
   }
 
   static _onChangeTab(event, target) {

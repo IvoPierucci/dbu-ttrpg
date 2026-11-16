@@ -95,7 +95,7 @@ import * as gearReadingModule from "./gear.mjs";
 import { SUPER_PROFILES, askFeatures, favoredDamage, favoredElement, forcedFullWager, maxKiWager, maxLifeWager,
   minimumKiWager } from "./maneuvers.mjs";
 import { askUnitedPartner } from "./united-attack.mjs";
-import { askWayOfThePilot, doEject, hasVehicleQuality, pilotedBy, pilotingOf, rideAsInstant, vehicleOf, vehicleRepairables,
+import { askWayOfThePilot, bigBlasterFor, doEject, hasVehicleQuality, pilotedBy, pilotingOf, rideAsInstant, vehicleOf, vehicleRepairables,
   vehicleWeaponsFor, whyNotInVehicle, whyNotPilotAttack, whyNotVehicleAttack } from "./vehicles.mjs";
 
 /**
@@ -5824,6 +5824,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         const item = offered.find(each => each.id === pickedId);
         if (!item) return false;
         declared = { ...declared, weapon: { ...armedWith(actor, item, declared, [], targetActor), vehicleWeapon: true } };
+        // Big Blaster's Vehicle Weapon: its Minor Sphere - and, at 2 Slots, an Absolute Attack (Intense Blast).
+        const blaster = bigBlasterFor(vehicle, item);
+        if (blaster) {
+          declared = { ...declared, area: blaster.area };
+          if (blaster.absolute) maneuver = { ...maneuver, absolute: true };
+        }
       }
       declared = { ...declared, piloting: pilotingOf(vehicle),
         damageAttribute: { label: `${vehicle.name}'s Output`, value: Number(vehicle.system.output) || 0 } };

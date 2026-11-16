@@ -4,6 +4,7 @@ kind: gear
 itemType: buddy
 buddyEffect: passive
 remote: true
+# Its Vehicles too: any of theirs with Remote Controlled, Piloted from afar from its row (vehicles.mjs).
 source: Core Rule
 description: >
   Active: a Communicator, and a Remote Control for every Item of yours one links with. Defeated,

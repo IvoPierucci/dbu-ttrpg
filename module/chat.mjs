@@ -4699,6 +4699,17 @@ async function majinCollision(target, amount) {
   return yes;
 }
 
+/**
+ * Collision Damage a Character takes off something that is not a card's - a Vehicle that hit them (vehicles.mjs): as any Collision's,
+ * none Incorporeal, halved where something halves it, Majin Genes' Adaptation Point asked. Said.
+ */
+export async function collisionTaken(target, amount, reason = "Collision Damage") {
+  const received = collisionAmount(target, amount);
+  const ignored = await majinCollision(target, received);
+  const done = await reduceLifePoints(target, ignored ? 0 : received, { reason: ignored ? `${reason}, ignored - Majin Genes` : reason });
+  return `${target.name} loses ${done?.taken ?? 0} Life Points${ignored ? " (Majin Genes: none)" : ""}`;
+}
+
 /** What of a Collision's Damage they take: none in the Incorporeal State ("You cannot suffer from Collision Damage"), halved, or all. */
 function collisionAmount(target, amount) {
   if ((Number(target?.system?.states?.incorporeal) || 0) > 0) return 0;

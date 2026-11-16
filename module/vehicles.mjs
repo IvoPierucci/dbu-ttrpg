@@ -180,7 +180,9 @@ export function vehicleReading(source, { creator = null } = {}) {
       range,
       ranged: range.max > range.min,
       effect: effects.join(", "),
-      choose: definition.choose === "environment" ? chooseCount : 0,
+      choose: ["environment", "weapon"].includes(definition.choose) ? chooseCount : 0,
+      // What it chooses: Battle Environments, or one of its Vehicle Weapons (Big Blaster's).
+      chooseWeapon: definition.choose === "weapon",
       choices: (entry.choices ?? []).slice(0, chooseCount),
       waits: String(definition.waits ?? ""),
       weapons: definition.weapons ? amountOf(definition.weapons, context(slots)) : 0,
@@ -292,6 +294,14 @@ export function registerVehicleHooks() {
       const crew = actor.system.crew ?? {};
       options.dbuCrewBefore = [crew.pilot, ...(crew.passengers ?? [])].filter(Boolean);
     }
+  });
+  // Its Grade changed: its Vehicle Weapons' with it - "a Craftsmanship Grade equal to that of this Vehicle".
+  Hooks.on("updateActor", async (actor, change, options, userId) => {
+    if ((actor.type !== "vehicle") || (userId !== game.user.id) || !foundry.utils.hasProperty(change, "system.grade")) return;
+    const grade = Number(actor.system.grade) || 1;
+    const updates = Array.from(actor.items ?? []).filter(item => (item.getFlag?.("dbu-ttrpg", VEHICLE_WEAPON) !== undefined)
+      && (Number(item.system?.crafted?.grade) !== grade)).map(item => ({ _id: item.id, "system.crafted.grade": grade }));
+    if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
   });
   // Destroyed: its Life Points from above 0 to 0 - its crew hurt, once, by the GM.
   Hooks.on("updateActor", async (actor, change, options) => {
@@ -795,6 +805,22 @@ export function pilotingOf(vehicle) {
     normalSpeed: Number(vehicle.system.speed?.normal) || 0 };
 }
 
+/**
+ * Big Blaster: "Apply a Minor Sphere AoE to any Attacking Maneuver made with a Vehicle Weapon of your choice when selecting this
+ * Vehicle Quality. The Target Square for this AoE may be any Square, EXCEPT a Square that this Vehicle would occupy. If this Vehicle
+ * Quality takes up 2 Quality Slots, apply the Intense Blast Advantage" - an Absolute Attack. What an attack with this Weapon gets,
+ * or null.
+ */
+export function bigBlasterFor(vehicle, item) {
+  const at = item?.getFlag?.("dbu-ttrpg", VEHICLE_WEAPON);
+  if (at === undefined) return null;
+  const entry = (vehicle?.system?.qualities ?? []).find(each => (each.id === "vehicle-big-blaster")
+    && (String(each.choices?.[0] ?? "") === String(at)));
+  if (!entry) return null;
+  return { area: { shape: "sphere", magnitude: "minor", centredOnSquare: true, notOn: vehicle.uuid, source: "Big Blaster" },
+    absolute: (Number(entry.slots) || 1) >= 2 };
+}
+
 /** What a Vehicle paid of a Maneuver, so taking it back gives it back to the Vehicle. */
 const VEHICLE_PAID = new Map();
 
@@ -1231,24 +1257,116 @@ export function whyNotRemote(actor, vehicle) {
   return whyNotPilot(actor, vehicle);
 }
 
-/** Piloting it from afar begun, or ended. What happened, said. */
-export async function toggleRemotePilot(actor, remote) {
-  const vehicle = remoteVehicleOf(remote);
-  const crew = vehicle?.system?.crew ?? {};
-  if (vehicle && (crew.pilot === actor.uuid) && crew.remote) {
-    await writeCrew(vehicle, { pilot: "", passengers: [...(crew.passengers ?? [])], remote: false });
-    return `${actor.name} stops Piloting ${vehicle.name} from afar.`;
-  }
+/** The Vehicle a character Pilots from afar, or null. */
+export function remotePilotedVehicle(actor) {
+  return allVehicles().find(vehicle => (vehicle.system?.crew?.pilot === actor?.uuid) && vehicle.system.crew.remote) ?? null;
+}
+
+/** Piloting one from afar ended. Said, or null where there was none. */
+export async function stopRemotePilot(actor) {
+  const vehicle = remotePilotedVehicle(actor);
+  if (!vehicle) return null;
+  await writeCrew(vehicle, { pilot: "", passengers: [...(vehicle.system.crew.passengers ?? [])], remote: false });
+  return `${actor.name} stops Piloting ${vehicle.name} from afar.`;
+}
+
+/** Piloting one from afar begun, by a device - out of any other's controls first. Said, or null where it may not be. */
+export async function startRemotePilot(actor, vehicle, device) {
   const why = whyNotRemote(actor, vehicle);
   if (why) {
     globalThis.ui?.notifications?.warn(why);
     return null;
   }
-  // Out of any other Vehicle's controls first - one Vehicle Piloted at a time.
   const other = pilotedBy(actor);
   if (other && (other !== vehicle)) await writeCrew(other, crewWith(other.system.crew, actor.uuid, null));
-  await writeCrew(vehicle, { pilot: actor.uuid, passengers: [...(crew.passengers ?? [])], remote: true });
-  return `${actor.name} Pilots ${vehicle.name} from afar, by ${remote.name}.`;
+  await writeCrew(vehicle, { pilot: actor.uuid, passengers: [...(vehicle.system.crew?.passengers ?? [])], remote: true });
+  return `${actor.name} Pilots ${vehicle.name} from afar, by ${device?.name ?? "a Remote Control"}.`;
+}
+
+/** The Remote Control's connected Vehicle Piloted from afar, or no longer. What happened, said. */
+export async function toggleRemotePilot(actor, remote) {
+  const vehicle = remoteVehicleOf(remote);
+  if (vehicle && (remotePilotedVehicle(actor) === vehicle)) return stopRemotePilot(actor);
+  return startRemotePilot(actor, vehicle, remote);
+}
+
+/**
+ * How a device reaches Vehicles from afar: "one" - connected to one (the Remote Control; a Controller Weapon attuned to Vehicles) -
+ * "any" - every one of theirs with Remote Controlled (a Support Buddy: "a Remote Control for any Items/Vehicles/Battle Jackets you
+ * possess ... considered to already be connected to them"; a Controller Weapon at 2 Slots: "all Items of that type") - or "".
+ *
+ * @param {Item} item
+ * @param {string[]} kinds   what it reaches (gear.mjs remoteKinds)
+ * @param {boolean} all      whether it reaches every one of them (gear.mjs remotesAll)
+ */
+export function vehicleRemoteMode(item, kinds = [], all = false) {
+  if (item?.system?.gearId === "remote-control") return "one";
+  if (item?.system?.itemType === "buddy") return kinds.length ? "any" : "";
+  if (kinds.includes("vehicle")) return all ? "any" : "one";
+  return "";
+}
+
+/** The Vehicles a device reaching "any" may Pilot from afar: theirs, with Remote Controlled. */
+export function possessedRemoteVehicles() {
+  return remoteVehicles().filter(vehicle => vehicle.isOwner);
+}
+
+// --- Collisions ------------------------------------------------------------------------------------------------------------------
+//
+// "If a Vehicle collides with a Feature, it is treated as Feature Collision as if the Vehicle was a Character. If a Vehicle collides
+// with the ground, it is treated as Ground Collision as if the Vehicle was a Character. If a Vehicle collides with another
+// Character, it is treated as Feature Collision as if the Vehicle was a Feature." A button on its sheet (the user's): what it hit,
+// and the Collision Damage - "reduce your Life Points by the Hardness Value of the Feature you Collided with" - its own off a
+// Feature or the ground, theirs off it, at its Hardness Rank, for the Characters targeted.
+
+/** What a collision costs: a Feature's or the ground's Hardness Rank against the Vehicle, or its own against the Characters. */
+export function collisionCosts(vehicle, { kind, rank = 0 } = {}, targets = []) {
+  if (kind === "character") {
+    return targets.map(target => ({ target, amount: hardnessValue(vehicle.system.hardnessRank,
+      Math.max(1, Number(target.system?.baseTierOfPower) || 1)) }));
+  }
+  return [{ target: vehicle, amount: hardnessValue(rank, Math.max(1, Number(vehicle.system.baseTierOfPower) || 1)) }];
+}
+
+/** The Collision button: asked what it hit, the Damage taken, said. */
+export async function vehicleCollision(vehicle) {
+  const { HARDNESS_RANKS } = await import("./features.mjs");
+  const targets = Array.from(globalThis.game?.user?.targets ?? []).map(token => token.actor)
+    .filter(actor => actor && (actor.type !== "vehicle"));
+  const ranks = HARDNESS_RANKS.map(entry => `<option value="${entry.rank}">Rank ${entry.rank} &middot; ${
+    hardnessValue(entry.rank, Math.max(1, Number(vehicle.system.baseTierOfPower) || 1))} Damage &middot; ${
+    foundry.utils.escapeHTML(entry.material)}</option>`).join("");
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${vehicle.name}: Collision` },
+    content: `<label class="dbu-wager"><span>It hit</span><select name="kind">
+        <option value="feature">A Feature</option><option value="ground">The ground</option>
+        ${targets.length ? `<option value="character">${targets.length === 1 ? foundry.utils.escapeHTML(targets[0].name)
+          : `The ${targets.length} Characters targeted`} - as a Feature, Hardness Rank ${vehicle.system.hardnessRank}</option>` : ""}
+      </select></label>
+      <label class="dbu-wager"><span>Hardness Rank</span><select name="rank">${ranks}</select>
+        <em>Of the Feature or the ground it hit</em></label>
+      <p class="dbu-respond-hint">A Character it hits takes its Hardness Value; target them first.</p>`,
+    buttons: [{ action: "hit", label: "Collide", default: true, callback: (event, button) => ({
+      kind: button.form.elements.kind.value, rank: Number(button.form.elements.rank.value) || 0 }) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  }).catch(() => null);
+  if (!chosen || (typeof chosen !== "object")) return null;
+  const costs = collisionCosts(vehicle, chosen, targets);
+  const { collisionTaken, requestActorUpdate } = await import("./chat.mjs");
+  const said = [];
+  for (const { target, amount } of costs) {
+    if (target === vehicle) {
+      const life = Math.max(0, (Number(vehicle.system.life?.value) || 0) - amount);
+      await requestActorUpdate(vehicle, { "system.life.value": life });
+      said.push(`${vehicle.name} loses ${amount} Life Points (${chosen.kind === "ground" ? "the ground" : "a Feature"}, Hardness Rank ${chosen.rank})`);
+    }
+    else said.push(await collisionTaken(target, amount, `Collision Damage, ${vehicle.name} - Hardness Rank ${vehicle.system.hardnessRank}`));
+  }
+  const text = `${vehicle.name} collides: ${said.join("; ")}.`;
+  await globalThis.ChatMessage?.create({ speaker: globalThis.ChatMessage.getSpeaker({ actor: vehicle }),
+    content: `<div class="dbu-settled-note">${foundry.utils.escapeHTML(text)}</div>` });
+  return text;
 }
 
 /** The Actor a uuid names, if it can be had without waiting - a Vehicle's Creator, its Pilot and Passengers. */

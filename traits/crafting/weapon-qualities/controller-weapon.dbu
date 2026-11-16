@@ -3,7 +3,7 @@ name: Controller Weapon
 kind: crafting
 slots: 1~2
 # The Items a Remote Control reaches that are in this system: a Bomb, a Collar.
-choices: bomb=Bomb, shock-collar=Collar
+choices: bomb=Bomb, shock-collar=Collar, vehicle=Vehicle
 source: Core Rule
 description: >
   A Remote Control too, attuned to one Item of a type - every Item of it, with 2 Slots.
@@ -38,4 +38,5 @@ if ($slots >= 2) {
 
 # --- What is not built ---------------------------------------------------------------------------
 #
-# Vehicles and Battle Jackets are not in this system, and neither is piloting one from afar.
+# A Vehicle with Remote Controlled, Piloted from afar from the Weapon's row (vehicles.mjs): attuned to one, connected there; with
+# 2 Slots, any of theirs. Battle Jackets are not built yet.

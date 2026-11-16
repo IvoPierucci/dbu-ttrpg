@@ -15,7 +15,7 @@
         <a class="dbu-vq-arrow" data-action="toggleQuality" data-index="{{quality.index}}"><i class="fas fa-chevron-{{#if quality.open}}down{{else}}right{{/if}}"></i></a>
         <span class="dbu-vq-name" data-action="toggleQuality" data-index="{{quality.index}}">{{quality.name}}</span>
         {{#each quality.chooses as |choose|}}
-        <select data-quality-choice="{{quality.index}}:{{choose.at}}" aria-label="Battle Environment" {{#unless @root.editable}}disabled{{/unless}}>
+        <select data-quality-choice="{{quality.index}}:{{choose.at}}" aria-label="{{#if quality.chooseWeapon}}Vehicle Weapon{{else}}Battle Environment{{/if}}" {{#unless @root.editable}}disabled{{/unless}}>
           {{#each choose.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
         </select>
         {{/each}}

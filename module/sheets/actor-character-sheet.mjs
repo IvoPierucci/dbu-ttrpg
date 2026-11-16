@@ -4,6 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, typicalMinion } from "../actor-types.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
+import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
 import { isVillainousManeuver } from "../villainous.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
@@ -1366,6 +1367,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (isStored(gearItems, item) && !item.flags?.["dbu-ttrpg"]?.innerRoom) continue;
       const type = GEAR_TYPES[item.system.itemType] ?? GEAR_TYPES.basic;
       const held = item.system.capsule ? heldBy(gearItems, item) : null;
+      // The Vehicle they Pilot from afar, if any (vehicles.mjs) - said on every device that reaches one.
+      const remotePiloted = remotePilotedVehicle(this.actor);
       // A Vehicle in it, by the Capsule Quality (vehicles.mjs).
       const heldVehicle = item.system.capsule ? fromUuidSync(item.getFlag?.("dbu-ttrpg", "vehicleStored") || "") : null;
       context.gear[type.list]?.push({
@@ -1445,17 +1448,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // What a Power Up nearby destroys it at, where something does.
         breaksAt: Number(item.system.scan?.breaksAt) || 0,
         // A Remote Control, what it is connected to, and whether that can be set off now.
-        remote: remoteKinds(item, getTrait).length > 0,
-        // And a Vehicle it may be connected to - the Remote Control's own (vehicles.mjs): which, and whether it Pilots it now.
-        remoteControl: item.system.gearId === "remote-control",
-        remoteVehicle: (item.system.gearId === "remote-control") ? (fromUuidSync(item.getFlag?.("dbu-ttrpg", "remoteVehicle") || "")?.name ?? "") : "",
-        remotePiloting: (item.system.gearId === "remote-control")
-          && (fromUuidSync(item.getFlag?.("dbu-ttrpg", "remoteVehicle") || "")?.system?.crew?.pilot === this.actor.uuid),
+        // A Controller Weapon attuned to Vehicles reaches no Item: that is the row's Vehicle buttons.
+        remote: remoteKinds(item, getTrait).filter(kind => kind !== "vehicle").length > 0,
+        // And the Vehicles it reaches from afar (vehicles.mjs): one connected - the Remote Control's, a Controller Weapon's - or any
+        // of theirs - a Support Buddy's, a Controller Weapon's at 2 Slots; the one they Pilot from afar now, if any.
+        ...((mode => (mode ? {
+          vehicleRemote: mode,
+          vehicleRemoteOne: mode === "one",
+          remoteVehicle: (mode === "one") ? (fromUuidSync(item.getFlag?.("dbu-ttrpg", "remoteVehicle") || "")?.name ?? "") : "",
+          remotePilotingName: remotePiloted?.name ?? ""
+        } : {}))(vehicleRemoteMode(item, remoteKinds(item, getTrait), remotesAll(item, getTrait)))),
         connectedName: remotesAll(item, getTrait)
           ? `every ${remoteKinds(item, getTrait).map(kind => getTrait(kind)?.name ?? kind).join(", ")}`
           : DBUCharacterSheet.#connectedName(item, gearItems),
         // A Controller Weapon attuned to one Item, not yet told which.
-        attunes: (item.system.crafted?.kind === "weapon") && remoteKinds(item, getTrait).length > 0
+        attunes: (item.system.crafted?.kind === "weapon") && remoteKinds(item, getTrait).filter(kind => kind !== "vehicle").length > 0
           && !remotesAll(item, getTrait),
         canTrigger: remotesAll(item, getTrait)
           ? connectable(gearItems, item, getTrait).some(each => canTrigger(each))
@@ -5655,11 +5662,29 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return remote.setFlag("dbu-ttrpg", REMOTE_VEHICLE, picked);
   }
 
-  /** Piloting the Vehicle a Remote Control is connected to, from afar - or no longer (vehicles.mjs). */
+  /**
+   * Piloting a Vehicle from afar, or no longer (vehicles.mjs): the one connected, or - a Support Buddy, a Controller Weapon at 2
+   * Slots - one of theirs with Remote Controlled, asked.
+   */
   static async _onRemotePilot(event, target) {
-    const remote = this.actor.items.get(target.dataset.itemId);
-    if (!remote) return;
-    const said = await (await import("../vehicles.mjs")).toggleRemotePilot(this.actor, remote);
+    const device = this.actor.items.get(target.dataset.itemId);
+    if (!device) return;
+    const V = await import("../vehicles.mjs");
+    let said = await V.stopRemotePilot(this.actor);
+    if (!said) {
+      const mode = V.vehicleRemoteMode(device, remoteKinds(device, getTrait), remotesAll(device, getTrait));
+      let vehicle = (mode === "one") ? V.remoteVehicleOf(device) : null;
+      if (mode === "any") {
+        const offered = V.possessedRemoteVehicles().filter(each => !each.system.crew?.pilot);
+        if (!offered.length) return ui.notifications.warn("No Vehicle of yours with Remote Controlled and no Pilot.");
+        const { askPlayerChoice } = await import("../chat.mjs");
+        const picked = (offered.length === 1) ? offered[0].uuid
+          : await askPlayerChoice(this.actor, `${device.name}: Pilot a Vehicle`, offered.map(each => ({ value: each.uuid, label: each.name })));
+        vehicle = offered.find(each => each.uuid === picked);
+        if (!vehicle) return;
+      }
+      said = await V.startRemotePilot(this.actor, vehicle, device);
+    }
     if (said) ui.notifications.info(said);
   }
 

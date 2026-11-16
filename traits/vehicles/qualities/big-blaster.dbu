@@ -4,6 +4,9 @@ kind: vehicle quality
 slots: 1~2
 source: Vehicles
 needsQuality: vehicle-weapon-installed
+# "A Vehicle Weapon of your choice when selecting this Vehicle Quality" - picked on its row.
+choose: weapon
+chooseCount: 1
 # Its entry as the Vehicles page prints it, word for word.
 text: >
   Big Blaster: This Vehicle's Weapon possesses potent destructive force.
