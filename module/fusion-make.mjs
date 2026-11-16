@@ -55,8 +55,69 @@ export function relinkCopies(items, kept = []) {
     const own = data.flags?.["dbu-ttrpg"];
     const giver = own?.grantedBy ? ids.get(key(own[FUSED_FROM], own.grantedBy)) : null;
     if (giver) own.grantedBy = giver;
+    // And a choice naming one of their Items - Favored Technique's Signature Technique: the copy of it.
+    if (Array.isArray(data.system?.chosen)) {
+      data.system.chosen = data.system.chosen.map(entry => {
+        const copy = ids.get(key(own?.[FUSED_FROM], entry?.value));
+        return copy ? { ...entry, value: copy } : entry;
+      });
+    }
   }
   return items;
+}
+
+/** Which of a Talent's copies is which: its file's id, or its name. */
+const talentKey = item => item.flags?.["dbu-ttrpg"]?.sourceId || item.name;
+
+/** What a Talent was answered with, said shortly: its choices and Options. */
+function talentAnswer(item) {
+  return (item.system?.chosen ?? []).map(entry => String(entry?.label || entry?.value || "")).filter(Boolean).join(", ");
+}
+
+/**
+ * The Talents more than one Fused Character has, answered differently (another Option or choice): the Fusion has each once (Double
+ * Dip), so whose it keeps is asked (the user's). [{ key, name, versions: [{ from, fromName, answer }] }]
+ */
+export function talentConflicts(actors) {
+  const seen = new Map();
+  for (const actor of actors) {
+    for (const item of Array.from(actor.items ?? []).filter(each => each.type === "talent")) {
+      const key = talentKey(item);
+      const raw = JSON.stringify(item.system?.chosen ?? []);
+      const entry = seen.get(key) ?? { key, name: item.name, versions: [] };
+      if (!entry.versions.some(version => version.raw === raw)) {
+        entry.versions.push({ from: actor.uuid, fromName: actor.name, answer: talentAnswer(item) || "nothing chosen", raw });
+      }
+      seen.set(key, entry);
+    }
+  }
+  return [...seen.values()].filter(entry => entry.versions.length > 1)
+    .map(entry => ({ ...entry, versions: entry.versions.map(({ raw, ...version }) => version) }));
+}
+
+/**
+ * Whose of each such Talent the Fusion keeps: { [key]: a Fused Character's uuid } - {} where none differs, null where backed out of.
+ * Fused again, whose it kept the last time is the one picked to start with.
+ */
+async function askTalentChoices(actors, fusion = null) {
+  const conflicts = talentConflicts(actors);
+  if (!conflicts.length) return {};
+  const before = Object.fromEntries(Array.from(fusion?.items ?? []).filter(item => (item.type === "talent")
+    && item.flags?.["dbu-ttrpg"]?.[FUSED_COPY]).map(item => [talentKey(item), item.flags["dbu-ttrpg"][FUSED_FROM]]));
+  const escape = foundry.utils.escapeHTML;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Fusion: Talents" },
+    content: `<p class="dbu-respond-hint">These Talents are had by more than one Fused Character, with different choices. The Fusion has each
+      once (Double Dip): whose does it keep?</p>
+      ${conflicts.map((conflict, at) => `<label class="dbu-wager"><span>${escape(conflict.name)}</span><select name="talent${at}">${conflict.versions
+        .map(version => `<option value="${escape(version.from)}" ${(before[conflict.key] === version.from) ? "selected" : ""}>${
+          escape(version.fromName)}: ${escape(version.answer)}</option>`).join("")}</select></label>`).join("")}`,
+    buttons: [{ action: "ok", label: "Keep these", default: true, callback: (event, button) =>
+      Object.fromEntries(conflicts.map((conflict, at) => [conflict.key, button.form.elements[`talent${at}`].value])) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  }).catch(() => null);
+  return (picked && (typeof picked === "object")) ? picked : null;
 }
 
 /** A Fused Character as the Fusion keeps it: who, their Power Level, Race, base Size, Alignment, whether a Minion. */
@@ -140,7 +201,7 @@ export function racialWarnings(picked) {
  * Traits; not their Core Maneuvers. A Signature Technique or Unique Ability copied comes Free (the user's): none of the Fusion's
  * Technique Points spent on it.
  */
-export function copiedItems(actors) {
+export function copiedItems(actors, { talentPicks = {} } = {}) {
   const talents = new Set();
   const out = [];
   for (const actor of actors) {
@@ -148,7 +209,9 @@ export function copiedItems(actors) {
       if (coreManeuver(item) || raceTrait(item)) continue;
       const data = copyOf(item, actor, { [FUSED_COPY]: true });
       if (item.type === "talent") {
-        const key = item.flags?.["dbu-ttrpg"]?.sourceId || item.name;
+        const key = talentKey(item);
+        // Had by more than one, answered differently: the one picked (askTalentChoices) - the first had, otherwise.
+        if (talentPicks?.[key] && (talentPicks[key] !== actor.uuid)) continue;
         if (talents.has(key)) continue;
         talents.add(key);
       }
@@ -188,7 +251,7 @@ export function racialItems(actors, picked) {
  * @param {object} [options]
  * @param {string[]} [options.modifiers]  the Fusion Modifiers it has (Synergistic Fusion's +3 Power Level)
  */
-export function fusionPlan(actors, method, { modifiers = [] } = {}) {
+export function fusionPlan(actors, method, { modifiers = [], talentPicks = {} } = {}) {
   const fused = actors.map(snapshotOf);
   const lead = leadFused(fused);
   const power = fusionPowerLevel(fused, { synergistic: modifiers.includes("synergistic-fusion") });
@@ -213,7 +276,7 @@ export function fusionPlan(actors, method, { modifiers = [] } = {}) {
     masters: allMinions ? [...new Set(actors.map(actor => String(actor.system?.master ?? "")).filter(Boolean))] : [],
     // "The Fusion gains 10(bT) Technique Points" - (bT) "the base ToP of the Fused Character with the highest Power Level".
     bT: lead ? baseTierFor(lead.powerLevel) : 1,
-    items: copiedItems(actors),
+    items: copiedItems(actors, { talentPicks }),
     // "If all of their Fused Characters had their Life Points below the Injured Health Threshold, set that Fusion's Life Points to 1
     // Life Point above the Bruised Health Threshold."
     allBelowInjured: actors.length > 0 && actors.every(actor => ["injured", "critical"].includes(actor.system?.threshold?.key))
@@ -791,7 +854,10 @@ async function fuse(actors, method, name, fusion = null) {
   const modifiers = await askModifiers(actors, method, { current: first ? [] : (kept.modifiers ?? []), balanced: kept.balanced ?? [],
     racialCount, repeating: !first });
   if (modifiers === null) return null;
-  const plan = fusionPlan(actors, method, { modifiers: modifiers.modifiers });
+  // A Talent more than one of them has, with different choices: whose the Fusion keeps (the user's).
+  const talentPicks = await askTalentChoices(actors, existing);
+  if (talentPicks === null) return null;
+  const plan = fusionPlan(actors, method, { modifiers: modifiers.modifiers, talentPicks });
   plan.balanced = modifiers.balanced;
   // In place of the Fused Characters' Apparel, the Method's.
   plan.items = await methodItems(actors, method, plan.items);
