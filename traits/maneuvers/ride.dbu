@@ -1,0 +1,39 @@
+id: ride
+name: Ride
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 2/round
+exploitable: If you are in the Melee Range of an Opponent
+source: Core Rule
+description: >
+  Get into a Vehicle beside you - at its controls if nobody is - or, in one, get out of it, stop Piloting it, or try to take
+  its controls.
+# The user's text (2026-11-15), word for word.
+text: >
+  Ride Maneuver [2/Round]: Take control of a vehicle to ride across the battlefield in style.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: If you are in the Melee Range of an Opponent
+  –Effect: Enter an adjacent Vehicle or Battle Jacket if you are not already in a Vehicle or Battle Jacket, then you may
+  become the Pilot if there is no Pilot. If you are already in a Vehicle or Battle Jacket, upon using this Maneuver, you
+  may either:
+  • Leave that Vehicle/Battle Jacket to move onto an unoccupied Square adjacent to that Vehicle/Battle Jacket.
+  • Stop Piloting this Vehicle/Battle Jacket and move to an unoccupied Square within the Vehicle/Battle Jacket.
+  • Attempt to become the Pilot of the Vehicle/Battle Jacket. If the current Pilot is willing, you become the Pilot in
+  their place and swap which Squares you are occupying in the Vehicle/Battle Jacket. If not, make a Clash (Physical Strike
+  vs Physical Strike/Dodge). If you win, you become the Pilot. The winner of the Clash may choose to remove the other
+  Character involved in the Clash from the Vehicle/Battle Jacket, placing them on a Square adjacent to the Vehicle/Battle
+  Jacket of their choice.
+
+---
+
+# No script: it moves tokens and writes a Vehicle's Crew, which a script cannot reach - vehicles.mjs askRide (asked before it is
+# paid: which Vehicle beside you, and as Pilot or Passenger; in one, Leave / Stop Piloting / become the Pilot) and doRide (done,
+# said on its card). A Pilot needs 1+ Pilot Rank, and a Vehicle with Life Points left. The token goes to the first unoccupied
+# Square in the Vehicle - the Pilot to the Pilot Seat - or beside it when leaving; none free, the table places it.
+# The Pilot asked whether they are willing; not, the Clash (Physical Strike vs Physical Strike/Dodge) on a card of its own,
+# settled in chat.mjs (clash.ride), the winner asked whether the other goes out. Battle Jackets are not built yet.

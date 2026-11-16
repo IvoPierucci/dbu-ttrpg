@@ -282,6 +282,8 @@ function applyRequest(request) {
     case "positionChange": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, POSITION_FLAG, request.position);
     case "swapTokens": return swapTokens(request.aUuid, request.bUuid);
+    // Tokens moved for a Vehicle (vehicles.mjs): its Crew with it, one put in it or out of it - tokens the mover may not own.
+    case "tokens": return game.scenes.get(request.sceneId)?.updateEmbeddedDocuments("Token", request.updates ?? [], request.options ?? {});
     case "heroSwitch": return heroSwitchGM(request.heroUuid, request.avatarUuid);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
@@ -1339,6 +1341,14 @@ async function settleClashEffects(messageId, clash) {
 
   if (clash.drain && clash.result && !clash.drain.applied) {
     await settleDrain(message, clash);
+  }
+
+  // The Ride Maneuver's Clash for a Vehicle's Pilot (vehicles.mjs): won, the Pilot; either way the winner may put the other out.
+  if (clash.ride && clash.result && !clash.ride.applied) {
+    await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, ride: { ...clash.ride, applied: true } });
+    const { settleRideClash } = await import("./vehicles.mjs");
+    const said = await settleRideClash(clash, whoWonClash(clash.result) === "challenger");
+    if (said) await settledNote(message, said);
   }
 
   if (clash.disarm && clash.result && !clash.disarm.applied) {
@@ -15554,6 +15564,19 @@ async function swapTokens(aUuid, bUuid) {
   const b = fromUuidSync(bUuid)?.getActiveTokens?.(false, true)?.[0];
   if (!a || !b || (a.parent !== b.parent)) return ui.notifications.warn("Both tokens must be on the same scene.");
   return a.parent.updateEmbeddedDocuments("Token", [{ _id: a.id, x: b.x, y: b.y }, { _id: b.id, x: a.x, y: a.y }]);
+}
+
+/**
+ * Tokens moved on one scene - a Vehicle's Crew with it, one put in it or out of it (vehicles.mjs) - by whoever may, or through the GM
+ * when one of them is somebody else's.
+ */
+export function requestTokenUpdates(scene, updates, options = {}) {
+  if (!scene || !updates.length) return null;
+  const mine = updates.every(update => scene.tokens.get(update._id)?.isOwner);
+  if (game.user.isGM || mine) return scene.updateEmbeddedDocuments("Token", updates, options);
+  if (!game.users.activeGM) return ui.notifications.warn("A GM must be connected to move the tokens.");
+  game.socket.emit(CHANNEL, { type: "tokens", sceneId: scene.id, updates, options });
+  return null;
 }
 
 function requestSwap(aUuid, bUuid) {

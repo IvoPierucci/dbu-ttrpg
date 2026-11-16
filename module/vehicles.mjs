@@ -257,6 +257,7 @@ export function tokenSizeOf(reading) {
 }
 
 export function registerVehicleHooks() {
+  registerCrewHooks();
   Hooks.on("preCreateActor", (actor, data) => {
     if (actor.type !== "vehicle") return;
     const reading = vehicleReading(actor.system);
@@ -273,6 +274,393 @@ export function registerVehicleHooks() {
     for (const token of actor.getActiveTokens(false, true)) {
       if (((token.width !== size.width) || (token.height !== size.height)) && token.isOwner) await token.update(size);
     }
+  });
+}
+
+// --- Crew: the Ride Maneuver, and the tokens in a Vehicle ----------------------------------------------------------------------
+//
+// "There are two positions within a Vehicle: Pilot ... Passenger." Kept on the Vehicle (`system.crew`, by uuid). Their tokens stay
+// on the map over the Vehicle's Squares and move with it (the user's); one whose token ends up outside them is in it no more - "If
+// you, for any reason, are placed on a Square outside of the Squares occupied by a Vehicle, you are no longer a Pilot or Passenger
+// for that Vehicle."
+
+/** Every Vehicle in the world. */
+function allVehicles() {
+  return Array.from(globalThis.game?.actors ?? []).filter(actor => actor.type === "vehicle");
+}
+
+/** The Vehicle a character is in, and as what: { vehicle, role: "pilot" | "passenger" }, or null. */
+export function vehicleOf(actor) {
+  if (!actor?.uuid) return null;
+  for (const vehicle of allVehicles()) {
+    const crew = vehicle.system?.crew ?? {};
+    if (crew.pilot === actor.uuid) return { vehicle, role: "pilot" };
+    if ((crew.passengers ?? []).includes(actor.uuid)) return { vehicle, role: "passenger" };
+  }
+  return null;
+}
+
+/** Whether a character is Piloting a Vehicle - the Vehicle, or null. */
+export function pilotedBy(actor) {
+  const inside = vehicleOf(actor);
+  return (inside?.role === "pilot") ? inside.vehicle : null;
+}
+
+/** The crew a change leaves: who is Pilot, who are Passengers - one actor moved, added or taken out. */
+export function crewWith(crew, uuid, role) {
+  const passengers = (crew?.passengers ?? []).filter(each => each !== uuid);
+  let pilot = (crew?.pilot === uuid) ? "" : (crew?.pilot ?? "");
+  if (role === "pilot") pilot = uuid;
+  if (role === "passenger") passengers.push(uuid);
+  return { pilot, passengers };
+}
+
+/** A token's first one on a scene - an Actor's, or the token given. */
+function tokenDocOf(who, scene = null) {
+  if (!who) return null;
+  if (who.documentName === "Token") return who;
+  if (who.document?.documentName === "Token") return who.document;
+  const tokens = who.getActiveTokens?.(false, true) ?? [];
+  return tokens.find(token => !scene || (token.parent?.id === scene.id)) ?? null;
+}
+
+/** A token's footprint in Squares on its scene: { x, y, w, h }. */
+export function footprint(token) {
+  const grid = token?.parent?.grid?.size ?? globalThis.canvas?.grid?.size ?? 100;
+  return { x: Math.round(token.x / grid), y: Math.round(token.y / grid), w: token.width ?? 1, h: token.height ?? 1 };
+}
+
+const overlaps = (a, b) => (a.x < b.x + b.w) && (b.x < a.x + a.w) && (a.y < b.y + b.h) && (b.y < a.y + a.h);
+const within = (inner, outer) => (inner.x >= outer.x) && (inner.y >= outer.y) && (inner.x + inner.w <= outer.x + outer.w)
+  && (inner.y + inner.h <= outer.y + outer.h);
+
+/** Whether a token stands wholly on a Vehicle's Squares. */
+export function standsIn(token, vehicleToken) {
+  return Boolean(token && vehicleToken) && within(footprint(token), footprint(vehicleToken));
+}
+
+/**
+ * Where a token may be put in a Vehicle: "If they cannot fit within the confines of the available Squares (meaning that nothing is
+ * occupying those squares), a Character cannot enter that Vehicle." The first room from the front left, row by row - or the Square
+ * asked for first, the Pilot Seat. Squares, not pixels; null when there is none.
+ *
+ * @param {object} vehicleBox   the Vehicle's footprint
+ * @param {object} size         { w, h } of the one going in
+ * @param {object[]} taken      the footprints of the other tokens there
+ * @param {number|null} [first] a Square's place in the Vehicle to try first (row by row from its front left)
+ */
+export function roomIn(vehicleBox, size, taken, first = null) {
+  const fits = (x, y) => {
+    const box = { x, y, w: size.w, h: size.h };
+    return within(box, vehicleBox) && !taken.some(other => overlaps(box, other));
+  };
+  if (Number.isInteger(first)) {
+    const x = vehicleBox.x + (first % vehicleBox.w);
+    const y = vehicleBox.y + Math.floor(first / vehicleBox.w);
+    if (fits(x, y)) return { x, y };
+  }
+  for (let y = vehicleBox.y; y <= vehicleBox.y + vehicleBox.h - size.h; y++) {
+    for (let x = vehicleBox.x; x <= vehicleBox.x + vehicleBox.w - size.w; x++) {
+      if (fits(x, y)) return { x, y };
+    }
+  }
+  return null;
+}
+
+/** An unoccupied place beside a Vehicle, for one leaving it - nearest its front left first. Squares; null when there is none. */
+export function roomBeside(vehicleBox, size, taken) {
+  const around = [];
+  for (let y = vehicleBox.y - size.h; y <= vehicleBox.y + vehicleBox.h; y++) {
+    for (let x = vehicleBox.x - size.w; x <= vehicleBox.x + vehicleBox.w; x++) {
+      const box = { x, y, w: size.w, h: size.h };
+      if (overlaps(box, vehicleBox)) continue;
+      // Adjacent: touching the Vehicle's Squares, a corner counting.
+      const gapX = Math.max(0, Math.max(box.x - (vehicleBox.x + vehicleBox.w), vehicleBox.x - (box.x + box.w)));
+      const gapY = Math.max(0, Math.max(box.y - (vehicleBox.y + vehicleBox.h), vehicleBox.y - (box.y + box.h)));
+      if (Math.max(gapX, gapY) !== 0) continue;
+      if ((x < 0) || (y < 0) || taken.some(other => overlaps(box, other))) continue;
+      around.push({ x, y });
+    }
+  }
+  return around[0] ?? null;
+}
+
+/** The footprints of every other token on a scene. */
+function takenOn(scene, ...not) {
+  const skip = new Set(not.filter(Boolean).map(token => token.id));
+  return Array.from(scene?.tokens ?? []).filter(token => !skip.has(token.id) && !token.hidden).map(footprint);
+}
+
+/** A Vehicle's own token on a scene - the one the character is on. */
+export function vehicleTokenOf(vehicle, scene = null) {
+  return tokenDocOf(vehicle, scene ?? globalThis.canvas?.scene ?? null);
+}
+
+/** The Vehicles beside a character's token, on its scene. */
+export function vehiclesBeside(actor) {
+  const mine = tokenDocOf(actor, globalThis.canvas?.scene ?? null);
+  if (!mine) return [];
+  return allVehicles().filter(vehicle => {
+    const theirs = tokenDocOf(vehicle, mine.parent);
+    if (!theirs) return false;
+    const a = footprint(mine);
+    const b = footprint(theirs);
+    const gapX = Math.max(0, Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w)));
+    const gapY = Math.max(0, Math.max(a.y - (b.y + b.h), b.y - (a.y + a.h)));
+    return Math.max(gapX, gapY) === 0;
+  });
+}
+
+/** "To Pilot a Vehicle, you require at least 1 Skill Rank in the Piloting Skill." */
+export function canPilot(actor) {
+  return (Number(actor?.system?.skills?.pilot?.ranks) || 0) >= 1;
+}
+
+/** Why a character may not take a Vehicle's controls, or "" - a Pilot Rank, and a Vehicle not destroyed. */
+export function whyNotPilot(actor, vehicle) {
+  if (!canPilot(actor)) return `${actor.name} needs at least 1 Skill Rank in Pilot to Pilot a Vehicle.`;
+  if ((Number(vehicle?.system?.life?.value) || 0) <= 0) return `${vehicle.name} is destroyed: nobody can Pilot it till it is repaired.`;
+  return "";
+}
+
+/** A token's place, from Squares into the scene's pixels. */
+function toPixels(scene, square) {
+  const grid = scene?.grid?.size ?? globalThis.canvas?.grid?.size ?? 100;
+  return { x: square.x * grid, y: square.y * grid };
+}
+
+/** Its crew written - by the GM when the Vehicle is not the mover's. */
+async function writeCrew(vehicle, crew) {
+  const { requestActorUpdate } = await import("./chat.mjs");
+  return requestActorUpdate(vehicle, { "system.crew": crew });
+}
+
+/** Tokens moved - by the GM when one is not the mover's. */
+async function moveTokens(scene, updates, options = {}) {
+  const { requestTokenUpdates } = await import("./chat.mjs");
+  return requestTokenUpdates(scene, updates, { dbuVehicleCrew: true, ...options });
+}
+
+/**
+ * What the Ride Maneuver will do, asked before it is paid for. Out of a Vehicle: "Enter an adjacent Vehicle ... then you may become
+ * the Pilot if there is no Pilot." In one: "Leave that Vehicle", "Stop Piloting this Vehicle", or "Attempt to become the Pilot".
+ *
+ * @returns {Promise<object|null>}  { vehicle, action: "enter" | "leave" | "stop" | "pilot", asPilot }, or null for nothing
+ */
+export async function askRide(actor) {
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const notify = text => globalThis.ui?.notifications?.warn(text);
+  const inside = vehicleOf(actor);
+  if (inside) {
+    const { vehicle, role } = inside;
+    const options = [{ value: "leave", label: `Leave ${vehicle.name}` }];
+    if (role === "pilot") options.push({ value: "stop", label: "Stop Piloting" });
+    else options.push({ value: "pilot", label: vehicle.system.crew.pilot ? "Attempt to become the Pilot" : "Become the Pilot" });
+    const action = await askPlayerChoice(actor, `Ride: ${vehicle.name}`, options);
+    if (!action) return null;
+    if (action === "pilot") {
+      const why = whyNotPilot(actor, vehicle);
+      if (why) { notify(why); return null; }
+    }
+    return { vehicle, action };
+  }
+
+  const beside = vehiclesBeside(actor);
+  if (!beside.length) { notify(`${actor.name} is not next to a Vehicle to Ride.`); return null; }
+  let vehicle = beside[0];
+  if (beside.length > 1) {
+    const id = await askPlayerChoice(actor, "Ride: which Vehicle?", beside.map(each => ({ value: each.id, label: each.name })));
+    vehicle = beside.find(each => each.id === id);
+    if (!vehicle) return null;
+  }
+  // Room for them, or no going in.
+  const mine = tokenDocOf(actor, globalThis.canvas?.scene ?? null);
+  const theirs = vehicleTokenOf(vehicle, mine?.parent);
+  if (!mine || !theirs || !roomIn(footprint(theirs), footprint(mine), takenOn(mine.parent, mine, theirs))) {
+    notify(`There is no room for ${actor.name} in ${vehicle.name}.`);
+    return null;
+  }
+  let asPilot = false;
+  if (!vehicle.system.crew.pilot && !whyNotPilot(actor, vehicle)) {
+    const role = await askPlayerChoice(actor, `Ride: ${vehicle.name}`,
+      [{ value: "pilot", label: "Enter as the Pilot" }, { value: "passenger", label: "Enter as a Passenger" }]);
+    if (!role) return null;
+    asPilot = role === "pilot";
+  }
+  return { vehicle, action: "enter", asPilot };
+}
+
+/**
+ * The Ride Maneuver done, once paid: the crew written and the tokens moved; a Pilot who is not willing to give the controls up
+ * answered with the Clash (Physical Strike vs Physical Strike/Dodge). What happened, said - or the Clash's card, which is its card.
+ */
+export async function doRide(actor, maneuver, plan) {
+  const { vehicle, action } = plan;
+  const scene = globalThis.canvas?.scene ?? null;
+  const mine = tokenDocOf(actor, scene);
+  const theirs = vehicleTokenOf(vehicle, scene);
+  const crew = vehicle.system.crew;
+  const seat = (vehicle.system.reading?.size?.cols ?? 1) > 1 ? vehicle.system.pilotSeat : null;
+
+  if (action === "leave") {
+    const spot = (mine && theirs) ? roomBeside(footprint(theirs), footprint(mine), takenOn(scene, mine, theirs)) : null;
+    await writeCrew(vehicle, crewWith(crew, actor.uuid, null));
+    if (spot) await moveTokens(scene, [{ _id: mine.id, ...toPixels(scene, spot) }]);
+    return `${actor.name} leaves ${vehicle.name}${spot ? "" : " - no unoccupied Square beside it: place the token by hand"}.`;
+  }
+
+  if (action === "stop") {
+    await writeCrew(vehicle, crewWith(crew, actor.uuid, "passenger"));
+    const spot = (mine && theirs) ? roomIn(footprint(theirs), footprint(mine), takenOn(scene, mine, theirs)) : null;
+    if (spot) await moveTokens(scene, [{ _id: mine.id, ...toPixels(scene, spot) }]);
+    return `${actor.name} stops Piloting ${vehicle.name}, a Passenger now.`;
+  }
+
+  if (action === "enter") {
+    const spot = (mine && theirs) ? roomIn(footprint(theirs), footprint(mine), takenOn(scene, mine, theirs), plan.asPilot ? seat : null) : null;
+    if (!spot) return `There is no room for ${actor.name} in ${vehicle.name}.`;
+    await writeCrew(vehicle, crewWith(crew, actor.uuid, plan.asPilot ? "pilot" : "passenger"));
+    await moveTokens(scene, [{ _id: mine.id, ...toPixels(scene, spot) }]);
+    return `${actor.name} gets into ${vehicle.name}${plan.asPilot ? " as its Pilot" : " as a Passenger"}.`;
+  }
+
+  // "Attempt to become the Pilot of the Vehicle." Nobody at the controls: they are theirs.
+  const pilot = actorAt(crew.pilot);
+  if (!pilot) {
+    await takeControls(vehicle, actor, scene);
+    return `${actor.name} becomes ${vehicle.name}'s Pilot.`;
+  }
+  // "If the current Pilot is willing, you become the Pilot in their place and swap which Squares you are occupying."
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const willing = await askPlayerChoice(pilot, `${actor.name} wants ${vehicle.name}'s controls`,
+    [{ value: "yes", label: "Let them Pilot" }, { value: "no", label: "Refuse - a Clash" }],
+    { text: `${actor.name} attempts to become the Pilot. Willing, you swap Squares; not, a Clash (Physical Strike vs Physical Strike/Dodge).` });
+  if (willing === "yes") {
+    await writeCrew(vehicle, crewWith(crewWith(crew, pilot.uuid, "passenger"), actor.uuid, "pilot"));
+    const a = tokenDocOf(actor, scene);
+    const b = tokenDocOf(pilot, scene);
+    if (a && b) await moveTokens(scene, [{ _id: a.id, x: b.x, y: b.y }, { _id: b.id, x: a.x, y: a.y }]);
+    return `${pilot.name} lets ${actor.name} take ${vehicle.name}'s controls - they swap places.`;
+  }
+  return postRideClash(actor, pilot, vehicle, maneuver);
+}
+
+/** The Pilot's place taken: the crew written, and the Pilot Seat sat in - swapping with whoever was in it. */
+async function takeControls(vehicle, actor, scene, crew = vehicle.system.crew) {
+  await writeCrew(vehicle, crewWith(crew, actor.uuid, "pilot"));
+  const cols = vehicle.system.reading?.size?.cols ?? 1;
+  const mine = tokenDocOf(actor, scene);
+  const theirs = vehicleTokenOf(vehicle, scene);
+  if ((cols <= 1) || !mine || !theirs) return;
+  const box = footprint(theirs);
+  const seat = vehicle.system.pilotSeat;
+  const at = { x: box.x + (seat % cols), y: box.y + Math.floor(seat / cols) };
+  const here = footprint(mine);
+  if ((here.x === at.x) && (here.y === at.y)) return;
+  const sitter = Array.from(scene.tokens).find(token => (token.id !== mine.id) && (token.id !== theirs.id)
+    && overlaps(footprint(token), { x: at.x, y: at.y, w: 1, h: 1 }));
+  const updates = [{ _id: mine.id, ...toPixels(scene, at) }];
+  if (sitter) updates.push({ _id: sitter.id, x: mine.x, y: mine.y });
+  await moveTokens(scene, updates);
+}
+
+/** "If not, make a Clash (Physical Strike vs Physical Strike/Dodge). If you win, you become the Pilot." */
+async function postRideClash(actor, pilot, vehicle, maneuver) {
+  return globalThis.ChatMessage.create({
+    speaker: globalThis.ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      "dbu-ttrpg": {
+        clash: {
+          category: "strike",
+          clashLabel: "Clash (Physical Strike vs Physical Strike/Dodge)",
+          strikeFoundations: ["physical"],
+          maneuverName: maneuver.name,
+          reason: `${actor.name} tries to take ${vehicle.name}'s controls from ${pilot.name}. Win and they are the Pilot; `
+            + "whoever wins may put the other out of it.",
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: pilot.uuid,
+          defenderName: pilot.name,
+          defenderRoll: "",
+          ride: { applied: false, vehicleUuid: vehicle.uuid },
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/**
+ * The Ride Clash settled (chat.mjs): "If you win, you become the Pilot. The winner of the Clash may choose to remove the other
+ * Character involved in the Clash from the Vehicle, placing them on a Square adjacent to the Vehicle of their choice." Asked of the
+ * winner's player; the Square the first unoccupied one beside it, moved by hand from there.
+ */
+export async function settleRideClash(clash, challengerWon) {
+  const vehicle = actorAt(clash.ride.vehicleUuid);
+  const challenger = actorAt(clash.challengerUuid);
+  const defender = actorAt(clash.defenderUuid);
+  if (!vehicle || !challenger || !defender) return "";
+  const scene = globalThis.canvas?.scene ?? null;
+  const said = [];
+  let crew = vehicle.system.crew;
+  if (challengerWon) {
+    crew = crewWith(crewWith(crew, defender.uuid, "passenger"), challenger.uuid, "pilot");
+    said.push(`${challenger.name} takes ${vehicle.name}'s controls.`);
+  }
+  else said.push(`${defender.name} keeps ${vehicle.name}'s controls.`);
+  const [winner, loser] = challengerWon ? [challenger, defender] : [defender, challenger];
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const out = await askPlayerChoice(winner, `Ride: ${vehicle.name}`,
+    [{ value: "out", label: `Put ${loser.name} out of it` }, { value: "stay", label: `Let ${loser.name} stay` }]);
+  const theirs = vehicleTokenOf(vehicle, scene);
+  const loserToken = tokenDocOf(loser, scene);
+  const updates = [];
+  if (out === "out") {
+    crew = crewWith(crew, loser.uuid, null);
+    const spot = (theirs && loserToken) ? roomBeside(footprint(theirs), footprint(loserToken), takenOn(scene, loserToken, theirs)) : null;
+    if (spot) updates.push({ _id: loserToken.id, ...toPixels(scene, spot) });
+    said.push(`${winner.name} puts ${loser.name} out of it${spot ? "" : " - no unoccupied Square beside it: place the token by hand"}.`);
+  }
+  if (challengerWon) await takeControls(vehicle, challenger, scene, crew);
+  else await writeCrew(vehicle, crew);
+  if (updates.length) await moveTokens(scene, updates);
+  return said.join(" ");
+}
+
+/**
+ * The tokens kept with their Vehicle (the user's: the crew's tokens over its Squares, moving with it): a Vehicle's token moved, its
+ * Pilot's and Passengers' moved as far the same way - by the client that moved it, through the GM where they are not its. And one
+ * of theirs moved off its Squares by any other means - "placed on a Square outside of the Squares occupied by a Vehicle" - is in it
+ * no more.
+ */
+export function registerCrewHooks() {
+  Hooks.on("preUpdateToken", (token, change, options) => {
+    if ((token.actor?.type !== "vehicle") || !(("x" in change) || ("y" in change))) return;
+    options.dbuVehicleFrom = { x: token.x, y: token.y };
+  });
+  Hooks.on("updateToken", async (token, change, options, userId) => {
+    if (userId !== game.user.id) return;
+    if (!(("x" in change) || ("y" in change))) return;
+    const scene = token.parent;
+    if (token.actor?.type === "vehicle") {
+      const from = options.dbuVehicleFrom;
+      if (!from) return;
+      const dx = token.x - from.x;
+      const dy = token.y - from.y;
+      if (!dx && !dy) return;
+      const crew = token.actor.system.crew;
+      const updates = [crew.pilot, ...(crew.passengers ?? [])].map(uuid => tokenDocOf(actorAt(uuid), scene)).filter(Boolean)
+        .map(member => ({ _id: member.id, x: member.x + dx, y: member.y + dy }));
+      if (updates.length) await moveTokens(scene, updates);
+      return;
+    }
+    if (options.dbuVehicleCrew) return;
+    const inside = vehicleOf(token.actor);
+    if (!inside) return;
+    const theirs = vehicleTokenOf(inside.vehicle, scene);
+    if (theirs && !standsIn(token, theirs)) await writeCrew(inside.vehicle, crewWith(inside.vehicle.system.crew, token.actor.uuid, null));
   });
 }
 

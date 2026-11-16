@@ -4548,6 +4548,15 @@ async function askRepair(actor) {
 }
 
 /** The Repair card: the Check it owes, at its Difficulty; the card's button mends the Item. */
+/** The Ride Maneuver done: said on its card - or, a Pilot not willing to give up the controls, the Clash's card in its place. */
+async function postRide(actor, maneuver, plan) {
+  const { doRide } = await import("./vehicles.mjs");
+  const done = await doRide(actor, maneuver, plan);
+  if (typeof done !== "string") return done;
+  const { postManeuver } = await import("./chat.mjs");
+  return postManeuver(actor, maneuver, { note: done });
+}
+
 async function postRepair(actor, maneuver, entry) {
   const { postManeuver } = await import("./chat.mjs");
   const dc = DBUCharacterData.DIFFICULTIES[entry.craftDC];
@@ -5608,6 +5617,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Trickster Magician (2): moving yourself as well as a Clash's effect.
   let trickMove = false;
   let repairing = null;
+  // The Ride Maneuver: into a Vehicle, out of it, or at its controls (vehicles.mjs) - asked before it is paid.
+  let riding = null;
   let materializing = null;
   let foreseen = null;
   let sustaining = null;
@@ -6033,6 +6044,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const clashing = parts.filter(part => part !== "move");
       trickMove = parts.includes("move") && (clashing.length > 0);
       trick = (clashing.length > 1) ? "both" : (clashing[0] ?? "move");
+    }
+
+    // Ride: which Vehicle, and what - asked before the Action is paid.
+    if (maneuver.id === "ride") {
+      riding = await (await import("./vehicles.mjs")).askRide(actor);
+      if (!riding) return false;
     }
 
     // Repair: which Item, asked before the Actions are paid.
@@ -6994,6 +7011,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await treatAlly(actor, targetActor, maneuver)
     : (maneuver.repair && repairing)
     ? await postRepair(actor, maneuver, repairing)
+    : ((maneuver.id === "ride") && riding)
+    ? await postRide(actor, maneuver, riding)
     : (maneuver.materialize && materializing)
     ? await postMaterialize(actor, maneuver, materializing)
     : (maneuver.precognition && foreseen)
