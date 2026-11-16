@@ -3529,6 +3529,105 @@
   --checkbox-checkmark-color: transparent;
 }
 
+/* A window's list of boxes to tick (the Fusion's Racial Traits, Fuse's Characters): one a line, its note to the right - the sheet's
+   .dbu-pick rules stop at the sheet, and without these the boxes ran on as one paragraph. */
+.application.dbu-dialog .dbu-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 8px;
+}
+
+.application.dbu-dialog .dbu-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.application.dbu-dialog .dbu-pick:hover { background: var(--dbu-chat-raised); }
+.application.dbu-dialog .dbu-pick input { margin: 0; flex: none; }
+
+.application.dbu-dialog .window-content .dbu-pick-note {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dbu-chat-dim);
+}
+
+.application.dbu-dialog .window-content .dbu-vq-warning {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #e8796f;
+}
+
+.application.dbu-dialog .window-content .dbu-vq-warning:empty { display: none; }
+
+/* The Fusion Modifiers window: a row each - box, name, whether its Prerequisite is met, and why beneath the name. */
+.application.dbu-dialog .dbu-fusion-mods {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 6px;
+}
+
+.application.dbu-dialog .window-content .dbu-fusion-mod {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 1px;
+  padding: 5px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.application.dbu-dialog .dbu-fusion-mod:hover { background: var(--dbu-chat-raised); }
+.application.dbu-dialog .dbu-fusion-mod input { margin: 0; }
+
+.application.dbu-dialog .window-content .dbu-fusion-mod-name {
+  font-weight: bold;
+  color: var(--dbu-chat-text);
+}
+
+.application.dbu-dialog .window-content .dbu-fusion-mod-state {
+  padding: 0 7px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.application.dbu-dialog .window-content .is-met .dbu-fusion-mod-state { color: #8fce7a; }
+.application.dbu-dialog .window-content .is-unmet .dbu-fusion-mod-state { color: #e8796f; }
+.application.dbu-dialog .window-content .is-table .dbu-fusion-mod-state { color: var(--dbu-chat-dim); }
+
+.application.dbu-dialog .window-content .dbu-fusion-mod-why {
+  grid-column: 2 / span 2;
+  font-size: 11px;
+  color: var(--dbu-chat-dim);
+}
+
+/* Balanced Fusion's two Attributes, beneath its row. */
+.application.dbu-dialog .dbu-fusion-mod-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px 6px 30px;
+}
+
+.application.dbu-dialog .window-content .dbu-fusion-mod-sub > span {
+  font-size: 11px;
+  color: var(--dbu-chat-dim);
+  white-space: nowrap;
+}
+
+.application.dbu-dialog .dbu-fusion-mod-sub select { flex: 1 1 0; min-width: 0; }
+
 .application.dbu-dialog input[type="number"],
 .application.dbu-dialog input[type="text"],
 .application.dbu-dialog select {

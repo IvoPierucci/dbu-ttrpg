@@ -444,19 +444,27 @@ async function askModifiers(actors, method, { current = [], balanced = [], racia
   const lead = leadFused(actors.map(snapshotOf));
   const checks = modifierChecks(actors, { racialCount, bT: lead ? baseTierFor(lead.powerLevel) : 1, partnerOf, rivalOf });
   const escape = foundry.utils.escapeHTML;
-  const mark = ok => (ok === true) ? "&#10003;" : (ok === false) ? "&#10007;" : "?";
+  // Each Modifier a row of its own: its box, its name, whether its Prerequisite is met (a chip), and why underneath - Balanced Fusion's
+  // two Attributes beneath its own row (the user's: ordered, not run together).
+  const state = ok => (ok === true) ? ["is-met", "Met"] : (ok === false) ? ["is-unmet", "Not met"] : ["is-table", "The table's"];
   const even = balancedAttributes(actors);
   const offered = even.length >= 2 ? even : ATTRIBUTES;
   const select = (name, at) => `<select name="${name}">${offered.map(key => `<option value="${key}" ${((balanced[at] ?? offered[at]) === key) ? "selected" : ""}>${
     titled(key)}</option>`).join("")}</select>`;
-  const rows = FUSION_MODIFIERS.map(id => `<label class="dbu-pick" data-tooltip="${escape(checks[id].why)}"><input type="checkbox" name="modifier" value="${id}"
-    ${current.includes(id) ? "checked" : ""}/> ${mark(checks[id].ok)} ${escape(getTrait(id)?.name ?? id)} <em class="dbu-pick-note">${escape(checks[id].why)}</em></label>`).join("");
+  const rows = FUSION_MODIFIERS.map(id => {
+    const [cls, said] = state(checks[id].ok);
+    const row = `<label class="dbu-fusion-mod ${cls}"><input type="checkbox" name="modifier" value="${id}" ${current.includes(id) ? "checked" : ""}/>
+      <span class="dbu-fusion-mod-name">${escape(getTrait(id)?.name ?? id)}</span><span class="dbu-fusion-mod-state">${said}</span>
+      <span class="dbu-fusion-mod-why">${escape(checks[id].why)}</span></label>`;
+    return (id === "balanced-fusion")
+      ? `${row}<div class="dbu-fusion-mod-sub"><span>Balanced Attributes</span>${select("balanced1", 0)}${select("balanced2", 1)}</div>` : row;
+  }).join("");
+  const most = modifiersAllowed(method);
   const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: "Fusion: Fusion Modifiers" },
-    content: `<p class="dbu-respond-hint">${escape(FUSION_METHODS[method]?.label ?? "")}: ${(modifiersAllowed(method) === 2) ? "up to 2" : "1"} Fusion
-      Modifier${(modifiersAllowed(method) === 2) ? "s" : ""} it meets the Prerequisite of${repeating ? " - fused again, \"you may change 1 Fusion Modifier\"" : ""}.</p>
-      <div class="dbu-picks">${rows}</div>
-      <label class="dbu-wager"><span>Balanced Attributes</span>${select("balanced1", 0)}${select("balanced2", 1)}</label>
+    content: `<p class="dbu-respond-hint">${escape(FUSION_METHODS[method]?.label ?? "")}: ${(most === 2) ? "up to 2" : "1"} Fusion
+      Modifier${(most === 2) ? "s" : ""} it meets the Prerequisite of${repeating ? " - fused again, \"you may change 1 Fusion Modifier\"" : ""}.</p>
+      <div class="dbu-fusion-mods">${rows}</div>
       <p class="dbu-vq-warning" data-modifier-warning></p>`,
     buttons: [{ action: "ok", label: "Take these", default: true, callback: (event, button) => ({
       modifiers: Array.from(button.form.querySelectorAll('input[name="modifier"]:checked')).map(input => input.value),
