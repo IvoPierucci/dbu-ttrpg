@@ -1,5 +1,6 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
-import { commandedNow, isCharacter, isMinion, typicalMinion } from "./actor-types.mjs";
+import { commandedNow, isCharacter, isMinion, isVehicle, typicalMinion } from "./actor-types.mjs";
+import { calledShotShelter, vehicleDodgeOf, vehicleTargets } from "./vehicle-crew.mjs";
 import { staminaLeft, staminaToStay, thresholdLines } from "./adversary.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
@@ -30060,6 +30061,8 @@ export async function postAttack(actor, target, maneuver,
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
+  // A Vehicle's crew (vehicle-crew.mjs): an attack at someone in a Vehicle is at the Vehicle - once, an area's too - but a Called Shot.
+  if (!reflecting && target) ({ target, extraTargets } = vehicleTargets(target, extraTargets, isCalledShot({ modifiers })));
   // Swaggering Wager (2): "if you have used at least 1 Attacking Maneuver since the start of your previous turn".
   if (actor?.getFlag?.(SCOPE, "swagger")?.count && !actor.getFlag(SCOPE, "swagger").attacked) {
     await requestActorUpdate(actor, { [`flags.${SCOPE}.swagger.attacked`]: true });
@@ -30123,6 +30126,9 @@ export async function postAttack(actor, target, maneuver,
   // Encounter.
   if (!reflecting && await askGambitCharges(actor, foundation)) charges = (Number(charges) || 0) + 2;
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
+  // The Vehicles among them (vehicles.mjs): ready at once, its Pilot's Dodge Roll with its Defense Value - or none, with no Pilot.
+  const vehicleSide = (!reflecting && everyone.some(isVehicle))
+    ? await (await import("./vehicles.mjs")).vehicleDefences(everyone) : null;
   // Surging (1): "Apply an Energy Charge to all of your Attacking Maneuvers that include your Focus as a target."
   const focus = ((Number(actor.system.states?.surging) || 0) > 0) ? (actor.getFlag?.(SCOPE, "surgingFocus") ?? "") : "";
   if (focus && !reflecting && everyone.some(each => each?.uuid === focus)) charges = (Number(charges) || 0) + 1;
@@ -30459,7 +30465,10 @@ export async function postAttack(actor, target, maneuver,
           // Counter Actions".
           counterless: [target, ...extraTargets].map(entry => entry?.uuid).filter(Boolean)
             .filter(uuid => (Number(fromUuidSync(uuid)?.system?.actions?.counterLeft) || 0) <= 0),
-          ...(selfCaught ? { autoHitUuids: [actor.uuid] } : {}),
+          ...((selfCaught || vehicleSide?.autoHit?.length)
+            ? { autoHitUuids: [...(selfCaught ? [actor.uuid] : []), ...(vehicleSide?.autoHit ?? [])] } : {}),
+          // A Vehicle's Pilot answering for it: their Dodge Roll, its Defense Value (vehicles.mjs vehicleDefences).
+          ...(vehicleSide?.dodges?.length ? { vehicleDodges: vehicleSide.dodges } : {}),
           // A Signature Technique's features on this attack, worked out as it was declared.
           technique,
           // Made during Volleyball Time! - whose, and whether it is the Spike!.
@@ -30712,7 +30721,7 @@ export async function postAttack(actor, target, maneuver,
           // with. Nothing is rolled until every participant appears here: both sides
           // may have effects to apply first, and a roll made before they do cannot be
           // taken back.
-          ready: [],
+          ready: [...(vehicleSide?.ready ?? [])],
           // A list, not an object keyed by uuid: a uuid is full of dots and Foundry
           // expands dotted keys when a document is written, so a key like
           // "Actor.4Nx8qLmP2Zk" comes back as a nested Actor object and the lookup
@@ -30722,7 +30731,7 @@ export async function postAttack(actor, target, maneuver,
           // The range at which this one gives an opening, carried so the card can say it
           // and so the offers can name it. Blank on most.
           exploitable: maneuver.exploitable ?? "",
-          defences: [],
+          defences: [...(vehicleSide?.defences ?? [])],
           // Everyone who stepped in front of somebody else. A list rather than an object
           // keyed by uuid, for the reason every other list here is one: a uuid is full of
           // dots and Foundry expands dotted keys when a document is written.
@@ -32555,9 +32564,12 @@ async function resolveAttackWork(message, attack) {
       foundation: defenceFoundation = "energy"
     } = defenceFor(attack, uuid) ?? {};
 
+    // A Vehicle: its Pilot's Dodge Roll, with its Defense Value (the user's) - their dice, their Diminishing Defense.
+    const standIn = vehicleDodgeOf(attack, (attack.vehicleDodges ?? []).find(entry => entry?.uuid === uuid)?.pilotUuid);
+    const roller = (isVehicle(target) && standIn) ? (fromUuidSync(standIn.pilotUuid) ?? target) : target;
     const options = {
-      extraDice: target.system.dice.extra.formula,
-      criticalDice: target.system.dice.critical.formula,
+      extraDice: roller.system.dice?.extra?.formula ?? "",
+      criticalDice: roller.system.dice?.critical?.formula ?? "",
       combatRoll: true,
       urgent: Boolean(attack.urgentRolls)
     };
@@ -32571,7 +32583,7 @@ async function resolveAttackWork(message, attack) {
       : (attack.duelLosers ?? []).includes(uuid)
       ? "Lost the Duel"
       : (attack.autoHitUuids ?? []).includes(uuid)
-      ? "Volatile Explosion: hit automatically"
+      ? (isVehicle(target) ? `${target.name} has no Pilot: hit as a Feature is` : "Volatile Explosion: hit automatically")
       : attacker.system.effects?.slots?.["attack.autoHit"] === true
       ? `${attacker.name} hits automatically`
       : target.system.effects?.slots?.["incoming.autoHit"] === true
@@ -32587,9 +32599,9 @@ async function resolveAttackWork(message, attack) {
     // Without this the defender met three more Strikes with nothing at all, and every
     // one of them landed for free.
     const stillCounts = Boolean(profileFor(attack)?.followUps);
-    let answer = (forced && !stillCounts)
+    let answer = (forced && (!stillCounts || (roller.type === "vehicle")))
       ? null
-      : await defence.answer(target, options, attack);
+      : await defence.answer(roller, options, attack);
     // Jolt Counter (2): "reduce the Dice Score of your Dodge Roll against your opponents' Attacking Maneuver to 0".
     if (answer && defenceFor(attack, uuid)?.jolt) {
       answer = { ...answer, total: 0, lines: [...(answer.lines ?? []), noteLine("Jolt Counter: its Dice Score 0")] };
@@ -32744,20 +32756,22 @@ async function resolveAttackWork(message, attack) {
       // sake of applying Diminishing Defense stacks", once per rank.
       // Agile Warrior (2): "You do not gain Diminishing Defense stack(s) from the first Attacking Maneuver made with you as a
       // target each Combat Round" - the first that would give any, counted here where it would.
-      agileFree = (target.system?.effects?.slots?.["diminishing.firstFree"] === true)
-        && (target.getFlag?.(SCOPE, "agileRound") !== roundKey());
-      if (agileFree) await requestActorUpdate(target, { [`flags.${SCOPE}.agileRound`]: roundKey() });
+      // A Vehicle's: its Pilot's, who rolled it.
+      const dodger = roller;
+      agileFree = (dodger.system?.effects?.slots?.["diminishing.firstFree"] === true)
+        && (dodger.getFlag?.(SCOPE, "agileRound") !== roundKey());
+      if (agileFree) await requestActorUpdate(dodger, { [`flags.${SCOPE}.agileRound`]: roundKey() });
       // Three-Eyes (3): "The first time you would gain a stack of Diminishing Defense from each Opponent during each Combat Round" - none.
-      const seenThisRound = (target.getFlag?.(SCOPE, "threeEyesDefense")?.round === roundKey())
-        ? (target.getFlag(SCOPE, "threeEyesDefense").from ?? []) : [];
-      if (!agileFree && (target.system?.effects?.slots?.["threeEyes.defense"] === true) && attack.attackerUuid
-        && !seenThisRound.includes(attack.attackerUuid) && !alliesOnScene(target).some(ally => ally.uuid === attack.attackerUuid)) {
+      const seenThisRound = (dodger.getFlag?.(SCOPE, "threeEyesDefense")?.round === roundKey())
+        ? (dodger.getFlag(SCOPE, "threeEyesDefense").from ?? []) : [];
+      if (!agileFree && (dodger.system?.effects?.slots?.["threeEyes.defense"] === true) && attack.attackerUuid
+        && !seenThisRound.includes(attack.attackerUuid) && !alliesOnScene(dodger).some(ally => ally.uuid === attack.attackerUuid)) {
         agileFree = true;
-        await requestActorUpdate(target, { [`flags.${SCOPE}.threeEyesDefense`]: { round: roundKey(), from: [...seenThisRound, attack.attackerUuid] } });
+        await requestActorUpdate(dodger, { [`flags.${SCOPE}.threeEyesDefense`]: { round: roundKey(), from: [...seenThisRound, attack.attackerUuid] } });
       }
-      else await requestActorUpdate(target, {
+      else await requestActorUpdate(dodger, {
         "system.diminishingDefense":
-          target.system.diminishingDefense + (target.system.diminishing.defense.perAttack
+          dodger.system.diminishingDefense + (dodger.system.diminishing.defense.perAttack
             * (attack.technique?.diminishingDefenseTimes ?? 1) * (attack.doublesDiminishing ? 2 : 1))
       });
     }
@@ -35039,7 +35053,11 @@ async function rollAttackWoundWork(message, attack) {
     // is an amount the attacker brings. Taken off what the piercing left, and rounded
     // down like every other halving - ignoring half of what is already gone would be
     // worth more than ignoring half of what is there.
-    const afterPierce = Math.max(0, (target.system.damageReduction ?? 0) - pierced);
+    // "If a Character is targeted by a Called Shot while inside of a Vehicle, increase their Damage Reduction by that Vehicle's Soak
+    // Value" - and a Vehicle's Energy Shield, asked of its Pilot as the hit is (vehicles.mjs).
+    const shelter = calledShotShelter(target, isCalledShot(attack))
+      + (isVehicle(target) ? await (await import("./vehicles.mjs")).energyShield(target) : 0);
+    const afterPierce = Math.max(0, (target.system.damageReduction ?? 0) + shelter - pierced);
     // Bludgeoning's "ignore 1/2 of your target's Damage Reduction" is another such fraction,
     // and another thing than Concentrated's: both, and each takes its own part.
     const halved = (profileFor(attack)?.ignoresHalfDamageReduction
@@ -35248,9 +35266,12 @@ function zenCounterParts(actor, attack) {
 }
 
 function dodgeBonus(actor, { halved = false, attack = null } = {}) {
-  const defenseValue = actor.system.defenseValue;
+  // A Vehicle's Pilot answering for it (vehicles.mjs): its Defense Value in place of theirs (the user's).
+  const forVehicle = vehicleDodgeOf(attack, actor?.uuid);
+  const defenseValue = forVehicle ? forVehicle.defenseValue : actor.system.defenseValue;
   const parts = [{
-    label: halved ? "Defense Value (halved)" : "Defense Value",
+    label: forVehicle ? `${forVehicle.name}'s Defense Value${(forVehicle.notes ?? []).length ? ` (${forVehicle.notes.join(", ")})` : ""}`
+      : (halved ? "Defense Value (halved)" : "Defense Value"),
     value: halved ? Math.floor(defenseValue / 2) : defenseValue
   }];
 
@@ -37989,7 +38010,8 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
   // the Life Points on both sides of the one write, because the Threshold is derived and
   // leaves no record of having been crossed.
   const thresholds = Object.keys(DBUCharacterData.THRESHOLDS);
-  const knockedThrough = thresholds.indexOf(
+  // A Vehicle has no Health Thresholds (the user's): nothing to be knocked through.
+  const knockedThrough = !isVehicle(target) && thresholds.indexOf(
     DBUCharacterData.thresholdKey(floor, target.system.life.max, typicalMinion(target)))
     > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
       target.system.life.max, typicalMinion(target)));
@@ -38027,6 +38049,13 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
       // Pain Resistant (2): none of theirs answers it.
       ...(painDenied ? { dbuKnockerDenied: true } : {}) } : {})
   });
+  // A Vehicle: its Life Points and nothing else - "A Vehicle cannot obtain Combat Conditions", no Health Threshold, nothing of a
+  // Character's answering the hit. Destroyed at 0 (vehicles.mjs).
+  if (isVehicle(target)) {
+    requestEdit(message, { type: "attack",
+      attack: { ...attack, result: { ...attack.result, targets: replaceTarget(attack, target.uuid, { applied: true }) } } });
+    return;
+  }
   if (arms) await offerArmsHit(armsUser, target);
   // Power of the Hera (3): knocked through a Health Threshold, or Defeated, by it - the Power Up, out of sequence.
   if (armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)

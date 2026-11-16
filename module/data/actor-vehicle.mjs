@@ -64,9 +64,21 @@ export default class DBUVehicleData extends foundry.abstract.TypeDataModel {
     this.squares = { cols: reading.size.cols, rows: reading.size.rows };
     // A Vehicle is no Character: no effects, no Combat Conditions ("A Vehicle cannot obtain Combat Conditions"), never Defeated -
     // destroyed at 0 Life Points. Empty, so what reads a target's finds nothing rather than failing.
-    this.effects = { slots: {}, parts: {} };
+    this.effects = { slots: {}, parts: {}, programs: [] };
     this.conditions = {};
     this.defeated = false;
+    // What an attack's working reads off any target, and a Vehicle has none of (its Pilot rolls its Dodge): nothing, so it reads
+    // nothing rather than failing. No Health Thresholds - "healthy" whatever its Life Points.
+    this.dice = { extra: { formula: "" }, critical: { formula: "" } };
+    this.rollModifiers = {};
+    this.diminishing = { defense: { penalty: 0, perAttack: 0 }, offense: { penalty: 0, perAttack: 0 } };
+    this.diminishingDefense = 0;
+    this.threshold = { key: "healthy", penalty: 0 };
+    this.actions = { counter: 0, counterLeft: 0, standard: 0 };
+    this.states = {};
+    this.battlefield = {};
+    this.resources = {};
+    this.minion = false;
     this.destroyed = (Number(this.life.value) || 0) <= 0;
   }
 }

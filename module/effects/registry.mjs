@@ -16,6 +16,7 @@ import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
+import { shelteredBy } from "../vehicle-crew.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, categoryApplies, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
@@ -685,6 +686,8 @@ function highPrograms(actor, report) {
 function qualityPrograms(actor, report) {
   // Ignored altogether by what they are wearing - Environmental Protection.
   if (groundIgnored(Array.from(actor.items ?? []), getTrait).qualities) return [];
+  // In a Vehicle: "Characters within a Vehicle ignore the effects of the Battle Environment and Environment Qualities".
+  if (shelteredBy(actor).ground) return [];
 
   // Gathered whether they are on the ground or above it. A Quality belongs to a Square and
   // a High Environment has Squares of its own - Obscured says so outright: "this
@@ -763,6 +766,8 @@ function environmentPrograms(actor, report) {
   if (isAirborne(actor.system)) return [];
   // Ignored altogether by what they are wearing - Environmental Protection.
   if (groundIgnored(Array.from(actor.items ?? []), getTrait).environments) return [];
+  // In a Vehicle: "Characters within a Vehicle ignore the effects of the Battle Environment" (vehicle-crew.mjs).
+  if (shelteredBy(actor).ground) return [];
 
   const id = environmentIdOf(actor.system, getTrait);
   // Draconic Physique with Hazy Dragon: "Ignore the penalties from the Bog Environment" - its own script stands in.
@@ -822,6 +827,8 @@ function weatherPrograms(actor, report) {
   // Left on the character rather than cleared: the storm is still there when they come
   // down, and clearing it would be this system deciding something about the ground.
   if (highTrait(actor)?.noWeather === true) return [];
+  // In an Air-Tight Vehicle: "Characters within this Vehicle can ignore the effects of Battle Weather".
+  if (shelteredBy(actor).airTight) return [];
 
   const id = String(actor.system?.battlefield?.weather?.id ?? "");
   if (!id) return [];

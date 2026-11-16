@@ -264,6 +264,34 @@ export function registerVehicleHooks() {
     actor.updateSource({ prototypeToken: { actorLink: true, ...tokenSizeOf(reading) },
       "system.life.value": reading.lifeMax, "system.ki.value": reading.kiMax });
   });
+  // Its Crew changed: everyone who was in it or is now worked out again - what they ignore of the ground and the air is whether
+  // they are in it (vehicle-crew.mjs), and that is read as they are prepared.
+  Hooks.on("preUpdateActor", (actor, change, options) => {
+    // Its Life Points as they were, for whether this write destroys it.
+    if ((actor.type === "vehicle") && foundry.utils.hasProperty(change, "system.life.value")) {
+      options.dbuLifeBefore = Number(actor.system.life?.value) || 0;
+    }
+    if ((actor.type === "vehicle") && foundry.utils.hasProperty(change, "system.crew")) {
+      const crew = actor.system.crew ?? {};
+      options.dbuCrewBefore = [crew.pilot, ...(crew.passengers ?? [])].filter(Boolean);
+    }
+  });
+  // Destroyed: its Life Points from above 0 to 0 - its crew hurt, once, by the GM.
+  Hooks.on("updateActor", async (actor, change, options) => {
+    if ((actor.type !== "vehicle") || !foundry.utils.hasProperty(change, "system.life.value")) return;
+    if (!game.user.isActiveGM && !(game.user.isGM && !game.users.activeGM)) return;
+    if (((Number(options.dbuLifeBefore) || 0) > 0) && ((Number(actor.system.life?.value) || 0) <= 0)) await vehicleDestroyed(actor);
+  });
+  Hooks.on("updateActor", (actor, change, options) => {
+    if ((actor.type !== "vehicle") || !foundry.utils.hasProperty(change, "system.crew")) return;
+    const crew = actor.system.crew ?? {};
+    for (const uuid of new Set([...(options.dbuCrewBefore ?? []), crew.pilot, ...(crew.passengers ?? [])].filter(Boolean))) {
+      const member = actorAt(uuid);
+      if (!member || (member.type === "vehicle")) continue;
+      member.reset?.();
+      if (member.sheet?.rendered) member.sheet.render();
+    }
+  });
   Hooks.on("updateActor", async (actor, change, options, userId) => {
     if ((actor.type !== "vehicle") || (game.user.id !== userId)) return;
     const changed = foundry.utils.getProperty(change, "system");
@@ -768,6 +796,105 @@ export async function refundVehicleCost(actor, maneuver) {
     "system.ki.value": Math.min(Number(vehicle.system.ki?.max) || 0, (Number(vehicle.system.ki?.value) || 0) + paid.cost),
     "system.capacity.spent": Math.max(0, (Number(vehicle.system.capacity?.spent) || 0) - paid.cost) });
   return true;
+}
+
+// --- Attacked ------------------------------------------------------------------------------------------------------------------
+//
+// "A Vehicle is a member of the Battlefield, and can thus be targeted by Attacking Maneuvers as if it was another Character" -
+// "When targeted by an Attacking Maneuver, a Vehicle uses its own Defense Value, Soak Value, and Damage Reduction". Its Pilot
+// answers for it with their own Dodge Roll and its Defense Value, nothing else of the Defend Maneuver (the user's); with no Pilot it
+// does not defend, hit as a Feature is (the user's). Countermeasures and Energy Shield are its Pilot's Counter Action (the user's).
+
+/** A Counter Action of its Pilot's spent, where a Combat Encounter counts them - through the GM where they are not the mover's. */
+async function spendPilotCounter(pilot) {
+  if (!globalThis.game?.combat?.started) return true;
+  if ((Number(pilot.system?.actions?.counterLeft) || 0) <= 0) return false;
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(pilot, { "system.actionsSpent.counter": (Number(pilot.system.actionsSpent?.counter) || 0) + 1 });
+  return true;
+}
+
+/** Whether a Pilot has a Counter Action to spend - always, out of a Combat Encounter. */
+function pilotHasCounter(pilot) {
+  return !globalThis.game?.combat?.started || ((Number(pilot?.system?.actions?.counterLeft) || 0) > 0);
+}
+
+/**
+ * What an attack carries for the Vehicles among its targets, worked out as it is made: each one ready at once - nothing of the
+ * Defend Maneuver to choose for it - its Pilot's Dodge Roll with its Defense Value, or, with no Pilot, hit as a Feature is.
+ * Favored Environment's 1/2 Output where its Pilot stands in that Battle Environment; Countermeasures' asked of its Pilot.
+ *
+ * @param {Actor[]} everyone   the attack's targets
+ * @returns {Promise<{ ready: string[], defences: object[], autoHit: string[], dodges: object[] }>}
+ */
+export async function vehicleDefences(everyone) {
+  const out = { ready: [], defences: [], autoHit: [], dodges: [] };
+  for (const vehicle of everyone.filter(each => each?.type === "vehicle")) {
+    out.ready.push(vehicle.uuid);
+    const pilot = actorAt(vehicle.system.crew?.pilot);
+    if (!pilot) {
+      out.autoHit.push(vehicle.uuid);
+      continue;
+    }
+    const output = Number(vehicle.system.output) || 0;
+    let defenseValue = Number(vehicle.system.defenseValue) || 0;
+    const notes = [];
+    const favored = (vehicle.system.qualities ?? []).find(entry => entry.id === "vehicle-favored-environment")?.choices?.[0];
+    if (favored) {
+      const { environmentIdOf } = await import("./environments.mjs");
+      if (environmentIdOf(pilot.system, getTrait) === favored) {
+        defenseValue += Math.floor(output / 2);
+        notes.push(`Favored Environment +${Math.floor(output / 2)}`);
+      }
+    }
+    if (hasVehicleQuality(vehicle, "countermeasures") && pilotHasCounter(pilot)) {
+      const { askPlayerChoice } = await import("./chat.mjs");
+      const used = await askPlayerChoice(pilot, `${vehicle.name}: Countermeasures`,
+        [{ value: "yes", label: `Spend a Counter Action: Defense Value +${Math.floor(output / 2)}` }, { value: "no", label: "No" }],
+        { text: `${vehicle.name} is targeted by an Attacking Maneuver.` });
+      if ((used === "yes") && await spendPilotCounter(pilot)) {
+        defenseValue += Math.floor(output / 2);
+        notes.push(`Countermeasures +${Math.floor(output / 2)}`);
+      }
+    }
+    out.defences.push({ uuid: vehicle.uuid, defence: "dodge" });
+    out.dodges.push({ uuid: vehicle.uuid, pilotUuid: pilot.uuid, name: vehicle.name, defenseValue, notes });
+  }
+  return out;
+}
+
+/**
+ * Energy Shield: "When this Vehicle is hit by an Attacking Maneuver, you may spend a Counter Action. If you do, you may spend an
+ * amount of the Vehicle's Ki Points up to its Output to increase this Vehicle's Damage Reduction by an equal amount." Asked of its
+ * Pilot as the hit is; the Damage Reduction it adds, or 0.
+ */
+export async function energyShield(vehicle) {
+  if ((vehicle?.type !== "vehicle") || !hasVehicleQuality(vehicle, "energy-shield")) return 0;
+  const pilot = actorAt(vehicle.system.crew?.pilot);
+  const most = Math.min(Number(vehicle.system.output) || 0, Number(vehicle.system.ki?.value) || 0);
+  if (!pilot || (most <= 0) || !pilotHasCounter(pilot)) return 0;
+  const { askPlayerAmount, requestActorUpdate } = await import("./chat.mjs");
+  const amount = Math.min(most, Math.max(0, Math.floor(Number(await askPlayerAmount(pilot, `${vehicle.name}: Energy Shield`, most,
+    "Ki Points into its Damage Reduction - a Counter Action spent")) || 0)));
+  if (!amount || !await spendPilotCounter(pilot)) return 0;
+  await requestActorUpdate(vehicle, { "system.ki.value": (Number(vehicle.system.ki?.value) || 0) - amount });
+  return amount;
+}
+
+/**
+ * "If a Vehicle is destroyed, all Characters within it have their Life Points reduced by 1/4 of the Maximum Life Points for that
+ * Vehicle." Done once, as its Life Points reach 0 - by the GM - and said.
+ */
+async function vehicleDestroyed(vehicle) {
+  const loss = Math.floor((Number(vehicle.system.life?.max) || 0) / 4);
+  const crew = [vehicle.system.crew?.pilot, ...(vehicle.system.crew?.passengers ?? [])].map(actorAt).filter(Boolean);
+  const { reduceLifePoints } = await import("./chat.mjs");
+  for (const member of crew) await reduceLifePoints(member, loss, { reason: `${vehicle.name} destroyed` });
+  await globalThis.ChatMessage?.create({
+    speaker: globalThis.ChatMessage.getSpeaker({ actor: vehicle }),
+    content: `<p><strong>${foundry.utils.escapeHTML(vehicle.name)}</strong> is destroyed.${crew.length
+      ? ` Everyone in it loses ${loss} Life Points (1/4 of its Maximum): ${crew.map(each => foundry.utils.escapeHTML(each.name)).join(", ")}.` : ""}</p>`
+  });
 }
 
 /** The Actor a uuid names, if it can be had without waiting - a Vehicle's Creator, its Pilot and Passengers. */

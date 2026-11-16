@@ -6,6 +6,7 @@ import { getTrait, printedLines, resourceLimits, traitsOfKind } from "./effects/
 import { featureAsks, withGranted } from "./signature.mjs";
 import { customBuffBasicIsSignature } from "./custom-buffs.mjs";
 import { asksStamina, staminaForKi, staminaLeft } from "./adversary.mjs";
+import { pilotedVehicle as pilotedBy } from "./vehicle-crew.mjs";
 
 /**
  * Maneuvers: anything that spends an Action.
@@ -37,15 +38,6 @@ import { asksStamina, staminaForKi, staminaLeft } from "./adversary.mjs";
  *                                 Profile id, or "any" to choose freely. Its
  *                                 Foundation is chosen when the attack is declared.
  */
-
-/**
- * The Vehicle a character is Piloting (vehicles.mjs pilotedBy) - asked here without importing that module, which brings the data
- * models with it.
- */
-function pilotedBy(actor) {
-  if (!actor?.uuid) return null;
-  return Array.from(globalThis.game?.actors ?? []).find(each => (each.type === "vehicle") && (each.system?.crew?.pilot === actor.uuid)) ?? null;
-}
 
 /**
  * The four types of Maneuver. `action` names the Action a Maneuver of that type

@@ -17,6 +17,7 @@
  * one caller and not another.
  */
 
+import { shelteredBy } from "./vehicle-crew.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { environmentIdOf, highTraitOf } from "./environments.mjs";
 import { setCondition } from "./conditions.mjs";
@@ -39,6 +40,9 @@ export function environmentOf(actor) {
 export function isUnbreathable(actor) {
   // Ignored altogether by something they have - the Space Helmet worn.
   if (!permits(actor?.system?.effects?.slots, "unbreathableEnvironments")) return false;
+  // In an Air-Tight Vehicle: "Characters within this Vehicle can ignore the effects of ... Unbreathable Environments" (in any
+  // other, they "still suffer the effects of an Unbreathable Environment").
+  if (shelteredBy(actor).airTight) return false;
   const rank = Number(actor?.system?.battlefield?.highEnvironment) || 0;
   if (rank) {
     const sky = highTraitOf(actor.system, { all: () => traitsOfKind("high") });
