@@ -6,8 +6,7 @@ requiresSkill: craftVehicles
 requiresRanks: 2
 sessionLimit: 1
 timeCost: 4 Hours
-# Vehicles and Battle Jackets are not in this system: what it does is said on the card, and done by
-# the table.
+# A Vehicle picked among those the player can see: its Vehicle Level made their Power Level once the hours are spent
 effectNote: recreates a Vehicle or Battle Jacket exactly as it was (with their current Power Level and - for a Battle Jacket - their Scholarship Score if higher than its Jacket Attribute)
 source: Core Rule
 description: >
@@ -25,4 +24,4 @@ text: >
 
 # Offered on the Adventure tab to whoever has 2+ Ranks in Craft (Vehicles).
 # The use counts, the card says the Time Cost, and its button - once the time is spent - says what it
-# does. Vehicles and Battle Jackets are not built: the recreating is the table's.
+# does. A Vehicle's Vehicle Level is made theirs (vehicles.mjs tuneUpVehicle); a Battle Jacket's is not built yet.

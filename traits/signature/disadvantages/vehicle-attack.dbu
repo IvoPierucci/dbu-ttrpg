@@ -5,7 +5,7 @@ side: disadvantages
 tpCost: -4
 requirement: Blitz Profile OR Restricted – Weapon Disadvantage.
 requires: profile:blitz|has:restricted-weapon
-summary: Only while Piloting a Vehicle - not enforced until Vehicles exist.
+summary: Only while Piloting a Vehicle - refused otherwise.
 description: >
   This technique requires the use of your vehicle to ram into your enemies.
 text: >

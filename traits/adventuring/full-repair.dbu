@@ -34,4 +34,4 @@ text: >
 # Weapons too). Asked: which - one of their Weapons, or a Vehicle or Battle Jacket - and how many
 # hours, 2 to 10; every full 2 is a fifth (5 hours is two fifths). The use counts at once; the card's
 # button, once the hours are spent, gives the Weapon its Life Points back (a destroyed one comes back).
-# Vehicles and Battle Jackets are not built: for those the card says what they regain.
+# A Vehicle picked among those the player can see: its Life Points back (vehicles.mjs). Battle Jackets are not built yet.

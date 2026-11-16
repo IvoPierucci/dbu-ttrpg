@@ -847,6 +847,12 @@ export async function vehicleDefences(everyone) {
         notes.push(`Favored Environment +${Math.floor(output / 2)}`);
       }
     }
+    // Expert Pilot (2): "Increase all of your Dodge Rolls made with a Vehicle by 1(T) for every 2 Skill Ranks of Piloting gained."
+    const expert = expertPilotDodge(pilot);
+    if (expert) {
+      defenseValue += expert;
+      notes.push(`Expert Pilot +${expert}`);
+    }
     if (hasVehicleQuality(vehicle, "countermeasures") && pilotHasCounter(pilot)) {
       const { askPlayerChoice } = await import("./chat.mjs");
       const used = await askPlayerChoice(pilot, `${vehicle.name}: Countermeasures`,
@@ -895,6 +901,191 @@ async function vehicleDestroyed(vehicle) {
     content: `<p><strong>${foundry.utils.escapeHTML(vehicle.name)}</strong> is destroyed.${crew.length
       ? ` Everyone in it loses ${loss} Life Points (1/4 of its Maximum): ${crew.map(each => foundry.utils.escapeHTML(each.name)).join(", ")}.` : ""}</p>`
   });
+}
+
+// --- What waited on Vehicles -----------------------------------------------------------------------------------------------------
+
+/** Whether a character has the Expert Pilot Talent. */
+export function hasExpertPilot(actor) {
+  return Array.from(actor?.items ?? []).some(item => (item.type === "talent")
+    && ((item.flags?.["dbu-ttrpg"]?.sourceId === "expert-pilot") || (String(item.name ?? "").trim().toLowerCase() === "expert pilot")));
+}
+
+/** Expert Pilot (1): "For the effects of this Talent, the 5th Skill Rank in Piloting is treated as 2 Skill Ranks." */
+export function expertPilotRanks(actor) {
+  const ranks = Number(actor?.system?.skills?.pilot?.ranks) || 0;
+  return (ranks >= 5) ? ranks + 1 : ranks;
+}
+
+/** Expert Pilot (2): "Increase all of your Dodge Rolls made with a Vehicle by 1(T) for every 2 Skill Ranks of Piloting gained." */
+export function expertPilotDodge(actor) {
+  if (!hasExpertPilot(actor)) return 0;
+  return Math.floor(expertPilotRanks(actor) / 2) * Math.max(1, Number(actor.system?.tierOfPower) || 1);
+}
+
+const roundOf = () => `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+
+/** Expert Pilot (4): "[1/Round]: Use the Ride Maneuver as an Instant Maneuver." Asked; taken, its Round spent. */
+export async function rideAsInstant(actor, maneuver) {
+  if (!hasExpertPilot(actor) || (actor.getFlag?.("dbu-ttrpg", "expertRideRound") === roundOf())) return maneuver;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const answer = await askPlayerChoice(actor, `${actor.name}: Expert Pilot`,
+    [{ value: "instant", label: "Ride as an Instant Maneuver (1/Round)" }, { value: "standard", label: "As it is - 1 Action" }]);
+  if (answer !== "instant") return maneuver;
+  await actor.setFlag("dbu-ttrpg", "expertRideRound", roundOf());
+  return { ...maneuver, type: "instant", actionCost: 0 };
+}
+
+/** Vehicle Attack: "You cannot use this Signature Technique unless you are Piloting a Vehicle." */
+export function whyNotVehicleAttack(actor, maneuver) {
+  if (!(maneuver?.advantages ?? []).includes("vehicle-attack") || pilotedBy(actor)) return "";
+  return `${maneuver.name} is a Vehicle Attack: only while Piloting a Vehicle.`;
+}
+
+/**
+ * Eye of the Dragon's Way of the Pilot, by Quick to Master's Option: "If you would target an Opponent with an Attacking Maneuver
+ * while piloting a Battle Jacket or Vehicle, you may spend up to 10(bT) of that Battle Jacket or Vehicle's Life Points to increase
+ * the Wound Roll for that Attacking Maneuver by an equal amount." Asked, once a Round; taken, on the Wound.
+ */
+export function wayOfThePilot(actor) {
+  const items = Array.from(actor?.items ?? []);
+  return items.some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "eye-of-the-dragon")
+    && items.some(item => (item.system?.chosen ?? []).some(entry => (entry?.key === "option") && (entry.value === "way-of-the-pilot")));
+}
+
+export async function askWayOfThePilot(actor, vehicle, declared, target) {
+  if (!vehicle || !declared || !target || !wayOfThePilot(actor) || (actor.getFlag?.("dbu-ttrpg", "wayOfThePilotRound") === roundOf())) {
+    return declared;
+  }
+  const { areOpponents } = await import("./allies.mjs");
+  if (!areOpponents(target, actor)) return declared;
+  const most = Math.min(10 * Math.max(1, Number(actor.system?.baseTierOfPower) || 1), Math.max(0, Number(vehicle.system.life?.value) || 0));
+  if (most <= 0) return declared;
+  const { askPlayerAmount, requestActorUpdate } = await import("./chat.mjs");
+  const amount = Math.min(most, Math.max(0, Math.floor(Number(await askPlayerAmount(actor, `${actor.name}: Way of the Pilot`, most,
+    `${vehicle.name}'s Life Points onto the Wound Roll (1/Round)`)) || 0)));
+  if (!amount) return declared;
+  await actor.setFlag("dbu-ttrpg", "wayOfThePilotRound", roundOf());
+  await requestActorUpdate(vehicle, { "system.life.value": (Number(vehicle.system.life?.value) || 0) - amount });
+  return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: `Way of the Pilot (${vehicle.name})`, value: amount }] };
+}
+
+/**
+ * The Eject Maneuver: "Immediately leave a Vehicle/Battle Jacket and move a number of Squares away from the Vehicle/Battle Jacket in
+ * a straight line equal to your number of Skill Ranks in Piloting." Straight away from its middle - out of it first, if that is
+ * further. "If that Vehicle/Battle Jacket was targeted for an Attacking Maneuver when you used this effect, and you were the Pilot,
+ * carry out that Attacking Maneuver against the Vehicle/Battle Jacket as if you were still the Pilot" - an attack already made at it
+ * keeps who answers for it (vehicleDefences), so nothing more is done for that.
+ */
+export async function doEject(actor) {
+  const inside = vehicleOf(actor);
+  if (!inside) return null;
+  const { vehicle } = inside;
+  await writeCrew(vehicle, crewWith(vehicle.system.crew, actor.uuid, null));
+  const scene = globalThis.canvas?.scene ?? null;
+  const mine = tokenDocOf(actor, scene);
+  const theirs = vehicleTokenOf(vehicle, scene);
+  const ranks = Number(actor.system?.skills?.pilot?.ranks) || 0;
+  if (!mine || !theirs) return `${actor.name} ejects from ${vehicle.name} - ${ranks} Square${ranks === 1 ? "" : "s"} away from it.`;
+  const box = footprint(theirs);
+  const here = footprint(mine);
+  const sign = value => (value > 0) ? 1 : (value < 0) ? -1 : 0;
+  // Away from its middle: along the side they are on, or the corner's diagonal when they are as far off one way as the other.
+  const offX = (here.x + (here.w / 2)) - (box.x + (box.w / 2));
+  const offY = (here.y + (here.h / 2)) - (box.y + (box.h / 2));
+  let dx = (Math.abs(offY) > 2 * Math.abs(offX)) ? 0 : sign(offX);
+  let dy = (Math.abs(offX) > 2 * Math.abs(offY)) ? 0 : sign(offY);
+  if (!dx && !dy) dy = -1;
+  let at = { ...here };
+  for (let step = 0; (step < ranks) || overlaps(at, box); step++) at = { ...at, x: at.x + dx, y: at.y + dy };
+  at = { ...at, x: Math.max(0, at.x), y: Math.max(0, at.y) };
+  await moveTokens(scene, [{ _id: mine.id, ...toPixels(scene, at) }]);
+  return `${actor.name} ejects from ${vehicle.name}, ${ranks} Square${ranks === 1 ? "" : "s"} away from it in a straight line.`;
+}
+
+/** The Craft DC a Vehicle's Craftsmanship Grade asks - its table's. */
+export function vehicleCraftDC(vehicle) {
+  return gradeRow(vehicle?.system?.grade).difficulty;
+}
+
+/**
+ * The Repair Maneuver's "a Vehicle/Battle Jacket you are adjacent to": each Vehicle beside them, to be repaired with Craft
+ * (Vehicles) at its Craft DC - entries shaped as the Maneuver's own (use-maneuver.mjs repairables).
+ */
+export function vehicleRepairables(actor) {
+  const ranks = Number(actor?.system?.skills?.craftVehicles?.ranks) || 0;
+  return vehiclesBeside(actor).map(vehicle => ({
+    item: { id: vehicle.uuid, name: vehicle.name }, vehicleUuid: vehicle.uuid, kind: "vehicle", specialty: "craftVehicles",
+    craftDC: vehicleCraftDC(vehicle),
+    why: !(ranks > 0) ? "needs Ranks in Craft (Vehicles)"
+      : ((Number(vehicle.system.life?.value) || 0) >= (Number(vehicle.system.life?.max) || 0)) ? "nothing to repair" : ""
+  }));
+}
+
+/** "Restore the Life Points of the Weapon/Vehicle/Battle Jacket by 2d10(bT) plus your Skill Bonus" - Craft (Vehicles)'. Said. */
+export async function repairVehicle(actor, vehicleUuid) {
+  const vehicle = actorAt(vehicleUuid);
+  if (!vehicle) return null;
+  const baseTier = Math.max(1, Number(actor.system?.baseTierOfPower) || 1);
+  const roll = await new Roll(`${2 * baseTier}d10`).evaluate();
+  const bonus = Number(actor.system?.skills?.craftVehicles?.bonus) || 0;
+  const back = roll.total + bonus;
+  const life = Math.min(Number(vehicle.system.life?.max) || 0, (Number(vehicle.system.life?.value) || 0) + back);
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(vehicle, { "system.life.value": life });
+  return { roll, text: `${vehicle.name}: ${roll.total} (${2 * baseTier}d10) + ${bonus} (Craft (Vehicles)) = ${back} Life Points back.` };
+}
+
+/** Full Repair: "It regains Life ... equal to 1/5 of their respective maximums for every 2 hours spent." Said. */
+export async function fullRepairVehicle(vehicleUuid, steps, share = 5) {
+  const vehicle = actorAt(vehicleUuid);
+  if (!vehicle) return "the Vehicle is gone";
+  const max = Number(vehicle.system.life?.max) || 0;
+  const before = Number(vehicle.system.life?.value) || 0;
+  const back = Math.floor((max * Math.max(0, steps)) / Math.max(1, share));
+  const life = Math.min(max, before + back);
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(vehicle, { "system.life.value": life });
+  return `${vehicle.name} regains ${life - before} Life Points (${steps}/${share} of its Maximum)`;
+}
+
+/** Tune Up: "with your current Power Level" - its Vehicle Level the one who did it's. Said. */
+export async function tuneUpVehicle(vehicleUuid, actor) {
+  const vehicle = actorAt(vehicleUuid);
+  if (!vehicle) return "the Vehicle is gone";
+  const level = Math.min(MAX_VEHICLE_LEVEL, Math.max(1, Number(actor.system?.powerLevel) || 1));
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(vehicle, { "system.vehicleLevel": level });
+  return `${vehicle.name} is Vehicle Level ${level}`;
+}
+
+/** The Craftsmanship Grade a Create Check's Difficulty makes - the Grade table's Craft DCs, Novice taken as Apprentice. */
+export function gradeForDifficulty(difficulty) {
+  return VEHICLE_GRADES.find(row => row.difficulty === difficulty)?.grade ?? 1;
+}
+
+/**
+ * Create, a Vehicle made: "A Vehicle's Vehicle Level is equal to the Power Level of its creator at the time of creation" - an Actor of
+ * its own, its Grade the Difficulty the Check was made at, its Creator who made it, owned by their players. By the GM where the maker
+ * may not make Actors.
+ */
+export function vehicleDataFor(maker, { name = "", difficulty = "apprentice" } = {}) {
+  const owners = Array.from(globalThis.game?.users ?? []).filter(user => !user.isGM && maker.testUserPermission?.(user, "OWNER"));
+  return {
+    name: String(name || "").trim() || `${maker.name}'s Vehicle`,
+    type: "vehicle",
+    system: { grade: gradeForDifficulty(difficulty), vehicleLevel: Math.min(MAX_VEHICLE_LEVEL, Math.max(1, Number(maker.system?.powerLevel) || 1)),
+      creator: maker.uuid },
+    ownership: Object.fromEntries(owners.map(user => [user.id, 3]))
+  };
+}
+
+export async function makeVehicle(maker, create) {
+  const data = vehicleDataFor(maker, create);
+  if (game.user.isGM || game.user.can?.("ACTOR_CREATE")) return Actor.create(data);
+  if (!game.users.activeGM) return ui.notifications.warn("A GM must be connected to make the Vehicle.");
+  const { requestMakeVehicle } = await import("./chat.mjs");
+  return requestMakeVehicle(data);
 }
 
 /** The Actor a uuid names, if it can be had without waiting - a Vehicle's Creator, its Pilot and Passengers. */

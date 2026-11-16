@@ -95,7 +95,8 @@ import * as gearReadingModule from "./gear.mjs";
 import { SUPER_PROFILES, askFeatures, favoredDamage, favoredElement, forcedFullWager, maxKiWager, maxLifeWager,
   minimumKiWager } from "./maneuvers.mjs";
 import { askUnitedPartner } from "./united-attack.mjs";
-import { hasVehicleQuality, pilotedBy, pilotingOf, vehicleWeaponsFor, whyNotInVehicle, whyNotPilotAttack } from "./vehicles.mjs";
+import { askWayOfThePilot, doEject, hasVehicleQuality, pilotedBy, pilotingOf, rideAsInstant, vehicleOf, vehicleRepairables,
+  vehicleWeaponsFor, whyNotInVehicle, whyNotPilotAttack, whyNotVehicleAttack } from "./vehicles.mjs";
 
 /**
  * What a Maneuver costs from the Action economy, and out of which pool.
@@ -270,7 +271,7 @@ function permitted(actor, maneuver) {
   }
 
   // In a Vehicle (vehicles.mjs): its Pilot uses no Unique Ability, and nobody in it the Soar Maneuver but a Pilot with Hikou.
-  const inVehicle = whyNotInVehicle(actor, maneuver);
+  const inVehicle = whyNotInVehicle(actor, maneuver) || whyNotVehicleAttack(actor, maneuver);
   if (inVehicle) {
     ui.notifications.warn(inVehicle);
     return false;
@@ -4529,9 +4530,10 @@ async function postSustain(actor, maneuver, sustaining) {
 
 /** Repair: which Weapon or piece of Apparel. */
 async function askRepair(actor) {
-  const options = repairables(actor);
+  // "OR a Vehicle/Battle Jacket you are adjacent to" (vehicles.mjs).
+  const options = [...repairables(actor), ...vehicleRepairables(actor)];
   if (!options.length) {
-    ui.notifications.warn(`${actor.name} has no Weapon or Apparel to repair.`);
+    ui.notifications.warn(`${actor.name} has no Weapon, Apparel or Vehicle beside them to repair.`);
     return null;
   }
   const escape = Handlebars.escapeExpression;
@@ -4941,6 +4943,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
                                                     portal = false, combo = false, spiritSword = null,
                                                     extraTargets = [], armedAs = "", extraCharges = 0 } = {}) {
   if (!actor || !maneuver) return false;
+  // Expert Pilot (4): "[1/Round]: Use the Ride Maneuver as an Instant Maneuver" - asked first, as it changes what it is (vehicles.mjs).
+  if (maneuver.id === "ride") maneuver = await rideAsInstant(actor, maneuver);
   // Its /Round and /Encounter uses as they were - Instantaneous Control's Cancel takes off what making it added.
   const usesBefore = { used: [...(actor.system.usedManeuvers ?? [])], round: [...(actor.system.talentUses?.round ?? [])],
     encounter: [...(actor.system.talentUses?.encounter ?? [])] };
@@ -5821,6 +5825,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       }
       declared = { ...declared, piloting: pilotingOf(vehicle),
         damageAttribute: { label: `${vehicle.name}'s Output`, value: Number(vehicle.system.output) || 0 } };
+      // Eye of the Dragon's Way of the Pilot: the Vehicle's Life Points onto the Wound - asked, once a Round.
+      declared = await askWayOfThePilot(actor, vehicle, declared, targetActor);
     }
     else if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted && !maneuver.buddyAttack && (armedAs !== "unarmed")) {
       const chosen = await askWeapon(actor, declared);
@@ -6077,6 +6083,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const clashing = parts.filter(part => part !== "move");
       trickMove = parts.includes("move") && (clashing.length > 0);
       trick = (clashing.length > 1) ? "both" : (clashing[0] ?? "move");
+    }
+
+    // Eject: "Immediately leave a Vehicle" - from one.
+    if ((maneuver.id === "eject") && !vehicleOf(actor)) {
+      ui.notifications.warn(`${actor.name} is in no Vehicle to Eject from.`);
+      return false;
     }
 
     // Ride: which Vehicle, and what - asked before the Action is paid.
@@ -7051,6 +7063,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await postRepair(actor, maneuver, repairing)
     : ((maneuver.id === "ride") && riding)
     ? await postRide(actor, maneuver, riding)
+    : (maneuver.id === "eject")
+    ? await (await import("./chat.mjs")).postManeuver(actor, maneuver, { note: (await doEject(actor)) ?? "" })
     : (maneuver.materialize && materializing)
     ? await postMaterialize(actor, maneuver, materializing)
     : (maneuver.precognition && foreseen)

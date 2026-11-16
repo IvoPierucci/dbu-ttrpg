@@ -3,6 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, typicalMinion } from "../actor-types.mjs";
+import { vehicleHolding } from "../vehicle-crew.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
 import { isVillainousManeuver } from "../villainous.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
@@ -7084,7 +7085,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           <select name="type">${Object.entries(TRAVEL_TYPES).map(([key, type]) =>
             `<option value="${key}">${escape(type.label)} (${escape(type.time)})</option>`).join("")}</select></label>
         <label class="dbu-respond-option" data-tooltip="Regardless of the Travel Type, no Ki Points are lost.">
-          <input type="checkbox" name="vehicle"/> <span class="dbu-respond-name">By Vehicle</span></label>
+          <input type="checkbox" name="vehicle" ${vehicleHolding(this.actor) ? "checked" : ""}/> <span class="dbu-respond-name">By Vehicle</span></label>
         <label class="dbu-respond-option" data-tooltip="The Rest Maneuver used during a Medium or Long Travel that takes less than 2 days: no Ki Points are lost, and the Travel takes the Rest's Time Cost longer.">
           <input type="checkbox" name="rested"/> <span class="dbu-respond-name">Rested on the way</span></label>`,
       buttons: [
@@ -7149,6 +7150,22 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Full Repair: what, and for how long, asked first.
     if (definition.fullRepair === true) return this.#startFullRepair(entry, definition, "");
+
+    // Tune Up: which Vehicle (vehicles.mjs) - its Vehicle Level theirs once the hours are spent.
+    if (definition.id === "tune-up") {
+      const vehicles = game.actors.filter(actor => (actor.type === "vehicle") && actor.visible);
+      if (!vehicles.length) {
+        ui.notifications.warn(`${this.actor.name}: no Vehicle to Tune Up.`);
+        return;
+      }
+      const { askPlayerChoice, postAdventuring } = await import("../chat.mjs");
+      const picked = (vehicles.length === 1) ? vehicles[0].uuid : await askPlayerChoice(this.actor, `${this.actor.name} - ${definition.name}`,
+        vehicles.map(vehicle => ({ value: vehicle.uuid, label: vehicle.name })));
+      const vehicle = vehicles.find(each => each.uuid === picked);
+      if (!vehicle) return;
+      await this.actor.update({ "system.adventureUses": [...(this.actor.system.adventureUses ?? []), entry.id] });
+      return postAdventuring(this.actor, definition, { tuneUp: { vehicleUuid: vehicle.uuid, name: vehicle.name } });
+    }
 
     // A Clash at a Character - Pickpocket's "Target a Character. Make a Clash (Thievery vs
     // Perception/Thievery)". At the one token targeted, and every earlier attempt on them this
@@ -7532,8 +7549,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const ranksIn = key => Number(this.actor.system.skills?.[key]?.ranks) || 0;
     const weapons = (ranksIn("craftWeapons") >= 2) ? this.actor.items.filter(item => (item.system.crafted?.kind === "weapon")
       && (((Number(item.system.crafted.lifeLost) || 0) > 0) || item.system.crafted.destroyed)) : [];
-    const vehicles = ranksIn("craftVehicles") >= 2;
-    if (!weapons.length && !vehicles) {
+    // Each Vehicle they can see (vehicles.mjs) - a Battle Jacket is not built yet.
+    const vehicles = (ranksIn("craftVehicles") >= 2)
+      ? game.actors.filter(actor => (actor.type === "vehicle") && actor.visible) : [];
+    if (!weapons.length && !vehicles.length) {
       ui.notifications.warn(`${this.actor.name} has nothing to Full Repair: 2+ Ranks in Craft (Weapons) and a damaged `
         + "Weapon, or 2+ in Craft (Vehicles).");
       return;
@@ -7545,13 +7564,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       window: { title: `${this.actor.name} - ${definition.name}` },
       content: `<label class="dbu-wager"><span>Repair</span>
           <select name="what">${weapons.map(item => `<option value="${item.id}" ${(item.id === itemId) ? "selected" : ""}>${
-            escape(item.name)}</option>`).join("")}${vehicles ? `<option value="vehicle">A Vehicle or Battle Jacket</option>` : ""}</select></label>
+            escape(item.name)}</option>`).join("")}${vehicles.map(vehicle => `<option value="vehicle:${vehicle.uuid}">${escape(vehicle.name)} (Vehicle)</option>`).join("")}</select></label>
         <label class="dbu-wager"><span>Hours</span>
           <input type="number" name="hours" value="${min}" min="${min}" max="${max}" step="1"/>
           <em>1/5 of the most for every 2</em></label>`,
       buttons: [
         { action: "repair", label: "Begin", default: true, callback: (event, button, dialog) => ({
-          what: dialog.element.querySelector('select[name="what"]')?.value ?? "vehicle",
+          what: dialog.element.querySelector('select[name="what"]')?.value ?? "",
           hours: Math.min(max, Math.max(min, Math.floor(Number(dialog.element.querySelector('input[name="hours"]')?.value) || min)))
         }) },
         { action: "cancel", label: "Cancel" }
@@ -7559,11 +7578,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rejectClose: false
     });
     if (!chosen || (typeof chosen !== "object")) return;
-    const item = (chosen.what === "vehicle") ? null : this.actor.items.get(chosen.what);
+    const vehicle = String(chosen.what).startsWith("vehicle:") ? fromUuidSync(String(chosen.what).slice(8)) : null;
+    const item = vehicle ? null : this.actor.items.get(chosen.what);
+    if (!vehicle && !item) return;
     await this.actor.update({ "system.adventureUses": [...(this.actor.system.adventureUses ?? []), entry.id] });
     const { postAdventuring } = await import("../chat.mjs");
     return postAdventuring(this.actor, definition, {
-      repair: { itemId: item?.id ?? "", itemName: item?.name ?? "a Vehicle or Battle Jacket", hours: chosen.hours }
+      repair: { itemId: item?.id ?? "", vehicleUuid: vehicle?.uuid ?? "", itemName: item?.name ?? vehicle?.name ?? "", hours: chosen.hours }
     });
   }
 

@@ -49,7 +49,8 @@ if (optionChosen("way-of-the-mystic")) {
 if (optionChosen("way-of-the-weaponmaster")) {
     allow armed.eyeOfTheDragon;
 }
-# Way of the Pilot: waits on Battle Jackets and Vehicles being piloted - till then, the table's.
+# Way of the Pilot: a Vehicle piloted, an Opponent targeted - its Life Points onto the Wound, asked once a Round (vehicles.mjs
+# askWayOfThePilot). A Battle Jacket's waits on Battle Jackets.
 
 # Way of the Serene, Way of the Fury: the Power Up used - a box in its window, once a Round and twice an Encounter: the
 # State till the end of your next turn.

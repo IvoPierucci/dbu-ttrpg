@@ -15,5 +15,6 @@ text: >
 
 ---
 
-# Every effect here is about a Vehicle, a Battle Jacket or the Ride Maneuver, and none of them is built yet: written, held and
-# given (Way of the Pilot's), its effects the table's till they are - (1) counts only for this Talent's own.
+# Every effect here is about a Vehicle, a Battle Jacket or the Ride Maneuver: written, held and
+# given (Way of the Pilot's). Vehicles are built (vehicles.mjs): (1) counted for this Talent's own, (2) on the Dodge Roll its Pilot
+# makes for a Vehicle, (4) asked as the Ride is used, once a Round. (3) and (5) wait on Battle Jackets.

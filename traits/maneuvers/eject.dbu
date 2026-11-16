@@ -30,5 +30,5 @@ text: >
 
 ---
 
-# Opened by 2+ Ranks in Pilot, like every other Skill's. Vehicles and Battle Jackets are not built in this system: the
-# leaving and the attack carried out against it are the table's; the card says how far.
+# Opened by 2+ Ranks in Pilot, like every other Skill's. Done by vehicles.mjs doEject: out of the Vehicle's crew, its token moved
+# that many Squares straight away from it (out of it first). An attack already made at it keeps its Pilot answering for it.

@@ -31,4 +31,5 @@ text: >
 # Weapon, Apparel for Apparel) - the others are shown refused, with the reason; and a broken one (0
 # Life Points, 0 Break Value) is brought back by it.
 #
-# Not built: Vehicles and Battle Jackets, which are not in the system.
+# A Vehicle beside them, with Craft (Vehicles) at its Craftsmanship Grade's Craft DC: its Life Points (vehicles.mjs). Battle Jackets
+# are not in the system yet.

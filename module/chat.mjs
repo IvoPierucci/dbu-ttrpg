@@ -285,6 +285,8 @@ function applyRequest(request) {
     case "swapTokens": return swapTokens(request.aUuid, request.bUuid);
     // Tokens moved for a Vehicle (vehicles.mjs): its Crew with it, one put in it or out of it - tokens the mover may not own.
     case "tokens": return game.scenes.get(request.sceneId)?.updateEmbeddedDocuments("Token", request.updates ?? [], request.options ?? {});
+    // A Vehicle made by the Create Maneuver of a player who may not make Actors (vehicles.mjs makeVehicle).
+    case "makeVehicle": return Actor.create(request.data);
     case "heroSwitch": return heroSwitchGM(request.heroUuid, request.avatarUuid);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
@@ -4916,7 +4918,8 @@ function renderRepair(message, html) {
   button.type = "button";
   button.className = "dbu-clash-button";
   button.textContent = `The Check was made - repair ${repair.itemName}`;
-  button.dataset.tooltip = (repair.kind === "weapon")
+  button.dataset.tooltip = (repair.kind === "vehicle") ? "2d10(bT) plus your Craft (Vehicles) Skill Bonus back in its Life Points."
+    : (repair.kind === "weapon")
     ? "2d10(bT) plus your Craft Skill Bonus back in Life Points - a broken one too."
     : "2 Break Value back - a broken one too.";
   button.addEventListener("click", () => repairGear(message, repair));
@@ -4938,6 +4941,14 @@ export const REPAIR_BREAK_VALUE = 2;
 
 async function repairGear(message, repair) {
   const actor = fromUuidSync(repair.actorUuid);
+  // A Vehicle beside them (vehicles.mjs): its Life Points, 2d10(bT) plus Craft (Vehicles).
+  if (repair.kind === "vehicle") {
+    await message.setFlag(SCOPE, REPAIR_FLAG, { ...repair, applied: true });
+    const done = actor ? await (await import("./vehicles.mjs")).repairVehicle(actor, repair.itemId) : null;
+    if (!done) return ui.notifications.warn(`${repair.itemName} is gone.`);
+    return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [done.roll],
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(done.text)}</div>` });
+  }
   const item = actor?.items?.get(repair.itemId);
   if (!item) {
     ui.notifications.warn(`${repair.itemName} is gone.`);
@@ -5033,7 +5044,7 @@ async function dropNotes(done) {
  * has been spent in full. Interrupted, the button is simply never pressed.
  */
 export async function postAdventuring(actor, definition, { repair = null, topic = "", patient = null,
-  knowledge = "" } = {}) {
+  knowledge = "", tuneUp = null } = {}) {
   const escape = Handlebars.escapeExpression;
   // Full Repair says what it is on, and the hours chosen in place of its "2~10 Hours".
   const time = repair ? `${repair.hours} Hours` : (definition.timeCost ?? "");
@@ -5064,6 +5075,8 @@ export async function postAdventuring(actor, definition, { repair = null, topic 
       // Full Repair's: what, and for how many hours, and the fifths they earn.
       repair: repair ? { ...repair, share: Number(definition.repairShare) || 5, per: Number(definition.repairHours) || 2,
         min: Number(definition.hoursMin) || 2, max: Number(definition.hoursMax) || 10 } : null,
+      // Tune Up's Vehicle (vehicles.mjs): its Vehicle Level made theirs once it is done.
+      tuneUp,
       applied: false
     } } }
   });
@@ -5105,6 +5118,7 @@ async function settleAdventuring(message, adventuring) {
   if (adventuring.note) said.push(`${actor.name} ${adventuring.note.replaceAll("{knowledge}", adventuring.knowledge || "Knowledge")}${
     adventuring.topic ? ` - the topic: ${adventuring.topic}` : ""}`);
   if (adventuring.repair) said.push(await fullRepairDone(actor, adventuring.repair));
+  if (adventuring.tuneUp) said.push(await (await import("./vehicles.mjs")).tuneUpVehicle(adventuring.tuneUp.vehicleUuid, actor));
   if (adventuring.patient) said.push(await careDone(adventuring.patient));
   return settledNote(message, `${actor.name} finishes ${adventuring.name}${said.length ? `: ${said.join(", ")}` : ""}.`);
 }
@@ -5138,6 +5152,8 @@ async function fullRepairDone(actor, repair) {
   const { repairSteps, repairedLoss } = await import("./adventure.mjs");
   const steps = repairSteps(repair.hours, repair);
   const item = repair.itemId ? actor.items.get(repair.itemId) : null;
+  // A Vehicle (vehicles.mjs): its own Life Points back.
+  if (repair.vehicleUuid) return (await import("./vehicles.mjs")).fullRepairVehicle(repair.vehicleUuid, steps, repair.share);
   if (!repair.itemId) {
     return `${repair.itemName} regains ${steps}/${repair.share} of its Life Points (and a Battle Jacket of its Ki Points)`;
   }
@@ -6055,7 +6071,11 @@ async function settleCreate(message, create, success) {
   const say = async text => { const note = await settledNote(message, text); if (note) done.notes.push(note.id); };
   if (!success) await say("Failed.");
   else if (create.kind !== "basic") {
-    await say(["weapon", "apparel"].includes(create.kind) ? `${create.name} made - build it on the Gear tab.` : `${create.name} made.`);
+    await say(["weapon", "apparel"].includes(create.kind) ? `${create.name} made - build it on the Gear tab.`
+      : (create.kind === "vehicle") ? `${create.name} made - a Vehicle of its own in the Actors directory: choose its Size and Qualities there.`
+      : `${create.name} made.`);
+    // A Vehicle: an Actor of its own, its Grade the Difficulty, its Vehicle Level its maker's Power Level (vehicles.mjs).
+    if (create.kind === "vehicle") await (await import("./vehicles.mjs")).makeVehicle(maker, { difficulty: create.difficulty });
     // "Once you have created anything through the Create Maneuver, you gain a Blueprint of what was created." Not
     // from a Blueprint, nor from Magical Materialization's quick one.
     if (!create.blueprint && !create.noBlueprint) done.blueprint = await giveBlueprint(maker, create);
@@ -15571,6 +15591,12 @@ async function swapTokens(aUuid, bUuid) {
  * Tokens moved on one scene - a Vehicle's Crew with it, one put in it or out of it (vehicles.mjs) - by whoever may, or through the GM
  * when one of them is somebody else's.
  */
+/** A Vehicle's Actor made by the GM - the Create Maneuver's, for a player who may not make Actors (vehicles.mjs). */
+export function requestMakeVehicle(data) {
+  game.socket.emit(CHANNEL, { type: "makeVehicle", data });
+  return null;
+}
+
 export function requestTokenUpdates(scene, updates, options = {}) {
   if (!scene || !updates.length) return null;
   const mine = updates.every(update => scene.tokens.get(update._id)?.isOwner);
