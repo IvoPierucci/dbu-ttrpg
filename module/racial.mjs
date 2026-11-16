@@ -44,6 +44,8 @@
  *                                   allyBeside` with an Ally adjacent alone (Difference in Shell's King and Queen)
  *   grantsFactorTraitOf: <factor>   a Factor Trait of that Factor chosen as it is added - gone with it (Robot Ripoff's of Alternate
  *                                   Upbringing)
+ *   grantsRacialOf: <race>          a Racial Trait of that Race chosen as it is added - `grantsRacialImportance: secondary` of those
+ *                                   alone - changeable on its Options tab, gone with it (Majin Genes' Majin Secondary Trait)
  *   grantedLifeCost: 1              the Racial Life Modifier that much lower for each Trait it gave still had (Bestial Presence's)
  *   holdsState / zeroScore          (a Trait's or an Option's) a State it keeps you in; an Attribute Score it holds at 0 (Savage's)
  *   grantsTechniques: full-power    Nameless Horde (4)'s 'Full Power' Signature Techniques, made as it is added (full-power.mjs) -
@@ -790,7 +792,8 @@ export async function answeredTalent(data, trait, actor) {
  */
 export async function choiceRowsOf(item) {
   const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
-  const talentRow = await talentChoiceRow(item, file);
+  // And the Racial Trait a `grantsRacialOf` gave (Majin Genes').
+  const talentRow = await talentChoiceRow(item, file) ?? racialGrantRow(item, file);
   if (!file?.choose) return talentRow ? [talentRow] : [];
   const actor = item.actor ?? null;
   const chosen = item.system.chosen ?? [];
@@ -837,6 +840,8 @@ export async function changeChoice(item, which, value) {
   const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   // The Talent a `grantsTalentChoiceFrom` gave: the old one off, the new one on, as it was given (marked the Trait's).
   if (which === "talent") return changeTalentChoice(item, file, value);
+  // The Racial Trait a `grantsRacialOf` gave: the old one off, the new one on.
+  if (which === "racial") return changeRacialGrant(item, file, value);
   if (!file?.choose || !value) return false;
   const key = (which === 3) ? `${file.id}#3` : (which === 2) ? `${file.id}#2` : file.id;
   const kind = (which === 3) ? file.choose3 : (which === 2) ? file.choose2 : file.choose;
@@ -1142,6 +1147,9 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   }
   // Robot Ripoff (2): "Gain a Factor Trait from Alternate Upbringing" - which, asked; gone with it.
   if (trait.grantsFactorTraitOf) await grantFactorTrait(actor, item, String(trait.grantsFactorTraitOf));
+  // Majin Genes (2), Genetic Focus: Majins (2): "Gain access to a Majin Secondary Trait of your choice" - which, asked; changeable on
+  // its Options tab; gone with it.
+  if (trait.grantsRacialOf) await grantRacialOf(actor, item, trait);
   // Were-Beast (2): "the Secondary Racial Trait you exchanged for this Factor Trait becomes known as your 'Normal Trait'" - which, asked.
   if (trait.asksNormalTrait) await askNormalTrait(actor, item);
   return item;
@@ -1325,6 +1333,74 @@ async function grantFactorTrait(actor, item, factor) {
   });
   const chosen = offered.find(each => each.id === picked);
   return chosen ? addRacialTrait(actor, chosen, { grantedBy: item.id }) : null;
+}
+
+/**
+ * The Racial Traits a `grantsRacialOf` offers this character: that Race's (`grantsRacialImportance`'s alone where it names one - Majin
+ * Genes' Secondary), not a Subrace's nor an Option, not had - but the one it gave.
+ */
+export function racialGrantChoices(file, actor, keep = "") {
+  const race = String(file?.grantsRacialOf ?? "");
+  if (!race) return [];
+  const importance = String(file.grantsRacialImportance ?? "");
+  const had = new Set(Array.from(actor?.items ?? []).map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
+  return traitsOfKind("races").filter(trait => (trait.owner === race) && !trait.optionOf && !trait.subrace
+    && (!importance || (String(trait.importance ?? "") === importance)) && ((trait.id === keep) || !had.has(trait.id)))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** What a `grantsRacialOf` gives, said: "Majin Secondary Trait". */
+function racialGrantLabel(file) {
+  const race = getRace(String(file?.grantsRacialOf ?? ""))?.name ?? String(file?.grantsRacialOf ?? "");
+  const importance = String(file?.grantsRacialImportance ?? "");
+  return `${race} ${importance ? `${importance.charAt(0).toUpperCase()}${importance.slice(1)} ` : "Racial "}Trait`;
+}
+
+/** As it is gained: which, asked - "Later, by hand" leaves it to its Options tab. */
+async function grantRacialOf(actor, item, file) {
+  const offered = racialGrantChoices(file, actor);
+  if (!offered.length) return null;
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${item.name} - a ${racialGrantLabel(file)}` },
+    content: `<label class="dbu-respond-option"><span class="dbu-respond-name">${escape(racialGrantLabel(file))}</span>
+      <select name="racial">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select></label>`,
+    buttons: [{ action: "take", label: "Gain", default: true,
+      callback: (event, button, dialog) => dialog.element.querySelector('[name="racial"]')?.value ?? "" },
+      { action: "later", label: "Later, by hand" }],
+    rejectClose: false
+  });
+  return (typeof picked === "string") && picked ? changeRacialGrant(item, file, picked) : null;
+}
+
+/** The one a `grantsRacialOf` gave, as a row of its Options tab - changeable. */
+function racialGrantRow(item, file) {
+  if (!file?.grantsRacialOf) return null;
+  const current = (item.system.chosen ?? []).find(entry => entry.key === `${file.id}#racial`)?.value ?? "";
+  const offered = racialGrantChoices(file, item.actor ?? null, current);
+  return { which: "racial", current, label: racialGrantLabel(file),
+    options: offered.map(trait => ({ value: trait.id, label: trait.name, selected: trait.id === current })) };
+}
+
+/** Chosen or changed: the one it gave before taken off, the new one given by it (`grantedRacial`), what is chosen recorded. */
+async function changeRacialGrant(item, file, value) {
+  const actor = item?.actor;
+  if (!actor || !file) return false;
+  const key = `${file.id}#racial`;
+  const old = (item.system.chosen ?? []).find(entry => entry.key === key)?.value ?? "";
+  if (old === value) return false;
+  const trait = value ? racialGrantChoices(file, actor, old).find(each => each.id === value) : null;
+  if (value && !trait) return false;
+  const gone = Array.from(actor.items).filter(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
+    && each.flags?.["dbu-ttrpg"]?.grantedRacial).map(each => each.id);
+  if (gone.length) await actor.deleteEmbeddedDocuments("Item", gone);
+  if (trait) {
+    const given = await addRacialTrait(actor, trait, { grantedBy: item.id });
+    if (given) await given.setFlag("dbu-ttrpg", "grantedRacial", true);
+  }
+  await item.update({ "system.chosen": [...(item.system.chosen ?? []).filter(entry => entry.key !== key),
+    ...(trait ? [{ key, value, label: `${file.name}: ${trait.name}` }] : [])] });
+  return true;
 }
 
 /** `grantsOtherOptions: a=b` and `grantsOtherChoices: a=b` - the Option and the choice each granted Other Trait is given with. */

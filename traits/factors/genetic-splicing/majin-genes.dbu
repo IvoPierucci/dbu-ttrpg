@@ -3,6 +3,9 @@ name: Majin Genes
 order: 2
 category: body
 importance: secondary
+# (2) "Gain access to a Majin Secondary Trait of your choice": which, asked as it is gained - changeable on its Options tab, gone with it.
+grantsRacialOf: majin
+grantsRacialImportance: secondary
 description: >
   Partially made of chewing gum-like goop, you embody the whimsical chaos of the Majin race.
 text: >
@@ -18,8 +21,8 @@ text: >
 allow save.racial.morale;
 # (1)
 allow unnatural;
-# (2) The Majin Secondary Trait is added by hand from the Traits tab, as any Racial Trait is (the user's: the system does not control
-# which Racial Traits a character has) - and that it cannot be traded for a Factor Trait, the table's.
+# (2) The Majin Secondary Trait: given by it, chosen as it is gained (its grantsRacialOf header); that it cannot be traded for a Factor
+# Trait, the table's.
 # (3) Collision Damage about to be taken, an Adaptation Point to spend: asked - spent, none of it (chat.mjs majinCollision).
 allow majinGenes.collision;
 

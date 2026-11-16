@@ -5,6 +5,9 @@ category: body
 # "[Uncanny Monster]": it replaces that Primary Racial Trait - which, the table's. (1) Its Prerequisite, the Majin Genes Factor Trait,
 # shown and never enforced.
 importance: primary
+# (2) "Gain access to a Majin Secondary Trait of your choice": which, asked as it is gained - changeable on its Options tab, gone with it.
+grantsRacialOf: majin
+grantsRacialImportance: secondary
 # Its own description was given cut short ("T"): asked for.
 text: >
   Genetic Focus: Majins (Body) [Uncanny Monster]:
@@ -17,7 +20,7 @@ text: >
 ---
 
 [passive]
-# (2) The Majin Secondary Trait added by hand from the Traits tab, as any Racial Trait is; that it cannot be traded, the table's.
+# (2) The Majin Secondary Trait: given by it, chosen as it is gained (its grantsRacialOf header); that it cannot be traded, the table's.
 # (3) Where the Magic Modifier is the higher (actor-character.mjs) - Priest's.
 allow surgency.magic;
 # (4)
