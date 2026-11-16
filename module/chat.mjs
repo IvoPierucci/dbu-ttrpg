@@ -37685,10 +37685,12 @@ async function submitDuelWager(message, actor) {
   if (!side) return;
   const primary = duelParticipants(attack).find(entry => entry.uuid === actor.uuid)?.primary ?? false;
   // Teamwork (1): joined through the United Attack, twice the 1/10th.
-  // Fusion of Ki (5): joined your Linked Character's with its box ticked, "double the effects of ... Wager" too.
+  // Fusion of Ki (5): joined your Linked Character's with its box ticked, "double the effects of ... Wager" too - each doubling its
+  // own (the user's): with Teamwork's, four times.
   const joined = [...(attack.duel.united ?? []), ...(attack.united ?? [])].filter(entry => entry.uuid === actor.uuid);
-  const teamworked = !primary && (joined.length > 0)
-    && ((actor.system?.effects?.slots?.["united.doubleWager"] === true) || joined.some(entry => entry.kiFused));
+  const teamworked = (!primary && (joined.length > 0))
+    ? (((actor.system?.effects?.slots?.["united.doubleWager"] === true) ? 2 : 1) * (joined.some(entry => entry.kiFused) ? 2 : 1))
+    : 1;
   // Duel Wager: the two who roll may wager more.
   const raised = primary ? duelSideWager(attack, side) : [];
   const cap = duelWagerCap(actor, { primary, doubled: teamworked, bonus: raised.reduce((sum, row) => sum + row.value, 0) });

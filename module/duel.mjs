@@ -146,8 +146,10 @@ export function whyNotDuel(actor, attack, { counterLeft = 1 } = {}) {
  */
 export function duelWagerCap(actor, { primary = false, doubled = false, bonus = 0 } = {}) {
   const max = Number(actor?.system?.capacity?.max) || 0;
-  // Teamwork (1)'s, a United Attack's joiner: twice the 1/10th.
-  const cap = Math.floor(max / (primary ? 3 : 10)) * (doubled ? 2 : 1) + Math.max(0, Number(bonus) || 0);
+  // Teamwork (1)'s, a United Attack's joiner: twice the 1/10th. A number where several effects double it, each its own (the
+  // user's): Teamwork and the Fusion of Ki's both, four times.
+  const times = (typeof doubled === "number") ? Math.max(1, doubled) : (doubled ? 2 : 1);
+  const cap = Math.floor(max / (primary ? 3 : 10)) * times + Math.max(0, Number(bonus) || 0);
   return Math.max(0, Math.min(cap, Number(actor?.system?.ki?.value) || 0));
 }
 
