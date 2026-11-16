@@ -2,7 +2,8 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
-import { isAdversary, isCharacter, typicalMinion } from "../actor-types.mjs";
+import { isAdversary, isCharacter, isFusion, typicalMinion } from "../actor-types.mjs";
+import { fusionContext } from "../fusion.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
@@ -616,6 +617,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       renameReputation: DBUCharacterSheet._onRenameReputation,
       deleteReputation: DBUCharacterSheet._onDeleteReputation,
       editImage: DBUCharacterSheet._onEditImage,
+      fuseAgain: DBUCharacterSheet._onFuseAgain,
+      openFused: DBUCharacterSheet._onOpenFused,
       connectRemoteVehicle: DBUCharacterSheet._onConnectRemoteVehicle,
       remotePilot: DBUCharacterSheet._onRemotePilot
     },
@@ -636,6 +639,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       scrollable: [""]
     },
     customBuffs: { template: "systems/dbu-ttrpg/templates/parts/actor-custom-buffs.hbs", scrollable: [""] },
+    // A Fusion's own (the user's mockup, 2026-11-16): on a Fusion's sheet only, in its Progression's place.
+    fusion: { template: "systems/dbu-ttrpg/templates/parts/actor-fusion.hbs", scrollable: [""] },
     techniques: { template: "systems/dbu-ttrpg/templates/parts/actor-techniques.hbs", scrollable: [""] },
     uniqueAbilities: { template: "systems/dbu-ttrpg/templates/parts/actor-unique-abilities.hbs", scrollable: [""] },
     traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs", scrollable: [""] },
@@ -824,6 +829,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // What the player writes in by hand to change a value (the user's; custom-buffs.mjs) - in the second row beside the
     // Maneuvers, the strip still breaking after the sixth.
     customBuffs: { id: "customBuffs", group: "primary", label: "Custom Buffs" },
+    // A Fusion's own: who it is made of and how (fusion.mjs) - on a Fusion's sheet, which has no Progression.
+    fusion: { id: "fusion", group: "primary", label: "Fusion" },
     // Time outside a Combat Encounter: the Adventure rules.
     adventure: { id: "adventure", group: "primary", label: "Adventure" },
     biography: { id: "biography", group: "primary", label: "Biography" },
@@ -1654,6 +1661,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // An Adversary's own tab (adversary.mjs): its Category and what the Adversary Table gives for it, and Main's Attributes and
     // Skills with the boxes it writes into.
     context.isAdversary = isAdversary(this.actor);
+    // A Fusion's tab (fusion.mjs): who it is made of, its Method and Modifiers, its power, its Technique Points.
+    context.isFusion = isFusion(this.actor);
+    context.fusion = context.isFusion ? fusionContext(this.actor, {
+      actorAt: uuid => (uuid ? fromUuidSync(uuid) : null),
+      raceName: id => raceOptions().find(option => option.value === id)?.label ?? "",
+      subraceName,
+      sizeLabel: key => DBUCharacterData.SIZES[key]?.label ?? key,
+      alignments: DBUCharacterData.ALIGNMENTS,
+      trait: id => getTrait(id)
+    }) : null;
     if (context.isAdversary) context.adversary = this.#adversaryContext(context);
     // A tab for each type, the last one opened kept (the user's); what Manage hid left off, counted.
     {
@@ -3613,24 +3630,29 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.actor.update({ "system.customBuffs": buffs });
   }
 
-  /** The tab an Adversary's sheet has in Main's place, and the one every other sheet has not: which is left off this one. */
-  get #tabLeftOff() {
-    return isAdversary(this.actor) ? "main" : "adversary";
+  /**
+   * The tabs left off this sheet: an Adversary's has its own in Main's place; a Fusion's has its own in its Progression's place
+   * ("you do not follow typical Character Creation rules"); every other has neither of the two.
+   */
+  get #tabsLeftOff() {
+    if (isAdversary(this.actor)) return ["main", "fusion"];
+    if (isFusion(this.actor)) return ["adversary", "progression"];
+    return ["adversary", "fusion"];
   }
 
-  /** Main or the Adversary tab, never both: the part of the one left off is not drawn at all. */
+  /** The parts of the tabs left off are not drawn at all. */
   _configureRenderOptions(options) {
     super._configureRenderOptions(options);
-    if (Array.isArray(options.parts)) options.parts = options.parts.filter(part => part !== this.#tabLeftOff);
+    if (Array.isArray(options.parts)) options.parts = options.parts.filter(part => !this.#tabsLeftOff.includes(part));
   }
 
   /** Build the tab configuration used by the "tabs" part template. */
   _getTabs() {
     const tabs = {};
     // An Adversary's sheet opens on its own tab, where another's opens on Main.
-    if (this.tabGroups.primary === this.#tabLeftOff) this.tabGroups.primary = isAdversary(this.actor) ? "adversary" : "main";
+    if (this.#tabsLeftOff.includes(this.tabGroups.primary)) this.tabGroups.primary = isAdversary(this.actor) ? "adversary" : "main";
     for (const [key, tab] of Object.entries(this.constructor.TABS)) {
-      if (key === this.#tabLeftOff) continue;
+      if (this.#tabsLeftOff.includes(key)) continue;
       tabs[key] = {
         ...tab,
         active: this.tabGroups[tab.group] === key,
@@ -3835,6 +3857,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   _onRender(context, options) {
     super._onRender(context, options);
+
+    // A Fusion's Alignment, within its Fused Characters' (fusion.mjs) - unnamed, the Biography tab's select having the name.
+    for (const select of this.element.querySelectorAll("select[data-fusion-alignment]")) {
+      select.addEventListener("change", event => {
+        event.stopPropagation();
+        return this.actor.update({ "system.alignment": Number(select.value) || 0 });
+      });
+    }
 
     // A Duplicate's original, chosen (the user's): asked first, then copied onto it - its own Traits and the rest replaced.
     for (const select of this.element.querySelectorAll("[data-duplicate-of]")) {
@@ -5647,6 +5677,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * "For a Bomb, you can spend 1 Action to trigger that Bomb." A Bomb set to Remote
    * Controlled, placed, and still the character's.
    */
+  /** A Fused Character's sheet, opened from a Fusion's tab. */
+  static _onOpenFused(event, target) {
+    return fromUuidSync(target.dataset.uuid ?? "")?.sheet?.render(true);
+  }
+
+  /** Fuse, or Fuse again (recalculate): the Fusion made or taken again from its Fused Characters (fusion-make.mjs). */
+  static async _onFuseAgain() {
+    if (!this.isEditable) return;
+    const { fuseOnto } = await import("../fusion-make.mjs");
+    return fuseOnto(this.actor);
+  }
+
   /** A Remote Control connected to a Vehicle with Remote Controlled, or back to its Items (vehicles.mjs). */
   static async _onConnectRemoteVehicle(event, target) {
     const remote = this.actor.items.get(target.dataset.itemId);

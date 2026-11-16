@@ -71,6 +71,8 @@ Hooks.once("init", () => {
   CONFIG.Actor.dataModels.minion = DBUCharacterData;
   // And an Adversary (the Adversaries page; adversary.mjs): the same model again, which reads its type.
   CONFIG.Actor.dataModels.adversary = DBUCharacterData;
+  // And a Fusion (the Fusion page; fusion.mjs): the same model, which reads its type - no Progression, its Fused Characters' instead.
+  CONFIG.Actor.dataModels.fusion = DBUCharacterData;
   // A Vehicle (the Vehicles page; vehicles.mjs): a model and a sheet of its own, nothing of a Character's in it (the user's).
   CONFIG.Actor.dataModels.vehicle = DBUVehicleData;
 
@@ -128,7 +130,7 @@ Hooks.once("init", () => {
   const DocumentSheetConfig = foundry.applications.apps.DocumentSheetConfig;
   DocumentSheetConfig.unregisterSheet(foundry.documents.Actor, "core", foundry.appv1.sheets.ActorSheet);
   DocumentSheetConfig.registerSheet(foundry.documents.Actor, "dbu-ttrpg", DBUCharacterSheet, {
-    types: ["character", "minion", "adversary"],
+    types: ["character", "minion", "adversary", "fusion"],
     makeDefault: true,
     label: "DBU Character Sheet"
   });
@@ -536,9 +538,13 @@ Hooks.on("preCreateActor", (actor, data, options, userId) => {
   if (!isMinion(actor) && (data.prototypeToken?.actorLink === undefined)) updates["prototypeToken.actorLink"] = true;
 
   const submitted = data.system?.progression;
-  // A Minion's own (Minion Creation's Minion PL) - a Duplicate's comes copied from its Master.
-  const progression = (submitted?.length) ? submitted : DBUCharacterData.buildDefaultProgression({ minion: actor.type === "minion" });
-  if (!submitted?.length) updates["system.progression"] = progression;
+  // A Minion's own (Minion Creation's Minion PL) - a Duplicate's comes copied from its Master. A Fusion has none: "you do not follow
+  // typical Character Creation rules" - what it has is its Fused Characters' (fusion.mjs).
+  const fusion = actor.type === "fusion";
+  const progression = fusion ? [] : (submitted?.length) ? submitted
+    : DBUCharacterData.buildDefaultProgression({ minion: actor.type === "minion" });
+  if (!submitted?.length && !fusion) updates["system.progression"] = progression;
+  if (fusion) updates["system.progression"] = [];
 
   const powerLevel = data.system?.powerLevel ?? 1;
   const race = data.system?.race;

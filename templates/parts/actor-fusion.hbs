@@ -1,0 +1,85 @@
+{{! A Fusion's own tab (the user's mockup, 2026-11-16): who it is made of, by what Method, its Fusion Modifiers, what its power is worked
+    out from, its Technique Points and Fused Technique, and its Awakening Limits. Fusing and splitting on the map are the table's. }}
+<section class="tab {{tabs.fusion.cssClass}}" data-tab="fusion" data-group="primary">
+  {{#with fusion as |f|}}
+  <div class="dbu-fusion-panel">
+    <h3 class="dbu-side-title">Fused Characters
+      <span class="panel-note">
+        {{#if @root.editable}}<button type="button" class="dbu-vehicle-add" data-action="fuseAgain"
+                data-tooltip="Repeating Fusion: Attributes, Skills, Talents, Techniques, Unique Abilities, Items and Power Level taken again from them; the rest kept">{{#if f.hasFused}}Fuse again (recalculate){{else}}Fuse{{/if}}</button>{{/if}}
+      </span>
+    </h3>
+    {{#each f.fused as |member|}}
+    <div class="dbu-fusion-row">
+      <img src="{{member.img}}" alt=""/>
+      <span class="dbu-fusion-name">{{member.name}}{{#if member.missing}} <em class="dbu-vehicle-over">(gone)</em>{{/if}}</span>
+      <span class="dbu-vehicle-note">{{member.race}} &middot; PL {{member.powerLevel}} &middot; {{member.size}}{{#if member.minion}} &middot; Minion{{/if}}</span>
+      {{#unless member.missing}}<a data-action="openFused" data-uuid="{{member.uuid}}" data-tooltip="Open their sheet"><i class="fas fa-up-right-from-square"></i></a>{{/unless}}
+    </div>
+    {{else}}
+    <p class="dbu-vehicle-empty">No Fused Characters yet: Fuse picks them and the Method.</p>
+    {{/each}}
+  </div>
+
+  <div class="dbu-fusion-panel">
+    <h3 class="dbu-side-title">Fusion Method
+      <span class="panel-note">
+        <select name="system.fusion.method" {{#unless @root.editable}}disabled{{/unless}}>
+          {{#each f.methods as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
+        </select>
+        {{#if f.method}}<span class="dbu-fusion-tag">{{#if f.method.temporary}}Temporary &middot; {{f.method.rounds}} Round{{#unless (eq f.method.rounds 1)}}s{{/unless}}{{else}}Lasting{{/if}} &middot; {{f.method.fusedSaid}} Fused</span>{{/if}}
+      </span>
+    </h3>
+    {{#if f.method}}
+    <div class="dbu-fusion-row"><span class="dbu-fusion-name">{{#if f.method.traitName}}{{f.method.traitName}}{{else}}Its Method Trait{{/if}} <em class="dbu-vehicle-note">(Method Trait)</em></span>
+      <span class="dbu-vehicle-note">on the Traits tab</span></div>
+    {{/if}}
+  </div>
+
+  <div class="dbu-fusion-panel">
+    <h3 class="dbu-side-title">Fusion Modifiers <span class="panel-note">{{f.modifiers.chosen.length}} of {{f.modifiers.allowed}}</span></h3>
+    {{#each f.modifiers.chosen as |modifier|}}
+    <div class="dbu-fusion-row"><span class="dbu-fusion-name">{{modifier.name}}</span></div>
+    {{else}}
+    <p class="dbu-vehicle-empty">None chosen.</p>
+    {{/each}}
+  </div>
+
+  <div class="dbu-fusion-panel">
+    <h3 class="dbu-side-title">Fusion Power <span class="panel-note">{{#if f.power.leadName}}(bT) = {{f.power.leadName}}'s base ToP {{f.power.bT}}{{/if}}</span></h3>
+    <div class="dbu-box-grid dbu-vehicle-aptitudes">
+      <div class="stat"><em>Power Level</em><span data-tooltip="{{f.power.why}}">{{f.power.powerLevel}}</span></div>
+      <div class="stat"><em>Base ToP</em><span data-tooltip="Never above 7">{{f.power.baseTier}}</span></div>
+      <div class="stat"><em>Races</em><span data-tooltip="Racial Life Modifier {{f.power.lifeModifier}}: the highest">{{#each f.power.races as |race|}}{{race}}{{#unless @last}}, {{/unless}}{{/each}}</span></div>
+      <div class="stat"><em>Size</em>
+        <select name="system.size" data-tooltip="{{f.power.sizeRange}}" {{#unless @root.editable}}disabled{{/unless}}>
+          {{#each f.power.sizes as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
+        </select></div>
+    </div>
+    <div class="dbu-fusion-row">
+      <span class="dbu-fusion-name">Alignment
+        <select data-fusion-alignment {{#unless @root.editable}}disabled{{/unless}}>
+          {{#each f.power.alignments as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
+        </select></span>
+      <span class="dbu-vehicle-note">{{f.power.alignmentRange}}{{#if f.hasFused}} &middot; Karma: {{#each f.fused as |member|}}{{#unless member.minion}}{{member.name}} {{member.karma}}{{#unless @last}}, {{/unless}}{{/unless}}{{/each}}{{/if}}</span>
+    </div>
+  </div>
+
+  <div class="dbu-fusion-panel">
+    <h3 class="dbu-side-title">Technique Points <span class="panel-note">{{f.tp.gained}} from Character Combination</span></h3>
+    {{#if f.tp.fusedTechnique}}
+    <div class="dbu-fusion-row"><span class="dbu-fusion-tag">Fused Technique</span><span class="dbu-fusion-name">{{f.tp.fusedTechnique.name}}</span>
+      <button type="button" class="dbu-vehicle-add" data-action="editItem" data-item-id="{{f.tp.fusedTechnique.id}}">Open</button></div>
+    {{else if f.tp.none}}
+    <p class="dbu-vehicle-empty">No Fused Technique: 5(bT) more Technique Points.</p>
+    {{else}}
+    <p class="dbu-vehicle-empty">No Fused Technique yet.</p>
+    {{/if}}
+  </div>
+
+  <div class="dbu-fusion-panel">
+    <h3 class="dbu-side-title">Fusion Awakenings <span class="panel-note">Lesser {{f.awakenings.lesser}} &middot; Greater {{f.awakenings.greater}}</span></h3>
+    <p class="dbu-vehicle-empty">Waits on the Transformations.</p>
+  </div>
+  {{/with}}
+</section>

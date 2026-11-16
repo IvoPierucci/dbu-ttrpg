@@ -7,16 +7,16 @@
  */
 
 /** The Actor types that are Characters. */
-export const CHARACTER_TYPES = Object.freeze(["character", "minion", "adversary"]);
+export const CHARACTER_TYPES = Object.freeze(["character", "minion", "adversary", "fusion"]);
 
 /** Whether an Actor - or what a token stands for - is a Character, a Minion included. */
 export function isCharacter(actor) {
   return CHARACTER_TYPES.includes(actor?.type);
 }
 
-/** Whether an Actor is a Minion. */
+/** Whether an Actor is a Minion - a Fusion of Minions too ("the resultant Fusion is also a Minion"). */
 export function isMinion(actor) {
-  return actor?.type === "minion";
+  return (actor?.type === "minion") || ((actor?.type === "fusion") && Boolean(actor.system?.fusion?.minion));
 }
 
 /**
@@ -45,6 +45,14 @@ export function commandedNow(actor) {
 /** Whether an Actor is an Adversary (the Adversaries page): the ARC's, with a Category and a PCC of its own. */
 export function isAdversary(actor) {
   return actor?.type === "adversary";
+}
+
+/**
+ * Whether an Actor is a Fusion (the Fusion page; the user's: an Actor type of its own) - a Character made of two or more others, on
+ * the Character's model and sheet (fusion.mjs).
+ */
+export function isFusion(actor) {
+  return actor?.type === "fusion";
 }
 
 /**

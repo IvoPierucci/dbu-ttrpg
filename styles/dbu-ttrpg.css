@@ -6230,3 +6230,15 @@
 }
 .dbu-ttrpg .dbu-vehicle-cell.extra { border-color: #4c6a8a; }
 .dbu-ttrpg .dbu-vehicle-cell.on { border: 1px solid #f5c542; background: rgba(245, 197, 66, 0.15); }
+
+/* --- Fusion (the user's mockup, 2026-11-16): its tab's panels, as the Vehicle's ----------------------------------------------- */
+.dbu-ttrpg .dbu-fusion-panel { margin-bottom: 10px; }
+.dbu-ttrpg .tab[data-tab="fusion"] .dbu-side-title { justify-content: space-between; margin-bottom: 6px; }
+.dbu-ttrpg .tab[data-tab="fusion"] .dbu-side-title .panel-note { color: var(--dbu-text-dim); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dbu-ttrpg .tab[data-tab="fusion"] select { width: auto; height: 22px; font-size: 12px; }
+.dbu-ttrpg .dbu-fusion-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 4px 0; border-top: 1px solid var(--dbu-border); }
+.dbu-ttrpg .dbu-side-title + .dbu-fusion-row { border-top: 0; }
+.dbu-ttrpg .dbu-fusion-row img { width: 28px; height: 28px; object-fit: contain; border: 0; }
+.dbu-ttrpg .dbu-fusion-name { flex: 1; min-width: 120px; }
+.dbu-ttrpg .dbu-fusion-tag { padding: 1px 7px; border-radius: 3px; background: rgba(245, 197, 66, 0.15); color: #f5c542; font-size: 11px; white-space: nowrap; }
+.dbu-ttrpg .tab[data-tab="fusion"] .dbu-box-grid { margin-bottom: 6px; }

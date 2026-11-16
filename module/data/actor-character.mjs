@@ -13,6 +13,7 @@ import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
 import { customBuffThresholdFor } from "../custom-buffs.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryGains, adversaryRanks, quickplayScores } from "../adversary.mjs";
+import { FUSION_MAX_BASE_TIER, fusionRacialLife, fusionRacialSaves } from "../fusion.mjs";
 import { craftedReading, groundIgnored, isNaturalArmor, naturalArmorFactor, platingBonusFlat, platingBonusPerBaseTier, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable,
   topLayerPiece } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
@@ -1228,6 +1229,45 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       ranks: new fields.SchemaField(Object.fromEntries(Object.keys(DBUCharacterData.SKILLS)
         .map(key => [key, new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })])))
     });
+    // --- A Fusion's own (module/fusion.mjs) ---
+    // Read only on an Actor of the Fusion type (the user's): who it is made of, by what Method, with which Fusion Modifiers, and what
+    // was taken from them as it was fused - the highest Scores and Skill Ranks, all their Races, its Power Level - so that it stays
+    // as it was made till it is fused again (Repeating Fusions). Each a field of its own: a SchemaField keeps what it declares.
+    schema.fusion = new fields.SchemaField({
+      fused: new fields.ArrayField(new fields.SchemaField({
+        uuid: new fields.StringField({ required: true, blank: false }),
+        name: new fields.StringField({ required: true, blank: true, initial: "" }),
+        img: new fields.StringField({ required: true, blank: true, initial: "" }),
+        powerLevel: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),
+        race: new fields.StringField({ required: true, blank: true, initial: "" }),
+        subrace: new fields.StringField({ required: true, blank: true, initial: "" }),
+        size: new fields.StringField({ required: true, blank: true, initial: "" }),
+        alignment: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        minion: new fields.BooleanField({ required: true, initial: false })
+      })),
+      method: new fields.StringField({ required: true, blank: true, initial: "" }),
+      modifiers: new fields.ArrayField(new fields.StringField({ required: true, blank: false })),
+      // Balanced Fusion's 'Balanced Attributes'.
+      balanced: new fields.ArrayField(new fields.StringField({ required: true, blank: false })),
+      scores: new fields.SchemaField(Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS)
+        .map(key => [key, new fields.NumberField({ required: true, integer: true, initial: 1, min: 0 })]))),
+      // Its Skill Ranks, one entry a Rank, as a Skill Improvement's slots are.
+      ranks: new fields.ArrayField(new fields.StringField({ required: true, blank: false })),
+      races: new fields.ArrayField(new fields.SchemaField({
+        race: new fields.StringField({ required: true, blank: true, initial: "" }),
+        subrace: new fields.StringField({ required: true, blank: true, initial: "" }),
+        save: new fields.StringField({ required: true, blank: true, initial: "" })
+      })),
+      // "This Power Level can exceed 30" - only for base Tier of Power, Life, Ki, Capacity and Legend Realized.
+      powerLevel: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),
+      // What Character Combination gave it in Technique Points, and its Fused Technique (an Item's id) - or none, for 5(bT) more.
+      tpGained: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      fusedTechnique: new fields.StringField({ required: true, blank: true, initial: "" }),
+      noFusedTechnique: new fields.BooleanField({ required: true, initial: false }),
+      // Minion Fusion: "If a Minion fuses with another Minion, the resultant Fusion is also a Minion" - both Masters its.
+      minion: new fields.BooleanField({ required: true, initial: false }),
+      masters: new fields.ArrayField(new fields.StringField({ required: true, blank: false }))
+    });
     // Narrative Stamina (Adversaries in Combat): "At the start of each Combat Round, gain Narrative Stamina equal to the amount
     // listed on the Adversary Category Table above. You lose all Narrative Stamina at the end of each Combat Round." What is
     // left of this Round's; its most is worked out (`narrativeStamina.max`). Not a Resource: those are emptied as an Encounter
@@ -2108,10 +2148,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const atts = this.attributes;
 
     // A Minion (the rulebook's Minion Rules, the user's Actor type): read by every rule that treats one apart.
-    this.minion = this.parent?.type === "minion";
+    // Minion Fusion: "If a Minion fuses with another Minion, the resultant Fusion is also a Minion."
+    this.minion = (this.parent?.type === "minion") || ((this.parent?.type === "fusion") && Boolean(this.fusion?.minion));
     // An Adversary (the Adversaries page, the user's Actor type), and what the Adversary Table gives it for its Category and
     // PCC (adversary.mjs) - nothing, on any other Actor.
     this.adversaryMade = this.parent?.type === "adversary";
+    // A Fusion (the Fusion page, the user's Actor type): what it was made from, read in place of a Progression (fusion.mjs).
+    this.fusionMade = this.parent?.type === "fusion";
     this.adversaryGains = adversaryGains(this, { made: this.adversaryMade });
     // "Adversaries of the Villain or Elite Adversary Categories ... also benefit from the following rules": Narrative Stamina
     // and One-Man Army - but in a 1-on-1 Duel, which "ignore[s] the rules of Narrative Stamina and One-Man Army".
@@ -2126,7 +2169,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // The sheet clamps Power Level as it is edited, but a macro or module could still
     // write something out of range; keep everything derived from it sane regardless.
-    this.powerLevel = Math.min(Math.max(this.powerLevel, 1), DBUCharacterData.MAX_POWER_LEVEL);
+    // A Fusion's is its Fusion Power Level, which "can exceed 30".
+    this.powerLevel = this.fusionMade ? Math.max(1, Number(this.fusion?.powerLevel) || 1)
+      : Math.min(Math.max(this.powerLevel, 1), DBUCharacterData.MAX_POWER_LEVEL);
 
     // The Racial Traits had - the files their Items came from - for whatever asks for one by name (traitActive).
     this.racialTraits = Array.from(this.parent?.items ?? []).filter(item => item.type === "racial")
@@ -2134,7 +2179,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // Racial Life Modifier, from whichever race is selected. An unknown or unset race
     // contributes nothing rather than breaking the Life calculation.
-    this.racialLifeModifier = racialLifeModifier(this.race);
+    // A Fusion: "uses the highest Racial Life Modifier among its Races".
+    this.racialLifeModifier = (this.fusionMade && (this.fusion?.races ?? []).length) ? fusionRacialLife(this.fusion.races)
+      : racialLifeModifier(this.race);
     // Bestial Presence (1): "For every Bestial Trait gained through this effect, reduce your Racial Life Modifier by 1" - those it
     // gave, still had (`grantedLifeCost`).
     for (const item of Array.from(this.parent?.items ?? []).filter(each => each.type === "racial")) {
@@ -2158,6 +2205,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const quick = this.adversaryMade ? quickplayScores(this, DBUCharacterData.tierOfPowerFor(this.powerLevel),
       { balanced: (this.adversary?.quickplay?.talents ?? []).includes("balanced-warrior") }) : null;
     for (const key of Object.keys(atts)) {
+      // A Fusion: "equal to the highest Attribute Score for each Attribute among the Fused Characters" - taken as it was fused.
+      if (this.fusionMade) {
+        atts[key].score = Math.max(0, Number(this.fusion?.scores?.[key] ?? 1));
+        continue;
+      }
       if (quick) {
         // Character Perks and the Attribute Points written on the Adversary tab still on top (the user's).
         atts[key].score = (quick.scores[key] ?? 1)
@@ -2253,7 +2305,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       .flatMap(entry => this.rowSkillRanks(entry)),
       ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? []),
       // And an Adversary's, written on its own tab.
-      ...(this.adversaryMade ? adversaryRanks(this) : [])];
+      ...(this.adversaryMade ? adversaryRanks(this) : []),
+      // And a Fusion's: "equal to the highest number of Skill Ranks in that Skill" among its Fused Characters.
+      ...(this.fusionMade ? (this.fusion?.ranks ?? []) : [])];
     const early = {
       attributes: this.attributes,
       skills: Object.fromEntries(Object.keys(this.skillTable).map(key =>
@@ -2376,6 +2430,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // already 1, reduce their Saving Throws and Combat Rolls by 1)" - the second an effect of its own (registry.mjs).
     this.baseTierOfPower = this.typicalMinion ? Math.max(1, DBUCharacterData.tierOfPowerFor(this.powerLevel) - 1)
       : DBUCharacterData.tierOfPowerFor(this.powerLevel);
+    // A Fusion: "the Fusion's base Tier of Power does not exceed 7", whatever its Power Level.
+    if (this.fusionMade) this.baseTierOfPower = Math.min(FUSION_MAX_BASE_TIER, this.baseTierOfPower);
 
 
     // The ground's Hardness Rank as the Square's Qualities leave it. Derived rather than
@@ -2600,7 +2656,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // And every Character Perk's Skill Improvement.
       ...DBUCharacterData.perksOf(this.characterPerks, "Skill Improvement", this.powerLevel).flatMap(perk => perk.skillRanks ?? []),
       // And an Adversary's, written on its own tab: "any number of Skill Ranks that you deem fit".
-      ...(this.adversaryMade ? adversaryRanks(this) : [])
+      ...(this.adversaryMade ? adversaryRanks(this) : []),
+      // And a Fusion's, the highest among its Fused Characters (fusion.mjs).
+      ...(this.fusionMade ? (this.fusion?.ranks ?? []) : [])
     ];
 
     const rankCap = DBUCharacterData.skillRankCap(this.tierOfPower);
@@ -2664,7 +2722,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // A Required Skill with no Ranks cannot be rolled at all - it always fails.
         untrained: Boolean(skill.required) && (ranks === 0),
         // An Adversary's never: "even ignoring the usual limit applied by their base Tier of Power".
-        overCap: (ranks > rankCap) && !this.adversaryMade
+        overCap: (ranks > rankCap) && !this.adversaryMade && !this.fusionMade
       }];
     }));
 
@@ -3437,7 +3495,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // Saving Throws: tied to Attribute Score (not Modifier) per the rules. The race's
     // focused Saving Throw: "Increase the listed Saving Throw by 1(T) and reduce its Critical Target by 1."
-    const racialSaves = racialSavingThrows(this.race, this.racialSavingThrow);
+    // A Fusion: "gains the Racial Saving Throw Bonus of all of its Races".
+    const racialSaves = (this.fusionMade && (this.fusion?.races ?? []).length) ? fusionRacialSaves(this.fusion.races)
+      : racialSavingThrows(this.race, this.racialSavingThrow);
 
     // What moves the die of every Saving Throw - Legacy's 2. Rolled with it wherever one is.
     this.saveNatural = slot(this, "saves.natural");

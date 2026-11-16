@@ -9,6 +9,7 @@
   "TYPES.Actor.character": "Character",
   "TYPES.Actor.minion": "Minion",
   "TYPES.Actor.adversary": "Adversary",
+  "TYPES.Actor.fusion": "Fusion",
   "TYPES.Actor.vehicle": "Vehicle",
   "TYPES.Item.talent": "Talent",
   "TYPES.Item.racial": "Racial Trait",
