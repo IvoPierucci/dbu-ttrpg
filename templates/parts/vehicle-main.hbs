@@ -1,0 +1,35 @@
+{{! Main (the user's, 2026-11-15): who is driving it and who its Passengers are, and every Aptitude it uses. }}
+<section class="tab {{tabs.main.cssClass}}" data-tab="main" data-group="primary">
+  <div class="dbu-vehicle-panel">
+    <h3 class="dbu-side-title">Crew <span class="panel-note">{{reading.size.label}}: {{crew.squares}} Square{{#unless (eq crew.squares 1)}}s{{/unless}}, {{crew.inside}} in it</span></h3>
+    {{#if crew.pilot}}
+    <div class="dbu-vehicle-crew">
+      <span class="dbu-vehicle-role pilot">Pilot</span>
+      <img src="{{crew.pilot.img}}" alt=""/>
+      <span class="dbu-vehicle-crew-name">{{crew.pilot.name}}</span>
+      {{#if crew.seatNeeded}}<span class="dbu-vehicle-crew-note">Pilot Seat: {{crew.seat}}</span>{{/if}}
+      <a data-action="openCrew" data-uuid="{{crew.pilot.uuid}}" data-tooltip="Open their sheet"><i class="fas fa-up-right-from-square"></i></a>
+    </div>
+    {{/if}}
+    {{#each crew.passengers as |member|}}
+    <div class="dbu-vehicle-crew">
+      <span class="dbu-vehicle-role">Passenger</span>
+      <img src="{{member.img}}" alt=""/>
+      <span class="dbu-vehicle-crew-name">{{member.name}}</span>
+      <a data-action="openCrew" data-uuid="{{member.uuid}}" data-tooltip="Open their sheet"><i class="fas fa-up-right-from-square"></i></a>
+    </div>
+    {{/each}}
+    {{#unless crew.pilot}}
+    <p class="dbu-vehicle-empty">No Pilot. Use the Ride Maneuver next to it to get in.</p>
+    {{/unless}}
+  </div>
+
+  <div class="dbu-vehicle-panel">
+    <h3 class="dbu-side-title">Aptitudes <span class="panel-note">Output {{reading.output}} &middot; Tier {{reading.tier}}</span></h3>
+    <div class="dbu-box-grid dbu-vehicle-aptitudes">
+      {{#each aptitudes as |aptitude|}}
+      <div class="stat"><em>{{aptitude.label}}</em><span data-tooltip-html="{{aptitude.tip}}">{{aptitude.value}}</span></div>
+      {{/each}}
+    </div>
+  </div>
+</section>

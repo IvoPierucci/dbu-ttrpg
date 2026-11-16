@@ -54,3 +54,12 @@ export function isAdversary(actor) {
 export function isPlayerCharacter(actor) {
   return actor?.type === "character";
 }
+
+/**
+ * Whether an Actor is a Vehicle (the Vehicles page; the user's: an Actor type of its own, made from nothing a Character has). No
+ * Character: "A Vehicle is a member of the Battlefield, and can thus be targeted by Attacking Maneuvers as if it was another
+ * Character. Otherwise, it functions similarly to a Feature."
+ */
+export function isVehicle(actor) {
+  return actor?.type === "vehicle";
+}

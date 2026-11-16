@@ -1,0 +1,14 @@
+id: vehicle-armored-plating
+name: Armored Plating
+kind: vehicle quality
+slots: 1
+source: Vehicles
+damageReduction: halfOutput
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Armored Plating: Reinforced by bulky armor, this Vehicle is well-defended.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: This Vehicle gains Damage Reduction equal to 1/2 of its Output.
+
+---

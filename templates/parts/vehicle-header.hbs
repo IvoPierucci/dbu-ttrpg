@@ -1,0 +1,64 @@
+{{! A Vehicle's header (the user's, 2026-11-15): as a Character's - its square picture, its name with Level, Grade, Size and Output beside
+    it, Life (no Health Thresholds: a Vehicle has only Life Points), and Ki with the Capacity beside it, what is left of it this
+    Combat Round. }}
+<header class="sheet-header dbu-header">
+  <div class="dbu-portrait">
+    <img class="profile-img" src="{{actor.img}}" data-action="editImage" data-edit="img" title="{{actor.name}}"/>
+  </div>
+
+  <div class="dbu-header-fields">
+    <div class="dbu-header-name">
+      <input class="character-name" name="name" type="text" value="{{actor.name}}" placeholder="Vehicle Name"/>
+      <div class="dbu-header-traits">
+        <span class="header-field" data-tooltip="Vehicle Level"><em>Level</em> <span class="computed-value">{{reading.level}}</span></span>
+        <span class="header-field" data-tooltip="Craftsmanship Grade"><em>Grade</em> <span class="computed-value">{{reading.grade}}</span></span>
+        <span class="header-field"><em>Size</em> <span class="computed-value">{{reading.size.label}}</span></span>
+        <span class="header-field" data-tooltip="{{reading.workings.output}}"><em>Output</em> <span class="computed-value">{{reading.output}}</span></span>
+      </div>
+    </div>
+
+    <div class="dbu-header-pools">
+      <div class="dbu-pool dbu-pool-life">
+        <div class="dbu-pool-top">
+          <em class="dbu-pool-name" data-tooltip="{{reading.workings.life}}">Life Points
+            {{#if system.destroyed}}<span class="dbu-vehicle-destroyed" data-tooltip="At 0 Life Points: destroyed.">Destroyed</span>{{/if}}
+          </em>
+          <span class="dbu-pool-values">
+            <input type="number" name="system.life.value" value="{{system.life.value}}" min="0"/>
+            <span class="resource-sep">/</span>
+            <span class="computed-value">{{system.life.max}}</span>
+          </span>
+        </div>
+        <div class="dbu-pool-bars">
+          <div class="dbu-pool-bar"><i style="width: {{lifePercent}}%"></i></div>
+        </div>
+      </div>
+
+      <div class="dbu-pool dbu-pool-ki">
+        <div class="dbu-pool-top">
+          <span class="dbu-pool-pair">
+            <em class="dbu-pool-name" data-tooltip="{{reading.workings.ki}}">Ki Points</em>
+            <span class="dbu-pool-values">
+              <input type="number" name="system.ki.value" value="{{system.ki.value}}" min="0"/>
+              <span class="resource-sep">/</span>
+              <span class="computed-value">{{system.ki.max}}</span>
+            </span>
+          </span>
+          <span class="dbu-pool-pair dbu-pool-capacity"
+                data-tooltip="Capacity left this Combat Round: {{capacity.spent}} Ki spent of it. {{reading.workings.capacity}}.">
+            <em class="dbu-pool-name">Capacity</em>
+            <span class="dbu-pool-values">
+              <input type="number" data-capacity-left value="{{capacity.left}}" step="1" aria-label="Capacity left this round"/>
+              <span class="resource-sep">/</span>
+              <span class="computed-value">{{capacity.max}}</span>
+            </span>
+          </span>
+        </div>
+        <div class="dbu-pool-bars">
+          <div class="dbu-pool-bar"><i style="width: {{kiPercent}}%"></i></div>
+          <div class="dbu-pool-bar dbu-pool-capbar"><i style="width: {{capacityPercent}}%"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>

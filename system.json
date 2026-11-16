@@ -55,7 +55,8 @@
     "Actor": {
       "character": {},
       "minion": {},
-      "adversary": {}
+      "adversary": {},
+      "vehicle": {}
     },
     "Item": {
       "talent": {},

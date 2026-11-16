@@ -1,0 +1,14 @@
+id: vehicle-hikou
+name: Hikou
+kind: vehicle quality
+slots: 1
+source: Vehicles
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Hikou: This Vehicle is capable of flight, by one means or another.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: The Pilot may use the Soar Maneuver while piloting this Vehicle. The current High Environment of the
+  Vehicle is also applied to all Characters within the Vehicle.
+
+---

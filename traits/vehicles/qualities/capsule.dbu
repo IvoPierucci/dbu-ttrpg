@@ -1,0 +1,14 @@
+id: vehicle-capsule
+name: Capsule
+kind: vehicle quality
+slots: 1
+source: Vehicles
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Capsule: This Vehicle can be miniaturized and carried in your pocket.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: While no Character is inside of this Vehicle, it can be stored within a Capsule (see — Capsule Basic
+  Item).
+
+---

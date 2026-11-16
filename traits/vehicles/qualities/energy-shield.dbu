@@ -1,0 +1,15 @@
+id: vehicle-energy-shield
+name: Energy Shield
+kind: vehicle quality
+slots: 1
+source: Vehicles
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Energy Shield: This Vehicle can deploy a defensive screen to protect it from harm.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: When this Vehicle is hit by an Attacking Maneuver, you may spend a Counter Action. If you do, you may
+  spend an amount of the Vehicle's Ki Points up to its Output to increase this Vehicle's Damage Reduction by an equal
+  amount.
+
+---

@@ -1,0 +1,13 @@
+id: vehicle-air-tight
+name: Air-Tight
+kind: vehicle quality
+slots: 1
+source: Vehicles
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Air-Tight: This Vehicle is sealed tight so that no air leaks out.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Characters within this Vehicle can ignore the effects of Battle Weather and Unbreathable Environments.
+
+---

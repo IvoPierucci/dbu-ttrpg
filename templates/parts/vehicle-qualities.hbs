@@ -1,0 +1,61 @@
+{{! Qualities (the user's, 2026-11-15): the Quality Slots used of the Grade's - warned past them, never refused - and each Vehicle
+    Quality with what it does, its choice, its Slots and what it asks; Weapon Installed's Vehicle Weapons under it. }}
+<section class="tab {{tabs.qualities.cssClass}}" data-tab="qualities" data-group="primary">
+  <div class="dbu-vehicle-panel">
+    <h3 class="dbu-side-title">Vehicle Qualities
+      <span class="panel-note">
+        <span class="{{#if slots.over}}dbu-vehicle-over{{/if}}">Quality Slots {{slots.used}} of {{slots.have}} (Grade {{reading.grade}}){{#if slots.over}} &middot; {{slots.over}} over{{/if}}</span>
+        {{#if editable}}<button type="button" class="dbu-vehicle-add" data-action="addQuality"><i class="fas fa-plus"></i> Add Quality</button>{{/if}}
+      </span>
+    </h3>
+
+    {{#each qualities as |quality|}}
+    <div class="dbu-vq">
+      <div class="dbu-vq-row">
+        <a class="dbu-vq-arrow" data-action="toggleQuality" data-index="{{quality.index}}"><i class="fas fa-chevron-{{#if quality.open}}down{{else}}right{{/if}}"></i></a>
+        <span class="dbu-vq-name" data-action="toggleQuality" data-index="{{quality.index}}">{{quality.name}}</span>
+        {{#each quality.chooses as |choose|}}
+        <select data-quality-choice="{{quality.index}}:{{choose.at}}" aria-label="Battle Environment" {{#unless @root.editable}}disabled{{/unless}}>
+          {{#each choose.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
+        </select>
+        {{/each}}
+        {{#if quality.effect}}<span class="dbu-vq-effect">{{quality.effect}}</span>{{/if}}
+        {{#if quality.ranged}}
+        <input type="number" class="dbu-vq-slots" data-quality-slots="{{quality.index}}" value="{{quality.slots}}" min="{{quality.range.min}}"
+               max="{{quality.range.max}}" data-tooltip="Quality Slots: {{quality.range.min}} to {{quality.range.max}}" {{#unless @root.editable}}disabled{{/unless}}/>
+        {{else}}
+        <span class="dbu-vq-slots-fixed" data-tooltip="Quality Slots">{{quality.slots}}</span>
+        {{/if}}
+        {{#if @root.editable}}<a class="dbu-vq-delete" data-action="deleteQuality" data-index="{{quality.index}}" data-tooltip="Take it off"><i class="fas fa-trash"></i></a>{{/if}}
+      </div>
+      {{#each quality.warnings as |warning|}}<p class="dbu-vq-warning">{{warning}}</p>{{/each}}
+      {{#if quality.open}}
+      <div class="dbu-vq-text">
+        {{#each quality.text as |line|}}{{#if line.gap}}<br>{{else}}<p>{{line.text}}</p>{{/if}}{{/each}}
+        {{#if quality.waits}}<p class="dbu-vq-waits">{{quality.waits}}</p>{{/if}}
+      </div>
+      {{/if}}
+      {{#if quality.weaponRows.length}}
+      <div class="dbu-vq-weapons">
+        {{#each quality.weaponRows as |weapon|}}
+        <div class="dbu-vq-weapon">
+          <i class="fas fa-crosshairs"></i>
+          <span class="dbu-vq-weapon-name{{#unless weapon.built}} unbuilt{{/unless}}">{{weapon.name}}{{#unless weapon.built}} - not built yet{{/unless}}</span>
+          {{#if weapon.type}}<span class="dbu-vq-tag{{#if weapon.wrongType}} wrong{{/if}}"
+                {{#if weapon.wrongType}}data-tooltip="A Vehicle Weapon must be an Energy Weapon (a Magic one with its Creator's 2+ Use Magic)."{{/if}}>{{weapon.type}}</span>{{/if}}
+          {{#if weapon.built}}
+          <select data-weapon-profile="{{weapon.id}}" aria-label="Profile" {{#unless @root.editable}}disabled{{/unless}}>
+            {{#each weapon.profiles as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
+          </select>
+          {{/if}}
+          <button type="button" class="dbu-vehicle-add" data-action="buildWeapon" data-at="{{weapon.at}}" data-item-id="{{weapon.id}}">Build</button>
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+    </div>
+    {{else}}
+    <p class="dbu-vehicle-empty">No Vehicle Qualities yet.</p>
+    {{/each}}
+  </div>
+</section>

@@ -1,0 +1,14 @@
+id: vehicle-countermeasures
+name: Countermeasures
+kind: vehicle quality
+slots: 1
+source: Vehicles
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Countermeasures: You can deploy some kind of defensive measure that makes it harder for enemies to hit this Vehicle.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: When this Vehicle is targeted by an Attacking Maneuver, you may spend a Counter Action to increase that
+  Vehicle's Defense Value by 1/2 of that Vehicle's Output for the duration of that Attacking Maneuver.
+
+---

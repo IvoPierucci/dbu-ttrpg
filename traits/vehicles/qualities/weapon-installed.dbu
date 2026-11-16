@@ -1,0 +1,21 @@
+id: vehicle-weapon-installed
+name: Weapon Installed
+kind: vehicle quality
+slots: 1~3
+source: Vehicles
+needsCreatorSkill: craftWeapons 2
+weapons: slots
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Weapon Installed: This Vehicle has an in-built Weapon of some variety.
+  –Prerequisites: This Vehicle's Creator has 2+ Skill Ranks in Craft (Weapons).
+  –Quality Slots: 1~3
+  –Effects: For each Quality Slot this Vehicle Quality takes up, create a Weapon (see — Weapons) with a Craftsmanship
+  Grade equal to that of this Vehicle – this is known as a 'Vehicle Weapon'. While you are Piloting this Vehicle, you
+  may use that Vehicle Weapon. Your Vehicle Weapon must be an Energy Weapon. If this Vehicle's Creator has 2+ Skill
+  Ranks in Use Magic, your Vehicle Weapon may also be a Magic Weapon.
+
+  When you create a Vehicle Weapon, you must select a Profile for that Weapon's Foundation. That Weapon can only make
+  Attacking Maneuvers of that Profile.
+
+---

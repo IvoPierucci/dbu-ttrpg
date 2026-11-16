@@ -1,0 +1,26 @@
+id: vehicle-colony-ship
+name: Colony Ship
+kind: vehicle quality
+slots: 2
+source: Vehicles
+needsSizeAtLeast: gigantic
+needsGrade: 3
+waits: Clonal Vehicles are the table's for now.
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Colony Ship: This Vehicle houses other, smaller vehicles such as fighter jets or escape pods. (Inspired directly
+  from the Homebrew of Comeau)
+  –Prerequisites: This Vehicle's Size Category is Gigantic or larger, this Vehicle's Craftsmanship Grade is 3 or
+  higher.
+  –Quality Slots: 2
+  –Effects: Upon applying this Vehicle Quality, create a Vehicle of the Large or Enormous Size Category. That
+  Vehicle's Craftsmanship Grade is 1 lower than the Craftsmanship Grade of this Vehicle. That Vehicle is known as a
+  Clonal Vehicle. Your Vehicle may possess up to 2 Enormous Clonal Vehicles or 6 Large Clonal Vehicles.
+
+  Any Passengers in this Vehicle may use the Ride Maneuver to enter a Clonal Vehicle as the Pilot. If they do so,
+  place one of your Clonal Vehicles on a Square adjacent to this Vehicle. As an Action, a Clonal Vehicle that is in a
+  Square adjacent to a Vehicle with the Colony Ship Quality may remove itself from the Combat Encounter to re-dock
+  itself. All Characters inside of the Clonal Vehicle will become Passengers in the Vehicle with the Colony Ship
+  Quality.
+
+---

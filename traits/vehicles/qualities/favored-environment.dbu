@@ -1,0 +1,17 @@
+id: vehicle-favored-environment
+name: Favored Environment
+kind: vehicle quality
+slots: 1
+source: Vehicles
+choose: environment
+chooseCount: 1
+defenseValueThere: halfOutput
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Favored Environment: This Vehicle performs most optimally in a specific environment.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Select a Battle Environment. While this Vehicle is in that Battle Environment, increase its Defense Value
+  by 1/2 of its Output.
+
+---

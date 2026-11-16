@@ -1,0 +1,19 @@
+id: vehicle-big-blaster
+name: Big Blaster
+kind: vehicle quality
+slots: 1~2
+source: Vehicles
+needsQuality: vehicle-weapon-installed
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Big Blaster: This Vehicle's Weapon possesses potent destructive force.
+  –Prerequisites: Weapon Installed Vehicle Quality, did not select a Profile with an AoE for its effects
+  –Quality Slots: 1~2
+  –Effects: Apply a Minor Sphere AoE to any Attacking Maneuver made with a Vehicle Weapon of your choice when
+  selecting this Vehicle Quality. The Target Square for this AoE may be any Square, EXCEPT a Square that this Vehicle
+  would occupy.
+
+  If this Vehicle Quality takes up 2 Quality Slots, apply the Intense Blast Advantage to any Attacking Maneuver made
+  with that Vehicle Weapon.
+
+---

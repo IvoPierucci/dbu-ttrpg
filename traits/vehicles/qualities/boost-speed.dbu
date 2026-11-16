@@ -1,0 +1,15 @@
+id: vehicle-boost-speed
+name: Boost Speed
+kind: vehicle quality
+slots: 1
+source: Vehicles
+boostedSpeed: doubleOutput
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Boost Speed: This Vehicle is equipped with speed boosters of some kind, allowing it to go even faster.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: This Vehicle's Boosted Speed is instead equal to double its Output. You may use the Rapid Movement option
+  of the Movement Maneuver while Piloting this Vehicle.
+
+---

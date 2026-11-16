@@ -62,6 +62,9 @@ export const KINDS = Object.freeze({
   // and Qualities, and a Weapon's. The subfolder says which: `crafting/apparel-categories/
   // armor.dbu`, `crafting/weapon-qualities/artisan.dbu`. Read by the Item's own sheet.
   crafting: { label: "Crafting Option", priority: PRIORITY.base },
+  // A Vehicle's own (vehicles.mjs): `vehicles/qualities/<id>.dbu`, the Vehicle Qualities - nothing gathered from them as effects;
+  // what each does to a Vehicle's numbers is said in its header and read by vehicles.mjs.
+  vehicles: { label: "Vehicle Quality", priority: PRIORITY.base },
   // A Karmic Effect is bought with a Karma Point rather than granted by anything, so
   // it sits at base Priority - nothing else is competing with it for a Slot.
   karma: { label: "Karmic Effect", priority: PRIORITY.base },

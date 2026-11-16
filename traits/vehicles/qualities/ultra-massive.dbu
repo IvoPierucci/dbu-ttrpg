@@ -1,0 +1,15 @@
+id: vehicle-ultra-massive
+name: Ultra-Massive
+kind: vehicle quality
+slots: 2
+source: Vehicles
+needsSizeIs: gigantic
+sizeTo: colossal
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Ultra-Massive: This Vehicle is nearly the size of a planet.
+  –Prerequisites: This Vehicle's Size Category is Gigantic prior to applying the effects of this Vehicle Quality.
+  –Quality Slots: 2
+  –Effects: This Vehicle's Size Category is Colossal.
+
+---

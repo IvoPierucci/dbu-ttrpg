@@ -6108,3 +6108,125 @@
 
 /* Progression's Scores heading carries the cap now. */
 .dbu-ttrpg .dbu-score-cap { color: var(--dbu-accent); font-weight: 600; }
+
+/* --- Vehicles (the user's design, 2026-11-15) ---------------------------------------------------------------------------------
+   Its header is a Character's (.dbu-header); below it Main, Qualities and Creation, each a few panels under a side title. */
+.dbu-ttrpg.vehicle .dbu-vehicle-panel { margin-bottom: 10px; }
+.dbu-ttrpg.vehicle .dbu-side-title { justify-content: space-between; margin-bottom: 6px; }
+.dbu-ttrpg.vehicle .dbu-side-title .panel-note { color: var(--dbu-text-dim); display: flex; align-items: center; gap: 8px; }
+.dbu-ttrpg .dbu-vehicle-destroyed {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: #b33;
+  color: #fff;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Main: the Crew, one row each. */
+.dbu-ttrpg .dbu-vehicle-crew { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--dbu-border); }
+.dbu-ttrpg .dbu-vehicle-side-title + .dbu-vehicle-crew,
+.dbu-ttrpg .dbu-side-title + .dbu-vehicle-crew { border-top: 0; }
+.dbu-ttrpg .dbu-vehicle-crew img { width: 28px; height: 28px; object-fit: contain; border: 0; }
+.dbu-ttrpg .dbu-vehicle-crew-name { flex: 1; min-width: 0; }
+.dbu-ttrpg .dbu-vehicle-crew-note { font-size: 12px; color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-vehicle-role {
+  flex: 0 0 72px;
+  padding: 1px 0;
+  border-radius: 3px;
+  background: rgba(100, 174, 240, 0.15);
+  color: #64aef0;
+  font-size: 10px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dbu-ttrpg .dbu-vehicle-role.pilot { background: rgba(245, 197, 66, 0.15); color: #f5c542; }
+.dbu-ttrpg .dbu-vehicle-empty { margin: 4px 0; color: var(--dbu-text-dim); font-style: italic; }
+
+/* Main: the eight Aptitudes, four to a row. Both classes, to outweigh every box grid's two columns. */
+.dbu-ttrpg .dbu-box-grid.dbu-vehicle-aptitudes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* Qualities: one row each, its text folded under it. */
+.dbu-ttrpg .dbu-vehicle-add {
+  flex: none;
+  width: auto;
+  height: 22px;
+  line-height: 20px;
+  margin: 0;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.dbu-ttrpg .dbu-vehicle-over { color: #e8796f; }
+.dbu-ttrpg .dbu-vq { padding: 4px 0; border-top: 1px solid var(--dbu-border); }
+.dbu-ttrpg .dbu-side-title + .dbu-vq { border-top: 0; }
+.dbu-ttrpg .dbu-vq-row { display: flex; align-items: center; gap: 8px; min-height: 24px; }
+.dbu-ttrpg .dbu-vq-arrow { flex: 0 0 12px; color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-vq-name { flex: 1; min-width: 0; cursor: pointer; }
+.dbu-ttrpg .dbu-vq-effect { font-size: 12px; color: var(--dbu-text-dim); white-space: nowrap; }
+.dbu-ttrpg .dbu-vq-row select,
+.dbu-ttrpg .dbu-vq-weapon select { flex: none; width: auto; height: 22px; font-size: 12px; }
+.dbu-ttrpg input.dbu-vq-slots {
+  flex: none;
+  width: calc(1ch + 14px);
+  height: 22px;
+  padding: 0 2px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.dbu-ttrpg input.dbu-vq-slots::-webkit-inner-spin-button,
+.dbu-ttrpg input.dbu-vq-slots::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.dbu-ttrpg .dbu-vq-slots-fixed { flex: none; width: calc(1ch + 14px); text-align: center; color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-vq-delete { flex: none; color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-vq-warning { margin: 2px 0 0 20px; font-size: 12px; color: #e8796f; }
+.dbu-ttrpg .dbu-vq-text { margin: 4px 0 2px 20px; font-size: 12px; line-height: 1.5; }
+.dbu-ttrpg .dbu-vq-text p { margin: 0 0 2px; }
+.dbu-ttrpg .dbu-vq-waits { color: var(--dbu-text-dim); font-style: italic; }
+.dbu-ttrpg .dbu-vq-weapons { margin: 4px 0 0 20px; padding-left: 8px; border-left: 2px solid #4c6a8a; }
+.dbu-ttrpg .dbu-vq-weapon { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 12px; }
+.dbu-ttrpg .dbu-vq-weapon-name { flex: 1; min-width: 0; }
+.dbu-ttrpg .dbu-vq-weapon-name.unbuilt { color: var(--dbu-text-dim); font-style: italic; }
+.dbu-ttrpg .dbu-vq-tag { padding: 0 5px; border-radius: 3px; background: rgba(100, 174, 240, 0.15); color: #64aef0; font-size: 11px; }
+.dbu-ttrpg .dbu-vq-tag.wrong { background: rgba(232, 121, 111, 0.15); color: #e8796f; }
+
+/* The Add Quality catalogue: a search, then one row each - the ones that do not fit in gray, with why. */
+.application.dbu-vq-catalog .window-content { min-width: 420px; }
+.application.dbu-vq-catalog .dbu-vq-left { margin: 0 0 4px; }
+.application.dbu-vq-catalog .dbu-vq-search { width: 100%; margin-bottom: 6px; }
+.application.dbu-vq-catalog .dbu-vq-list { max-height: 380px; overflow-y: auto; }
+.application.dbu-vq-catalog .dbu-vq-pick { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.application.dbu-vq-catalog .dbu-vq-pick-name { flex: 0 0 150px; }
+.application.dbu-vq-catalog .dbu-vq-pick-note { flex: 1; min-width: 0; font-size: 12px; opacity: 0.75; }
+.application.dbu-vq-catalog .dbu-vq-pick.unfit .dbu-vq-pick-name { opacity: 0.6; }
+.application.dbu-vq-catalog .dbu-vq-pick button { flex: none; width: auto; height: 22px; line-height: 20px; padding: 0 10px; }
+
+/* Creation: four fields, two to a row; the Pilot Seat a grid of the Squares. */
+.dbu-ttrpg .dbu-vehicle-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.dbu-ttrpg .dbu-vehicle-field { display: flex; flex-direction: column; gap: 3px; }
+.dbu-ttrpg .dbu-vehicle-field > em {
+  font-style: normal;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--dbu-text-dim);
+}
+.dbu-ttrpg .dbu-vehicle-field select { height: 24px; }
+.dbu-ttrpg .dbu-vehicle-level { display: flex; align-items: center; gap: 6px; }
+.dbu-ttrpg .dbu-vehicle-level input { flex: none; width: calc(2ch + 16px); height: 24px; text-align: center; }
+.dbu-ttrpg .dbu-vehicle-note { font-size: 12px; color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-vehicle-seat { display: flex; align-items: flex-start; gap: 16px; }
+.dbu-ttrpg .dbu-vehicle-grid { display: grid; gap: 3px; flex: none; }
+.dbu-ttrpg .dbu-vehicle-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px dashed var(--dbu-border-strong);
+  border-radius: 3px;
+  color: #f5c542;
+}
+.dbu-ttrpg .dbu-vehicle-cell.extra { border-color: #4c6a8a; }
+.dbu-ttrpg .dbu-vehicle-cell.on { border: 1px solid #f5c542; background: rgba(245, 197, 66, 0.15); }

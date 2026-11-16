@@ -1,0 +1,16 @@
+id: vehicle-scanner
+name: Scanner
+kind: vehicle quality
+slots: 1
+source: Vehicles
+needsCreatorSkill: knowledge 2
+waits: Waits on the Item Search Adventure Maneuver.
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Scanner: This Vehicle has the ability to scan its surroundings and provide specific information to its Pilot.
+  –Prerequisites: This Vehicle's Creator has 2+ Skill Ranks in Knowledge (Science).
+  –Quality Slots: 1
+  –Effects: You gain access to the Item Search Adventure Maneuver (see — Adventure Maneuvers) while you are Piloting
+  this Vehicle.
+
+---

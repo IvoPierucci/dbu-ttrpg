@@ -1,0 +1,15 @@
+id: vehicle-heavy-vehicle
+name: Heavy Vehicle
+kind: vehicle quality
+slots: 1
+source: Vehicles
+speeds: half
+soakValue: level
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Heavy Vehicle: Bulky and sturdy, this Vehicle may not be very fast, but it can take a hit.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Halve this Vehicle's Speeds, but increase the Soak Value of this Vehicle by its Vehicle Level.
+
+---

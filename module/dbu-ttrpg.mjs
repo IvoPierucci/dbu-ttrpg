@@ -2,6 +2,9 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import { isCharacter, isMinion } from "./actor-types.mjs";
 import { initiativeOrder, masterOf, minionsOf } from "./allies.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
+import DBUVehicleData from "./data/actor-vehicle.mjs";
+import DBUVehicleSheet from "./sheets/actor-vehicle-sheet.mjs";
+import { registerVehicleHooks } from "./vehicles.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
 import DBURacialData from "./data/item-racial.mjs";
 import { registerRacialHooks } from "./racial.mjs";
@@ -68,6 +71,8 @@ Hooks.once("init", () => {
   CONFIG.Actor.dataModels.minion = DBUCharacterData;
   // And an Adversary (the Adversaries page; adversary.mjs): the same model again, which reads its type.
   CONFIG.Actor.dataModels.adversary = DBUCharacterData;
+  // A Vehicle (the Vehicles page; vehicles.mjs): a model and a sheet of its own, nothing of a Character's in it (the user's).
+  CONFIG.Actor.dataModels.vehicle = DBUVehicleData;
 
   // "Their place in Initiative is directly after their Master, in the order among Initiative, of their Initiative Value."
   CONFIG.Combat.documentClass = class DBUCombat extends CONFIG.Combat.documentClass {
@@ -127,6 +132,11 @@ Hooks.once("init", () => {
     makeDefault: true,
     label: "DBU Character Sheet"
   });
+  DocumentSheetConfig.registerSheet(foundry.documents.Actor, "dbu-ttrpg", DBUVehicleSheet, {
+    types: ["vehicle"],
+    makeDefault: true,
+    label: "DBU Vehicle Sheet"
+  });
 
   DocumentSheetConfig.unregisterSheet(foundry.documents.Item, "core", foundry.appv1.sheets.ItemSheet);
   DocumentSheetConfig.registerSheet(foundry.documents.Item, "dbu-ttrpg", DBUTalentSheet, {
@@ -151,6 +161,7 @@ Hooks.once("init", () => {
   registerChatHooks();
   registerHotbarDrop();
   registerCombatHooks();
+  registerVehicleHooks();
   registerDefeatHooks();
   registerRacialLifeHooks();
   registerRacialHooks();

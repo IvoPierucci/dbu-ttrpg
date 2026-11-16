@@ -1,0 +1,15 @@
+id: vehicle-brutal-design
+name: Brutal Design
+kind: vehicle quality
+slots: 1~2
+source: Vehicles
+hardnessRank: slots
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Brutal Design: This Vehicle's construction is incredibly durable.
+  –Prerequisites: N/A
+  –Quality Slots: 1~2
+  –Effects: Increase the Hardness Rank of this Vehicle by a number of Ranks equal to the number of Quality Slots this
+  Vehicle Quality takes up.
+
+---

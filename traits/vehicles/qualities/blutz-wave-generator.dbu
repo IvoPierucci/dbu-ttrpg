@@ -1,0 +1,19 @@
+id: vehicle-blutz-wave-generator
+name: Blutz Wave Generator
+kind: vehicle quality
+slots: 2
+source: Vehicles
+needsCreatorSkill: knowledge 2
+waits: Waits on the Transformations.
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Blutz Wave Generator: This Vehicle can recreate the effect of the full moon.
+  –Prerequisites: This Vehicle's Creator has 2+ Skill Ranks in Knowledge (Science).
+  –Quality Slots: 2
+  –Effects: By spending 2 Actions while you are Piloting this Vehicle, you may select a willing Character of the
+  Saiyan Race who possesses the Saiyan Heritage Racial Trait and is not at Long Range. For a number of Combat Rounds
+  equal to twice this Vehicle's Craftsmanship Grade, their Option effect for the Saiyan Heritage Racial Trait becomes
+  Tailed. Additionally, upon being targeted, they may use the Transformation Maneuver to enter any Transformation with
+  the Blutz Wave Aspect as an Out-of-Sequence Maneuver.
+
+---

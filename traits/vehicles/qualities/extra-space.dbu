@@ -1,0 +1,15 @@
+id: vehicle-extra-space
+name: Extra Space
+kind: vehicle quality
+slots: 1~3
+source: Vehicles
+extraRows: slots
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Extra Space: Someone has extended this Vehicle in length to accommodate more passengers.
+  –Prerequisites: N/A
+  –Quality Slots: 1~3
+  –Effects: For every Quality Slot, increase the amount of Squares occupied by this Vehicle by applying an additional
+  row at the bottom of the Squares occupied by this Vehicle due to its Size Category.
+
+---

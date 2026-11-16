@@ -1,0 +1,19 @@
+id: vehicle-adjustable
+name: Adjustable
+kind: vehicle quality
+slots: 1
+source: Vehicles
+needsQuality: vehicle-favored-environment
+choose: environment
+chooseCount: 2
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Adjustable: This Vehicle can swap between environments with the press of a button.
+  –Prerequisites: Favored Environment
+  –Quality Slots: 1
+  –Effects: Select 2 additional Battle Environments, you may spend 1 Action while Piloting this Vehicle to change the
+  Battle Environment that is selected for Favored Environment to one of the additional Battle Environments selected
+  for this Vehicle Quality or change it back to the originally selected Battle Environment through the Favored
+  Environment Vehicle Quality.
+
+---

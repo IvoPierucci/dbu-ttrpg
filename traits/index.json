@@ -1686,6 +1686,27 @@
     "unique/magical-materialization/magic-crafter.dbu",
     "unique/magical-materialization/tech-materialization.dbu",
     "unique/magical-materialization/food-materialization.dbu",
-    "unique/magical-materialization/limited-creation.dbu"
+    "unique/magical-materialization/limited-creation.dbu",
+    "vehicles/qualities/adjustable.dbu",
+    "vehicles/qualities/air-tight.dbu",
+    "vehicles/qualities/armored-plating.dbu",
+    "vehicles/qualities/big-blaster.dbu",
+    "vehicles/qualities/blutz-wave-generator.dbu",
+    "vehicles/qualities/boost-speed.dbu",
+    "vehicles/qualities/brutal-design.dbu",
+    "vehicles/qualities/capsule.dbu",
+    "vehicles/qualities/colony-ship.dbu",
+    "vehicles/qualities/countermeasures.dbu",
+    "vehicles/qualities/energy-shield.dbu",
+    "vehicles/qualities/extra-space.dbu",
+    "vehicles/qualities/favored-environment.dbu",
+    "vehicles/qualities/heavy-vehicle.dbu",
+    "vehicles/qualities/hikou.dbu",
+    "vehicles/qualities/jacket-dock.dbu",
+    "vehicles/qualities/living-quarters.dbu",
+    "vehicles/qualities/remote-controlled.dbu",
+    "vehicles/qualities/scanner.dbu",
+    "vehicles/qualities/ultra-massive.dbu",
+    "vehicles/qualities/weapon-installed.dbu"
   ]
 }

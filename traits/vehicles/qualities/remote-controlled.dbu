@@ -1,0 +1,13 @@
+id: vehicle-remote-controlled
+name: Remote Controlled
+kind: vehicle quality
+slots: 1
+source: Vehicles
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Remote Controlled: This Vehicle can be piloted while you're not inside it, via remote.
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: This Vehicle can be connected to and controlled with a Remote (see — Remote Basic Item).
+
+---

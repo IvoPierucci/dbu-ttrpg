@@ -1,0 +1,49 @@
+{{! Creation (the user's, 2026-11-15): what it was made with - its Craftsmanship Grade, Size Category, Vehicle Level (with Tune Up),
+    its Creator, and the Pilot Seat for one Enormous or larger. }}
+<section class="tab {{tabs.creation.cssClass}}" data-tab="creation" data-group="primary">
+  <div class="dbu-vehicle-panel">
+    <h3 class="dbu-side-title">Vehicle <span class="panel-note">Output {{reading.output}} = Level {{reading.level}} + 2 &times; Grade {{reading.grade}}</span></h3>
+    <div class="dbu-vehicle-fields">
+      <label class="dbu-vehicle-field"><em>Craftsmanship Grade</em>
+        <select name="system.grade" {{#unless editable}}disabled{{/unless}}>
+          {{#each grades as |grade|}}<option value="{{grade.value}}" {{#if grade.selected}}selected{{/if}}>{{grade.label}}</option>{{/each}}
+        </select>
+        <span class="dbu-vehicle-note{{#if slots.over}} dbu-vehicle-over{{/if}}">{{gradeNote}}{{#if slots.over}}: {{slots.used}} used on the Qualities tab{{/if}}</span>
+      </label>
+      <label class="dbu-vehicle-field"><em>Size Category</em>
+        <select name="system.size" {{#unless editable}}disabled{{/unless}}>
+          {{#each sizes as |size|}}<option value="{{size.value}}" {{#if size.selected}}selected{{/if}}>{{size.label}}</option>{{/each}}
+        </select>
+        <span class="dbu-vehicle-note">{{sizeNote}} &middot; Large to Gigantic</span>
+      </label>
+      <div class="dbu-vehicle-field"><em>Vehicle Level</em>
+        <span class="dbu-vehicle-level">
+          <input type="number" name="system.vehicleLevel" value="{{system.vehicleLevel}}" min="1" max="{{maxLevel}}" {{#unless editable}}disabled{{/unless}}/>
+          {{#if editable}}<button type="button" class="dbu-vehicle-add" data-action="tuneUp"
+                  data-tooltip="Tune Up: its Vehicle Level becomes its owner's Power Level">Tune Up</button>{{/if}}
+        </span>
+        <span class="dbu-vehicle-note">Its creator's Power Level when made</span>
+      </div>
+      <label class="dbu-vehicle-field"><em>Creator</em>
+        <select name="system.creator" {{#unless editable}}disabled{{/unless}}>
+          {{#each creators as |creator|}}<option value="{{creator.value}}" {{#if creator.selected}}selected{{/if}}>{{creator.label}}</option>{{/each}}
+        </select>
+        <span class="dbu-vehicle-note">{{#if creatorNote}}For Prerequisites: {{creatorNote}}{{else}}For the Prerequisites that ask about its Creator{{/if}}</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="dbu-vehicle-panel">
+    <h3 class="dbu-side-title">Pilot Seat <span class="panel-note">{{#if seat}}Enormous or larger: pick the Square{{else}}One Square: no Pilot Seat to pick{{/if}}</span></h3>
+    {{#if seat}}
+    <div class="dbu-vehicle-seat">
+      <div class="dbu-vehicle-grid" style="grid-template-columns: repeat({{seat.cols}}, 1fr);">
+        {{#each seat.cells as |cell|}}
+        <a class="dbu-vehicle-cell{{#if cell.on}} on{{/if}}{{#if cell.extra}} extra{{/if}}" data-action="pickSeat" data-index="{{cell.index}}">{{#if cell.on}}<i class="fas fa-dharmachakra"></i>{{/if}}</a>
+        {{/each}}
+      </div>
+      <p class="dbu-vehicle-note">The Pilot must occupy this Square. A row added by Extra Space shows in blue.</p>
+    </div>
+    {{/if}}
+  </div>
+</section>

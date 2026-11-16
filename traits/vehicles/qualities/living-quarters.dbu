@@ -1,0 +1,19 @@
+id: vehicle-living-quarters
+name: Living Quarters
+kind: vehicle quality
+slots: 2
+source: Vehicles
+needsSizeAtLeast: enormous
+waits: Waits on Bases.
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Living Quarters: This Vehicle doubles as a home away from home.
+  –Prerequisites: This Vehicle's Size Category is Enormous or Larger.
+  –Quality Slots: 2
+  –Effects: This Vehicle has all the amenities of a home. This can mean separate rooms in larger Vehicles and tends to
+  include a bathroom, kitchen, and dedicated living room. This takes up 2 Squares, which must be aligned either
+  vertically or horizontally. These Squares are considered occupied.
+
+  You may use this Vehicle as if it was a Base with the Bedroom and Kitchen Rooms.
+
+---

@@ -1,0 +1,23 @@
+id: vehicle-jacket-dock
+name: Jacket Dock
+kind: vehicle quality
+slots: 2
+source: Vehicles
+needsSizeAtLeast: gigantic
+waits: Waits on Battle Jackets.
+# Its entry as the Vehicles page prints it, word for word.
+text: >
+  Jacket Dock: This Vehicle houses a Battle Jacket within.
+  –Prerequisites: This Vehicle's Size Category is Gigantic or larger.
+  –Quality Slots: 2
+  –Effects: This Vehicle may store a Battle Jacket with a Size Category lower than it within the Vehicle. When using
+  the Ride Maneuver, a Character within this Vehicle may become the Pilot of that Battle Jacket. If they do, that
+  Battle Jacket is moved to an unoccupied Square(s) adjacent to the Vehicle.
+
+  A Piloted Battle Jacket on an adjacent Square to a Vehicle with the Jacket Dock Vehicle Quality may spend 1 Action
+  to dock their Battle Jacket, storing it within that Vehicle. If they do, they can become the Pilot or Passenger of
+  that Vehicle as if they used the Ride Maneuver.
+
+  Each Vehicle can only store 1 Battle Jacket at a time.
+
+---
