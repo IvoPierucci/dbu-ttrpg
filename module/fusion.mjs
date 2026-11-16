@@ -150,7 +150,10 @@ export function fusionContext(actor, lookups) {
       baseTier: system.baseTierOfPower,
       races: races.length ? races : ["-"],
       lifeModifier: system.racialLifeModifier,
-      sizes: sizes.map(key => ({ value: key, label: lookups.sizeLabel(key), selected: key === system.size })),
+      // Its base Size as built: the derived `size` is an object (key, chosen, ...) - read off it, or the select shows the smallest and
+      // sends that back with the next change anywhere on the sheet.
+      sizes: sizes.map(key => ({ value: key, label: lookups.sizeLabel(key),
+        selected: key === String(actor._source?.system?.size ?? system.size?.chosen ?? system.size ?? "") })),
       sizeRange: `${lookups.sizeLabel(sizes[0])} to ${lookups.sizeLabel(sizes[sizes.length - 1])}`,
       alignments: alignments.map(value => ({ value, label: lookups.alignments[value]?.label ?? String(value), selected: value === system.alignment })),
       alignmentRange: `${lookups.alignments[alignments[alignments.length - 1]]?.label ?? ""} to ${lookups.alignments[alignments[0]]?.label ?? ""}`

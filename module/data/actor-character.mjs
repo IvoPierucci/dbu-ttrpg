@@ -2401,6 +2401,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // worked out below, from the Score as it stands here.
     let scoresMoved = false;
     for (const key of Object.keys(atts)) {
+      // The Score before any effect moved it - what a Fusion takes from it (fusion-make.mjs highestScores): its Traits and Talents,
+      // copied onto the Fusion, move the Fusion's own again.
+      atts[key].unmoved = atts[key].score;
       const added = slot(this, `${key}.score`);
       if (!added) continue;
       atts[key].score += added;
@@ -2680,6 +2683,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         ...skill,
         key,
         ranks,
+        // Those of its own - race, Progression, Character Perks - without an effect's: what a Fusion takes (fusion-make.mjs highestRanks).
+        ownRanks: rankSlots.filter(slot => slot === key).length,
         sizeAdjustment,
         // Skill Bonus is half the governing Attribute's Score, rounded down (the user's), plus 2 per Rank, and then
         // whatever effects do to it - Blinded halving Perception, Sleeping taking 2 off

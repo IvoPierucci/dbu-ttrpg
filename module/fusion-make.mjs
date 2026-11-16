@@ -75,17 +75,26 @@ export function snapshotOf(actor) {
   };
 }
 
-/** "The highest Attribute Score for each Attribute among the Fused Characters." */
+/**
+ * "The highest Attribute Score for each Attribute among the Fused Characters" - as their race and Progression make it, before any
+ * effect moves it: the Traits and Talents that moved theirs are copied onto the Fusion and move its own (not twice), and what is not
+ * copied (a Custom Buff, a Racial Trait not chosen) is not the Fusion's.
+ */
 export function highestScores(actors) {
+  const score = entry => Number(entry?.unmoved ?? entry?.score) || 0;
   return Object.fromEntries(Object.keys(DBUCharacterData.ATTRIBUTE_ABBREVIATIONS).map(key =>
-    [key, actors.reduce((best, actor) => Math.max(best, Number(actor.system?.attributes?.[key]?.score) || 0), 0)]));
+    [key, actors.reduce((best, actor) => Math.max(best, score(actor.system?.attributes?.[key])), 0)]));
 }
 
-/** "The amount of Skill Ranks in each Skill ... is equal to the highest number of Skill Ranks in that Skill" - one entry a Rank. */
+/**
+ * "The amount of Skill Ranks in each Skill ... is equal to the highest number of Skill Ranks in that Skill" - one entry a Rank. Their
+ * own, without an effect's (copied, it gives the Fusion its own).
+ */
 export function highestRanks(actors) {
   const keys = new Set(actors.flatMap(actor => Object.keys(actor.system?.skills ?? {})));
+  const ranks = entry => Number(entry?.ownRanks ?? entry?.ranks) || 0;
   return [...keys].flatMap(key => {
-    const most = actors.reduce((best, actor) => Math.max(best, Number(actor.system?.skills?.[key]?.ranks) || 0), 0);
+    const most = actors.reduce((best, actor) => Math.max(best, ranks(actor.system?.skills?.[key])), 0);
     return Array.from({ length: most }, () => key);
   });
 }

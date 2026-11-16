@@ -6918,8 +6918,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const held = [...had].map(id => getTrait(id)).filter(Boolean);
     // Not this character's to take - dimmed, and why on hover; still taken if picked (the user's). Left out altogether where the Settings
     // tab's "Only Traits you may have" is ticked.
-    const unfitOf = trait => racialTraitUnfit(trait, this.actor.system.race, this.actor.system.subrace, this.actor.system.effects?.slots)
-      || minionRacialUnfit(trait, this.actor, held);
+    // A Fusion's: fit where any of its Races' is ("the Fusion gains all the Races (and Subraces)").
+    const races = (this.actor.type === "fusion") && (this.actor.system.fusion?.races ?? []).length ? this.actor.system.fusion.races
+      : [{ race: this.actor.system.race, subrace: this.actor.system.subrace }];
+    const unfitOf = trait => races.map(entry => racialTraitUnfit(trait, entry.race, entry.subrace, this.actor.system.effects?.slots))
+      .reduce((left, why) => (left && why) ? why : "", "unfit") || minionRacialUnfit(trait, this.actor, held);
     const traits = racialTraitsInOrder(this.actor.system.race, undefined, this.actor.system.effects?.slots)
       .filter(trait => !this.actor.system.hideUnfitTraits || had.has(trait.id) || !unfitOf(trait));
     if (!traits.length) {
