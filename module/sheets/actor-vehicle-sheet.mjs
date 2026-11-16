@@ -125,6 +125,15 @@ export default class DBUVehicleSheet extends HandlebarsApplicationMixin(ActorShe
       };
     });
     context.slots = reading.slots;
+    // Adjustable: which of its Battle Environments Favored Environment is set to now.
+    const adjustable = reading.qualities.find(quality => quality.id === "vehicle-adjustable");
+    const favoredRow = context.qualities.find(quality => quality.id === "vehicle-favored-environment");
+    if (adjustable && favoredRow && favoredRow.choices[0]) {
+      const { favoredEnvironment } = await import("../vehicles.mjs");
+      const now = favoredEnvironment(actor);
+      favoredRow.switchable = [favoredRow.choices[0], ...adjustable.choices.filter(Boolean)]
+        .map(value => ({ value, label: environmentName(value), selected: value === now }));
+    }
 
     // Creation: what it was made with.
     context.grades = VEHICLE_GRADES.map(row => ({ value: row.grade, selected: row.grade === reading.grade,
@@ -185,6 +194,20 @@ export default class DBUVehicleSheet extends HandlebarsApplicationMixin(ActorShe
           choices[at] = select.value;
           entry.choices = choices;
         });
+      });
+    }
+    // Adjustable: "you may spend 1 Action while Piloting this Vehicle to change the Battle Environment that is selected for Favored
+    // Environment" - the Action its Pilot's, in a Combat Encounter, where they are the one changing it.
+    for (const select of this.element.querySelectorAll("select[data-active-environment]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        const own = select.querySelector("option")?.value ?? "";
+        await this.actor.update({ "system.activeEnvironment": (select.value === own) ? "" : select.value });
+        const pilot = actorAt(this.actor.system.crew?.pilot);
+        if (game.combat?.started && pilot?.isOwner) {
+          const { spendActions } = await import("../combat.mjs");
+          await spendActions(pilot, 1, "standard");
+        }
       });
     }
     for (const select of this.element.querySelectorAll("select[data-weapon-profile]")) {

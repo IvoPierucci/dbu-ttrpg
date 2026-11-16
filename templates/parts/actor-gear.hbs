@@ -177,7 +177,12 @@
         {{/if}}
         {{/if}}
         {{#if row.capsule}}
-        {{#if row.heldId}}
+        {{#if row.heldVehicle}}
+        <span class="gear-type" data-tooltip="A Vehicle, by its Capsule Quality">holds {{row.heldName}}</span>
+        <button type="button" class="gear-act" data-action="throwGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="It appears beside you.">Throw</button>
+        {{else if row.heldId}}
         <a class="gear-type" data-action="editItem" data-item-id="{{row.heldId}}">holds {{row.heldName}}</a>
         <button type="button" class="gear-act" data-action="throwGear"
                 data-item-id="{{row.itemId}}"

@@ -44,6 +44,7 @@ text: >
 #
 # --- What is not built ---------------------------------------------------------------------------
 #
-# "Vehicles and Bases can also be stored within Capsules through the Capsule Quality." There
-# are no Vehicles, Bases or Capsule Quality in this system yet. A living thing is not an Item
-# here, so there is nothing to refuse.
+# "Vehicles and Bases can also be stored within Capsules through the Capsule Quality." A Vehicle of
+# theirs with the Capsule Quality and nobody in it: offered by Store, its tokens taken off the scenes;
+# Thrown, its token beside the thrower (vehicles.mjs). There are no Bases yet. A living thing is not
+# an Item here, so there is nothing to refuse.

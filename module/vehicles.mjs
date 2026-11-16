@@ -258,6 +258,20 @@ export function tokenSizeOf(reading) {
 
 export function registerVehicleHooks() {
   registerCrewHooks();
+  // Hikou: "The current High Environment of the Vehicle is also applied to all Characters within the Vehicle" - its Pilot's, who
+  // Soars it: their rank written onto every Passenger as it changes, and onto one getting in.
+  Hooks.on("updateActor", async (actor, change, options, userId) => {
+    if (userId !== game.user.id) return;
+    if (actor.type === "vehicle") {
+      if (!foundry.utils.hasProperty(change, "system.crew") || !hasVehicleQuality(actor, "hikou")) return;
+      const pilot = actorAt(actor.system.crew?.pilot);
+      if (pilot) await skyForPassengers(actor, Number(pilot.system?.battlefield?.highEnvironment) || 0);
+      return;
+    }
+    if (!foundry.utils.hasProperty(change, "system.battlefield.highEnvironment")) return;
+    const vehicle = pilotedBy(actor);
+    if (vehicle && hasVehicleQuality(vehicle, "hikou")) await skyForPassengers(vehicle, Number(actor.system.battlefield?.highEnvironment) || 0);
+  });
   Hooks.on("preCreateActor", (actor, data) => {
     if (actor.type !== "vehicle") return;
     const reading = vehicleReading(actor.system);
@@ -805,6 +819,20 @@ export async function refundVehicleCost(actor, maneuver) {
 // answers for it with their own Dodge Roll and its Defense Value, nothing else of the Defend Maneuver (the user's); with no Pilot it
 // does not defend, hit as a Feature is (the user's). Countermeasures and Energy Shield are its Pilot's Counter Action (the user's).
 
+/**
+ * The Battle Environment its Favored Environment is set to: "Select a Battle Environment" - or, with Adjustable, "change the Battle
+ * Environment that is selected for Favored Environment to one of the additional Battle Environments selected for this Vehicle
+ * Quality or change it back" (the sheet's choice, `activeEnvironment`). "" with no Favored Environment.
+ */
+export function favoredEnvironment(vehicle) {
+  const qualities = vehicle?.system?.qualities ?? [];
+  const own = qualities.find(entry => entry.id === "vehicle-favored-environment")?.choices?.[0] ?? "";
+  if (!own) return "";
+  const extra = (qualities.find(entry => entry.id === "vehicle-adjustable")?.choices ?? []).filter(Boolean);
+  const active = String(vehicle.system.activeEnvironment ?? "");
+  return (active && extra.includes(active)) ? active : own;
+}
+
 /** A Counter Action of its Pilot's spent, where a Combat Encounter counts them - through the GM where they are not the mover's. */
 async function spendPilotCounter(pilot) {
   if (!globalThis.game?.combat?.started) return true;
@@ -839,7 +867,7 @@ export async function vehicleDefences(everyone) {
     const output = Number(vehicle.system.output) || 0;
     let defenseValue = Number(vehicle.system.defenseValue) || 0;
     const notes = [];
-    const favored = (vehicle.system.qualities ?? []).find(entry => entry.id === "vehicle-favored-environment")?.choices?.[0];
+    const favored = favoredEnvironment(vehicle);
     if (favored) {
       const { environmentIdOf } = await import("./environments.mjs");
       if (environmentIdOf(pilot.system, getTrait) === favored) {
@@ -1086,6 +1114,65 @@ export async function makeVehicle(maker, create) {
   if (!game.users.activeGM) return ui.notifications.warn("A GM must be connected to make the Vehicle.");
   const { requestMakeVehicle } = await import("./chat.mjs");
   return requestMakeVehicle(data);
+}
+
+/** A Hikou Vehicle's High Environment written onto its Passengers - through the GM where they are not the mover's. */
+async function skyForPassengers(vehicle, rank) {
+  const { requestActorUpdate } = await import("./chat.mjs");
+  for (const passenger of (vehicle.system.crew?.passengers ?? []).map(actorAt).filter(Boolean)) {
+    if ((Number(passenger.system?.battlefield?.highEnvironment) || 0) !== rank) {
+      await requestActorUpdate(passenger, { "system.battlefield.highEnvironment": rank });
+    }
+  }
+}
+
+// --- Capsule ----------------------------------------------------------------------------------------------------------------------
+//
+// The Capsule Quality: "While no Character is inside of this Vehicle, it can be stored within a Capsule" - the Capsule Basic Item's
+// "Vehicles and Bases can also be stored within Capsules through the Capsule Quality". Stored, its tokens are taken off the scenes
+// and the Capsule holds it (`vehicleStored`); thrown - an Action - it appears beside its thrower, the table moving it from there.
+
+/** The flag a Capsule holding a Vehicle carries: its uuid. */
+export const VEHICLE_STORED = "vehicleStored";
+
+/** The Vehicles a character may put in a Capsule: theirs, with the Capsule Quality, nobody in it, in no other Capsule. */
+export function capsuleVehicles(actor) {
+  const stored = new Set(Array.from(globalThis.game?.actors ?? []).flatMap(each => Array.from(each.items ?? []))
+    .map(item => item.getFlag?.("dbu-ttrpg", VEHICLE_STORED)).filter(Boolean));
+  return allVehicles().filter(vehicle => vehicle.isOwner && hasVehicleQuality(vehicle, "capsule") && !stored.has(vehicle.uuid)
+    && !vehicle.system.crew?.pilot && !(vehicle.system.crew?.passengers ?? []).length);
+}
+
+/** Stored: the Capsule holds it, and its tokens are off every scene. */
+export async function storeVehicle(capsule, vehicle) {
+  await capsule.setFlag("dbu-ttrpg", VEHICLE_STORED, vehicle.uuid);
+  const { requestTokenDeletes } = await import("./chat.mjs");
+  for (const scene of Array.from(globalThis.game?.scenes ?? [])) {
+    const ids = Array.from(scene.tokens ?? []).filter(token => token.actorId === vehicle.id).map(token => token.id);
+    if (ids.length) await requestTokenDeletes(scene, ids);
+  }
+}
+
+/**
+ * Thrown: "it appears instantly in that position" - its token beside its thrower on their scene, where there is room (the first
+ * unoccupied place, nearest their front left), the Capsule empty again. Said.
+ */
+export async function throwVehicle(actor, capsule) {
+  const vehicle = actorAt(capsule.getFlag?.("dbu-ttrpg", VEHICLE_STORED));
+  if (!vehicle) {
+    await capsule.unsetFlag?.("dbu-ttrpg", VEHICLE_STORED);
+    return null;
+  }
+  const scene = globalThis.canvas?.scene ?? null;
+  const mine = tokenDocOf(actor, scene);
+  const size = tokenSizeOf(vehicle.system.reading);
+  const spot = mine ? roomBeside(footprint(mine), { w: size.width, h: size.height }, takenOn(scene, mine)) : null;
+  await capsule.unsetFlag("dbu-ttrpg", VEHICLE_STORED);
+  if (spot && scene) {
+    const { requestVehicleToken } = await import("./chat.mjs");
+    await requestVehicleToken(scene, vehicle, toPixels(scene, spot));
+  }
+  return `${actor.name} throws ${capsule.name}, and ${vehicle.name} appears${spot ? " beside them" : " - place it on the map by hand"}.`;
 }
 
 /** The Actor a uuid names, if it can be had without waiting - a Vehicle's Creator, its Pilot and Passengers. */

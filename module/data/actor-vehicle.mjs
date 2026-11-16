@@ -31,6 +31,8 @@ export default class DBUVehicleData extends foundry.abstract.TypeDataModel {
       // "If your Vehicle's Size Category is Enormous or larger, you must select a Square within that Vehicle" - its place among
       // the Squares, row by row from the front left.
       pilotSeat: int(0),
+      // Adjustable: the Battle Environment Favored Environment is set to now - its own, or one of Adjustable's two. Blank, its own.
+      activeEnvironment: new fields.StringField({ required: true, blank: true, initial: "" }),
       // Who made it - an Actor's uuid - for the Prerequisites that ask about its Creator's Skill Ranks.
       creator: new fields.StringField({ required: true, blank: true, initial: "" }),
       // Who is in it: one Pilot and its Passengers, by uuid (the Ride Maneuver's).

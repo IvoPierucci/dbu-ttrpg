@@ -2509,6 +2509,8 @@ async function drainDestination(actor, maneuver, store) {
  */
 export async function payFromStore(actor, maneuver, declared, price) {
   if (!maneuver?.attacking || !declared?.foundation) return false;
+  // Piloting: the Vehicle's Ki pays its Pilot's attacks (spendManeuverCost) - no Energy-Suction Device of theirs.
+  if (pilotedBy(actor)) return false;
   const { canPayAttack, drainStore } = await import("./gear.mjs");
   const store = drainStore(actor.items);
   if (!canPayAttack(store, declared.foundation, price)) return false;
@@ -6762,7 +6764,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // A Movement's Ki taken from a worn Jetpack as far as it goes, and the rest from the
   // character - whose part alone counts against their Capacity. The character's part is
   // paid first, since that is the half that can be refused.
-  const moving = crossing ? movementPayment(Array.from(actor.items ?? []), price)
+  // Piloting: the Vehicle's Ki pays its Movement (spendManeuverCost) - no Jetpack of its Pilot's.
+  const moving = (crossing && !pilotedBy(actor)) ? movementPayment(Array.from(actor.items ?? []), price)
     : { store: null, fromStore: 0, fromSelf: price };
   // Perfect Strike: the full Ki Cost is paid, and Capacity takes half of it - the wager as usual.
   const perfect = !crossing && maneuver.ultimate && ["simple"].includes(declared?.profile)

@@ -19,6 +19,12 @@
           {{#each choose.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}
         </select>
         {{/each}}
+        {{#if quality.switchable}}
+        <select data-active-environment aria-label="Set to now (Adjustable)" data-tooltip="Set to now - Adjustable: 1 Action while Piloting"
+                {{#unless @root.editable}}disabled{{/unless}}>
+          {{#each quality.switchable as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>Now: {{option.label}}</option>{{/each}}
+        </select>
+        {{/if}}
         {{#if quality.effect}}<span class="dbu-vq-effect">{{quality.effect}}</span>{{/if}}
         {{#if quality.ranged}}
         <input type="number" class="dbu-vq-slots" data-quality-slots="{{quality.index}}" value="{{quality.slots}}" min="{{quality.range.min}}"

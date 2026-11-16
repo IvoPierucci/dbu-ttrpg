@@ -1364,6 +1364,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (isStored(gearItems, item) && !item.flags?.["dbu-ttrpg"]?.innerRoom) continue;
       const type = GEAR_TYPES[item.system.itemType] ?? GEAR_TYPES.basic;
       const held = item.system.capsule ? heldBy(gearItems, item) : null;
+      // A Vehicle in it, by the Capsule Quality (vehicles.mjs).
+      const heldVehicle = item.system.capsule ? fromUuidSync(item.getFlag?.("dbu-ttrpg", "vehicleStored") || "") : null;
       context.gear[type.list]?.push({
         itemId: item.id,
         name: item.name,
@@ -1477,7 +1479,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A Capsule, and what it holds.
         capsule: Boolean(item.system.capsule),
         heldId: held?.id ?? "",
-        heldName: held?.name ?? "",
+        heldName: held?.name ?? heldVehicle?.name ?? "",
+        heldVehicle: Boolean(heldVehicle),
         // A piece of Apparel: the Layer it is worn on, or the three it could go on - each
         // closed while another piece is on it, and saying which.
         ...((item.system.crafted?.kind === "apparel") ? this.#layerRow(gearItems, item) : {}),
@@ -5370,11 +5373,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!capsule?.system.capsule) return;
 
     const items = this.actor.items.filter(owned => owned.type === "gear");
-    if (heldBy(items, capsule)) return;
+    if (heldBy(items, capsule) || capsule.getFlag("dbu-ttrpg", "vehicleStored")) return;
 
     const offered = storable(items, capsule);
-    if (!offered.length) {
-      ui.notifications.info(`${this.actor.name} has no Basic Item to put in it.`);
+    // And a Vehicle of theirs with the Capsule Quality and nobody in it (vehicles.mjs).
+    const { capsuleVehicles, storeVehicle } = await import("../vehicles.mjs");
+    const vehicles = capsuleVehicles(this.actor);
+    if (!offered.length && !vehicles.length) {
+      ui.notifications.info(`${this.actor.name} has no Basic Item, nor a Vehicle with the Capsule Quality, to put in it.`);
       return;
     }
 
@@ -5384,6 +5390,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       window: { title: `${capsule.name} - Store` },
       content: `<select name="stored" class="dbu-gear-pick">${offered
         .map(item => `<option value="${escape(item.id)}">${escape(item.name)}</option>`)
+        .join("")}${vehicles.map(vehicle => `<option value="vehicle:${escape(vehicle.uuid)}">${escape(vehicle.name)} (Vehicle)</option>`)
         .join("")}</select>`,
       buttons: [
         {
@@ -5397,6 +5404,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rejectClose: false
     });
 
+    const vehicle = vehicles.find(entry => `vehicle:${entry.uuid}` === chosen);
+    if (vehicle) return storeVehicle(capsule, vehicle);
     const item = offered.find(entry => entry.id === chosen);
     if (!item) return;
     // "While you are holding a Torch" - put away, it is not held, and goes out.
@@ -5415,10 +5424,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!capsule?.system.capsule) return;
 
     const held = heldBy(this.actor.items.filter(owned => owned.type === "gear"), capsule);
-    if (!held) return;
+    const vehicleIn = capsule.getFlag("dbu-ttrpg", "vehicleStored");
+    if (!held && !vehicleIn) return;
 
     const { spendActions } = await import("../combat.mjs");
     if (!await spendActions(this.actor, capsule.system.placeCost ?? 0)) return;
+    // A Vehicle: its token beside the thrower (vehicles.mjs).
+    if (!held) {
+      const said = await (await import("../vehicles.mjs")).throwVehicle(this.actor, capsule);
+      return said ? ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: `<p>${Handlebars.escapeExpression(said)}</p>` }) : null;
+    }
 
     await held.update({ "system.storedIn": "" });
     return ChatMessage.create({

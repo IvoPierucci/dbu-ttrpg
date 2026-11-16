@@ -287,6 +287,9 @@ function applyRequest(request) {
     case "tokens": return game.scenes.get(request.sceneId)?.updateEmbeddedDocuments("Token", request.updates ?? [], request.options ?? {});
     // A Vehicle made by the Create Maneuver of a player who may not make Actors (vehicles.mjs makeVehicle).
     case "makeVehicle": return Actor.create(request.data);
+    // A Vehicle put in a Capsule, its tokens taken off; thrown out of one, its token made (vehicles.mjs).
+    case "deleteTokens": return game.scenes.get(request.sceneId)?.deleteEmbeddedDocuments("Token", request.ids ?? []);
+    case "vehicleToken": return placeVehicleToken(game.scenes.get(request.sceneId), fromUuidSync(request.vehicleUuid ?? ""), request.at);
     case "heroSwitch": return heroSwitchGM(request.heroUuid, request.avatarUuid);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
@@ -15591,6 +15594,30 @@ async function swapTokens(aUuid, bUuid) {
  * Tokens moved on one scene - a Vehicle's Crew with it, one put in it or out of it (vehicles.mjs) - by whoever may, or through the GM
  * when one of them is somebody else's.
  */
+/** Tokens taken off a scene - a Vehicle put in a Capsule (vehicles.mjs) - by the GM where the mover may not. */
+export function requestTokenDeletes(scene, ids) {
+  if (!scene || !ids.length) return null;
+  if (game.user.isGM) return scene.deleteEmbeddedDocuments("Token", ids);
+  if (!game.users.activeGM) return ui.notifications.warn("A GM must be connected to take the tokens off.");
+  game.socket.emit(CHANNEL, { type: "deleteTokens", sceneId: scene.id, ids });
+  return null;
+}
+
+/** A Vehicle's token made on a scene at a place - thrown out of a Capsule (vehicles.mjs). */
+async function placeVehicleToken(scene, vehicle, at) {
+  if (!scene || !vehicle) return null;
+  const token = await vehicle.getTokenDocument({ x: Number(at?.x) || 0, y: Number(at?.y) || 0 });
+  return scene.createEmbeddedDocuments("Token", [token.toObject()]);
+}
+
+export function requestVehicleToken(scene, vehicle, at) {
+  if (!scene || !vehicle) return null;
+  if (game.user.isGM) return placeVehicleToken(scene, vehicle, at);
+  if (!game.users.activeGM) return ui.notifications.warn("A GM must be connected to put the Vehicle on the map.");
+  game.socket.emit(CHANNEL, { type: "vehicleToken", sceneId: scene.id, vehicleUuid: vehicle.uuid, at });
+  return null;
+}
+
 /** A Vehicle's Actor made by the GM - the Create Maneuver's, for a player who may not make Actors (vehicles.mjs). */
 export function requestMakeVehicle(data) {
   game.socket.emit(CHANNEL, { type: "makeVehicle", data });
