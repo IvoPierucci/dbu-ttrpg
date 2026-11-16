@@ -12,6 +12,8 @@
  * to 0)" - the first of each Defeat.
  */
 
+import { karmaAvailable } from "./fusion.mjs";
+
 const SCOPE = "dbu-ttrpg";
 
 /** The six, as the page lists them. */
@@ -68,19 +70,20 @@ export function desperationHolders(ally, key, alliesOnScene) {
   const effect = desperationEffect(key);
   if (!effect || !ally) return [];
   return alliesOnScene(ally).filter(holder => (holder.uuid !== ally.uuid) && open(holder, effect)
-    && ((Number(holder.system?.karma) || 0) >= desperationCost(holder, effect)));
+    && (karmaAvailable(holder) >= desperationCost(holder, effect)));
 }
 
 /** Paid: the Karma, its limit, and Honorbound (2)'s first. */
 export async function payDesperation(holder, key) {
   const effect = desperationEffect(key);
   const cost = desperationCost(holder, effect);
-  const karma = Number(holder.system?.karma) || 0;
-  if (karma < cost) return false;
+  if (karmaAvailable(holder) < cost) return false;
   const { requestActorUpdate } = await import("./chat.mjs");
   const first = (holder.system?.effects?.slots?.["honorbound.desperation"] === true)
     && (holder.getFlag?.(SCOPE, "honorboundDefeat") !== defeatKey(holder));
-  await requestActorUpdate(holder, { "system.karma": karma - cost,
+  // A Fusion's: its own or a Fused Character's, asked (karma.mjs payKarma).
+  if (!await (await import("./karma.mjs")).payKarma(holder, cost, effect?.name ?? "Desperation Effect")) return false;
+  await requestActorUpdate(holder, {
     [`flags.${SCOPE}.desperation.${key}`]: (effect.per === "round") ? roundKey() : encounterKey(),
     ...(first ? { [`flags.${SCOPE}.honorboundDefeat`]: defeatKey(holder) } : {}) });
   return true;
@@ -158,7 +161,7 @@ export async function justTakeIt(holder) {
   const effect = desperationEffect("take-it");
   if (!holder?.system?.defeated) return ui.notifications.warn(`${holder?.name ?? "They"} must be Defeated.`);
   if (!open(holder, effect)) return ui.notifications.warn(`${effect.name}: already used this Combat Encounter.`);
-  if ((Number(holder.system.karma) || 0) < desperationCost(holder, effect)) {
+  if (karmaAvailable(holder) < desperationCost(holder, effect)) {
     return ui.notifications.warn(`${effect.name} needs ${desperationCost(holder, effect)} Karma.`);
   }
   const allies = alliesOnScene(holder).filter(ally => ally.uuid !== holder.uuid);

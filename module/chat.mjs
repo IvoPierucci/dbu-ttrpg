@@ -1,7 +1,7 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { commandedNow, isCharacter, isMinion, isVehicle, typicalMinion } from "./actor-types.mjs";
 import { calledShotShelter, vehicleDodgeOf, vehicleTargets } from "./vehicle-crew.mjs";
-import { hasRace, racesOf } from "./fusion.mjs";
+import { hasRace, karmaAvailable, racesOf } from "./fusion.mjs";
 import { staminaLeft, staminaToStay, thresholdLines } from "./adversary.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
@@ -2817,7 +2817,7 @@ async function transfigurationDestroyed(message, clash) {
     `${target.name} dies. They may spend a Karma Point to avoid dying - they are Defeated `
     + "either way.",
     [
-      { action: "karma", label: `Spend a Karma Point (${target.system.karma ?? 0} left)` },
+      { action: "karma", label: `Spend a Karma Point (${karmaAvailable(target)} left)` },
       { action: "die", label: "Let them die" }
     ]);
   if (!answer) return;
@@ -6454,7 +6454,7 @@ async function rerollWindow(message, actor, { situation = null, check = null, op
     classes: ["dbu-dialog"],
     window: { title: `Reroll - ${actor.name}` },
     content: rollWindowHtml({
-      top: `<div class="dbu-roll-resources"><span>Karma <b>${actor.system.karma ?? 0}</b></span></div>${rollBoxHtml(what(null), line(null))}`,
+      top: `<div class="dbu-roll-resources"><span>Karma <b>${karmaAvailable(actor)}</b></span></div>${rollBoxHtml(what(null), line(null))}`,
       body: rollSection("Rerolls", `<label class="dbu-respond-option"><input type="radio" name="reroll" value="" checked/><span class="dbu-respond-name">None</span></label>${rows}`)
     }),
     render: (event, dialog) => {
@@ -8917,7 +8917,7 @@ export function resourceLine(actor) {
     cell("Ki", `${system.ki?.value ?? 0} / ${system.ki?.max ?? 0}`),
     (actions !== null) ? cell("Actions", actions) : "",
     (counter !== null) ? cell("Counter Actions", counter) : "",
-    cell("Karma", system.karma ?? 0)
+    cell("Karma", karmaAvailable(actor))
   ].join("")}</div>`;
 }
 
@@ -9031,7 +9031,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
 
   const karmicGroup = karmicRows
     ? `<details class="dbu-respond-group" open>
-         <summary>Karmic Effects &middot; ${actor.system.karma ?? 0} left</summary>
+         <summary>Karmic Effects &middot; ${karmaAvailable(actor)} left</summary>
          ${karmicRows}
        </details>`
     : "";
@@ -9580,7 +9580,7 @@ async function respondDialog(message, respondable, { initials = new Map(), check
     // not part of this roll" are different things, and an empty list says neither.
     const karmaGroup = karmicOptions.length
       ? `<details class="dbu-respond-group">
-           <summary>Karmic Effects &middot; ${actor.system.karma ?? 0} left</summary>
+           <summary>Karmic Effects &middot; ${karmaAvailable(actor)} left</summary>
            ${karmic}
          </details>`
       : "";
@@ -9923,7 +9923,7 @@ async function respondPicker(message, entries, initials = new Map()) {
     const counter = game.combat?.started ? actionsLeft(actor, "counter") : null;
     const actions = game.combat?.started ? actionsLeft(actor, "standard") : null;
     const stats = [(actions !== null) ? `${actions} Action${(actions === 1) ? "" : "s"}` : "",
-      (counter !== null) ? `${counter} Counter Action${(counter === 1) ? "" : "s"}` : "", `Karma ${actor.system.karma ?? 0}`].filter(Boolean).join(" &middot; ");
+      (counter !== null) ? `${counter} Counter Action${(counter === 1) ? "" : "s"}` : "", `Karma ${karmaAvailable(actor)}`].filter(Boolean).join(" &middot; ");
     return `<div class="dbu-respond-who${entry.isTarget ? " dbu-respond-who-target" : ""}${entry.usable ? "" : " dbu-respond-blocked"}" data-who="${actor.uuid}">
       <img src="${esc(actor.img)}" alt=""/>
       <div class="dbu-respond-who-body">
@@ -14345,7 +14345,7 @@ function renderIllusion(message, html) {
       await roll.evaluate();
       await applyIllusion(message, ILLUSION_CONDITIONS[roll.total - 1], `rolled ${roll.total}`);
     }, "1 Blinded, 2 Shaken, 3 Impediment, 4 Compelled");
-    if ((caster.system.karma ?? 0) > 0) {
+    if (karmaAvailable(caster) > 0) {
       button("Choose: 1 Karma Point", async () => {
         const picked = await pick(`${illusion.name} - Karma`, "Which Combat Condition?",
           ILLUSION_CONDITIONS.map(key => ({ action: key, label: conditionLabel(key) })));
@@ -36587,7 +36587,7 @@ export async function steadfastFailedBy(actor, knockedUuid, threshold) {
  */
 export async function buddySystem(actor) {
   if (!actor) return;
-  if ((Number(actor.system?.karma) || 0) < 1) return ui.notifications.warn(`${actor.name} has no Karma Point to spend.`);
+  if (karmaAvailable(actor) < 1) return ui.notifications.warn(`${actor.name} has no Karma Point to spend.`);
   const { traitsOfKind } = await import("./effects/traits.mjs");
   const offered = traitsOfKind("gear").filter(trait => (trait.itemType === "buddy") && (trait.special !== true))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -38835,10 +38835,10 @@ function deathButtons(message, card, subject, buttons) {
   if (isMinion(subject)) {
     if (card.deathSettled) return;
     const master = game.actors?.get(masterOf(subject));
-    const karma = Number(master?.system?.karma) || 0;
-    if (master && (karma >= 1) && (game.user.isGM || master.isOwner)) {
+    // A Fusion Master's: its own or a Fused Character's, asked (karma.mjs payKarma).
+    if (master && (karmaAvailable(master) >= 1) && (game.user.isGM || master.isOwner)) {
       button(`Keep alive (${master.name}'s Karma)`, `${master.name} spends 1 Karma Point: Defeated, not killed.`, async () => {
-        await requestActorUpdate(master, { "system.karma": karma - 1 });
+        if (!await (await import("./karma.mjs")).payKarma(master, 1, `Keep ${subject.name} alive`)) return;
         requestEdit(message, { type: "moment", moment: { ...card, deathSettled: "survived",
           detail: `${master.name} spends 1 Karma Point: ${subject.name} is kept alive.` } });
       });
@@ -38863,10 +38863,10 @@ function deathButtons(message, card, subject, buttons) {
       () => requestEdit(message, { type: "moment", moment: { ...card, intent: "ko", detail: "KO." } }));
   }
   if ((card.intent === "death") && !card.deathSettled && subject.isOwner) {
-    const karma = Number(subject.system.karma) || 0;
-    if (karma >= 1) {
+    // A Fusion's: its own or a Fused Character's, asked (karma.mjs payKarma).
+    if (karmaAvailable(subject) >= 1) {
       button("Survive (1 Karma)", "Spend 1 Karma Point: Defeated, not dead.", async () => {
-        await subject.update({ "system.karma": karma - 1 });
+        if (!await (await import("./karma.mjs")).payKarma(subject, 1, "Survive")) return;
         requestEdit(message, { type: "moment", moment: { ...card, deathSettled: "survived", detail: "Death intent - survived (1 Karma)." } });
       });
     }
@@ -41022,7 +41022,7 @@ function renderAttack(message, html) {
       destroy.textContent = `${entry.own.buddyHit.name} is destroyed`;
       destroy.addEventListener("click", () => settleBuddyHit(message, target, attack, false));
       container.append(destroy);
-      if ((target.system.karma ?? 0) > 0) {
+      if (karmaAvailable(target) > 0) {
         const save = document.createElement("button");
         save.type = "button";
         save.className = "dbu-clash-button dbu-karma-button";

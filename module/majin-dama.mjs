@@ -14,6 +14,7 @@
  */
 
 import { getTrait } from "./effects/traits.mjs";
+import { karmaAvailable } from "./fusion.mjs";
 
 /** The file it is made from. */
 export const MAJIN_DAMA = "majin-dama";
@@ -146,8 +147,8 @@ export function renewOpen(actor) {
 
 export async function renewMajinDama(actor) {
   if (!renewOpen(actor)) return null;
-  const karma = Number(actor.system.karma) || 0;
-  if (karma < RENEW_KARMA) {
+  // A Fusion's: its own or a Fused Character's (karma.mjs payKarma).
+  if (karmaAvailable(actor) < RENEW_KARMA) {
     ui.notifications.warn(`${actor.name} needs ${RENEW_KARMA} Karma Points.`);
     return null;
   }
@@ -159,7 +160,7 @@ export async function renewMajinDama(actor) {
   if (!ok) return null;
   const data = await damaItemData(actor);
   if (!data) return null;
-  await actor.update({ "system.karma": karma - RENEW_KARMA });
+  if (!await (await import("./karma.mjs")).payKarma(actor, RENEW_KARMA, "A new Majin-Dama")) return null;
   const [made] = await actor.createEmbeddedDocuments("Item", [data]);
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(`${actor.name} spends ${RENEW_KARMA} Karma Points: a new Majin-Dama, Integrated.`)}</p>` });

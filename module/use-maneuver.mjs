@@ -10,6 +10,7 @@
 import { adversaryActionsFor, isVillainousManeuver, villainousAfter, villainousBefore } from "./villainous.mjs";
 import { areAllies, areOpponents } from "./allies.mjs";
 import { isCharacter } from "./actor-types.mjs";
+import { karmaAvailable } from "./fusion.mjs";
 import { favoredChoiceOf } from "./data/item-maneuver.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import {
@@ -3147,7 +3148,7 @@ export async function karmicAssault(actor, maneuver, declared) {
   if (!(maneuver.ultimate || maneuver.ascended) || maneuver.superProfile) return unchanged;
   const { allKarmicEffects } = await import("./karma.mjs");
   const effect = allKarmicEffects().find(entry => entry.key === "karmic-assault");
-  if (!effect || ((Number(actor.system.karma) || 0) < (effect.cost ?? 0))) return unchanged;
+  if (!effect || (karmaAvailable(actor) < (effect.cost ?? 0))) return unchanged;
 
   const escape = Handlebars.escapeExpression;
   const supers = Object.entries(SUPER_PROFILES).map(([id, entry]) =>

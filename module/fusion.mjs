@@ -86,6 +86,17 @@ export function hasRace(actor, race, subrace = "") {
   return all.some(entry => (entry.race === race) && (!subrace || (entry.subrace === subrace)));
 }
 
+/**
+ * The most Karma Points a Character may spend at once: its own - a Fusion's, the most of its own and any one Fused Character's (not
+ * a Minion's): "The Fusion can use the Karma Points of all of the Fused Characters" (karma.mjs payKarma asks whose).
+ */
+export function karmaAvailable(actor) {
+  const own = Number(actor?.system?.karma) || 0;
+  if (!isFusion(actor)) return own;
+  return Math.max(own, ...(actor.system.fusion?.fused ?? []).filter(entry => !entry.minion)
+    .map(entry => Number(globalThis.fromUuidSync?.(entry.uuid)?.system?.karma) || 0));
+}
+
 /** Every Race a Character is of: a Fusion's all of its Races ("the Fusion gains all the Races"), anyone else's own one. */
 export function racesOf(actor) {
   const system = actor?.system;

@@ -147,6 +147,26 @@ export function karmaPools(actor) {
   return [...own, ...fused];
 }
 
+/**
+ * Karma Points paid outside the Karma window - surviving Death, keeping a Minion alive, a Desperation Effect, a new Majin-Dama: a
+ * Fusion's from its own or a Fused Character's, asked (karmaSource), as the window's are. Whether paid.
+ */
+export async function payKarma(actor, cost, what = "Karma") {
+  // Nothing to pay - Honorbound (2)'s first Desperate Effect at 0: nothing asked.
+  if (!(cost > 0)) return true;
+  const pool = await karmaSource(actor, cost, what);
+  if (pool === undefined) return false;
+  const from = pool ?? actor;
+  const karma = Number(from.system?.karma) || 0;
+  if (karma < cost) {
+    ui.notifications.warn(`${from.name} does not have ${cost} Karma Point${(cost === 1) ? "" : "s"}.`);
+    return false;
+  }
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(from, { "system.karma": karma - cost });
+  return true;
+}
+
 /** Which pays: null for the actor itself, another Actor, or undefined where backed out of. Asked of a Fusion where more than one could. */
 async function karmaSource(actor, cost, what) {
   if (actor?.type !== "fusion") return null;

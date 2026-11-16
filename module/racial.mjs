@@ -449,15 +449,16 @@ export function racialTraitRace(race, subrace = "", factor = "") {
 
 /** The Racial Trait Items a character has, in the picker's order: own race's first, then by race name, then as printed. */
 export function ownedRacialTraits(actor) {
-  const race = actor?.system?.race;
+  // A Fusion's: every one of its Races' first (fusion.mjs racesOf).
+  const races = racesOf(actor).length ? racesOf(actor) : [actor?.system?.race];
   const slots = actor?.system?.effects?.slots;
   const fileOf = item => getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   // A Factor Trait that replaces a Racial Trait of theirs by name - From Goop's "[Majin Regeneration]" - stands where that one would (the
   // user's): its race's group, its order.
   const place = item => {
-    const replaced = replacedTraitOf(fileOf(item), race);
+    const replaced = races.map(race => replacedTraitOf(fileOf(item), race)).find(Boolean);
     return replaced ? { rank: 0, group: groupName(replaced), order: orderOf(replaced) + 0.5 }
-      : { rank: groupRank(item, race, slots), group: groupName(item), order: orderOf(fileOf(item)) };
+      : { rank: Math.min(...races.map(race => groupRank(item, race, slots))), group: groupName(item), order: orderOf(fileOf(item)) };
   };
   return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && !isOtherTrait(item)).sort((a, b) => {
     const [one, two] = [place(a), place(b)];
