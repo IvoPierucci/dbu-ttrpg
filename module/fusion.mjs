@@ -86,6 +86,14 @@ export function hasRace(actor, race, subrace = "") {
   return all.some(entry => (entry.race === race) && (!subrace || (entry.subrace === subrace)));
 }
 
+/** Every Race a Character is of: a Fusion's all of its Races ("the Fusion gains all the Races"), anyone else's own one. */
+export function racesOf(actor) {
+  const system = actor?.system;
+  if (!system) return [];
+  const all = (isFusion(actor) && (system.fusion?.races ?? []).length) ? system.fusion.races.map(entry => entry.race) : [system.race];
+  return [...new Set(all.map(race => String(race ?? "")).filter(Boolean))];
+}
+
 /** Size Categories, smallest first. */
 const SIZE_ORDER = Object.freeze(["nano", "tiny", "small", "medium", "large", "enormous", "gigantic", "colossal"]);
 

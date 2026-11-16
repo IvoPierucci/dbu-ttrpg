@@ -3,7 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, isFusion, typicalMinion } from "../actor-types.mjs";
-import { fusionContext } from "../fusion.mjs";
+import { fusionContext, racesOf } from "../fusion.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
@@ -6923,7 +6923,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       : [{ race: this.actor.system.race, subrace: this.actor.system.subrace }];
     const unfitOf = trait => races.map(entry => racialTraitUnfit(trait, entry.race, entry.subrace, this.actor.system.effects?.slots))
       .reduce((left, why) => (left && why) ? why : "", "unfit") || minionRacialUnfit(trait, this.actor, held);
-    const traits = racialTraitsInOrder(this.actor.system.race, undefined, this.actor.system.effects?.slots)
+    const traits = racialTraitsInOrder(racesOf(this.actor), undefined, this.actor.system.effects?.slots)
       .filter(trait => !this.actor.system.hideUnfitTraits || had.has(trait.id) || !unfitOf(trait));
     if (!traits.length) {
       ui.notifications.info("There are no Racial Traits to add yet.");
@@ -7047,7 +7047,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const had = new Set(this.actor.system.racialTraits ?? []);
     // The Settings tab's "Only Traits you may have": the ones greyed left out.
     const traits = otherTraitsInOrder().filter(trait => !this.actor.system.hideUnfitTraits || had.has(trait.id)
-      || !otherTraitUnfit(trait, this.actor.system.race));
+      || !otherTraitUnfit(trait, racesOf(this.actor)));
     if (!traits.length) {
       ui.notifications.info("There are no Other Traits to add yet.");
       return;
@@ -7063,10 +7063,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
                placeholder="Type an Evolution, Bestial or Monstrous Trait"/>
         <ol class="gear-quality-list" data-feature-list>
           ${traits.map(trait => `<li class="gear-quality-option${had.has(trait.id) ? " blocked"
-            : (otherTraitUnfit(trait, this.actor.system.race) ? " unfit" : "")}"
+            : (otherTraitUnfit(trait, racesOf(this.actor)) ? " unfit" : "")}"
             data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
             data-tooltip="${escape(had.has(trait.id) ? "Already had"
-              : [otherTraitUnfit(trait, this.actor.system.race), trait.description ?? ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
+              : [otherTraitUnfit(trait, racesOf(this.actor)), trait.description ?? ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
             <span class="gear-quality-cost">${escape(otherGroupName(trait.owner))}</span></li>`).join("")}
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol></div>`,

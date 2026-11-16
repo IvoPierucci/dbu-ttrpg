@@ -1,7 +1,7 @@
 import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { commandedNow, isCharacter, isMinion, isVehicle, typicalMinion } from "./actor-types.mjs";
 import { calledShotShelter, vehicleDodgeOf, vehicleTargets } from "./vehicle-crew.mjs";
-import { hasRace } from "./fusion.mjs";
+import { hasRace, racesOf } from "./fusion.mjs";
 import { staminaLeft, staminaToStay, thresholdLines } from "./adversary.mjs";
 import { desperationCost, desperationEffect, desperationHolders, payDesperation } from "./desperation.mjs";
 import { alliesRuling, alliesWithin, bestTier, guidanceRangeGap, guidingAllies, opponentsWithin, SPHERE_RADIUS, withinGuidance } from "./guidance.mjs";
@@ -18150,15 +18150,16 @@ function ballSetOf(actor) {
 export function unifyRefusal(actor, aimed) {
   const slots = actor.system.effects?.slots ?? {};
   // Genetic Focus: Shadow Dragon (4): "your Race is considered to be Shadow Dragon for the effects of the Unify Maneuver".
-  const raceOf = who => (who?.system?.effects?.slots?.["unify.asShadowDragon"] === true) ? "shadow-dragon" : String(who?.system?.race ?? "");
+  // A Fusion is of every one of its Races (fusion.mjs racesOf): one in common is "a member of your Race".
+  const racesFor = who => (who?.system?.effects?.slots?.["unify.asShadowDragon"] === true) ? ["shadow-dragon"] : racesOf(who);
   if (!aimed.length) return "Target the one to Unify with first.";
   const androids = (slots["unify.androids"] === true) && hasRace(actor, "android");
-  const wide = androids && aimed.every(other => (String(other.system?.race ?? "") === "android")
+  const wide = androids && aimed.every(other => hasRace(other, "android")
     && (other.system?.effects?.slots?.["unify.androids"] === true));
   if (aimed.length > (wide ? 2 : 1)) return wide ? "Up to 2 Androids." : "Only one to Unify with - target one.";
   for (const other of aimed) {
     if (other.uuid === actor.uuid) return `${actor.name} cannot Unify with themselves.`;
-    if (raceOf(other) !== raceOf(actor)) return `${other.name} is not of ${actor.name}'s Race.`;
+    if (!racesFor(other).some(race => racesFor(actor).includes(race))) return `${other.name} is not of ${actor.name}'s Race.`;
     if (other.system?.minion) return `${other.name} is a Minion.`;
     if ((slots["unify.sameSet"] === true) && (ballSetOf(other) !== ballSetOf(actor))) {
       return `${other.name} is not of ${actor.name}'s set of Dragon Balls.`;
@@ -37305,7 +37306,8 @@ function whyNotMirror(actor, attack, item, counterLeft = 1) {
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   if (!attacker) return "the attacker is not here to copy";
   // Angel's Unique Rule: "Angels cannot be Minions".
-  if (getRace(attacker.system?.race ?? "")?.noMinion === true) return `${attacker.name} is an Angel: Angels cannot be Minions`;
+  // A Fusion with an Angel among its Races is one too.
+  if (racesOf(attacker).some(race => getRace(race)?.noMinion === true)) return `${attacker.name} is an Angel: Angels cannot be Minions`;
   return whyNotCopyClone(actor, { itemId: item?.id, name: item?.name ?? "Copy Clone" }, attacker) ?? "";
 }
 

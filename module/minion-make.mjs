@@ -13,6 +13,7 @@
 
 import DBUCharacterData from "./data/actor-character.mjs";
 import { masterOf } from "./allies.mjs";
+import { racesOf } from "./fusion.mjs";
 
 const SCOPE = "dbu-ttrpg";
 
@@ -156,7 +157,8 @@ export async function makeMinion(master, options = {}) {
   const copy = options.copyOf ? (globalThis.fromUuidSync?.(options.copyOf) ?? null) : null;
   // Angel's Unique Rule: "Angels cannot be Minions" - no Duplicate of one.
   const { cannotBeMinion } = await import("./races.mjs");
-  if (options.duplicate && cannotBeMinion((copy ?? master).system?.race)) {
+  // A Fusion with an Angel among its Races (fusion.mjs racesOf) as well.
+  if (options.duplicate && racesOf(copy ?? master).some(race => cannotBeMinion(race))) {
     ui.notifications.warn(`${(copy ?? master).name} is an Angel: Angels cannot be Minions, so no Duplicate of them.`);
     return [];
   }

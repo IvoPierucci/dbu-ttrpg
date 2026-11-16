@@ -7,6 +7,7 @@ import { featureAsks, withGranted } from "./signature.mjs";
 import { customBuffBasicIsSignature } from "./custom-buffs.mjs";
 import { asksStamina, staminaForKi, staminaLeft } from "./adversary.mjs";
 import { pilotedVehicle as pilotedBy } from "./vehicle-crew.mjs";
+import { racesOf } from "./fusion.mjs";
 
 /**
  * Maneuvers: anything that spends an Action.
@@ -4445,7 +4446,8 @@ const SELF_DUPLICATING_UAS = Object.freeze(["multi-form-technique", "super-ghost
 export function whyNoAngelDuplicate(actor, maneuver, target = null, cannot = () => false) {
   const library = uniqueLibraryOf(actor, maneuver);
   const of = SELF_DUPLICATING_UAS.includes(library) ? actor : (library === "copy-clone") ? target : null;
-  return (of && cannot(of.system?.race)) ? `${of.name} is an Angel: Angels cannot be Minions (${maneuver.name}).` : null;
+  // A Fusion: any of its Races (fusion.mjs racesOf).
+  return (of && racesOf(of).some(race => cannot(race))) ? `${of.name} is an Angel: Angels cannot be Minions (${maneuver.name}).` : null;
 }
 
 /**

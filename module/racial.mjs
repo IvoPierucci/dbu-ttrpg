@@ -66,6 +66,7 @@
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { isCharacter } from "./actor-types.mjs";
 import { getRace, isMinionRace, subraceName } from "./races.mjs";
+import { racesOf } from "./fusion.mjs";
 import { grantedTechniqueItems, isTechniqueData, whyNoNewTechnique } from "./full-power.mjs";
 import { traitAside } from "./aside.mjs";
 
@@ -415,12 +416,16 @@ export function minionRacialUnfit(trait, actor, held = []) {
 
 /** The same for an Other Trait: Evolution Traits are the Arcosians' alone (the user's). */
 export function otherTraitUnfit(trait, race) {
-  return ((trait?.owner === "evolution") && (race !== "arcosian")) ? "Arcosians' alone" : "";
+  // A race, or a Fusion's Races (fusion.mjs racesOf) - fit where any is.
+  return ((trait?.owner === "evolution") && ![race].flat().includes("arcosian")) ? "Arcosians' alone" : "";
 }
 
+/** Ordered for the picker: the character's own race's first - a Fusion's, any of its Races' (an array) - then by race name. */
 export function racialTraitsInOrder(race, traits = racialTraitFiles(), slots = null) {
+  const races = [race].flat().length ? [race].flat() : [""];
+  const rank = trait => Math.min(...races.map(each => groupRank(trait, each, slots)));
   return traits.slice().sort((a, b) =>
-    (groupRank(a, race, slots) - groupRank(b, race, slots))
+    (rank(a) - rank(b))
     || groupName(a).localeCompare(groupName(b))
     || (orderOf(a) - orderOf(b))
     || a.name.localeCompare(b.name));
@@ -968,8 +973,10 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
   // Difference in Shell's Choice: "Depending on your choice for the Option effect of Pieces of the Hive" - that one's, not asked.
   // More than a Minion (3): "Depending on your Race" - the race's, not asked.
   if (!presetOption && trait.optionsByRace) {
-    const race = String(actor?.system?.race ?? "");
-    presetOption = racialOptionsOf(trait.id).find(option => race && (String(option.forRace ?? "") === race))?.id ?? "";
+    // A Fusion's any of its Races (fusion.mjs racesOf): the one Option that fits, or asked where more than one does.
+    const races = racesOf(actor);
+    const fitting = racialOptionsOf(trait.id).filter(option => races.includes(String(option.forRace ?? "")));
+    presetOption = (fitting.length === 1) ? fitting[0].id : "";
   }
   if (!presetOption && trait.optionsFollow) {
     const followed = Array.from(actor?.items ?? []).find(each => each.flags?.["dbu-ttrpg"]?.sourceId === String(trait.optionsFollow));

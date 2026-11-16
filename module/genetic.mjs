@@ -10,6 +10,7 @@
  */
 
 import { isCharacter } from "./actor-types.mjs";
+import { racesOf } from "./fusion.mjs";
 
 const SCOPE = "dbu-ttrpg";
 
@@ -42,8 +43,9 @@ export function geneRaces(actor) {
 
 /** Whether a character may be the Donor for a Gene of that race. */
 export function fitsGene(other, race) {
-  const theirs = String(other?.system?.race ?? "");
-  return (race === "*") ? !Object.values(GENE_RACES).includes(theirs) : (theirs === race);
+  // A Fusion: any of its Races (fusion.mjs racesOf) - "*" one of them none of the Genes' races.
+  const theirs = racesOf(other).length ? racesOf(other) : [""];
+  return (race === "*") ? theirs.some(each => !Object.values(GENE_RACES).includes(each)) : theirs.includes(race);
 }
 
 /** Whether the Donors can each be given a Gene of their own, of their race - no more Donors than Genes. */
