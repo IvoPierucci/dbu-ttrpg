@@ -64,7 +64,7 @@
  */
 
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
-import { isCharacter } from "./actor-types.mjs";
+import { isCharacter, isMinion } from "./actor-types.mjs";
 import { getRace, isMinionRace, subraceName } from "./races.mjs";
 import { racesOf } from "./fusion.mjs";
 import { grantedTechniqueItems, isTechniqueData, whyNoNewTechnique } from "./full-power.mjs";
@@ -400,7 +400,8 @@ export function racialTraitUnfit(trait, race, subrace = "", slots = null) {
  */
 export function minionRacialUnfit(trait, actor, held = []) {
   // A Racial Factor for no Minion - Minion No More's "Prerequisite(s): You are not a Minion." (its `notMinion`): dimmed on a Minion's list.
-  if ((actor?.type === "minion") && (racialFactor(factorOf(trait))?.notMinion === true)) return "Its Racial Factor's Prerequisite is not met: you are a Minion";
+  // A Fusion of Minions too ("the resultant Fusion is also a Minion").
+  if (isMinion(actor) && (racialFactor(factorOf(trait))?.notMinion === true)) return "Its Racial Factor's Prerequisite is not met: you are a Minion";
   if ((actor?.type !== "minion") || actor.system?.duplicate || factorOf(trait) || isMinionRace(actor.system?.race)) return "";
   const race = actor.system?.race ?? "";
   const kindOf = each => (each?.subrace ? "subrace" : ((each?.importance === "secondary") ? "secondary" : "primary"));

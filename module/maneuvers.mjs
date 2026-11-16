@@ -1,5 +1,5 @@
 import { actsFreely, areAllies, masterOf, minionsOf } from "./allies.mjs";
-import { commandedNow } from "./actor-types.mjs";
+import { commandedNow, isMinion } from "./actor-types.mjs";
 import { guidanceRangeGap } from "./guidance.mjs";
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { getTrait, printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
@@ -4526,7 +4526,7 @@ export function whyNoMinionRoom(actor, maneuver) {
 function minionFamily(actor) {
   const actors = globalThis.game?.actors;
   if (!actors || !actor) return [];
-  const master = (actor.type === "minion") ? actors.get?.(masterOf(actor)) : actor;
+  const master = isMinion(actor) ? actors.get?.(masterOf(actor)) : actor;
   if (!master) return [];
   return [master.id, ...minionsOf(master)].filter(id => id !== actor.id).map(id => actors.get?.(id)).filter(Boolean);
 }

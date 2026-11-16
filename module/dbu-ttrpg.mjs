@@ -483,7 +483,7 @@ Hooks.once("setup", async () => {
   await Promise.all([loadRaces(), loadManeuvers()]);
   for (const actor of game.actors ?? []) actor.prepareData();
   // A Minion reads its Master's effects (allies.mjs minionGifts): again, now every Master's are prepared.
-  for (const actor of game.actors ?? []) if (actor.type === "minion") actor.prepareData();
+  for (const actor of game.actors ?? []) if (isMinion(actor)) actor.prepareData();
 });
 
 /**
@@ -491,7 +491,7 @@ Hooks.once("setup", async () => {
  * their own data, an Item gained, changed or lost - prepares their Minions again, and shows it.
  */
 function minionsRefresh(master) {
-  if (!master || (master.type === "minion")) return;
+  if (!master || isMinion(master)) return;
   for (const id of minionsOf(master)) {
     const minion = game.actors?.get(id);
     if (!minion) continue;
@@ -513,7 +513,8 @@ Hooks.on("updateActor", async (actor, changes) => {
     : minionsOf(actor).map(id => [actor, game.actors?.get(id)]);
   for (const [master, minion] of pairs) {
     // Copy Clone's: a Duplicate of another Character, at their Power Level.
-    if (!master || !minion || minion.getFlag?.("dbu-ttrpg", "copied")) continue;
+    // A Fusion of Minions: its Power Level is its Fused Characters' (fusion.mjs), not a Master's.
+    if (!master || !minion || minion.getFlag?.("dbu-ttrpg", "copied") || (minion.type === "fusion")) continue;
     // An Adversary Minion: "can be made at any Power Level that seems appropriate" - its own.
     if (minion.system?.adversaryMinion && !minion.system?.duplicate) continue;
     const level = Number(master.system.powerLevel) || 1;

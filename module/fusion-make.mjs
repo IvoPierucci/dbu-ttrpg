@@ -9,6 +9,7 @@
 
 import DBUCharacterData from "./data/actor-character.mjs";
 import { isCharacter, isFusion, isMinion } from "./actor-types.mjs";
+import { masterOf } from "./allies.mjs";
 import { FUSION_METHODS, baseTierFor, fusionPowerLevel, leadFused, modifiersAllowed } from "./fusion.mjs";
 import { isVillainous } from "./racial.mjs";
 import { APPAREL_LAYERS, GEAR_ICON, composeEffects, gearItemFrom, qualityInactive } from "./gear.mjs";
@@ -277,7 +278,8 @@ export function fusionPlan(actors, method, { modifiers = [], talentPicks = {} } 
     // "If a Minion fuses with another Minion, the resultant Fusion is also a Minion (if they had separate Masters, then both Masters
     // may serve as the Master for the Fusion)."
     minion: allMinions,
-    masters: allMinions ? [...new Set(actors.map(actor => String(actor.system?.master ?? "")).filter(Boolean))] : [],
+    // Each one's Master as anywhere else (allies.mjs masterOf): its own Settings' or the list that names it.
+    masters: allMinions ? [...new Set(actors.map(actor => masterOf(actor) || String(actor.system?.master ?? "")).filter(Boolean))] : [],
     // "The Fusion gains 10(bT) Technique Points" - (bT) "the base ToP of the Fused Character with the highest Power Level".
     bT: lead ? baseTierFor(lead.powerLevel) : 1,
     items: copiedItems(actors, { talentPicks }),

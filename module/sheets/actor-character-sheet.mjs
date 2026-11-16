@@ -2,7 +2,7 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
-import { isAdversary, isCharacter, isFusion, typicalMinion } from "../actor-types.mjs";
+import { isAdversary, isCharacter, isFusion, mayBeMaster, typicalMinion } from "../actor-types.mjs";
 import { fusionContext, racesOf } from "../fusion.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
@@ -3260,7 +3260,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * changed by no list, only by an effect that says so - ticked in a window, added together. A Minion has no Minions.
    */
   static async _onAddMinions() {
-    if (this.actor.type === "minion") return ui.notifications.warn("A Minion cannot be the Master of a Minion.");
+    if (!mayBeMaster(this.actor)) return ui.notifications.warn("A Minion cannot be the Master of a Minion.");
     const listed = new Set(minionsOf(this.actor));
     const offered = (game.actors?.contents ?? [])
       .filter(actor => (actor.type === "minion") && !listed.has(actor.id) && !masterOf(actor)
@@ -3319,7 +3319,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const rows = master ? [{ id: master.id, name: master.name, img: master.img, unknown: master.unknown, on: true, locked: Boolean(master.theirs),
       note: master.theirs ? "from their list" : "" }] : [];
     const others = (game.actors?.contents ?? [])
-      .filter(actor => ["character", "adversary"].includes(actor.type) && (actor.id !== master?.id) && actor.testUserPermission(game.user, "OBSERVER")
+      .filter(actor => mayBeMaster(actor) && (actor.id !== master?.id) && actor.testUserPermission(game.user, "OBSERVER")
         && (minionsOf(actor).length < minionCaps(actor).outside))
       .map(actor => ({ id: actor.id, name: actor.name, img: actor.img ?? "", on: false }));
     return [...rows, ...others.sort((a, b) => a.name.localeCompare(b.name))];
@@ -3345,7 +3345,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** Ticked in the Minions' window: on the list, if Limited Control leaves room; unticked, off. */
   static async _onPickMinion(event, target) {
     const id = target?.dataset?.id ?? "";
-    if (!id || (this.actor.type === "minion")) return;
+    if (!id || !mayBeMaster(this.actor)) return;
     const own = this.actor.system.minions ?? [];
     if (!target.checked) return this.actor.update({ "system.minions": own.filter(each => each !== id) });
     const listed = minionsOf(this.actor);
@@ -3379,7 +3379,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (this.actor.type !== "minion") return;
     if (masterOf(this.actor)) return ui.notifications.warn(`${this.actor.name} already has a Master.`);
     const offered = (game.actors?.contents ?? [])
-      .filter(actor => ["character", "adversary"].includes(actor.type) && actor.testUserPermission(game.user, "OBSERVER")
+      .filter(actor => mayBeMaster(actor) && actor.testUserPermission(game.user, "OBSERVER")
         // Limited Control: a Character with room for one more.
         && (minionsOf(actor).length < minionCaps(actor).outside))
       .sort((a, b) => a.name.localeCompare(b.name));

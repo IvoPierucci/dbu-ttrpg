@@ -14,6 +14,7 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import { masterOf } from "./allies.mjs";
 import { racesOf } from "./fusion.mjs";
+import { isMinion } from "./actor-types.mjs";
 
 const SCOPE = "dbu-ttrpg";
 
@@ -149,7 +150,8 @@ export function freeSquareBeside(token) {
  */
 export async function makeMinion(master, options = {}) {
   // "Minions cannot create or be the Master of a Minion."
-  if (!master || !game.user.isGM || (master.type === "minion")) return [];
+  // A Fusion of Minions neither: "the resultant Fusion is also a Minion".
+  if (!master || !game.user.isGM || isMinion(master)) return [];
   const made = [];
   const token = master.getActiveTokens?.(false, true)?.[0] ?? null;
   const combat = game.combats?.contents?.find(each => each.combatants.some(combatant => combatant.actorId === master.id)) ?? null;

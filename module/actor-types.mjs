@@ -57,10 +57,18 @@ export function isFusion(actor) {
 
 /**
  * A Player Character (Adversary Categories): "Player Characters refer to any non-Minion Characters controlled by a player" -
- * a Character that is neither a Minion nor an Adversary (the user's).
+ * a Character that is neither a Minion nor an Adversary (the user's). A Fusion of Player Characters too - not one of Minions.
  */
 export function isPlayerCharacter(actor) {
-  return actor?.type === "character";
+  return (actor?.type === "character") || ((actor?.type === "fusion") && !isMinion(actor));
+}
+
+/**
+ * Whether an Actor may be a Master of Minions: a Character - not a Minion ("Minions cannot create or be the Master of a Minion"), a
+ * Fusion of Minions neither - an Adversary or a Fusion.
+ */
+export function mayBeMaster(actor) {
+  return ["character", "adversary", "fusion"].includes(actor?.type) && !isMinion(actor);
 }
 
 /**

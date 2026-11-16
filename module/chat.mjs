@@ -19210,9 +19210,9 @@ export async function casteKnightStrike(actor) {
  */
 export async function castePawnStrike(actor) {
   if (!actor) return;
-  const borrowedAdvantages = ["full-wager", ...((actor.type === "minion") ? [] : ["power-shot", "power-shot"])];
+  const borrowedAdvantages = ["full-wager", ...(isMinion(actor) ? [] : ["power-shot", "power-shot"])];
   const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
-    reason: `Caste Combat - Pawn: Full Wager${(actor.type === "minion") ? "" : ", Power Shot (2)"}`, grants: { borrowedAdvantages } };
+    reason: `Caste Combat - Pawn: Full Wager${isMinion(actor) ? "" : ", Power Shot (2)"}`, grants: { borrowedAdvantages } };
   const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
   if (card) return requestEdit(card, { type: "offer", offer });
   return offerOutOfSequence(actor, offer);
@@ -26778,7 +26778,7 @@ export async function wieldShape(actor, itemId) {
   const { whyNotWithinMelee } = await import("./maneuvers.mjs");
   const seen = new Set([actor.uuid]);
   const near = (canvas?.tokens?.placeables ?? []).map(token => token.actor).filter(other => {
-    if (!other || seen.has(other.uuid) || !["character", "minion", "adversary"].includes(other.type)) return false;
+    if (!other || seen.has(other.uuid) || !isCharacter(other)) return false;
     seen.add(other.uuid);
     return !whyNotWithinMelee(other, actor, "wield");
   });

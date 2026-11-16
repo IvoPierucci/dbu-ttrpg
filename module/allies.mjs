@@ -10,6 +10,11 @@ function actorOf(who) {
   return (who?.documentName === "Actor") ? who : (who?.actor ?? null);
 }
 
+/** Who may hold a Minions list: a Character, an Adversary or a Fusion - not a Fusion of Minions (actor-types.mjs mayBeMaster). */
+function listsMinions(actor) {
+  return ["character", "adversary", "fusion"].includes(actor?.type) && !((actor.type === "fusion") && actor.system?.fusion?.minion);
+}
+
 /** What a list holds of a Character: the world Actor's id - a token's own copy of it carries the same one. */
 export function allyKey(who) {
   return actorOf(who)?.id ?? "";
@@ -31,11 +36,23 @@ export function areAllies(one, other) {
   const a = allyKey(one);
   const b = allyKey(other);
   if (!a || !b || (a === b) || masterPair(one, other)) return false;
-  const masterFor = who => (masterOf(who) ? (globalThis.game?.actors?.get?.(masterOf(who)) ?? null) : null);
-  const mine = masterFor(one);
-  const theirs = masterFor(other);
-  return Boolean((mine && directAllies(mine, other)) || (theirs && directAllies(one, theirs))
-    || (mine && theirs && directAllies(mine, theirs)));
+  // A Fusion of Minions: each of its Masters' (masterIds).
+  const mastersFor = who => masterIds(who).map(id => globalThis.game?.actors?.get?.(id) ?? null).filter(Boolean);
+  const mine = mastersFor(one);
+  const theirs = mastersFor(other);
+  return mine.some(master => directAllies(master, other)) || theirs.some(master => directAllies(one, master))
+    || mine.some(master => theirs.some(their => directAllies(master, their)));
+}
+
+/**
+ * A Minion's Master's id, as a list - a Fusion of Minions' every one: "if they had separate Masters, then both Masters may serve as the
+ * Master for the Fusion". None for anybody who is not a Minion.
+ */
+function masterIds(who) {
+  const actor = actorOf(who);
+  if ((actor?.type === "fusion") && actor.system?.fusion?.minion) return Array.from(actor.system.fusion.masters ?? []).filter(Boolean);
+  const one = masterOf(who);
+  return one ? [one] : [];
 }
 
 /** A Duplicate and its own Master, either way round - never Allies. */
@@ -50,7 +67,7 @@ function directAllies(one, other) {
   const b = allyKey(other);
   if (!a || !b || (a === b) || masterPair(one, other)) return false;
   return listedAllies(one).includes(b) || listedAllies(other).includes(a)
-    || (masterOf(one) === b) || (masterOf(other) === a);
+    || masterIds(one).includes(b) || masterIds(other).includes(a);
 }
 
 /**
@@ -64,7 +81,10 @@ export function areOpponents(one, other) {
   const a = allyKey(one);
   const b = allyKey(other);
   if (!a || !b || (a === b)) return true;
-  return (masterOf(one) || a) !== (masterOf(other) || b);
+  // Each one's side: their Master's - a Fusion of Minions', any of its Masters' - or their own.
+  const mine = masterIds(one).length ? masterIds(one) : [a];
+  const theirs = masterIds(other).length ? masterIds(other) : [b];
+  return !mine.some(id => theirs.includes(id));
 }
 
 /**
@@ -122,7 +142,7 @@ export function masterOf(who) {
   const own = String(actor.system?.master ?? "");
   if (own) return own;
   const lister = (globalThis.game?.actors?.contents ?? [])
-    .find(other => ["character", "adversary"].includes(other.type) && Array.from(other.system?.minions ?? []).includes(actor.id));
+    .find(other => listsMinions(other) && Array.from(other.system?.minions ?? []).includes(actor.id));
   if (lister) return lister.id;
   // An Adversary Minion with no Master named: the first of the Adversaries, all of whom are its Master (mastersOf).
   return mastersOf(actor)[0] ?? "";
@@ -140,24 +160,29 @@ export function isAdversaryMinion(who) {
  */
 export function mastersOf(who) {
   const actor = actorOf(who);
+  // A Fusion of Minions: both of its Fused Characters' Masters.
+  if ((actor?.type === "fusion") && actor.system?.fusion?.minion) return masterIds(actor);
   if (actor?.type !== "minion") return [];
   const named = String(actor.system?.master ?? "");
   if (!isAdversaryMinion(actor)) {
     const one = named || (globalThis.game?.actors?.contents ?? [])
-      .find(other => ["character", "adversary"].includes(other.type) && Array.from(other.system?.minions ?? []).includes(actor.id))?.id;
+      .find(other => listsMinions(other) && Array.from(other.system?.minions ?? []).includes(actor.id))?.id;
     return one ? [one] : [];
   }
   const adversaries = (globalThis.game?.actors?.contents ?? []).filter(other => other.type === "adversary").map(other => other.id);
   return [...new Set([named, ...adversaries].filter(Boolean))];
 }
 
-/** A Character's Minions, by id: its own list's and every Minion naming it as its Master. None for a Minion - it has none. */
+/** A Character's Minions, by id: its own list's and every Minion naming it as its Master. None for a Minion - it has none - a Fusion of Minions neither. */
 export function minionsOf(who) {
   const actor = actorOf(who);
-  if (!actor || (actor.type === "minion")) return [];
+  if (!actor || (actor.type === "minion") || ((actor.type === "fusion") && actor.system?.fusion?.minion)) return [];
   const own = Array.from(actor.system?.minions ?? []).filter(Boolean);
   const theirs = (globalThis.game?.actors?.contents ?? [])
-    .filter(other => (other.type === "minion") && (other.system?.master === actor.id)).map(other => other.id);
+    .filter(other => ((other.type === "minion") && (other.system?.master === actor.id))
+      // A Fusion of Minions: each of its Masters' ("both Masters may serve as the Master for the Fusion").
+      || ((other.type === "fusion") && other.system?.fusion?.minion && Array.from(other.system.fusion.masters ?? []).includes(actor.id)))
+    .map(other => other.id);
   // An Adversary's: every Adversary Minion besides, each of them considering every Adversary its Master.
   const adversaryMinions = (actor.type === "adversary") ? (globalThis.game?.actors?.contents ?? [])
     .filter(other => isAdversaryMinion(other)).map(other => other.id) : [];
@@ -207,15 +232,18 @@ function minionGiftsFrom(actor, master) {
  */
 export function actsFreely(who) {
   const actor = actorOf(who);
-  if (actor?.type !== "minion") return false;
+  if ((actor?.type !== "minion") && !((actor?.type === "fusion") && actor.system?.fusion?.minion)) return false;
   // Adversary Masters: "Adversary Minions always have access to their Act Phase and do not need to be targeted by the Command
   // Maneuver."
   if (isAdversaryMinion(actor)) return true;
   if (actor.getFlag?.("dbu-ttrpg", "minionKind") === "goop") return true;
-  const master = globalThis.game?.actors?.get?.(masterOf(actor));
-  if (master?.system?.effects?.slots?.["leadership.minionActs"] !== true) return false;
-  const bonded = master.getFlag?.("dbu-ttrpg", "bonded")?.uuid ?? "";
-  return Boolean(bonded) && ((bonded === actor.uuid) || (globalThis.fromUuidSync?.(bonded)?.id === actor.id));
+  // Any of its Masters' Bond - a Fusion of Minions has more than one.
+  return masterIds(actor).some(id => {
+    const master = globalThis.game?.actors?.get?.(id);
+    if (master?.system?.effects?.slots?.["leadership.minionActs"] !== true) return false;
+    const bonded = master.getFlag?.("dbu-ttrpg", "bonded")?.uuid ?? "";
+    return Boolean(bonded) && ((bonded === actor.uuid) || (globalThis.fromUuidSync?.(bonded)?.id === actor.id));
+  });
 }
 
 /**

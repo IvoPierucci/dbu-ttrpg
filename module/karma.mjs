@@ -101,7 +101,7 @@ export async function spendKarma(actor, effect) {
       window: { title: effect.name },
       content: `<p>How many Karma Points does this cost?</p>
         <input type="number" name="cost" value="1" min="1"
-               max="${actor.system.karma ?? 0}" step="1" autofocus/>`,
+               max="${Math.max(...karmaPools(actor).map(pool => pool.karma))}" step="1" autofocus/>`,
       buttons: [
         {
           action: "confirm",

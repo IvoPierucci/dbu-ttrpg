@@ -11,7 +11,7 @@
  */
 
 import { actsFreely, areAllies, areOpponents, masterOf, minionsOf, opponentsCountAsAllies } from "./allies.mjs";
-import { commandedNow, isAdversary, isCharacter } from "./actor-types.mjs";
+import { commandedNow, isAdversary, isCharacter, isMinion } from "./actor-types.mjs";
 import { adversaryEncounterEnd, adversaryEncounterStart } from "./adversary.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
@@ -195,10 +195,13 @@ async function recoveryPeriods(combat) {
   const ended = `${combat.id}:${(Number(combat.round) || 0) - 1}`;
   const here = combatants(combat);
   const told = [];
-  for (const master of here.filter(actor => actor.type !== "minion")) {
+  // A Fusion of Minions is each of its Masters' Minion: recovered once, by the first.
+  const recovered = new Set();
+  for (const master of here.filter(actor => !isMinion(actor))) {
     if (master.getFlag?.("dbu-ttrpg", "commandedRound") === ended) continue;
     const ids = new Set(minionsOf(master));
-    const theirs = here.filter(actor => ids.has(actor.id) && !actor.system?.defeated);
+    const theirs = here.filter(actor => ids.has(actor.id) && !actor.system?.defeated && !recovered.has(actor.id));
+    for (const minion of theirs) recovered.add(minion.id);
     if (!theirs.length) continue;
     const tier = Math.max(1, Number(master.system?.tierOfPower) || 1);
     // Minion Coordinator (1): "Increase the amount ... regained through the Recovery Period rule for Minions by 1d8(T)" - on the one roll.
@@ -865,7 +868,7 @@ export function registerCombatHooks() {
   Hooks.on("deleteCombatant", async combatant => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
     const actor = combatant.actor;
-    if (!combatant.parent?.started || !isCharacter(actor) || (actor.type === "minion")) return;
+    if (!combatant.parent?.started || !isCharacter(actor) || isMinion(actor)) return;
     // Act Again's turn taken off is not its Adversary leaving: it is still in the Encounter.
     if (combatant.getFlag?.("dbu-ttrpg", "actAgain")) return;
     await dismissDuplicates(duplicatesOf(actor));
@@ -907,7 +910,7 @@ export function registerCombatHooks() {
     // And every Duplicate in it, or of a Master in it, ceases to exist - From Goop (8) first: "All of your Goops die at the end
     // of the Combat Encounter. Regain Life Points equal to 1/2 of the total Life Points amongst those Goops before they died."
     const here = combatants(combat);
-    for (const master of here.filter(actor => (actor.type !== "minion") && (actor.system.effects?.slots?.["fromGoop.goop"] === true))) {
+    for (const master of here.filter(actor => !isMinion(actor) && (actor.system.effects?.slots?.["fromGoop.goop"] === true))) {
       const goops = duplicatesOf(master).filter(minion => minion.getFlag?.("dbu-ttrpg", "minionKind") === "goop");
       const left = goops.reduce((sum, goop) => sum + Math.max(0, Number(goop.system.life?.value) || 0), 0);
       const back = Math.floor(left / 2);
@@ -918,7 +921,7 @@ export function registerCombatHooks() {
       }
     }
     await dismissDuplicates([...here.filter(actor => actor.system?.duplicate),
-      ...here.filter(actor => actor.type !== "minion").flatMap(duplicatesOf)]);
+      ...here.filter(actor => !isMinion(actor)).flatMap(duplicatesOf)]);
 
     await announceEncounterEnd(rounds);
   });
@@ -930,7 +933,8 @@ export function registerCombatHooks() {
  * Round, ended there: the End Phase is the next turn's coming. Said to the table.
  */
 function followerSkips(actor) {
-  if ((actor?.type !== "minion") || commandedNow(actor) || actsFreely(actor)) return false;
+  // A Fusion of Minions too: "the resultant Fusion is also a Minion" - Commanded by either of its Masters.
+  if (!isMinion(actor) || commandedNow(actor) || actsFreely(actor)) return false;
   ui.notifications?.info(`${actor.name} is a Minion not Commanded this Round: its Act Phase is skipped.`);
   return true;
 }
