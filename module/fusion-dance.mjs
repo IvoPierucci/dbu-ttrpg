@@ -194,6 +194,9 @@ export async function settleDanceSide(message, side, success, total) {
   return requestEdit(message, { type: "fusionDance", flag: DANCE_SIDE[side], value: { done: { success: Boolean(success), total } } });
 }
 
+/** Each card's 1d4, once rolled on this client. */
+const ROLLED_D4 = new Map();
+
 /**
  * Fuse: "Both Characters combine using the Metamorese Fusion Method" - with one failed, "roll a 1d4": rolled here once, on the card,
  * and kept. Asked as any Fuse is (fusion-make.mjs fuseTogether) - but no Fusion Modifiers for a Plump or Frail one.
@@ -207,13 +210,18 @@ export async function danceFuse(message) {
   const actors = [fromUuidSync(card.a), fromUuidSync(card.b)];
   if (actors.some(each => !each)) return ui.notifications.warn("One of them is no longer here to fuse with.");
   const { requestEdit } = await import("./chat.mjs");
-  let d4 = Number(card.d4) || 0;
+  // Rolled once: kept here too, a second click coming before a relayed write reaches the card.
+  let d4 = Number(card.d4) || ROLLED_D4.get(message.id) || 0;
   if ((outcome === "one") && !d4) {
     d4 = (await new Roll("1d4").evaluate()).total;
+    ROLLED_D4.set(message.id, d4);
     await requestEdit(message, { type: "fusionDance", flag: DANCE_CARD, value: { ...card, d4 } });
   }
   const { fuseTogether } = await import("./fusion-make.mjs");
   const made = await fuseTogether(actors, "metamorese", { dance: (outcome === "one") ? danceMishap(d4) : "" });
-  if (made) await requestEdit(message, { type: "fusionDance", flag: DANCE_CARD, value: { ...card, d4, fused: made.name ?? "fused" } });
+  // Made - or asked of the GM, who makes it; dropped or refused, the button stays.
+  if ((made?.documentName === "Actor") || made?.requested) {
+    await requestEdit(message, { type: "fusionDance", flag: DANCE_CARD, value: { ...card, d4, fused: made.name || "fused" } });
+  }
   return made;
 }

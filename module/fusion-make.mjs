@@ -895,10 +895,13 @@ export async function askFusedTechnique(fusion) {
 }
 
 /** Fused, by whoever may - the GM making the Actor for a player who may not (chat.mjs relay). */
-async function fuse(actors, method, name, fusion = null, { dance = "" } = {}) {
+async function fuse(actors, method, name, fusion = null, { dance } = {}) {
   const existing = fusion ?? existingFusion(actors.map(actor => actor.uuid), method);
-  // Said before anything is asked, not after.
-  if (existing && !existing.isOwner) return ui.notifications.warn(`${existing.name} is not yours to fuse.`);
+  // Said before anything is asked, not after - and nothing made, said to whoever asks (null).
+  if (existing && !existing.isOwner) return void ui.notifications.warn(`${existing.name} is not yours to fuse.`) ?? null;
+  // A Metamorese Fusion's result (Complete, Plump or Frail): the Metamoran Fusion Dance's where it made it; fused again any other way
+  // - Fuse again (recalculate), Settings' Fuse - the one it has (the Fusion tab's select changes it); none by any other Method.
+  dance = (method !== "metamorese") ? "" : (dance ?? existing?.system?.fusion?.dance ?? "");
   const first = !existing || !(existing.system.fusion?.fused ?? []).length;
   let racial = [];
   if (first) {
@@ -936,18 +939,20 @@ async function fuse(actors, method, name, fusion = null, { dance = "" } = {}) {
     if (made) await askFusedTechnique(made);
     return made;
   }
-  if (!game.users.activeGM) return ui.notifications.warn("A GM must be connected to make the Fusion.");
+  if (!game.users.activeGM) return void ui.notifications.warn("A GM must be connected to make the Fusion.") ?? null;
   const { requestMakeFusion } = await import("./chat.mjs");
-  return requestMakeFusion(plan, name);
+  requestMakeFusion(plan, name);
+  // Asked of the GM: made there - what asked for it is done (the Metamoran Fusion Dance's card, marked fused).
+  return { name, requested: true };
 }
 
 /**
  * Fused by an effect that names with whom and how - Tuffle Fusion (2)'s Parasitic Fusion, the Metamoran Fusion Dance's Metamorese (its
  * `dance`: Plump or Frail) and Five-Way Fusion's Maxi: asked first, then as any Fuse.
  */
-export async function fuseTogether(actors, method, { dance = "" } = {}) {
+export async function fuseTogether(actors, method, { dance } = {}) {
   const all = actors.filter(Boolean);
-  if (all.some(isFusion)) return ui.notifications.warn("A Fusion cannot be a Fused Character for another Fusion.");
+  if (all.some(isFusion)) return void ui.notifications.warn("A Fusion cannot be a Fused Character for another Fusion.") ?? null;
   const existing = existingFusion(all.map(actor => actor.uuid), method);
   const ok = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
     window: { title: `${FUSION_METHODS[method]?.label ?? "Fusion"}` },
