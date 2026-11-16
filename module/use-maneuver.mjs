@@ -95,6 +95,7 @@ import * as gearReadingModule from "./gear.mjs";
 import { SUPER_PROFILES, askFeatures, favoredDamage, favoredElement, forcedFullWager, maxKiWager, maxLifeWager,
   minimumKiWager } from "./maneuvers.mjs";
 import { askUnitedPartner } from "./united-attack.mjs";
+import { hasVehicleQuality, pilotedBy, pilotingOf, vehicleWeaponsFor, whyNotInVehicle, whyNotPilotAttack } from "./vehicles.mjs";
 
 /**
  * What a Maneuver costs from the Action economy, and out of which pool.
@@ -265,6 +266,13 @@ function permitted(actor, maneuver) {
   // God Maneuvers: "only available to those with access to Divine Ki Points" - in the God Ki State.
   if (maneuver.godManeuver && !actor.system.divineKi?.active) {
     ui.notifications.warn(`${maneuver.name} is a God Maneuver: only in the God Ki State.`);
+    return false;
+  }
+
+  // In a Vehicle (vehicles.mjs): its Pilot uses no Unique Ability, and nobody in it the Soar Maneuver but a Pilot with Hikou.
+  const inVehicle = whyNotInVehicle(actor, maneuver);
+  if (inVehicle) {
+    ui.notifications.warn(inVehicle);
     return false;
   }
 
@@ -2602,7 +2610,7 @@ async function markSeen(actor, target) {
  *
  * @returns {Promise<?{speed: string, rapid: boolean}>} null if it was backed out of
  */
-export async function askMovement(actor) {
+export async function askMovement(actor, { rapid: rapidAllowed = true, pilot = null } = {}) {
   const tier = Math.max(1, actor.system.tierOfPower ?? 1);
 
   const options = Object.entries(MOVEMENT_SPEEDS).map(([key, speed], index) => {
@@ -2626,15 +2634,17 @@ export async function askMovement(actor) {
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
-    window: { title: "Movement" },
+    window: { title: pilot ? `Movement: ${actor.name}` : "Movement" },
     content: `<div class="dbu-profile-picker">${options}</div>
-      <label class="dbu-wager">
+      ${rapidAllowed ? `<label class="dbu-wager">
         <span>Rapid Movement</span>
         <input type="checkbox" name="rapid"/>
         <em>+${RAPID_MOVEMENT_PER_TIER * tier} KP &middot; increase your Strike Rolls by
           1(T) until the end of your turn</em>
-      </label>
-      <p class="dbu-respond-hint">Move on the map yourself. Leaving an Opponent's Melee
+      </label>` : ""}
+      <p class="dbu-respond-hint">${pilot
+        ? `${Handlebars.escapeExpression(pilot.name)} Pilots it: move its token on the map - everyone in it moves with it - its Ki Points paying.`
+        : "Move on the map yourself."} Leaving an Opponent's Melee
         Range hands them the Exploit Maneuver.</p>`,
     buttons: [
       {
@@ -5789,6 +5799,29 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         ...(lent ? { weapon: { ...lent, meleeRange: (Number(lent.meleeRange) || 0) + (Number(spiritSword.reach) || 0) } } : {}),
         ...(spiritSword.area ? { area: { shape: spiritSword.area } } : {}) };
     }
+    else if (pilotedBy(actor)) {
+      // Piloting (vehicles.mjs): only with one of its Vehicle Weapons, of the Profile it was made for, or of the Blitz Profile -
+      // and "the Output for the Damage Attribute of that Attacking Maneuver".
+      const vehicle = pilotedBy(actor);
+      const why = whyNotPilotAttack(actor, vehicle, declared);
+      if (why) {
+        ui.notifications.warn(why);
+        return false;
+      }
+      if (declared.profile !== "blitz") {
+        const offered = vehicleWeaponsFor(vehicle, declared.foundation, declared.profile);
+        const pickedId = (offered.length === 1) ? offered[0].id : await foundry.applications.api.DialogV2.wait({
+          classes: ["dbu-dialog"], window: { title: `${vehicle.name}: Vehicle Weapon` }, content: "",
+          buttons: [...offered.map(item => ({ action: item.id, label: item.name })), { action: "cancel", label: "Cancel" }],
+          rejectClose: false
+        });
+        const item = offered.find(each => each.id === pickedId);
+        if (!item) return false;
+        declared = { ...declared, weapon: { ...armedWith(actor, item, declared, [], targetActor), vehicleWeapon: true } };
+      }
+      declared = { ...declared, piloting: pilotingOf(vehicle),
+        damageAttribute: { label: `${vehicle.name}'s Output`, value: Number(vehicle.system.output) || 0 } };
+    }
     else if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted && !maneuver.buddyAttack && (armedAs !== "unarmed")) {
       const chosen = await askWeapon(actor, declared);
       if (chosen === null) return false;
@@ -6407,7 +6440,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // How far, and how hard. Asked here because the answer is what the Maneuver costs,
     // and because backing out of it has to leave the Maneuver unused.
     if (maneuver.movement) {
-      crossing = await askMovement(actor);
+      // Piloting: "it moves using its own Speeds ... (you cannot apply the effects of Rapid Movement)" but with Boost Speed.
+      const vehicle = pilotedBy(actor);
+      if (vehicle) crossing = await askMovement(vehicle, { rapid: hasVehicleQuality(vehicle, "boost-speed"), pilot: actor });
+      else crossing = await askMovement(actor);
       if (!crossing) return false;
     }
 
@@ -6685,6 +6721,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         * Math.max(1, Number(targetActor.system?.tierOfPower) || 1) : 0)
       // "6(T) for each Action spent" - Explosion Sorcery's.
       + (maneuver.kiPerAction ? (Math.max(1, Number(actionsSpent) || 1) - 1) * maneuverKiCost(maneuver, null, actor) : 0);
+  // Piloting a Vehicle: its Movement priced at its Tier and Speeds (the user's) - paid by it, as its attacks are (spendManeuverCost).
+  if (crossing && pilotedBy(actor)) price = movementKiCost(pilotedBy(actor), crossing);
   // Energy Control: 2(T) off, a rank of Homing - asked before anything is paid.
   if (!crossing) {
     const control = await (await import("./chat.mjs")).energyControlAsk(actor, maneuver, declared, price);

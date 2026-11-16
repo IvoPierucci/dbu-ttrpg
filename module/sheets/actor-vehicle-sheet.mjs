@@ -4,12 +4,8 @@ const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 import DBUCharacterData from "../data/actor-character.mjs";
 import { isCharacter } from "../actor-types.mjs";
 import { getTrait, printedLines } from "../effects/traits.mjs";
-import { actorAt, battleEnvironments, environmentName, MAX_VEHICLE_LEVEL, qualitySlotRange, VEHICLE_GRADES, VEHICLE_SIZES,
-  vehicleQualities } from "../vehicles.mjs";
-
-/** The flag a Vehicle Weapon carries on its Vehicle: which of Weapon Installed's it is, and the one Profile it makes. */
-const VEHICLE_WEAPON = "vehicleWeapon";
-const VEHICLE_PROFILE = "vehicleProfile";
+import { actorAt, battleEnvironments, environmentName, MAX_VEHICLE_LEVEL, qualitySlotRange, VEHICLE_GRADES, VEHICLE_PROFILE, VEHICLE_SIZES,
+  VEHICLE_WEAPON, vehicleQualities } from "../vehicles.mjs";
 
 /**
  * A Vehicle's sheet (the user's design, 2026-11-15): a header as a Character's - square picture, its name with Level, Grade, Size

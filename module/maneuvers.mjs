@@ -39,6 +39,15 @@ import { asksStamina, staminaForKi, staminaLeft } from "./adversary.mjs";
  */
 
 /**
+ * The Vehicle a character is Piloting (vehicles.mjs pilotedBy) - asked here without importing that module, which brings the data
+ * models with it.
+ */
+function pilotedBy(actor) {
+  if (!actor?.uuid) return null;
+  return Array.from(globalThis.game?.actors ?? []).find(each => (each.type === "vehicle") && (each.system?.crew?.pilot === actor.uuid)) ?? null;
+}
+
+/**
  * The four types of Maneuver. `action` names the Action a Maneuver of that type
  * spends; the types that resolve outside the Action economy spend none.
  */
@@ -2681,6 +2690,10 @@ export const ACTION_TYPES = Object.freeze(["standard", "counter"]);
  * @returns {Promise<boolean>} Whether the Maneuver may proceed.
  */
 export async function spendManeuverCost(actor, maneuver, costOverride = null) {
+  // A Vehicle's Pilot: "When using the Movement Maneuver or an Attacking Maneuver as a Pilot, use the Vehicle's Ki Points instead of
+  // your own" - and its Capacity, the Ki Wager with them (the user's). Paid by it (vehicles.mjs), through the GM where it is not theirs.
+  const vehicle = (maneuver?.attacking || maneuver?.movement || maneuver?.profile) ? pilotedBy(actor) : null;
+  if (vehicle) return (await import("./vehicles.mjs")).spendVehicleCost(actor, vehicle, maneuver, costOverride ?? maneuver.kiCost ?? 0);
   const capacityCost = Number.isFinite(maneuver?.capacityCost) ? maneuver.capacityCost : null;
   const cost = costOverride ?? maneuver.kiCost ?? 0;
   if (cost <= 0) return true;
@@ -2773,6 +2786,8 @@ export function paidSince(actor, before) {
 }
 
 export async function refundManeuverCost(actor, maneuver) {
+  // Paid by the Vehicle its maker Pilots (vehicles.mjs): given back to it.
+  if (await (await import("./vehicles.mjs")).refundVehicleCost(actor, maneuver)) return;
   const divine = DIVINE_PAID.get(`${actor.uuid}:${maneuver.id ?? maneuver.name}`);
   if (divine) {
     DIVINE_PAID.delete(`${actor.uuid}:${maneuver.id ?? maneuver.name}`);
@@ -3820,7 +3835,9 @@ export function instantHeld(played) {
  * and no more than they could actually pay for.
  */
 export function maxKiWager(actor, advantages = []) {
-  const { capacity, ki } = actor.system;
+  // Piloting a Vehicle: the attack's Ki its, the wager with it (the user's) - its Ki Points and its Capacity.
+  const vehicle = pilotedBy(actor);
+  const { capacity, ki } = vehicle?.system ?? actor.system;
   // "You cannot use ... Ki Wagers" - the Ki-Sealing Handcuff.
   if (!permits(actor.system.effects?.slots, "kiWagers")) return 0;
 
@@ -3833,7 +3850,7 @@ export function maxKiWager(actor, advantages = []) {
     : Math.floor(capacity.max / 2);
 
   // An Adversary's Narrative Stamina pays a wager as any Ki Points (adversary.mjs): counted with them.
-  return Math.max(0, Math.min(half, capacity.remaining, ki.value + staminaForKi(actor), wagerShareCap(actor)));
+  return Math.max(0, Math.min(half, capacity.remaining, ki.value + (vehicle ? 0 : staminaForKi(actor)), wagerShareCap(vehicle ?? actor)));
 }
 
 /** Discarded Divinity's: no Ki Wager past a share of the Max Capacity (rounded down) - Infinity where nothing says so. */
@@ -3978,19 +3995,22 @@ function profileTabs(maneuver, foundations, actor, pool, shut) {
  * ticked), off the Capacity too. A number short goes red, nothing said (the user's); an ignored Capacity never does.
  */
 function attackPoolsHtml(maneuver, actor) {
-  const system = actor?.system;
-  if (!system) return "";
-  const divine = system.divineKi ?? {};
+  const own = actor?.system;
+  if (!own) return "";
+  // Piloting a Vehicle: its Ki Points and Capacity are what the attack takes (vehicles.mjs) - its Pilot's Life and Divine Ki their own.
+  const vehicle = pilotedBy(actor);
+  const system = vehicle?.system ?? own;
+  const divine = own.divineKi ?? {};
   const capacityCost = Number.isFinite(maneuver?.capacityCost) ? maneuver.capacityCost : "";
   const data = {
     ki: Number(system.ki?.value) || 0, kiMax: Number(system.ki?.max) || 0,
     cap: (Number(system.capacity?.max) || 0) - (Number(system.capacity?.spent) || 0), capMax: Number(system.capacity?.max) || 0,
     capIgnored: system.capacity?.ignored ? 1 : 0, capCost: capacityCost,
-    life: Number(system.life?.value) || 0, lifeMax: Number(system.life?.max) || 0,
+    life: Number(own.life?.value) || 0, lifeMax: Number(own.life?.max) || 0,
     divine: divine.active ? (Number(divine.value) || 0) : "", divineMax: Number(divine.max) || 0,
     divineUse: (divine.active && divine.use) ? 1 : 0, god: maneuver?.godManeuver ? 1 : 0,
-    stamina: staminaForKi(actor) || "", staminaMax: Number(system.narrativeStamina?.max) || 0,
-    staminaAuto: (staminaForKi(actor) > 0) && !asksStamina(actor) ? 1 : 0,
+    stamina: (vehicle ? 0 : staminaForKi(actor)) || "", staminaMax: Number(own.narrativeStamina?.max) || 0,
+    staminaAuto: !vehicle && (staminaForKi(actor) > 0) && !asksStamina(actor) ? 1 : 0,
     // An attack with nothing to pick still costs what it costs.
     fixedCost: maneuver?.profile ? "" : maneuverKiCost(maneuver, {}, actor)
   };

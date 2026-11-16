@@ -74,8 +74,8 @@ function amountOf(word, { output, level, slots }) {
   }
 }
 
-/** The Size order, smallest first, for "Gigantic or larger". */
-const SIZE_ORDER = Object.keys(DBUCharacterData.SIZES);
+/** The Size order, smallest first, for "Gigantic or larger" - asked when needed, never as the module loads. */
+const sizeOrder = () => Object.keys(DBUCharacterData.SIZES);
 
 /**
  * Whatever a Vehicle Quality asks that this Vehicle does not have - warned of, never refused (the user's).
@@ -87,7 +87,7 @@ const SIZE_ORDER = Object.keys(DBUCharacterData.SIZES);
 export function qualityWarnings(definition, { grade, size, qualityIds = [], creator = null } = {}) {
   const warnings = [];
   const sizeLabel = key => DBUCharacterData.SIZES[key]?.label ?? key;
-  if (definition.needsSizeAtLeast && (SIZE_ORDER.indexOf(size) < SIZE_ORDER.indexOf(definition.needsSizeAtLeast))) {
+  if (definition.needsSizeAtLeast && (sizeOrder().indexOf(size) < sizeOrder().indexOf(definition.needsSizeAtLeast))) {
     warnings.push(`Needs a Size Category of ${sizeLabel(definition.needsSizeAtLeast)} or larger.`);
   }
   if (definition.needsSizeIs && (size !== definition.needsSizeIs)) {
@@ -218,7 +218,7 @@ export function vehicleReading(source, { creator = null } = {}) {
     grade, level, output, tier,
     gradeRow: gradeRow(grade),
     madeSize,
-    size: { key: sizeKey, label: size.label, steps: SIZE_ORDER.indexOf(sizeKey) - SIZE_ORDER.indexOf(DBUCharacterData.DEFAULT_SIZE),
+    size: { key: sizeKey, label: size.label, steps: sizeOrder().indexOf(sizeKey) - sizeOrder().indexOf(DBUCharacterData.DEFAULT_SIZE),
       cols, rows: rows + extraRows, baseRows: rows, extraRows, squares: cols * (rows + extraRows) },
     lifeMax, kiMax,
     capacity: { max: capacityMax, spent: capacitySpent, left: Math.max(0, capacityMax - capacitySpent) },
@@ -662,6 +662,112 @@ export function registerCrewHooks() {
     const theirs = vehicleTokenOf(inside.vehicle, scene);
     if (theirs && !standsIn(token, theirs)) await writeCrew(inside.vehicle, crewWith(inside.vehicle.system.crew, token.actor.uuid, null));
   });
+}
+
+// --- Piloting ------------------------------------------------------------------------------------------------------------------
+//
+// "While you are Piloting a Vehicle, you cannot use any Unique Abilities or Attacking Maneuvers except an Attacking Maneuver that
+// uses the Vehicle Weapon ... or an Attacking Maneuver of the Blitz Profile" - refused (the user's). "You cannot use the Soar
+// Maneuver while in a Vehicle" but its Pilot with Hikou; Rapid Movement only with Boost Speed. "When using the Movement Maneuver
+// or an Attacking Maneuver as a Pilot, use the Vehicle's Ki Points instead of your own" - its Capacity too, the Ki Wager with it,
+// its Tier for the Movement's (T) (the user's). "Any Attacking Maneuver made by the Pilot of a Vehicle uses the Output for the
+// Damage Attribute"; Blitz moves and counts with its Output (the user's).
+
+/** The flags a Vehicle Weapon carries on its Vehicle: which of Weapon Installed's it is, and the one Profile it makes. */
+export const VEHICLE_WEAPON = "vehicleWeapon";
+export const VEHICLE_PROFILE = "vehicleProfile";
+
+/** Whether a Vehicle has a Vehicle Quality, by its file's id without the "vehicle-". */
+export function hasVehicleQuality(vehicle, id) {
+  return (vehicle?.system?.qualities ?? []).some(entry => entry.id === `vehicle-${id}`);
+}
+
+/** Why a Pilot may not use this Maneuver, or "": a Unique Ability; the Soar without Hikou. Attacks are judged once declared. */
+export function whyNotPiloting(actor, vehicle, maneuver) {
+  if (!vehicle) return "";
+  const said = `${actor.name} is Piloting ${vehicle.name}`;
+  if ((maneuver?.tags ?? []).includes("uniqueAbility")) return `${said}: no Unique Abilities.`;
+  if ((maneuver?.id === "soar") && !hasVehicleQuality(vehicle, "hikou")) return `${said}: no Soar Maneuver - it has no Hikou.`;
+  return "";
+}
+
+/** "You cannot use the Soar Maneuver while in a Vehicle" - a Passenger never, its Pilot only with Hikou. */
+export function whyNotInVehicle(actor, maneuver) {
+  const inside = vehicleOf(actor);
+  if (!inside) return "";
+  if (inside.role === "pilot") return whyNotPiloting(actor, inside.vehicle, maneuver);
+  return (maneuver?.id === "soar") ? `${actor.name} is in ${inside.vehicle.name}: no Soar Maneuver in a Vehicle.` : "";
+}
+
+/** The Vehicle Weapons an attack of this Foundation and Profile may be made with: built, whole, and made for that Profile. */
+export function vehicleWeaponsFor(vehicle, foundation, profile) {
+  return Array.from(vehicle?.items ?? []).filter(item => (item.type === "gear")
+    && (item.getFlag?.("dbu-ttrpg", VEHICLE_WEAPON) !== undefined) && (item.system?.crafted?.kind === "weapon")
+    && !item.system.crafted.destroyed && ((item.system.crafted.weaponType ?? "") === foundation)
+    && ((item.getFlag?.("dbu-ttrpg", VEHICLE_PROFILE) ?? "") === profile));
+}
+
+/**
+ * Why a Pilot's attack may not be made, or "": only with a Vehicle Weapon made for its Profile and Foundation, or of the Blitz
+ * Profile.
+ */
+export function whyNotPilotAttack(actor, vehicle, declared) {
+  if (!vehicle || !declared) return "";
+  const { profile, foundation } = declared;
+  if (profile === "blitz") return "";
+  if (vehicleWeaponsFor(vehicle, foundation, profile).length) return "";
+  return `${actor.name} is Piloting ${vehicle.name}: only an Attacking Maneuver with one of its Vehicle Weapons (of the Profile it was `
+    + "made for), or of the Blitz Profile.";
+}
+
+/** What a Pilot's attack carries of its Vehicle: whose Output is its Damage Attribute, and the Speed a Blitz measures by. */
+export function pilotingOf(vehicle) {
+  return { vehicleUuid: vehicle.uuid, name: vehicle.name, output: Number(vehicle.system.output) || 0,
+    normalSpeed: Number(vehicle.system.speed?.normal) || 0 };
+}
+
+/** What a Vehicle paid of a Maneuver, so taking it back gives it back to the Vehicle. */
+const VEHICLE_PAID = new Map();
+
+/**
+ * A Pilot's Movement or attack paid by the Vehicle: its Ki Points, and as much of its Capacity - through the GM when it is not the
+ * Pilot's to change.
+ *
+ * @returns {Promise<boolean>} whether it was paid
+ */
+export async function spendVehicleCost(actor, vehicle, maneuver, cost) {
+  cost = Math.max(0, Math.floor(Number(cost) || 0));
+  if (!cost) return true;
+  const ki = Number(vehicle.system.ki?.value) || 0;
+  const left = Number(vehicle.system.capacity?.remaining) || 0;
+  if (ki < cost) {
+    globalThis.ui?.notifications?.warn(`${vehicle.name} needs ${cost} Ki Points for ${maneuver.name} and has ${ki}.`);
+    return false;
+  }
+  if (cost > left) {
+    globalThis.ui?.notifications?.warn(`${vehicle.name} has ${left} Capacity left this round and ${maneuver.name} costs ${cost}.`);
+    return false;
+  }
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(vehicle, { "system.ki.value": ki - cost,
+    "system.capacity.spent": (Number(vehicle.system.capacity?.spent) || 0) + cost });
+  VEHICLE_PAID.set(`${actor.uuid}:${maneuver.id ?? maneuver.name}`, { vehicleUuid: vehicle.uuid, cost });
+  return true;
+}
+
+/** A Maneuver its Vehicle paid for, taken back: its Ki Points and Capacity given back to the Vehicle. False when none paid. */
+export async function refundVehicleCost(actor, maneuver) {
+  const key = `${actor.uuid}:${maneuver.id ?? maneuver.name}`;
+  const paid = VEHICLE_PAID.get(key);
+  if (!paid) return false;
+  VEHICLE_PAID.delete(key);
+  const vehicle = actorAt(paid.vehicleUuid);
+  if (!vehicle) return true;
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(vehicle, {
+    "system.ki.value": Math.min(Number(vehicle.system.ki?.max) || 0, (Number(vehicle.system.ki?.value) || 0) + paid.cost),
+    "system.capacity.spent": Math.max(0, (Number(vehicle.system.capacity?.spent) || 0) - paid.cost) });
+  return true;
 }
 
 /** The Actor a uuid names, if it can be had without waiting - a Vehicle's Creator, its Pilot and Passengers. */

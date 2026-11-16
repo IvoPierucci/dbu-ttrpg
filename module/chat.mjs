@@ -30055,7 +30055,7 @@ export async function postAttack(actor, target, maneuver,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
-                                   rapidFist = false, angryNatural = 0, profileCritical = false, adamantineHeal = false,
+                                   rapidFist = false, angryNatural = 0, profileCritical = false, adamantineHeal = false, piloting = null,
                                    energyHoming = false, zoonerExposed = 0, niceFatigue = 0 },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
@@ -30615,6 +30615,8 @@ export async function postAttack(actor, target, maneuver,
           // attacker's own does - a Bomb's recorded Scholarship Modifier, the Hologram
           // Projector's Personality. Null for every attack made with the Foundation's own.
           damageAttribute,
+          // Made by a Vehicle's Pilot (vehicles.mjs pilotingOf): its Output, and the Speed a Blitz measures by. Null otherwise.
+          piloting,
           // What the Throw Maneuver threw, and what it comes to on a hit. Null on every
           // attack that throws nothing.
           thrown,
@@ -34238,10 +34240,12 @@ function profileWoundParts(attacker, attack) {
   // effects of Charging Assault, increase the Wound Roll by 1/2 of your Agility
   // Modifier." A rule this Profile has about an Advantage it granted, so it is keyed
   // off the same number the Advantage was given and not off the Advantage itself.
+  // Piloting: "you move using the Vehicle's Output" - its Normal Speed measured, half its Output added (the user's).
   if (profile?.woundPerCharge === "halfAgilityBeyondNormalSpeed") {
     const squares = Math.max(0, attack.squaresCharged ?? 0);
-    const bonus = Math.floor((attacker.system.attributes?.agility?.mod ?? 0) / 2);
-    if ((squares > (attacker.system.speed?.normal ?? 0)) && (bonus > 0)) {
+    const bonus = Math.floor((attack.piloting ? attack.piloting.output : (attacker.system.attributes?.agility?.mod ?? 0)) / 2);
+    const normal = attack.piloting ? attack.piloting.normalSpeed : (attacker.system.speed?.normal ?? 0);
+    if ((squares > normal) && (bonus > 0)) {
       parts.push({ label: `${profile.label} (charge)`, value: bonus });
     }
   }
