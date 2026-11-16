@@ -41,9 +41,10 @@ function copyOf(item, actor, flags = {}) {
 }
 
 /**
- * What one of their Items gave another - a Trait's Weapon, a Talent's Gene, a Racial Trait's Talent - given by the giver's copy on
- * the Fusion: `grantedBy` pointed at it, among the copies made now and those it keeps (its Racial Traits). Where the giver was not
- * copied, left as it was.
+ * What one of their Items names another by - what gave it (`grantedBy`: a Trait's Weapon, a Talent's Gene, a Racial Trait's Talent),
+ * what was chosen (Favored Technique's Signature Technique, a Buddy's Signature Technique, a Collar's pair) - pointed at that one's
+ * copy on the Fusion, among the copies made now and those it keeps (its Racial Traits). Any value of its data or flags that is the
+ * id of an Item of the same Fused Character that was copied; one that was not, left as it was.
  */
 export function relinkCopies(items, kept = []) {
   const key = (from, id) => `${from ?? ""}|${id ?? ""}`;
@@ -51,17 +52,20 @@ export function relinkCopies(items, kept = []) {
     ...kept.map(item => [key(item.flags?.["dbu-ttrpg"]?.[FUSED_FROM], item.flags?.["dbu-ttrpg"]?.[COPIED_ID]), item.id]),
     ...items.map(data => [key(data.flags?.["dbu-ttrpg"]?.[FUSED_FROM], data.flags?.["dbu-ttrpg"]?.[COPIED_ID]), data._id])
   ].filter(([at, id]) => id && !at.endsWith("|")));
-  for (const data of items) {
-    const own = data.flags?.["dbu-ttrpg"];
-    const giver = own?.grantedBy ? ids.get(key(own[FUSED_FROM], own.grantedBy)) : null;
-    if (giver) own.grantedBy = giver;
-    // And a choice naming one of their Items - Favored Technique's Signature Technique: the copy of it.
-    if (Array.isArray(data.system?.chosen)) {
-      data.system.chosen = data.system.chosen.map(entry => {
-        const copy = ids.get(key(own?.[FUSED_FROM], entry?.value));
-        return copy ? { ...entry, value: copy } : entry;
-      });
+  const swap = (value, from) => {
+    if (typeof value === "string") return ids.get(key(from, value)) ?? value;
+    if (Array.isArray(value)) return value.map(each => swap(each, from));
+    if (value && (typeof value === "object")) {
+      // Its own copiedId and fusedFrom say where it came from: never swapped.
+      return Object.fromEntries(Object.entries(value).map(([name, each]) => [name, [COPIED_ID, FUSED_FROM].includes(name) ? each : swap(each, from)]));
     }
+    return value;
+  };
+  for (const data of items) {
+    const from = data.flags?.["dbu-ttrpg"]?.[FUSED_FROM];
+    if (!from) continue;
+    if (data.system) data.system = swap(data.system, from);
+    data.flags["dbu-ttrpg"] = swap(data.flags["dbu-ttrpg"], from);
   }
   return items;
 }
@@ -608,6 +612,25 @@ async function askCombinedApparel(actors) {
   return (picked && (typeof picked === "object")) ? picked : null;
 }
 
+/**
+ * Their Apparel as it is (Merge, Parasitic): one piece worn a Layer - "choose which ones it has equipped" - the lead's (the highest
+ * Power Level) where more than one wore that Layer, the others' carried, to be put on from the Gear tab. Natural Armor and an
+ * Integrated piece, on no Layer, as they were.
+ */
+export function onePerLayer(items, leadUuid = "") {
+  const fromOf = data => data.flags?.["dbu-ttrpg"]?.[FUSED_FROM] ?? "";
+  const layered = data => isApparel(data) && data.system?.equipped && !data.system?.integrated && !data.flags?.["dbu-ttrpg"]?.naturalArmor;
+  const taken = new Set();
+  const worn = new Set();
+  for (const data of [...items].sort((a, b) => Number(fromOf(b) === leadUuid) - Number(fromOf(a) === leadUuid)).filter(layered)) {
+    const layer = data.system.layer || "top";
+    if (taken.has(layer)) continue;
+    taken.add(layer);
+    worn.add(data);
+  }
+  return items.map(data => (layered(data) && !worn.has(data)) ? { ...data, system: { ...data.system, equipped: false } } : data);
+}
+
 /** What the Fusion is given in place of the Fused Characters' Apparel, by its Method - asked where it asks. Null where backed out of. */
 async function methodItems(actors, method, items) {
   const { getTrait } = await import("./effects/traits.mjs");
@@ -619,7 +642,7 @@ async function methodItems(actors, method, items) {
     if (picks === null) return null;
     return [...items.filter(data => !isApparel(data)), ...combinedApparel(actors, picks, getTrait)];
   }
-  return items;
+  return onePerLayer(items, leadFused(actors.map(snapshotOf))?.uuid ?? "");
 }
 
 /** A new Fusion's Actor, made with its owners - by the GM where the player may not make Actors (chat.mjs "makeFusion"). */

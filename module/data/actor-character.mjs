@@ -2335,7 +2335,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.effects.programs = programsFor(this.parent ?? {}, {
       report: message => this.effects.errors.push(message),
       // For a Buddy's Buddy Attribute, and the Skills its script names by the Score they use.
-      baseTier: DBUCharacterData.tierOfPowerFor(this.powerLevel),
+      // A Fusion's never above 7, whatever its Power Level past 30.
+      baseTier: this.fusionMade ? Math.min(FUSION_MAX_BASE_TIER, DBUCharacterData.tierOfPowerFor(this.powerLevel))
+        : DBUCharacterData.tierOfPowerFor(this.powerLevel),
       // A Minion's Weakness at base Tier 1 is an effect of its own (registry.mjs) - not a Special Minion's.
       minion: this.typicalMinion,
       // What its Master's effects give it, and Brood Parent's Mini Minions.
