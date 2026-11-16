@@ -6,13 +6,13 @@
     <h3 class="panel-title">Attributes <span class="panel-note">Modifiers</span></h3>
     <div class="dbu-main-attributes">
       {{#each attributeCards as |attribute|}}
-      <button type="button" class="dbu-main-attribute" data-action="rollAttribute" data-attribute="{{attribute.key}}"
-              data-tooltip="Roll 1d10 + Modifier">
-        <span class="dbu-main-die" aria-hidden="true">d10</span>
-        <span class="dbu-main-attribute-name">{{attribute.key}}</span>
-        {{! The Modifier and what it is made of. }}
+      {{! As Might's box on Combat (the user's, 2026-11-16): its name, in the accent, is what rolls; its Modifier shows what it is
+          made of on hover. }}
+      <div class="dbu-main-attribute">
+        <button type="button" class="stat-roll dbu-main-attribute-name" data-action="rollAttribute" data-attribute="{{attribute.key}}"
+                data-tooltip="Roll 1d10 + Modifier">{{attribute.key}}</button>
         <span class="dbu-main-attribute-mod" data-tooltip-html="{{attribute.workings}}">{{attribute.mod}}</span>
-      </button>
+      </div>
       {{/each}}
     </div>
   </section>

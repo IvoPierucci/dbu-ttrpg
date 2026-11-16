@@ -6140,32 +6140,23 @@
   background: var(--dbu-panel);
   box-shadow: none;
   color: var(--dbu-text);
-  cursor: pointer;
 }
 
-.dbu-ttrpg .dbu-main-attribute:hover { border-color: var(--dbu-accent); text-shadow: none; }
-
+/* Its name is the roll, in the accent as Might's on Combat; Foundry's own button height and hover glow off. */
 .dbu-ttrpg .dbu-main-attribute-name {
+  height: auto;
+  min-height: 0;
   font-size: 10px;
   font-weight: bold;
+  line-height: 1.2;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--dbu-text-dim);
+  color: var(--dbu-accent);
+  box-shadow: none;
 }
 
-.dbu-ttrpg .dbu-main-attribute:hover .dbu-main-attribute-name { color: var(--dbu-accent); }
-.dbu-ttrpg .dbu-main-attribute-mod { font-size: 26px; font-weight: bold; line-height: 1.05; }
-
-.dbu-ttrpg .dbu-main-die {
-  position: absolute;
-  top: 4px;
-  right: 5px;
-  font-size: 10px;
-  color: var(--dbu-text-dim);
-  opacity: 0;
-}
-
-.dbu-ttrpg .dbu-main-attribute:hover .dbu-main-die { opacity: 1; }
+.dbu-ttrpg .dbu-main-attribute-name:hover { text-shadow: none; box-shadow: none; text-decoration: underline; }
+.dbu-ttrpg .dbu-main-attribute-mod { font-size: 26px; font-weight: bold; line-height: 1.05; cursor: help; }
 
 .dbu-ttrpg .dbu-main-skills {
   display: grid;
