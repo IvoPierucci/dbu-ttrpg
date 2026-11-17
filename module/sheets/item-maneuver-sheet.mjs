@@ -6,7 +6,6 @@ import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { MANEUVER_TYPES, PROFILES, SUPER_PROFILES, TAIL_VARIANTS, getManeuver } from "../maneuvers.mjs";
 import { pickedName, wireNameSearch } from "../search.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
-import { favoredAdvantage, favoredChoiceOf } from "../data/item-maneuver.mjs";
 import {
   LEVELS, choiceLabel, composeTechniqueEffects, featureCatalogue, featureChoiceOptions, featureDef, featureEntryTP, featureProblem,
   featureTP, isUltimate, maxRanks, profileKiPerTier, signatureOf, superProfileKiPerTier,
@@ -352,16 +351,10 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
           .map(line => (line ? { text: line, bullet: /^[*•]/.test(line) } : { gap: true }))
       };
     });
-    // Favored Technique (2): "Apply that Advantage to your Favored Technique" - on its list too (the user's), no TP for it, its Talent's
-    // to change; where it is on the list already, the Talent gives it no rank more.
-    const favored = favoredAdvantage(this.item);
-    if (favored && !sig.features.some(entry => entry.id === favored)) {
-      const def = featureDef(favored);
-      const choice = favoredChoiceOf(this.item)[favored] ?? "";
-      rows.push({ index: -1, id: favored, name: def?.name ?? favored, side: "Advantage", ranks: 1, ranked: false, tp: 0, given: "Favored Technique",
-        choose: "", choiceLabel: choice ? choiceLabel(def, choice) : "", fixedChoice: Boolean(choice), problem: "", disadvantage: false,
-        tip: def?.summary ?? "", lines: String(def?.text ?? "").split("\n").map(line => line.trim())
-          .map(line => (line ? { text: line, bullet: /^[*•]/.test(line) } : { gap: true })) });
+    // Favored Technique (2)'s Advantage is on the build as one an effect gives (technique.mjs givenFeatures): on the list (the user's),
+    // no TP, its rank and choice its Talent's - no box, no cross.
+    for (const row of rows.filter(each => sig.features[each.index]?.given)) {
+      Object.assign(row, { given: sig.features[row.index].given, ranked: false, choose: "", fixedChoice: Boolean(sig.features[row.index].choice) });
     }
 
     // What can be added: every feature not already on it, greyed where its Requirement fails.
@@ -453,7 +446,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
   #withFeatures(features) {
     const sig = signatureOf(this.item);
     return {
-      "system.signature.features": features,
+      // One an effect gives (Favored Technique's) is read on the build, never written with it.
+      "system.signature.features": features.filter(entry => !entry.given).map(({ given, ...entry }) => entry),
       "system.script": composeTechniqueEffects({ ...sig, features }, this.item.system.script ?? "")
     };
   }

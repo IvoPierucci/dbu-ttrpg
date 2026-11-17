@@ -72,8 +72,26 @@ export function signatureOf(item) {
       // Technique's 0. Null where it costs what it lists.
       ...((entry.tpCost !== null) && (entry.tpCost !== undefined) && (entry.tpCost !== "") && Number.isFinite(Number(entry.tpCost))
         ? { tpCost: Math.trunc(Number(entry.tpCost)) } : {})
-    })).filter(entry => entry.id)
+    })).filter(entry => entry.id).concat(givenFeatures(item, sig.features))
   };
+}
+
+/**
+ * Favored Technique (2): "Select an Advantage with a Technique Point Cost of 10 or less. Apply that Advantage to your Favored
+ * Technique" - on the build as any of its features, so all it does is read (its KP: Efficiency's 4(T); its area; its ranks), no TP
+ * for it (`tpCost: 0`) and marked `given`: never written back with the stored ones (item-maneuver-sheet.mjs). Where the Technique
+ * has it already, the Talent gives it nothing more (the user's report, 2026-11-16: Efficiency taken through it took no KP off).
+ */
+function givenFeatures(item, stored = []) {
+  const actor = item?.parent;
+  if (!actor?.items || !item?.id) return [];
+  const talent = Array.from(actor.items).find(each => (each.type === "talent") && (each.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique"));
+  const chosen = talent?.system?.chosen ?? [];
+  if ((chosen.find(entry => entry.key === "favored-technique")?.value ?? "") !== item.id) return [];
+  const id = chosen.find(entry => entry.key === "favored-technique#2")?.value ?? "";
+  if (!id || Array.from(stored ?? []).some(entry => entry?.id === id)) return [];
+  const choice = chosen.find(entry => entry.key === "favored-technique#3")?.value ?? "";
+  return [{ id, ranks: 1, choice, tpCost: 0, given: "Favored Technique" }];
 }
 
 /** Whether an Item is a Technique built through the builder rather than a bare tagged one. */
