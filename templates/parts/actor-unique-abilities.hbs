@@ -9,9 +9,12 @@
               data-tooltip="A published Unique Ability: its type and Restrictions asked">Add Unique Ability</button>
     </h3>
 
+    {{! Spent on the Unique Abilities, and what is left of all of it (the user's). }}
     <div class="technique-summary">
-      <span data-tooltip="TP on Unique Abilities, and on them and the Signature Techniques together, against the TP Progression has given">
-        TP <b>{{uniqueAbilities.spent}}</b> &middot; with Techniques <b>{{uniqueAbilities.together}}</b> / {{uniqueAbilities.available}}</span>
+      <span data-tooltip="What the Unique Abilities cost in TP - the Signature Techniques' are on their own tab">
+        TP spent on Unique Abilities <b>{{uniqueAbilities.spent}}</b></span>
+      <span class="{{#if tpSummary.over}}dbu-tp-over{{/if}}" data-tooltip="What is left of the TP Progression has given ({{tpSummary.total}}), once the Signature Techniques and the Unique Abilities are paid for">
+        TP left <b>{{tpSummary.left}}</b></span>
     </div>
     {{#if uniqueAbilities.warning}}<p class="gear-warning">{{uniqueAbilities.warning}}</p>{{/if}}
 

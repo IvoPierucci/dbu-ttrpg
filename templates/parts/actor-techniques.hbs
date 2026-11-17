@@ -6,10 +6,13 @@
               data-tooltip="A blank Super Technique, opened on its Sig Creation tab">New Signature Technique</button>
     </h3>
 
+    {{! The TP on the left - spent on the Techniques, and what is left of all of it (the user's) - the Ultimates at the far right. }}
     <div class="technique-summary">
-      <span data-tooltip="What the Techniques cost in TP, against the TP Progression has given - the Unique Abilities' are on their own tab">
-        TP <b>{{techniques.spent}}</b> / {{techniques.available}}</span>
-      <span data-tooltip="Ultimates possessed, against one plus one per Super beyond the first (Transformation Techniques not counted)">
+      <span data-tooltip="What the Signature Techniques cost in TP - the Unique Abilities' are on their own tab">
+        TP spent on Signature Techniques <b>{{techniques.spent}}</b></span>
+      <span class="{{#if tpSummary.over}}dbu-tp-over{{/if}}" data-tooltip="What is left of the TP Progression has given ({{tpSummary.total}}), once the Signature Techniques and the Unique Abilities are paid for">
+        TP left <b>{{tpSummary.left}}</b></span>
+      <span class="technique-summary-right" data-tooltip="Ultimates possessed, against one plus one per Super beyond the first (Transformation Techniques not counted)">
         Ultimates <b>{{techniques.ultimates}}</b> / {{techniques.ultimateCap}}</span>
       <span data-tooltip="Ultimates used this Combat Encounter">
         Used this Encounter <b>{{techniques.usedThisEncounter}}</b> / {{techniques.encounterCap}}</span>

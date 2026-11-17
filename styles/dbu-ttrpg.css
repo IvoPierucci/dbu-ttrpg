@@ -488,9 +488,14 @@
 
 .dbu-ttrpg .technique-summary {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 4px 18px;
   margin-bottom: 6px;
 }
+
+/* The Ultimates' counts at the far right (the user's); the TP left in red where it is overspent. */
+.dbu-ttrpg .technique-summary .technique-summary-right { margin-left: auto; }
+.dbu-ttrpg .technique-summary .dbu-tp-over b { color: #e8796f; }
 
 
 .dbu-gear-pick optgroup option {
