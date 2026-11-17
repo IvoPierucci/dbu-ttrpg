@@ -5921,8 +5921,13 @@
 
 /* Debug's Maneuver Access (the user's, 2026-11-16): a row each - box, name (its section beside it while searching), type, and what
    opens it already; a section or type filter greyed while the search ignores it, hidden where every one in it is open. */
-.dbu-ttrpg .dbu-access-window .dbu-maneuver-search { margin: 0 0 4px; }
-.dbu-ttrpg .dbu-access-window .dbu-maneuver-tabs { margin: 2px 0; }
+/* Its list scrolls inside the window (the user's): the rest of it held to its own height, the list taking what is left. */
+.dbu-ttrpg .dbu-access-window { width: min(460px, 100%); }
+.dbu-ttrpg .dbu-access-window > * { flex: 0 0 auto; }
+.dbu-ttrpg .dbu-access-window > .dbu-combat-window-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: start; gap: 2px; }
+.dbu-ttrpg .dbu-access-window > .dbu-maneuver-search { width: auto; margin: 0 12px 4px; }
+.dbu-ttrpg .dbu-access-window > .dbu-maneuver-tabs,
+.dbu-ttrpg .dbu-access-window > .dbu-maneuver-note { margin: 2px 12px; }
 .dbu-ttrpg .dbu-access-window .dbu-maneuver-tab[hidden] { display: none; }
 .dbu-ttrpg .dbu-access-window .dbu-maneuver-tab.dbu-access-off { border-style: dashed; opacity: 0.6; }
 .dbu-ttrpg .dbu-access-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
