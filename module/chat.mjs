@@ -33,7 +33,7 @@ import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { customBuffBasicIsSignature, customBuffMarked, customBuffOn } from "./custom-buffs.mjs";
 import { armorPiercing, damageAttributeOf, namedDamageAttribute, karmicSteps, linkedPick, skyAssaultWaives,
-  techniqueAttack, techniqueDamageParts, techniqueStrikeAgainst, techniqueStrikeParts,
+  techniqueAttack, techniqueDamageParts, techniqueStrikePartsAgainst, techniqueStrikeParts,
   techniqueWoundAgainst, techniqueWoundParts } from "./technique-attack.mjs";
 import { advantageWoundParts, featureRanks, pushes, staggers, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
@@ -32780,13 +32780,15 @@ async function resolveAttackWork(message, attack) {
     // anywhere around its wielder, so how far it came is the table's and nothing is taken.
     const weapon = attack.weapon ?? {};
     const skyWaived = skyAssaultWaives(attacker, attack, target);
+    // Long Shot, Short Range and a Trick Attack's won Clash: against this one alone - counted with the distance as before, each
+    // named on the card of its own (techniqueRows), not as the Long Range's.
+    const techniqueRows = (weapon.telekinetic || attack.portal) ? [] : techniqueStrikePartsAgainst(attacker, attack,
+      { longRange: atLongRange(attacker, target), outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),
+        tricked: (attack.tricked ?? []).includes(uuid) });
     const longRange = (weapon.telekinetic || attack.portal) ? 0
       : ((weapon.ignoresLongRange || skyWaived ? 0 : longRangePenalty(attacker, target))
         - (atLongRange(attacker, target) ? (Number(weapon.longRangeStrike) || 0) : 0)
-        // Long Shot, Short Range and a Trick Attack's won Clash: against this one alone.
-        - techniqueStrikeAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
-            outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),
-            tricked: (attack.tricked ?? []).includes(uuid) })
+        - techniqueRows.reduce((sum, part) => sum + part.value, 0)
         - grantedLongShot(attacker, attack, target))
       // Masterful Strike (2): a penalty to the Strike Roll like any other - left off; what lowers it kept.
       - ((attacker.system.effects?.slots?.["strike.ignorePenalties"] === true)
@@ -32965,6 +32967,8 @@ async function resolveAttackWork(message, attack) {
       analysisNamed: analysisParts.map(signedPart),
       // In the hover of what the Strike was worth against them, not written on the card (the user's): the Strike, each part, the distance.
       analysisRows: analysisParts.map(part => ({ label: part.label, value: part.value })),
+      // The Technique's own parts against them (Trick Attack, Long Shot, Short Range): inside `longRange`'s number, named apart.
+      techniqueRows: techniqueRows.filter(part => part.value),
       strikeBase: strike.total,
       against,
       // Said on the card, since a defence that was never rolled needs a reason beside
@@ -34522,7 +34526,7 @@ function isAbsoluteMiss(own) {
  *
  * @returns {Promise<{withArms: boolean}|null>} null when it was closed without rolling
  */
-async function askFollowUps(attack, attacker, { plan, beatable, longRange }) {
+async function askFollowUps(attack, attacker, { plan, beatable, line = null }) {
   const escape = Handlebars.escapeExpression;
   const count = plan.rolls + (Number(attack.technique?.followUpRolls) || 0);
   const strike = attack.result?.strike ?? {};
@@ -34533,7 +34537,7 @@ async function askFollowUps(attack, attacker, { plan, beatable, longRange }) {
   const formula = formulaHtml({ base: DBUCharacterData.BASE_DIE, dice: groups, parts: [
     ...(strike.lines ?? []).filter(entry => (entry.kind === "part") && !entry.outcome && entry.value)
       .map(entry => ({ label: entry.source, value: entry.value })),
-    ...(longRange ? [{ label: "Long Range", value: -longRange }] : [])
+    ...distanceRows(line)
   ] });
 
   // What may join these rolls. Multiple Arms is Triggered, so it is a box the player ticks or leaves.
@@ -34612,7 +34616,7 @@ async function rollFollowUpStrikes(message, attack, attacker) {
   const longRange = line?.longRange ?? 0;
 
   // The window first: what each Strike rolls, the effects that may join it, and Roll - or Close, to leave them for now.
-  const asked = await askFollowUps(attack, attacker, { plan, beatable, longRange });
+  const asked = await askFollowUps(attack, attacker, { plan, beatable, line });
   if (!asked) return;
   const withArms = asked.withArms;
 
@@ -34725,7 +34729,7 @@ async function homingRetry(message, attack, uuid) {
         ...(attack.result?.strike?.lines ?? []).filter(entry => (entry.kind === "part") && !entry.outcome && entry.value)
           .map(entry => ({ label: entry.source, value: entry.value })),
         { label: `Homing (${misses} missed)`, value: misses * tier },
-        ...((Number(own.longRange) || 0) ? [{ label: "Long Range", value: -Number(own.longRange) }] : [])
+        ...distanceRows(own)
       ] } });
   if (!ready) return;
   const roll = await rollSide(attacker, [
@@ -40251,8 +40255,17 @@ function attackerRow(attack) {
 
 /** What the Strike was worth against one target past the roll itself: each part (Analysis, Lock On...) and the distance. */
 function againstLines(own) {
-  return [...(own?.analysisRows ?? []).map(partLine),
-    ...(own?.longRange ? [partLine({ label: "Long Range", value: -own.longRange })] : [])];
+  return [...(own?.analysisRows ?? []).map(partLine), ...distanceRows(own).map(partLine)];
+}
+
+/**
+ * What the distance's number (`longRange`, taken off the Strike) carried, named: the Technique's own parts against them - a Trick
+ * Attack's +2(bT), Long Shot, Short Range - each apart (the user's report: they read as "Long Range"), the rest the Long Range's.
+ */
+function distanceRows(own) {
+  const technique = Array.from(own?.techniqueRows ?? []).filter(part => Number(part?.value));
+  const distance = -(Number(own?.longRange) || 0) - technique.reduce((sum, part) => sum + (Number(part.value) || 0), 0);
+  return [...technique, ...(distance ? [{ label: "Long Range", value: distance }] : [])];
 }
 
 /** Said on a target's line where the Strike was worth more or less against them than it rolled - which way, not how much. */

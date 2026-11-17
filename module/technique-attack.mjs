@@ -204,18 +204,26 @@ export function darkAndLight(attack) {
  *
  * @param {{longRange: boolean, outsideMelee: boolean, tricked: boolean}} facts  about this pair
  */
-export function techniqueStrikeAgainst(attacker, attack, { longRange = false, outsideMelee = false, tricked = false } = {}) {
+export function techniqueStrikeAgainst(attacker, attack, facts = {}) {
+  return techniqueStrikePartsAgainst(attacker, attack, facts).reduce((sum, part) => sum + part.value, 0);
+}
+
+/**
+ * The same, each named - for the card's hover, where they were summed into "Long Range" and a Trick Attack's +2(bT) read as the
+ * distance's (the user's report, 2026-11-17).
+ */
+export function techniqueStrikePartsAgainst(attacker, attack, { longRange = false, outsideMelee = false, tricked = false } = {}) {
   const tech = attack.technique;
-  if (!tech) return 0;
+  if (!tech) return [];
   const tier = tierOf(attacker);
   const baseTier = baseTierOf(attacker);
   const ranks = id => featureRanks(tech.features, id);
   const doubled = id => (tech.features.includes("super-advantage") && (tech.choices["super-advantage"] === id)) ? 2 : 1;
-  let value = 0;
-  if (longRange && ranks("long-shot")) value += ranks("long-shot") * doubled("long-shot") * tier;
-  if (outsideMelee && (ranks("short-range") === 1)) value -= 2 * baseTier;
-  if (tricked) value += 2 * baseTier;
-  return value;
+  const parts = [];
+  if (longRange && ranks("long-shot")) parts.push({ label: "Long Shot", value: ranks("long-shot") * doubled("long-shot") * tier });
+  if (outsideMelee && (ranks("short-range") === 1)) parts.push({ label: "Short Range", value: -2 * baseTier });
+  if (tricked) parts.push({ label: "Trick Attack", value: 2 * baseTier });
+  return parts;
 }
 
 /**
