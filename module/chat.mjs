@@ -32637,6 +32637,21 @@ function windowParts(actor, parts) {
 }
 
 /**
+ * The Technique's own parts against each target - a Trick Attack's won Clash, Long Shot, Short Range - in the Strike's window too,
+ * each with whom it is against (the user's): added to the Strike against that one alone, as the card's hover says.
+ */
+function techniqueAgainstParts(attacker, attack) {
+  if (!attack?.technique || attack.weapon?.telekinetic || attack.portal) return [];
+  return attackTargets(attack).flatMap(entry => {
+    const target = fromUuidSync(entry.uuid ?? "");
+    if (!target) return [];
+    return techniqueStrikePartsAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
+      outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")), tricked: (attack.tricked ?? []).includes(entry.uuid) })
+      .filter(part => part.value).map(part => ({ ...part, label: `${part.label} (against ${target.name})` }));
+  });
+}
+
+/**
  * Roll the exchange: the Strike, and whatever each target chose to meet it with.
  */
 async function resolveAttack(message, attack) {
@@ -33877,7 +33892,7 @@ async function attackerStage(message, attack, attacker) {
       top: `${resourceLine(attacker)}${rollAttackLine(attack, "Attacking")}`,
       formula: { what: "Strike Roll", base: DBUCharacterData.BASE_DIE,
         dice: combatDiceGroups(attacker, null, "strike", effectSignature(attacker, attack)),
-        parts: windowParts(attacker, strikeParts(attacker, attack)) } });
+        parts: windowParts(attacker, [...strikeParts(attacker, attack), ...techniqueAgainstParts(attacker, attack)]) } });
   if (!ready) return;
   // What the window armed, kept on the card, so Change can put it back (the user's).
   const armed = (attacker.system.armedTalents ?? []).filter(id => !before.has(id));
