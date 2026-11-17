@@ -4056,14 +4056,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     for (const handler of this.#dragDrop) handler.bind(this.element);
     this.#bindActionTotals();
     this.#bindRange('input[name="system.powerLevel"]', 1, DBUCharacterData.MAX_POWER_LEVEL);
-    // Clearing the field falls back to 10, not to the 7 minimum - an emptied field
-    // must not hand out the best possible Critical Target.
-    this.#bindRange(
-      'input[name="system.criticalTarget"]',
-      DBUCharacterData.CRITICAL_TARGET_MIN,
-      DBUCharacterData.CRITICAL_TARGET_DEFAULT,
-      DBUCharacterData.CRITICAL_TARGET_DEFAULT
-    );
   }
 
   /**

@@ -2191,12 +2191,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       if (cost) this.racialLifeModifier -= cost * Array.from(this.parent.items).filter(each => each.flags?.["dbu-ttrpg"]?.grantedBy === item.id).length;
     }
 
-    // The Critical Target can be lowered by effects, but never past 7, and never
-    // raised above its starting value of 10.
-    this.criticalTarget = Math.min(
-      DBUCharacterData.CRITICAL_TARGET_DEFAULT,
-      Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget)
-    );
+    // The Critical Target starts at 10 and is lowered by effects alone (below), never past 7. Debug's Crit Target is gone (the user's,
+    // 2026-11-16: a Custom Buff does it now) - a number written there before is no longer read.
+    this.criticalTarget = DBUCharacterData.CRITICAL_TARGET_DEFAULT;
 
     // --- Attribute Scores, before anything else ---
     // A Score depends only on the progression table, the Power Level and the race - not
@@ -2471,10 +2468,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // The current Tier of Power is the Base Tier as altered by Transformations and
     // effects. Breakthrough caps it at two Tiers above the Base; it can be lowered
-    // freely, but never below 1.
+    // freely, but never below 1. Debug's ToP Mod is gone (the user's, 2026-11-16: a Custom Buff does it now) - a number written
+    // there before is no longer read.
     this.tierOfPower = Math.min(
       this.baseTierOfPower + DBUCharacterData.BREAKTHROUGH_LIMIT,
-      Math.max(1, this.baseTierOfPower + this.tierOfPowerModifier + slot(this, "tierOfPower"))
+      Math.max(1, this.baseTierOfPower + slot(this, "tierOfPower"))
     );
     // The Tier of Power a Ki Point Cost's (T) is counted at. Breakthrough: "When you temporarily increase your Tier of Power, you do
     // not increase your Ki Point Costs" - so never above the Base Tier; lowered, it follows (the user's report: a Custom Buff's

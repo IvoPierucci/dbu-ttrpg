@@ -386,34 +386,15 @@
       Ki Multiplier
       {{#if system.debug.kiMultiplier}}<em>Ki x2 &middot; Capacity x1.5</em>{{/if}}
     </label>
-    {{! Set by hand, for what nothing on the sheet works out yet - the Tier of Power's and the Critical Target's. }}
-    <div class="character-fields">
-      <label data-tooltip="Adjustment from Transformations and effects. Breakthrough caps the result at BToP + 2.">ToP Mod
-        <input type="number" name="system.tierOfPowerModifier" value="{{system.tierOfPowerModifier}}"/>
-      </label>
-
-      <label data-tooltip="Base Die result needed to crit. Effects can lower it to 7.">Crit Target
-        <input type="number" name="system.criticalTarget" value="{{system.criticalTarget}}" min="7" max="10"/>
-      </label>
-    </div>
+    {{! The ToP Mod and Crit Target are gone (the user's, 2026-11-16): Custom Buffs do both now. }}
+    {{! A row each kind (the user's): the round and the Encounter; the Maneuvers; Fusion. }}
     {{! Turning the round and the Encounter over by hand - for a table playing without a formal Encounter, and for putting
         things right when one gets out of step. A Combat does the round on its own. }}
-    <div class="capacity">
+    <div class="capacity dbu-debug-row">
       <button type="button" data-action="resetCapacity" class="capacity-reset"
               data-tooltip="Give back the Actions and the Capacity, and clear the attacks made and the Diminishing stacks. A Combat does this on its own each round.">New round</button>
       <button type="button" data-action="resetEncounter" class="capacity-reset"
               data-tooltip="Restore maneuvers limited to once per encounter">New encounter</button>
-      {{! From the Maneuvers tab (the user's): what a character made before Maneuvers were Items is missing. }}
-      <button type="button" data-action="grantManeuvers" class="capacity-reset"
-              data-tooltip="Give this character any core Maneuver they are missing. New characters get them automatically.">Add core maneuvers</button>
-      {{! Which Special and God Maneuvers this character has, for what nothing written grants yet (the user's). }}
-      <button type="button" data-action="openCombatWindow" data-window="maneuverAccess" class="capacity-reset"
-              data-tooltip="Open any Special or God Maneuver to this character, as an effect would - a God Maneuver still in the God Ki State.">Maneuver Access</button>
-      {{! Fusion (the user's): with whom and by which Method - a new Fusion, or theirs fused again. Not a Fusion's own. }}
-      {{#unless isFusion}}
-      <button type="button" data-action="fuseWith" class="capacity-reset"
-              data-tooltip="Fuse with other Characters by a Fusion Method: a new Fusion, or the one they make fused again (recalculated).">Fuse</button>
-      {{/unless}}
       {{#if canEnterEncounter}}
       {{! For somebody who walked into an Encounter already under way: it began for
           everyone else when it began, and it begins for them now. Gone once taken, and
@@ -422,6 +403,21 @@
               data-tooltip="The Combat Encounter begins for you now. Applies your start-of-Encounter effects, once.">Enter the encounter</button>
       {{/if}}
     </div>
+    <div class="capacity dbu-debug-row">
+      {{! From the Maneuvers tab (the user's): what a character made before Maneuvers were Items is missing. }}
+      <button type="button" data-action="grantManeuvers" class="capacity-reset"
+              data-tooltip="Give this character any core Maneuver they are missing. New characters get them automatically.">Add core maneuvers</button>
+      {{! Which Special and God Maneuvers this character has, for what nothing written grants yet (the user's). }}
+      <button type="button" data-action="openCombatWindow" data-window="maneuverAccess" class="capacity-reset"
+              data-tooltip="Open any Special or God Maneuver to this character, as an effect would - a God Maneuver still in the God Ki State.">Maneuver Access</button>
+    </div>
+    {{! Fusion (the user's): with whom and by which Method - a new Fusion, or theirs fused again. Not a Fusion's own. }}
+    {{#unless isFusion}}
+    <div class="capacity dbu-debug-row">
+      <button type="button" data-action="fuseWith" class="capacity-reset"
+              data-tooltip="Fuse with other Characters by a Fusion Method: a new Fusion, or the one they make fused again (recalculated).">Fuse</button>
+    </div>
+    {{/unless}}
   </section>
 
 </div>

@@ -1353,6 +1353,10 @@
   padding: 0 10px;
 }
 
+/* Debug's buttons, a row each kind (the user's): the round and the Encounter; the Maneuvers; Fusion. */
+.dbu-ttrpg .dbu-debug-row { flex-wrap: wrap; }
+.dbu-ttrpg .dbu-debug-row + .dbu-debug-row { margin-top: 6px; }
+
 .dbu-ttrpg .capacity-note {
   font-size: 10px;
   font-style: italic;
