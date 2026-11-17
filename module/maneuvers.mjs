@@ -3616,6 +3616,8 @@ export function whyNotSpecial(actor, maneuver) {
   // A Villainous Maneuver: "a form of Special Maneuver that all Adversaries have access to".
   if ((maneuver.source === "Villainous Maneuver") && (actor?.type === "adversary")) return null;
   if (openedWithoutGear(actor, maneuver)) return null;
+  // Debug's Maneuver Access: opened by hand, as an effect's grant would.
+  if (debugManeuvers(actor).includes(maneuver.id)) return null;
   // Assimilation (3): a Goop of its holder's.
   if ((maneuver.id === "absorb") && goopAbsorbs(actor)) return null;
 
@@ -3660,15 +3662,69 @@ export function whyNotSpecial(actor, maneuver) {
  */
 export const DEBUG_GOD_MANEUVERS = "debugGodManeuvers";
 
-export function debugGodManeuvers(actor) {
-  const held = actor?.getFlag?.("dbu-ttrpg", DEBUG_GOD_MANEUVERS);
-  return Array.isArray(held) ? held : [];
+/**
+ * Debug's Maneuver Access (the user's, 2026-11-16, in place of its God Maneuvers): any Special or God Maneuver - a Villainous one on an
+ * Adversary's sheet - opened as an effect's grant would open it. The God Maneuvers ticked before it kept (their flag read too).
+ */
+export const DEBUG_MANEUVERS = "debugManeuvers";
+
+export function debugManeuvers(actor) {
+  const held = [actor?.getFlag?.("dbu-ttrpg", DEBUG_MANEUVERS), actor?.getFlag?.("dbu-ttrpg", DEBUG_GOD_MANEUVERS)]
+    .flatMap(list => (Array.isArray(list) ? list : []));
+  return [...new Set(held)];
+}
+
+/** Older name of the same list. */
+export const debugGodManeuvers = debugManeuvers;
+
+/**
+ * What opens a Special or God Maneuver for this character besides Debug - "" where nothing does: an effect's grant, the Skill Ranks
+ * that open it, an Item that gives it, Tail Proficiency, a Goop's Assimilation; a Villainous Maneuver, every Adversary.
+ */
+export function maneuverAccessLock(actor, maneuver) {
+  const slots = actor?.system?.effects?.slots;
+  if (granted(slots, `maneuver.${maneuver.id}`)) return "By an effect";
+  if (maneuver.godManeuver) return "";
+  if ((maneuver.source === "Villainous Maneuver") && (actor?.type === "adversary")) return "Every Adversary";
+  if ((maneuver.id === "tail-attack") && (slots?.["tailProficiency.attack"] === true)) return "Tail Proficiency";
+  const skill = (actor?.system?.specialManeuvers ?? []).find(entry => (entry.maneuver === maneuver.id) && entry.open);
+  if (skill) return `Skill: ${skill.skill} ${skill.needs}`;
+  if ((maneuver.id === "absorb") && goopAbsorbs(actor)) return "Assimilation";
+  const item = (actor?.items ?? []).find(each => (each.type === "gear") && (each.system?.grantsManeuver === maneuver.id)
+    && ((each.system?.itemType !== "accessory") || each.system?.equipped));
+  return item?.name ?? "";
+}
+
+/** Debug's Maneuver Access sections: Special, God - and Villainous, on an Adversary's sheet alone (the user's). */
+export const ACCESS_SECTIONS = Object.freeze({ special: "Special", god: "God", villainous: "Villainous" });
+
+/**
+ * Every Maneuver Debug's Maneuver Access lists for this character: the library's Special and God Maneuvers - not one a Trait's own
+ * effect is, which comes with its Trait - and the Villainous ones on an Adversary's sheet alone. Open (`open`) where something
+ * already opens it or Debug does; by name.
+ */
+export function maneuverAccessRows(actor) {
+  const adversary = actor?.type === "adversary";
+  const ticked = new Set(debugManeuvers(actor));
+  return allManeuvers()
+    .filter(maneuver => (maneuver.special || maneuver.godManeuver) && !maneuver.fromTrait)
+    .map(maneuver => ({ maneuver, section: maneuver.godManeuver ? "god"
+      : ((maneuver.source === "Villainous Maneuver") ? "villainous" : "special") }))
+    .filter(({ section }) => adversary || (section !== "villainous"))
+    .map(({ maneuver, section }) => {
+      const lock = maneuverAccessLock(actor, maneuver);
+      const type = MANEUVER_TYPES[maneuver.type] ? maneuver.type : "standard";
+      return { id: maneuver.id, name: maneuver.name, key: String(maneuver.name ?? "").toLowerCase(), section,
+        sectionLabel: ACCESS_SECTIONS[section], type,
+        typeLabel: MANEUVER_TYPES[type].label, lock, ticked: ticked.has(maneuver.id), open: Boolean(lock) || ticked.has(maneuver.id) };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function whyNotGod(actor, maneuver) {
   const slots = actor?.system?.effects?.slots;
   if (!permits(slots, `maneuver.${maneuver.id}`)) return `Something is keeping ${actor.name} from using ${maneuver.name}.`;
-  if (!granted(slots, `maneuver.${maneuver.id}`) && !debugGodManeuvers(actor).includes(maneuver.id)) {
+  if (!granted(slots, `maneuver.${maneuver.id}`) && !debugManeuvers(actor).includes(maneuver.id)) {
     return `${actor.name} has not been granted ${maneuver.name}. A God Maneuver is gained through an effect.`;
   }
   if (!actor?.system?.divineKi?.active) return `${maneuver.name} is a God Maneuver: only in the God Ki State.`;

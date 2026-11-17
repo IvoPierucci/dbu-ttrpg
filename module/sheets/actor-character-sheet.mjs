@@ -54,7 +54,8 @@ import {
 } from "../conditions.mjs";
 import { actionsLeft, actionsWithin, convertActions, convertibleActions, isTheirTurn, newRoundFor, spendActions }
   from "../combat.mjs";
-import { DEBUG_GOD_MANEUVERS, debugGodManeuvers, instantHeld, instantTurnKey, whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
+import { ACCESS_SECTIONS, DEBUG_GOD_MANEUVERS, DEBUG_MANEUVERS, debugManeuvers, instantHeld, instantTurnKey, maneuverAccessRows,
+  whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
 import { baseDieLine, breakdownTable, contributionLine, extraDiceLine, partLine, noteLine, floorLine, skillWorkingsTable,
          fromOutcome, workingsTable, atRollTime, saveClashBonuses } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
@@ -91,6 +92,7 @@ import {
   escapeGrapple,
   fitsOutOfSequence,
   importCoreManeuvers,
+  maneuverItemFrom,
   outOfSequenceMode,
   releaseGrapple,
   useBuddyAttack,
@@ -585,7 +587,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       changeSheetType: DBUCharacterSheet._onChangeSheetType,
       keepSheetType: DBUCharacterSheet._onKeepSheetType,
       closeCombatWindow: DBUCharacterSheet._onCloseCombatWindow,
-      toggleDebugGod: DBUCharacterSheet._onToggleDebugGod,
+      toggleDebugManeuver: DBUCharacterSheet._onToggleDebugManeuver,
+      clearDebugManeuvers: DBUCharacterSheet._onClearDebugManeuvers,
       pinCombat: DBUCharacterSheet._onPinCombat,
       setThresholdCheck: DBUCharacterSheet._onSetThresholdCheck,
       toggleCondition: DBUCharacterSheet._onToggleCondition,
@@ -706,6 +709,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   /** What the Maneuvers tab's search holds, kept through a render. */
   #maneuverQuery = "";
+
+  /** Debug's Maneuver Access: its search, section and type - kept through a render, set anew as it opens. */
+  #accessQuery = "";
+  #accessSection = "special";
+  #accessType = "all";
 
   /**
    * The Maneuvers tab's search, over every Maneuver of yours and not the open tab's alone (the user's): typed into, each type with a
@@ -1635,19 +1643,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.villainousOf = { have: context.villainousTraits.length, allowed: Number(this.actor.system.adversaryGains?.traits) || 0 };
     context.villainousOf.over = context.villainousOf.have > context.villainousOf.allowed;
     context.isGM = game.user.isGM;
-    // Debug's God Maneuvers (the user's, 2026-11-15): every God Maneuver the character carries - not one a Trait's own effect is,
-    // Golden Fruit's - ticked where Debug opens it, marked where an effect already grants it.
-    if (this.#combatWindow === "godManeuvers") {
-      const ticked = debugGodManeuvers(this.actor);
-      const slots = this.actor.system.effects?.slots ?? {};
-      context.godManeuverPicks = this.actor.items
-        .filter(item => (item.type === "maneuver") && item.system.godManeuver && !item.system.fromTrait)
-        .map(item => {
-          const id = item.system.maneuverId || item.id;
-          const byEffect = (slots[`maneuver.${id}`] === true) || (slots[`maneuver.${id}`]?.allow === true);
-          return { id, name: item.name, img: item.img, ticked: ticked.includes(id), byEffect };
-        })
-        .sort((a, b) => a.name.localeCompare(b.name));
+    // Debug's Maneuver Access (the user's, 2026-11-16, in place of its God Maneuvers): every Special and God Maneuver - Villainous on
+    // an Adversary's sheet - ticked where Debug opens it, locked where something else does. Its sections and types, and the search
+    // that ignores them, worked on the page (#wireManeuverAccess).
+    if (this.#combatWindow === "maneuverAccess") {
+      context.maneuverAccess = {
+        rows: maneuverAccessRows(this.actor),
+        sections: Object.entries(ACCESS_SECTIONS).filter(([key]) => (key !== "villainous") || isAdversary(this.actor))
+          .map(([key, label]) => ({ key, label })),
+        types: Object.entries(MANEUVER_TYPES).map(([key, type]) => ({ key, label: type.label }))
+      };
     }
 
     // The header's Capacity bar (the user's): full as the Round starts, emptied by what is spent - as Ki's is.
@@ -1884,8 +1889,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       resources: windowIs === "resources", conditions: windowIs === "conditions",
       // The Settings tab's States' Triggered / Automatic, in the same window over the sheet (the user's).
       stateTriggers: windowIs === "stateTriggers",
-      // Debug's God Maneuvers (the user's).
-      godManeuvers: windowIs === "godManeuvers",
+      // Debug's Maneuver Access (the user's).
+      maneuverAccess: windowIs === "maneuverAccess",
       // And its Allies' and Minions' (or Master's) Manage windows.
       allies: windowIs === "allies", minions: windowIs === "minions", master: windowIs === "master",
       // The Settings tab's Skill Specialties; the Maneuvers tab's Manage.
@@ -3966,6 +3971,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         this.#applyManeuverSearch();
       }
     }
+
+    // Debug's Maneuver Access: its sections, types and search, worked on the page.
+    this.#wireManeuverAccess();
 
     // A list typed into (`[data-combo]`): a Talent Addition row's, a Custom Buff's Effect.
     for (const combo of this.element.querySelectorAll("[data-combo]")) DBUCharacterSheet.#bindCombo(combo);
@@ -8090,6 +8098,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static _onOpenCombatWindow(event, target) {
     this.#combatWindow = target.dataset.window || null;
     this.#specialtyConfirm = null;
+    if (this.#combatWindow === "maneuverAccess") {
+      this.#accessQuery = "";
+      this.#accessSection = "special";
+      this.#accessType = "all";
+    }
     this.render();
   }
 
@@ -8177,13 +8190,110 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.render();
   }
 
-  /** Debug's God Maneuvers: one opened or closed, as an effect's grant would - the God Ki State still asked. */
-  static async _onToggleDebugGod(event, target) {
+  /**
+   * Debug's Maneuver Access: one opened or closed, as an effect's grant would - a God Maneuver still asking for the God Ki State. Opened
+   * and not carried, its Maneuver Item given. The older God Maneuvers list folded into it as it is written.
+   */
+  static async _onToggleDebugManeuver(event, target) {
     const id = target.dataset.id;
     if (!id) return;
-    const held = debugGodManeuvers(this.actor);
+    const held = debugManeuvers(this.actor);
     const next = target.checked ? [...new Set([...held, id])] : held.filter(each => each !== id);
-    return this.actor.setFlag("dbu-ttrpg", DEBUG_GOD_MANEUVERS, next);
+    if (target.checked && !this.actor.items.some(item => (item.type === "maneuver") && (item.system.maneuverId === id))) {
+      const definition = getManeuver(id);
+      if (definition) await this.actor.createEmbeddedDocuments("Item", [maneuverItemFrom(definition)]);
+    }
+    return this.actor.update({ [`flags.dbu-ttrpg.${DEBUG_MANEUVERS}`]: next, [`flags.dbu-ttrpg.-=${DEBUG_GOD_MANEUVERS}`]: null });
+  }
+
+  /**
+   * Debug's Maneuver Access on the page (the user's, 2026-11-16): a section, and a type within it, filter the rows - a section or a
+   * type whose every Maneuver is open already not shown, its count those still to open; typed into, the search ignores both and
+   * finds every Maneuver, each with its section beside it.
+   */
+  #wireManeuverAccess() {
+    const root = this.element.querySelector("[data-maneuver-access]");
+    if (!root) return;
+    const rows = [...root.querySelectorAll("[data-access-row]")];
+    const sections = [...root.querySelectorAll("[data-access-section]")];
+    const types = [...root.querySelectorAll("[data-access-type]")];
+    const search = root.querySelector("[data-access-search]");
+    const empty = root.querySelector("[data-access-empty]");
+    const hint = root.querySelector("[data-access-hint]");
+    const gone = root.querySelector("[data-access-gone]");
+    const closed = row => row.dataset.open !== "1";
+    const apply = () => {
+      const query = this.#accessQuery.trim().toLowerCase();
+      const left = key => rows.filter(row => (row.dataset.section === key) && closed(row)).length;
+      const shown = sections.map(button => button.dataset.accessSection).filter(key => left(key) > 0);
+      if (!shown.includes(this.#accessSection)) this.#accessSection = shown[0] ?? "";
+      for (const button of sections) {
+        const key = button.dataset.accessSection;
+        button.hidden = !shown.includes(key);
+        button.classList.toggle("active", !query && (key === this.#accessSection));
+        button.classList.toggle("dbu-access-off", Boolean(query));
+        const count = button.querySelector("[data-access-count]");
+        if (count) count.textContent = String(left(key));
+      }
+      const typesLeft = new Set(rows.filter(row => (row.dataset.section === this.#accessSection) && closed(row)).map(row => row.dataset.type));
+      if ((this.#accessType !== "all") && !typesLeft.has(this.#accessType)) this.#accessType = "all";
+      for (const button of types) {
+        const key = button.dataset.accessType;
+        button.hidden = (key !== "all") && !typesLeft.has(key);
+        button.classList.toggle("active", !query && (key === this.#accessType));
+        button.classList.toggle("dbu-access-off", Boolean(query));
+      }
+      let visible = 0;
+      for (const row of rows) {
+        const show = query ? row.dataset.name.includes(query)
+          : ((row.dataset.section === this.#accessSection) && ((this.#accessType === "all") || (row.dataset.type === this.#accessType)));
+        row.hidden = !show;
+        if (show) visible++;
+        const kind = row.querySelector("[data-access-kind]");
+        if (kind) kind.hidden = !query;
+      }
+      if (empty) {
+        empty.hidden = visible > 0;
+        empty.textContent = query ? "No Maneuver by that name." : "Every Maneuver here is open already.";
+      }
+      if (hint) hint.hidden = !query;
+      const hidden = sections.filter(button => button.hidden).map(button => button.dataset.label);
+      if (gone) {
+        gone.hidden = !hidden.length;
+        gone.textContent = hidden.length ? `Not shown, every one open: ${hidden.join(", ")} (the search still finds them).` : "";
+      }
+    };
+    if (search) {
+      search.value = this.#accessQuery;
+      search.addEventListener("input", () => { this.#accessQuery = search.value; apply(); });
+      search.addEventListener("change", event => event.stopPropagation());
+      search.addEventListener("keydown", event => { if (event.key === "Enter") event.preventDefault(); });
+    }
+    for (const button of sections) {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        this.#accessSection = button.dataset.accessSection;
+        this.#accessType = "all";
+        this.#accessQuery = "";
+        if (search) search.value = "";
+        apply();
+      });
+    }
+    for (const button of types) {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        this.#accessType = button.dataset.accessType;
+        this.#accessQuery = "";
+        if (search) search.value = "";
+        apply();
+      });
+    }
+    apply();
+  }
+
+  /** Debug's Maneuver Access: every one opened here closed again. */
+  static async _onClearDebugManeuvers() {
+    return this.actor.update({ [`flags.dbu-ttrpg.${DEBUG_MANEUVERS}`]: [], [`flags.dbu-ttrpg.-=${DEBUG_GOD_MANEUVERS}`]: null });
   }
 
   /** Closed: the button, Escape, or a click beside it. The Turn State's Edit locks again with it. */

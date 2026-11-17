@@ -200,25 +200,47 @@
   </section>
   {{/if}}
 
-  {{#if combatWindow.godManeuvers}}
+  {{! Debug's Maneuver Access (the user's, 2026-11-16, in place of its God Maneuvers): any Special or God Maneuver - Villainous on an
+      Adversary's - opened by hand. Sections and types filter it, a section or type with every one open not shown; the search
+      ignores them (actor-character-sheet.mjs #wireManeuverAccess). }}
+  {{#if combatWindow.maneuverAccess}}
   <div class="dbu-combat-overlay">
-    <div class="dbu-combat-window" role="dialog" aria-modal="true">
-      <header><h3>God Maneuvers &middot; Debug</h3></header>
-      <p class="dbu-manage-note">Ticked: open to this character, usable while in the God Ki State. One an effect already grants is open
-        whatever is ticked here.</p>
-      <div class="dbu-combat-window-body dbu-picks ally-picks">
-        {{#each godManeuverPicks as |pick|}}
-        <label class="dbu-pick{{#if pick.ticked}} on{{/if}}{{#if pick.byEffect}} on{{/if}}"{{#if pick.byEffect}} data-tooltip="Granted by an effect"{{/if}}>
-          <input type="checkbox" data-action="toggleDebugGod" data-id="{{pick.id}}"
-                 {{#if pick.ticked}}checked{{/if}}{{#if pick.byEffect}} checked disabled{{/if}}{{#unless @root.editable}} disabled{{/unless}}/>
-          {{#if pick.img}}<img class="ally-img dbu-item-img" src="{{pick.img}}" alt=""/>{{/if}}
-          {{pick.name}}{{#if pick.byEffect}} <em class="dbu-pick-note">by an effect</em>{{/if}}
-        </label>
-        {{else}}
-        <p class="dbu-clist-empty">No God Maneuver on this character - Add core maneuvers gives them.</p>
+    <div class="dbu-combat-window dbu-access-window" role="dialog" aria-modal="true" data-maneuver-access>
+      <header><h3>Maneuver Access &middot; Debug</h3></header>
+      <p class="dbu-manage-note">Ticked: open to this character as an effect's grant would open it. A God Maneuver still asks for the God
+        Ki State. One something else opens already cannot be unticked here.</p>
+      <input type="search" class="dbu-maneuver-search" data-access-search placeholder="Search by name" autocomplete="off" spellcheck="false"/>
+      <div class="dbu-maneuver-tabs">
+        {{#each maneuverAccess.sections as |section|}}
+        <button type="button" class="dbu-maneuver-tab" data-access-section="{{section.key}}" data-label="{{section.label}}">
+          {{section.label}}<b data-access-count></b></button>
         {{/each}}
       </div>
-      <footer><button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button></footer>
+      <div class="dbu-maneuver-tabs dbu-access-types">
+        <button type="button" class="dbu-maneuver-tab" data-access-type="all">All types</button>
+        {{#each maneuverAccess.types as |type|}}
+        <button type="button" class="dbu-maneuver-tab" data-access-type="{{type.key}}">{{type.label}}</button>
+        {{/each}}
+      </div>
+      <p class="dbu-maneuver-note" data-access-hint hidden>Searching every Maneuver - the sections are ignored.</p>
+      <div class="dbu-combat-window-body dbu-picks dbu-access-rows">
+        {{#each maneuverAccess.rows as |row|}}
+        <label class="dbu-pick dbu-access-row{{#if row.open}} on{{/if}}" data-access-row data-section="{{row.section}}" data-type="{{row.type}}"
+               data-name="{{row.key}}" data-open="{{#if row.open}}1{{else}}0{{/if}}">
+          <input type="checkbox" data-action="toggleDebugManeuver" data-id="{{row.id}}"
+                 {{#if row.open}}checked{{/if}}{{#if row.lock}} disabled{{/if}}{{#unless @root.editable}} disabled{{/unless}}/>
+          <span class="dbu-access-name">{{row.name}} <span class="dbu-access-kind" data-access-kind hidden>{{row.sectionLabel}}</span></span>
+          <span class="dbu-access-type">{{row.typeLabel}}</span>
+          {{#if row.lock}}<span class="dbu-access-lock">{{row.lock}}</span>{{/if}}
+        </label>
+        {{/each}}
+        <p class="dbu-clist-empty" data-access-empty hidden></p>
+      </div>
+      <p class="dbu-maneuver-note" data-access-gone hidden></p>
+      <footer>
+        <button type="button" class="dbu-manage" data-action="clearDebugManeuvers" {{#unless editable}}disabled{{/unless}}>Untick all</button>
+        <button type="button" class="dbu-manage" data-action="closeCombatWindow">Close</button>
+      </footer>
     </div>
   </div>
   {{/if}}
@@ -384,9 +406,9 @@
       {{! From the Maneuvers tab (the user's): what a character made before Maneuvers were Items is missing. }}
       <button type="button" data-action="grantManeuvers" class="capacity-reset"
               data-tooltip="Give this character any core Maneuver they are missing. New characters get them automatically.">Add core maneuvers</button>
-      {{! Which God Maneuvers this character has, for what nothing written grants yet - usable in the God Ki State (the user's). }}
-      <button type="button" data-action="openCombatWindow" data-window="godManeuvers" class="capacity-reset"
-              data-tooltip="Choose which God Maneuvers this character has access to - usable while in the God Ki State.">God Maneuvers</button>
+      {{! Which Special and God Maneuvers this character has, for what nothing written grants yet (the user's). }}
+      <button type="button" data-action="openCombatWindow" data-window="maneuverAccess" class="capacity-reset"
+              data-tooltip="Open any Special or God Maneuver to this character, as an effect would - a God Maneuver still in the God Ki State.">Maneuver Access</button>
       {{! Fusion (the user's): with whom and by which Method - a new Fusion, or theirs fused again. Not a Fusion's own. }}
       {{#unless isFusion}}
       <button type="button" data-action="fuseWith" class="capacity-reset"

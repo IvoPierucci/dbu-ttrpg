@@ -5902,6 +5902,22 @@
 
 /* Manage at the far right of the Maneuvers tab's type tabs (the user's). */
 .dbu-ttrpg .dbu-maneuver-tabs { align-items: center; }
+
+/* Debug's Maneuver Access (the user's, 2026-11-16): a row each - box, name (its section beside it while searching), type, and what
+   opens it already; a section or type filter greyed while the search ignores it, hidden where every one in it is open. */
+.dbu-ttrpg .dbu-access-window .dbu-maneuver-search { margin: 0 0 4px; }
+.dbu-ttrpg .dbu-access-window .dbu-maneuver-tabs { margin: 2px 0; }
+.dbu-ttrpg .dbu-access-window .dbu-maneuver-tab[hidden] { display: none; }
+.dbu-ttrpg .dbu-access-window .dbu-maneuver-tab.dbu-access-off { border-style: dashed; opacity: 0.6; }
+.dbu-ttrpg .dbu-access-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+.dbu-ttrpg .dbu-access-row[hidden] { display: none; }
+.dbu-ttrpg .dbu-access-name { min-width: 0; overflow-wrap: anywhere; }
+.dbu-ttrpg .dbu-access-kind { margin-left: 4px; padding: 0 5px; border: 1px solid var(--dbu-border); border-radius: 3px; font-size: 10px; }
+.dbu-ttrpg .dbu-access-kind[hidden] { display: none; }
+.dbu-ttrpg .dbu-access-type { font-size: 11px; color: var(--dbu-text-dim); }
+.dbu-ttrpg .dbu-access-lock { padding: 0 5px; border: 1px solid #4f8a62; border-radius: 3px; font-size: 10px; color: #9fd8b0; white-space: nowrap; }
+.dbu-ttrpg .dbu-access-window [data-access-gone][hidden], .dbu-ttrpg .dbu-access-window [data-access-hint][hidden],
+.dbu-ttrpg .dbu-access-window [data-access-empty][hidden] { display: none; }
 .dbu-ttrpg .dbu-maneuver-tabs .dbu-maneuver-manage { margin-left: auto; flex: 0 0 auto; width: auto; }
 
 /* --- Custom Buffs (the user's; custom-buffs.mjs) -------------------------------------------------------
