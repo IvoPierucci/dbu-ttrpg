@@ -4847,6 +4847,35 @@ async function revertTransfiguration(actor, target, maneuver) {
  * are not measured (`_throughPortal`, read by whyNotWithinMelee and whyNotInReach), an attack carries `portal` - no Long
  * Range - and the choice is spent once a Maneuver is made.
  */
+/**
+ * Fake Out's and Trick Attack's Clash cards, one a target and feature: Fake Out against each, Trick Attack against each Opponent
+ * ("When you target an Opponent with this Attacking Maneuver" - an Ally aimed at is not fooled). Aimed at the attack's card where it
+ * is made already (`attackMessageId`), else once it is (useManeuverOnce). What was posted, by kind and target.
+ */
+async function postTechniqueClashes(actor, maneuver, features, targets, { attackMessageId = "", skip = new Set() } = {}) {
+  const list = [].concat(features ?? []);
+  const trickSkill = maneuver.featureChoices?.["trick-attack"] || "bluff";
+  const posted = [];
+  const seen = new Set();
+  for (const target of targets.filter(Boolean)) {
+    if (seen.has(target.uuid)) continue;
+    seen.add(target.uuid);
+    if (list.includes("fake-out") && !skip.has(`fake-out:${target.uuid}`)) {
+      const message = await postSkillClash(actor, target, { name: `${maneuver.name} (Fake Out)`, type: "instant",
+        clash: { skill: "bluff", defenderSkills: ["intuition"] } },
+        { techniqueClash: { kind: "fake-out", attackMessageId, applied: false } });
+      if (message) posted.push({ kind: "fake-out", uuid: target.uuid, message });
+    }
+    if (list.includes("trick-attack") && areOpponents(target, actor) && !skip.has(`trick-attack:${target.uuid}`)) {
+      const message = await postSkillClash(actor, target, { name: `${maneuver.name} (Trick Attack)`, type: "instant",
+        clash: { skill: trickSkill, defenderSkills: ["intuition", "perception"] } },
+        { techniqueClash: { kind: "trick-attack", attackMessageId, applied: false } });
+      if (message) posted.push({ kind: "trick-attack", uuid: target.uuid, message });
+    }
+  }
+  return posted;
+}
+
 export async function useManeuver(actor, maneuver, options = {}) {
   // Planet Burst (a Villainous Maneuver): a Mega Flare at every Player Character in the Combat, with PCC Energy Charges.
   if ((maneuver?.id === "planet-burst") && !options.targetUuid) {
@@ -7046,6 +7075,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       extraActions: (Number(declared.extraActions) || 0) + (Number(burstActions) || 0)
     } } };
   }
+  // Fake Out and Trick Attack: their Clash cards posted before the attack's (the user's) - aimed at it once it is made, below.
+  const earlyClashes = (declared && maneuver.signature && !maneuver.signatureTechnique)
+    ? await postTechniqueClashes(actor, maneuver, declared.advantages ?? maneuver.advantages ?? [],
+        [targetActor, ...[...extraTargets, ...(declared.extraTargets ?? [])].map(entry => fromUuidSync(entry?.uuid ?? ""))])
+    : [];
   const card = maneuver.suplex
     ? await (await import("./chat.mjs")).postMightClash(actor, fromUuidSync(actor.system.grapple.partner), {
         maneuverName: maneuver.name,
@@ -7425,25 +7459,30 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     if (!back) await actor.items.get(thrown.itemId)?.update({ "system.equipped": false });
   }
 
-  // Fake Out and Trick Attack: a Clash against each target as the attack is declared, settled onto
-  // the attack before it is answered.
-  if (card && declared && maneuver.signature && !maneuver.signatureTechnique) {
+  // Fake Out and Trick Attack: a Clash against each target as the attack is declared, settled onto the attack before it is
+  // answered. Posted before the attack's card (above, the user's): each aimed at it now - or taken back where the attack has not
+  // that feature or that target after all; one for a target the attack gained (an area's) posted now.
+  if (!card) {
+    for (const early of earlyClashes) await early.message.delete();
+  }
+  else if (declared && maneuver.signature && !maneuver.signatureTechnique) {
     const features = card.getFlag?.("dbu-ttrpg", "attack")?.technique?.features ?? [];
     const aimed = (card.getFlag?.("dbu-ttrpg", "attack")?.targets ?? []).map(entry => fromUuidSync(entry.uuid))
       .filter(Boolean);
-    const trickSkill = maneuver.featureChoices?.["trick-attack"] || "bluff";
-    for (const target of aimed) {
-      if (features.includes("fake-out")) {
-        await postSkillClash(actor, target, { name: `${maneuver.name} (Fake Out)`, type: "instant",
-          clash: { skill: "bluff", defenderSkills: ["intuition"] } },
-          { techniqueClash: { kind: "fake-out", attackMessageId: card.id, applied: false } });
+    const posted = new Set();
+    for (const early of earlyClashes) {
+      if (!features.includes(early.kind) || !aimed.some(target => target.uuid === early.uuid)) {
+        await early.message.delete();
+        continue;
       }
-      // Trick Attack: "When you target an Opponent with this Attacking Maneuver" - an Ally aimed at is not fooled (allies.mjs).
-      if (features.includes("trick-attack") && areOpponents(target, actor)) {
-        await postSkillClash(actor, target, { name: `${maneuver.name} (Trick Attack)`, type: "instant",
-          clash: { skill: trickSkill, defenderSkills: ["intuition", "perception"] } },
-          { techniqueClash: { kind: "trick-attack", attackMessageId: card.id, applied: false } });
-      }
+      const clash = early.message.getFlag("dbu-ttrpg", "clash") ?? {};
+      await early.message.setFlag("dbu-ttrpg", "clash", { ...clash,
+        techniqueClash: { ...(clash.techniqueClash ?? {}), attackMessageId: card.id } });
+      posted.add(`${early.kind}:${early.uuid}`);
+    }
+    const late = aimed.filter(target => ["fake-out", "trick-attack"].some(kind => features.includes(kind) && !posted.has(`${kind}:${target.uuid}`)));
+    for (const early of await postTechniqueClashes(actor, maneuver, features, late, { attackMessageId: card.id, skip: posted })) {
+      posted.add(`${early.kind}:${early.uuid}`);
     }
   }
 
