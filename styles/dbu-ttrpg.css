@@ -385,6 +385,22 @@
   gap: 4px;
 }
 
+/* A feature's TP Cost written over, between its TP and its cross (the user's): two characters wide, no spinner; its listed cost greyed
+   as the placeholder. */
+.dbu-ttrpg .technique-tp-cost {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 22px;
+  padding: 0 2px;
+  text-align: center;
+  font-size: 12px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.dbu-ttrpg .technique-tp-cost::-webkit-inner-spin-button,
+.dbu-ttrpg .technique-tp-cost::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.dbu-ttrpg .technique-given { font-style: italic; }
+
 .dbu-ttrpg .gear-rank {
   width: 20px;
   height: 20px;

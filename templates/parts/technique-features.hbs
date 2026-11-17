@@ -47,10 +47,19 @@
       <button type="button" class="gear-type gear-choice" data-action="chooseFeature" data-index="{{row.index}}"
               data-tooltip="Change">{{row.choiceLabel}}</button>
       {{/if}}
+      {{#if row.fixedChoice}}<span class="gear-type gear-choice">{{row.choiceLabel}}</span>{{/if}}
       <span class="gear-type">{{row.tp}} TP</span>
       {{#if row.problem}}<span class="gear-warning" data-tooltip="{{row.problem}}">Requirement not met</span>{{/if}}
+      {{#if row.given}}
+      {{! Given by an effect (Favored Technique's): no TP, changed where it is chosen - nothing to write or take off here. }}
+      <span class="gear-type technique-given" data-tooltip="Given by {{row.given}}: no TP spent on it - changed on that Talent's Options">{{row.given}}</span>
+      {{else}}
+      {{! Its TP Cost written over (the user's, as a Unique Ability's TP Cost Change): blank, what it lists. }}
+      <input type="number" class="technique-tp-cost" data-feature-tp="{{row.index}}" value="{{row.tpCost}}" placeholder="{{row.listedTp}}"
+             step="1" data-tooltip="Its TP Cost, written over - what an effect makes it cost. Blank: {{row.listedTp}}, what it lists"/>
       <button type="button" class="gear-remove" data-action="removeFeature"
               data-index="{{row.index}}" data-tooltip="Remove">&times;</button>
+      {{/if}}
     </div>
     <div class="technique-feature-text">
       {{#each row.lines as |line|}}

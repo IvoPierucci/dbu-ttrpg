@@ -6,8 +6,9 @@ import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { MANEUVER_TYPES, PROFILES, SUPER_PROFILES, TAIL_VARIANTS, getManeuver } from "../maneuvers.mjs";
 import { pickedName, wireNameSearch } from "../search.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
+import { favoredAdvantage, favoredChoiceOf } from "../data/item-maneuver.mjs";
 import {
-  LEVELS, choiceLabel, composeTechniqueEffects, featureCatalogue, featureChoiceOptions, featureDef, featureProblem,
+  LEVELS, choiceLabel, composeTechniqueEffects, featureCatalogue, featureChoiceOptions, featureDef, featureEntryTP, featureProblem,
   featureTP, isUltimate, maxRanks, profileKiPerTier, signatureOf, superProfileKiPerTier,
   superProfileProblem, techniqueKiPerTier, techniqueTP, techniqueTPCharged, tierTpCap, godFinisherProblem
 } from "../technique.mjs";
@@ -336,7 +337,10 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
         ranked: top > 1,
         canUp: entry.ranks < top,
         canDown: entry.ranks > 1,
-        tp: featureTP(def, entry.ranks),
+        tp: featureEntryTP(entry),
+        // Its TP Cost written over, in the box between it and the cross - blank where it costs what it lists (listedTp).
+        listedTp: featureTP(def, entry.ranks),
+        tpCost: Number.isFinite(entry.tpCost) ? entry.tpCost : "",
         choose: def?.choose ?? "",
         choiceLabel: entry.choice ? choiceLabel(def, entry.choice) : (def?.choose ? "Not chosen" : ""),
         problem: featureProblem(entry.id, sig, { actor }),
@@ -348,6 +352,17 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
           .map(line => (line ? { text: line, bullet: /^[*•]/.test(line) } : { gap: true }))
       };
     });
+    // Favored Technique (2): "Apply that Advantage to your Favored Technique" - on its list too (the user's), no TP for it, its Talent's
+    // to change; where it is on the list already, the Talent gives it no rank more.
+    const favored = favoredAdvantage(this.item);
+    if (favored && !sig.features.some(entry => entry.id === favored)) {
+      const def = featureDef(favored);
+      const choice = favoredChoiceOf(this.item)[favored] ?? "";
+      rows.push({ index: -1, id: favored, name: def?.name ?? favored, side: "Advantage", ranks: 1, ranked: false, tp: 0, given: "Favored Technique",
+        choose: "", choiceLabel: choice ? choiceLabel(def, choice) : "", fixedChoice: Boolean(choice), problem: "", disadvantage: false,
+        tip: def?.summary ?? "", lines: String(def?.text ?? "").split("\n").map(line => line.trim())
+          .map(line => (line ? { text: line, bullet: /^[*•]/.test(line) } : { gap: true })) });
+    }
 
     // What can be added: every feature not already on it, greyed where its Requirement fails.
     const catalogue = featureCatalogue();
@@ -395,6 +410,17 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
   async _onRender(context, options) {
     await super._onRender(context, options);
     this.#wireFeatureSearch();
+    // A feature's TP Cost written over, in its box: kept on the entry, not submitted with the form - blank, what it lists again.
+    for (const input of this.element.querySelectorAll("[data-feature-tp]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        const index = Number(input.dataset.featureTp);
+        const written = String(input.value ?? "").trim();
+        const tpCost = (written === "") || !Number.isFinite(Number(written)) ? null : Math.trunc(Number(written));
+        const features = signatureOf(this.item).features.map((each, at) => (at === index) ? { ...each, tpCost } : each);
+        this.item.update(this.#withFeatures(features));
+      });
+    }
     // An Advancement's TP Cost Change, written on its card: kept on the entry, not submitted with the form.
     for (const input of this.element.querySelectorAll("[data-advancement-change]")) {
       input.addEventListener("change", event => {

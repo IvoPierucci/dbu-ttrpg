@@ -635,7 +635,9 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
           id: new fields.StringField({ required: true, blank: false }),
           ranks: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),
           /** Widespread's shape, Trick Attack's Skill, Condition's Condition, and so on. */
-          choice: new fields.StringField({ required: true, blank: true, initial: "" })
+          choice: new fields.StringField({ required: true, blank: true, initial: "" }),
+          /** Its TP Cost written over (the user's): what an effect makes it cost - null where it costs what it lists. */
+          tpCost: new fields.NumberField({ required: false, nullable: true, integer: true, initial: null })
         }), { required: true, initial: [] }),
         /**
          * Delayed: "keep a record of the Dice Score of your Wound Roll". Which attack it was, who

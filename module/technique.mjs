@@ -67,7 +67,11 @@ export function signatureOf(item) {
     // Powerful Technique (3)'s Advantage, given - bought already, its TP refunded (techniqueTP).
     powerfulFree: powerfulFreeOf(item),
     features: Array.from(sig.features ?? []).map(entry => ({
-      id: entry.id, ranks: Math.max(1, Number(entry.ranks) || 1), choice: entry.choice ?? ""
+      id: entry.id, ranks: Math.max(1, Number(entry.ranks) || 1), choice: entry.choice ?? "",
+      // Its TP Cost written over (the user's, as a Unique Ability's TP Cost Change): what an effect makes it cost - Favored
+      // Technique's 0. Null where it costs what it lists.
+      ...((entry.tpCost !== null) && (entry.tpCost !== undefined) && (entry.tpCost !== "") && Number.isFinite(Number(entry.tpCost))
+        ? { tpCost: Math.trunc(Number(entry.tpCost)) } : {})
     })).filter(entry => entry.id)
   };
 }
@@ -119,6 +123,12 @@ export function featureTP(def, ranks = 1) {
   return total;
 }
 
+/** What one feature on a Technique costs: its TP Cost written over where it is (`tpCost`), else what its ranks list. */
+export function featureEntryTP(entry) {
+  if ((entry?.tpCost !== null) && (entry?.tpCost !== undefined) && Number.isFinite(Number(entry.tpCost))) return Math.trunc(Number(entry.tpCost));
+  return featureTP(featureDef(entry?.id), entry?.ranks);
+}
+
 /**
  * The Technique's TP Cost: 8, plus its Advantages, less its Disadvantages, never under 8 -
  * and then +4 for an Ultimate, "applied after all modifications".
@@ -136,7 +146,7 @@ export function techniqueTP(sig, slots = null) {
   // What an effect gives it is free and not the Technique's: no TP for it, and none counted towards its KP or its cap (the
   // user's) - God of War's Weapon Assisted. An Advantage or a Disadvantage alike.
   const features = (sig.features ?? []).filter(entry => !givenFree(entry, slots, sig)).reduce((sum, entry) =>
-    sum + featureTP(featureDef(entry.id), entry.ranks), 0);
+    sum + featureEntryTP(entry), 0);
   const start = techniqueStartTP(sig);
   const built = Math.max(Math.min(MINIMUM_TP, start), start + features);
   return built + (isUltimate(sig.level) ? ULTIMATE_TP : 0);
