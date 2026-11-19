@@ -1,0 +1,17 @@
+id: perfection-genetic-zenkai
+name: Genetic Zenkai
+order: 4
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: perfect-traits
+groupLabel: Perfect Traits
+description: >
+  Brought back from the brink of death, your power grows beyond measure.
+text: >
+  Genetic Zenkai: Brought back from the brink of death, your power grows beyond measure.
+  (1)-[Passive]: While you are below the Injured Health Threshold, increase your Wound Rolls and Soak Value by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you have used a [Triggered/Defeated] effect this Combat Encounter and are not Defeated after its use, increase your Tier of Power by 1 (see — Breakthrough) until the end of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,16 @@
+id: doping-dangerous-amplification
+name: Dangerous Amplification
+order: 2
+slot: trait
+description: >
+  Thanks to the chemicals soaking your brain, your adrenaline is in overdrive, amping up your aggression and driving you to action, regardless of the cost to your body.
+text: >
+  Dangerous Amplification: Thanks to the chemicals soaking your brain, your adrenaline is in overdrive, amping up your aggression and driving you to action, regardless of the cost to your body.
+  (1)-[Passive]: Halve your Surgency.
+  (2)-[Triggered]: When you use an Attacking Maneuver, you may spend Life Points up to the Ki Point Cost of that Attacking Maneuver. If you do, increase the Wound Roll by an equal amount.
+  (3)-[1/Round]: You may spend 4(bT) Life Points to use the Power Up Maneuver as an Instant Maneuver.
+  (4)-[Triggered, 1/Encounter]: If you spend more than 8(bT) Life Points through the 2nd effect of Dangerous Amplification, you may apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,15 @@
+id: great-namekian-giants-vantage
+name: Giant's Vantage
+order: 2
+slot: burst
+description: >
+  From your new height in the clouds, you can clearly see the battlefield, making everyone- and their attacks- seem like tiny ants.
+text: >
+  Giant's Vantage: From your new height in the clouds, you can clearly see the battlefield, making everyone- and their attacks- seem like tiny ants.
+  (1)-[Triggered/Transform]: Until the end of your next turn:
+  All other Characters are Studied.
+  Increase your Damage Reduction by 1/2 (rounded up) of G(T).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

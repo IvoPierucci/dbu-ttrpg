@@ -63,7 +63,8 @@
       "talent": {},
       "racial": {},
       "maneuver": {},
-      "gear": {}
+      "gear": {},
+      "transformation": {}
     }
   },
   "primaryTokenAttribute": "life",

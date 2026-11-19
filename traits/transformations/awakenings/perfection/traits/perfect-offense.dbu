@@ -1,0 +1,17 @@
+id: perfection-perfect-offense
+name: Perfect Offense
+order: 9
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: perfect-traits
+groupLabel: Perfect Traits
+description: >
+  Your strongest techniques pack a greater punch.
+text: >
+  Perfect Offense: Your strongest techniques pack a greater punch.
+  (1)-[Passive]: Increase your Wound Rolls by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you use an Ultimate Signature Technique and spend 3+ Adaptation Points on the Wound Roll of that Attacking Maneuver, apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

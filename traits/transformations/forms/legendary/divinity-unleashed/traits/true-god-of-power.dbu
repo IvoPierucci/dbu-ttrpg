@@ -1,0 +1,22 @@
+id: divinity-unleashed-true-god-of-power
+name: True God of Power
+order: 5
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 2
+description: >
+  Possessing physical might that dwarfs mortal comprehension, you represent the aspirations of all who seek to grow strong.
+text: >
+  True God of Power: Possessing physical might that dwarfs mortal comprehension, you represent the aspirations of all who seek to grow strong.
+  (1)-[Prerequisite]: Access to the God of Power effect for the Option effect of Divine Magic.
+  (2)-[Permanent]: Divinity Unleashed gains the Bulky and Armored Aspects.
+  (3)-[Passive]: Reduce your Muscle Penalty by 1(bT).
+  (4)-[Passive]: Increase the Attribute Modifier Bonus (FO/TE) of Divinity Unleashed by 1(T) for each stack of Super Stack you possess.
+  (5)-[Triggered, 1/Encounter]: If you use the Divine Muscle God Maneuver in response to an Attacking Maneuver, set the Damage Category of that Attacking Maneuver to Standard for the sake of your Damage calculation. If it would already be Standard (either normally, or due to other Aspects/effects that reduced the Damage Category), then double your Soak Value for the duration of that Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

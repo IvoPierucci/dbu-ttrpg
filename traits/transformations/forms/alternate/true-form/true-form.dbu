@@ -1,0 +1,35 @@
+id: true-form
+name: True Form
+type: form
+subtype: alternate
+racial: Arcosian
+prerequisites: Emperor Mutation Trait
+line: metamorphosis
+stage: 3
+tier: 4+
+stress: 20
+aspects: Enhanced Save (Corporeal/Impulsive), Draining (LV2), Power High (LV1), Long Transformation (LV2), Exhausting
+bonuses: AG +3(T), FO +3(T), TE +3(T), IN +1(T), MA +3(T)
+description: >
+  The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
+text: >
+  The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
+
+  **True Form** — Racial Requirement: Arcosian / Form / Alternate / Prerequisite(s): Emperor Mutation Trait / Line: Metamorphosis / Stage: 3 / Stress Test Requirement: 20 / Tier of Power Requirement. 4+
+  Aspects: Enhanced Save (Corporeal/Impulsive), Draining (LV2), Power High (LV1), Long Transformation (LV2), Exhausting
+  AG +3(T) · FO +3(T) · TE +3(T) · SC – · IN +1(T) · MA +3(T) · PE –
+
+  Unending Pressure: Your sheer, overwhelming power enables you to tear through your prey like tissue paper.
+  (1)-[Passive]: While you are above the Injured Health Threshold, increase your Strike and Dodge Rolls by 1(T).
+  (2)-[Passive]: While in the Superior State, you are treated as if you are in the Healthy Health Threshold for all of your effects.
+  (3)-[Triggered, 1/Round]: If you deal Damage to an Opponent with an Attacking Maneuver made through the 2nd effect of Coup de Grace, gain an additional stack of Overwhelm.
+  (4)-[Triggered, 1/Encounter]: If you maximize your stacks of Overwhelm, enter the Superior State until the start of your next turn. If you were already in the Superior State, enter the Surging State instead.
+
+  MASTERY TRAIT — Conquered Mutation: You have finally, at long last, mastered the power you were born with, and this power is now wholly yours to command.
+  (1)-[Permanent]: True Form loses the Long Transformation and Exhausting Aspects.
+  (2)-[Permanent]: All Stages of Metamorphosis gain the Perfect Ki Control Aspect.
+  (3)-[Passive]: Ignore the 3rd effect of Suppression of Power.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

@@ -1,0 +1,19 @@
+id: suppressed-divinity-divine-role
+name: Divine Role
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Granted dominion over an aspect of reality, you now stand tall as a true deity in your own right.
+text: >
+  Divine Role: Granted dominion over an aspect of reality, you now stand tall as a true deity in your own right.
+  (1)-[Permanent, Passive]: Upon gaining access to Suppressed Divinity, select 2 God Maneuvers. You have access to those God Maneuvers while in any Transformation of the Appointed God Transformation Line.
+  (2)-[Passive]: You gain access to the Injury Transfer and Space-Time Connection Unique Abilities.
+  (3)-[Passive]: Increase the Combat Rolls of all Allies within a Large Sphere AoE (centered on you) by 1(T). If you have no Allies within this AoE, instead increase your Wound Rolls and Soak Value by 1(T).
+  (4)-[Triggered]: If you use Combat Recovery, all Allies within a Large Sphere AoE (centered on you) regain Ki Points equal to 1/2 of your Surgency.
+  (5)-[Triggered/Power, 1/Round]: If you have no Allies within a Large Sphere AoE (centered on you) and you have not used Combat Recovery this Combat Round, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you use this effect, you cannot use Combat Recovery during this Combat Round.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

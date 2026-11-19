@@ -1,0 +1,55 @@
+id: time-power
+name: Time Power
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: Access to the Time Freeze Unique Ability
+tier: 2+
+stress: 12
+aspects: Enhanced Save (Cognitive), Exhausting, Draining (LV2)
+bonuses: AG +1(T), FO +1(T), IN +1(T), MA +1(T)
+description: >
+  By some means, you have achieved complete mastery over the flow of time, allowing you to move through it at your own pace, control the rate at which others move through it, or even stop it altogether. There is no defense against your newfound abilities; all challengers will crumble against your Time Power unleashed.
+text: >
+  By some means, you have achieved complete mastery over the flow of time, allowing you to move through it at your own pace, control the rate at which others move through it, or even stop it altogether. There is no defense against your newfound abilities; all challengers will crumble against your Time Power unleashed.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): Access to the Time Freeze Unique Ability / Stress Test Requirement: 12 / Tier of Power Requirement. 2+
+  Aspects: Enhanced Save (Cognitive), Exhausting, Draining (LV2)
+  AG +1(T) · FO +1(T) · TE – · SC – · IN +1(T) · MA +1(T) · PE –
+
+  Time Control: You possess true mastery over time, allowing you to manipulate the very flow of time around your enemies.
+  (1)-[Permanent]: You gain access to the Time Profile.
+  (2)-[Passive]: You gain access to the Time Seal and Time Reversion Unique Abilities.
+  (3)-[Triggered, 1/Encounter]: When using a Signature Technique, you may add the Multi-Profile Super Profile to that Attacking Maneuver, but you must select the Time Profile for the effects of Multi-Profile.
+  (4)-[Automatic/Start of Turn]: If you are not in the God Ki Special State, reduce your Life Points by 1/10th of your Maximum Life Points.
+
+  Time Profile — Time: You slow the flow of time around your opponent. –Foundations: All –Damage Category: Standard –KP Cost: 10(T) –Effect: If you deal Damage to an Opponent with this Attacking Maneuver, they gain a stack of the Slowed Combat Condition until the end of your next turn and the Guard Down Combat Condition until the end of this turn.
+
+  Time Unique Abilities
+  **Time Seal** — You alter the flow of time around your enemy, slowing their perception of reality.
+  –Ability Type: Magical –Prerequisites: Access to the Time Power Enhancement Power –TP Cost: N/A –KP Cost: 12(T) –Maneuver Type: Standard –Action Cost: 2 Actions –Minions: Non-Minion –Passive Bonus: N/A
+  –Effect: Target an Opponent within your Melee Range. Make 3 Clashes (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) against that Opponent. For each Clash you win, that Opponent gains a stack of the Slowed Combat Condition until the end of your next turn. If you win all three Clashes, your Opponent does not lose these stacks of the Slowed Combat Condition until the end of the Combat Encounter.
+  You can only use this Unique Ability once per Combat Encounter.
+  **Time Reversion** — You turn back the clock, preventing the actions of others from having ever occurred.
+  –Ability Type: Magical –Prerequisites: Access to the Time Power Enhancement Power –TP Cost: N/A –KP Cost: 12(T) –Maneuver Type: Counter –Action Cost: 2 Counter Actions –Minions: Non-Minion –Passive Bonus: N/A
+  –Effect: When a Character uses an Instant Maneuver or a Standard Maneuver with an Action Cost of 1 Action, you may use this Maneuver in response to it. Make a Clash (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) against that character. If you win, their Maneuver is cancelled. Any Ki Points, Divine Ki Points, or Resources spent on that Maneuver are regained, but the Action Cost is still spent and this use of that Maneuver counts to any limitations on how many times that Maneuver can be used in a Combat Round (but not any limitations on how many times it can be used in a Combat Encounter).
+  You can only use this Unique Ability once per Combat Encounter.
+
+  The Frozen Time: You can halt time more effectively than anyone else, allowing you to dominate your opponents while they cannot fight back.
+  (1)-[Passive]: Increase your Combat Rolls against Opponents with the Slowed Combat Condition by 1(T).
+  (2)-[Passive]: Increase your Wound Rolls by 2(T) during a Frozen Turn.
+  (3)-[Passive]: Gain an additional Action for your Frozen Turn through the effects of the Time Freeze Unique Ability.
+  (4)-[Triggered, 1/Encounter]: During your Frozen Turn, if you knock an Opponent through a Health Threshold with an Attacking Maneuver, that Opponent automatically fails their Steadfast Check.
+
+  BURST LIMIT — Time Has Stopped: You instantly halt the flow of time all around you, allowing you to act as you please.
+  (1)-[Triggered/Transform]: Use the Time Freeze Unique Ability without paying the Ki Point Cost.
+
+  MASTERY TRAIT — Dominion Over Time: Your mastery over the flow of time is so great that you can command it with merely a thought.
+  (1)-[Permanent]: Time Power loses the Exhausting and Draining Aspects.
+  (2)-[Passive]: Reduce the Ki Point Cost of any Unique Ability with 'Time' in their name by 2(T).
+  (3)-[Passive]: The 3rd effect of Time Control loses the [1/Encounter] Keyword and gains the [1/Round, 2/Encounter] Keywords.
+  (4)-[Passive]: Ignore the 4th effect of Time Control.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

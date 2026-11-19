@@ -1,0 +1,18 @@
+id: oozaru-furious-beast
+name: Furious Beast
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  The beast within overwhelms most Saiyans' minds, taking over and sending them into a berserk rage.
+text: >
+  Furious Beast: The beast within overwhelms most Saiyans' minds, taking over and sending them into a berserk rage.
+  (1)-[Permanent]: You cannot enter this Transformation unless there is a full moon or False Moon, and you can't gain access to Oozaru except through the 5th effect of Saiyan Heritage.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T) for each Health Threshold you are below.
+  (3)-[Passive]: You may apply an unlimited number of Battle Born stacks to your Wound Rolls.
+  (4)-[Automatic]: If you would gain a stack of Battle Born, you must apply it to your Wound Rolls.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

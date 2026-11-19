@@ -1,0 +1,16 @@
+id: wrathful-empowering-fury
+name: Empowering Fury
+order: 2
+slot: trait
+description: >
+  Your burning rage fuels you, driving you to new heights of power.
+text: >
+  Empowering Fury: Your burning rage fuels you, driving you to new heights of power.
+  (1)-[Passive]: While you are below the Injured Health Threshold, increase your Tier of Power Extra Dice by G Dice Categories.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T) for each Health Threshold you are below.
+  (3)-[Triggered, 1/Encounter]: When you trigger the second effect of Born for Battle, apply your Surgency twice for the Ki Surge used through this effect.
+  (4)-[Triggered, 1/Encounter]: If you enter the 2nd Grade for this Transformation, gain a stack of Battle Born.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

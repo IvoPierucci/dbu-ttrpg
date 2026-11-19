@@ -1,0 +1,21 @@
+id: super-saiyan-1-s-cells
+name: S-Cells
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 3
+description: >
+  The latent power in your blood awakens, granting you increased might.
+text: >
+  S-Cells: The latent power in your blood awakens, granting you increased might.
+  (1)-[Passive]: While you have 4+ stacks of Battle Born, increase the Tier of Power Extra Dice for your Combat Rolls by 1 Category and increase your Damage Reduction by 1(T).
+  (2)-[1/Round]: While you have 6+ stacks of Battle Born, you may use the Power Up Maneuver as an Instant Maneuver.
+  (3)-[Permanent, Option]: Upon gaining access to this Transformation, select one of the following effects:
+  Super Surger [Passive]: While you have 2+ stacks of Power, increase your Combat Rolls and Surgency by 1(T) and 2(T) respectively.
+  Super Speed [Passive]: While you have 2+ stacks of Battle Born applied to your Dodge Rolls, increase your Speeds and Defense Value by 1(T).
+  Super Sturdy [Passive]: While you have 2+ stacks of Battle Born applied to your Wound Rolls, increase your Soak Value by 2(T).
+  Super Specialist [Permanent, Passive]: Upon gaining this effect, select a Foundation. Increase your Strike Rolls and Wound Rolls for that Foundation by 1(T) and 2(T) respectively while you have a Battle Born stack in their respective Combat Rolls.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

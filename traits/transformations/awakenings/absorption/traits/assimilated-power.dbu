@@ -1,0 +1,20 @@
+id: absorption-assimilated-power
+name: Assimilated Power
+order: 1
+slot: trait
+description: >
+  You have taken another's power into yourself, making it your own, at least for the time being.
+text: >
+  Assimilated Power: You have taken another's power into yourself, making it your own, at least for the time being.
+  (1)-[Ruling]: Upon gaining a stack of Absorption, a Character will be assigned to that stack of Absorption as the 'Absorbed Character'. Each stack of Absorption has an 'Absorbed Character'.
+  (2)-[Addendum]: Please refer to the 'Absorption AMB', 'Temporary Absorption Limit', 'Absorbing Fusions', and 'Out-of-Combat Absorption' text boxes below.
+  (3)-[Passive]: You gain access to all of the Signature Techniques, Unique Abilities, Forms (including any Masteries and Evolved Stages), and Enhancements (including any Masteries) possessed by your Absorbed Characters (Except Minions). To gain access to a Unique Ability or Transformation, you must meet their Prerequisites (including any Racial Requirements).
+  (4)-[Passive, Addendum]: Upon gaining a stack of Absorption, select and gain access to a Primary Racial Trait possessed by that stack of Absorption's Absorbed Character. You cannot possess more than 2 Primary Racial Traits through this effect at any one time. See the 'Absorbed Traits' text box below for more details.
+  (5)-[Automatic/Start of Turn]: If a stack of Absorption is a Temporary Awakening, make a Clash (Cognitive) against the Absorbed Character, but reduce your Dice Score by 1(bT) for each Health Threshold Penalty you're suffering from. If you win, nothing happens. If you lose, reduce your Life Points by 1/4 of your Maximum Life Points and lose that stack of Absorption.
+  (6)-[Automatic/Start of Turn]: If you are Defeated, lose all stacks of Absorption you possess.
+  (7)-[Automatic]: Upon losing a stack of Absorption, the Absorbed Character is freed and, if you are still in a Combat Encounter, enters the Combat Encounter on a square adjacent to you of their choice.
+  (8)-[Triggered]: At the end of a Combat Encounter, if you have not reached your Awakening Limit for Lesser Awakenings, you may make a Clash (Cognitive) against the Absorbed Characters for any stacks of Absorption that are Temporary Awakenings. If you win, that stack of Absorption stops being a Temporary Awakening if adding that Awakening would not cause you to exceed the Awakening Limit.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

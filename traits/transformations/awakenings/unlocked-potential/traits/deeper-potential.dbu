@@ -1,0 +1,16 @@
+id: unlocked-potential-deeper-potential
+name: Deeper Potential
+order: 2
+slot: trait
+stacks: 2
+description: >
+  Even deeper inside you, another wellspring of your potential bubbles to the surface, granting you immeasurable power.
+text: >
+  Deeper Potential (2): Even deeper inside you, another wellspring of your potential bubbles to the surface, granting you immeasurable power.
+  (1)-[Passive]: While in the Surging State, increase your Wound Rolls by 2(T).
+  (2)-[1/Encounter]: You may use the Power Up Maneuver as an Instant Maneuver.
+  (3)-[Triggered, 1/Encounter]: After having rolled a Combat Roll, you may choose to set the Natural Result of that Combat Roll to 10.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

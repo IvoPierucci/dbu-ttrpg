@@ -1,0 +1,36 @@
+id: partial-suppression
+name: Partial Suppression
+type: form
+subtype: alternate
+racial: Arcosian
+prerequisites: Emperor Mutation Trait
+line: metamorphosis
+stage: 2
+tier: 3+
+stress: 16
+aspects: Enhanced Save (Corporeal/Impulsive), Draining (LV1), Power High (LV1)
+bonuses: AG +2(T), FO +2(T), TE +2(T), IN +1(T), MA +2(T)
+description: >
+  The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
+text: >
+  The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
+
+  **Partial Suppression** — Racial Requirement: Arcosian / Form / Alternate / Prerequisite(s): Emperor Mutation Trait / Line: Metamorphosis / Stage: 2 / Stress Test Requirement: 16 / Tier of Power Requirement. 3+
+  Aspects: Enhanced Save (Corporeal/Impulsive), Draining (LV1), Power High (LV1)
+  AG +2(T) · FO +2(T) · TE +2(T) · SC – · IN +1(T) · MA +2(T) · PE –
+
+  Coup de Grace: The way you overpower your prey in combat, many forget just how quickly you're capable of delivering the final blow.
+  (1)-[Passive]: While you are above the Injured Health Threshold, increase your Wound Rolls and Speeds by 1(T).
+  (2)-[1/Round]: As an Instant Maneuver, you may spend 2 stacks of Overwhelm to use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+  (3)-[Triggered/Superior]: Choose a Combat Roll. Until you leave the Superior State, increase that Combat Roll by 1(T).
+  (4)-[Triggered, 1/Encounter]: If you make an Attacking Maneuver whose Damage Category would be increased beyond Lethal, that Attacking Maneuver may also ignore the Damage Reduction for all target(s) of that Attacking Maneuver.
+
+  MASTERY TRAIT — Mutant's Resilience: Because of your overflowing power, you never seem to run out of stamina.
+  (1)-[Passive]: When you regain Life Points through the 6th effect of Suppression of Power, regain Ki Points equal to 1/2 of the Life Points gained.
+  (2)-[1/Round]: As an Instant Maneuver, you may spend 2 stacks of Overwhelm to gain a Counter Action.
+  (3)-[Triggered, 1/Round]: If you trigger the 3rd effect of the Emperor Mutation Trait, enter the Superior State until the start of your next turn.
+  (4)-[Triggered/Power, 1/Round]: If you haven't applied Legend Realized to a lower Stage of Metamorphosis, you may apply Legend Realized as if you were entering that Transformation.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

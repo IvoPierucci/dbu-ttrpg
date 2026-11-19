@@ -1,0 +1,17 @@
+id: perfection-perfect-defense
+name: Perfect Defense
+order: 7
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: perfect-traits
+groupLabel: Perfect Traits
+description: >
+  You are unerringly adept at avoiding being struck.
+text: >
+  Perfect Defense: You are unerringly adept at avoiding being struck.
+  (1)-[Passive]: Reduce the Critical Target of your Strike and Dodge Rolls by 1.
+  (2)-[Triggered, 1/Encounter]: If you are hit by an Attacking Maneuver made through the Basic Attack Maneuver, you may spend your maximum number of Adaptation Points to instead dodge that Attacking Maneuver. If that Attacking Maneuver was an Absolute Attack, do not still apply the Wound Roll. You cannot trigger this effect in response to an Attacking Maneuver made by a Character in the Determined State.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

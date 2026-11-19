@@ -1,0 +1,20 @@
+id: lightspeed-mode-gear-shift
+name: Gear Shift
+order: 1
+slot: trait
+description: >
+  You are able to ramp up your speed at-will, allowing you to move faster than anyone else.
+text: >
+  Gear Shift: You are able to ramp up your speed at-will, allowing you to move faster than anyone else.
+  (1)-[Passive]: Increase your Initiative Value by G(T).
+  (2)-[Passive]: Increase the Tier of Power Extra Dice applied to your Strike and Dodge Rolls by G Dice Categories (min. 1d4).
+  (3)-[Graded]: Lightspeed Mode has 2 Grades. Each Lightspeed Mode Grade:
+  Has its own Stress Test Requirement.
+  Has its own Tier of Power Requirement, which is equal to the Grade number (i.e. Grade 2 has a Tier of Power Requirement of 2+ and Grade 3 has a Tier of Power Requirement of 3+).
+  Sets the AMB (Attribute Modifier Bonus) of Lightspeed for the listed Attribute to the amount listed on the Grades table.
+  Increases the amount of Damage you suffer from Collision and Attacking Maneuvers by an amount listed on the Grades table.
+  Applies additional Aspects; some Grades have additional Aspects.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

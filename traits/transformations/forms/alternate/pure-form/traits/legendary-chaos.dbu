@@ -1,0 +1,17 @@
+id: pure-form-legendary-chaos
+name: Legendary Chaos
+order: 6
+slot: mastery
+mastery: 4
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  The unbridled chaos within you swallows order in its entirety, destabilizing reality itself in your presence.
+text: >
+  Legendary Chaos (4): The unbridled chaos within you swallows order in its entirety, destabilizing reality itself in your presence.
+  (1)-[Permanent]: Pure Form gains 2 additional levels of the Scaling Aspect.
+  (2)-[1/Encounter]: As an Instant Maneuver, use a Ki Surge. Then, roll your Chaos Die.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

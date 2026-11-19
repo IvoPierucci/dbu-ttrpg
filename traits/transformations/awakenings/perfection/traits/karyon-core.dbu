@@ -1,0 +1,17 @@
+id: perfection-karyon-core
+name: Karyon Core
+order: 5
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: perfect-traits
+groupLabel: Perfect Traits
+description: >
+  You are able to regenerate even from apparent death, allowing you to stand back up in the face of what would otherwise be defeat.
+text: >
+  Karyon Core: You are able to regenerate even from apparent death, allowing you to stand back up in the face of what would otherwise be defeat.
+  (1)-[Passive]: Increase your Surgency by 1(T).
+  (2)-[Triggered/Defeated]: At the start of your next turn, instead of skipping your turn, use a Healing Surge as an Out-of-Sequence Maneuver, stop being Defeated, and take your turn as normal. This effect cannot be triggered if the Attacking Maneuver that Defeated you dealt Damage exceeding 1/3 of your Maximum Life Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

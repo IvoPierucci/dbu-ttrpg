@@ -1,0 +1,50 @@
+id: giant-form
+name: Giant Form
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: N/A
+tier: 1+
+stress: 4
+aspects: Graded, Growth (Level G)
+# No table: each Grade raises the Stress Test Requirement by 3 and Growth by a level - how the first counts, asked in stage 4.
+# The 4th Grade opens with Super Giant Form (1).
+grades: 4
+bonuses: FO G(T), TE G(T)
+description: >
+  Some people have the ability to increase their physical size by nearly ten times normal, making them grow to enormous stature. By using any of a number of techniques, they alter their body's volume and size to gigantic proportions.
+text: >
+  Some people have the ability to increase their physical size by nearly ten times normal, making them grow to enormous stature. By using any of a number of techniques, they alter their body's volume and size to gigantic proportions.
+
+  Although this Transformation does not actually increase your power level, it does increase your physical strength and power. It also makes you much heavier and more durable without impacting your speed. Even though your speed is not changed, your ability to dodge attacks is reduced due to your sheer size. Overall, Giant Form gives you great offensive power and your physical blows are very deadly.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 4 / Tier of Power Requirement. 1+
+  Aspects: Graded, Growth (Level G)
+  AG – · FO G(T) · TE G(T) · SC – · IN – · MA – · PE –
+
+  Accelerated Growth: You have the ability to increase in size at will, or return to your original size.
+  (1)-[Passive]: Increase the Dice Category of your Punching Down Extra Dice by 1 Dice Category.
+  (2)-[Passive]: This Transformation gains the Armored Aspect if your Size Category is Gigantic or higher.
+  (3)-[1/Round]: If your Size Category is Enormous or higher, you may use the Sudden Stop Maneuver without spending a Counter Action.
+  (4)-[Graded]: This Transformation has 3 Grades. Each Grade:
+  Increases the Stress Test Requirement by 3.
+  Increases your Growth Aspect by 1 level.
+  Sets your Attribute Modifier Bonuses as shown on the table above.
+
+  Battlefield Titan: You aim to be the biggest problem on the battlefield, literally and figuratively.
+  (1)-[Triggered, 1/Round]: If you are targeted by an Attacking Maneuver and do not use any Counter Maneuvers in response to that Attacking Maneuver, increase your Soak Value by G(T) for the duration of that Attacking Maneuver.
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver against an Opponent(s), they qualify for Punching Down on this Attacking Maneuver regardless of their Size Category. If they would already qualify for Punching Down, increase the Wound Roll for calculating that Opponent's Damage Calculation by G(T).
+
+  BURST LIMIT — Giant Assault: Your massive bulk allows you to withstand blows and dish them out with great force.
+  (1)-[Triggered/Transform]: Increase your Wound Rolls and Soak Value by G(T) until the start of your next turn. Additionally, until the end of your turn, all of your qualifying Signature Techniques gain the Intense Blast Advantage.
+
+  MASTERY TRAIT — Super Giant Form: You are extremely adept at manipulating your size and making use of that increased bulk in combat.
+  (1)-[Permanent]: You gain access to the 4th Grade of Giant Form.
+  (2)-[Passive]: The Growth Aspect for Giant Form can reach up to 4 levels.
+  (3)-[Passive]: Increase your Damage Reduction by 1/2 (rounded up) of G(T).
+  (4)-[Passive]: Double the bonus from the 1st effect of Accelerated Growth.
+  (5)-[Passive]: The 1st effect of Battlefield Titan loses its [1/Round] Keyword.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

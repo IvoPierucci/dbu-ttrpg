@@ -1,0 +1,93 @@
+id: full-power-super-saiyan
+name: Full Power Super Saiyan
+type: form
+subtype: legendary
+racial: Saiyan
+prerequisites: Fully Mastered Super Saiyan 1
+tier: 4+
+stress: 25
+aspects: Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Bursting, Draining (LV2), Difficult (LV1)
+bonuses: AG +4(T), FO +4(T), TE +4(T), IN +2(T), MA +4(T)
+description: >
+  Thuh-thump. Thuh-thump. The beat of your heart echoes in your eardrums, thumping in time with the battlefield chaos around you, a steady percussive metronome by which to time your actions to. The golden blaze of your splendorous power burns brightly around you, lighting your surroundings awash with an unmistakable glow. The bright green shine of your eyes surveys the ongoing battle. Others have changed, evolved their power to raise the stakes of combat, but you've simply expanded the potential of the powers you wield, keeping up with ease. You don't even need to evolve to a new form of Super Saiyan- using its full power is enough.
+text: >
+  Thuh-thump. Thuh-thump. The beat of your heart echoes in your eardrums, thumping in time with the battlefield chaos around you, a steady percussive metronome by which to time your actions to. The golden blaze of your splendorous power burns brightly around you, lighting your surroundings awash with an unmistakable glow. The bright green shine of your eyes surveys the ongoing battle. Others have changed, evolved their power to raise the stakes of combat, but you've simply expanded the potential of the powers you wield, keeping up with ease. You don't even need to evolve to a new form of Super Saiyan- using its full power is enough.
+
+  Racial Requirement: Saiyan / Transformation Type: Form / Form Type: Legendary / Prerequisite(s): Fully Mastered Super Saiyan 1 / Stress Test Requirement: 25 / Tier of Power Requirement: 4+
+  Aspects: Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Bursting, Draining (LV2), Difficult (LV1)
+  AG +4(T) · FO +4(T) · TE +4(T) · SC – · IN +2(T) · MA +4(T) · PE –
+
+  Style of Super Saiyan: You've grown comfortable enough with your Super Saiyan power to customize it to meet your needs.
+  (1)-[Permanent, Ruling]: Upon gaining access to this Transformation, select and gain access to a 'Super Saiyan Style' Trait while you are in this Transformation.
+  (2)-[Passive]: For each stack of Power you possess, increase your Soak Value by 1(T).
+  (3)-[Passive]: Gain an additional stack of Power from the Power Up Maneuver.
+  (4)-[Passive]: Increase your Combat Rolls by 1/2 (rounded up) of the Apparel Bonus for the piece of Apparel destroyed through the Bursting Aspect upon entering this Transformation.
+  (5)-[Triggered/Power, 1/Encounter]: Gain a stack of Battle Born.
+
+  Full Power of the Super Saiyan: Unleashing the unlimited potential of the Super Saiyan Transformation, you draw out even more raw power.
+  (1)-[Passive]: Increase the Dice Score of your Duel Clashes by 1(T) for every 4 stacks of Battle Born you possess (max. 3(T)).
+  (2)-[Passive]: For every 4 stacks of Battle Born you possess, increase your Tier of Power Extra Dice by 1 Category (max. +3 Categories).
+  (3)-[Triggered]: If you are hit by an Attacking Maneuver, you may increase your Damage Reduction by 1(T) for every 2 stacks of Battle Born you possess for the duration of that Attacking Maneuver. After concluding that Maneuver, lose 1 stack of Battle Born.
+  (4)-[Triggered]: If you hit an Opponent with an Attacking Maneuver, you may increase your Wound Rolls by 1(T) for every 2 stacks of Battle Born you possess for the duration of that Attacking Maneuver. After concluding that Maneuver, lose 1 stack of Battle Born.
+  (5)-[Triggered/Transform, 1/Encounter]: Enter the Raging State until the end of your turn.
+
+  Super Saiyan Style Traits
+  Legendary Super Saiyan: Clad in a blaze of legendary power, you represent the pinnacle of evolution for the Super Saiyan Transformation.
+  (1)-[Prerequisite]: Legendary Saiyan Factor Trait.
+  (2)-[Permanent]: Reduce the Stress Test Requirement of the Legendary Evolved Stage with this Transformation as its Original Form by 3.
+  (3)-[Passive]: Increase your Might by 1(T).
+  Back to Basics: You have no need for those inefficient evolutions of the Super Saiyan form; when properly mastered, the basic Super Saiyan far outclasses them.
+  (1)-[Prerequisite]: Access to Super Saiyan 1. Variants do not count as Super Saiyan 1 for this effect.
+  (2)-[Passive]: You gain access to the Option effect you chose for the 3rd effect of S-Cells.
+  (3)-[1/Round]: While you have 4+ stacks of Battle Born, you may use the Power Up Maneuver as an Instant Maneuver.
+  (4)-[Passive]: Depending on your number of Power stacks, gain access to the following effects:
+  2+ Power Stacks [Triggered, 1/Round]: When making an Attacking Maneuver, you can add up to 2 Energy Charges to that Attacking Maneuver. After concluding that Attacking Maneuver, lose a number of Battle Born stacks equal to the amount of Energy Charges added by this effect.
+  4+ Power Stacks [Passive]: Increase the Wound Roll of any Signature Technique Maneuver you make with a Ki Wager by 1/2 of the amount of Ki Points spent on the Ki Wager.
+  You Can't Destroy What I Am!: You've finally pushed past the barriers to strengthen your Super Saiyan state, entering the realm of legends. Though your path will one day become the Super Saiyan of the future, today, you're making history.
+  (1)-[Prerequisite]: Access to Future Super Saiyan.
+  (2)-[Passive]: Increase S for the 1st effect of Desperate Hero by 1 for every 4 stacks of Battle Born you possess (max. +3).
+  (3)-[1/Round]: While you are below the Injured Health Threshold, you may use the Power Up Maneuver as an Instant Maneuver.
+  (4)-[Triggered/Start of Turn, Triggered/Transform]: If you are in a Desperate Battle, enter the Desperate Hero Special State until the Combat Encounter stops being treated as a Desperate Battle or you leave this Transformation.
+  Superior Pain, Superior Power: Through your tireless efforts, you've transformed the golden flames you've awakened, creating an even more superior state.
+  (1)-[Prerequisite]: Access to Superior Super Saiyan.
+  (2)-[Passive]: For every 4 stacks of Battle Born you possess, increase your Surgency by 1(T) (max. 3(T)).
+  (3)-[Triggered]: If you are hit by an Attacking Maneuver, regain Ki Points equal to 1/4 (rounded up) of your Surgency.
+  (4)-[Triggered/Power, 1/Round]: Spend a stack of Battle Born to regain Life Points equal to 1/2 of your Surgency and enter the Superior State until the end of your turn.
+  Greater Super Class: Your dedication to your chosen path awakens a new power within you, elevating you to heights never before thought possible.
+  (1)-[Prerequisite]: Access to Xeno Super Saiyan.
+  (2)-[Passive]: You gain access to the 4th effect of Super Saiyan Class.
+  (3)-[1/Encounter]: If you have 6+ stacks of Battle Born, use your Choice effect for the 3rd effect of Class Selection. This does not count towards that effect's [1/Encounter] Keyword.
+  Pinnacle of Legacy: You represent the very beginnings of a proud line of warriors that spans all of known history, and the power you've awakened proves it.
+  (1)-[Prerequisite]: Access to Ancestral Super Saiyan.
+  (2)-[Passive]: While you are in the Undying State, increase your Soak Value and Wound Rolls by 2(T). Additionally, this Transformation gains the Armored Aspect.
+  (3)-[1/Round]: As an Instant Maneuver, you may spend a stack of Battle Born to use the Power Up Maneuver.
+  (4)-[Triggered/Power, 1/Encounter]: Enter the Undying State until the start of your next turn.
+  All-Out Super Saiyan: T
+  (1)-[Prerequisite]: Access to All-Out Form
+  (2)-[Automatic/Transform, Resource]: Lose all stacks of Holding Back and gain a stack of 'All-Out Power' (max. 3).
+  (3)-[Passive]: Each stack of All-Out Power increases your Combat Rolls by 1(T), your Tier of Power Extra Dice by 1 Dice Category, and is treated as a stack of Power for all of your effects.
+  (4)-[Passive]: For each stack of All-Out Power you possess, this Transformation gains a level of the Draining Aspect.
+  (5)-[Passive]: You cannot gain stacks of Holding Back while in this Transformation.
+  (6)-[Triggered/Power, 1/Encounter]: If you are below the Injured Health Threshold, gain a stack of All-Out Power.
+  (7)-[Triggered/Transform, 1/Encounter]: If you entered this Transformation through a Transformation Maneuver used through the 1st effect of Unleash your Power, use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, you may enter the Superior State until the start of your next turn.
+
+  MASTERY TRAIT
+  Deeper into the Depths (1): You dig deep, pulling out even more power from the classic Super Saiyan Transformation, utilizing it in a superior manner.
+  (1)-[Permanent]: Full Power Super Saiyan gains M levels of the Scaling Aspect and loses M levels of the Draining Aspect.
+  (2)-[Passive]: Increase your maximum number of Power stacks by M.
+  (3)-[Passive]: Treat the Superior State as the Raging State for the effects of the Raging Aspect.
+  (4)-[Triggered]: When you use the 5th effect of Full Power of the Super Saiyan, you may enter the Superior State instead of the Raging State. If you do, the effect lasts until the start of your next turn.
+  Limit of the Super Saiyan (2): You aren't just a living legend anymore, you've transformed your power into one that surpasses even the original legend themself.
+  (1)-[Permanent]: Full Power Super Saiyan gains the Perfect Ki Control Aspect.
+  (2)-[1/Round]: As an Instant Maneuver, you can spend a stack of Battle Born to regain Ki Points and Capacity equal to 1/4 of your Max Capacity.
+  (3)-[1/Encounter]: As an Instant Maneuver, you may spend a stack of Battle Born to use a Healing Surge as an Out-of-Sequence Maneuver.
+
+  LEGENDARY TRAIT — True Power of the Saiyan Race: You know beyond a shadow of a doubt that the classics are the best, and you rock those golden flames and green eyes with effortless swagger.
+  (1)-[Passive]: Your stacks of Power are treated as if they are Battle Born stacks applied to your Wound Rolls for your effects (they do not count towards your maximum number of Battle Born).
+  (2)-[Passive]: For each stack of Power you possess, increase your Wound Rolls by 1(T).
+  (3)-[Passive]: While in a Transformation with the Super Saiyan Form Aspect, double the increase to your Capacity from that Aspect.
+  (4)-[Triggered, 1/Encounter]: If you succeed at the Steadfast Check for a Health Threshold, you may use the Transformation Maneuver as an Out-of-Sequence Maneuver to attempt to enter a Transformation with the Super Saiyan Form Aspect.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

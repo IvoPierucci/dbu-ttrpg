@@ -1,0 +1,14 @@
+id: giant-form-battlefield-titan
+name: Battlefield Titan
+order: 2
+slot: trait
+description: >
+  You aim to be the biggest problem on the battlefield, literally and figuratively.
+text: >
+  Battlefield Titan: You aim to be the biggest problem on the battlefield, literally and figuratively.
+  (1)-[Triggered, 1/Round]: If you are targeted by an Attacking Maneuver and do not use any Counter Maneuvers in response to that Attacking Maneuver, increase your Soak Value by G(T) for the duration of that Attacking Maneuver.
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver against an Opponent(s), they qualify for Punching Down on this Attacking Maneuver regardless of their Size Category. If they would already qualify for Punching Down, increase the Wound Roll for calculating that Opponent's Damage Calculation by G(T).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

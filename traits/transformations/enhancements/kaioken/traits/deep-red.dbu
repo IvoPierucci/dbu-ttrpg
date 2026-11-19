@@ -1,0 +1,22 @@
+id: kaioken-deep-red
+name: Deep Red
+order: 4
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  The brilliant scarlet flames that encompass you now answer to your whims.
+text: >
+  Deep Red: The brilliant scarlet flames that encompass you now answer to your whims.
+  (1)-[Permanent]: You gain access to the 4th and 5th Grades of Kaioken.
+  (2)-[Permanent]: If you are in the Entrusted State, you gain access to the 6th Grade of Kaioken.
+  (3)-[Passive]: While in the 4th Grade or higher of Kaioken, Kaioken has its Attribute Modifier Bonus (IN) increased by 1(T).
+  (4)-[Passive]: Reduce the Life Point Cost of all Kaioken Grades by 1(bT).
+  (5)-[Automatic]: If you end your turn in the 6th Grade of Kaioken, you must use the Transformation Maneuver to enter a lower Grade of Kaioken as an Out-of-Sequence Maneuver.
+  (6)-[Triggered/Entrusted]: Use the Transformation Maneuver as an Out-of-Sequence Maneuver to enter the 6th Grade of Kaioken.
+  (7)-[Triggered, 1/Encounter]: Upon being knocked through a Health Threshold by paying the Life Point Cost, you may trigger any effects that would normally be triggered as if it was the result of an Opponent's Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

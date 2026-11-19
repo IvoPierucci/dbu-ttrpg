@@ -1,0 +1,25 @@
+id: divinity-unleashed-true-god-of-peace
+name: True God of Peace
+order: 3
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 2
+description: >
+  Guided by wisdom and seeking prosperity, you avoid conflict and attempt amicable resolutions.
+text: >
+  True God of Peace: Guided by wisdom and seeking prosperity, you avoid conflict and attempt amicable resolutions.
+  (1)-[Prerequisite]: Access to the God of Peace effect for the Option effect of Divine Magic.
+  (2)-[Permanent]: Divinity Unleashed gains the Innate State (Mindful) and Mindful Aspects.
+  (3)-[Ruling]: For the effects of True God of Peace, 'L' is equal to your current level of the Mindful State.
+  (4)-[Passive]: Ignore the 2nd effect of the Mindful State.
+  (5)-[Passive]: Increase your Strike and Dodge Rolls by L(T).
+  (6)-[Passive]: Reduce the Divine Ki Point Cost of the Divine Peace God Maneuver by L(T).
+  (7)-[Automatic]: If you fail a Steadfast Check, or the Combat Round ends without you having used Combat Recovery, set your level of the Mindful State to Calm.
+  (8)-[Triggered, 1/Round]: If you use Combat Recovery, enter the next level of the Mindful State while you are in this Transformation.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

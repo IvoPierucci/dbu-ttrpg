@@ -1,0 +1,35 @@
+id: true-angel
+name: True Angel
+type: enhancement
+subtype: standard
+racial: Angel
+prerequisites: You are not a Minion
+tier: 1+
+stress: 12
+aspects: Enhanced Save (All), Natural (LV1), Scaling (LV4), Innate State (Superior), Peaked, Limited (LV3)
+bonuses: AG +1(T), FO +1(T), TE +1(T), IN +1(T), MA +1(T)
+description: >
+  Some things are worth dying for, and you've found one of them. Left with no way to achieve the desired outcome in battle without unleashing your full angelic strength, you have decided that interfering in this battle is worth erasure for defying the laws of the angels. Though what remains of your existence is fleeting, you will take the time you have left to impress upon those who stand against you- and what you care most about- the unequivocal, unsurpassable might of a True Angel.
+text: >
+  Some things are worth dying for, and you've found one of them. Left with no way to achieve the desired outcome in battle without unleashing your full angelic strength, you have decided that interfering in this battle is worth erasure for defying the laws of the angels. Though what remains of your existence is fleeting, you will take the time you have left to impress upon those who stand against you- and what you care most about- the unequivocal, unsurpassable might of a True Angel.
+
+  Racial Requirement: Angel / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): You are not a Minion / Stress Test Requirement: 12 / Tier of Power Requirement. 1+
+  Aspects: Enhanced Save (All), Natural (LV1), Scaling (LV4), Innate State (Superior), Peaked, Limited (LV3)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN +1(T) · MA +1(T) · PE –
+
+  Law-Defying Battle: Even knowing that you are forbidden from using your full power against a mortal, you unleash it anyways, deciding the cost of erasure is worth it to sway the outcome of this battle.
+  (1)-[Permanent]: True Angel can be used as either a Form or an Enhancement for Transformation Stacking (see — Transformation Rules).
+  (2)-[Passive]: Your base Tier of Power becomes 8.
+  (3)-[Passive]: You are treated as having no Counter Actions for your effects regardless of your current number of Counter Actions.
+  (4)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, you are instead not hit by that Attacking Maneuver. If that Attacking Maneuver was an Absolute Attack, the usual effects of Absolute Attacks do not apply to that Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you use an Attacking Maneuver, you may enter the Determined State for the duration of that Attacking Maneuver.
+  (6)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, they automatically fail the Steadfast Check for that Health Threshold.
+  (7)-[Triggered, 1/Round]: If you use a Signature Technique, you may apply the Absolute Annihilation Super Profile to that Attacking Maneuver.
+  (8)-[Automatic]: Upon leaving this Transformation, you are erased from existence. This effect does not trigger if there is an Angel or a Character with a Divine Role (see — Roles) among your Opponents.
+
+  BURST LIMIT — Unsealed Instinct: No longer holding back, you tap into the angelic power of Autonomous Ultra Instinct.
+  (1)-[Triggered/Transform]: True Angel gains the Linked (Autonomous Ultra Instinct) Aspect and triggers its effects. Additionally, you have access to Autonomous Ultra Instinct while in the True Angel Transformation.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

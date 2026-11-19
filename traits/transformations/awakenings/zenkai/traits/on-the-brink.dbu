@@ -1,0 +1,16 @@
+id: zenkai-on-the-brink
+name: On the Brink
+order: 3
+slot: trait
+stacks: 3
+description: >
+  You've spent so much time on the edge of death, you've learned to leverage it against your enemies.
+text: >
+  On the Brink (3): You've spent so much time on the edge of death, you've learned to leverage it against your enemies.
+  (1)-[Passive]: While you are below the Injured Health Threshold and have 6+ stacks of Battle Born, increase your Strike and Dodge Rolls by 1(T).
+  (2)-[1/Encounter]: Use a Healing Surge as an Instant Maneuver.
+  (3)-[Automatic]: If you trigger the 4th effect of Born for Battle, instead of gaining a stack of Zenkai as a Temporary Awakening, enter the Surging State until the end of your next turn. If you do, ignore the 2nd effect of the Surging State.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

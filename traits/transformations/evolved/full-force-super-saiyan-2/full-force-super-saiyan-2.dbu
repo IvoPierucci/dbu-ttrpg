@@ -1,0 +1,31 @@
+id: full-force-super-saiyan-2
+name: Full Force Super Saiyan 2
+type: evolved
+subtype: alternate
+# Generic: on any Form that meets its Prerequisites; Unique: on the Form in brackets alone.
+evolvedType: Unique (Super Saiyan 2)
+racial: 
+prerequisites: Fully Mastered Super Saiyan 2
+tier: 4+
+stress: +4
+aspects: Peaked
+bonuses: AG +1(T), FO +1(T), TE +1(T), MA +1(T)
+description: >
+  As a Super Saiyan who has ascended past a Super Saiyan, you have practiced and trained, repeatedly diving into the depths of the power of Super Saiyan 2. Now, you've unlocked the maximum potential of the form you've trained so hard with, matching the power of the next form of Super Saiyan.
+text: >
+  As a Super Saiyan who has ascended past a Super Saiyan, you have practiced and trained, repeatedly diving into the depths of the power of Super Saiyan 2. Now, you've unlocked the maximum potential of the form you've trained so hard with, matching the power of the next form of Super Saiyan.
+
+  Evolved Stage Type: Unique (Super Saiyan 2) / Transformation Type: Form / Form Type: Alternate / Prerequisite(s): Fully Mastered Super Saiyan 2 / Stress Test Requirement: +4 / Tier of Power Requirement: 4+
+  Aspects: Peaked
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Sparking Limit Break: Pushing past the limits of Super Saiyan 2, clad in arcs of lightning, your power skyrockets even further beyond.
+  (1)-[Passive]: Your Attacking Maneuvers that possess a Ki Wager equal to or exceeding 1/4 of your Max Capacity have their Strike Rolls increased by 1(T).
+  (2)-[Passive]: Your Attacking Maneuvers that possess a Ki Wager equal to or exceeding 1/4 of your Max Capacity have their Wound Rolls increased by 4(T).
+  (3)-[Triggered/Power, 1/Round]: Spend 4(bT) Ki Points to enter the Surging State until the end of your turn.
+  (4)-[Triggered, 1/Encounter]: If you would gain any number of stacks of the Fatigued Combat Condition, you may instead regain Ki Points equal to 1/2 of your Surgency.
+  (5)-[Triggered/Start of Turn, 1/Encounter]: If no other Character has taken their turn yet during this Combat Round, you may enter the Superior State for the duration of that turn.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

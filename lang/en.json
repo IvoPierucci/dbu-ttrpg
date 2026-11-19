@@ -14,5 +14,6 @@
   "TYPES.Item.talent": "Talent",
   "TYPES.Item.racial": "Racial Trait",
   "TYPES.Item.maneuver": "Maneuver",
-  "TYPES.Item.gear": "Item"
+  "TYPES.Item.gear": "Item",
+  "TYPES.Item.transformation": "Transformation"
 }

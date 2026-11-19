@@ -1,0 +1,30 @@
+id: dark-evolution
+name: Dark Evolution
+type: awakening
+subtype: greater
+origin: body
+racial: Any Race
+prerequisites: N/A
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: FO +2, TE +2, MA +2
+description: >
+  Hulking and unsettling, your form has, by whatever means, become unnatural. Twisted by darkness, you have become a thing of nightmares, to be reviled and despised. You are not welcome in civilized company- not with the form you now take. But with this transformation comes unbridled strength, a power that surpasses any you wielded before. This is no one-sided curse- it's a Dark Evolution.
+text: >
+  Hulking and unsettling, your form has, by whatever means, become unnatural. Twisted by darkness, you have become a thing of nightmares, to be reviled and despised. You are not welcome in civilized company- not with the form you now take. But with this transformation comes unbridled strength, a power that surpasses any you wielded before. This is no one-sided curse- it's a Dark Evolution.
+
+  Racial Requirement: Any Race / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Body / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG – · FO +2 · TE +2 · SC – · IN – · MA +2 · PE –
+
+  Monstrous Evolution: You have been transformed, growing into a true monster.
+  (1)-[Passive]: Reduce your Racial Life Modifier by 3.
+  (2)-[Passive]: Increase your Wound Rolls, Soak Value, and Damage Reduction by 1(T).
+  (3)-[Passive]: Increase your Size Category by 1 Category after all other calculations.
+  (4)-[Passive]: Upon gaining access to this Awakening, select and gain access to 1 Bestial Trait and 1 Monstrous Trait while you possess this Awakening.
+  (5)-[Triggered, 1/Encounter]: If you would receive Damage from an Attacking Maneuver that is less than 1/4 (rounded up) of your Maximum Life Points, you do not receive that Damage.
+  (6)-[Triggered, 1/Encounter]: If you hit only 1 Opponent with an Attacking Maneuver, you may apply your Damage Attribute an additional time to that Attacking Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

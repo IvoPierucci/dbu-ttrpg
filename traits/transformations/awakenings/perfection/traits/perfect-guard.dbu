@@ -1,0 +1,17 @@
+id: perfection-perfect-guard
+name: Perfect Guard
+order: 8
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: perfect-traits
+groupLabel: Perfect Traits
+description: >
+  Your sturdy build grows tougher to damage the longer you fight.
+text: >
+  Perfect Guard: Your sturdy build grows tougher to damage the longer you fight.
+  (1)-[Passive]: Increase your Soak Value by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you use the Direct Hit or Guard option of the Defend Maneuver, increase your Damage Reduction by 1/2 of your Soak Value (before modification due to the effects of the Defend Maneuver) for the duration of that Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

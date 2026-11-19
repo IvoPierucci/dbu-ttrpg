@@ -1,0 +1,148 @@
+id: divinity-unleashed
+name: Divinity Unleashed
+type: form
+subtype: legendary
+racial: Shinjin
+prerequisites: N/A
+line: appointed-god
+stage: 1
+tier: 4+
+stress: 25
+aspects: Enhanced Save (All), God Ki, Battle Uniform, Difficult (LV1)
+bonuses: AG +4(T), FO +4(T), TE +4(T), IN +2(T), MA +4(T)
+description: >
+  Empowered by the divine energies of the heavens, and emboldened by the purpose given them by their positions, some Kaio ascend to divinity and tap into the true essence of creation. With this vision manifested in their form, they attain a state of holy perfection as they unleash their divinity.
+text: >
+  Empowered by the divine energies of the heavens, and emboldened by the purpose given them by their positions, some Kaio ascend to divinity and tap into the true essence of creation. With this vision manifested in their form, they attain a state of holy perfection as they unleash their divinity.
+
+  **Divinity Unleashed** — Racial Requirement: Shinjin / Form / Legendary / Prerequisite(s): N/A / Line: Appointed God / Stage: 1 / Stress Test Requirement: 25 / Tier of Power Requirement. 4+
+  Aspects: Enhanced Save (All), God Ki, Battle Uniform, Difficult (LV1)
+  AG +4(T) · FO +4(T) · TE +4(T) · SC – · IN +2(T) · MA +4(T) · PE –
+
+  Cosmic Flow: Your godly energy allows you to overwhelm lesser foes and prove your divine superiority.
+  (1)-[Passive]: Attacking Maneuvers that target Allies within a Huge Sphere AoE (centered on you) trigger your Exploit Maneuver.
+  (2)-[Passive]: Increase the AoE for the 3rd effect of Divine Role by 1 Magnitude.
+  (3)-[Passive]: If you would use Divine Ki Points to pay the Ki Point Cost of an Attacking Maneuver, reduce the Ki Point Cost by 2(T).
+  (4)-[Passive]: If you would use Divine Ki Points for a Ki Wager, increase the Wound Roll of that Attacking Maneuver by 1/2 of the amount of Divine Ki Points spent on the Ki Wager.
+  (5)-[Triggered]: If you use Combat Recovery, regain Divine Ki Points equal to 1/2 of your Surgency.
+  (6)-[Triggered, 1/Encounter]: If you use Combat Recovery while below the Injured Health Threshold, double the amount of Life and Ki Points you regain from that use of Combat Recovery. Additionally, double the amount of Divine Ki Points regained from the 5th effect of Cosmic Flow for this use of Combat Recovery.
+
+  Ascended Divine Magic: Your holy magic grows in strength, empowered by divine energy.
+  (1)-[Permanent, Passive]: Upon gaining access to Divinity Unleashed, select a Domain Trait. You have access to that Domain Trait while in Divinity Unleashed.
+  (2)-[Permanent, Passive]: Upon gaining access to this Transformation, select a Size Category (Small, Medium or Large). You become that Size Category while in this Transformation.
+  (3)-[Passive]: Increase your Might and Saving Throws by 1(T) for the duration of any Clash initiated by an Opponent.
+  (4)-[Passive]: Increase the Skill Bonus of your Knowledge, Creature Handling, Clairvoyance, Perception, Use Magic, and Investigation Skills by 2.
+
+  Domain Traits
+  True God of Peace: Guided by wisdom and seeking prosperity, you avoid conflict and attempt amicable resolutions.
+  (1)-[Prerequisite]: Access to the God of Peace effect for the Option effect of Divine Magic.
+  (2)-[Permanent]: Divinity Unleashed gains the Innate State (Mindful) and Mindful Aspects.
+  (3)-[Ruling]: For the effects of True God of Peace, 'L' is equal to your current level of the Mindful State.
+  (4)-[Passive]: Ignore the 2nd effect of the Mindful State.
+  (5)-[Passive]: Increase your Strike and Dodge Rolls by L(T).
+  (6)-[Passive]: Reduce the Divine Ki Point Cost of the Divine Peace God Maneuver by L(T).
+  (7)-[Automatic]: If you fail a Steadfast Check, or the Combat Round ends without you having used Combat Recovery, set your level of the Mindful State to Calm.
+  (8)-[Triggered, 1/Round]: If you use Combat Recovery, enter the next level of the Mindful State while you are in this Transformation.
+  True God of Judgement: Not content with merely watching mortals, you render divine judgment, punishing the wicked for their misdeeds.
+  (1)-[Prerequisite]: Access to the God of Judgement effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (FO/MA) of Divinity Unleashed by 1(T).
+  (3)-[Passive]: Increase the Dice Category of your Energy Charges by 1 Category.
+  (4)-[Passive]: Increase your Combat Rolls by 1(T) for each Health Threshold you are below.
+  (5)-[Passive]: While below the Injured Health Threshold, double the amount of Energy Charges gained from the effects of God of Judgement.
+  (6)-[Triggered, 1/Encounter]: If you use the Divine Judgement Maneuver while in the Injured Health Threshold, you do not have to pay the Divine Ki Point Cost for that God Maneuver and apply an Energy Charge to the Attacking Maneuver made through its effects.
+  True God of Power: Possessing physical might that dwarfs mortal comprehension, you represent the aspirations of all who seek to grow strong.
+  (1)-[Prerequisite]: Access to the God of Power effect for the Option effect of Divine Magic.
+  (2)-[Permanent]: Divinity Unleashed gains the Bulky and Armored Aspects.
+  (3)-[Passive]: Reduce your Muscle Penalty by 1(bT).
+  (4)-[Passive]: Increase the Attribute Modifier Bonus (FO/TE) of Divinity Unleashed by 1(T) for each stack of Super Stack you possess.
+  (5)-[Triggered, 1/Encounter]: If you use the Divine Muscle God Maneuver in response to an Attacking Maneuver, set the Damage Category of that Attacking Maneuver to Standard for the sake of your Damage calculation. If it would already be Standard (either normally, or due to other Aspects/effects that reduced the Damage Category), then double your Soak Value for the duration of that Maneuver.
+  True God of Survival: Through wit and tenacity, you outlast every calamity that befalls you with divine grace.
+  (1)-[Prerequisite]: Access to the God of Survival effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (IN) of Divinity Unleashed by 1(T).
+  (3)-[Passive]: Increase your Surgency by 2(T).
+  (4)-[Passive]: Increase your Combat Rolls and Soak Value by 2(T) while you are above the Injured Health Threshold.
+  (5)-[Triggered, 1/Round]: If you get hit by an Attacking Maneuver and receive Damage, you may regain Life Points equal to your Insight Modifier.
+  (6)-[Triggered, 1/Encounter]: If you use the Divine Healing God Maneuver while below the Injured Health Threshold, do not pay the Divine Ki Point Cost and double the amount of Life Points you regain.
+  True God of Wisdom: Serene and benevolent, you impart words of divine knowledge to those who seek your opinion.
+  (1)-[Prerequisite]: Access to the God of Wisdom effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Set the Attribute Modifier Bonus (SC/PE) of Divinity Unleashed to match the Transformation's Attribute Modifier Bonus (MA).
+  (3)-[Passive]: Double the bonus from the effect of God of Wisdom.
+  (4)-[Triggered, 1/Round]: If you use the Divine Wisdom God Maneuver, you may regain Life Points equal to 1/2 of your Personality or Scholarship Modifier (whichever is higher).
+  (5)-[Triggered, 1/Round]: If you use the Hype Maneuver and/or the Analysis Maneuver, you may remove a Combat Condition (except Suffocating or Pinned) from yourself or an adjacent Ally.
+  (6)-[Triggered/Transform, 1/Encounter]: Use the Divine Wisdom God Maneuver as an Out-of-Sequence Maneuver. This use of the Divine Wisdom God Maneuver does not cost Divine Ki Points, and does not count towards the [1/Round] limit on the God Maneuver.
+  True God of War: Clashing in eternal conflict, you represent the drive of all beings who seek supremacy.
+  (1)-[Prerequisite]: Access to the God of War effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase your Combat Rolls by 2(T) while you are wielding a Weapon.
+  (3)-[Passive]: While you are wielding a Weapon, it gains the Divine Armament Quality without taking up any Quality slots.
+  (4)-[Passive]: Ignore the Ki Point Cost for Magical Materialization if you create a Weapon through its effects.
+  (5)-[Triggered, 1/Round]: If you use the Divine Weapon God Maneuver, apply your Damage Attribute an additional time to that Attacking Maneuver.
+  Divine Armament Quality — Divine Armament: This weapon is imbued with divine power, suitable only for the hands of a god. –Weapon Type: All –Prerequisites: True God of War –Quality Slots: N/A –Effects: If an Attacking Maneuver made with this Weapon has its Ki Point Cost paid with Divine Ki Points, apply your Greater Dice to the Strike and Wound Rolls of that Attacking Maneuver.
+  True God of Magic: Keeper of arcane secrets, you hold knowledge about magic that mere mortals can only dream of.
+  (1)-[Prerequisite]: Access to the God of Magic effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (IN/MA) of Divinity Unleashed by 1(T).
+  (3)-[Passive]: Increase your Combat Rolls by 2(T).
+  (4)-[Passive]: Reduce the Divine Ki Point Cost of Divine Spell by 1(bT).
+  (5)-[Passive]: During a Combat Round in which you have used a Magical Unique Ability, your Magic Attacks have their Wound Rolls increased by 1/4 (rounded up) of your Magic Modifier.
+  (6)-[Triggered/Transform]: Upon entering Divinity Unleashed, select a Magical Unique Ability that you meet the Prerequisites for. You gain access to that Magical Unique Ability until you leave Divinity Unleashed.
+  True God of Many: Charismatic and sociable, you are a divine leader of others, imbuing your subordinates with heavenly might.
+  (1)-[Prerequisite]: Access to the God of Many effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Combat Rolls and Soak Value of your Minions by 1(T).
+  (3)-[Passive]: Your Minions gain double the bonus from the 3rd effect of Divine Role.
+  (4)-[Passive]: While you are in the Spectator State, increase your Soak Value and Damage Reduction by 2(T).
+  (5)-[Passive]: Your Minions may spend your Counter Actions as if they were their own.
+  (6)-[Triggered, 1/Encounter]: If you use the Divine Summoning God Maneuver, any Minions moved by this effect may use the Power Up Maneuver as an Out-of-Sequence Maneuver (this occurs before any Exploit Maneuvers are triggered).
+  True God of Time: The flow of time bends to your will, acting in accordance with your deepest desires.
+  (1)-[Prerequisite]: Access to the God of Time effect for the Option effect of Divine Magic.
+  (2)-[Permanent]: If you do not have access to the Time Power Enhancement, then gain access to it.
+  (3)-[Permanent]: Divinity Unleashed gains the Linked (Time Power) Aspect.
+  (4)-[Passive]: Reduce the Stress Test Requirement of Time Power by 4.
+  (5)-[Passive]: Increase your Combat Rolls during a Frozen Turn by 1(T).
+  (6)-[Passive]: A Character may use the Signature Technique Maneuver instead of the Basic Attack Maneuver through the effects of your use of the Freeze Attack God Maneuver.
+  (7)-[Triggered, 1/Encounter]: If you target an Ally with the Freeze Attack God Maneuver, apply your Damage Attribute to any Attacking Maneuver they make through its effects.
+  True God of an Element: Nature itself answers to your call as the primordial elements bow down in service to your divine whims.
+  (1)-[Prerequisite]: Access to the God of an Element effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (FO/MA) of Divinity Unleashed by 1(T).
+  (3)-[Passive]: Double the bonus to your Strike and Wound Rolls from Favored Element.
+  (4)-[Passive]: Reduce the Divine Ki Point Cost of Divine Element by 2(bT).
+  (5)-[Triggered, 1/Round]: If you spend Divine Ki Points to pay the Ki Point Cost of an Attacking Maneuver with a Profile of your Favored Element, apply an Energy Charge to that Attacking Maneuver.
+  (6)-[Permanent, Option]: Upon gaining access to this Trait, choose one of the following effects:
+  God of the Elements [Permanent, Passive]: Upon gaining this effect, select up to 3 Profiles with 'Elemental' in their name. They become your Favored Elements while in this Transformation.
+  God of Focus [Permanent, Passive, Ruling]: Upon gaining this effect, select a Favored Element. That Element becomes your 'Divine Focus'. Any Attacking Maneuvers of your Divine Focus may target an additional Character if they do not possess an AoE, and if they do possess an AoE, increase the Magnitude of that AoE by 1 Magnitude.
+
+  MASTERY TRAIT
+  Divine Entity (1): You have gained full control over your godly might, allowing you to reach an even greater height.
+  (1)-[Permanent]: Divinity Unleashed gains M levels of the Scaling Aspect.
+  (2)-[Passive]: The 5th effect of Cosmic Flow uses your entire Surgency, instead of 1/2.
+  (3)-[Triggered]: If you spend a Counter Action(s), regain 1(bT) Divine Ki Points for each Counter Action spent.
+  True Divinity (2): Your divine might surpasses even the greatest of godly beings and transcends all known limits of power.
+  (1)-[Permanent]: Divinity Unleashed gains the Perfect Ki Control Aspect.
+  (2)-[Passive]: You may spend your Counter Actions as if they were Actions for Combat Recovery.
+  (3)-[Triggered, 1/Encounter]: If you spend 3 Counter Actions in a Combat Round, upon spending that final Counter Action, regain Divine Ki Points equal to your Surgency.
+
+  LEGENDARY TRAIT
+  God of a Domain: You rise to godly power, giving you control over some aspect of reality, a divine Domain.
+  (1)-[Ruling]: Your choice for the 3rd effect of Divine Magic is known as your 'Domain'.
+  (2)-[Passive]: Increase your maximum number of Divine Ki Points by 1/2.
+  (3)-[Passive, Ruling]: Gain access to a Domain Maneuver, to gain access to a Domain Maneuver, your Domain must be in brackets after the name of that Domain Maneuver. All Domain Maneuvers are God Maneuvers.
+
+  Domain Maneuvers
+  Divine Peace (God of Peace) [1/Round]: Your resolve to solve conflicts without violence is, by itself, enough to stop attacks from harming you altogether. –Maneuver Type: Counter –Action Cost: 2 Counter Actions –Minions: N/A –DKP Cost: Varies –Effect: If you are in the Mindful State, you may use this Maneuver in response to being targeted by an Attacking Maneuver (that is not an Ultimate Signature Technique). Spend Divine Ki Points equal to the combined Ki Point Cost and Ki Wager for that Attacking Maneuver. If you do, that Attacking Maneuver is cancelled (the attacking Character does not regain any Actions or Ki Points). For every Energy Charge applied to that Attacking Maneuver, treat their Ki Point Cost as if it was 2(T) (using the Tier of Power of the attacking Character) higher.
+  Divine Judgement (God of Judgement) [1/Round]: You retaliate at the audacious whelp who dared to strike divine perfection. –Maneuver Type: Out-of-Sequence –Action Cost: N/A –Minions: N/A –DKP Cost: 5(T) –Effect: If you are hit by an Attacking Maneuver and take Damage, you may use this Maneuver. Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but you must target the Character that hit you with an Attacking Maneuver to enable you to use this Maneuver. Increase the Wound Roll of this Attacking Maneuver by 1/2 of the Damage you received from that Attacking Maneuver. This additional Damage cannot exceed your Damage Attribute.
+  Divine Muscle (God of Power) [1/Round]: Flexing your divine physique, you brace for incoming attacks. –Maneuver Type: Counter –Action Cost: 1 Counter Action –Minions: N/A –DKP Cost: 2(bT) –Effect: If you are hit by an Attacking Maneuver, you may use this Counter Maneuver and increase your Soak Value by 1(T) for each Super Stack you possess (before any calculations). This Maneuver is treated as the Direct Hit option of Defend Maneuver for any effects and gains its effects.
+  Divine Healing (God of Survival) [1/Round]: You recover your stamina even as you are being struck, healing yourself with divine grace. –Maneuver Type: Counter –Action Cost: 2 Counter Actions –Minions: N/A –DKP Cost: 2(bT) –Effect: If you are hit by an Attacking Maneuver and take Damage, you may use this Maneuver. Regain 2d10(bT) Life Points, increasing the Dice Score by your Surgency. This effect is considered a use of Combat Recovery for all of your effects.
+  Divine Wisdom (God of Wisdom) [1/Round]: You impart words of wisdom from Otherworld upon all who are humble enough to listen. –Maneuver Type: Instant –Action Cost: N/A –Minions: N/A –DKP Cost: 2(bT) –Effect: Use a Special Maneuver that is a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+  Divine Weapon (God of War) [1/Round]: Using your godly weapon to attack, you strike a powerful blow against your foes. –Maneuver Type: Instant –Action Cost: N/A –Minions: N/A –DKP Cost: 2(bT) –Effect: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. This Attacking Maneuver must be an Armed Attack.
+  Divine Spell (God of Magic) [1/Round]: Arcane secrets unfold before you as you cast a spell backed by divine power. –Maneuver Type: Instant –Action Cost: N/A –Minions: N/A –DKP Cost: 2(bT) –Effect: Use a Unique Ability that is a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+  Divine Summoning (God of Many) [1/Round]: Calling your subordinates into battle, you lead with heavenly insight and strategic might. –Maneuver Type: Instant –Action Cost: N/A –Minions: N/A –DKP Cost: 2(bT) for each Minion targeted –Effect: Target any number of your Minions. Place them on any unoccupied Square(s) on the Battlefield. If this places a Minion on a Square adjacent to an Opponent, this triggers that Minion's Exploit Maneuver. Only one Minion can use the Exploit Maneuver through this effect.
+  Freeze Attack (God of Time) [1/Round]: You bend the flow of time with divine skill, allowing a single attack to catch an enemy off-guard. –Maneuver Type: Instant –Action Cost: N/A –Minions: N/A –DKP Cost: 5(bT) –Effect: Target yourself or an Ally. That Character begins a Frozen Turn (see — Time Freeze) with 1 Action (instead of the 2 granted by Time Freeze). This Action must be spent on the Basic Attack Maneuver.
+  Divine Element (God of an Element) [1/Round]: You unleash the godly fury of nature, striking a blow with one of the primordial elements of creation. –Maneuver Type: Instant –Action Cost: N/A –Minions: N/A –DKP Cost: 2(bT) –Effect: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. This Attacking Maneuver must use your Favored Element as a Profile.
+
+  Battle Uniform — Category: Combat Clothing / Craftsmanship Grade: 5 / Accessories: N/A
+  Combat Ready: This set of clothing gives you such wonderful freedom of movement, it's like you're wearing nothing at all. –Apparel Category: All (Except Weights) –Prerequisites: N/A –Quality Slots: 1 –Effects: Increase your Strike and Dodge Rolls by 1/2 (rounded up) of your Apparel Bonus.
+  Divine Apparel: This article of clothing is empowered by a divine entity. –Apparel Category: All –Prerequisites: N/A –Quality Slots: 1 –Effects: Increase your Apparel Bonus by 1(bT).
+  Enchanted: Protected by magic, this item offers you greater defense. –Apparel Category: All (except Weights) –Prerequisites: N/A –Quality Slots: 1 –Effects: Increase your Soak Value by the Apparel Bonus.
+  Rejuvenating Light: The power that flows through you restores your divine energy. –Apparel Category: All (except Weights) –Prerequisites: Divinity Unleashed –Quality Slots: 1 –Effects: If you use a Surge Maneuver, regain 3(bT) Divine Ki Points.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

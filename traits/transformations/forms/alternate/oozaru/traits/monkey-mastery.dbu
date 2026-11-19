@@ -1,0 +1,19 @@
+id: oozaru-monkey-mastery
+name: Monkey Mastery
+order: 4
+slot: mastery
+mastery: 2
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You have gained the ability to contain your inner beast, allowing you true control over your beast form.
+text: >
+  Monkey Mastery (2): You have gained the ability to contain your inner beast, allowing you true control over your beast form.
+  (1)-[Permanent]: Oozaru loses the Innate State (Feral/Raging) Aspect, and gains an Attribute Modifier Bonus (AG) of +1(T).
+  (2)-[Passive]: For calculating the bonus/penalty to your Defense Value from your Size Category, and for the effects of Punching Up, you are considered to be of the Large Size Category.
+  (3)-[Passive]: Reduce your Muscle Penalty by 1(bT).
+  (4)-[Triggered/Transform, Triggered/Start of Turn]: Enter the Raging and/or Feral State(s) until the end of your turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

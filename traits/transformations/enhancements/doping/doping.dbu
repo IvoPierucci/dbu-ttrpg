@@ -1,0 +1,39 @@
+id: doping
+name: Doping
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: N/A
+tier: 1+
+stress: 6
+aspects: Enhanced Save (Impulsive), Bulky, Raging, Peaked, Exhausting, Limited (LV3)
+bonuses: AG +1(T), FO +1(T), TE +1(T), MA +1(T)
+description: >
+  Your thoughts blur. Your vision sharpens. The world seems brighter, colors more defined. Power courses through you, and for the first time in a long time, you feel… alive. As the chemicals enhancing your performance run their course, you'll find yourself to be ordinary once more, and you won't just want that next hit- you'll NEED it.
+text: >
+  Your thoughts blur. Your vision sharpens. The world seems brighter, colors more defined. Power courses through you, and for the first time in a long time, you feel… alive. As the chemicals enhancing your performance run their course, you'll find yourself to be ordinary once more, and you won't just want that next hit- you'll NEED it.
+
+  You cannot enter the Doping Enhancement Power freely. To use a Transformation Maneuver to enter the Doping Enhancement Power, you must first consume some kind of performance enhancing material such as a drug, an injection or a Fruit from the Tree of Might – discuss with your ARC what options are available.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 6 / Tier of Power Requirement. 1+
+  Aspects: Enhanced Save (Impulsive), Bulky, Raging, Peaked, Exhausting, Limited (LV3)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Body at the Brink: The chemicals coursing through your veins have pushed your body to its limits, giving you a strong edge against the competition.
+  (1)-[Passive]: Reduce your Muscle Penalty by 1(bT).
+  (2)-[Passive]: Increase your Wound Rolls by 1(T) for each Health Threshold you are below.
+  (3)-[Passive]: Increase your Strike Rolls, Dodge Rolls, and Soak Value by 1(T) while below the Injured Health Threshold.
+  (4)-[Triggered/Power, 1/Encounter]: Gain 1 Action.
+
+  Dangerous Amplification: Thanks to the chemicals soaking your brain, your adrenaline is in overdrive, amping up your aggression and driving you to action, regardless of the cost to your body.
+  (1)-[Passive]: Halve your Surgency.
+  (2)-[Triggered]: When you use an Attacking Maneuver, you may spend Life Points up to the Ki Point Cost of that Attacking Maneuver. If you do, increase the Wound Roll by an equal amount.
+  (3)-[1/Round]: You may spend 4(bT) Life Points to use the Power Up Maneuver as an Instant Maneuver.
+  (4)-[Triggered, 1/Encounter]: If you spend more than 8(bT) Life Points through the 2nd effect of Dangerous Amplification, you may apply an Energy Charge to that Attacking Maneuver.
+
+  BURST LIMIT — Power and Payment: The burst of adrenaline pumping through you grants you unimaginable power, damaging your body in the aftermath.
+  (1)-[Triggered/Transform]: Gain 2 Actions. After leaving this Transformation, gain the Drained Combat Condition and reduce your Life Points by 1/4 (rounded up) of your Maximum Life Points.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

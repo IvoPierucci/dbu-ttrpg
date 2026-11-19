@@ -1,0 +1,18 @@
+id: time-power-time-control
+name: Time Control
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You possess true mastery over time, allowing you to manipulate the very flow of time around your enemies.
+text: >
+  Time Control: You possess true mastery over time, allowing you to manipulate the very flow of time around your enemies.
+  (1)-[Permanent]: You gain access to the Time Profile.
+  (2)-[Passive]: You gain access to the Time Seal and Time Reversion Unique Abilities.
+  (3)-[Triggered, 1/Encounter]: When using a Signature Technique, you may add the Multi-Profile Super Profile to that Attacking Maneuver, but you must select the Time Profile for the effects of Multi-Profile.
+  (4)-[Automatic/Start of Turn]: If you are not in the God Ki Special State, reduce your Life Points by 1/10th of your Maximum Life Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

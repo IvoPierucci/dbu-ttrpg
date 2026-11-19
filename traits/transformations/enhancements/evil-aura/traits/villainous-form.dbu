@@ -1,0 +1,20 @@
+id: evil-aura-villainous-form
+name: Villainous Form
+order: 1
+slot: trait
+description: >
+  Whether it's something you chose for yourself or something placed upon you, this upgrade to your power compels you to act like the villain you've become.
+text: >
+  Villainous Form: Whether it's something you chose for yourself or something placed upon you, this upgrade to your power compels you to act like the villain you've become.
+  (1)-[Passive]: Gain access to the Evil Techniques (detailed below). You may use either your Force or Magic Modifier for the Damage Attribute of your Evil Techniques.
+  (2)-[Passive]: Gain access to the Darkness Mixer Modifier Maneuver.
+  (3)-[Passive]: When using an Evil Technique, you may spend Evil Points equal to 1/2 of the Ki Point Cost for that Attacking Maneuver instead of paying the Ki Point Cost.
+  (4)-[Triggered]: If you Ki Wager a number of Ki Points equal to (or exceeding) 1/10th of your Max Capacity on an Attacking Maneuver, increase your Wound Roll for that Attacking Maneuver by G(T).
+  (5)-[Graded]: Evil Aura has 2 Grades. Each Evil Aura Grade:
+  Sets the AMB (Attribute Modifier Bonus) of Evil Aura for the listed Attribute to the amount listed on the Grades table.
+  Sets the Stress Test Requirement for this Transformation.
+  Sets your maximum amount of Evil Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

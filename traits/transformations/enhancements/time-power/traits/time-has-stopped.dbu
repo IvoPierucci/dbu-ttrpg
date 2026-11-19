@@ -1,0 +1,13 @@
+id: time-power-time-has-stopped
+name: Time Has Stopped
+order: 3
+slot: burst
+description: >
+  You instantly halt the flow of time all around you, allowing you to act as you please.
+text: >
+  Time Has Stopped: You instantly halt the flow of time all around you, allowing you to act as you please.
+  (1)-[Triggered/Transform]: Use the Time Freeze Unique Ability without paying the Ki Point Cost.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,45 @@
+id: autonomous-ultra-instinct
+name: Autonomous Ultra Instinct
+type: enhancement
+racial: Any
+prerequisites: Access to the God Ki Special State through an effect or an Aspect
+tier: 6+
+stress: 12
+aspects: Enhanced Save (All), God Ki, Mindful, Innate State (Mindful), Straining, Beyond, Difficult (LV1)
+bonuses: AG +2(T), FO +1(T), MA +1(T)
+description: >
+  Your mind is too slow. The body can react before the mind can process what's happening, but you have to learn to let go first. Few can achieve this level of prowess, but you have. Your body moves without waiting for your mind, thus making you untouchable. Through pure instinct alone, your body can dodge blows and strike first.
+text: >
+  Your mind is too slow. The body can react before the mind can process what's happening, but you have to learn to let go first. Few can achieve this level of prowess, but you have. Your body moves without waiting for your mind, thus making you untouchable. Through pure instinct alone, your body can dodge blows and strike first.
+
+  Racial Requirement: Any / Transformation Type: Enhancement Power / Prerequisite(s): Access to the God Ki Special State through an effect or an Aspect / Stress Test Requirement: 12 / Tier of Power Requirement. 6+
+  Aspects: Enhanced Save (All), God Ki, Mindful, Innate State (Mindful), Straining, Beyond, Difficult (LV1)
+  AG +2(T) · FO +1(T) · TE – · SC – · IN – · MA +1(T) · PE –
+
+  Angelic Technique: You have learned to use a technique reserved for the divine beings known as Angels.
+  (1)-[Permanent]: Reduce the Stress Test Requirement of this Transformation by x, where x is equal to double the Tier of Power Requirement of the Transformation with the highest Tier of Power Requirement that is/would be used in conjunction with this Transformation. However, this Transformation's Stress Test Requirement is added completely onto any Transformation used in conjunction with it, rather than being halved, even when it has the lower Stress Test Requirement.
+  (2)-[Passive]: Increase your Combat Rolls by x(bT), where x is equal to 1 or 1/2 of the highest Tier of Power Requirement of any Transformation used in conjunction with this Transformation (min. 1) if you are using this Transformation in conjunction with another Transformation.
+  (3)-[Passive]: The minimum Natural Result of your Strike and Dodge Rolls is 2. If this Transformation is used in conjunction with another Transformation, increase the minimum Natural Result by 1/2 of that Transformation's Tier of Power Requirement.
+  (4)-[Triggered, 1/Round]: If you succeed in dodging an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you do not pay any Ki Points for this Attacking Maneuver.
+
+  In the Realm of Angels: You have ascended beyond the mortal nature of your birth and achieved divine skill previously unknown to the universe at large.
+  (1)-[Passive]: You do not trigger the Exploit Maneuver unless you are suffering from the Guard Down or Impediment Combat Conditions.
+  (2)-[Triggered/Start of Turn]: You may spend 3(bT) Divine Ki Points to remove a Combat Condition you are suffering from (except Pinned, Suffocating, Transfigured, or Poisoned). You may repeat this effect any number of times.
+  (3)-[Triggered/Power, 1/Round]: Enter the Zen level of the Mindful State until the start of your next turn.
+
+  BURST LIMIT — Angelic Trumpets: You move with fluid grace and precision, exerting only the necessary energy to avoid attacks and land your own.
+  (1)-[Triggered/Transform]: You successfully Dodge all Attacking Maneuvers that target you (except by characters in the Determined State) regardless of the Dice Score of your Dodge Roll until the start of your next turn.
+
+  MASTERY TRAITS
+  Sharpened Instinct (1): You learn to rely more on your instincts, honing them to a perfect edge.
+  (1)-[Permanent]: Autonomous Ultra Instinct loses the Straining Aspect.
+  (2)-[Passive]: You may enter the Tranquil level of the Mindful State instead of the Zen level through the 3rd effect of In the Realm of Angels.
+  (3)-[Passive]: Increase the minimum Natural Result for the 3rd effect of Angelic Techniques by 1.
+
+  Angelic Instinct (2): Your body moves without an ounce of input from your conscious mind, reacting to your surroundings.
+  (1)-[Permanent]: Autonomous Ultra Instinct gains the Natural (LV1) Aspect.
+  (2)-[Triggered]: If you are not hit by an Opponent's Attacking Maneuver that targets you, regain 2(bT) Ki Points.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

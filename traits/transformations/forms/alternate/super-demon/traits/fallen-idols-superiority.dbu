@@ -1,0 +1,22 @@
+id: super-demon-fallen-idols-superiority
+name: Fallen Idol's Superiority
+order: 5
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: demonic-traits
+groupLabel: Demonic Traits
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 2
+description: >
+  Unbreakable and unfathomable, your monstrous intensity shatters the battlefield and distorts the mind.
+text: >
+  Fallen Idol's Superiority: Unbreakable and unfathomable, your monstrous intensity shatters the battlefield and distorts the mind.
+  (1)-[Prerequisite]: You are of the Phantom Subrace.
+  (2)-[Permanent, Passive]: Upon gaining access to this Demonic Trait, select and gain access to up to 2 Bestial Traits while in this Transformation.
+  (3)-[Passive]: Increase the Dice Score of your Pressure Checks by 2. Reduce this bonus by 1 for every Bestial Trait you possess from the 2nd effect of Fallen Idol's Superiority.
+  (4)-[Passive]: While you possess 2+ stacks of Demonic Power, increase your Combat Rolls by 1(T).
+  (5)-[Triggered, 1/Encounter]: If an Opponent gains a Combat Condition due to your use of the 4th effect of Fallen Idol, enter the Superior State until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

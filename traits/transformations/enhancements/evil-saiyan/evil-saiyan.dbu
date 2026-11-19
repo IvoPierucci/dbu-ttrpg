@@ -1,0 +1,68 @@
+id: evil-saiyan
+name: Evil Saiyan
+type: enhancement
+subtype: standard
+racial: Saiyan
+prerequisites: N/A
+tier: 2+
+stress: 13
+variantOf: evil-aura
+aspects: Transcendent, Variant (Evil Aura), Enhanced Save (Cognitive), Prelude, Raging
+bonuses: AG +1(T), FO +2(T), TE +1(T), MA +1(T)
+description: >
+  Power, POWER!!! That is what you need! Let it fester from every inch of your body; let it crawl out and infect your brethren. This is the TRUE Saiyan way! The strength of a warrior's dark heart! THE BLOODLUST OF BATTLE!!! NONE SHALL STAND IN YOUR WAY!!!
+text: >
+  Power, POWER!!! That is what you need! Let it fester from every inch of your body; let it crawl out and infect your brethren. This is the TRUE Saiyan way! The strength of a warrior's dark heart! THE BLOODLUST OF BATTLE!!! NONE SHALL STAND IN YOUR WAY!!!
+
+  Racial Requirement: Saiyan / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 13 / Tier of Power Requirement. 2+
+  Aspects: Transcendent, Variant (Evil Aura), Enhanced Save (Cognitive), Prelude, Raging
+  AG +1(T) · FO +2(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Dark Saiya Power (Villainous Form): Your bloodlust scorches your blackened heart, driving you to battle.
+  (1)-[Passive]: Your maximum number of Evil Points is 10(bT).
+  (2)-[Passive]: While this Transformation is used in conjunction with a Transformation with the 'Saiyan' Racial Requirement:
+  Increase your Tier of Power Extra Dice by 1 Dice Category.
+  Reduce the Stress Test Requirement of Evil Saiyan by 3.
+  Gain an additional 2(bT) Evil Points at the start of each Combat Round through the first effect of Power of Evil.
+  (3)-[1/Round]: As an Instant Maneuver, spend a stack of Battle Born to regain 5(bT) Evil Points.
+  (4)-[Triggered, 1/Round]: If a Saiyan (that is not in the Mindful State) hits you with a Physical Attack that does not possess an AoE, make a Clash (Cognitive) against them. If you win, that Character enters the Berserk Special State.
+
+  Berserk Special State — Berserk
+  (1)-[Automatic/Start of Turn, Automatic/Berserk]: Target the closest Character who is not in the Berserk State. You gain the Compelled Combat Condition with that Character as the target until the start of your next turn.
+  (2)-[Passive]: Reduce your Strike Rolls and Dodge Rolls by 1(bT).
+  (3)-[Passive]: You cannot use the Signature Technique Maneuver.
+  (4)-[Passive]: Increase your Wound Rolls and Soak Value by 2(T).
+  (5)-[Triggered, 1/Round]: If you use an Attacking Maneuver, you may spend 2(bT) Ki Points to apply an Energy Charge to that Attacking Maneuver.
+  (6)-[Triggered/Threshold]: If you succeed at the Steadfast Check for this Health Threshold, leave the Berserk State.
+
+  Aura Expansion: Your aura of evil energy supplements your anatomy, extending your reach and empowering your Saiyan tail.
+  (1)-[Passive]: You gain access to the Aura Tail Special Maneuver.
+  (2)-[Passive]: While you have an Aura Tail, you gain access to the Tail Attack Maneuver. You do not select an option, but instead have access to the Elongated or Heavy options (you can only use one option at a time).
+  (3)-[Triggered]: If you use a Physical Attacking Maneuver, spend 2(bT) Evil Point(s) to apply either a Cone or Line AoE to that Attacking Maneuver or treat your Size Category as if it was 1 larger for the effects of Punching Down for the duration of that Attacking Maneuver.
+
+  Aura Tail Special Maneuver — Aura Tail [1/Round]: Either by coating your tail in energy or creating a phantom tail, you gain the strengths of having a tail with none of the weaknesses.
+  –Maneuver Type: Standard Maneuver –Action Cost: 1 Action –Minions: N/A –KP Cost: 4(T) –Exploitable: N/A
+  –Effect: You gain an Aura Tail. While you have an Aura Tail, depending on your choice for the Option effect of Saiyan Heritage, apply the following effects:
+  Tailed. Your Tail cannot be lost, is temporarily regrown if it was lost, and you ignore the 4th effect of Saiyan Heritage. Additionally, increase your Damage Reduction by 1(T).
+  Tailless. You benefit from both the effects of the Tailless and Tailed options of Saiyan Heritage.
+
+  BURST LIMIT — Overwhelming Evil Power: The insatiable evil urges mixes with your Saiyan battle lust to drive you into a frenzy.
+  (1)-[Triggered/Transform]: Enter the Surging State until the end of your turn. If you do, maximize your Evil Points.
+
+  MASTERY TRAIT — Focused Evil: By directing the darkness inside you, you take control over your battle lust and become a fine-tuned weapon of destruction.
+  (1)-[Passive]: Your maximum number of Evil Points is 15(bT).
+  (2)-[Passive]: Ignore the second effect of the Surging State.
+  (3)-[Passive]: While this Transformation is used in conjunction with another Transformation that has the 'Saiyan' Racial Requirement, increase the Dice Score of your Steadfast Checks by 1.
+  (4)-[Triggered, 1/Round]: If you knock an Opponent with a Combat Condition through a Health Threshold, gain 5(bT) Evil Points.
+  (5)-[Triggered/Power, 1/Round]: Target all Opponents within a Sphere AoE (centered on you). Make a Clash (Cognitive vs Cognitive/Morale) against those Opponents. If you win, they gain the Shaken Combat Condition until the start of your next turn.
+
+  TRANSCENDENT TRAIT — Evil of Legend: You have unleashed the ultimate potential of your battle-hungry Saiyan blood.
+  (1)-[Passive]: Evil Saiyan gains the Armored and Scaling (LV2) Aspects.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (IN) of Evil Saiyan by 1(T).
+  (3)-[Passive]: Your maximum number of Evil Points is 20(bT).
+  (4)-[Triggered/Start of Turn]: Evil Saiyan stops being Transcended.
+  (5)-[Triggered/Transform, 1/Encounter]: If you use the Burst Limit for this Transformation, gain a stack of Battle Born.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

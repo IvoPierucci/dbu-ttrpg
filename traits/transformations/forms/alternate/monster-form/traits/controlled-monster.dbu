@@ -1,0 +1,19 @@
+id: monster-form-controlled-monster
+name: Controlled Monster
+order: 3
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  With your mastery of your monstrous form, you have managed to rein in its vicious nature and take full control of your mind and body.
+text: >
+  Controlled Monster (1): With your mastery of your monstrous form, you have managed to rein in its vicious nature and take full control of your mind and body.
+  (1)-[Permanent]: Your level for the Rampaging Aspect is set to 2.
+  (2)-[Permanent]: Monster Form gains the Realization Aspect and M levels of the Scaling Aspect.
+  (3)-[Passive]: Ignore the effects of the Rampaging Aspect.
+  (4)-[Passive]: Increase your Combat Rolls by 1(T) while all of your Opponents are below the Bruised Health Threshold.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

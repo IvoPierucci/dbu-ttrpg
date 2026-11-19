@@ -1,0 +1,24 @@
+id: divinity-unleashed-true-god-of-time
+name: True God of Time
+order: 11
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 2, 3
+description: >
+  The flow of time bends to your will, acting in accordance with your deepest desires.
+text: >
+  True God of Time: The flow of time bends to your will, acting in accordance with your deepest desires.
+  (1)-[Prerequisite]: Access to the God of Time effect for the Option effect of Divine Magic.
+  (2)-[Permanent]: If you do not have access to the Time Power Enhancement, then gain access to it.
+  (3)-[Permanent]: Divinity Unleashed gains the Linked (Time Power) Aspect.
+  (4)-[Passive]: Reduce the Stress Test Requirement of Time Power by 4.
+  (5)-[Passive]: Increase your Combat Rolls during a Frozen Turn by 1(T).
+  (6)-[Passive]: A Character may use the Signature Technique Maneuver instead of the Basic Attack Maneuver through the effects of your use of the Freeze Attack God Maneuver.
+  (7)-[Triggered, 1/Encounter]: If you target an Ally with the Freeze Attack God Maneuver, apply your Damage Attribute to any Attacking Maneuver they make through its effects.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

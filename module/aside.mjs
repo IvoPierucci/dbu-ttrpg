@@ -10,9 +10,20 @@
  *
  * The reason, or "".
  */
+/**
+ * A Transformation Trait's own question - is its Transformation in use, with the Stacks and the Mastery it asks for? - asked of
+ * transformations.mjs, which registers it (useTransformationGate) so that this file still imports nothing.
+ */
+let transformationGate = null;
+export function useTransformationGate(gate) {
+  transformationGate = gate;
+}
+
 export function traitAside(item, items, actor = item?.parent) {
   const flags = item?.flags?.["dbu-ttrpg"] ?? {};
   const list = Array.from(items ?? []);
+  // A Transformation's Trait (transformations.mjs): "outside of the Transformation you don't have its Traits" (the user's).
+  if (item?.system?.transformation) return transformationGate ? transformationGate(item, list, actor) : "transformation";
   // A Villainous Trait switched off - by hand, or by a Weakpoint hit: had, and doing nothing (the user's).
   if (flags.villainousOff) return "villainous";
   if (flags.bestialOff && list.some(other => other.id === flags.bestialOff)) return "bestial";

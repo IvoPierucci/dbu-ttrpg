@@ -1,0 +1,18 @@
+id: dark-evolution-monstrous-evolution
+name: Monstrous Evolution
+order: 1
+slot: trait
+description: >
+  You have been transformed, growing into a true monster.
+text: >
+  Monstrous Evolution: You have been transformed, growing into a true monster.
+  (1)-[Passive]: Reduce your Racial Life Modifier by 3.
+  (2)-[Passive]: Increase your Wound Rolls, Soak Value, and Damage Reduction by 1(T).
+  (3)-[Passive]: Increase your Size Category by 1 Category after all other calculations.
+  (4)-[Passive]: Upon gaining access to this Awakening, select and gain access to 1 Bestial Trait and 1 Monstrous Trait while you possess this Awakening.
+  (5)-[Triggered, 1/Encounter]: If you would receive Damage from an Attacking Maneuver that is less than 1/4 (rounded up) of your Maximum Life Points, you do not receive that Damage.
+  (6)-[Triggered, 1/Encounter]: If you hit only 1 Opponent with an Attacking Maneuver, you may apply your Damage Attribute an additional time to that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

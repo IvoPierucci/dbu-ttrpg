@@ -1,0 +1,17 @@
+id: kaioken-crimson-sacrifice
+name: Crimson Sacrifice
+order: 2
+slot: trait
+description: >
+  By burning away your life force, you turn that energy into pure power.
+text: >
+  Crimson Sacrifice: By burning away your life force, you turn that energy into pure power.
+  (1)-[Passive]: You cannot regain Life Points.
+  (2)-[Passive]: You do not suffer from Reduced Momentum if you are knocked through a Health Threshold due to paying the Life Point Cost of Kaioken.
+  (3)-[Passive]: If you are using Kaioken in conjunction with a Form or Transcended Enhancement that does not possess the Perfect Ki Control Aspect, increase the Life Point Cost by 2(bT).
+  (4)-[Triggered]: If you lose Life Points due to paying Kaioken's Life Point Cost, regain G(bT) Ki Points.
+  (5)-[Triggered, 1/Encounter]: If you use an Ultimate Signature Technique, apply your Kaioken Dice an additional time to the Strike and Wound Roll of that Attacking Maneuver. Additionally, increase the Wound Roll of that Attacking Maneuver by G(T).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

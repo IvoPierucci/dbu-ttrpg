@@ -1,0 +1,19 @@
+id: time-power-dominion-over-time
+name: Dominion Over Time
+order: 4
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Your mastery over the flow of time is so great that you can command it with merely a thought.
+text: >
+  Dominion Over Time: Your mastery over the flow of time is so great that you can command it with merely a thought.
+  (1)-[Permanent]: Time Power loses the Exhausting and Draining Aspects.
+  (2)-[Passive]: Reduce the Ki Point Cost of any Unique Ability with 'Time' in their name by 2(T).
+  (3)-[Passive]: The 3rd effect of Time Control loses the [1/Encounter] Keyword and gains the [1/Round, 2/Encounter] Keywords.
+  (4)-[Passive]: Ignore the 4th effect of Time Control.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

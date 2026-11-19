@@ -1,0 +1,13 @@
+id: doping-power-and-payment
+name: Power and Payment
+order: 3
+slot: burst
+description: >
+  The burst of adrenaline pumping through you grants you unimaginable power, damaging your body in the aftermath.
+text: >
+  Power and Payment: The burst of adrenaline pumping through you grants you unimaginable power, damaging your body in the aftermath.
+  (1)-[Triggered/Transform]: Gain 2 Actions. After leaving this Transformation, gain the Drained Combat Condition and reduce your Life Points by 1/4 (rounded up) of your Maximum Life Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

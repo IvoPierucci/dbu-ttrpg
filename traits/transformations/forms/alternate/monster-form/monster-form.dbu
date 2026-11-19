@@ -1,0 +1,59 @@
+id: monster-form
+name: Monster Form
+type: form
+subtype: alternate
+racial: Any
+prerequisites: N/A
+tier: 2+
+stress: 12
+aspects: Prelude, Difficult (LV1)
+bonuses: AG +1(T), FO +1(T), TE +1(T), IN +1(T), MA +1(T)
+description: >
+  A monstrous transformation that shifts your body into a violent, terrifying beast. This may be the true form of your alien race or born from some kind of mutation or curse. Whatever the cause, this is a power that grows with you as it harnesses the depths of your primal abilities. While the power is immense, unfortunately this horrific transformation will not let you win any beauty pageants.
+text: >
+  A monstrous transformation that shifts your body into a violent, terrifying beast. This may be the true form of your alien race or born from some kind of mutation or curse. Whatever the cause, this is a power that grows with you as it harnesses the depths of your primal abilities. While the power is immense, unfortunately this horrific transformation will not let you win any beauty pageants.
+
+  Racial Requirement: Any / Transformation Type: Form / Form Type: Alternate / Prerequisite(s): N/A / Stress Test Requirement: 12 / Tier of Power Requirement. 2+
+  Aspects: Prelude, Difficult (LV1)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN +1(T) · MA +1(T) · PE –
+
+  Monstrous Ascension: Your transformation into your monstrous persona has many benefits, allowing your strength to grow in many unexpected ways.
+  (1)-[Permanent, Passive]: Upon gaining access to this Transformation:
+  Choose an Attribute (AG/TE or FO+MA). Increase the Attribute Modifier Bonus of that Attribute(s) by 1(T).
+  Choose an Aspect: High Speed, Bulky, or Raging. This Transformation gains your chosen Aspect.
+  Choose 2 Saving Throws. This Transformation gains the Enhanced Save Aspect for those Saving Throws.
+  Choose a Monstrous Trait to gain access to while in this Transformation.
+  Choose a Bestial Trait to gain access to while in this Transformation.
+  Choose between 0~3 levels of the Growth Aspect. This Transformation gains those levels of that Aspect.
+  Choose between 0~2 levels of the Rampaging Aspect. This Transformation gains those levels of that Aspect.
+  (2)-[Passive]: Increase the amount of Life and Ki Points you regain through Legend Realized by 1/2 of the Attribute Modifier for the Attribute you chose through the first effect of Monstrous Ascension.
+  (3)-[Passive]: For each level of the Rampaging Aspect this Transformation possesses, increase your Soak Value and Wound Rolls by 1(T).
+  (4)-[Passive]: Depending on the Aspect you chose through the first effect of Monstrous Ascension, gain access to one of the following effects:
+  High Speed [Triggered, 1/Round]: If you use an Attacking Maneuver, and have used the Movement Maneuver this Combat Round to move your full Boosted Speed, increase the Wound Roll of that Attacking Maneuver by 1/2 of your Boosted Speed.
+  Bulky [Passive]: While you possess up to 2 stacks of Super Stack, increase your Strike Rolls by 1(T).
+  Raging [Passive]: This Transformation gains the Innate State (Raging) Aspect.
+
+  Violent Monster: Your monstrous state leaves you prone to fits of rage, increasing your strength.
+  (1)-[Permanent, Ruling]: Upon gaining access to this Transformation, design a Super Signature Technique with a TP Cost of up to 25. This Signature Technique is known as your 'Vile Technique'. You only have access to your Vile Technique while you are in Monster Form and have access to the Violent Monster Trait.
+  (2)-[Passive]: Increase the Strike Rolls of your Attacking Maneuvers by 1(T) if all of the target(s) of that Attacking Maneuver are below a lower Health Threshold than you.
+  (3)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers by 1(T) for each Health Threshold the target(s) are below. If there are multiple targets, this increase to Wound Rolls is based on the target above the highest Health Threshold.
+  (4)-[Passive]: Double the bonus to your Wound Rolls for the 3rd effect of Violent Monster if the Attacking Maneuver is your Vile Technique.
+  (5)-[Triggered, 1/Round]: If you or an Ally knock an Opponent through a Health Threshold with an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target the Opponent knocked through a Health Threshold to trigger this effect with that Attacking Maneuver.
+  (6)-[Triggered, 1/Round]: If you Defeat an Opponent or knock them through a Health Threshold with an Attacking Maneuver, regain Life and Ki Points equal to 1/2 of the Attribute Modifier for the Attribute you chose through the first effect of Monstrous Ascension.
+  (7)-[Triggered, 1/Encounter]: If you use your Vile Technique, you may apply the Ascended Signature Advantage to that Attacking Maneuver.
+
+  MASTERY TRAIT
+  Controlled Monster (1): With your mastery of your monstrous form, you have managed to rein in its vicious nature and take full control of your mind and body.
+  (1)-[Permanent]: Your level for the Rampaging Aspect is set to 2.
+  (2)-[Permanent]: Monster Form gains the Realization Aspect and M levels of the Scaling Aspect.
+  (3)-[Passive]: Ignore the effects of the Rampaging Aspect.
+  (4)-[Passive]: Increase your Combat Rolls by 1(T) while all of your Opponents are below the Bruised Health Threshold.
+
+  Unstoppable Monster (2): Thanks to your total mastery over your monstrous self, you've become impossible to defeat.
+  (1)-[Permanent]: Monster Form gains the Armored Aspect.
+  (2)-[Permanent, Passive]: Upon gaining access to this Mastery Trait, select and gain access to a Monstrous Trait while in this Transformation.
+  (3)-[Triggered, 1/Encounter]: If you are knocked through a Health Threshold and succeed at the Steadfast Check, apply Legend Realized. This use of Legend Realized does not count towards the amount of uses you gain through the Realization Aspect.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

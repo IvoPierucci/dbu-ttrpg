@@ -1,0 +1,68 @@
+id: kaioken
+name: Kaioken
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: N/A
+tier: 1+
+stress: 6
+aspects: Graded, Heartbeat (LV3), High Speed, Enhanced Save (Impulsive), Glowing, Straining
+# Its Kaioken Grades tables: Grades 4 and 5 open with Deep Red (1), the 6th in the Entrusted State - said, never refused.
+grades: 6
+grade1: stress 6; AG/FO/MA 1(T); dice N/A; lifeCost 2(bT); label x2
+grade2: stress 8; AG/FO/MA 1(T); dice 1d4; lifeCost 3(bT); label x3
+grade3: stress 10; AG/FO/MA 2(T); dice 1d4; lifeCost 4(bT); label x4
+grade4: stress 12; AG/FO/MA 2(T); dice 1d6; lifeCost 5(bT); label x10; needs Mastery 1
+grade5: stress 14; AG/FO/MA 3(T); dice 1d8; lifeCost 6(bT); label x20; needs Mastery 1
+grade6: stress 16; AG/FO/MA 4(T); dice 1d10; lifeCost 7(bT); label x100; needs Entrusted
+bonuses: AG *, FO *, MA *
+description: >
+  Known to some as "King Kai's Fist", the Kaioken manifests as a brilliant crimson flame surrounding the user. With this almost divine power, you can multiply your power by many times, allowing you to ascend to the highest echelons of greatness. But this power comes at a cost; don't abuse this great strength, lest the strain it causes on your body forces you to explode…
+text: >
+  Known to some as "King Kai's Fist", the Kaioken manifests as a brilliant crimson flame surrounding the user. With this almost divine power, you can multiply your power by many times, allowing you to ascend to the highest echelons of greatness. But this power comes at a cost; don't abuse this great strength, lest the strain it causes on your body forces you to explode…
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 6 / Tier of Power Requirement. 1+
+  Aspects: Graded, Heartbeat (LV3), High Speed, Enhanced Save (Impulsive), Glowing, Straining
+  AG * · FO * · TE – · SC – · IN – · MA * · PE –
+
+  Exponential Power: You possess the ability to greatly increase your power, but for great power, there is always a great cost.
+  (1)-[1/Round]: During your turn, you may use the Movement Maneuver as an Instant Maneuver.
+  (2)-[Passive]: Increase your Wound Rolls by 1/2 (rounded up) of G(T).
+  (3)-[Passive, Ruling]: Increase your Combat Rolls by the 'Kaioken Dice'. Your Kaioken Dice is decided by the Grade of Kaioken, detailed in the Kaioken Grades table below.
+  (4)-[Graded]: Kaioken has 3 Grades. Each Kaioken Grade:
+  Each Grade after the first increases the Stress Test Requirement by 2.
+  Sets the Kaioken Dice.
+  Sets the AMB (Attribute Modifier Bonus) of Kaioken for the listed Attributes to the amount listed on the Kaioken Grades table.
+  Has a Life Point Cost you must pay to be able to use any Attacking Maneuver.
+  | Kaioken Grades | Kaioken Dice | AMB (AG/FO/MA) | Life Point Cost |
+  | 1 (x2) | N/A | 1(T) | 2(bT) |
+  | 2 (x3) | 1d4 | 1(T) | 3(bT) |
+  | 3 (x4) | 1d4 | 2(T) | 4(bT) |
+
+  Crimson Sacrifice: By burning away your life force, you turn that energy into pure power.
+  (1)-[Passive]: You cannot regain Life Points.
+  (2)-[Passive]: You do not suffer from Reduced Momentum if you are knocked through a Health Threshold due to paying the Life Point Cost of Kaioken.
+  (3)-[Passive]: If you are using Kaioken in conjunction with a Form or Transcended Enhancement that does not possess the Perfect Ki Control Aspect, increase the Life Point Cost by 2(bT).
+  (4)-[Triggered]: If you lose Life Points due to paying Kaioken's Life Point Cost, regain G(bT) Ki Points.
+  (5)-[Triggered, 1/Encounter]: If you use an Ultimate Signature Technique, apply your Kaioken Dice an additional time to the Strike and Wound Roll of that Attacking Maneuver. Additionally, increase the Wound Roll of that Attacking Maneuver by G(T).
+
+  BURST LIMIT — Scarlet Multiplier: The instantaneous burst of strength you get when activating this power is enough to overwhelm most opponents.
+  (1)-[Triggered/Transform]: You may use the Power Up Maneuver, Movement Maneuver, or Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, regain Life and Ki Points equal to 5x the Life Point Cost for this Grade of Kaioken (before any reductions) – ignoring the first effect of Crimson Sacrifice.
+
+  MASTERY TRAIT — Deep Red: The brilliant scarlet flames that encompass you now answer to your whims.
+  (1)-[Permanent]: You gain access to the 4th and 5th Grades of Kaioken.
+  (2)-[Permanent]: If you are in the Entrusted State, you gain access to the 6th Grade of Kaioken.
+  (3)-[Passive]: While in the 4th Grade or higher of Kaioken, Kaioken has its Attribute Modifier Bonus (IN) increased by 1(T).
+  (4)-[Passive]: Reduce the Life Point Cost of all Kaioken Grades by 1(bT).
+  (5)-[Automatic]: If you end your turn in the 6th Grade of Kaioken, you must use the Transformation Maneuver to enter a lower Grade of Kaioken as an Out-of-Sequence Maneuver.
+  (6)-[Triggered/Entrusted]: Use the Transformation Maneuver as an Out-of-Sequence Maneuver to enter the 6th Grade of Kaioken.
+  (7)-[Triggered, 1/Encounter]: Upon being knocked through a Health Threshold by paying the Life Point Cost, you may trigger any effects that would normally be triggered as if it was the result of an Opponent's Attacking Maneuver.
+
+  MASTERED KAIOKEN GRADES TABLE
+  | 4 (x10) | 1d6 | 2(T) | 5(bT) |
+  | 5 (x20) | 1d8 | 3(T) | 6(bT) |
+  | 6 (x100) | 1d10 | 4(T) | 7(bT) |
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

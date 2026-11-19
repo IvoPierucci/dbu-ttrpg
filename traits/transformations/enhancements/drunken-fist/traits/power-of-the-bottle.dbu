@@ -1,0 +1,18 @@
+id: drunken-fist-power-of-the-bottle
+name: Power of the Bottle
+order: 1
+slot: trait
+# Its [Constant] effects: a [Triggered] one that may be used outside the Transformation (the user's).
+constant: 1
+description: >
+  Whether through imitation or through actually imbibing, your movement is like that of a drunkard, but with combat skills woven in.
+text: >
+  Power of the Bottle: Whether through imitation or through actually imbibing, your movement is like that of a drunkard, but with combat skills woven in.
+  (1)-[Constant]: If you drink from a Sake Bottle, instead of entering the Drunk State, you may use the Transformation Maneuver to enter this Transformation as an Out-of-Sequence Maneuver.
+  (2)-[Passive]: The first effect of the Tipsy Level of the Drunk Special State increases your Saving Throws and Combat Rolls instead of reducing them.
+  (3)-[Triggered, Resource]: If you successfully dodge an Opponent's Attacking Maneuver, gain a stack of Toppling (max. 3).
+  (4)-[Triggered]: If you target an Opponent with an Attacking Maneuver, you may spend any number of Toppling stacks to increase the Strike and Wound Rolls of that Attacking Maneuver by 1(T) for each Toppling stack spent.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

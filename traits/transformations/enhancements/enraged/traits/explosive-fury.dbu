@@ -1,0 +1,18 @@
+id: enraged-explosive-fury
+name: Explosive Fury
+order: 1
+slot: trait
+description: >
+  You've gone straight past frustrated, mad, and angry; you are absolutely livid.
+text: >
+  Explosive Fury: You've gone straight past frustrated, mad, and angry; you are absolutely livid.
+  (1)-[Triggered/Transform, Triggered/Start of Turn]: Gain the Guard Down Combat Condition until the start of your next turn. If you do, enter the next level of the Raging State until you leave this Transformation.
+  (2)-[Passive]: Ignore all Health Threshold Penalties while in the Furious level of the Raging State.
+  (3)-[Passive]: Increase your Soak Value and Wound Rolls by 1(T) while you are not suffering from any Health Threshold Penalties.
+  (4)-[Automatic]: If you fail a Steadfast Check, return to the Angry level of the Raging State – exiting any higher levels.
+  (5)-[Automatic/Start of Turn]: If you do not trigger the 1st effect of Explosive Fury, return to the Angry level of the Raging State – exiting any higher levels.
+  (6)-[Triggered, 1/Encounter]: If you target only 1 Character with an Attacking Maneuver while below the Injured Health Threshold, enter the Determined State for the duration of that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

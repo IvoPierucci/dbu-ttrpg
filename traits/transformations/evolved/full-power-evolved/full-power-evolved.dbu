@@ -1,0 +1,29 @@
+id: full-power-evolved
+name: Full Power
+type: evolved
+subtype: same
+# Generic: on any Form that meets its Prerequisites; Unique: on the Form in brackets alone.
+evolvedType: Generic
+racial: 
+prerequisites: Original Form is Mastered
+tier: +1 higher than that of Original Form
+stress: +2
+aspects: Pinnacle (LV2), Draining (LV1), Peaked
+bonuses: FO +1(T), MA +1(T)
+description: >
+  You unlock the maximum power of your transformation, increasing your abilities for a time. With your powers pushed to their limits, you've reached heights of strength others simply cannot fathom.
+text: >
+  You unlock the maximum power of your transformation, increasing your abilities for a time. With your powers pushed to their limits, you've reached heights of strength others simply cannot fathom.
+
+  Evolved Stage Type: Generic / Transformation Type: Same as Original Form / Prerequisite(s): Original Form is Mastered / Stress Test Requirement: +2 / Tier of Power Requirement: +1 higher than that of Original Form
+  Aspects: Pinnacle (LV2), Draining (LV1), Peaked
+  AG – · FO +1(T) · TE – · SC – · IN – · MA +1(T) · PE –
+
+  Power to the Limit: You push your Form's power to its limit.
+  (1)-[Passive]: Increase your maximum number of Power Stacks by 1.
+  (2)-[1/Round]: If you use the Power Up Maneuver while you have 1+ stacks of Power, you may gain an extra stack of Power from this use of the Power Up Maneuver. You cannot use this effect if you have used it during the last Combat Round.
+  (3)-[Triggered, 1/Encounter]: If you hit an Opponent with an Attacking Maneuver that has a Ki Wager equal to or exceeding 1/4 of your Max Capacity, apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

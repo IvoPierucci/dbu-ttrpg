@@ -1,0 +1,19 @@
+id: pure-form-directed-chaos
+name: Directed Chaos
+order: 3
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You've mastered the ability to manipulate the chaotic nature of your Transformation.
+text: >
+  Directed Chaos (1): You've mastered the ability to manipulate the chaotic nature of your Transformation.
+  (1)-[Permanent]: Pure Form loses the Rampaging and Power High Aspects, but gains M levels of the Scaling Aspect (max. 2) and the Realization Aspect.
+  (2)-[Passive]: While in the Superior State, increase your Wound Rolls and Soak Value by 1(T).
+  (3)-[Triggered]: If you reroll your Initiative through the 6th effect of Erratic Majin after rolling your Chaos Die for the 7th effect of Erratic Majin, you may increase or reduce the Dice Score of your Initiative roll by x(bT), where x is equal to 1/2 (rounded up) of your result on that roll of the Chaos Die.
+  (4)-[Triggered, 1/Round]: If you roll a 6 on your Chaos Die, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

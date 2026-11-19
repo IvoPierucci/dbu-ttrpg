@@ -1,0 +1,20 @@
+id: full-power-super-saiyan-superior-pain-superior-power
+name: >
+  Superior Pain, Superior Power
+order: 6
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: super-saiyan-style-traits
+groupLabel: Super Saiyan Style Traits
+description: >
+  Through your tireless efforts, you've transformed the golden flames you've awakened, creating an even more superior state.
+text: >
+  Superior Pain, Superior Power: Through your tireless efforts, you've transformed the golden flames you've awakened, creating an even more superior state.
+  (1)-[Prerequisite]: Access to Superior Super Saiyan.
+  (2)-[Passive]: For every 4 stacks of Battle Born you possess, increase your Surgency by 1(T) (max. 3(T)).
+  (3)-[Triggered]: If you are hit by an Attacking Maneuver, regain Ki Points equal to 1/4 (rounded up) of your Surgency.
+  (4)-[Triggered/Power, 1/Round]: Spend a stack of Battle Born to regain Life Points equal to 1/2 of your Surgency and enter the Superior State until the end of your turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

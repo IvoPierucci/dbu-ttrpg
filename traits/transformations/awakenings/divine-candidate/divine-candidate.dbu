@@ -1,0 +1,30 @@
+id: divine-candidate
+name: Divine Candidate
+type: awakening
+subtype: greater
+origin: mind
+racial: Any
+prerequisites: N/A
+tier: 4+
+maxStacks: 1
+aspects: 
+bonuses: AG +1, FO +1, TE +1, IN +1, MA +1
+description: >
+  While some are able to wield the power of the Gods, you've taken it one step further and began training to fill a divine position! Even as a mere candidate, you've gained far more proficiency using God Ki, and the extra power that provides is immense.
+text: >
+  While some are able to wield the power of the Gods, you've taken it one step further and began training to fill a divine position! Even as a mere candidate, you've gained far more proficiency using God Ki, and the extra power that provides is immense.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Mind / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 4+
+  AG +1 · FO +1 · TE +1 · SC – · IN +1 · MA +1 · PE –
+
+  Divine Training: You have been given a role as an apprentice to a divine being of some variety, allowing you to train in earnest to take that position.
+  (1)-[Passive]: All of your Transformations with the God Ki Aspect gain the Perfect Ki Control Aspect.
+  (2)-[Passive]: Upon gaining access to this Transformation, select and gain access to a God Maneuver of your choice.
+  (3)-[Passive]: While in the God Ki State, reduce the Ki Point Cost of all Attacking Maneuvers by 1(T).
+  (4)-[Passive]: While in the God Ki State, increase your Surgency by 2(T).
+  (5)-[Triggered/Power, 1/Round]: You may enter the God Ki State until the end of your turn.
+  (6)-[Triggered/God Ki, 1/Encounter]: Use a Ki Surge. If you do, regain Divine Ki Points equal to your Surgency.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

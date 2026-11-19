@@ -1,0 +1,21 @@
+id: monster-form-violent-monster
+name: Violent Monster
+order: 2
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Your monstrous state leaves you prone to fits of rage, increasing your strength.
+text: >
+  Violent Monster: Your monstrous state leaves you prone to fits of rage, increasing your strength.
+  (1)-[Permanent, Ruling]: Upon gaining access to this Transformation, design a Super Signature Technique with a TP Cost of up to 25. This Signature Technique is known as your 'Vile Technique'. You only have access to your Vile Technique while you are in Monster Form and have access to the Violent Monster Trait.
+  (2)-[Passive]: Increase the Strike Rolls of your Attacking Maneuvers by 1(T) if all of the target(s) of that Attacking Maneuver are below a lower Health Threshold than you.
+  (3)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers by 1(T) for each Health Threshold the target(s) are below. If there are multiple targets, this increase to Wound Rolls is based on the target above the highest Health Threshold.
+  (4)-[Passive]: Double the bonus to your Wound Rolls for the 3rd effect of Violent Monster if the Attacking Maneuver is your Vile Technique.
+  (5)-[Triggered, 1/Round]: If you or an Ally knock an Opponent through a Health Threshold with an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target the Opponent knocked through a Health Threshold to trigger this effect with that Attacking Maneuver.
+  (6)-[Triggered, 1/Round]: If you Defeat an Opponent or knock them through a Health Threshold with an Attacking Maneuver, regain Life and Ki Points equal to 1/2 of the Attribute Modifier for the Attribute you chose through the first effect of Monstrous Ascension.
+  (7)-[Triggered, 1/Encounter]: If you use your Vile Technique, you may apply the Ascended Signature Advantage to that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,19 @@
+id: great-namekian-namekian-titan
+name: Namekian Titan
+order: 1
+slot: trait
+replaces: Battlefield Titan
+description: >
+  Your large size allows you to deal even more punishment to the enemies you have identified the weaknesses of.
+text: >
+  Namekian Titan (Battlefield Titan): Your large size allows you to deal even more punishment to the enemies you have identified the weaknesses of.
+  (1)-[Passive]: Increase your Surgency by 1(T) for each Size Category you are larger than Large.
+  (2)-[Passive]: The increase to your Melee Range from the 4th effect of Namekian Biology is increased by G.
+  (3)-[Passive]: If a Studied Ally of a smaller Size Category is occupying a Square that you are also occupying, they cannot be targeted by Attacking Maneuvers unless that Attacking Maneuver possesses an AoE.
+  (4)-[Triggered, 1/Round]: When making a Physical Attack, you may apply a Line or Cone AoE to that Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you receive Damage from a Studied Opponent's Attacking Maneuver, regain Life Points equal to 1/2 of your Surgency.
+  (6)-[Triggered, 1/Round]: If you target a Studied Opponent (and no other Characters) with an Attacking Maneuver, apply Punching Down regardless of that Character's Size Category. If you would already apply Punching Down against that Opponent, increase the Wound Roll of that Attacking Maneuver by 1/2 of your Surgency.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

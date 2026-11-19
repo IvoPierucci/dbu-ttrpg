@@ -2176,7 +2176,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       : Math.min(Math.max(this.powerLevel, 1), DBUCharacterData.MAX_POWER_LEVEL);
 
     // The Racial Traits had - the files their Items came from - for whatever asks for one by name (traitActive).
-    this.racialTraits = Array.from(this.parent?.items ?? []).filter(item => item.type === "racial")
+    // A Transformation's outside it not among them: "you don't count as having the Trait" (the user's).
+    this.racialTraits = Array.from(this.parent?.items ?? []).filter(item => (item.type === "racial")
+      && !(item.system?.transformation && traitAside(item, this.parent?.items, this.parent)))
       .map(item => item.flags?.["dbu-ttrpg"]?.sourceId).filter(Boolean);
 
     // Racial Life Modifier, from whichever race is selected. An unknown or unset race

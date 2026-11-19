@@ -1,0 +1,66 @@
+id: lightspeed-mode
+name: Lightspeed Mode
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: N/A
+tier: 1+
+stress: *
+aspects: Graded, Transcendent, Enhanced Save (Impulsive), High Speed
+# Its Grades table: Grades 3 and 4 open with Super Maximum Lightspeed Mode (1) - said, never refused.
+grades: 4
+grade1: stress 6; tier 1; AG 1(T); damage 2(bT)
+grade2: stress 10; tier 2; AG 3(T); damage 5(bT)
+grade3: stress 14; tier 3; AG 4(T); damage 6(bT); aspects Straining; needs Transcendent Trait
+grade4: stress 22; tier 4; AG 6(T); damage 8(bT); aspects Straining, Exhausting; needs Transcendent Trait
+bonuses: AG *, FO +G(T), MA +G(T)
+description: >
+  From your long years of training, you've learned that the best defense is simply not to be there. Coincidentally, if you're able to strike your opponent without being struck yourself, victory becomes a simple matter. For these reasons, and possibly more, you have pushed your speed farther, breaking even the limits of what you imagined possible. Faster and faster, you keep moving, aiming to become the fastest in the universe.
+text: >
+  From your long years of training, you've learned that the best defense is simply not to be there. Coincidentally, if you're able to strike your opponent without being struck yourself, victory becomes a simple matter. For these reasons, and possibly more, you have pushed your speed farther, breaking even the limits of what you imagined possible. Faster and faster, you keep moving, aiming to become the fastest in the universe.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: * / Tier of Power Requirement. 1+
+  Aspects: Graded, Transcendent, Enhanced Save (Impulsive), High Speed
+  AG * · FO +G(T) · TE – · SC – · IN – · MA +G(T) · PE –
+
+  Gear Shift: You are able to ramp up your speed at-will, allowing you to move faster than anyone else.
+  (1)-[Passive]: Increase your Initiative Value by G(T).
+  (2)-[Passive]: Increase the Tier of Power Extra Dice applied to your Strike and Dodge Rolls by G Dice Categories (min. 1d4).
+  (3)-[Graded]: Lightspeed Mode has 2 Grades. Each Lightspeed Mode Grade:
+  Has its own Stress Test Requirement.
+  Has its own Tier of Power Requirement, which is equal to the Grade number (i.e. Grade 2 has a Tier of Power Requirement of 2+ and Grade 3 has a Tier of Power Requirement of 3+).
+  Sets the AMB (Attribute Modifier Bonus) of Lightspeed for the listed Attribute to the amount listed on the Grades table.
+  Increases the amount of Damage you suffer from Collision and Attacking Maneuvers by an amount listed on the Grades table.
+  Applies additional Aspects; some Grades have additional Aspects.
+  | Grades | Stress Test | AMB (AG) | Damage | Aspects |
+  | 1 | 6 | 1(T) | 2(bT) | N/A |
+  | 2 | 10 | 3(T) | 5(bT) | N/A |
+
+  Speed Star: You are at your absolute best when moving at maximum speed around the battlefield, gathering momentum to dodge and strike with.
+  (1)-[1/Round]: You may use the Movement Maneuver or Basic Attack Maneuver as an Instant Maneuver.
+  (2)-[Triggered/Start of Turn]: If you have not been hit by an Attacking Maneuver since the end of your last turn, increase your Strike and Dodge Rolls by 1/2 (rounded up) of G(T) until the start of your next turn.
+  (3)-[Triggered, 1/Round]: If you use the Movement Maneuver during your turn to leave the Melee Range of another character, make a Clash (Impulsive vs Impulsive/Cognitive) against that character. Whoever loses the Clash has the Guard Down Combat Condition until the end of this turn.
+  (4)-[Triggered, 1/Round]: If you have used the Movement Maneuver this Combat Round and use an Attacking Maneuver, you may use your Agility Modifier as the Damage Attribute.
+  (5)-[Triggered, 1/Round]: When you use the Movement Maneuver, you may move through any Squares occupied by Opponents (you cannot end your movement on that Square). If you do, make a Clash (Impulsive vs Impulsive/Corporeal) against those Opponent(s) whose Squares you have moved through. If you win, reduce their Life Points by 1/2 of your Boosted Speed.
+
+  BURST LIMIT — Lightspeed Assault: In a blur of motion, you close the distance between you and your target.
+  (1)-[Triggered/Transform]: Use the Movement Maneuver as an Out-of-Sequence Maneuver. If you do, increase your Speeds and Combat Rolls by G(T) until the start of your next turn.
+
+  MASTERY TRAIT — FTL: You rocket forward faster than light itself, streaking past friend and foe alike to strike at your desired target.
+  (1)-[Permanent]: The second and higher Grades of Lightspeed Mode gain the Heartbeat (LV2) Aspect.
+  (2)-[Passive]: Increase your Wound Rolls of your Signature Techniques by 1/2 (rounded up) of G(T).
+  (3)-[Passive]: Reduce the extra Damage you receive from your Grade of Lightspeed Mode by 2(bT).
+  (4)-[Passive]: Your use of the Movement Maneuver while in the second or higher Grades of Lightspeed Mode does not trigger the Exploit Maneuver.
+  (5)-[Triggered/Start of Turn]: If you are in the first Grade of Lightspeed Mode, regain 3(bT) Ki Points.
+
+  TRANSCENDENT TRAIT — Super Maximum Lightspeed Mode: Your extreme speed increases beyond the scale of imagination as you accelerate to a velocity that dwarfs the speed of light by comparison.
+  (1)-[Permanent]: Gain access to the 3rd and 4th Grades of Lightspeed Mode.
+  (2)-[Passive]: Halve the reduction to your Dodge Rolls from the Guard Down Combat Condition.
+  (3)-[Passive]: While in the 3rd or 4th grades of Lightspeed Mode, halve the penalty from your Diminishing Defense.
+  (4)-[Triggered, 1/Encounter]: If you apply the 4th effect of Speed Star to an Attacking Maneuver, you may apply a number of Energy Charges to that Attacking Maneuver equal to 1/2 (rounded up) of G.
+  | 3 | 14 | 4(T) | 6(bT) | Straining |
+  | 4 | 22 | 6(T) | 8(bT) | Straining, Exhausting |
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

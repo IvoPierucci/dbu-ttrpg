@@ -1,0 +1,16 @@
+id: super-saiyan-3-the-peak-of-super-saiyan
+name: The Peak of Super Saiyan
+order: 3
+slot: mastery
+mastery: 2
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You have managed, somehow, to rein in your massive pool of energy, allowing you to fight at full strength.
+text: >
+  The Peak of Super Saiyan (2): You have managed, somehow, to rein in your massive pool of energy, allowing you to fight at full strength.
+  (1)-[Permanent]: Super Saiyan 3 loses the Draining Aspect.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

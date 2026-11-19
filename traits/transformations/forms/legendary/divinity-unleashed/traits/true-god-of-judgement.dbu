@@ -1,0 +1,21 @@
+id: divinity-unleashed-true-god-of-judgement
+name: True God of Judgement
+order: 4
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+description: >
+  Not content with merely watching mortals, you render divine judgment, punishing the wicked for their misdeeds.
+text: >
+  True God of Judgement: Not content with merely watching mortals, you render divine judgment, punishing the wicked for their misdeeds.
+  (1)-[Prerequisite]: Access to the God of Judgement effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (FO/MA) of Divinity Unleashed by 1(T).
+  (3)-[Passive]: Increase the Dice Category of your Energy Charges by 1 Category.
+  (4)-[Passive]: Increase your Combat Rolls by 1(T) for each Health Threshold you are below.
+  (5)-[Passive]: While below the Injured Health Threshold, double the amount of Energy Charges gained from the effects of God of Judgement.
+  (6)-[Triggered, 1/Encounter]: If you use the Divine Judgement Maneuver while in the Injured Health Threshold, you do not have to pay the Divine Ki Point Cost for that God Maneuver and apply an Energy Charge to the Attacking Maneuver made through its effects.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

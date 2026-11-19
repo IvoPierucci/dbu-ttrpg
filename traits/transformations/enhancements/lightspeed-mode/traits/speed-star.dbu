@@ -1,0 +1,17 @@
+id: lightspeed-mode-speed-star
+name: Speed Star
+order: 2
+slot: trait
+description: >
+  You are at your absolute best when moving at maximum speed around the battlefield, gathering momentum to dodge and strike with.
+text: >
+  Speed Star: You are at your absolute best when moving at maximum speed around the battlefield, gathering momentum to dodge and strike with.
+  (1)-[1/Round]: You may use the Movement Maneuver or Basic Attack Maneuver as an Instant Maneuver.
+  (2)-[Triggered/Start of Turn]: If you have not been hit by an Attacking Maneuver since the end of your last turn, increase your Strike and Dodge Rolls by 1/2 (rounded up) of G(T) until the start of your next turn.
+  (3)-[Triggered, 1/Round]: If you use the Movement Maneuver during your turn to leave the Melee Range of another character, make a Clash (Impulsive vs Impulsive/Cognitive) against that character. Whoever loses the Clash has the Guard Down Combat Condition until the end of this turn.
+  (4)-[Triggered, 1/Round]: If you have used the Movement Maneuver this Combat Round and use an Attacking Maneuver, you may use your Agility Modifier as the Damage Attribute.
+  (5)-[Triggered, 1/Round]: When you use the Movement Maneuver, you may move through any Squares occupied by Opponents (you cannot end your movement on that Square). If you do, make a Clash (Impulsive vs Impulsive/Corporeal) against those Opponent(s) whose Squares you have moved through. If you win, reduce their Life Points by 1/2 of your Boosted Speed.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

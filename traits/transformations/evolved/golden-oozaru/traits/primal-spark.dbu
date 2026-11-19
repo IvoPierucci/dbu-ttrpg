@@ -1,0 +1,15 @@
+id: golden-oozaru-primal-spark
+name: Primal Spark
+order: 2
+slot: legendary
+description: >
+  The untamed roar of the Great Ape within, sparking with golden power, has awakened the primal energy deep inside you.
+text: >
+  Primal Spark: The untamed roar of the Great Ape within, sparking with golden power, has awakened the primal energy deep inside you.
+  (1)-[Passive]: While you possess 2+ stacks of Battle Born applied to your Wound Rolls, increase your Surgency by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you use a Surge during your turn, you may enter the Superior State until the end of that turn.
+  (3)-[Triggered/Power, 1/Encounter]: If you have 2+ stacks of Battle Born applied to your Wound Rolls, you may use a Ki Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

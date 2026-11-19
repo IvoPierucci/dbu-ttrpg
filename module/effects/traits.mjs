@@ -377,6 +377,32 @@ const LOAD_ATTEMPTS = 2;
  * A file that cannot be read is reported by name and skipped: one bad Trait must not
  * take the rest of the system with it, and least of all silently.
  */
+/**
+ * Where a file under traits/transformations/ belongs (the plan: every Transformation's own things in its own folder, so that
+ * taking one away leaves nothing behind). The folder of its type first - awakenings, enhancements, evolved, forms/alternate,
+ * forms/legendary - then the Transformation's own folder, holding its file of the same name and, in subfolders named for their
+ * kind, what is its: `traits/` its Transformation Traits, `unique/` its Unique Abilities (an Advancement in a folder named for
+ * its Unique Ability, as everywhere), `maneuvers/`, `gear/`, `states/`, `signature/`.
+ *
+ * Read as if it sat in that kind's own folder - a Maneuver of a Transformation's is a Maneuver like any other - with the
+ * Transformation it belongs to beside it. Null for any other file.
+ *
+ * @param {string[]} parts  its path under traits/, split on "/"
+ * @returns {{kind: string, owner: string|null, transformation: string, folder: string}|null}
+ */
+export function transformationPlace(parts) {
+  if (parts[0] !== "transformations") return null;
+  const at = (parts[1] === "forms") ? 3 : 2;
+  const folder = parts.slice(1, at).join("/");
+  const transformation = parts[at];
+  if (!transformation || (parts.length < at + 2)) return { kind: "", owner: null, transformation: "", folder };
+  // Its own file: <type>/<id>/<id>.dbu.
+  if (parts.length === at + 2) return { kind: "transformations", owner: null, transformation, folder };
+  const inner = parts.slice(at + 1);
+  if (inner[0] === "traits") return { kind: "transformations", owner: transformation, transformation, folder };
+  return { kind: inner[0], owner: (inner.length > 2) ? inner[1] : null, transformation, folder };
+}
+
 export async function loadTraits() {
   traits.clear();
 
@@ -425,8 +451,9 @@ export async function loadTraits() {
     // The folder is the Trait's kind, and the one after it - when there is one - is
     // what it belongs to: traits/races/android/… are the Android's Racial Traits.
     const parts = file.relative.split("/");
-    const kind = parts[0];
-    const owner = (parts.length > 2) ? parts[1] : null;
+    const placed = transformationPlace(parts);
+    const kind = placed?.kind ?? parts[0];
+    const owner = placed ? placed.owner : ((parts.length > 2) ? parts[1] : null);
 
     if (!KINDS[kind]) {
       console.warn(`DBU TTRPG | "${file.relative}" is in a folder this system does not know.`);
@@ -447,6 +474,8 @@ export async function loadTraits() {
       ...trait,
       kind,
       owner,
+      // What a file inside a Transformation's folder belongs to - its id - and, the Transformation's own file, its type folder.
+      ...(placed ? { transformation: placed.transformation, transformationFolder: placed.folder } : {}),
       priority: KINDS[kind].priority,
       path: file.relative
     });

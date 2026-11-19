@@ -1,0 +1,16 @@
+id: time-power-the-frozen-time
+name: The Frozen Time
+order: 2
+slot: trait
+description: >
+  You can halt time more effectively than anyone else, allowing you to dominate your opponents while they cannot fight back.
+text: >
+  The Frozen Time: You can halt time more effectively than anyone else, allowing you to dominate your opponents while they cannot fight back.
+  (1)-[Passive]: Increase your Combat Rolls against Opponents with the Slowed Combat Condition by 1(T).
+  (2)-[Passive]: Increase your Wound Rolls by 2(T) during a Frozen Turn.
+  (3)-[Passive]: Gain an additional Action for your Frozen Turn through the effects of the Time Freeze Unique Ability.
+  (4)-[Triggered, 1/Encounter]: During your Frozen Turn, if you knock an Opponent through a Health Threshold with an Attacking Maneuver, that Opponent automatically fails their Steadfast Check.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

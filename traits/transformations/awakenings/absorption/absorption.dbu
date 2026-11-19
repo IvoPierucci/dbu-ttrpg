@@ -1,0 +1,42 @@
+id: absorption
+name: Absorption
+type: awakening
+subtype: lesser
+origin: body
+racial: Any
+prerequisites: Can only be obtained through the Absorb Maneuver or Out-of-Combat Absorption
+tier: 1+
+maxStacks: 7
+aspects: 
+bonuses: 
+description: >
+  Your power isn't limited to just your own strength. You can take and harness the power of others for yourself, by force if necessary. By taking them into your body through magical or esoteric means, you gain their strength on top of your own. Will you use their strength for good? Or for your own purposes? Will you set them free once the enemy before you is defeated? Or will you keep them trapped indefinitely to bolster your own abilities?
+text: >
+  Your power isn't limited to just your own strength. You can take and harness the power of others for yourself, by force if necessary. By taking them into your body through magical or esoteric means, you gain their strength on top of your own. Will you use their strength for good? Or for your own purposes? Will you set them free once the enemy before you is defeated? Or will you keep them trapped indefinitely to bolster your own abilities?
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Body / Prerequisite(s): Can only be obtained through the Absorb Maneuver or Out-of-Combat Absorption / Maximum No of Stacks: 7 / Tier of Power Requirement. 1+
+  AG – · FO – · TE – · SC – · IN – · MA – · PE –
+
+  Assimilated Power: You have taken another's power into yourself, making it your own, at least for the time being.
+  (1)-[Ruling]: Upon gaining a stack of Absorption, a Character will be assigned to that stack of Absorption as the 'Absorbed Character'. Each stack of Absorption has an 'Absorbed Character'.
+  (2)-[Addendum]: Please refer to the 'Absorption AMB', 'Temporary Absorption Limit', 'Absorbing Fusions', and 'Out-of-Combat Absorption' text boxes below.
+  (3)-[Passive]: You gain access to all of the Signature Techniques, Unique Abilities, Forms (including any Masteries and Evolved Stages), and Enhancements (including any Masteries) possessed by your Absorbed Characters (Except Minions). To gain access to a Unique Ability or Transformation, you must meet their Prerequisites (including any Racial Requirements).
+  (4)-[Passive, Addendum]: Upon gaining a stack of Absorption, select and gain access to a Primary Racial Trait possessed by that stack of Absorption's Absorbed Character. You cannot possess more than 2 Primary Racial Traits through this effect at any one time. See the 'Absorbed Traits' text box below for more details.
+  (5)-[Automatic/Start of Turn]: If a stack of Absorption is a Temporary Awakening, make a Clash (Cognitive) against the Absorbed Character, but reduce your Dice Score by 1(bT) for each Health Threshold Penalty you're suffering from. If you win, nothing happens. If you lose, reduce your Life Points by 1/4 of your Maximum Life Points and lose that stack of Absorption.
+  (6)-[Automatic/Start of Turn]: If you are Defeated, lose all stacks of Absorption you possess.
+  (7)-[Automatic]: Upon losing a stack of Absorption, the Absorbed Character is freed and, if you are still in a Combat Encounter, enters the Combat Encounter on a square adjacent to you of their choice.
+  (8)-[Triggered]: At the end of a Combat Encounter, if you have not reached your Awakening Limit for Lesser Awakenings, you may make a Clash (Cognitive) against the Absorbed Characters for any stacks of Absorption that are Temporary Awakenings. If you win, that stack of Absorption stops being a Temporary Awakening if adding that Awakening would not cause you to exceed the Awakening Limit.
+
+  Absorption AMB — The Attribute Modifier Bonuses (AMB) of Absorption are different to most other Awakenings. Each stack of Absorption applies its own AMB, instead of applying the AMB of the Transformation again. Each stack of Absorption applies an AMB of +1 in the three Attributes with the highest Attribute Score amongst the Absorbed Character's Attributes. If there's a tie, you decide.
+
+  Temporary Absorption Limit — You can only possess up to 2 stacks of Absorption as a Temporary Awakening. If you use the Absorb Maneuver to absorb an additional Character during a Combat Encounter, you must lose access to a stack of Absorption you possess as a Temporary Awakening (you can decide which).
+
+  Absorbing Fusions — A Fusion is considered a single stack of Absorption despite being made from multiple Characters, though its Attribute Modifier Bonus is multiplied by the number of Fused Characters that make up the Fusion. If that Fusion is a Temporary Fusion and their Round Limit ends while an Absorbed Character, each of their Fused Characters becomes a stack of Absorption as a Temporary Awakening. This can exceed your maximum number of Temporary Awakening stacks for Absorption, but for each one after the second, reduce your Cognitive Saves by 1(T).
+
+  Out-of-Combat Absorption — While outside of a Combat Encounter, you may gain stacks of Absorption through requesting them from your ARC – typically through some kind of attempt to absorb a Character (aside from those of your fellow players). You will likely have to pass various checks to absorb a character outside of a Combat Encounter, usually the typical clashes for the Absorb Maneuver, but those may be modified by circumstance. It is a more narrative use of the Absorb Maneuver, but it cannot allow for the stack of Absorption gained to be a Temporary Awakening. Any stacks of Absorption gained outside of a Combat Encounter must be gained as a typical Awakening, which counts towards your Awakening Limit.
+
+  Absorbed Traits — You can only possess up to 2 additional Primary Racial Traits no matter how many stacks of Absorption you possess, but you may lose a stack of Absorption and thus the Primary Racial Trait associated with it. Due to this, while outside of a Combat Encounter, you may re-choose which Primary Racial Traits you are benefiting from due to stacks of Primary Racial Traits at the cost of an Instant Time Unit.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

@@ -176,7 +176,8 @@ function coreManeuver(item) {
  * `importance`. Not an Other or Villainous Trait, nor one another Trait gave.
  */
 function raceTrait(item) {
-  return (item.type === "racial") && !item.system?.other && !isVillainous(item) && !item.flags?.["dbu-ttrpg"]?.grantedBy;
+  return (item.type === "racial") && !item.system?.other && !isVillainous(item) && !item.flags?.["dbu-ttrpg"]?.grantedBy
+    && !item.system?.transformation;
 }
 
 /** The Racial Traits a Fusion may choose among: every Fused Character's, each once, Primary / Secondary / Subrace - Factor Traits as theirs. */

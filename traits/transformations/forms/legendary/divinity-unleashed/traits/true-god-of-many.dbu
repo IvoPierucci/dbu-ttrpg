@@ -1,0 +1,21 @@
+id: divinity-unleashed-true-god-of-many
+name: True God of Many
+order: 10
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+description: >
+  Charismatic and sociable, you are a divine leader of others, imbuing your subordinates with heavenly might.
+text: >
+  True God of Many: Charismatic and sociable, you are a divine leader of others, imbuing your subordinates with heavenly might.
+  (1)-[Prerequisite]: Access to the God of Many effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Combat Rolls and Soak Value of your Minions by 1(T).
+  (3)-[Passive]: Your Minions gain double the bonus from the 3rd effect of Divine Role.
+  (4)-[Passive]: While you are in the Spectator State, increase your Soak Value and Damage Reduction by 2(T).
+  (5)-[Passive]: Your Minions may spend your Counter Actions as if they were their own.
+  (6)-[Triggered, 1/Encounter]: If you use the Divine Summoning God Maneuver, any Minions moved by this effect may use the Power Up Maneuver as an Out-of-Sequence Maneuver (this occurs before any Exploit Maneuvers are triggered).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

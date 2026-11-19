@@ -1,0 +1,15 @@
+id: legendary-evolved-unstoppable-legend
+name: Unstoppable Legend
+order: 2
+slot: legendary
+description: >
+  You are nearly impossible to kill, and even harder to hold at bay.
+text: >
+  Unstoppable Legend: You are nearly impossible to kill, and even harder to hold at bay.
+  (1)-[Passive]: While in a Transformation with the Super Saiyan Form Aspect, increase your Wound Rolls and Soak Value by 1(T).
+  (2)-[Triggered]: Upon making a Stress Test to enter or remain in a Transformation with the Super Saiyan Form Aspect, you may (after seeing the result) reduce your Life Points by 1/10th of your Maximum Life Points to increase the Dice Score of that Stress Test by 2.
+  (3)-[Triggered, 1/Encounter]: Upon entering a Transformation with the Super Saiyan Form Aspect, gain a stack of Battle Born. You must apply this stack of Battle Born to your Wound Rolls.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

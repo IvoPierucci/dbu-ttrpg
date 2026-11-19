@@ -1,0 +1,15 @@
+id: evil-saiyan-aura-expansion
+name: Aura Expansion
+order: 2
+slot: trait
+description: >
+  Your aura of evil energy supplements your anatomy, extending your reach and empowering your Saiyan tail.
+text: >
+  Aura Expansion: Your aura of evil energy supplements your anatomy, extending your reach and empowering your Saiyan tail.
+  (1)-[Passive]: You gain access to the Aura Tail Special Maneuver.
+  (2)-[Passive]: While you have an Aura Tail, you gain access to the Tail Attack Maneuver. You do not select an option, but instead have access to the Elongated or Heavy options (you can only use one option at a time).
+  (3)-[Triggered]: If you use a Physical Attacking Maneuver, spend 2(bT) Evil Point(s) to apply either a Cone or Line AoE to that Attacking Maneuver or treat your Size Category as if it was 1 larger for the effects of Punching Down for the duration of that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,37 @@
+id: zenkai
+name: Zenkai
+type: awakening
+subtype: lesser
+origin: mind
+racial: Saiyan
+prerequisites: N/A
+tier: 1+
+maxStacks: 3
+aspects: 
+bonuses: AG +1, FO +1, TE +1, MA +1
+description: >
+  Saiyans are notorious for their ability to grow ever stronger in the midst of battle. Never is this more apparent than when they are pushed to the brink of death, and return stronger than ever before. To the Saiyans, this phenomenon is known as a Zenkai. Everyone else just knows it as "time to run".
+text: >
+  Saiyans are notorious for their ability to grow ever stronger in the midst of battle. Never is this more apparent than when they are pushed to the brink of death, and return stronger than ever before. To the Saiyans, this phenomenon is known as a Zenkai. Everyone else just knows it as "time to run".
+
+  Racial Requirement: Saiyan / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Mind / Prerequisite(s): N/A / Maximum No of Stacks: 3 / Tier of Power Requirement. 1+
+  AG +1 · FO +1 · TE +1 · SC – · IN – · MA +1 · PE –
+
+  Saiyan Spirit: Your burning warrior spirit blazes brighter after you've been close to death.
+  (1)-[Passive]: While you have 6+ stacks of Battle Born, increase your Combat Rolls by 1(T).
+  (2)-[Passive]: Increase the Dice Score of your Steadfast Checks by 1 for each Health Threshold you are below (max. Z).
+  (3)-[Triggered/Undying]: If you enter the Undying State through the 2nd effect of Saiyan Heritage, increase your Soak Value and Wound Rolls by Z(bT) until you leave the Undying State.
+  (4)-[Triggered, Z/Encounter]: If you succeed at a Steadfast Check, gain a stack of Battle Born. If you trigger this effect and are already at your maximum number of Battle Born stacks, you may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver instead.
+
+  Warrior's Determination (2): Your fierce determination keeps you in the fight long past when others would fall.
+  (1)-[Passive]: While you possess 4+ stacks of Battle Born, increase your Surgency by Z(T).
+  (2)-[Triggered, 1/Encounter]: If you use an Ultimate Signature Technique while in the Undying State, apply Z Energy Charges to that Attacking Maneuver.
+
+  On the Brink (3): You've spent so much time on the edge of death, you've learned to leverage it against your enemies.
+  (1)-[Passive]: While you are below the Injured Health Threshold and have 6+ stacks of Battle Born, increase your Strike and Dodge Rolls by 1(T).
+  (2)-[1/Encounter]: Use a Healing Surge as an Instant Maneuver.
+  (3)-[Automatic]: If you trigger the 4th effect of Born for Battle, instead of gaining a stack of Zenkai as a Temporary Awakening, enter the Surging State until the end of your next turn. If you do, ignore the 2nd effect of the Surging State.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

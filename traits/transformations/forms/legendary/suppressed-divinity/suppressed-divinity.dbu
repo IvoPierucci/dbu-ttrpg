@@ -1,0 +1,40 @@
+id: suppressed-divinity
+name: Suppressed Divinity
+type: form
+subtype: legendary
+racial: Shinjin
+prerequisites: N/A
+line: appointed-god
+stage: 0
+tier: 4+
+stress: 14
+aspects: Enhanced Save (Cognitive), God Ki, Natural (LV2), Peaked
+bonuses: AG +3(T), FO +3(T), TE +3(T), IN +1(T), MA +3(T)
+description: >
+  Empowered by the divine energies of the heavens, and emboldened by the purpose given them by their positions, some Kaio ascend to divinity and tap into the true essence of creation. With this vision manifested in their form, they attain a state of holy perfection as they unleash their divinity.
+text: >
+  Empowered by the divine energies of the heavens, and emboldened by the purpose given them by their positions, some Kaio ascend to divinity and tap into the true essence of creation. With this vision manifested in their form, they attain a state of holy perfection as they unleash their divinity.
+
+  **Suppressed Divinity** — Racial Requirement: Shinjin / Transformation Type: Form / Form Type: Legendary / Prerequisite(s): N/A / Transformation Line: Appointed God / Transformation Stage: 0 (Null Stage) / Stress Test Requirement: 14 / Tier of Power Requirement. 4+
+  Aspects: Enhanced Save (Cognitive), God Ki, Natural (LV2), Peaked
+  AG +3(T) · FO +3(T) · TE +3(T) · SC – · IN +1(T) · MA +3(T) · PE –
+
+  Divine Role: Granted dominion over an aspect of reality, you now stand tall as a true deity in your own right.
+  (1)-[Permanent, Passive]: Upon gaining access to Suppressed Divinity, select 2 God Maneuvers. You have access to those God Maneuvers while in any Transformation of the Appointed God Transformation Line.
+  (2)-[Passive]: You gain access to the Injury Transfer and Space-Time Connection Unique Abilities.
+  (3)-[Passive]: Increase the Combat Rolls of all Allies within a Large Sphere AoE (centered on you) by 1(T). If you have no Allies within this AoE, instead increase your Wound Rolls and Soak Value by 1(T).
+  (4)-[Triggered]: If you use Combat Recovery, all Allies within a Large Sphere AoE (centered on you) regain Ki Points equal to 1/2 of your Surgency.
+  (5)-[Triggered/Power, 1/Round]: If you have no Allies within a Large Sphere AoE (centered on you) and you have not used Combat Recovery this Combat Round, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you use this effect, you cannot use Combat Recovery during this Combat Round.
+
+  Additional Unique Abilities
+  **Injury Transfer** — You take the wounds of others upon yourself in order to heal them.
+  –Ability Type: Magical –Prerequisites: N/A –TP Cost: N/A –KP Cost: 10(T) –Maneuver Type: Standard –Action Cost: 3 Actions –Minions: Non-Minion –Passive Bonus: N/A
+  –Effect: Target a willing Ally within your Melee Range. If your Life Points are higher than that of the targeted Ally, you may swap your current Life Points values. Any Health Thresholds you fall under due to this Unique Ability have their Steadfast Check automatically failed.
+  This cannot allow your targeted Ally's Life Points to exceed their Maximum Life Points.
+  **Space-Time Connection** — You possess the ability to link two people together in such a way that their life energy becomes one.
+  –Ability Type: Magical –Prerequisites: N/A –TP Cost: N/A –KP Cost: 10(T) –Maneuver Type: Standard –Action Cost: 3 Actions –Minions: Non-Minion –Passive Bonus: N/A
+  –Effect: Target 2 willing Allies. Those Allies gain access to the Energy Synchronize Maneuver (see — Fusion of Ki) until the end of your next turn.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

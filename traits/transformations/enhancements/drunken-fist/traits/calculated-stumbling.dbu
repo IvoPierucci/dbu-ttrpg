@@ -1,0 +1,13 @@
+id: drunken-fist-calculated-stumbling
+name: Calculated Stumbling
+order: 3
+slot: burst
+description: >
+  You may be staggering and bumbling around the battlefield, but every movement is purposeful and meaningful.
+text: >
+  Calculated Stumbling: You may be staggering and bumbling around the battlefield, but every movement is purposeful and meaningful.
+  (1)-[Triggered/Transform]: Enter the Plastered Level of the Drunk State until the end of your next turn and gain 3 stacks of Toppling. The 4th, 5th, and 6th effects of Unpredictable Combat lose the [1/Round] keyword until the end of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

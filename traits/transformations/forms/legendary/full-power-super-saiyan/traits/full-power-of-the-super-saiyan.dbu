@@ -1,0 +1,17 @@
+id: full-power-super-saiyan-full-power-of-the-super-saiyan
+name: Full Power of the Super Saiyan
+order: 2
+slot: trait
+description: >
+  Unleashing the unlimited potential of the Super Saiyan Transformation, you draw out even more raw power.
+text: >
+  Full Power of the Super Saiyan: Unleashing the unlimited potential of the Super Saiyan Transformation, you draw out even more raw power.
+  (1)-[Passive]: Increase the Dice Score of your Duel Clashes by 1(T) for every 4 stacks of Battle Born you possess (max. 3(T)).
+  (2)-[Passive]: For every 4 stacks of Battle Born you possess, increase your Tier of Power Extra Dice by 1 Category (max. +3 Categories).
+  (3)-[Triggered]: If you are hit by an Attacking Maneuver, you may increase your Damage Reduction by 1(T) for every 2 stacks of Battle Born you possess for the duration of that Attacking Maneuver. After concluding that Maneuver, lose 1 stack of Battle Born.
+  (4)-[Triggered]: If you hit an Opponent with an Attacking Maneuver, you may increase your Wound Rolls by 1(T) for every 2 stacks of Battle Born you possess for the duration of that Attacking Maneuver. After concluding that Maneuver, lose 1 stack of Battle Born.
+  (5)-[Triggered/Transform, 1/Encounter]: Enter the Raging State until the end of your turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

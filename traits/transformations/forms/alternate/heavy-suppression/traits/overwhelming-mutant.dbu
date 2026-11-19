@@ -1,0 +1,16 @@
+id: heavy-suppression-overwhelming-mutant
+name: Overwhelming Mutant
+order: 2
+slot: trait
+description: >
+  As you shed layers of suppression like dead scales, your peerless power shines brighter, overwhelming any foe.
+text: >
+  Overwhelming Mutant: As you shed layers of suppression like dead scales, your peerless power shines brighter, overwhelming any foe.
+  (1)-[Passive]: While you possess 2+ stacks of Power, increase your Wound Rolls and Soak Value by 1/2 of S(T).
+  (2)-[Triggered/Power]: You may spend 2 stacks of Overwhelm to gain an additional stack of Power from this use of the Power Up Maneuver.
+  (3)-[Triggered, 1/Encounter]: At the end of your turn, spend all stacks of Overwhelm to regain 3(bT) Life Points for each stack spent.
+  (4)-[Triggered, 1/Encounter]: At the end of your turn, do not trigger the 2nd effect of Overwhelming Fighter.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

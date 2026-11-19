@@ -1,0 +1,15 @@
+id: super-demon-fiendish-evolution
+name: Fiendish Evolution
+order: 7
+slot: mastery
+mastery: 2
+description: >
+  Pushing your power to its functional limit, you evolve into something even greater than a mere demon.
+text: >
+  Fiendish Evolution (2): Pushing your power to its functional limit, you evolve into something even greater than a mere demon.
+  (1)-[Passive]: While you possess 2+ stacks of Demonic Power, Super Demon gains the Armored Aspect.
+  (2)-[Triggered/Start of Turn, 1/Encounter]: Ignore the 3rd effect of Demonic Pressure.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

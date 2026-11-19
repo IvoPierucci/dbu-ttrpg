@@ -1,0 +1,43 @@
+id: legendary-evolved
+name: Legendary
+type: evolved
+subtype: legendary
+# Generic: on any Form that meets its Prerequisites; Unique: on the Form in brackets alone.
+evolvedType: Generic
+racial: 
+prerequisites: >
+  Original Form (or an Evolved Stage applied to it) has Super Saiyan Form Aspect, Legendary Saiyan Factor Trait
+tier: Same as Original Form
+stress: +5
+aspects: Armored, Bulky, Pinnacle (LV1), Growth (LV1), Peaked, Rampaging (LV2)
+bonuses: AG +1(T), FO +1(T), TE +1(T), MA +1(T)
+description: >
+  It's said that once every thousand years, a legendary figure amongst Saiyans will be born and terrorize the universe as an unstoppable force capable of destroying everything. You are that legend. Your body swells with bulging muscles as you stand head and shoulders above the competition, your hair spiked up into a glorious emerald gleam while a seemingly endless amount of energy pours out of you.
+text: >
+  It's said that once every thousand years, a legendary figure amongst Saiyans will be born and terrorize the universe as an unstoppable force capable of destroying everything. You are that legend. Your body swells with bulging muscles as you stand head and shoulders above the competition, your hair spiked up into a glorious emerald gleam while a seemingly endless amount of energy pours out of you.
+
+  Evolved Stage Type: Generic / Transformation Type: Form / Form Type: Legendary / Prerequisite(s): Original Form (or an Evolved Stage applied to it) has Super Saiyan Form Aspect, Legendary Saiyan Factor Trait / Stress Test Requirement: +5 / Tier of Power Requirement: Same as Original Form
+  Aspects: Armored, Bulky, Pinnacle (LV1), Growth (LV1), Peaked, Rampaging (LV2)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Unlimited Power: Your power grows stronger and stronger, the longer you fight for.
+  (1)-[Acclimated]: If the Original Form is Mastered:
+  Remove the Rampaging Aspect from this Evolved Stage.
+  Reduce your Muscle Penalty by 1(bT).
+  Ignore the 5th effect of Unlimited Power.
+  The 6th effect of Unlimited Power becomes [Triggered] instead of [Automatic].
+  (2)-[Passive]: While you possess 4+ stacks of Battle Born applied to your Wound Rolls, increase the Attribute Modifier Bonus (FO/TE/MA) of this Transformation by 1(T).
+  (3)-[Passive]: While you possess 6+ stacks of Battle Born, ignore all Health Threshold Penalties.
+  (4)-[Passive]: Your Ki Points may exceed your Maximum Ki Points.
+  (5)-[Automatic]: At the end of your turn, reduce your Life Points by 1/10th (rounded up) of your Ki Points.
+  (6)-[Automatic/Start of Turn]: Reduce your Life Points by 1/10th of your Maximum Life Points to use a Ki Surge as an Out-of-Sequence Maneuver.
+
+  LEGENDARY TRAIT
+  Unstoppable Legend: You are nearly impossible to kill, and even harder to hold at bay.
+  (1)-[Passive]: While in a Transformation with the Super Saiyan Form Aspect, increase your Wound Rolls and Soak Value by 1(T).
+  (2)-[Triggered]: Upon making a Stress Test to enter or remain in a Transformation with the Super Saiyan Form Aspect, you may (after seeing the result) reduce your Life Points by 1/10th of your Maximum Life Points to increase the Dice Score of that Stress Test by 2.
+  (3)-[Triggered, 1/Encounter]: Upon entering a Transformation with the Super Saiyan Form Aspect, gain a stack of Battle Born. You must apply this stack of Battle Born to your Wound Rolls.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

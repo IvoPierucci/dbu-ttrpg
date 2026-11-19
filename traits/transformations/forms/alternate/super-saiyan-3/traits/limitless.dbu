@@ -1,0 +1,17 @@
+id: super-saiyan-3-limitless
+name: Limitless
+order: 1
+slot: trait
+description: >
+  Your energy has surpassed all reason and restraint, straining your body to the limit.
+text: >
+  Limitless: Your energy has surpassed all reason and restraint, straining your body to the limit.
+  (1)-[Passive]: All of your Attacking Maneuvers gain the Full Wager Advantage.
+  (2)-[Passive]: Increase the Wound Roll of any Attacking Maneuver you make with a Ki Wager by 1/2 of the amount of Ki Points spent on the Ki Wager.
+  (3)-[Passive]: Halve the Ki Points you regain through Ki Surges and Combat Recovery.
+  (4)-[Passive]: While you are in the Raging or Superior State, increase your Wound Rolls and Soak Value by 1(T).
+  (5)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver that has a Ki Wager equal to or exceeding 1/4 of your Max Capacity, apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

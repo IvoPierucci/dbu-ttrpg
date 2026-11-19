@@ -1,0 +1,18 @@
+id: true-form-conquered-mutation
+name: Conquered Mutation
+order: 2
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  You have finally, at long last, mastered the power you were born with, and this power is now wholly yours to command.
+text: >
+  Conquered Mutation: You have finally, at long last, mastered the power you were born with, and this power is now wholly yours to command.
+  (1)-[Permanent]: True Form loses the Long Transformation and Exhausting Aspects.
+  (2)-[Permanent]: All Stages of Metamorphosis gain the Perfect Ki Control Aspect.
+  (3)-[Passive]: Ignore the 3rd effect of Suppression of Power.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

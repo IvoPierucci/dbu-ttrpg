@@ -1,0 +1,20 @@
+id: super-demon-fiendish-power
+name: Fiendish Power
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Unleashing the power deep within your demonic blood, you tap into a massive burst of strength.
+text: >
+  Fiendish Power: Unleashing the power deep within your demonic blood, you tap into a massive burst of strength.
+  (1)-[Permanent, Passive]: Upon gaining access to this Transformation, select and gain access to a Demonic Trait while you are in this Transformation.
+  (2)-[Passive]: For each stack of Demonic Power you possess, increase your Strike and Dodge Rolls by 1(T).
+  (3)-[Passive]: For each stack of Demonic Power you possess, increase your Tier of Power Extra Dice by 1 Dice Category.
+  (4)-[Passive]: For each stack of Demonic Fatigue you possess, increase the Ki Point Cost of your Attacking Maneuvers by 1(T).
+  (5)-[Triggered, 1/Round]: If you use Legend Realized, make a Pressure Check.
+  (6)-[Triggered, 1/Encounter]: If you succeed at a Pressure Check while already having 2+ stacks of Demonic Power, all Opponents within a Huge Sphere AoE (centered on you) have their Life Points reduced by your Might.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

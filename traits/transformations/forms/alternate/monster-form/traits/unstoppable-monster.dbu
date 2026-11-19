@@ -1,0 +1,18 @@
+id: monster-form-unstoppable-monster
+name: Unstoppable Monster
+order: 4
+slot: mastery
+mastery: 2
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  Thanks to your total mastery over your monstrous self, you've become impossible to defeat.
+text: >
+  Unstoppable Monster (2): Thanks to your total mastery over your monstrous self, you've become impossible to defeat.
+  (1)-[Permanent]: Monster Form gains the Armored Aspect.
+  (2)-[Permanent, Passive]: Upon gaining access to this Mastery Trait, select and gain access to a Monstrous Trait while in this Transformation.
+  (3)-[Triggered, 1/Encounter]: If you are knocked through a Health Threshold and succeed at the Steadfast Check, apply Legend Realized. This use of Legend Realized does not count towards the amount of uses you gain through the Realization Aspect.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

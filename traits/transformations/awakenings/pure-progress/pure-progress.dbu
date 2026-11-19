@@ -1,0 +1,36 @@
+id: pure-progress
+name: Pure Progress
+type: awakening
+subtype: greater
+origin: mind
+racial: Any
+prerequisites: N/A
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: AG +1, FO +1, TE +1, IN +2, MA +1
+description: >
+  Power is not measured by strength alone. You, more than anyone, know this to be true. Adapt. Evolve. Overcome. If you can do that, you can overpower anyone who stands before you. Studying your opponent and learning how to improve your own skills on the fly, you have developed the distinct ability to grow stronger and stronger as you fight, never allowing anyone to wield more power than you.
+text: >
+  Power is not measured by strength alone. You, more than anyone, know this to be true. Adapt. Evolve. Overcome. If you can do that, you can overpower anyone who stands before you. Studying your opponent and learning how to improve your own skills on the fly, you have developed the distinct ability to grow stronger and stronger as you fight, never allowing anyone to wield more power than you.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Mind / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG +1 · FO +1 · TE +1 · SC – · IN +2 · MA +1 · PE –
+
+  Combat Imprinting: Adapting instantly as you study your opponents, you learn to grasp the principles of greater power and soar to greater heights even as you continue to fight.
+  (1)-[Triggered/Start of Turn, Resource]: If you are in a Combat Encounter with an Opponent who has used an Attacking Maneuver during the last Combat Round and has a Power Level that is equal to or greater than yours, gain 1 Progress. Whenever you gain a stack of Progress, you must apply it to either Strike, Dodge, or Wound (you decide). You can only have up to 2 stacks of Progress on a single Combat Roll. Each stack of Progress increases the corresponding Combat Roll by 1(T).
+  (2)-[Passive]: While you have 2+ stacks of Progress, increase your Soak Value by 1(T).
+  (3)-[Passive]: While you have 3+ stacks of Progress, increase the Dice Score of any rolls you make for Clashes initiated by an Opponent in which you use your Might or any Saving Throw by 1(T).
+  (4)-[Passive]: While you have 4+ stacks of Progress, increase your Stress Bonus by 1.
+  (5)-[Triggered, 1/Round]: If you are knocked through a Health Threshold by an Opponent's Attacking Maneuver or knock an Opponent through a Health Threshold with an Attacking Maneuver, gain a stack of Progress.
+  (6)-[Triggered/Start of Turn, 1/Encounter]: While you have 6 stacks of Progress, you may spend an Action to enter the Flow State for the remainder of the Combat Encounter.
+
+  FLOW STATE
+  (1)-[Passive]: Halve the Ki Point Cost of all your Attacking Maneuvers (after all modifications).
+  (2)-[Passive]: Ignore all Health Threshold Penalties, but your effects cannot increase the Dice Score of your Steadfast Checks.
+  (3)-[Passive]: Remove the limit on your number of Progress Stacks for each Combat Roll, but you can only apply a Progress stack to a Combat Roll if it has the lowest number of Progress stacks amongst your Combat Rolls.
+  (4)-[Automatic]: If you fail a Steadfast Check, you have your Life Points reduced to 0 (or a negative value), or your number of Ki Points fall below 1/4 of your Maximum Ki Points, leave the Flow State. Upon leaving the Flow State, set your number of Progress Stacks on each Combat Roll to 2 (this cannot increase your number of Progress stacks).
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

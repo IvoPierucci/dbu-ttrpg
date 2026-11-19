@@ -1,0 +1,21 @@
+id: wrathful-compressed-oozaru
+name: Compressed Oozaru
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  All the raw, explosive power of the mighty Oozaru, packed into your decidedly smaller form, has left you as quite the powerhouse.
+text: >
+  Compressed Oozaru: All the raw, explosive power of the mighty Oozaru, packed into your decidedly smaller form, has left you as quite the powerhouse.
+  (1)-[Permanent]: This Transformation cannot be used in conjunction with any Transformation that has the Blutz Wave Aspect.
+  (2)-[Passive]: Treat your Size Category as if it was G Size Categories larger for the sake of Punching Down.
+  (3)-[1/Round]: You may spend 1 stack of Battle Born to use the Signature Technique Maneuver while in the Feral State. If that Signature Technique was a Super Signature, you may apply the Ascended Signature Advantage to it.
+  (4)-[Graded]: Wrathful has 2 Grades. Each Wrathful Grade:
+  Has their own Stress Test Requirement.
+  Sets the AMB (Attribute Modifier Bonus) of Wrathful for the listed Attributes to the amount listed on the Grades table.
+  Applies additional Aspects.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,13 @@
+id: seething-fury-you-must-die-by-my-hand
+name: You Must Die by My Hand!
+order: 2
+slot: burst
+description: >
+  Your burning rage has no limits, and you will make sure that anyone who opposes you doesn't live to regret it.
+text: >
+  You Must Die by My Hand!: Your burning rage has no limits, and you will make sure that anyone who opposes you doesn't live to regret it.
+  (1)-[Triggered/Transform]: Maximize your stacks of Overwhelm. If you do, you may use the Basic Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver. Apply the bonus to Wound Rolls from your stacks of Overwhelm an additional time to this Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

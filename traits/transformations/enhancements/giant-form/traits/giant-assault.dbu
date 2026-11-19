@@ -1,0 +1,13 @@
+id: giant-form-giant-assault
+name: Giant Assault
+order: 3
+slot: burst
+description: >
+  Your massive bulk allows you to withstand blows and dish them out with great force.
+text: >
+  Giant Assault: Your massive bulk allows you to withstand blows and dish them out with great force.
+  (1)-[Triggered/Transform]: Increase your Wound Rolls and Soak Value by G(T) until the start of your next turn. Additionally, until the end of your turn, all of your qualifying Signature Techniques gain the Intense Blast Advantage.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

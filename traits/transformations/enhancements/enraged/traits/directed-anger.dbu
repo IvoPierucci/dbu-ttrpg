@@ -1,0 +1,17 @@
+id: enraged-directed-anger
+name: Directed Anger
+order: 4
+slot: mastery
+mastery: 1
+description: >
+  Channeling your titanic rage, you take control of your anger and use it as a weapon against your foes.
+text: >
+  Directed Anger: Channeling your titanic rage, you take control of your anger and use it as a weapon against your foes.
+  (1)-[Passive]: While you possess the Guard Down Combat Condition, it does not count as a Combat Condition for the effects of your Opponents.
+  (2)-[Passive]: Ignore the second effect of the Angry level of the Raging State.
+  (3)-[Passive]: While you are in the Apoplectic Level of the Raging State, this Transformation possesses the Armored Aspect.
+  (4)-[Triggered, 1/Round]: If you use the Cross Counter option of the Defend Maneuver, you may spend 5(bT) Ki Points to enter the Determined State for the duration of that Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

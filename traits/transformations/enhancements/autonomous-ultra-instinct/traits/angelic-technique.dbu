@@ -1,0 +1,18 @@
+id: autonomous-ultra-instinct-angelic-technique
+name: Angelic Technique
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You have learned to use a technique reserved for the divine beings known as Angels.
+text: >
+  Angelic Technique: You have learned to use a technique reserved for the divine beings known as Angels.
+  (1)-[Permanent]: Reduce the Stress Test Requirement of this Transformation by x, where x is equal to double the Tier of Power Requirement of the Transformation with the highest Tier of Power Requirement that is/would be used in conjunction with this Transformation. However, this Transformation's Stress Test Requirement is added completely onto any Transformation used in conjunction with it, rather than being halved, even when it has the lower Stress Test Requirement.
+  (2)-[Passive]: Increase your Combat Rolls by x(bT), where x is equal to 1 or 1/2 of the highest Tier of Power Requirement of any Transformation used in conjunction with this Transformation (min. 1) if you are using this Transformation in conjunction with another Transformation.
+  (3)-[Passive]: The minimum Natural Result of your Strike and Dodge Rolls is 2. If this Transformation is used in conjunction with another Transformation, increase the minimum Natural Result by 1/2 of that Transformation's Tier of Power Requirement.
+  (4)-[Triggered, 1/Round]: If you succeed in dodging an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you do not pay any Ki Points for this Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

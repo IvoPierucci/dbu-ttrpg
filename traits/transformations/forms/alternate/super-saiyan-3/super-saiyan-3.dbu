@@ -1,0 +1,38 @@
+id: super-saiyan-3
+name: Super Saiyan 3
+type: form
+subtype: alternate
+racial: Same as the 1st Stage of this Transformation Line
+prerequisites: N/A
+line: super-saiyan
+stage: 3
+tier: 4+
+stress: 20
+aspects: Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Draining (LV4), Power High (LV2), Long Transformation (LV2), Exhausting, Difficult (LV1)
+bonuses: AG +3(T), FO +3(T), TE +3(T), IN +1(T), MA +3(T)
+description: >
+  A golden aura blazes to life around you as the energy radiating off of you in waves lifts your hair towards the heavens and washes it gold with power. You're not the average Saiyan warrior anymore. You have ascended beyond and become a Super Saiyan.
+text: >
+  A golden aura blazes to life around you as the energy radiating off of you in waves lifts your hair towards the heavens and washes it gold with power. You're not the average Saiyan warrior anymore. You have ascended beyond and become a Super Saiyan.
+
+  **Super Saiyan 3** — Racial Requirement: Same as the 1st Stage of this Transformation Line / Form / Alternate / Prerequisite(s): N/A / Line: Super Saiyan / Stage: 3 / Stress Test Requirement: 20 / Tier of Power Requirement. 4+
+  Aspects: Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Draining (LV4), Power High (LV2), Long Transformation (LV2), Exhausting, Difficult (LV1)
+  AG +3(T) · FO +3(T) · TE +3(T) · SC – · IN +1(T) · MA +3(T) · PE –
+
+  Limitless: Your energy has surpassed all reason and restraint, straining your body to the limit.
+  (1)-[Passive]: All of your Attacking Maneuvers gain the Full Wager Advantage.
+  (2)-[Passive]: Increase the Wound Roll of any Attacking Maneuver you make with a Ki Wager by 1/2 of the amount of Ki Points spent on the Ki Wager.
+  (3)-[Passive]: Halve the Ki Points you regain through Ki Surges and Combat Recovery.
+  (4)-[Passive]: While you are in the Raging or Superior State, increase your Wound Rolls and Soak Value by 1(T).
+  (5)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver that has a Ki Wager equal to or exceeding 1/4 of your Max Capacity, apply an Energy Charge to that Attacking Maneuver.
+
+  MASTERY TRAIT
+  Even Further Beyond (1): You have pushed past the limits of your power, becoming even stronger.
+  (1)-[Permanent]: Super Saiyan 3 loses the Power High, Long Transformation, and the Exhausting Aspects, and 2 levels of the Draining Aspect.
+  (2)-[Passive]: Ignore the 3rd effect of Limitless.
+  The Peak of Super Saiyan (2): You have managed, somehow, to rein in your massive pool of energy, allowing you to fight at full strength.
+  (1)-[Permanent]: Super Saiyan 3 loses the Draining Aspect.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

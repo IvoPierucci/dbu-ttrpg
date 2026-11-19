@@ -1,0 +1,13 @@
+id: evil-aura-dark-power-rising
+name: Dark Power Rising
+order: 3
+slot: burst
+description: >
+  The culmination of evil energy inside you reaches a bursting point!
+text: >
+  Dark Power Rising: The culmination of evil energy inside you reaches a bursting point!
+  (1)-[Triggered/Transform]: Use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, maximize your Evil Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

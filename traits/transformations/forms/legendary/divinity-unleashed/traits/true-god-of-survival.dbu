@@ -1,0 +1,21 @@
+id: divinity-unleashed-true-god-of-survival
+name: True God of Survival
+order: 6
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+description: >
+  Through wit and tenacity, you outlast every calamity that befalls you with divine grace.
+text: >
+  True God of Survival: Through wit and tenacity, you outlast every calamity that befalls you with divine grace.
+  (1)-[Prerequisite]: Access to the God of Survival effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (IN) of Divinity Unleashed by 1(T).
+  (3)-[Passive]: Increase your Surgency by 2(T).
+  (4)-[Passive]: Increase your Combat Rolls and Soak Value by 2(T) while you are above the Injured Health Threshold.
+  (5)-[Triggered, 1/Round]: If you get hit by an Attacking Maneuver and receive Damage, you may regain Life Points equal to your Insight Modifier.
+  (6)-[Triggered, 1/Encounter]: If you use the Divine Healing God Maneuver while below the Injured Health Threshold, do not pay the Divine Ki Point Cost and double the amount of Life Points you regain.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,36 @@
+id: feral-fist
+name: Feral Fist
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: N/A
+tier: 1+
+stress: 8
+variantOf: drunken-fist
+aspects: Variant (Drunken Fist), Innate State (Feral), Enhanced Save (Impulsive), High Speed, Peaked
+bonuses: AG +1(T)
+description: >
+  In most warriors, the conscious mind overrides instinct, allowing them to act how they please rather than acting on their first impulse. You, however, are not most warriors, choosing to rely on those impulses and instincts to the exclusion of all else.
+text: >
+  In most warriors, the conscious mind overrides instinct, allowing them to act how they please rather than acting on their first impulse. You, however, are not most warriors, choosing to rely on those impulses and instincts to the exclusion of all else.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 8 / Tier of Power Requirement. 1+
+  Aspects: Variant (Drunken Fist), Innate State (Feral), Enhanced Save (Impulsive), High Speed, Peaked
+  AG +1(T) · FO – · TE – · SC – · IN – · MA – · PE –
+
+  Mad Dog Attack (Power of the Bottle): As the line between instinct and conscious thought fades into obscurity, you launch yourself into battle like a wild animal.
+  (1)-[Constant]: If you would use an effect that would let you enter the Feral Special State, you may instead use the Transformation Maneuver to enter this Transformation as an Out-of-Sequence Maneuver.
+  (2)-[Passive]: You can use Unique Abilities that are Counter Maneuvers or Out-of-Sequence Maneuvers, even while in the Feral State.
+  (3)-[Passive]: While in the Unhinged level of the Feral State, reduce the Critical Target for your Wound Rolls by 2.
+  (4)-[1/Round]: During your turn, you may use the Movement Maneuver as an Instant Maneuver.
+  (5)-[Triggered, Resource]: If you use the Movement Maneuver or score a Critical Result on the Wound Roll of an Attacking Maneuver, gain a stack of Ferocity (max. 3).
+  (6)-[Triggered]: If you are targeted by an Opponent's Attacking Maneuver, you may spend any number of Ferocity stacks to increase your Dodge Rolls by 1(T) for each Ferocity stack spent.
+  (7)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver, you may spend any number of Ferocity stacks to increase your Wound Roll for that Attacking Maneuver by 1(T) for each stack of Ferocity stack spent.
+  (8)-[Triggered, 1/Round]: If you end your movement from the Movement Maneuver with an Opponent in your Melee Range, you may spend 2 stacks of Ferocity to use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target that Opponent with this Attacking Maneuver.
+
+  BURST LIMIT — Unforeseen Ferocity: Your feral nature overwhelms and subdues not only your conscious mind, but also your enemies.
+  (1)-[Triggered/Transform]: Gain 3 stacks of Ferocity. Additionally, enter the Unhinged level of the Feral State until the end of your next turn.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

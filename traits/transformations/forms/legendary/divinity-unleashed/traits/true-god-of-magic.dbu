@@ -1,0 +1,21 @@
+id: divinity-unleashed-true-god-of-magic
+name: True God of Magic
+order: 9
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+description: >
+  Keeper of arcane secrets, you hold knowledge about magic that mere mortals can only dream of.
+text: >
+  True God of Magic: Keeper of arcane secrets, you hold knowledge about magic that mere mortals can only dream of.
+  (1)-[Prerequisite]: Access to the God of Magic effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (IN/MA) of Divinity Unleashed by 1(T).
+  (3)-[Passive]: Increase your Combat Rolls by 2(T).
+  (4)-[Passive]: Reduce the Divine Ki Point Cost of Divine Spell by 1(bT).
+  (5)-[Passive]: During a Combat Round in which you have used a Magical Unique Ability, your Magic Attacks have their Wound Rolls increased by 1/4 (rounded up) of your Magic Modifier.
+  (6)-[Triggered/Transform]: Upon entering Divinity Unleashed, select a Magical Unique Ability that you meet the Prerequisites for. You gain access to that Magical Unique Ability until you leave Divinity Unleashed.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

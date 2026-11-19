@@ -1,0 +1,16 @@
+id: spirit-control-spiritual-elite
+name: Spiritual Elite
+order: 2
+slot: trait
+stacks: 2
+description: >
+  With your newfound expertise, you've grown more efficient at manipulating your energy.
+text: >
+  Spiritual Elite (2): With your newfound expertise, you've grown more efficient at manipulating your energy.
+  (1)-[Passive]: Reduce the Ki Point Cost of your Spiritual Unique Abilities by 2(T).
+  (2)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers by 1/4 of their Ki Point Cost (before any reductions are applied).
+  (3)-[Triggered/Start of Turn]: Regain Z(bT) Ki Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

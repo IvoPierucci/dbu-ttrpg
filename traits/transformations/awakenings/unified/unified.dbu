@@ -1,0 +1,30 @@
+id: unified
+name: Unified
+type: awakening
+subtype: lesser
+origin: body
+racial: Any
+prerequisites: Can only be obtained through the effects of the Unify Maneuver
+tier: 1+
+maxStacks: 7
+aspects: 
+bonuses: AG +1, FO +1, TE +1, MA +1
+description: >
+  Your power alone isn't enough- and you don't necessarily have the time to train to grow stronger- so you and another have decided to merge your strengths and create a new warrior of greater strength. As one, you stand united against any who threaten you.
+text: >
+  Your power alone isn't enough- and you don't necessarily have the time to train to grow stronger- so you and another have decided to merge your strengths and create a new warrior of greater strength. As one, you stand united against any who threaten you.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Body / Prerequisite(s): Can only be obtained through the effects of the Unify Maneuver / Maximum No of Stacks: 7 / Tier of Power Requirement. 1+
+  AG +1 · FO +1 · TE +1 · SC – · IN – · MA +1 · PE –
+
+  Entrusted Everything: You have been entrusted with carrying on the legacy of another person. Their will, their power, their very essence, have been left in your hands.
+  (1)-[Ruling]: Upon gaining a stack of Unified, a Character will be assigned to that stack of Unification as the 'Merged Character'. Each stack of Unified has a 'Merged Character'.
+  (2)-[Automatic]: Upon losing a stack of Unified, the Merged Character is freed and, if you are still in a Combat Encounter, enters the Combat Encounter on a Square adjacent to you of their choice.
+  (3)-[Passive]: You gain access to all of the Signature Techniques, Unique Abilities, Forms (including any Masteries and Evolved Stages), and Enhancements (including any Masteries) possessed by your Merged Characters. To gain access to a Unique Ability or Transformation, you must meet their Prerequisites (including any Racial Requirements).
+  (4)-[Passive]: If you have to make a Skill Clash or Skill Check, instead of your number of Skill Ranks for that Skill, you may use the number of Skill Ranks possessed by any of your Merged Characters for that Skill.
+  (5)-[Passive]: Increase your Surgency by Z(bT).
+  (6)-[Triggered/Power, 1/Encounter]: Increase your Combat Rolls by Z(bT) until the start of your next turn.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

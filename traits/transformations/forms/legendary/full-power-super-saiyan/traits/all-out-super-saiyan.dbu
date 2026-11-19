@@ -1,0 +1,22 @@
+id: full-power-super-saiyan-all-out-super-saiyan
+name: All-Out Super Saiyan
+order: 9
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: super-saiyan-style-traits
+groupLabel: Super Saiyan Style Traits
+description: >
+  T
+text: >
+  All-Out Super Saiyan: T
+  (1)-[Prerequisite]: Access to All-Out Form
+  (2)-[Automatic/Transform, Resource]: Lose all stacks of Holding Back and gain a stack of 'All-Out Power' (max. 3).
+  (3)-[Passive]: Each stack of All-Out Power increases your Combat Rolls by 1(T), your Tier of Power Extra Dice by 1 Dice Category, and is treated as a stack of Power for all of your effects.
+  (4)-[Passive]: For each stack of All-Out Power you possess, this Transformation gains a level of the Draining Aspect.
+  (5)-[Passive]: You cannot gain stacks of Holding Back while in this Transformation.
+  (6)-[Triggered/Power, 1/Encounter]: If you are below the Injured Health Threshold, gain a stack of All-Out Power.
+  (7)-[Triggered/Transform, 1/Encounter]: If you entered this Transformation through a Transformation Maneuver used through the 1st effect of Unleash your Power, use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, you may enter the Superior State until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

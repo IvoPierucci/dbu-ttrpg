@@ -1,0 +1,29 @@
+id: inherited-life
+name: Inherited Life
+type: awakening
+subtype: greater
+origin: mind
+racial: Any
+prerequisites: Reincarnated Factor
+tier: 2+
+maxStacks: 1
+aspects: 
+bonuses: 
+description: >
+  The residual power you obtained from your past life is truly yours now, as natural to you now as breathing. Your former self and your new self have fully united, in your mind, at least, if not in body. You've inherited more than just your past life's power; you've access to their memories, now, too.
+text: >
+  The residual power you obtained from your past life is truly yours now, as natural to you now as breathing. Your former self and your new self have fully united, in your mind, at least, if not in body. You've inherited more than just your past life's power; you've access to their memories, now, too.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Mind / Prerequisite(s): Reincarnated Factor / Maximum No of Stacks: 1 / Tier of Power Requirement. 2+
+  AG – · FO – · TE – · SC – · IN – · MA – · PE –
+
+  Mastered Reincarnated: You've completely mastered the powers you inherited from your past self, making them truly your own.
+  (1)-[Passive]: Upon gaining this Transformation, regain access to the Racial Trait that you replaced with the Factor Trait from the Reincarnated Factor.
+  (2)-[Passive]: The Attribute Modifier Bonus of this Transformation is +2 in the three Attributes with the highest Attribute Scores among your Past Life's Attributes.
+  (3)-[Passive]: While you are benefiting from the 5th effect of the Lingering Power Factor Trait, increase your Damage Reduction by 2(bT).
+  (4)-[Passive]: The 5th effect of the Lingering Power Factor Trait loses its [1/Encounter] Keyword and gains the [1/Round, 2/Encounter] Keyword.
+  (5)-[Triggered, 1/Encounter]: When you use the Signature Technique Maneuver, you may use a Signature Technique possessed by your Past Life.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

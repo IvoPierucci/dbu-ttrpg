@@ -1,0 +1,15 @@
+id: heavy-suppression-overwhelming-strike
+name: Overwhelming Strike
+order: 1
+slot: trait
+description: >
+  Any worm that dares to raise a hand against you will find that your brutality and power can pierce even the toughest hides.
+text: >
+  Overwhelming Strike: Any worm that dares to raise a hand against you will find that your brutality and power can pierce even the toughest hides.
+  (1)-[Passive]: While you are in the Healthy Health Threshold, increase the Damage Category of all of your Signature Techniques by 1 Category.
+  (2)-[Passive]: If you are above the Injured Health Threshold, increase the Wound Rolls of your Signature Techniques by x(T), where x is equal to their Damage Category.
+  (3)-[Triggered/Transform, 1/Round]: Enter the Superior State until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

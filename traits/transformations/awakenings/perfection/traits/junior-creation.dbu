@@ -1,0 +1,17 @@
+id: perfection-junior-creation
+name: Junior Creation
+order: 6
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: perfect-traits
+groupLabel: Perfect Traits
+description: >
+  You are able to produce miniature versions of yourself.
+text: >
+  Junior Creation: You are able to produce miniature versions of yourself.
+  (1)-[Passive]: Increase your Maximum Ki Points by 1 for each Power Level reached.
+  (2)-[1/Round]: As a Standard Maneuver with a Variable Action Cost (1~3 Actions) and a Variable Ki Cost (4(bT) for each Action spent), create a Duplicate Minion on a square adjacent to you for each Action spent on this Maneuver. This Minion's base Size Category is Small, or, if your base Size Category is Small or less – then that Minion's Size Category is 1 Size Category smaller than yours.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

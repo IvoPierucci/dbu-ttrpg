@@ -1,0 +1,40 @@
+id: overtaken
+name: Overtaken
+type: awakening
+subtype: greater
+origin: body
+racial: Any
+prerequisites: Can only be obtained through the Possession Maneuver
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: 
+description: >
+  It's inside you. You can feel it, clawing at the edges of your mind. It's taken over, and there's nothing you can do about it, now. You're forced to watch through your own eyes as someone else uses your body for their whims, their goals, their life. You've become merely a puppet, a brand-spanking new suit for them to wear. You're now just a vessel that's been Overtaken.
+text: >
+  It's inside you. You can feel it, clawing at the edges of your mind. It's taken over, and there's nothing you can do about it, now. You're forced to watch through your own eyes as someone else uses your body for their whims, their goals, their life. You've become merely a puppet, a brand-spanking new suit for them to wear. You're now just a vessel that's been Overtaken.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Body / Prerequisite(s): Can only be obtained through the Possession Maneuver / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG – · FO – · TE – · SC – · IN – · MA – · PE –
+
+  I BECOME YOU: You are no longer in control of your body, having been taken over by another.
+  (1)-[Ruling]: Upon gaining Overtaken, a Character will be assigned as the 'Possessing Character'.
+  (2)-[Addendum]: Please refer to the 'Possessing Fusions' text box below.
+  (3)-[Passive]: You gain access to all of the Signature Techniques, Unique Abilities, Forms (including any Masteries and Evolved Stages), and Enhancements (including any Masteries) possessed by your Possessing Character. To gain access to a Unique Ability or Transformation, you must meet their Prerequisites (including any Racial Requirements).
+  (4)-[Passive]: Replace your Scholarship and Personality Scores with the higher between you and the Possessing Character.
+  (5)-[Passive]: When making a Skill Check, use the higher Skill Bonus between you and the Possessing Character.
+  (6)-[Passive]: The Attribute Modifier Bonus of this Transformation is +2 in the three Attributes with the highest Attribute Scores among the Possessing Character's Attributes.
+  (7)-[Passive]: Upon gaining this Awakening, your Possessing Character selects one of their Primary Racial Traits and up to 2 of their Talents that you meet the prerequisites of. You gain access to that Primary Racial Trait and those Talents while you possess this Awakening.
+  (8)-[Passive]: Ignore the effects of the Rampaging Aspect.
+  (9)-[Automatic/Start of Turn]: If this Awakening is a Temporary Awakening, make an Urgent Clash (Cognitive) against the Possessing Character. If you win, you lose this Awakening. If you lose, nothing happens.
+  (10)-[Automatic]: If you take any Damage from Attacking Maneuvers, the Possessing Character has their Life Points reduced by 1/2 of the amount of Damage you receive.
+  (11)-[Automatic/Start of Turn]: If you or your Possessing Character are Defeated, lose this Awakening.
+  (12)-[Automatic]: If you lose access to this Awakening, stop being controlled by the Possessing Character, remove the Possessing Character from your body, and if you are in a Combat Encounter, the Possessing Character enters that Combat Encounter on a Square adjacent to you of your choice.
+  (13)-[Automatic]: At the end of a Combat Encounter, if you have not reached your Awakening Limit for Greater Awakenings, make an Urgent Clash (Cognitive) against the Possessing Character (this Clash is not Urgent for the Possessing Character). If the Possessing Character wins, this Transformation stops being a Temporary Awakening.
+
+  Possessing Fusions (addendum)
+  If you are the Possessing Character for a Fusion and that Fusion ends, splitting into its Fused Characters, select one of those Fused Characters. That Character gains the Overtaken Awakening as a Level 2 Temporary Awakening with you as the Possessing Character. While they possess the Overtaken Awakening with you as the Possessing Character, you have control over that Character.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

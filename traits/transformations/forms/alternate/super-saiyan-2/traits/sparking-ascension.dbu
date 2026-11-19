@@ -1,0 +1,17 @@
+id: super-saiyan-2-sparking-ascension
+name: Sparking Ascension
+order: 3
+slot: mastery
+mastery: 2
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Your fine control of this form allows you to access its full power without restraint.
+text: >
+  Sparking Ascension (2): Your fine control of this form allows you to access its full power without restraint.
+  (1)-[Permanent]: Super Saiyan 2 loses the Draining Aspect.
+  (2)-[Passive]: Gain access to the Full Force Super Saiyan 2 Evolved Stage.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

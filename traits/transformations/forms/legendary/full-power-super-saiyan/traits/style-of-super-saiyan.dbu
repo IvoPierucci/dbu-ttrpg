@@ -1,0 +1,19 @@
+id: full-power-super-saiyan-style-of-super-saiyan
+name: Style of Super Saiyan
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You've grown comfortable enough with your Super Saiyan power to customize it to meet your needs.
+text: >
+  Style of Super Saiyan: You've grown comfortable enough with your Super Saiyan power to customize it to meet your needs.
+  (1)-[Permanent, Ruling]: Upon gaining access to this Transformation, select and gain access to a 'Super Saiyan Style' Trait while you are in this Transformation.
+  (2)-[Passive]: For each stack of Power you possess, increase your Soak Value by 1(T).
+  (3)-[Passive]: Gain an additional stack of Power from the Power Up Maneuver.
+  (4)-[Passive]: Increase your Combat Rolls by 1/2 (rounded up) of the Apparel Bonus for the piece of Apparel destroyed through the Bursting Aspect upon entering this Transformation.
+  (5)-[Triggered/Power, 1/Encounter]: Gain a stack of Battle Born.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

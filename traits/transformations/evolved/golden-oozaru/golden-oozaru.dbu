@@ -1,0 +1,41 @@
+id: golden-oozaru
+name: Golden Oozaru
+type: evolved
+subtype: legendary
+# Generic: on any Form that meets its Prerequisites; Unique: on the Form in brackets alone.
+evolvedType: Unique (Oozaru)
+racial: 
+prerequisites: Access to Super Saiyan 1
+tier: 3+
+stress: +12
+aspects: Armored, Super Saiyan Form, Peaked
+bonuses: FO +3(T), TE +3(T), IN +1(T)
+description: >
+  The raging beast within, now with the golden power of a Super Saiyan. The two most terrifying aspects of your being have merged into one, creating the ultimate, unstoppable, rampaging beast.
+text: >
+  The raging beast within, now with the golden power of a Super Saiyan. The two most terrifying aspects of your being have merged into one, creating the ultimate, unstoppable, rampaging beast.
+
+  Evolved Stage Type: Unique (Oozaru) / Transformation Type: Form / Form Type: Legendary / Prerequisite(s): Access to Super Saiyan 1 / Stress Test Requirement: +12 / Tier of Power Requirement: 3+
+  Aspects: Armored, Super Saiyan Form, Peaked
+  AG – · FO +3(T) · TE +3(T) · SC – · IN +1(T) · MA – · PE –
+
+  Golden Beast: Wielding the golden power of your Super Saiyan Transformation, your inner beast awakens, becoming a shining beacon of power and fury.
+  (1)-[Constant]: If you fail to enter this Transformation or leave this Transformation due to failing a Stress Test, enter the Oozaru Alternate Form.
+  (2)-[Passive]: While in the Raging or Superior State, treat your Size Category as Colossal for your effects and the effects of Punching Down.
+  (3)-[Passive]: While you have 4+ stacks of Battle Born, increase the Tier of Power Extra Dice for your Combat Rolls by 1 Category and increase your Soak Value by 1(T).
+  (4)-[Passive]: Gain access to the Fire Breath Signature Technique. The Elemental (Fire) Profile is considered a Favored Element for the sake of the Fire Breath Signature Technique.
+  (5)-[Triggered]: While you have 6+ stacks of Battle Born, if you make an Attacking Maneuver in which all of the targets qualify for the effects of Punching Down, increase the Wound Roll by 1(T) for each Size Category you are larger than the largest Character among those targets.
+  (6)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold, they gain a stack of the Broken Combat Condition until the start of your next turn.
+  (7)-[Triggered/Transform, 1/Encounter]: Use a Ki Surge.
+
+  Fire Breath Signature Technique — Fire Breath – Super Signature / Foundation: Magic (Elemental: Fire) / Advantages: Terrain Destruction (2), Widespread Assault (Cone), Concentrated Strike / Disadvantages: Restricted – Transformation (2, Golden Oozaru) / Ki Point Cost: 13(T)
+
+  LEGENDARY TRAIT
+  Primal Spark: The untamed roar of the Great Ape within, sparking with golden power, has awakened the primal energy deep inside you.
+  (1)-[Passive]: While you possess 2+ stacks of Battle Born applied to your Wound Rolls, increase your Surgency by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you use a Surge during your turn, you may enter the Superior State until the end of that turn.
+  (3)-[Triggered/Power, 1/Encounter]: If you have 2+ stacks of Battle Born applied to your Wound Rolls, you may use a Ki Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

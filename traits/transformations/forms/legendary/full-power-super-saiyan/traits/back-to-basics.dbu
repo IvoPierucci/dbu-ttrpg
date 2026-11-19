@@ -1,0 +1,20 @@
+id: full-power-super-saiyan-back-to-basics
+name: Back to Basics
+order: 4
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: super-saiyan-style-traits
+groupLabel: Super Saiyan Style Traits
+description: >
+  You have no need for those inefficient evolutions of the Super Saiyan form; when properly mastered, the basic Super Saiyan far outclasses them.
+text: >
+  Back to Basics: You have no need for those inefficient evolutions of the Super Saiyan form; when properly mastered, the basic Super Saiyan far outclasses them.
+  (1)-[Prerequisite]: Access to Super Saiyan 1. Variants do not count as Super Saiyan 1 for this effect.
+  (2)-[Passive]: You gain access to the Option effect you chose for the 3rd effect of S-Cells.
+  (3)-[1/Round]: While you have 4+ stacks of Battle Born, you may use the Power Up Maneuver as an Instant Maneuver.
+  (4)-[Passive]: Depending on your number of Power stacks, gain access to the following effects:
+  2+ Power Stacks [Triggered, 1/Round]: When making an Attacking Maneuver, you can add up to 2 Energy Charges to that Attacking Maneuver. After concluding that Attacking Maneuver, lose a number of Battle Born stacks equal to the amount of Energy Charges added by this effect.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

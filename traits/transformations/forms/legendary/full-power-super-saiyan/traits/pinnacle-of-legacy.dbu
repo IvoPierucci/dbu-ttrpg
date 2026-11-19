@@ -1,0 +1,19 @@
+id: full-power-super-saiyan-pinnacle-of-legacy
+name: Pinnacle of Legacy
+order: 8
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: super-saiyan-style-traits
+groupLabel: Super Saiyan Style Traits
+description: >
+  You represent the very beginnings of a proud line of warriors that spans all of known history, and the power you've awakened proves it.
+text: >
+  Pinnacle of Legacy: You represent the very beginnings of a proud line of warriors that spans all of known history, and the power you've awakened proves it.
+  (1)-[Prerequisite]: Access to Ancestral Super Saiyan.
+  (2)-[Passive]: While you are in the Undying State, increase your Soak Value and Wound Rolls by 2(T). Additionally, this Transformation gains the Armored Aspect.
+  (3)-[1/Round]: As an Instant Maneuver, you may spend a stack of Battle Born to use the Power Up Maneuver.
+  (4)-[Triggered/Power, 1/Encounter]: Enter the Undying State until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

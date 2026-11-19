@@ -1,0 +1,29 @@
+id: internalized-chaos
+name: Internalized Chaos
+type: form
+subtype: alternate
+racial: Majin
+prerequisites: Chaotic Majin Factor
+line: pure-majin
+stage: 0
+tier: 1+
+stress: 4
+aspects: Natural (LV2), Peaked
+bonuses: TE +1(T)
+description: >
+  Internalized Chaos Null Stage
+text: >
+  Internalized Chaos Null Stage
+
+  Racial Requirement: Majin / Transformation Type: Form / Form Type: Alternate / Prerequisite(s): Chaotic Majin Factor / Transformation Line: Pure Majin / Transformation Stage: 0 (Null Stage) / Stress Test Requirement: 4 / Tier of Power Requirement. 1+
+  Aspects: Natural (LV2), Peaked
+  AG – · FO – · TE +1(T) · SC – · IN – · MA – · PE –
+
+  Chaotic Entity: Chaos follows you wherever you go, leaving destruction in your wake.
+  (1)-[Passive]: You gain access to the 7th effect of Erratic Majin and the 3rd and 4th effects of Unpredictable.
+  (2)-[Triggered, 1/Round]: After seeing the result, you may reroll your Healing Surge.
+  (3)-[Triggered, 1/Encounter]: After seeing the result, you may reroll your Chaos Die.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

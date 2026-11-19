@@ -463,10 +463,11 @@ export function ownedRacialTraits(actor) {
     return replaced ? { rank: 0, group: groupName(replaced), order: orderOf(replaced) + 0.5 }
       : { rank: Math.min(...races.map(race => groupRank(item, race, slots))), group: groupName(item), order: orderOf(fileOf(item)) };
   };
-  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && !isOtherTrait(item)).sort((a, b) => {
-    const [one, two] = [place(a), place(b)];
-    return (one.rank - two.rank) || one.group.localeCompare(two.group) || (one.order - two.order) || a.name.localeCompare(b.name);
-  });
+  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && !isOtherTrait(item) && !item.system?.transformation)
+    .sort((a, b) => {
+      const [one, two] = [place(a), place(b)];
+      return (one.rank - two.rank) || one.group.localeCompare(two.group) || (one.order - two.order) || a.name.localeCompare(b.name);
+    });
 }
 
 /** The Racial Trait of this race a Factor Trait names in brackets to replace - "From Goop (Body) [Majin Regeneration]:" - or null. */
@@ -606,7 +607,8 @@ export function isOtherTrait(item) {
 export function ownedOtherTraits(actor) {
   const group = item => item.system?.other || getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.owner || "";
   const rank = item => { const at = Object.keys(OTHER_GROUPS).indexOf(group(item)); return (at < 0) ? 99 : at; };
-  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && isOtherTrait(item) && !isVillainous(item))
+  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && isOtherTrait(item) && !isVillainous(item)
+    && !item.system?.transformation)
     .sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
 }
 
@@ -1049,7 +1051,7 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
  * Requirements, marked as given by it so it goes with it; each Talent, kept if it is ever lost. One already held is not
  * given twice; a Talent or Unique Ability not written yet is named.
  */
-export async function addRacialTrait(actor, trait, { grantedBy = "", presetOption = "", presetChoice = "" } = {}) {
+export async function addRacialTrait(actor, trait, { grantedBy = "", presetOption = "", presetChoice = "", transformation = "" } = {}) {
   const made = await racialItemFrom(trait, actor, { presetOption, presetChoice });
   if (!made) return null;
   // Personified Dragon Ball: "select a set of Dragon Balls (including a Size Category from Nano to Small) and a number of
@@ -1102,6 +1104,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   }
   // Given by another - Bestial Evolution's Bestial Trait - it goes with that one.
   if (grantedBy) made.data.flags["dbu-ttrpg"].grantedBy = grantedBy;
+  // A Transformation Trait: belongs to its Transformation Item (transformations.mjs), made and taken away with it.
+  if (transformation) made.data.system.transformation = transformation;
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
   if (!item) return null;
   await giveGrants(actor, item, made.grants, trait.name);

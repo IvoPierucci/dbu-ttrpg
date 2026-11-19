@@ -1,0 +1,37 @@
+id: unlocked-potential
+name: Unlocked Potential
+type: awakening
+subtype: greater
+origin: body
+racial: Any
+prerequisites: N/A
+tier: 1+
+maxStacks: 2
+aspects: 
+bonuses: AG +1, FO +2, TE +1, IN +1, MA +2
+description: >
+  Somehow, someone or something has unleashed your inner potential, drawing upon the latent powers from within you, and awakening your hidden strength. Unlocked Potential is an empowered state of being brought on by an outside force, thus allowing you to use your full potential at the time. Unlocked Potential doesn't have any outward appearance changes and you can gain Unlocked Potential multiple times.
+text: >
+  Somehow, someone or something has unleashed your inner potential, drawing upon the latent powers from within you, and awakening your hidden strength. Unlocked Potential is an empowered state of being brought on by an outside force, thus allowing you to use your full potential at the time. Unlocked Potential doesn't have any outward appearance changes and you can gain Unlocked Potential multiple times.
+
+  You can only get Unlocked Potential once from any one source. For example, if you had your potential unlocked by the Ultra Divine Water, even if you drank it again and succeeded at the Saving Throw, you would not gain this Manifested Power again. This also applies to having your potential unlocked by other characters – only once per each character.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Body / Prerequisite(s): N/A / Maximum No of Stacks: 2 / Tier of Power Requirement. 1+
+  AG +1 · FO +2 · TE +1 · SC – · IN +1 · MA +2 · PE –
+
+  Potential: Hidden within you lies a dormant power that was previously untapped, now brought to the surface.
+  (1)-[Passive]: While you have a stack of Power, increase your Combat Rolls and Soak Value by Z(bT).
+  (2)-[Passive]: Reduce the penalty from a Botch Result by Z(bT) on Combat Rolls.
+  (3)-[Passive]: For each Power Level reached, increase your Maximum Life and Ki Points by Z.
+  (4)-[Passive]: Increase the Dice Category of your Critical Result Extra Die by Z Categories.
+  (5)-[Triggered, Z/Round]: After having rolled a Combat Roll, you may choose to increase the Natural Result by 1. This can allow you to score a Critical Result or avoid a Botch Result.
+  (6)-[Triggered/Power, 1/Encounter]: Enter the Surging State until the end of your turn.
+
+  Deeper Potential (2): Even deeper inside you, another wellspring of your potential bubbles to the surface, granting you immeasurable power.
+  (1)-[Passive]: While in the Surging State, increase your Wound Rolls by 2(T).
+  (2)-[1/Encounter]: You may use the Power Up Maneuver as an Instant Maneuver.
+  (3)-[Triggered, 1/Encounter]: After having rolled a Combat Roll, you may choose to set the Natural Result of that Combat Roll to 10.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

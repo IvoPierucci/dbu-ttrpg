@@ -1,0 +1,45 @@
+id: super-saiyan-1
+name: Super Saiyan 1
+type: form
+subtype: alternate
+racial: Saiyan
+prerequisites: N/A
+line: super-saiyan
+stage: 1
+tier: 2+
+stress: 12
+aspects: Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Draining (LV1), Power High (LV1)
+bonuses: AG +1(T), FO +1(T), TE +1(T), IN +1(T), MA +1(T)
+description: >
+  A golden aura blazes to life around you as the energy radiating off of you in waves lifts your hair towards the heavens and washes it gold with power. You're not the average Saiyan warrior anymore. You have ascended beyond and become a Super Saiyan.
+text: >
+  A golden aura blazes to life around you as the energy radiating off of you in waves lifts your hair towards the heavens and washes it gold with power. You're not the average Saiyan warrior anymore. You have ascended beyond and become a Super Saiyan.
+
+  **Super Saiyan 1** — Racial Requirement: Saiyan / Transformation Type: Form / Form Type: Alternate / Prerequisite(s): N/A / Transformation Line: Super Saiyan / Transformation Stage: 1 / Stress Test Requirement: 12 / Tier of Power Requirement. 2+
+  Aspects: Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Draining (LV1), Power High (LV1)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN +1(T) · MA +1(T) · PE –
+
+  S-Cells: The latent power in your blood awakens, granting you increased might.
+  (1)-[Passive]: While you have 4+ stacks of Battle Born, increase the Tier of Power Extra Dice for your Combat Rolls by 1 Category and increase your Damage Reduction by 1(T).
+  (2)-[1/Round]: While you have 6+ stacks of Battle Born, you may use the Power Up Maneuver as an Instant Maneuver.
+  (3)-[Permanent, Option]: Upon gaining access to this Transformation, select one of the following effects:
+  Super Surger [Passive]: While you have 2+ stacks of Power, increase your Combat Rolls and Surgency by 1(T) and 2(T) respectively.
+  Super Speed [Passive]: While you have 2+ stacks of Battle Born applied to your Dodge Rolls, increase your Speeds and Defense Value by 1(T).
+  Super Sturdy [Passive]: While you have 2+ stacks of Battle Born applied to your Wound Rolls, increase your Soak Value by 2(T).
+  Super Specialist [Permanent, Passive]: Upon gaining this effect, select a Foundation. Increase your Strike Rolls and Wound Rolls for that Foundation by 1(T) and 2(T) respectively while you have a Battle Born stack in their respective Combat Rolls.
+
+  Golden Power: Your energy spikes and flows off of you in waves, shining gold with power.
+  (1)-[Passive]: Increase the Dice Score for your Duel Clashes by 1(T).
+  (2)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver while below the Bruised Health Threshold, reduce the Damage Category of that Attacking Maneuver (for your Damage Calculation) by 1 Category.
+  (3)-[Triggered/Transform]: Enter the Raging State until the end of your turn.
+  (4)-[Triggered/Transform, 1/Encounter]: Use a Ki Surge.
+
+  MASTERY TRAIT — This is a Super Saiyan: Your comfort in this form allows you to draw out even greater power, overwhelming your enemies.
+  (1)-[Permanent]: Super Saiyan 1 loses both the Draining and Power High Aspects and gains the Natural (LV1) and Heartbeat (LV1) Aspects.
+  (2)-[Permanent]: Gain access to the Full Power Evolved Stage for Super Saiyan 1.
+  (3)-[Passive]: Treat the Superior State as the Raging State for the effects of the Raging Aspect.
+  (4)-[Triggered]: When you use the 3rd effect of Golden Power, you may enter the Superior State instead of the Raging State. If you do, the effect lasts until the start of your next turn.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

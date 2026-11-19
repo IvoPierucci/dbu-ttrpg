@@ -1,0 +1,52 @@
+id: wrathful
+name: Wrathful
+type: enhancement
+subtype: standard
+racial: Saiyan
+prerequisites: N/A
+tier: 2+
+stress: *
+aspects: Graded, Raging, Innate State (Feral/Raging), Rampaging (LVG)
+grades: 2
+grade1: stress 14; AG/FO/TE 2(T); label Initial
+grade2: stress 18; AG/FO/TE 3(T); aspects Armored, Bulky, Growth (LV1); label Maximum
+bonuses: AG *, FO *, TE *
+description: >
+  Channeling the power of the Saiyan's Great Ape into your base state, you've become something else. All that power has overwhelmed your senses and sent your mind into the void, leaving you with nothing but a blinding rage. You've lost all sense of yourself and become Wrathful. By entering the Wrathful state, your muscles bulge, your eyes glow with a primal golden color and your hair spikes up as if turning into a Super Saiyan but remains black.
+text: >
+  Channeling the power of the Saiyan's Great Ape into your base state, you've become something else. All that power has overwhelmed your senses and sent your mind into the void, leaving you with nothing but a blinding rage. You've lost all sense of yourself and become Wrathful. By entering the Wrathful state, your muscles bulge, your eyes glow with a primal golden color and your hair spikes up as if turning into a Super Saiyan but remains black.
+
+  Racial Requirement: Saiyan / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: * / Tier of Power Requirement. 2+
+  Aspects: Graded, Raging, Innate State (Feral/Raging), Rampaging (LVG)
+  AG * · FO * · TE * · SC – · IN – · MA – · PE –
+
+  Compressed Oozaru: All the raw, explosive power of the mighty Oozaru, packed into your decidedly smaller form, has left you as quite the powerhouse.
+  (1)-[Permanent]: This Transformation cannot be used in conjunction with any Transformation that has the Blutz Wave Aspect.
+  (2)-[Passive]: Treat your Size Category as if it was G Size Categories larger for the sake of Punching Down.
+  (3)-[1/Round]: You may spend 1 stack of Battle Born to use the Signature Technique Maneuver while in the Feral State. If that Signature Technique was a Super Signature, you may apply the Ascended Signature Advantage to it.
+  (4)-[Graded]: Wrathful has 2 Grades. Each Wrathful Grade:
+  Has their own Stress Test Requirement.
+  Sets the AMB (Attribute Modifier Bonus) of Wrathful for the listed Attributes to the amount listed on the Grades table.
+  Applies additional Aspects.
+  | Grades | Stress Test | AMB (AG/FO/TE) | Aspects |
+  | 1 (Initial) | 14 | 2(T) | – |
+  | 2 (Maximum) | 18 | 3(T) | Armored, Bulky, Growth (LV1) |
+
+  Empowering Fury: Your burning rage fuels you, driving you to new heights of power.
+  (1)-[Passive]: While you are below the Injured Health Threshold, increase your Tier of Power Extra Dice by G Dice Categories.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T) for each Health Threshold you are below.
+  (3)-[Triggered, 1/Encounter]: When you trigger the second effect of Born for Battle, apply your Surgency twice for the Ki Surge used through this effect.
+  (4)-[Triggered, 1/Encounter]: If you enter the 2nd Grade for this Transformation, gain a stack of Battle Born.
+
+  BURST LIMIT — Saiyan Ferocity: Your fierce, bestial nature takes over completely, making you impossible to stop for a short time.
+  (1)-[Triggered/Transform]: Gain 2 stacks of Battle Born (these stacks of Battle Born must be applied to your Wound Rolls). Then, increase your Soak Value by 1(T) for each stack of Battle Born you currently possess until the start of your next turn.
+
+  MASTERY TRAIT — Mind over Monkey: Your conscious mind emerges over the beast inside, taking control to direct your wrath.
+  (1)-[Permanent]: Reduce the Rampaging Aspect for this Transformation by 1 level.
+  (2)-[Permanent]: Wrathful loses the Innate State (Feral) Aspect.
+  (3)-[1/Round]: You may use the Direct Hit option of the Defend Maneuver without spending a Counter Action.
+  (4)-[Triggered, 1/Encounter]: If you would use the Direct Hit option of the Defend Maneuver, instead of increasing your Soak Value by 1/2 – double it.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

@@ -1,0 +1,27 @@
+id: pure-form-erratic-majin
+name: Erratic Majin
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 3
+description: >
+  Your irrational and ever-changing nature makes it impossible to gauge what you will do at any given time.
+text: >
+  Erratic Majin: Your irrational and ever-changing nature makes it impossible to gauge what you will do at any given time.
+  (1)-[Automatic/Transform]: Lose all stacks of Absorption.
+  (2)-[Automatic]: If you gain a stack of Absorption, leave this Transformation.
+  (3)-[Permanent, Passive]: Upon gaining access to this Transformation, select a Majin Secondary Racial Trait. You gain access to that Racial Trait while you are in this Transformation.
+  (4)-[Passive]: Your base Size Category becomes Small, but for the sake of calculating your Soak Value and for the effects of Punching Down, your base Size Category is considered to be Medium.
+  (5)-[Passive]: You may use the Basic Attack Maneuver as an Instant Maneuver, instead of a Standard Maneuver, but you must still spend 1 Action to use the Basic Attack Maneuver.
+  (6)-[Triggered/Start of Combat Round]: Reroll your Initiative.
+  (7)-[Automatic/Start of Combat Round, Ruling]: Roll a 1d6 – this d6 is known as your 'Chaos Die'. Then, until the end of the Combat Round, gain the following effects depending on the result for your Chaos Die:
+  1 [Passive]: Reduce your Defense Value and Soak Value by 1(bT).
+  2 [Passive]: Reduce your Strike Rolls and Wound Rolls by 1(bT).
+  3 [Passive]: Increase your Surgency by 2(T).
+  4 [Passive]: Increase your Attribute Modifiers (FO/MA) by 1(T).
+  5 [Passive]: Increase your Attribute Modifiers (AG/TE) by 1(T).
+  6 [Passive]: Increase your Combat Rolls and Soak Value by 1(T).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

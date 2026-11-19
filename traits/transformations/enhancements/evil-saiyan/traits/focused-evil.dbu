@@ -1,0 +1,18 @@
+id: evil-saiyan-focused-evil
+name: Focused Evil
+order: 4
+slot: mastery
+mastery: 1
+description: >
+  By directing the darkness inside you, you take control over your battle lust and become a fine-tuned weapon of destruction.
+text: >
+  Focused Evil: By directing the darkness inside you, you take control over your battle lust and become a fine-tuned weapon of destruction.
+  (1)-[Passive]: Your maximum number of Evil Points is 15(bT).
+  (2)-[Passive]: Ignore the second effect of the Surging State.
+  (3)-[Passive]: While this Transformation is used in conjunction with another Transformation that has the 'Saiyan' Racial Requirement, increase the Dice Score of your Steadfast Checks by 1.
+  (4)-[Triggered, 1/Round]: If you knock an Opponent with a Combat Condition through a Health Threshold, gain 5(bT) Evil Points.
+  (5)-[Triggered/Power, 1/Round]: Target all Opponents within a Sphere AoE (centered on you). Make a Clash (Cognitive vs Cognitive/Morale) against those Opponents. If you win, they gain the Shaken Combat Condition until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

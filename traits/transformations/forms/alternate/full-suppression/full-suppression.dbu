@@ -1,0 +1,41 @@
+id: full-suppression
+name: Full Suppression
+type: form
+subtype: alternate
+racial: Arcosian
+prerequisites: Emperor Mutation Trait
+line: metamorphosis
+stage: 0
+tier: 1+
+stress: 2
+aspects: Natural (LV2), Peaked
+bonuses: 
+description: >
+  The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
+text: >
+  The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
+
+  **Full Suppression** — Racial Requirement: Arcosian / Transformation Type: Form / Form Type: Alternate / Prerequisite(s): Emperor Mutation Trait / Transformation Line: Metamorphosis / Transformation Stage: 0 (Null Stage) / Stress Test Requirement: 2 / Tier of Power Requirement. 1+
+  Aspects: Natural (LV2), Peaked
+  AG – · FO – · TE – · SC – · IN – · MA – · PE –
+
+  Suppression of Power: You've built enough layers around your power that you can easily control it.
+  (1)-[Addendum]: Please refer to the Metamorphosis Forms text box below.
+  (2)-[Permanent]: For the sake of entering and remaining in this Transformation, ignore its Tier of Power Requirement.
+  (3)-[Permanent]: You cannot enter a Transcended Enhancement, cannot enter another Alternate Form unless it is part of the Metamorphosis Transformation Line, and cannot leave any Transformation of this Transformation Line through the Revert Maneuver (unless you use it to enter a Transformation of this Transformation Line with 2 levels of the Natural Aspect).
+  (4)-[Passive]: While in the Full Suppression Stage of Metamorphosis, reduce the Ki Point Cost of your Attacking Maneuvers and Unique Abilities by 1(T).
+  (5)-[Passive]: Increase the amount of Life and Ki Points you regain from Legend Realized by 1d6(T).
+  (6)-[Triggered]: If you spend a stack(s) of Overwhelm, regain 2(bT) Life Points for each stack of Overwhelm spent. You cannot regain more than 8(bT) Life Points during a single Combat Round with this effect.
+  (7)-[Triggered/Start of Combat Round, 1/Encounter]: You may immediately take your Turn for this Combat Round, ignoring the Initiative Order.
+
+  Metamorphosis Forms (addendum)
+  The Metamorphosis Transformation Line acts differently to other Transformations, having a far more customizable quality, and therefore has a few unique rules to itself:
+  - Upon gaining access to it, for each Stage of Metamorphosis, you choose a Size Category between Small and Large. This replaces your base Size Category while you are in that Stage.
+  - Upon gaining access to it, for each Stage of Metamorphosis, you select S number of Evolution Traits to possess while in that Stage of Metamorphosis.
+  - Upon gaining access to it, for each Stage of Metamorphosis, make a choice for the Tail Attack Maneuver to replace the choice you made upon gaining access to the Maneuver while in that Stage.
+  - Upon gaining access to it, for each Stage of Metamorphosis, make a choice for the Option effect of Survivor to replace your Option while in that Stage.
+  - Evolved Stages applied to a Stage of Metamorphosis are not treated as their own Stage for these rules, but instead the Original Form (they possess the same Size Category, Evolution Traits, choice for the Tail Attack Maneuver, and Option effect of Survivor as the Original Form, unless specified otherwise).
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

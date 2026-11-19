@@ -1,0 +1,18 @@
+# Its id leads with aspect-: a State of the same name (Raging, Mindful, God Ki) has the bare one.
+id: aspect-pinnacle
+name: Pinnacle
+polarity: positive
+levels: true
+max: 2
+# [Solo]: its levels are not added between Transformations used together - the highest of them.
+solo: true
+# number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
+# rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
+group: rule
+# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+summary: >
+  This Evolved Stage stacks on another Evolved Stage of the same Original Form. Level 2: you choose whether to apply it as you enter.
+
+---
+
+# Nothing it does by itself yet: the Transformation Maneuver and Mastery read it.

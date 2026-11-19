@@ -1,0 +1,21 @@
+id: golden-oozaru-golden-beast
+name: Golden Beast
+order: 1
+slot: trait
+# Its [Constant] effects: a [Triggered] one that may be used outside the Transformation (the user's).
+constant: 1
+description: >
+  Wielding the golden power of your Super Saiyan Transformation, your inner beast awakens, becoming a shining beacon of power and fury.
+text: >
+  Golden Beast: Wielding the golden power of your Super Saiyan Transformation, your inner beast awakens, becoming a shining beacon of power and fury.
+  (1)-[Constant]: If you fail to enter this Transformation or leave this Transformation due to failing a Stress Test, enter the Oozaru Alternate Form.
+  (2)-[Passive]: While in the Raging or Superior State, treat your Size Category as Colossal for your effects and the effects of Punching Down.
+  (3)-[Passive]: While you have 4+ stacks of Battle Born, increase the Tier of Power Extra Dice for your Combat Rolls by 1 Category and increase your Soak Value by 1(T).
+  (4)-[Passive]: Gain access to the Fire Breath Signature Technique. The Elemental (Fire) Profile is considered a Favored Element for the sake of the Fire Breath Signature Technique.
+  (5)-[Triggered]: While you have 6+ stacks of Battle Born, if you make an Attacking Maneuver in which all of the targets qualify for the effects of Punching Down, increase the Wound Roll by 1(T) for each Size Category you are larger than the largest Character among those targets.
+  (6)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold, they gain a stack of the Broken Combat Condition until the start of your next turn.
+  (7)-[Triggered/Transform, 1/Encounter]: Use a Ki Surge.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

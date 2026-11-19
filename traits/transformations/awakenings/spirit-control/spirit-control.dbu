@@ -1,0 +1,90 @@
+id: spirit-control
+name: Spirit Control
+type: awakening
+subtype: lesser
+origin: mind
+racial: Any
+prerequisites: 2+ Skill Ranks in the Clairvoyance Skill
+tier: 1+
+maxStacks: 3
+aspects: 
+bonuses: AG +1, FO +1, IN +1, MA +1
+description: >
+  Mastery over your spiritual being does not come easily, but with it, you gain enlightenment and true control over your ki. Your hard training has paid off, giving you access to potent abilities you never could have dreamed possible before.
+text: >
+  Mastery over your spiritual being does not come easily, but with it, you gain enlightenment and true control over your ki. Your hard training has paid off, giving you access to potent abilities you never could have dreamed possible before.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Mind / Prerequisite(s): 2+ Skill Ranks in the Clairvoyance Skill / Maximum No of Stacks: 3 / Tier of Power Requirement. 1+
+  AG +1 · FO +1 · TE – · SC – · IN +1 · MA +1 · PE –
+
+  Spiritual Apprentice: You have been trained to finely control your energy.
+  (1)-[Passive]: You may spend Technique Points to obtain the Spiritual Unique Abilities and their Advancements (detailed below).
+  (2)-[Passive]: When you gain a stack of this Awakening, gain access to one of the Spiritual Unique Abilities (detailed below) without paying the TP Cost.
+  (3)-[Passive]: Increase the Dice Score of your Clairvoyance Skill Checks by 2.
+  (4)-[Passive]: Increase your Maximum Ki Points by 2 for every Power Level you possess.
+  (5)-[Passive]: Reduce the Ki Point Cost of all of your Attacking Maneuvers by 1(T).
+  (6)-[Passive]: Increase your Surgency by Z(bT).
+  (7)-[Triggered, 1/Encounter]: When using an Attacking Maneuver, you do not have to pay the Ki Point Cost for that Attacking Maneuver.
+
+  Spiritual Elite (2): With your newfound expertise, you've grown more efficient at manipulating your energy.
+  (1)-[Passive]: Reduce the Ki Point Cost of your Spiritual Unique Abilities by 2(T).
+  (2)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers by 1/4 of their Ki Point Cost (before any reductions are applied).
+  (3)-[Triggered/Start of Turn]: Regain Z(bT) Ki Points.
+
+  Spiritual Master (3): Through intense training and complete mastery, you have learned to revitalize yourself more effectively.
+  (1)-[1/Encounter]: You may use a Ki Surge as an Instant Maneuver.
+  (2)-[Triggered, 2/Round]: Each time you regain Ki Points, regain 3(bT) Life Points.
+
+  Spiritual Unique Abilities
+
+  **Instant Transmission** — By sensing the life energy of others, you are able to teleport yourself directly to their location, ignoring all the time and distance you would have needed to reach them normally.
+  –Ability Type: Technical/Magical –Prerequisites: Spirit Control –TP Cost: 15 –KP Cost: 4(T) –Maneuver Type: Instant –Action Cost: N/A –Minions: N/A
+  –Passive Bonus: You gain access to the Teleport Adventuring Maneuver and increase your Impulsive Saving Throw by 1(T)
+  –Effect: Target one Character you can sense through the Clairvoyance Skill. Make a Skill Clash (Clairvoyance vs Concealment) against them. If you win, you can instantly place yourself on a Square within a Sphere AoE (centered on them).
+  When you use this Unique Ability, you can make a Clash (Physical Strike vs Strike/Dodge) against any number of Characters within your Melee Range. If you win, they are immediately brought with you to your chosen location, instantly being placed on a Square within your Melee Range after you have arrived at your Square (they decide in order of Initiative). If you use Instant Transmission within a Grapple, you must target the other Character within the Grapple, and if the other Character wins the Clash, the Grapple immediately ends and the Grappled Character is freed.
+
+  Instant Transmission Advancements
+  COMBAT TRANSMITTER — You are able to attack as you teleport around the battlefield. –Prerequisites: Insight Score 8+ –TP Cost: 10 –Effect: If you are placed on a Square adjacent to an Opponent through the effects of Instant Transmission, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target that Opponent with that Attacking Maneuver.
+  MASTERFUL COMBAT TRANSMITTER — You are extremely adept at fighting while teleporting around the battlefield. –Prerequisites: Combat Transmitter –TP Cost: 5 –Effect: If you use the effects of Combat Transmitter, you may use the Signature Technique Maneuver instead.
+  SONIC TRANSMISSION — Your control over your teleportation allows you more space in which to appear. –Prerequisites: 3+ Skill Ranks in Clairvoyance –TP Cost: 8 –Effect: Increase the Magnitude of the Sphere AoE for the effects of Instant Transmission to Destructive.
+  SPIRIT TRANSPORTER — Rather than teleport yourself, you possess the ability necessary to teleport others. –Prerequisites: 4+ Skill Ranks in Clairvoyance, Insight Score 12+ –TP Cost: 8 –Effect: Make a Clash (Cognitive vs Impulsive) against your targeted Character. If you win, instead of moving yourself, move your targeted Character to an adjacent Square next to you.
+
+  **Instant Transmission: Saviour** — You teleport in to grab a comrade and teleport them out of danger.
+  –Ability Type: Technical/Magical –Prerequisites: Instant Transmission –TP Cost: 15 –KP Cost: 8(T) –Maneuver Type: Counter –Action Cost: 1 Counter Action –Minions: Non-Minion –Passive Bonus: N/A
+  –Effect: When an Ally is about to be hit by an Attacking Maneuver, select that Ally and then make a Clash (Impulsive vs Impulsive/Cognitive) against the attacking Character. If you win, the selected Ally automatically evades that Attacking Maneuver and then you and the selected Ally are moved to a Square and an adjacent Square of your choice respectively within a Large Sphere AoE (centered on the attacking Character).
+
+  **Instant Transmission: Assault** — You appear directly behind an enemy to unleash a powerful attack!
+  –Ability Type: Technical/Magical –Prerequisites: Instant Transmission, Combat Transmitter Advancement –TP Cost: 15 –KP Cost: 4(T) –Maneuver Type: Standard –Action Cost: 1 Action –Minions: N/A –Passive Bonus: N/A
+  –Effect: Target an Opponent. Make a Clash (Impulsive vs Impulsive/Cognitive) against that Opponent. If you win, place yourself on an adjacent Square to that Opponent and then use the Basic Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, that targeted Opponent must be a target of that Attacking Maneuver and suffers from the Guard Down Combat Condition against this Attacking Maneuver.
+  If you lose the Clash, you may place yourself on any Square within a Large Sphere AoE (centered on that Opponent).
+
+  **Gigantification** — You grow to whatever size you desire.
+  –Ability Type: Technical/Magical –Prerequisites: Spirit Control –TP Cost: 10 –KP Cost: 4(T) –Maneuver Type: Standard –Action Cost: 1 Action –Minions: N/A
+  –Passive Bonus: You gain access to the Giant Form Enhancement, and may be any Size Category (except Colossal) you wish outside of Combat Encounters.
+  –Effect: You may increase your Size Category to any Size Category up to Gigantic. If you do, you must pay the Ki Point Cost of this Unique Ability at the start of each of your turns. If you do not, stop applying this effect. You may also stop applying this effect as an Instant Maneuver.
+
+  **Spiritual Healing** — You have the ability to restore someone's energy and vitality.
+  –Ability Type: Technical/Magical –Prerequisites: Spirit Control –TP Cost: 10 –KP Cost: 10(T) –Maneuver Type: Standard –Action Cost: 1 Action –Minions: N/A –Passive Bonus: N/A
+  –Effect: Target a Character within your Melee Range. That Character regains 2d10(bT) Life and Ki Points. Increase the Dice Score of this roll by your Might.
+
+  **Spiritual Cloning** — You split into several copies of yourself created from your own energy.
+  –Ability Type: Technical/Magical –Prerequisites: Spirit Control –TP Cost: 15 –KP Cost: 10(T) –Maneuver Type: Standard –Action Cost: 3 Actions –Minions: N/A –Passive Bonus: N/A
+  –Effect: Create up to 4 Duplicate Minions (these Minions do not count towards your maximum number of Minions). Reduce the Tier of Power of you and any Duplicate Minions created through Spiritual Cloning by 1 (if already Tier of Power 1, reduce your/their Combat Rolls by 2 instead).
+  If you fail a Steadfast Check while you have Duplicate Minion(s) created by Spiritual Cloning, those Minions are Defeated.
+  As an Instant Maneuver during your turn, you can erase all of your Duplicate Minions created by this Unique Ability.
+
+  **Forced Spirit Fission** — You excise unnatural influences from a target's spirit.
+  –Ability Type: Technical/Magical –Prerequisites: 2+ stacks of Spirit Control –TP Cost: 30 –KP Cost: 6(T) –Maneuver Type: Instant Maneuver –Action Cost: N/A –Minions: N/A
+  –Passive Bonus: Increase your Cognitive Saving Throw and Wound Rolls by 1(bT).
+  –Effect: Until the end of your turn, your Attacking Maneuvers benefit from the following effects:
+  Reduce the Ki Points of any Character hit by your Attacking Maneuvers by 1/4 (rounded up) of your Might.
+  If a Character hit by your Attacking Maneuver possesses stacks of Lifeforce or Consumed Lifeforce, remove 1 stack of Lifeforce or Consumed Lifeforce from that Character. If that Attacking Maneuver knocked them through a Health Threshold, then 2 stacks of Lifeforce or Consumed Lifeforce instead.
+  If you deal Damage to a Fusion, make a Clash (Cognitive) against that Character. If you win, that Fusion is split into its Fused Characters (see — Defusing in a Combat Encounter).
+  If you deal Damage to a Character in the Fused Ki State, make a Clash (Cognitive) against that Character. If you win, both they and their partner exit that Special State.
+  If you deal Damage to a Character with a stack of the Absorption Awakening, make a Clash (Cognitive) against that Character. If you win, select a stack of that Awakening, eject the Absorbed Character and remove that stack of Absorption from that Character.
+  If you deal Damage to a Character with the Overtaken Awakening, make a Clash (Cognitive) against that Character. If you win, eject the Possessing Character and remove the Overtaken Awakening from that Character.
+  If you deal Damage to a Character with a stack of the Unified Awakening, make a Clash (Cognitive) against that Character. If you win, select a stack of the Unified Awakening, eject the Merged Character, and remove that stack of the Unified Awakening from that Character.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

@@ -1,0 +1,34 @@
+id: super-android
+name: Super Android
+type: awakening
+subtype: greater
+origin: body
+racial: Android
+prerequisites: N/A
+tier: 2+
+maxStacks: 1
+aspects: 
+bonuses: AG +1, FO +2, TE +1, MA +2
+description: >
+  You have reached a level beyond the typical scope of your robotic body or cybernetics. Superior in every way, you are now most assuredly a 'Super Android'. Your appearance may have changed, granting you different clothes and even possibly causing your body to grow but regardless of what changes have occurred in your ascension, what power you once possessed has now multiplied.
+text: >
+  You have reached a level beyond the typical scope of your robotic body or cybernetics. Superior in every way, you are now most assuredly a 'Super Android'. Your appearance may have changed, granting you different clothes and even possibly causing your body to grow but regardless of what changes have occurred in your ascension, what power you once possessed has now multiplied.
+
+  The Super Android Awakening can be gained one of two ways: you may gain Super Android by absorbing another Android or by being overhauled and improved by a genius scientist. Your ARC may also find other ways to grant you this Awakening, if it seems appropriate for your Character.
+
+  Racial Requirement: Android / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Body / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 2+
+  AG +1 · FO +2 · TE +1 · SC – · IN – · MA +2 · PE –
+
+  Super Weapon: Your upgrades have transformed you into a walking weapon of mass destruction.
+  (1)-[Passive]: While you are at the Healthy Health Threshold, increase your Combat Rolls and Damage Reduction by 1(T).
+  (2)-[Passive]: While your Ki Points are below 1/4 (rounded up) of your Maximum Ki Points, increase your Surgency by 2(T).
+  (3)-[Passive]: Upon gaining this Transformation, select and gain access to an additional effect from the 3rd effect of Technological Being.
+  (4)-[Triggered, Resource]: When you use the Energy Charge Maneuver, gain a stack of Reserved Energy (max. 6).
+  (5)-[Triggered, 1/Round]: When you use a Signature Technique, you may spend any number of Reserved Energy stacks. Increase the Wound Roll of that Attacking Maneuver by 1(T) for each stack of Reserved Energy spent this way.
+  (6)-[Triggered/Power, 1/Round]: You may spend any number of Reserved Energy stacks to regain 1(bT) Ki Points for each stack of Reserved Energy spent.
+  (7)-[Triggered, 1/Encounter]: If you spend 3+ stacks of Reserved Energy through the 5th effect of Super Weapon, apply an Energy Charge to that Attacking Maneuver for every 3 stacks of Reserved Energy spent.
+  (8)-[Triggered, 1/Encounter]: If you spend 3+ stacks of Reserved Energy through the 6th effect of Super Weapon, use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

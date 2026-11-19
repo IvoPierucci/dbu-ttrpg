@@ -1,0 +1,18 @@
+id: drunken-fist-unpredictable-combat
+name: Unpredictable Combat
+order: 2
+slot: trait
+description: >
+  The way you move, it becomes impossible to identify your next move, making defending against you or even striking you difficult beyond measure.
+text: >
+  Unpredictable Combat: The way you move, it becomes impossible to identify your next move, making defending against you or even striking you difficult beyond measure.
+  (1)-[Passive]: Do not reduce your Defense Value through the effects of the Cross Counter option of the Defend Maneuver.
+  (2)-[Passive]: If you score a Critical Result on a Combat Roll, increase the Dice Score of that Combat Roll by 1(T).
+  (3)-[Triggered]: If you score a Botch Result on a Dodge Roll, it becomes a Critical Result instead (this does not change the Natural Result).
+  (4)-[Triggered, 1/Round]: If you successfully dodge an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver after that Attacking Maneuver concludes. If you do, you must target the Character whose Attacking Maneuver you dodged with this Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you are targeted by an Attacking Maneuver, you may use the Cross Counter option of the Defend Maneuver without spending a Counter Action.
+  (6)-[Triggered, 1/Round]: If you would trigger the Exploit Maneuver, you can choose not to.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

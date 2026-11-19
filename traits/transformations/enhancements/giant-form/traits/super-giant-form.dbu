@@ -1,0 +1,20 @@
+id: giant-form-super-giant-form
+name: Super Giant Form
+order: 4
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You are extremely adept at manipulating your size and making use of that increased bulk in combat.
+text: >
+  Super Giant Form: You are extremely adept at manipulating your size and making use of that increased bulk in combat.
+  (1)-[Permanent]: You gain access to the 4th Grade of Giant Form.
+  (2)-[Passive]: The Growth Aspect for Giant Form can reach up to 4 levels.
+  (3)-[Passive]: Increase your Damage Reduction by 1/2 (rounded up) of G(T).
+  (4)-[Passive]: Double the bonus from the 1st effect of Accelerated Growth.
+  (5)-[Passive]: The 1st effect of Battlefield Titan loses its [1/Round] Keyword.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

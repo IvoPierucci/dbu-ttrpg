@@ -1,0 +1,25 @@
+id: super-demon-demon-realm-elite
+name: Demon Realm Elite
+order: 3
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: demonic-traits
+groupLabel: Demonic Traits
+description: >
+  As one of the strongest in the Demon Realm, when you unleash your full power, entire worlds tremble in fear.
+text: >
+  Demon Realm Elite: As one of the strongest in the Demon Realm, when you unleash your full power, entire worlds tremble in fear.
+  (1)-[Prerequisite]: You are of the Demon Person Subrace.
+  (2)-[Passive]: Increase your Combat Rolls and Soak Value by 1(T) while an Opponent is suffering from a Combat Condition that you inflicted.
+  (3)-[1/Round]: You may spend stacks of Demonic Power as if they were Actions/Counter Actions for the Action Cost of your Magical Unique Abilities that have an Action Cost of 1 Action/Counter Action.
+  (4)-[Choice]: Depending on your choice for the 3rd effect of Denizen of the Demon Realm, apply the following effects:
+  Demon Warrior [Passive]: Increase the Strike and Wound Rolls of your Armed Attacks by 1(T).
+  Demon Mage [Passive]: Increase the Strike and Wound Rolls of your Magic Attacks by 1(T).
+  Demon Face [Passive]: Super Demon gains an Attribute Modifier Bonus (SC/PE) equal to its Attribute Modifier Bonus (MA).
+  Elemental Demon [Passive]: Reduce the Ki Point Cost of your Favored Elements by 2(T).
+  Gigantic Demon [Passive]: Increase the Dice Category of your Punching Down Extra Dice by 1 Dice Category.
+  Transforming Demon [Passive]: Increase the Attribute Modifier Bonus (FO/MA) of Super Demon by 1(T).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

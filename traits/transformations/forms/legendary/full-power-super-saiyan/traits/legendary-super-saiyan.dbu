@@ -1,0 +1,20 @@
+id: full-power-super-saiyan-legendary-super-saiyan
+name: Legendary Super Saiyan
+order: 3
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: super-saiyan-style-traits
+groupLabel: Super Saiyan Style Traits
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 2
+description: >
+  Clad in a blaze of legendary power, you represent the pinnacle of evolution for the Super Saiyan Transformation.
+text: >
+  Legendary Super Saiyan: Clad in a blaze of legendary power, you represent the pinnacle of evolution for the Super Saiyan Transformation.
+  (1)-[Prerequisite]: Legendary Saiyan Factor Trait.
+  (2)-[Permanent]: Reduce the Stress Test Requirement of the Legendary Evolved Stage with this Transformation as its Original Form by 3.
+  (3)-[Passive]: Increase your Might by 1(T).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,22 @@
+id: legendary-evolved-unlimited-power
+name: Unlimited Power
+order: 1
+slot: trait
+description: >
+  Your power grows stronger and stronger, the longer you fight for.
+text: >
+  Unlimited Power: Your power grows stronger and stronger, the longer you fight for.
+  (1)-[Acclimated]: If the Original Form is Mastered:
+  Remove the Rampaging Aspect from this Evolved Stage.
+  Reduce your Muscle Penalty by 1(bT).
+  Ignore the 5th effect of Unlimited Power.
+  The 6th effect of Unlimited Power becomes [Triggered] instead of [Automatic].
+  (2)-[Passive]: While you possess 4+ stacks of Battle Born applied to your Wound Rolls, increase the Attribute Modifier Bonus (FO/TE/MA) of this Transformation by 1(T).
+  (3)-[Passive]: While you possess 6+ stacks of Battle Born, ignore all Health Threshold Penalties.
+  (4)-[Passive]: Your Ki Points may exceed your Maximum Ki Points.
+  (5)-[Automatic]: At the end of your turn, reduce your Life Points by 1/10th (rounded up) of your Ki Points.
+  (6)-[Automatic/Start of Turn]: Reduce your Life Points by 1/10th of your Maximum Life Points to use a Ki Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

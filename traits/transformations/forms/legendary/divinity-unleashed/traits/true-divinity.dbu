@@ -1,0 +1,18 @@
+id: divinity-unleashed-true-divinity
+name: True Divinity
+order: 14
+slot: mastery
+mastery: 2
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Your divine might surpasses even the greatest of godly beings and transcends all known limits of power.
+text: >
+  True Divinity (2): Your divine might surpasses even the greatest of godly beings and transcends all known limits of power.
+  (1)-[Permanent]: Divinity Unleashed gains the Perfect Ki Control Aspect.
+  (2)-[Passive]: You may spend your Counter Actions as if they were Actions for Combat Recovery.
+  (3)-[Triggered, 1/Encounter]: If you spend 3 Counter Actions in a Combat Round, upon spending that final Counter Action, regain Divine Ki Points equal to your Surgency.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,20 @@
+id: super-demon-fiendish-mastery
+name: Fiendish Mastery
+order: 6
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  Your demonic nature awakens further, unleashing deeper reserves of power.
+text: >
+  Fiendish Mastery (1): Your demonic nature awakens further, unleashing deeper reserves of power.
+  (1)-[Permanent]: Super Demon loses M levels of the Power High Aspect.
+  (2)-[Permanent]: Super Demon gains the Realization Aspect and M levels of the Scaling Aspect.
+  (3)-[Passive]: The 6th effect Fiendish Power loses the [1/Encounter] Keyword and gains the [M/Round, 3/Encounter] Keywords.
+  (4)-[Triggered]: If you succeed at a Pressure Check, regain M(bT) Life and Ki Points.
+  (5)-[Triggered/Power, M/Encounter]: Make a Pressure Check.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

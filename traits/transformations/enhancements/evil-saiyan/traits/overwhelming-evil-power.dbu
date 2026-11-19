@@ -1,0 +1,13 @@
+id: evil-saiyan-overwhelming-evil-power
+name: Overwhelming Evil Power
+order: 3
+slot: burst
+description: >
+  The insatiable evil urges mixes with your Saiyan battle lust to drive you into a frenzy.
+text: >
+  Overwhelming Evil Power: The insatiable evil urges mixes with your Saiyan battle lust to drive you into a frenzy.
+  (1)-[Triggered/Transform]: Enter the Surging State until the end of your turn. If you do, maximize your Evil Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

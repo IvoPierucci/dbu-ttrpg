@@ -19,6 +19,7 @@ import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { shelteredBy } from "../vehicle-crew.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { attributeShareScript } from "../fusion-of-ki.mjs";
+import { aspectScript, bonusScript, combineAspects, transformationsInUse, transformationTraitProgram } from "../transformations.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, categoryApplies, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
   topLayerPiece, wieldedWeapons, formScript, activeForm, buddiesOf, buddyScript,
@@ -177,7 +178,8 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     );
     // A Trait that does not compile is skipped and named, never applied half-way.
     if (errors.length) continue;
-    const program = activeOptionsOnly(item, whole);
+    // A Transformation Trait outside its Transformation: its [Permanent] and [Constant] effects alone (transformations.mjs).
+    const program = transformationTraitProgram(item, activeOptionsOnly(item, whole), actor.items);
 
     // What was ticked as a Counter Maneuver was used holds as a passive for its duration - Skill of the Watcher's
     // (chat.mjs answerCounter).
@@ -190,7 +192,8 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     entries.push({
       program: held,
       // A Racial Trait - the character's own Item, edited as a Talent is - on its own rung, above a Talent.
-      priority: (item.type === "racial") ? PRIORITY.racial : PRIORITY.talent,
+      // A Transformation Trait on the Transformations' rung, below a Racial Trait.
+      priority: (item.type === "racial") ? (item.system?.transformation ? PRIORITY.transformation : PRIORITY.racial) : PRIORITY.talent,
       sourceId: item.id,
       sourceUuid: item.uuid,
       sourceName: item.name,
@@ -207,6 +210,8 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
   entries.push(...drainPrograms(actor, report));
   entries.push(...karmaPrograms(report));
   entries.push(...statePrograms(actor, report));
+  entries.push(...transformationPrograms(actor, report));
+  entries.push(...aspectPrograms(actor, report));
   entries.push(...kiFusionPrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
   entries.push(...battlefieldPrograms(actor, report));
@@ -542,6 +547,41 @@ function kiFusionPrograms(actor, report) {
   if (errors.length) return [];
   return [{ program, priority: PRIORITY.state, sourceId: "state:fusion-of-ki:shares", sourceUuid: null,
     sourceName: `Fusion of Ki (${partner?.name ?? link.name})`, level: 1, stacks: 1 }];
+}
+
+/**
+ * The Transformations in use, as their Attribute Modifier Bonuses (transformations.mjs bonusesOf) - each named in the hovers by
+ * the Transformation it comes from.
+ */
+function transformationPrograms(actor, report) {
+  const entries = [];
+  for (const item of transformationsInUse(actor)) {
+    const script = bonusScript(item);
+    if (!script) continue;
+    const { program, errors } = compile(`transformation:${item.id}`, { script }, message => report(`${item.name}: ${message}`));
+    if (errors.length) continue;
+    entries.push({ program, priority: PRIORITY.transformation, sourceId: `transformation:${item.id}`, sourceUuid: item.uuid ?? null,
+      sourceName: item.name, level: 0, stacks: 1 });
+  }
+  return entries;
+}
+
+/**
+ * The Aspects in use, put together (transformations.mjs combineAspects): each Aspect's own file, once, at its combined level -
+ * never written into a Transformation (the user's). Named by the Aspect and what it came from.
+ */
+function aspectPrograms(actor, report) {
+  const entries = [];
+  for (const aspect of combineAspects(actor)) {
+    const script = aspectScript(aspect);
+    if (!script) continue;
+    const name = `${aspect.file?.name ?? aspect.name} (${aspect.from.join(", ")})`;
+    const { program, errors } = compile(`aspect:${aspect.id}`, { script }, message => report(`${name}: ${message}`));
+    if (errors.length) continue;
+    entries.push({ program, priority: PRIORITY.aspect, sourceId: `aspect:${aspect.id}`, sourceUuid: null, sourceName: name,
+      level: aspect.level ?? 1, stacks: 1 });
+  }
+  return entries;
 }
 
 function statePrograms(actor, report) {

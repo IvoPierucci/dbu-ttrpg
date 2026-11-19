@@ -1,0 +1,18 @@
+id: unlocked-potential-potential
+name: Potential
+order: 1
+slot: trait
+description: >
+  Hidden within you lies a dormant power that was previously untapped, now brought to the surface.
+text: >
+  Potential: Hidden within you lies a dormant power that was previously untapped, now brought to the surface.
+  (1)-[Passive]: While you have a stack of Power, increase your Combat Rolls and Soak Value by Z(bT).
+  (2)-[Passive]: Reduce the penalty from a Botch Result by Z(bT) on Combat Rolls.
+  (3)-[Passive]: For each Power Level reached, increase your Maximum Life and Ki Points by Z.
+  (4)-[Passive]: Increase the Dice Category of your Critical Result Extra Die by Z Categories.
+  (5)-[Triggered, Z/Round]: After having rolled a Combat Roll, you may choose to increase the Natural Result by 1. This can allow you to score a Critical Result or avoid a Botch Result.
+  (6)-[Triggered/Power, 1/Encounter]: Enter the Surging State until the end of your turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,21 @@
+id: divinity-unleashed-true-god-of-wisdom
+name: True God of Wisdom
+order: 7
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+description: >
+  Serene and benevolent, you impart words of divine knowledge to those who seek your opinion.
+text: >
+  True God of Wisdom: Serene and benevolent, you impart words of divine knowledge to those who seek your opinion.
+  (1)-[Prerequisite]: Access to the God of Wisdom effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Set the Attribute Modifier Bonus (SC/PE) of Divinity Unleashed to match the Transformation's Attribute Modifier Bonus (MA).
+  (3)-[Passive]: Double the bonus from the effect of God of Wisdom.
+  (4)-[Triggered, 1/Round]: If you use the Divine Wisdom God Maneuver, you may regain Life Points equal to 1/2 of your Personality or Scholarship Modifier (whichever is higher).
+  (5)-[Triggered, 1/Round]: If you use the Hype Maneuver and/or the Analysis Maneuver, you may remove a Combat Condition (except Suffocating or Pinned) from yourself or an adjacent Ally.
+  (6)-[Triggered/Transform, 1/Encounter]: Use the Divine Wisdom God Maneuver as an Out-of-Sequence Maneuver. This use of the Divine Wisdom God Maneuver does not cost Divine Ki Points, and does not count towards the [1/Round] limit on the God Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

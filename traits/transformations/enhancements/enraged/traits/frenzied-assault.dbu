@@ -1,0 +1,16 @@
+id: enraged-frenzied-assault
+name: Frenzied Assault
+order: 2
+slot: trait
+description: >
+  The force of your fury pushes you to continue attacking your enemies until they stop moving.
+text: >
+  Frenzied Assault: The force of your fury pushes you to continue attacking your enemies until they stop moving.
+  (1)-[Passive]: While in the Determined State, increase the Attribute Modifier Bonus (FO/MA) of this Transformation by 1(T).
+  (2)-[Passive]: While in the 3rd or higher Level of the Raging State, you automatically win all Clashes initiated by another Character that uses your Cognitive or Morale Saving Throw.
+  (3)-[Triggered, 1/Round]: If you use an Attacking Maneuver while in the 2nd or higher Level of the Raging State, increase the Damage Category of that Attacking Maneuver by 1 Category.
+  (4)-[Triggered, 1/Round]: If you are targeted by an Attacking Maneuver, you may use the Defend Maneuver without spending a Counter Action. If you do, you must select the Cross Counter option of the Defend maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

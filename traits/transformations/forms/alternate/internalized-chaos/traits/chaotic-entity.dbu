@@ -1,0 +1,15 @@
+id: internalized-chaos-chaotic-entity
+name: Chaotic Entity
+order: 1
+slot: trait
+description: >
+  Chaos follows you wherever you go, leaving destruction in your wake.
+text: >
+  Chaotic Entity: Chaos follows you wherever you go, leaving destruction in your wake.
+  (1)-[Passive]: You gain access to the 7th effect of Erratic Majin and the 3rd and 4th effects of Unpredictable.
+  (2)-[Triggered, 1/Round]: After seeing the result, you may reroll your Healing Surge.
+  (3)-[Triggered, 1/Encounter]: After seeing the result, you may reroll your Chaos Die.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

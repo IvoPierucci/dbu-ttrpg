@@ -1,0 +1,16 @@
+id: evil-aura-power-of-evil
+name: Power of Evil
+order: 2
+slot: trait
+description: >
+  The evil energy welling up inside you empowers your attacks and protects you from harm.
+text: >
+  Power of Evil: The evil energy welling up inside you empowers your attacks and protects you from harm.
+  (1)-[Triggered/Start of Combat Round, Resource]: Gain 5(bT) Evil Points.
+  (2)-[Triggered]: When you make an Attacking Maneuver, you may spend up to 5(bT) Evil Points to increase the Wound Roll of that Attacking Maneuver by an equal amount.
+  (3)-[Triggered]: When you are targeted by an Attacking Maneuver, you may spend up to 5(bT) Evil Points to gain an equal amount of Damage Reduction for the duration of that Attacking Maneuver.
+  (4)-[Triggered]: When you spend any number of Evil Points, regain an equal amount of Ki Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

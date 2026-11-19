@@ -1,0 +1,20 @@
+id: pure-form-pure-chaos
+name: Pure Chaos
+order: 5
+slot: mastery
+mastery: 3
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  The destructive energy gathering inside you boils to the surface, making you an extremely deadly foe.
+text: >
+  Pure Chaos (3): The destructive energy gathering inside you boils to the surface, making you an extremely deadly foe.
+  (1)-[Permanent]: Pure Form becomes a Legendary Form. Increase the Stress Test Requirement of this Transformation by 9 and its Attribute Modifier Bonus (AG/FO/TE/IN/MA) by 1(T).
+  (2)-[Permanent]: Pure Form gains the Perfect Ki Control Aspect.
+  (3)-[Passive]: While in the Superior State, apply an Energy Charge to all of your Attacking Maneuvers.
+  (4)-[Passive]: Double the reductions and increases from the 7th effect of Erratic Majin.
+  (5)-[Triggered]: If you take Damage from an Attacking Maneuver, you may spend a stack of Channeled Chaos to halve the amount of Damage you take.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

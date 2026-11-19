@@ -1,0 +1,33 @@
+id: seething-fury
+name: Seething Fury
+type: enhancement
+subtype: standard
+racial: Arcosian
+prerequisites: N/A
+tier: 1+
+stress: 10
+variantOf: enraged
+aspects: Variant (Enraged), Innate State (Raging), Raging, Exhausting, Peaked
+bonuses: FO +2(T), MA +2(T)
+description: >
+  You're clearly the best around, so why must all these peons continue to infuriate and humiliate you? It's jealousy, of course. None can hope to best you, so they insist on mocking you and making nuisances of themselves. But no matter what they attempt, none can stand up to your seething fury.
+text: >
+  You're clearly the best around, so why must all these peons continue to infuriate and humiliate you? It's jealousy, of course. None can hope to best you, so they insist on mocking you and making nuisances of themselves. But no matter what they attempt, none can stand up to your seething fury.
+
+  Racial Requirement: Arcosian / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 10 / Tier of Power Requirement. 1+
+  Aspects: Variant (Enraged), Innate State (Raging), Raging, Exhausting, Peaked
+  AG – · FO +2(T) · TE – · SC – · IN – · MA +2(T) · PE –
+
+  That Actually Hurt! (Frenzied Assault): You've been pushed to your absolute limit, and now your furious vengeance will tear anyone who stands before you to shreds.
+  (1)-[Passive]: Increase your Wound Rolls by 1(T) for each Health Threshold you are below.
+  (2)-[Passive]: While your Life Points are below 0, increase the Attribute Modifier Bonus (FO/MA) of this Transformation by 1(T).
+  (3)-[Triggered, 1/Round]: If you use an Attacking Maneuver while in the 2nd or higher Level of the Raging State, increase the Damage Category of that Attacking Maneuver by 1 Category.
+  (4)-[Triggered, 1/Encounter]: If you would use an Attacking Maneuver while below the Critical Health Threshold, you may apply either the All Out or Complete Annihilation Super Profile to that Attacking Maneuver.
+  (5)-[Constant, Triggered/Threshold, 1/Encounter]: Use the Transformation Maneuver to enter this Transformation as an Out-of-Sequence Maneuver.
+
+  BURST LIMIT — You Must Die by My Hand!: Your burning rage has no limits, and you will make sure that anyone who opposes you doesn't live to regret it.
+  (1)-[Triggered/Transform]: Maximize your stacks of Overwhelm. If you do, you may use the Basic Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver. Apply the bonus to Wound Rolls from your stacks of Overwhelm an additional time to this Attacking Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

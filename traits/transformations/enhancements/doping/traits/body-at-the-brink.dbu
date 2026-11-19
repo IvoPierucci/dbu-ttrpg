@@ -1,0 +1,16 @@
+id: doping-body-at-the-brink
+name: Body at the Brink
+order: 1
+slot: trait
+description: >
+  The chemicals coursing through your veins have pushed your body to its limits, giving you a strong edge against the competition.
+text: >
+  Body at the Brink: The chemicals coursing through your veins have pushed your body to its limits, giving you a strong edge against the competition.
+  (1)-[Passive]: Reduce your Muscle Penalty by 1(bT).
+  (2)-[Passive]: Increase your Wound Rolls by 1(T) for each Health Threshold you are below.
+  (3)-[Passive]: Increase your Strike Rolls, Dodge Rolls, and Soak Value by 1(T) while below the Injured Health Threshold.
+  (4)-[Triggered/Power, 1/Encounter]: Gain 1 Action.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

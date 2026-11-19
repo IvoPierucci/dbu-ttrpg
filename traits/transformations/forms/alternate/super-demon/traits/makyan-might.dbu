@@ -1,0 +1,20 @@
+id: super-demon-makyan-might
+name: Makyan Might
+order: 4
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: demonic-traits
+groupLabel: Demonic Traits
+description: >
+  Empowered by the might of the Makyo Star, you grow to massive proportions.
+text: >
+  Makyan Might: Empowered by the might of the Makyo Star, you grow to massive proportions.
+  (1)-[Prerequisite]: You are of the Makyan Subrace.
+  (2)-[Passive]: Super Demon gains the Growth (LV1) and Bulky Aspects.
+  (3)-[Passive]: While you possess a stack of Demonic Power, reduce your Muscle Penalty by 1(bT).
+  (4)-[Passive]: While you possess 3+ stacks of Demonic Power, increase your Wound Rolls, Soak Value and Might by 1(T).
+  (5)-[Triggered, 1/Round]: If you apply the 4th effect of Demons of the Makyo Star to a Pressure Check, you may reduce the Dice Score of that Pressure Check by 2. If you succeed at that Pressure Check, gain 1 Action.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,13 @@
+id: wrathful-saiyan-ferocity
+name: Saiyan Ferocity
+order: 3
+slot: burst
+description: >
+  Your fierce, bestial nature takes over completely, making you impossible to stop for a short time.
+text: >
+  Saiyan Ferocity: Your fierce, bestial nature takes over completely, making you impossible to stop for a short time.
+  (1)-[Triggered/Transform]: Gain 2 stacks of Battle Born (these stacks of Battle Born must be applied to your Wound Rolls). Then, increase your Soak Value by 1(T) for each stack of Battle Born you currently possess until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

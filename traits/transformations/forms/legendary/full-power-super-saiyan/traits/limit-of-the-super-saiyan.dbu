@@ -1,0 +1,18 @@
+id: full-power-super-saiyan-limit-of-the-super-saiyan
+name: Limit of the Super Saiyan
+order: 11
+slot: mastery
+mastery: 2
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You aren't just a living legend anymore, you've transformed your power into one that surpasses even the original legend themself.
+text: >
+  Limit of the Super Saiyan (2): You aren't just a living legend anymore, you've transformed your power into one that surpasses even the original legend themself.
+  (1)-[Permanent]: Full Power Super Saiyan gains the Perfect Ki Control Aspect.
+  (2)-[1/Round]: As an Instant Maneuver, you can spend a stack of Battle Born to regain Ki Points and Capacity equal to 1/4 of your Max Capacity.
+  (3)-[1/Encounter]: As an Instant Maneuver, you may spend a stack of Battle Born to use a Healing Surge as an Out-of-Sequence Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

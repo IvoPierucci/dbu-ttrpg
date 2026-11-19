@@ -1,0 +1,77 @@
+id: super-demon
+name: Super Demon
+type: form
+subtype: alternate
+racial: Demon
+prerequisites: N/A
+tier: 2+
+stress: 12
+aspects: Enhanced Save (Corporeal/Cognitive/Morale), Difficult (LV1), Power High (LV2)
+bonuses: AG +1(T), FO +1(T), TE +1(T), IN +1(T), MA +1(T)
+description: >
+  You've found further strength through some level of physical transformation, your power surges forth and bolsters you further beyond what others might've considered possible for a demon. However, you know the truth: this isn't the limit of what you can do– it's merely the first step towards even greater heights. With this power, you'll crush all who oppose you underfoot as you become a Super Demon.
+text: >
+  You've found further strength through some level of physical transformation, your power surges forth and bolsters you further beyond what others might've considered possible for a demon. However, you know the truth: this isn't the limit of what you can do– it's merely the first step towards even greater heights. With this power, you'll crush all who oppose you underfoot as you become a Super Demon.
+
+  Racial Requirement: Demon / Transformation Type: Form / Form Type: Alternate / Prerequisite(s): N/A / Stress Test Requirement: 12 / Tier of Power Requirement. 2+
+  Aspects: Enhanced Save (Corporeal/Cognitive/Morale), Difficult (LV1), Power High (LV2)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN +1(T) · MA +1(T) · PE –
+
+  Fiendish Power: Unleashing the power deep within your demonic blood, you tap into a massive burst of strength.
+  (1)-[Permanent, Passive]: Upon gaining access to this Transformation, select and gain access to a Demonic Trait while you are in this Transformation.
+  (2)-[Passive]: For each stack of Demonic Power you possess, increase your Strike and Dodge Rolls by 1(T).
+  (3)-[Passive]: For each stack of Demonic Power you possess, increase your Tier of Power Extra Dice by 1 Dice Category.
+  (4)-[Passive]: For each stack of Demonic Fatigue you possess, increase the Ki Point Cost of your Attacking Maneuvers by 1(T).
+  (5)-[Triggered, 1/Round]: If you use Legend Realized, make a Pressure Check.
+  (6)-[Triggered, 1/Encounter]: If you succeed at a Pressure Check while already having 2+ stacks of Demonic Power, all Opponents within a Huge Sphere AoE (centered on you) have their Life Points reduced by your Might.
+
+  Demonic Traits
+
+  Demonic Battle: Your back-handed strategies and cutthroat tactics leave your enemies reeling without recourse.
+  (1)-[Passive]: Increase your Combat Rolls made against Opponents who are suffering from a Combat Condition by 1(T).
+  (2)-[Passive]: Increase your Might by 1(T).
+  (3)-[Passive]: Apply an Energy Charge to your Signature Techniques that target at least 1 Opponent suffering from a Combat Condition.
+  (4)-[1/Round]: If you are adjacent to an Opponent suffering from a Combat Condition, you may use the Basic Attack Maneuver as an Instant Maneuver. If you do, you must target that Opponent with that Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you inflict a Combat Condition on an Opponent, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+  Demon Realm Elite: As one of the strongest in the Demon Realm, when you unleash your full power, entire worlds tremble in fear.
+  (1)-[Prerequisite]: You are of the Demon Person Subrace.
+  (2)-[Passive]: Increase your Combat Rolls and Soak Value by 1(T) while an Opponent is suffering from a Combat Condition that you inflicted.
+  (3)-[1/Round]: You may spend stacks of Demonic Power as if they were Actions/Counter Actions for the Action Cost of your Magical Unique Abilities that have an Action Cost of 1 Action/Counter Action.
+  (4)-[Choice]: Depending on your choice for the 3rd effect of Denizen of the Demon Realm, apply the following effects:
+  Demon Warrior [Passive]: Increase the Strike and Wound Rolls of your Armed Attacks by 1(T).
+  Demon Mage [Passive]: Increase the Strike and Wound Rolls of your Magic Attacks by 1(T).
+  Demon Face [Passive]: Super Demon gains an Attribute Modifier Bonus (SC/PE) equal to its Attribute Modifier Bonus (MA).
+  Elemental Demon [Passive]: Reduce the Ki Point Cost of your Favored Elements by 2(T).
+  Gigantic Demon [Passive]: Increase the Dice Category of your Punching Down Extra Dice by 1 Dice Category.
+  Transforming Demon [Passive]: Increase the Attribute Modifier Bonus (FO/MA) of Super Demon by 1(T).
+
+  Makyan Might: Empowered by the might of the Makyo Star, you grow to massive proportions.
+  (1)-[Prerequisite]: You are of the Makyan Subrace.
+  (2)-[Passive]: Super Demon gains the Growth (LV1) and Bulky Aspects.
+  (3)-[Passive]: While you possess a stack of Demonic Power, reduce your Muscle Penalty by 1(bT).
+  (4)-[Passive]: While you possess 3+ stacks of Demonic Power, increase your Wound Rolls, Soak Value and Might by 1(T).
+  (5)-[Triggered, 1/Round]: If you apply the 4th effect of Demons of the Makyo Star to a Pressure Check, you may reduce the Dice Score of that Pressure Check by 2. If you succeed at that Pressure Check, gain 1 Action.
+
+  Fallen Idol's Superiority: Unbreakable and unfathomable, your monstrous intensity shatters the battlefield and distorts the mind.
+  (1)-[Prerequisite]: You are of the Phantom Subrace.
+  (2)-[Permanent, Passive]: Upon gaining access to this Demonic Trait, select and gain access to up to 2 Bestial Traits while in this Transformation.
+  (3)-[Passive]: Increase the Dice Score of your Pressure Checks by 2. Reduce this bonus by 1 for every Bestial Trait you possess from the 2nd effect of Fallen Idol's Superiority.
+  (4)-[Passive]: While you possess 2+ stacks of Demonic Power, increase your Combat Rolls by 1(T).
+  (5)-[Triggered, 1/Encounter]: If an Opponent gains a Combat Condition due to your use of the 4th effect of Fallen Idol, enter the Superior State until the start of your next turn.
+
+  MASTERY TRAITS
+  Fiendish Mastery (1): Your demonic nature awakens further, unleashing deeper reserves of power.
+  (1)-[Permanent]: Super Demon loses M levels of the Power High Aspect.
+  (2)-[Permanent]: Super Demon gains the Realization Aspect and M levels of the Scaling Aspect.
+  (3)-[Passive]: The 6th effect Fiendish Power loses the [1/Encounter] Keyword and gains the [M/Round, 3/Encounter] Keywords.
+  (4)-[Triggered]: If you succeed at a Pressure Check, regain M(bT) Life and Ki Points.
+  (5)-[Triggered/Power, M/Encounter]: Make a Pressure Check.
+
+  Fiendish Evolution (2): Pushing your power to its functional limit, you evolve into something even greater than a mere demon.
+  (1)-[Passive]: While you possess 2+ stacks of Demonic Power, Super Demon gains the Armored Aspect.
+  (2)-[Triggered/Start of Turn, 1/Encounter]: Ignore the 3rd effect of Demonic Pressure.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

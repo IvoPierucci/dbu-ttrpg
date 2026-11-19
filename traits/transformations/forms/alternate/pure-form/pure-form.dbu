@@ -1,0 +1,79 @@
+id: pure-form
+name: Pure Form
+type: form
+subtype: alternate
+racial: Majin
+prerequisites: N/A
+tier: 2+
+stress: 12
+aspects: Enhanced Save (Corporeal/Impulsive/Morale), Raging, Power High (LV2), Rampaging (LV1), Difficult (LV3)
+bonuses: AG +1(T), FO +1(T), TE +1(T), IN +1(T), MA +1(T)
+description: >
+  Created by cosmic powers your Majin character is powerful and deadly, even more so when they are in their purest form. The form they took when they first came into existence, whether this powerful transformation is your Majin's true form or simply their purest form. It is either your natural cosmic powers or possibly magic influence that makes this form's power deadly… for everyone.
+text: >
+  Created by cosmic powers your Majin character is powerful and deadly, even more so when they are in their purest form. The form they took when they first came into existence, whether this powerful transformation is your Majin's true form or simply their purest form. It is either your natural cosmic powers or possibly magic influence that makes this form's power deadly… for everyone.
+
+  In this form, you are pure Majin, without any assimilated beings. This form is achieved through a process of self-purification. Your physical appearance changes in this form, giving you a shorter stature, roughly four feet tall, and your clothes magically change into the traditional Majin garments: white baggy pants with a black belt bearing a gold buckle with a large 'M' emblazoned upon it. Your features grow smooth and slim, and your mind blanks, leaving you child-like. Your pupils turn black and your irises become blood red. In this form, you become more erratic and your combat style is aggressive.
+
+  Racial Requirement: Majin / Transformation Type: Form / Form Type: Alternate / Prerequisite(s): N/A / Stress Test Requirement: 12 / Tier of Power Requirement. 2+
+  Aspects: Enhanced Save (Corporeal/Impulsive/Morale), Raging, Power High (LV2), Rampaging (LV1), Difficult (LV3)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN +1(T) · MA +1(T) · PE –
+
+  Erratic Majin: Your irrational and ever-changing nature makes it impossible to gauge what you will do at any given time.
+  (1)-[Automatic/Transform]: Lose all stacks of Absorption.
+  (2)-[Automatic]: If you gain a stack of Absorption, leave this Transformation.
+  (3)-[Permanent, Passive]: Upon gaining access to this Transformation, select a Majin Secondary Racial Trait. You gain access to that Racial Trait while you are in this Transformation.
+  (4)-[Passive]: Your base Size Category becomes Small, but for the sake of calculating your Soak Value and for the effects of Punching Down, your base Size Category is considered to be Medium.
+  (5)-[Passive]: You may use the Basic Attack Maneuver as an Instant Maneuver, instead of a Standard Maneuver, but you must still spend 1 Action to use the Basic Attack Maneuver.
+  (6)-[Triggered/Start of Combat Round]: Reroll your Initiative.
+  (7)-[Automatic/Start of Combat Round, Ruling]: Roll a 1d6 – this d6 is known as your 'Chaos Die'. Then, until the end of the Combat Round, gain the following effects depending on the result for your Chaos Die:
+  1 [Passive]: Reduce your Defense Value and Soak Value by 1(bT).
+  2 [Passive]: Reduce your Strike Rolls and Wound Rolls by 1(bT).
+  3 [Passive]: Increase your Surgency by 2(T).
+  4 [Passive]: Increase your Attribute Modifiers (FO/MA) by 1(T).
+  5 [Passive]: Increase your Attribute Modifiers (AG/TE) by 1(T).
+  6 [Passive]: Increase your Combat Rolls and Soak Value by 1(T).
+
+  Unpredictable: Your wild and unstable power is chaos incarnate, and even you don't know what will happen next!
+  (1)-[Triggered, 1/Round]: If you roll a 6 on your Chaos Die, enter the Superior State until the start of your next turn.
+  (2)-[Triggered, 1/Round]: If you use a Healing Surge, roll your Chaos Die.
+  (3)-[Triggered, Resource]: If you roll a 6 on your Chaos Die, gain a stack of Channeled Chaos.
+  (4)-[Triggered]: After seeing the result of your Chaos Die, you may spend a stack of Channeled Chaos to increase or reduce the result by 1.
+  (5)-[Triggered/Start of Combat Round]: Spend 2 stacks of Channeled Chaos. Until the end of this Combat Round, the Ki Point Cost of your Attacking Maneuvers is reduced to 0.
+  (6)-[Triggered/Start of Combat Round]: Spend 3 stacks of Channeled Chaos. Until the end of this Combat Round, apply your Damage Attribute an additional time for all of your Attacking Maneuvers.
+  (7)-[Triggered/Start of Combat Round]: If you are in the Superior State, instead of gaining a Counter Action, you may gain an additional Action.
+
+  MASTERY TRAIT
+  Directed Chaos (1): You've mastered the ability to manipulate the chaotic nature of your Transformation.
+  (1)-[Permanent]: Pure Form loses the Rampaging and Power High Aspects, but gains M levels of the Scaling Aspect (max. 2) and the Realization Aspect.
+  (2)-[Passive]: While in the Superior State, increase your Wound Rolls and Soak Value by 1(T).
+  (3)-[Triggered]: If you reroll your Initiative through the 6th effect of Erratic Majin after rolling your Chaos Die for the 7th effect of Erratic Majin, you may increase or reduce the Dice Score of your Initiative roll by x(bT), where x is equal to 1/2 (rounded up) of your result on that roll of the Chaos Die.
+  (4)-[Triggered, 1/Round]: If you roll a 6 on your Chaos Die, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+  Controlled Chaos (2): You capitalize on your chaotic nature, turning it into your greatest weapon.
+  (1)-[Permanent]: You cannot master Pure Form for the 3rd time unless your base Tier of Power is 4+.
+  (2)-[Passive]: Ignore the 2nd effect of Erratic Majin.
+  (3)-[Passive]: Ignore the 2nd effect of the Superior State.
+  (4)-[Triggered]: If you use the Transformation Maneuver to enter an Evolved Stage of Pure Form while in the Pure Form Transformation, you may ignore the 1st effect of Erratic Majin.
+  (5)-[Triggered/Power, 1/Round]: Roll your Chaos Die.
+
+  Pure Chaos (3): The destructive energy gathering inside you boils to the surface, making you an extremely deadly foe.
+  (1)-[Permanent]: Pure Form becomes a Legendary Form. Increase the Stress Test Requirement of this Transformation by 9 and its Attribute Modifier Bonus (AG/FO/TE/IN/MA) by 1(T).
+  (2)-[Permanent]: Pure Form gains the Perfect Ki Control Aspect.
+  (3)-[Passive]: While in the Superior State, apply an Energy Charge to all of your Attacking Maneuvers.
+  (4)-[Passive]: Double the reductions and increases from the 7th effect of Erratic Majin.
+  (5)-[Triggered]: If you take Damage from an Attacking Maneuver, you may spend a stack of Channeled Chaos to halve the amount of Damage you take.
+
+  Legendary Chaos (4): The unbridled chaos within you swallows order in its entirety, destabilizing reality itself in your presence.
+  (1)-[Permanent]: Pure Form gains 2 additional levels of the Scaling Aspect.
+  (2)-[1/Encounter]: As an Instant Maneuver, use a Ki Surge. Then, roll your Chaos Die.
+
+  LEGENDARY TRAIT
+  Sensation of Purity: You are most free when you do not make use of your ability to absorb others, making it easier for you to move around.
+  (1)-[Passive]: You gain access to the 7th effect of Erratic Majin and the 3rd and 4th effects of Unpredictable even while not in the Pure Form Transformation.
+  (2)-[Passive]: While in the Superior State, increase your Surgency by 2(T).
+  (3)-[Triggered]: If you roll a 6 on your Chaos Die, regain Life and Ki Points equal to 1/2 of your Surgency.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

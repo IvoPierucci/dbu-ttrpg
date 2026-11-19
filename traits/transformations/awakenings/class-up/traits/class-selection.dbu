@@ -1,0 +1,20 @@
+id: class-up-class-selection
+name: Class Selection
+order: 1
+slot: trait
+description: >
+  You've chosen a mantle for yourself, an identity to adhere to.
+text: >
+  Class Selection: You've chosen a mantle for yourself, an identity to adhere to.
+  (1)-[Passive]: Increase your Stress Bonus by 1.
+  (2)-[Option]: Upon gaining this Transformation, choose one of the following effects:
+  Hero [Passive]: Increase your Dodge Rolls and Soak Value by 1(T).
+  Elite [Passive]: Increase your Strike Rolls and Surgency by 1(T).
+  Berserker [Passive]: Increase your Wound Rolls and Might by 1(T).
+  (3)-[Choice]: Depending on your choice for the Option effect of Class Selection, gain the following effects:
+  Hero [1/Encounter]: Use the Power Up Maneuver as an Instant Maneuver. If you do, gain an additional stack of Power from this use of the Power Up Maneuver.
+  Elite [1/Encounter]: Use the Surge Maneuver as an Instant Maneuver. If you do, it does not count towards the [1/Encounter] Keyword for the Surge Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

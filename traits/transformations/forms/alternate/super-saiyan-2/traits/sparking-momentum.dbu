@@ -1,0 +1,17 @@
+id: super-saiyan-2-sparking-momentum
+name: Sparking Momentum
+order: 1
+slot: trait
+description: >
+  Your energy is too great to contain, taking the form of lightning coursing around your aura.
+text: >
+  Sparking Momentum: Your energy is too great to contain, taking the form of lightning coursing around your aura.
+  (1)-[Passive]: Increase the Dice Category of your Tier of Power Extra Dice by S-1 Categories.
+  (2)-[Passive]: While you are in the Raging or Superior State, increase your Strike and Dodge Rolls by 1(T).
+  (3)-[Passive]: Your Attacking Maneuvers that possess a Ki Wager equal to or exceeding 1/4 of your Max Capacity have their Damage Category increased by 1 Category.
+  (4)-[Triggered, 1/Encounter]: If you knock an Opponent through a Health Threshold, that Opponent gains a stack of the Broken Combat Condition until the start of your next turn. Additionally, gain an additional Action from Bonus Momentum.
+  (5)-[Triggered/Start of Combat Round, 1/Encounter]: Take your Turn immediately, ignoring the current Initiative Order. If multiple Characters apply this effect, they take their turns in order of highest to lowest Initiative Value.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

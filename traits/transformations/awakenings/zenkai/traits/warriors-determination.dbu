@@ -1,0 +1,15 @@
+id: zenkai-warriors-determination
+name: Warrior's Determination
+order: 2
+slot: trait
+stacks: 2
+description: >
+  Your fierce determination keeps you in the fight long past when others would fall.
+text: >
+  Warrior's Determination (2): Your fierce determination keeps you in the fight long past when others would fall.
+  (1)-[Passive]: While you possess 4+ stacks of Battle Born, increase your Surgency by Z(T).
+  (2)-[Triggered, 1/Encounter]: If you use an Ultimate Signature Technique while in the Undying State, apply Z Energy Charges to that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

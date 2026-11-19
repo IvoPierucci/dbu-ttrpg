@@ -1,0 +1,18 @@
+id: full-power-super-saiyan-greater-super-class
+name: Greater Super Class
+order: 7
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: super-saiyan-style-traits
+groupLabel: Super Saiyan Style Traits
+description: >
+  Your dedication to your chosen path awakens a new power within you, elevating you to heights never before thought possible.
+text: >
+  Greater Super Class: Your dedication to your chosen path awakens a new power within you, elevating you to heights never before thought possible.
+  (1)-[Prerequisite]: Access to Xeno Super Saiyan.
+  (2)-[Passive]: You gain access to the 4th effect of Super Saiyan Class.
+  (3)-[1/Encounter]: If you have 6+ stacks of Battle Born, use your Choice effect for the 3rd effect of Class Selection. This does not count towards that effect's [1/Encounter] Keyword.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

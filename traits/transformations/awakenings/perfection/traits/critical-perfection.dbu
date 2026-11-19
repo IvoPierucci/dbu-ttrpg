@@ -1,0 +1,17 @@
+id: perfection-critical-perfection
+name: Critical Perfection
+order: 3
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: perfect-traits
+groupLabel: Perfect Traits
+description: >
+  You strike your enemies' weak points with perfect efficacy.
+text: >
+  Critical Perfection: You strike your enemies' weak points with perfect efficacy.
+  (1)-[Passive]: Increase the Dice Score of any Combat Roll that you score a Critical Result on by 1(T).
+  (2)-[Triggered, 1/Round]: If you roll a Combat Roll, you may increase the Natural Result of that Combat Roll by 1 after seeing the Natural Result.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

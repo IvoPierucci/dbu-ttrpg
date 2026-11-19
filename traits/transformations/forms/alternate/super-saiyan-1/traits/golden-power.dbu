@@ -1,0 +1,16 @@
+id: super-saiyan-1-golden-power
+name: Golden Power
+order: 2
+slot: trait
+description: >
+  Your energy spikes and flows off of you in waves, shining gold with power.
+text: >
+  Golden Power: Your energy spikes and flows off of you in waves, shining gold with power.
+  (1)-[Passive]: Increase the Dice Score for your Duel Clashes by 1(T).
+  (2)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver while below the Bruised Health Threshold, reduce the Damage Category of that Attacking Maneuver (for your Damage Calculation) by 1 Category.
+  (3)-[Triggered/Transform]: Enter the Raging State until the end of your turn.
+  (4)-[Triggered/Transform, 1/Encounter]: Use a Ki Surge.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

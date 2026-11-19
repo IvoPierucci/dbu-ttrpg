@@ -1,0 +1,16 @@
+id: evil-aura-controlled-darkness
+name: Controlled Darkness
+order: 4
+slot: mastery
+mastery: 1
+description: >
+  The evil urges within you now answer to your beck and call.
+text: >
+  Controlled Darkness: The evil urges within you now answer to your beck and call.
+  (1)-[Passive]: Reduce the level of the Rampaging Aspect by 1 level.
+  (2)-[Passive]: Increase this Transformation's Attribute Modifier Bonus (AG) by 1(T).
+  (3)-[Triggered/Power, 1/Round]: You may spend 5(bT) Evil Points to gain an additional stack of Power.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

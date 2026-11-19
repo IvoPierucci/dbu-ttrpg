@@ -1,0 +1,16 @@
+id: true-form-unending-pressure
+name: Unending Pressure
+order: 1
+slot: trait
+description: >
+  Your sheer, overwhelming power enables you to tear through your prey like tissue paper.
+text: >
+  Unending Pressure: Your sheer, overwhelming power enables you to tear through your prey like tissue paper.
+  (1)-[Passive]: While you are above the Injured Health Threshold, increase your Strike and Dodge Rolls by 1(T).
+  (2)-[Passive]: While in the Superior State, you are treated as if you are in the Healthy Health Threshold for all of your effects.
+  (3)-[Triggered, 1/Round]: If you deal Damage to an Opponent with an Attacking Maneuver made through the 2nd effect of Coup de Grace, gain an additional stack of Overwhelm.
+  (4)-[Triggered, 1/Encounter]: If you maximize your stacks of Overwhelm, enter the Superior State until the start of your next turn. If you were already in the Superior State, enter the Surging State instead.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

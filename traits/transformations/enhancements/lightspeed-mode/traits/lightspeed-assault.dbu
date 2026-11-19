@@ -1,0 +1,13 @@
+id: lightspeed-mode-lightspeed-assault
+name: Lightspeed Assault
+order: 3
+slot: burst
+description: >
+  In a blur of motion, you close the distance between you and your target.
+text: >
+  Lightspeed Assault: In a blur of motion, you close the distance between you and your target.
+  (1)-[Triggered/Transform]: Use the Movement Maneuver as an Out-of-Sequence Maneuver. If you do, increase your Speeds and Combat Rolls by G(T) until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

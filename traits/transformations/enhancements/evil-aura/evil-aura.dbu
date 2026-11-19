@@ -1,0 +1,63 @@
+id: evil-aura
+name: Evil Aura
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: N/A
+tier: 1+
+stress: *
+aspects: Graded, Enhanced Save (Corporeal), Raging, Rampaging (LV G)
+grades: 2
+grade1: stress 13; FO/MA 1(T); evilMax 10(bT); label Villainous
+grade2: stress 18; FO/MA 3(T); evilMax 15(bT); label Supervillain
+bonuses: FO *, TE +1(T), IN +1(T), MA *
+description: >
+  In this universe, good and evil are tangible forces of nature with measurable effects on the world around you. In no case is this more apparent than in the aura of someone corrupted by true evil. Be it by force, a power thrust upon you by an insidious malevolent being, or by the pure evil in your own heart seeping out and engulfing you, the corruption you bear is made plain for all to see in your Evil Aura.
+text: >
+  In this universe, good and evil are tangible forces of nature with measurable effects on the world around you. In no case is this more apparent than in the aura of someone corrupted by true evil. Be it by force, a power thrust upon you by an insidious malevolent being, or by the pure evil in your own heart seeping out and engulfing you, the corruption you bear is made plain for all to see in your Evil Aura.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: * / Tier of Power Requirement. 1+
+  Aspects: Graded, Enhanced Save (Corporeal), Raging, Rampaging (LV G)
+  AG – · FO * · TE +1(T) · SC – · IN +1(T) · MA * · PE –
+
+  Villainous Form: Whether it's something you chose for yourself or something placed upon you, this upgrade to your power compels you to act like the villain you've become.
+  (1)-[Passive]: Gain access to the Evil Techniques (detailed below). You may use either your Force or Magic Modifier for the Damage Attribute of your Evil Techniques.
+  (2)-[Passive]: Gain access to the Darkness Mixer Modifier Maneuver.
+  (3)-[Passive]: When using an Evil Technique, you may spend Evil Points equal to 1/2 of the Ki Point Cost for that Attacking Maneuver instead of paying the Ki Point Cost.
+  (4)-[Triggered]: If you Ki Wager a number of Ki Points equal to (or exceeding) 1/10th of your Max Capacity on an Attacking Maneuver, increase your Wound Roll for that Attacking Maneuver by G(T).
+  (5)-[Graded]: Evil Aura has 2 Grades. Each Evil Aura Grade:
+  Sets the AMB (Attribute Modifier Bonus) of Evil Aura for the listed Attribute to the amount listed on the Grades table.
+  Sets the Stress Test Requirement for this Transformation.
+  Sets your maximum amount of Evil Points.
+  | Grade | AMB (FO/MA) | Stress Test | Evil Point Maximum |
+  | 1 (Villainous) | 1(T) | 13 | 10(bT) |
+  | 2 (Supervillain) | 3(T) | 18 | 15(bT) |
+
+  Power of Evil: The evil energy welling up inside you empowers your attacks and protects you from harm.
+  (1)-[Triggered/Start of Combat Round, Resource]: Gain 5(bT) Evil Points.
+  (2)-[Triggered]: When you make an Attacking Maneuver, you may spend up to 5(bT) Evil Points to increase the Wound Roll of that Attacking Maneuver by an equal amount.
+  (3)-[Triggered]: When you are targeted by an Attacking Maneuver, you may spend up to 5(bT) Evil Points to gain an equal amount of Damage Reduction for the duration of that Attacking Maneuver.
+  (4)-[Triggered]: When you spend any number of Evil Points, regain an equal amount of Ki Points.
+
+  Evil Techniques
+  Baked Sphere – Ultimate Signature / Foundation: Energy (Clearing) / Advantages: Twin-Linked (Wound), Power Shot (2), Sudden Blast / Disadvantages: Lead-Up (Clearing), Restriction – Transformation (2, Evil Aura), Self-Explosion / Ki Point Cost: 10(T)
+  Gigantic Ki Blast – Ultimate Signature / Foundation: Energy (Mega Flare) / Advantages: Widespread Assault (Sphere), Terrain Destruction (3), Intense Blast, Maximum Charge, Full Wager / Disadvantages: Mandatory Charge (3), Concentration, Restricted – Transformation (2, Evil Aura), All or Nothing, Exhaustive / Ki Point Cost: 9(T)
+  Marbling Drop – Super Signature / Foundation: Energy (Combination) / Advantages: Widespread Assault (Sphere), Knockback, Power Shot (2) / Disadvantages: Restriction – Transformation (2, Evil Aura), Self-Explosion / Ki Point Cost: 10(T)
+  Peeler Storm – Super Signature / Foundation: Physical (Sweeping) / Advantages: Hurricane Assault, Terrain Destruction (3), Staggering Attack / Disadvantages: Restriction – Transformation (2, Evil Aura), All or Nothing / Ki Point Cost: 8(T)
+  Rage Saucer – Super Signature / Foundation: Physical (Combination) / Advantages: Widespread Assault(Sphere), Alotta Lotta Attacks (3) / Disadvantages: Restriction – Transformation (2, Evil Aura) / Ki Point Cost: 8(T)
+
+  Darkness Mixer Modifier Maneuver — Darkness Mixer [1/Round]: A wash of dark power fills you with unimaginable strength.
+  –Action Cost: 1 Action –Base Maneuver: Power Up Maneuver –KP Cost: N/A
+  –Effect: Regain 3(bT) Evil Points and Ki Points. Then, make a Might Clash against all Opponents within a Sphere AoE (centered on you). If you win against an Opponent, reduce the Life Points of that Opponent by 1/2 of your Might.
+
+  BURST LIMIT — Dark Power Rising: The culmination of evil energy inside you reaches a bursting point!
+  (1)-[Triggered/Transform]: Use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, maximize your Evil Points.
+
+  MASTERY — Controlled Darkness: The evil urges within you now answer to your beck and call.
+  (1)-[Passive]: Reduce the level of the Rampaging Aspect by 1 level.
+  (2)-[Passive]: Increase this Transformation's Attribute Modifier Bonus (AG) by 1(T).
+  (3)-[Triggered/Power, 1/Round]: You may spend 5(bT) Evil Points to gain an additional stack of Power.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

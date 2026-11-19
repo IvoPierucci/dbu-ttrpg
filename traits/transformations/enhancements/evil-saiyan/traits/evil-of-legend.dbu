@@ -1,0 +1,17 @@
+id: evil-saiyan-evil-of-legend
+name: Evil of Legend
+order: 5
+slot: transcendent
+description: >
+  You have unleashed the ultimate potential of your battle-hungry Saiyan blood.
+text: >
+  Evil of Legend: You have unleashed the ultimate potential of your battle-hungry Saiyan blood.
+  (1)-[Passive]: Evil Saiyan gains the Armored and Scaling (LV2) Aspects.
+  (2)-[Passive]: Increase the Attribute Modifier Bonus (IN) of Evil Saiyan by 1(T).
+  (3)-[Passive]: Your maximum number of Evil Points is 20(bT).
+  (4)-[Triggered/Start of Turn]: Evil Saiyan stops being Transcended.
+  (5)-[Triggered/Transform, 1/Encounter]: If you use the Burst Limit for this Transformation, gain a stack of Battle Born.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

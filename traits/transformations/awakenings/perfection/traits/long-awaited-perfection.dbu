@@ -1,0 +1,17 @@
+id: perfection-long-awaited-perfection
+name: Long-Awaited Perfection
+order: 2
+slot: trait
+stacks: 2
+description: >
+  You have become a being of resplendent perfection.
+text: >
+  Long-Awaited Perfection (2): You have become a being of resplendent perfection.
+  (1)-[Passive]: Increase your Maximum Life Points and Maximum Ki Points by 2 for each Power Level reached.
+  (2)-[Passive]: Reduce the Critical Target of your Combat Rolls by 1.
+  (3)-[Triggered/Start of Turn]: Gain 1 Adaptation Point.
+  (4)-[Triggered/Start of Turn, 1/Encounter]: You may spend 3 Adaptation Points to gain 1 Action.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

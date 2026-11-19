@@ -1,0 +1,20 @@
+id: super-demon-demonic-battle
+name: Demonic Battle
+order: 2
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: demonic-traits
+groupLabel: Demonic Traits
+description: >
+  Your back-handed strategies and cutthroat tactics leave your enemies reeling without recourse.
+text: >
+  Demonic Battle: Your back-handed strategies and cutthroat tactics leave your enemies reeling without recourse.
+  (1)-[Passive]: Increase your Combat Rolls made against Opponents who are suffering from a Combat Condition by 1(T).
+  (2)-[Passive]: Increase your Might by 1(T).
+  (3)-[Passive]: Apply an Energy Charge to your Signature Techniques that target at least 1 Opponent suffering from a Combat Condition.
+  (4)-[1/Round]: If you are adjacent to an Opponent suffering from a Combat Condition, you may use the Basic Attack Maneuver as an Instant Maneuver. If you do, you must target that Opponent with that Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you inflict a Combat Condition on an Opponent, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

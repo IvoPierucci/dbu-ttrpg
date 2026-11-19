@@ -1,0 +1,21 @@
+id: full-suppression-suppression-of-power
+name: Suppression of Power
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 2, 3
+description: >
+  You've built enough layers around your power that you can easily control it.
+text: >
+  Suppression of Power: You've built enough layers around your power that you can easily control it.
+  (1)-[Addendum]: Please refer to the Metamorphosis Forms text box below.
+  (2)-[Permanent]: For the sake of entering and remaining in this Transformation, ignore its Tier of Power Requirement.
+  (3)-[Permanent]: You cannot enter a Transcended Enhancement, cannot enter another Alternate Form unless it is part of the Metamorphosis Transformation Line, and cannot leave any Transformation of this Transformation Line through the Revert Maneuver (unless you use it to enter a Transformation of this Transformation Line with 2 levels of the Natural Aspect).
+  (4)-[Passive]: While in the Full Suppression Stage of Metamorphosis, reduce the Ki Point Cost of your Attacking Maneuvers and Unique Abilities by 1(T).
+  (5)-[Passive]: Increase the amount of Life and Ki Points you regain from Legend Realized by 1d6(T).
+  (6)-[Triggered]: If you spend a stack(s) of Overwhelm, regain 2(bT) Life Points for each stack of Overwhelm spent. You cannot regain more than 8(bT) Life Points during a single Combat Round with this effect.
+  (7)-[Triggered/Start of Combat Round, 1/Encounter]: You may immediately take your Turn for this Combat Round, ignoring the Initiative Order.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

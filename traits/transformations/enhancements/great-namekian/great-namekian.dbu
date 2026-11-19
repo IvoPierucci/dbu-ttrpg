@@ -1,0 +1,44 @@
+id: great-namekian
+name: Great Namekian
+type: enhancement
+subtype: standard
+racial: Namekian
+prerequisites: N/A
+tier: 1+
+stress: 4
+variantOf: giant-form
+aspects: Variant (Giant Form), Graded, Growth (Level G)
+# No table, as Giant Form's. The 4th Grade opens with Dragon-Sized (1).
+grades: 4
+bonuses: FO G(T), TE G(T), MA G(T)
+description: >
+  Expanding your body through the use of your regenerative cells, you are able to grow to enormous sizes, allowing you to tower over the battlefield.
+text: >
+  Expanding your body through the use of your regenerative cells, you are able to grow to enormous sizes, allowing you to tower over the battlefield.
+
+  Racial Requirement: Namekian / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 4 / Tier of Power Requirement. 1+
+  Aspects: Variant (Giant Form), Graded, Growth (Level G)
+  AG – · FO G(T) · TE G(T) · SC – · IN – · MA G(T) · PE –
+
+  Namekian Titan (Battlefield Titan): Your large size allows you to deal even more punishment to the enemies you have identified the weaknesses of.
+  (1)-[Passive]: Increase your Surgency by 1(T) for each Size Category you are larger than Large.
+  (2)-[Passive]: The increase to your Melee Range from the 4th effect of Namekian Biology is increased by G.
+  (3)-[Passive]: If a Studied Ally of a smaller Size Category is occupying a Square that you are also occupying, they cannot be targeted by Attacking Maneuvers unless that Attacking Maneuver possesses an AoE.
+  (4)-[Triggered, 1/Round]: When making a Physical Attack, you may apply a Line or Cone AoE to that Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you receive Damage from a Studied Opponent's Attacking Maneuver, regain Life Points equal to 1/2 of your Surgency.
+  (6)-[Triggered, 1/Round]: If you target a Studied Opponent (and no other Characters) with an Attacking Maneuver, apply Punching Down regardless of that Character's Size Category. If you would already apply Punching Down against that Opponent, increase the Wound Roll of that Attacking Maneuver by 1/2 of your Surgency.
+
+  BURST LIMIT — Giant's Vantage: From your new height in the clouds, you can clearly see the battlefield, making everyone- and their attacks- seem like tiny ants.
+  (1)-[Triggered/Transform]: Until the end of your next turn:
+  All other Characters are Studied.
+  Increase your Damage Reduction by 1/2 (rounded up) of G(T).
+
+  MASTERY TRAIT — Dragon-Sized: You have grown to such proportions that you dwarf even the greatest of titans.
+  (1)-[Permanent]: You gain access to the 4th Grade of Great Namekian.
+  (2)-[Passive]: The Growth Aspect for Great Namekian can reach up to 4 levels.
+  (3)-[Passive]: Double the bonus from the 1st effect of Accelerated Growth.
+  (4)-[Passive]: Increase the amount of Life Points you gain from the 6th effect of Namekian Biology by G(bT).
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

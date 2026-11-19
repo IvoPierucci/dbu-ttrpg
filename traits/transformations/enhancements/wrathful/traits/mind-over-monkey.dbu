@@ -1,0 +1,19 @@
+id: wrathful-mind-over-monkey
+name: Mind over Monkey
+order: 4
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  Your conscious mind emerges over the beast inside, taking control to direct your wrath.
+text: >
+  Mind over Monkey: Your conscious mind emerges over the beast inside, taking control to direct your wrath.
+  (1)-[Permanent]: Reduce the Rampaging Aspect for this Transformation by 1 level.
+  (2)-[Permanent]: Wrathful loses the Innate State (Feral) Aspect.
+  (3)-[1/Round]: You may use the Direct Hit option of the Defend Maneuver without spending a Counter Action.
+  (4)-[Triggered, 1/Encounter]: If you would use the Direct Hit option of the Defend Maneuver, instead of increasing your Soak Value by 1/2 – double it.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

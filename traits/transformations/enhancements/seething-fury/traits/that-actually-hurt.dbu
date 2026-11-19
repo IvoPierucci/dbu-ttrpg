@@ -1,0 +1,20 @@
+id: seething-fury-that-actually-hurt
+name: That Actually Hurt!
+order: 1
+slot: trait
+replaces: Frenzied Assault
+# Its [Constant] effects: a [Triggered] one that may be used outside the Transformation (the user's).
+constant: 5
+description: >
+  You've been pushed to your absolute limit, and now your furious vengeance will tear anyone who stands before you to shreds.
+text: >
+  That Actually Hurt! (Frenzied Assault): You've been pushed to your absolute limit, and now your furious vengeance will tear anyone who stands before you to shreds.
+  (1)-[Passive]: Increase your Wound Rolls by 1(T) for each Health Threshold you are below.
+  (2)-[Passive]: While your Life Points are below 0, increase the Attribute Modifier Bonus (FO/MA) of this Transformation by 1(T).
+  (3)-[Triggered, 1/Round]: If you use an Attacking Maneuver while in the 2nd or higher Level of the Raging State, increase the Damage Category of that Attacking Maneuver by 1 Category.
+  (4)-[Triggered, 1/Encounter]: If you would use an Attacking Maneuver while below the Critical Health Threshold, you may apply either the All Out or Complete Annihilation Super Profile to that Attacking Maneuver.
+  (5)-[Constant, Triggered/Threshold, 1/Encounter]: Use the Transformation Maneuver to enter this Transformation as an Out-of-Sequence Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

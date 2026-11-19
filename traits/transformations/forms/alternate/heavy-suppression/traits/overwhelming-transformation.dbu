@@ -1,0 +1,18 @@
+id: heavy-suppression-overwhelming-transformation
+name: Overwhelming Transformation
+order: 3
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Even shedding a single layer of your suppression is enough to overwhelm most enemies.
+text: >
+  Overwhelming Transformation: Even shedding a single layer of your suppression is enough to overwhelm most enemies.
+  (1)-[Permanent]: This Transformation loses the Draining and Power High Aspects and gains the Natural (LV2) Aspect.
+  (2)-[Passive]: Increase the Apparel Bonus of your Plating by 1(T).
+  (3)-[Triggered/Transform, Triggered/Start of Turn]: Gain a stack of Overwhelm.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

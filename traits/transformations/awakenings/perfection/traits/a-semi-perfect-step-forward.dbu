@@ -1,0 +1,25 @@
+id: perfection-a-semi-perfect-step-forward
+name: A Semi-Perfect Step Forward
+order: 1
+slot: trait
+stacks: 1
+description: >
+  Your body has evolved, bringing you ever closer to the sublime image of perfection you were created to be.
+text: >
+  A Semi-Perfect Step Forward (1): Your body has evolved, bringing you ever closer to the sublime image of perfection you were created to be.
+  (1)-[Passive]: Increase your maximum number of Adaptation Points by Z.
+  (2)-[Passive]: Each time you gain a stack of Perfection, gain access to a Perfect Trait.
+  (3)-[Choice]: Depending on your choice for the 4th effect of Artificial Warrior, gain access to the following effects:
+  Genetic Survivor [Passive]: While in the Healthy Health Threshold, increase your Combat Rolls and Soak Value by Z(T).
+  Genetic Aggressor [Passive]: Increase your Strike and Wound Rolls by Z(T).
+  Genetic Agility [Passive]: Increase your Dodge Rolls and Wound Rolls by Z(T).
+  Pursuit of Perfection [Passive]: While you have a stack of Absorption, increase your Combat Rolls and Surgency by Z(T).
+  (4)-[Choice]: Depending on your choice for the 4th effect of Artificial Warrior, gain access to the following effects:
+  Genetic Survivor [Passive]: While below the Healthy Health Threshold, increase your Surgency by Z(T).
+  Genetic Aggressor [Triggered, 1/Round]: If you deal Damage to an Opponent with an Attacking Maneuver, you may spend 2 Adaptation Points to use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target that Opponent with this Attacking Maneuver.
+  Genetic Agility [Triggered, 1/Round]: If you successfully Dodge an Opponent's Attacking Maneuver, you may spend 1 Adaptation Point to use the Movement Maneuver as an Out-of-Sequence Maneuver. If you do, this movement does not trigger the Exploit Maneuver.
+  Pursuit of Perfection [Passive]: Increase the Dice Score of your Cognitive Saves for the 5th effect of Assimilated Power by 1(T).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

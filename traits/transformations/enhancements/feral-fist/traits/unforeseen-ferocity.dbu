@@ -1,0 +1,13 @@
+id: feral-fist-unforeseen-ferocity
+name: Unforeseen Ferocity
+order: 2
+slot: burst
+description: >
+  Your feral nature overwhelms and subdues not only your conscious mind, but also your enemies.
+text: >
+  Unforeseen Ferocity: Your feral nature overwhelms and subdues not only your conscious mind, but also your enemies.
+  (1)-[Triggered/Transform]: Gain 3 stacks of Ferocity. Additionally, enter the Unhinged level of the Feral State until the end of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

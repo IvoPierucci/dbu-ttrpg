@@ -1,0 +1,15 @@
+id: spirit-control-spiritual-master
+name: Spiritual Master
+order: 3
+slot: trait
+stacks: 3
+description: >
+  Through intense training and complete mastery, you have learned to revitalize yourself more effectively.
+text: >
+  Spiritual Master (3): Through intense training and complete mastery, you have learned to revitalize yourself more effectively.
+  (1)-[1/Encounter]: You may use a Ki Surge as an Instant Maneuver.
+  (2)-[Triggered, 2/Round]: Each time you regain Ki Points, regain 3(bT) Life Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

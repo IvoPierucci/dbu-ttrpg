@@ -1,0 +1,18 @@
+id: lightspeed-mode-super-maximum-lightspeed-mode
+name: Super Maximum Lightspeed Mode
+order: 5
+slot: transcendent
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Your extreme speed increases beyond the scale of imagination as you accelerate to a velocity that dwarfs the speed of light by comparison.
+text: >
+  Super Maximum Lightspeed Mode: Your extreme speed increases beyond the scale of imagination as you accelerate to a velocity that dwarfs the speed of light by comparison.
+  (1)-[Permanent]: Gain access to the 3rd and 4th Grades of Lightspeed Mode.
+  (2)-[Passive]: Halve the reduction to your Dodge Rolls from the Guard Down Combat Condition.
+  (3)-[Passive]: While in the 3rd or 4th grades of Lightspeed Mode, halve the penalty from your Diminishing Defense.
+  (4)-[Triggered, 1/Encounter]: If you apply the 4th effect of Speed Star to an Attacking Maneuver, you may apply a number of Energy Charges to that Attacking Maneuver equal to 1/2 (rounded up) of G.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

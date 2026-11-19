@@ -1,0 +1,17 @@
+id: super-saiyan-3-even-further-beyond
+name: Even Further Beyond
+order: 2
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You have pushed past the limits of your power, becoming even stronger.
+text: >
+  Even Further Beyond (1): You have pushed past the limits of your power, becoming even stronger.
+  (1)-[Permanent]: Super Saiyan 3 loses the Power High, Long Transformation, and the Exhausting Aspects, and 2 levels of the Draining Aspect.
+  (2)-[Passive]: Ignore the 3rd effect of Limitless.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

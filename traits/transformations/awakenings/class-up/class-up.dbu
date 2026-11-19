@@ -1,0 +1,33 @@
+id: class-up
+name: Class Up
+type: awakening
+subtype: lesser
+origin: mind
+racial: Any
+prerequisites: N/A
+tier: 2+
+maxStacks: 1
+aspects: 
+bonuses: AG +1, FO +1, TE +1, MA +1
+description: >
+  There's more than one way to get strong, and you've capitalized on it. Whether by pushing your limits or by being granted extra power, you've specialized into a single aspect of fighting. However you achieve it, by increasing your prowess in your unique fighting style, you've become a Hero, an Elite, or a Berserker.
+text: >
+  There's more than one way to get strong, and you've capitalized on it. Whether by pushing your limits or by being granted extra power, you've specialized into a single aspect of fighting. However you achieve it, by increasing your prowess in your unique fighting style, you've become a Hero, an Elite, or a Berserker.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Mind / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 2+
+  AG +1 · FO +1 · TE +1 · SC – · IN – · MA +1 · PE –
+
+  Class Selection: You've chosen a mantle for yourself, an identity to adhere to.
+  (1)-[Passive]: Increase your Stress Bonus by 1.
+  (2)-[Option]: Upon gaining this Transformation, choose one of the following effects:
+  Hero [Passive]: Increase your Dodge Rolls and Soak Value by 1(T).
+  Elite [Passive]: Increase your Strike Rolls and Surgency by 1(T).
+  Berserker [Passive]: Increase your Wound Rolls and Might by 1(T).
+  (3)-[Choice]: Depending on your choice for the Option effect of Class Selection, gain the following effects:
+  Hero [1/Encounter]: Use the Power Up Maneuver as an Instant Maneuver. If you do, gain an additional stack of Power from this use of the Power Up Maneuver.
+  Elite [1/Encounter]: Use the Surge Maneuver as an Instant Maneuver. If you do, it does not count towards the [1/Encounter] Keyword for the Surge Maneuver.
+  Berserker [1/Encounter]: Use the Basic Attack Maneuver or Signature Technique Maneuver as an Instant Maneuver. If you do, apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

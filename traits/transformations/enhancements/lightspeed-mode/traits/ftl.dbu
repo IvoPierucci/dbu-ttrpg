@@ -1,0 +1,20 @@
+id: lightspeed-mode-ftl
+name: FTL
+order: 4
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You rocket forward faster than light itself, streaking past friend and foe alike to strike at your desired target.
+text: >
+  FTL: You rocket forward faster than light itself, streaking past friend and foe alike to strike at your desired target.
+  (1)-[Permanent]: The second and higher Grades of Lightspeed Mode gain the Heartbeat (LV2) Aspect.
+  (2)-[Passive]: Increase your Wound Rolls of your Signature Techniques by 1/2 (rounded up) of G(T).
+  (3)-[Passive]: Reduce the extra Damage you receive from your Grade of Lightspeed Mode by 2(bT).
+  (4)-[Passive]: Your use of the Movement Maneuver while in the second or higher Grades of Lightspeed Mode does not trigger the Exploit Maneuver.
+  (5)-[Triggered/Start of Turn]: If you are in the first Grade of Lightspeed Mode, regain 3(bT) Ki Points.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

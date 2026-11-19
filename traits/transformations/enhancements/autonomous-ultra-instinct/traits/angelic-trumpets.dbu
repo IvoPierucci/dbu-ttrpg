@@ -1,0 +1,13 @@
+id: autonomous-ultra-instinct-angelic-trumpets
+name: Angelic Trumpets
+order: 3
+slot: burst
+description: >
+  You move with fluid grace and precision, exerting only the necessary energy to avoid attacks and land your own.
+text: >
+  Angelic Trumpets: You move with fluid grace and precision, exerting only the necessary energy to avoid attacks and land your own.
+  (1)-[Triggered/Transform]: You successfully Dodge all Attacking Maneuvers that target you (except by characters in the Determined State) regardless of the Dice Score of your Dodge Roll until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

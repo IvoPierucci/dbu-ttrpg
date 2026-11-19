@@ -1,0 +1,18 @@
+id: divinity-unleashed-cosmic-flow
+name: Cosmic Flow
+order: 1
+slot: trait
+description: >
+  Your godly energy allows you to overwhelm lesser foes and prove your divine superiority.
+text: >
+  Cosmic Flow: Your godly energy allows you to overwhelm lesser foes and prove your divine superiority.
+  (1)-[Passive]: Attacking Maneuvers that target Allies within a Huge Sphere AoE (centered on you) trigger your Exploit Maneuver.
+  (2)-[Passive]: Increase the AoE for the 3rd effect of Divine Role by 1 Magnitude.
+  (3)-[Passive]: If you would use Divine Ki Points to pay the Ki Point Cost of an Attacking Maneuver, reduce the Ki Point Cost by 2(T).
+  (4)-[Passive]: If you would use Divine Ki Points for a Ki Wager, increase the Wound Roll of that Attacking Maneuver by 1/2 of the amount of Divine Ki Points spent on the Ki Wager.
+  (5)-[Triggered]: If you use Combat Recovery, regain Divine Ki Points equal to 1/2 of your Surgency.
+  (6)-[Triggered, 1/Encounter]: If you use Combat Recovery while below the Injured Health Threshold, double the amount of Life and Ki Points you regain from that use of Combat Recovery. Additionally, double the amount of Divine Ki Points regained from the 5th effect of Cosmic Flow for this use of Combat Recovery.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

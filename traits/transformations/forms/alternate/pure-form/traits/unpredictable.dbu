@@ -1,0 +1,19 @@
+id: pure-form-unpredictable
+name: Unpredictable
+order: 2
+slot: trait
+description: >
+  Your wild and unstable power is chaos incarnate, and even you don't know what will happen next!
+text: >
+  Unpredictable: Your wild and unstable power is chaos incarnate, and even you don't know what will happen next!
+  (1)-[Triggered, 1/Round]: If you roll a 6 on your Chaos Die, enter the Superior State until the start of your next turn.
+  (2)-[Triggered, 1/Round]: If you use a Healing Surge, roll your Chaos Die.
+  (3)-[Triggered, Resource]: If you roll a 6 on your Chaos Die, gain a stack of Channeled Chaos.
+  (4)-[Triggered]: After seeing the result of your Chaos Die, you may spend a stack of Channeled Chaos to increase or reduce the result by 1.
+  (5)-[Triggered/Start of Combat Round]: Spend 2 stacks of Channeled Chaos. Until the end of this Combat Round, the Ki Point Cost of your Attacking Maneuvers is reduced to 0.
+  (6)-[Triggered/Start of Combat Round]: Spend 3 stacks of Channeled Chaos. Until the end of this Combat Round, apply your Damage Attribute an additional time for all of your Attacking Maneuvers.
+  (7)-[Triggered/Start of Combat Round]: If you are in the Superior State, instead of gaining a Counter Action, you may gain an additional Action.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

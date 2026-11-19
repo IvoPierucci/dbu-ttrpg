@@ -1,0 +1,14 @@
+# Its id leads with aspect-: a State of the same name (Raging, Mindful, God Ki) has the bare one.
+id: aspect-light-dependent
+name: Light Dependent
+polarity: negative
+# number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
+# rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
+group: rule
+# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+summary: >
+  A classification only.
+
+---
+
+# Nothing it does by itself yet: the Transformation Maneuver and Mastery read it.

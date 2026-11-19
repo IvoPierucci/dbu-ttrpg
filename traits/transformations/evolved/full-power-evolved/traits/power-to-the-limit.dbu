@@ -1,0 +1,15 @@
+id: full-power-evolved-power-to-the-limit
+name: Power to the Limit
+order: 1
+slot: trait
+description: >
+  You push your Form's power to its limit.
+text: >
+  Power to the Limit: You push your Form's power to its limit.
+  (1)-[Passive]: Increase your maximum number of Power Stacks by 1.
+  (2)-[1/Round]: If you use the Power Up Maneuver while you have 1+ stacks of Power, you may gain an extra stack of Power from this use of the Power Up Maneuver. You cannot use this effect if you have used it during the last Combat Round.
+  (3)-[Triggered, 1/Encounter]: If you hit an Opponent with an Attacking Maneuver that has a Ki Wager equal to or exceeding 1/4 of your Max Capacity, apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

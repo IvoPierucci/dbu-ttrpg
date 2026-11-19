@@ -1,0 +1,18 @@
+id: divinity-unleashed-divine-entity
+name: Divine Entity
+order: 13
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You have gained full control over your godly might, allowing you to reach an even greater height.
+text: >
+  Divine Entity (1): You have gained full control over your godly might, allowing you to reach an even greater height.
+  (1)-[Permanent]: Divinity Unleashed gains M levels of the Scaling Aspect.
+  (2)-[Passive]: The 5th effect of Cosmic Flow uses your entire Surgency, instead of 1/2.
+  (3)-[Triggered]: If you spend a Counter Action(s), regain 1(bT) Divine Ki Points for each Counter Action spent.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

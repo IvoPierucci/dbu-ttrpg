@@ -1,0 +1,17 @@
+id: oozaru-monkey-mayhem
+name: Monkey Mayhem
+order: 3
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Your conscious mind melds with that of the beast within, giving you some measure of control over your actions.
+text: >
+  Monkey Mayhem (1): Your conscious mind melds with that of the beast within, giving you some measure of control over your actions.
+  (1)-[Permanent]: Oozaru loses M levels of the Rampaging Aspect and gains an Attribute Modifier Bonus (IN) of +1(T).
+  (2)-[Passive]: Ignore the 4th effect of Furious Beast and the 1st and 2nd effects of Rampaging Assault.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

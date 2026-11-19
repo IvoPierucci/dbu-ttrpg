@@ -1,0 +1,19 @@
+id: spirit-control-spiritual-apprentice
+name: Spiritual Apprentice
+order: 1
+slot: trait
+description: >
+  You have been trained to finely control your energy.
+text: >
+  Spiritual Apprentice: You have been trained to finely control your energy.
+  (1)-[Passive]: You may spend Technique Points to obtain the Spiritual Unique Abilities and their Advancements (detailed below).
+  (2)-[Passive]: When you gain a stack of this Awakening, gain access to one of the Spiritual Unique Abilities (detailed below) without paying the TP Cost.
+  (3)-[Passive]: Increase the Dice Score of your Clairvoyance Skill Checks by 2.
+  (4)-[Passive]: Increase your Maximum Ki Points by 2 for every Power Level you possess.
+  (5)-[Passive]: Reduce the Ki Point Cost of all of your Attacking Maneuvers by 1(T).
+  (6)-[Passive]: Increase your Surgency by Z(bT).
+  (7)-[Triggered, 1/Encounter]: When using an Attacking Maneuver, you do not have to pay the Ki Point Cost for that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,19 @@
+id: great-namekian-dragon-sized
+name: Dragon-Sized
+order: 3
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You have grown to such proportions that you dwarf even the greatest of titans.
+text: >
+  Dragon-Sized: You have grown to such proportions that you dwarf even the greatest of titans.
+  (1)-[Permanent]: You gain access to the 4th Grade of Great Namekian.
+  (2)-[Passive]: The Growth Aspect for Great Namekian can reach up to 4 levels.
+  (3)-[Passive]: Double the bonus from the 1st effect of Accelerated Growth.
+  (4)-[Passive]: Increase the amount of Life Points you gain from the 6th effect of Namekian Biology by G(bT).
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

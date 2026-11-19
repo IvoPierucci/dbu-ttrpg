@@ -1,0 +1,28 @@
+id: monster-form-monstrous-ascension
+name: Monstrous Ascension
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Your transformation into your monstrous persona has many benefits, allowing your strength to grow in many unexpected ways.
+text: >
+  Monstrous Ascension: Your transformation into your monstrous persona has many benefits, allowing your strength to grow in many unexpected ways.
+  (1)-[Permanent, Passive]: Upon gaining access to this Transformation:
+  Choose an Attribute (AG/TE or FO+MA). Increase the Attribute Modifier Bonus of that Attribute(s) by 1(T).
+  Choose an Aspect: High Speed, Bulky, or Raging. This Transformation gains your chosen Aspect.
+  Choose 2 Saving Throws. This Transformation gains the Enhanced Save Aspect for those Saving Throws.
+  Choose a Monstrous Trait to gain access to while in this Transformation.
+  Choose a Bestial Trait to gain access to while in this Transformation.
+  Choose between 0~3 levels of the Growth Aspect. This Transformation gains those levels of that Aspect.
+  Choose between 0~2 levels of the Rampaging Aspect. This Transformation gains those levels of that Aspect.
+  (2)-[Passive]: Increase the amount of Life and Ki Points you regain through Legend Realized by 1/2 of the Attribute Modifier for the Attribute you chose through the first effect of Monstrous Ascension.
+  (3)-[Passive]: For each level of the Rampaging Aspect this Transformation possesses, increase your Soak Value and Wound Rolls by 1(T).
+  (4)-[Passive]: Depending on the Aspect you chose through the first effect of Monstrous Ascension, gain access to one of the following effects:
+  High Speed [Triggered, 1/Round]: If you use an Attacking Maneuver, and have used the Movement Maneuver this Combat Round to move your full Boosted Speed, increase the Wound Roll of that Attacking Maneuver by 1/2 of your Boosted Speed.
+  Bulky [Passive]: While you possess up to 2 stacks of Super Stack, increase your Strike Rolls by 1(T).
+  Raging [Passive]: This Transformation gains the Innate State (Raging) Aspect.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

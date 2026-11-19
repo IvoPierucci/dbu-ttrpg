@@ -1,0 +1,15 @@
+id: autonomous-ultra-instinct-in-the-realm-of-angels
+name: In the Realm of Angels
+order: 2
+slot: trait
+description: >
+  You have ascended beyond the mortal nature of your birth and achieved divine skill previously unknown to the universe at large.
+text: >
+  In the Realm of Angels: You have ascended beyond the mortal nature of your birth and achieved divine skill previously unknown to the universe at large.
+  (1)-[Passive]: You do not trigger the Exploit Maneuver unless you are suffering from the Guard Down or Impediment Combat Conditions.
+  (2)-[Triggered/Start of Turn]: You may spend 3(bT) Divine Ki Points to remove a Combat Condition you are suffering from (except Pinned, Suffocating, Transfigured, or Poisoned). You may repeat this effect any number of times.
+  (3)-[Triggered/Power, 1/Round]: Enter the Zen level of the Mindful State until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

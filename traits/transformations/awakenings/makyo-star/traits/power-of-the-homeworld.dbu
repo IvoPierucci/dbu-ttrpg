@@ -1,0 +1,16 @@
+id: makyo-star-power-of-the-homeworld
+name: Power of the Homeworld
+order: 1
+slot: trait
+description: >
+  The Makyo Star approaches, heralding an auspicious moment for you in your fight.
+text: >
+  Power of the Homeworld: The Makyo Star approaches, heralding an auspicious moment for you in your fight.
+  (1)-[Passive]: Increase your Might by 1(T).
+  (2)-[Passive]: While you possess 3+ stacks of Demonic Power, increase your Tier of Power by 1 (see — Breakthrough).
+  (3)-[Passive]: While you possess 3+ stacks of Demonic Fatigue, increase the Damage Category of all Attacking Maneuvers that target you by 1 Category for your damage calculation.
+  (4)-[Triggered/Power, 1/Round]: Make a Pressure Check. If you succeed, make a Might Clash against all Opponents within a Sphere AoE (centered on you). If you win, they gain a stack of the Shaken and Broken Combat Conditions until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

@@ -1,0 +1,19 @@
+id: full-power-super-saiyan-deeper-into-the-depths
+name: Deeper into the Depths
+order: 10
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You dig deep, pulling out even more power from the classic Super Saiyan Transformation, utilizing it in a superior manner.
+text: >
+  Deeper into the Depths (1): You dig deep, pulling out even more power from the classic Super Saiyan Transformation, utilizing it in a superior manner.
+  (1)-[Permanent]: Full Power Super Saiyan gains M levels of the Scaling Aspect and loses M levels of the Draining Aspect.
+  (2)-[Passive]: Increase your maximum number of Power stacks by M.
+  (3)-[Passive]: Treat the Superior State as the Raging State for the effects of the Raging Aspect.
+  (4)-[Triggered]: When you use the 5th effect of Full Power of the Super Saiyan, you may enter the Superior State instead of the Raging State. If you do, the effect lasts until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

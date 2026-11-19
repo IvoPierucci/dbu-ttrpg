@@ -1,0 +1,20 @@
+id: divinity-unleashed-true-god-of-war
+name: True God of War
+order: 8
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: domain-traits
+groupLabel: Domain Traits
+description: >
+  Clashing in eternal conflict, you represent the drive of all beings who seek supremacy.
+text: >
+  True God of War: Clashing in eternal conflict, you represent the drive of all beings who seek supremacy.
+  (1)-[Prerequisite]: Access to the God of War effect for the Option effect of Divine Magic.
+  (2)-[Passive]: Increase your Combat Rolls by 2(T) while you are wielding a Weapon.
+  (3)-[Passive]: While you are wielding a Weapon, it gains the Divine Armament Quality without taking up any Quality slots.
+  (4)-[Passive]: Ignore the Ki Point Cost for Magical Materialization if you create a Weapon through its effects.
+  (5)-[Triggered, 1/Round]: If you use the Divine Weapon God Maneuver, apply your Damage Attribute an additional time to that Attacking Maneuver.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

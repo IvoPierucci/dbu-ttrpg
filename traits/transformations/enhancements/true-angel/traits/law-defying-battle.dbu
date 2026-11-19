@@ -1,0 +1,22 @@
+id: true-angel-law-defying-battle
+name: Law-Defying Battle
+order: 1
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  Even knowing that you are forbidden from using your full power against a mortal, you unleash it anyways, deciding the cost of erasure is worth it to sway the outcome of this battle.
+text: >
+  Law-Defying Battle: Even knowing that you are forbidden from using your full power against a mortal, you unleash it anyways, deciding the cost of erasure is worth it to sway the outcome of this battle.
+  (1)-[Permanent]: True Angel can be used as either a Form or an Enhancement for Transformation Stacking (see — Transformation Rules).
+  (2)-[Passive]: Your base Tier of Power becomes 8.
+  (3)-[Passive]: You are treated as having no Counter Actions for your effects regardless of your current number of Counter Actions.
+  (4)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, you are instead not hit by that Attacking Maneuver. If that Attacking Maneuver was an Absolute Attack, the usual effects of Absolute Attacks do not apply to that Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you use an Attacking Maneuver, you may enter the Determined State for the duration of that Attacking Maneuver.
+  (6)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, they automatically fail the Steadfast Check for that Health Threshold.
+  (7)-[Triggered, 1/Round]: If you use a Signature Technique, you may apply the Absolute Annihilation Super Profile to that Attacking Maneuver.
+  (8)-[Automatic]: Upon leaving this Transformation, you are erased from existence. This effect does not trigger if there is an Angel or a Character with a Divine Role (see — Roles) among your Opponents.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

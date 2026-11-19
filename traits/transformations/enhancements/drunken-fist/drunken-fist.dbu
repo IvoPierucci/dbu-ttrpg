@@ -1,0 +1,39 @@
+id: drunken-fist
+name: Drunken Fist
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: N/A
+tier: 1+
+stress: 8
+aspects: Innate State (Drunk), Enhanced Save (Impulsive/Morale), Peaked
+bonuses: AG +1(T)
+description: >
+  Adept in the art of combat misdirection, you use the effects of drunkenness to your advantage, stumbling out of the way of attacks and using your swaying movement to attack your opponents while their guard is down. Your mastery over the art of "drunken" combat has earned you the coveted title of Drunken Fist.
+text: >
+  Adept in the art of combat misdirection, you use the effects of drunkenness to your advantage, stumbling out of the way of attacks and using your swaying movement to attack your opponents while their guard is down. Your mastery over the art of "drunken" combat has earned you the coveted title of Drunken Fist.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 8 / Tier of Power Requirement. 1+
+  Aspects: Innate State (Drunk), Enhanced Save (Impulsive/Morale), Peaked
+  AG +1(T) · FO – · TE – · SC – · IN – · MA – · PE –
+
+  Power of the Bottle: Whether through imitation or through actually imbibing, your movement is like that of a drunkard, but with combat skills woven in.
+  (1)-[Constant]: If you drink from a Sake Bottle, instead of entering the Drunk State, you may use the Transformation Maneuver to enter this Transformation as an Out-of-Sequence Maneuver.
+  (2)-[Passive]: The first effect of the Tipsy Level of the Drunk Special State increases your Saving Throws and Combat Rolls instead of reducing them.
+  (3)-[Triggered, Resource]: If you successfully dodge an Opponent's Attacking Maneuver, gain a stack of Toppling (max. 3).
+  (4)-[Triggered]: If you target an Opponent with an Attacking Maneuver, you may spend any number of Toppling stacks to increase the Strike and Wound Rolls of that Attacking Maneuver by 1(T) for each Toppling stack spent.
+
+  Unpredictable Combat: The way you move, it becomes impossible to identify your next move, making defending against you or even striking you difficult beyond measure.
+  (1)-[Passive]: Do not reduce your Defense Value through the effects of the Cross Counter option of the Defend Maneuver.
+  (2)-[Passive]: If you score a Critical Result on a Combat Roll, increase the Dice Score of that Combat Roll by 1(T).
+  (3)-[Triggered]: If you score a Botch Result on a Dodge Roll, it becomes a Critical Result instead (this does not change the Natural Result).
+  (4)-[Triggered, 1/Round]: If you successfully dodge an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver after that Attacking Maneuver concludes. If you do, you must target the Character whose Attacking Maneuver you dodged with this Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you are targeted by an Attacking Maneuver, you may use the Cross Counter option of the Defend Maneuver without spending a Counter Action.
+  (6)-[Triggered, 1/Round]: If you would trigger the Exploit Maneuver, you can choose not to.
+
+  BURST LIMIT — Calculated Stumbling: You may be staggering and bumbling around the battlefield, but every movement is purposeful and meaningful.
+  (1)-[Triggered/Transform]: Enter the Plastered Level of the Drunk State until the end of your next turn and gain 3 stacks of Toppling. The 4th, 5th, and 6th effects of Unpredictable Combat lose the [1/Round] keyword until the end of your next turn.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

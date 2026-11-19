@@ -1,0 +1,14 @@
+# Its id leads with aspect-: a State of the same name (Raging, Mindful, God Ki) has the bare one.
+id: aspect-absorbed-apparel
+name: Absorbed Apparel
+polarity: positive
+# number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
+# rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
+group: moment
+# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+summary: >
+  While in it you lose all equipped Apparel (it returns and is equipped on leaving); Combat Rolls and Soak Value +1/2 (rounded up) of the Apparel Bonus of the highest piece you had (max. 2(T)).
+
+---
+
+# Nothing it does by itself yet: its stage builds it.

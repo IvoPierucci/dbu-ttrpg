@@ -1,0 +1,19 @@
+id: full-power-super-saiyan-you-cant-destroy-what-i-am
+name: You Can't Destroy What I Am!
+order: 5
+slot: trait
+# One of these is chosen (the Transformation's row asks).
+group: super-saiyan-style-traits
+groupLabel: Super Saiyan Style Traits
+description: >
+  You've finally pushed past the barriers to strengthen your Super Saiyan state, entering the realm of legends. Though your path will one day become the Super Saiyan of the future, today, you're making history.
+text: >
+  You Can't Destroy What I Am!: You've finally pushed past the barriers to strengthen your Super Saiyan state, entering the realm of legends. Though your path will one day become the Super Saiyan of the future, today, you're making history.
+  (1)-[Prerequisite]: Access to Future Super Saiyan.
+  (2)-[Passive]: Increase S for the 1st effect of Desperate Hero by 1 for every 4 stacks of Battle Born you possess (max. +3).
+  (3)-[1/Round]: While you are below the Injured Health Threshold, you may use the Power Up Maneuver as an Instant Maneuver.
+  (4)-[Triggered/Start of Turn, Triggered/Transform]: If you are in a Desperate Battle, enter the Desperate Hero Special State until the Combat Encounter stops being treated as a Desperate Battle or you leave this Transformation.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

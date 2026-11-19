@@ -1,0 +1,13 @@
+id: kaioken-scarlet-multiplier
+name: Scarlet Multiplier
+order: 3
+slot: burst
+description: >
+  The instantaneous burst of strength you get when activating this power is enough to overwhelm most opponents.
+text: >
+  Scarlet Multiplier: The instantaneous burst of strength you get when activating this power is enough to overwhelm most opponents.
+  (1)-[Triggered/Transform]: You may use the Power Up Maneuver, Movement Maneuver, or Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, regain Life and Ki Points equal to 5x the Life Point Cost for this Grade of Kaioken (before any reductions) – ignoring the first effect of Crimson Sacrifice.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

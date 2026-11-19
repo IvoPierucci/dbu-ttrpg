@@ -1,0 +1,15 @@
+id: divinity-unleashed-god-of-a-domain
+name: God of a Domain
+order: 15
+slot: legendary
+description: >
+  You rise to godly power, giving you control over some aspect of reality, a divine Domain.
+text: >
+  God of a Domain: You rise to godly power, giving you control over some aspect of reality, a divine Domain.
+  (1)-[Ruling]: Your choice for the 3rd effect of Divine Magic is known as your 'Domain'.
+  (2)-[Passive]: Increase your maximum number of Divine Ki Points by 1/2.
+  (3)-[Passive, Ruling]: Gain access to a Domain Maneuver, to gain access to a Domain Maneuver, your Domain must be in brackets after the name of that Domain Maneuver. All Domain Maneuvers are God Maneuvers.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

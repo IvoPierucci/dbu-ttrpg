@@ -1,0 +1,33 @@
+id: battle-yardrat
+name: Battle Yardrat
+type: awakening
+subtype: greater
+origin: body
+racial: Yardrat
+prerequisites: N/A
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: AG +1, FO +1, TE +1, MA +1
+description: >
+  (Sin texto de introducción en la página.)
+text: >
+  (Sin texto de introducción en la página.)
+
+  Racial Requirement: Yardrat / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Body / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG +1 · FO +1 · TE +1 · SC – · IN – · MA +1 · PE –
+
+  Spirit of Battle: Y
+  (1)-[Passive]: Ignore the 1st effect of Power of the Weak.
+  (2)-[Passive]: While you are not Bonded, increase your Combat Rolls, Surgency, and Soak Value by 1(T).
+  (3)-[Passive]: While you are not Bonded, you only have to spend 1/2 of the Ki Point Cost for an Attacking Maneuver (this does not reduce the Ki Point Cost).
+  (4)-[Passive]: Depending on your Subrace, gain one of the following effects:
+  Tall Yardrat [Passive]: While you are not Bonded, you are considered your own Bonded Ally for the 3rd effect of Spiritual Warrior.
+  Bulbous Yardrat [Passive]: While you are not Bonded, all of your Allies are considered Bonded for the 3rd effect of Spiritual Pacifist.
+  (5)-[Triggered/Start of Turn]: Use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, you cannot use the Empower Maneuver until the start of your next turn.
+  (6)-[Triggered, 1/Round]: If you use a Signature Technique during a turn in which you have triggered the 5th effect of Spirit of Battle, apply an Energy Charge to that Attacking Maneuver.
+  (7)-[Triggered, 1/Encounter]: If you become Bonded to an Ally, that Ally may transfer up to 3 of their Actions to you. Then, if they transfer at least 1 Action, you may stop being Bonded.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

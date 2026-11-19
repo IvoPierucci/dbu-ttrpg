@@ -1,0 +1,18 @@
+id: autonomous-ultra-instinct-sharpened-instinct
+name: Sharpened Instinct
+order: 4
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You learn to rely more on your instincts, honing them to a perfect edge.
+text: >
+  Sharpened Instinct (1): You learn to rely more on your instincts, honing them to a perfect edge.
+  (1)-[Permanent]: Autonomous Ultra Instinct loses the Straining Aspect.
+  (2)-[Passive]: You may enter the Tranquil level of the Mindful State instead of the Zen level through the 3rd effect of In the Realm of Angels.
+  (3)-[Passive]: Increase the minimum Natural Result for the 3rd effect of Angelic Techniques by 1.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

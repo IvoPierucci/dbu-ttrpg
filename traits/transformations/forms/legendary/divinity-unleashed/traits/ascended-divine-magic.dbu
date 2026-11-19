@@ -1,0 +1,18 @@
+id: divinity-unleashed-ascended-divine-magic
+name: Ascended Divine Magic
+order: 2
+slot: trait
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  Your holy magic grows in strength, empowered by divine energy.
+text: >
+  Ascended Divine Magic: Your holy magic grows in strength, empowered by divine energy.
+  (1)-[Permanent, Passive]: Upon gaining access to Divinity Unleashed, select a Domain Trait. You have access to that Domain Trait while in Divinity Unleashed.
+  (2)-[Permanent, Passive]: Upon gaining access to this Transformation, select a Size Category (Small, Medium or Large). You become that Size Category while in this Transformation.
+  (3)-[Passive]: Increase your Might and Saving Throws by 1(T) for the duration of any Clash initiated by an Opponent.
+  (4)-[Passive]: Increase the Skill Bonus of your Knowledge, Creature Handling, Clairvoyance, Perception, Use Magic, and Investigation Skills by 2.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

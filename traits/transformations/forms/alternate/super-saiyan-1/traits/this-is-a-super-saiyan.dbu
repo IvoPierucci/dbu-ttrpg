@@ -1,0 +1,19 @@
+id: super-saiyan-1-this-is-a-super-saiyan
+name: This is a Super Saiyan
+order: 3
+slot: mastery
+mastery: 1
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1, 2
+description: >
+  Your comfort in this form allows you to draw out even greater power, overwhelming your enemies.
+text: >
+  This is a Super Saiyan: Your comfort in this form allows you to draw out even greater power, overwhelming your enemies.
+  (1)-[Permanent]: Super Saiyan 1 loses both the Draining and Power High Aspects and gains the Natural (LV1) and Heartbeat (LV1) Aspects.
+  (2)-[Permanent]: Gain access to the Full Power Evolved Stage for Super Saiyan 1.
+  (3)-[Passive]: Treat the Superior State as the Raging State for the effects of the Raging Aspect.
+  (4)-[Triggered]: When you use the 3rd effect of Golden Power, you may enter the Superior State instead of the Raging State. If you do, the effect lasts until the start of your next turn.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

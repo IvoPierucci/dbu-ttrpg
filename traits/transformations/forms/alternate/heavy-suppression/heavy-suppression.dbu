@@ -1,0 +1,40 @@
+id: heavy-suppression
+name: Heavy Suppression
+type: form
+subtype: alternate
+racial: Arcosian
+prerequisites: Emperor Mutation Trait
+line: metamorphosis
+stage: 1
+tier: 2+
+stress: 12
+aspects: Enhanced Save (Corporeal/Impulsive), Draining (LV1), Power High (LV1)
+bonuses: AG +1(T), FO +1(T), TE +1(T), IN +1(T), MA +1(T)
+description: >
+  The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
+text: >
+  The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
+
+  **Heavy Suppression** — Racial Requirement: Arcosian / Form / Alternate / Prerequisite(s): Emperor Mutation Trait / Line: Metamorphosis / Stage: 1 / Stress Test Requirement: 12 / Tier of Power Requirement. 2+
+  Aspects: Enhanced Save (Corporeal/Impulsive), Draining (LV1), Power High (LV1)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN +1(T) · MA +1(T) · PE –
+
+  Overwhelming Strike: Any worm that dares to raise a hand against you will find that your brutality and power can pierce even the toughest hides.
+  (1)-[Passive]: While you are in the Healthy Health Threshold, increase the Damage Category of all of your Signature Techniques by 1 Category.
+  (2)-[Passive]: If you are above the Injured Health Threshold, increase the Wound Rolls of your Signature Techniques by x(T), where x is equal to their Damage Category.
+  (3)-[Triggered/Transform, 1/Round]: Enter the Superior State until the start of your next turn.
+
+  Overwhelming Mutant: As you shed layers of suppression like dead scales, your peerless power shines brighter, overwhelming any foe.
+  (1)-[Passive]: While you possess 2+ stacks of Power, increase your Wound Rolls and Soak Value by 1/2 of S(T).
+  (2)-[Triggered/Power]: You may spend 2 stacks of Overwhelm to gain an additional stack of Power from this use of the Power Up Maneuver.
+  (3)-[Triggered, 1/Encounter]: At the end of your turn, spend all stacks of Overwhelm to regain 3(bT) Life Points for each stack spent.
+  (4)-[Triggered, 1/Encounter]: At the end of your turn, do not trigger the 2nd effect of Overwhelming Fighter.
+
+  MASTERY TRAIT — Overwhelming Transformation: Even shedding a single layer of your suppression is enough to overwhelm most enemies.
+  (1)-[Permanent]: This Transformation loses the Draining and Power High Aspects and gains the Natural (LV2) Aspect.
+  (2)-[Passive]: Increase the Apparel Bonus of your Plating by 1(T).
+  (3)-[Triggered/Transform, Triggered/Start of Turn]: Gain a stack of Overwhelm.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

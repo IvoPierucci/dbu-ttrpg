@@ -1,0 +1,20 @@
+id: pure-form-controlled-chaos
+name: Controlled Chaos
+order: 4
+slot: mastery
+mastery: 2
+# Its [Permanent] effects: they hold outside the Transformation too.
+permanent: 1
+description: >
+  You capitalize on your chaotic nature, turning it into your greatest weapon.
+text: >
+  Controlled Chaos (2): You capitalize on your chaotic nature, turning it into your greatest weapon.
+  (1)-[Permanent]: You cannot master Pure Form for the 3rd time unless your base Tier of Power is 4+.
+  (2)-[Passive]: Ignore the 2nd effect of Erratic Majin.
+  (3)-[Passive]: Ignore the 2nd effect of the Superior State.
+  (4)-[Triggered]: If you use the Transformation Maneuver to enter an Evolved Stage of Pure Form while in the Pure Form Transformation, you may ignore the 1st effect of Erratic Majin.
+  (5)-[Triggered/Power, 1/Round]: Roll your Chaos Die.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

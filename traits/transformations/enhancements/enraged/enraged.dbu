@@ -1,0 +1,45 @@
+id: enraged
+name: Enraged
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: N/A
+tier: 1+
+stress: 10
+aspects: Innate State (Raging), Raging
+bonuses: FO +1(T), TE +1(T), MA +1(T)
+description: >
+  It has been known since ancient times that there is a hidden strength that lies within the power of one's emotions, and none is more powerful than that of a righteous fury. By tapping into this very feeling, you awaken a deeper strength that you didn't know you had, and direct it all towards your enemy.
+text: >
+  It has been known since ancient times that there is a hidden strength that lies within the power of one's emotions, and none is more powerful than that of a righteous fury. By tapping into this very feeling, you awaken a deeper strength that you didn't know you had, and direct it all towards your enemy.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): N/A / Stress Test Requirement: 10 / Tier of Power Requirement. 1+
+  Aspects: Innate State (Raging), Raging
+  AG – · FO +1(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Explosive Fury: You've gone straight past frustrated, mad, and angry; you are absolutely livid.
+  (1)-[Triggered/Transform, Triggered/Start of Turn]: Gain the Guard Down Combat Condition until the start of your next turn. If you do, enter the next level of the Raging State until you leave this Transformation.
+  (2)-[Passive]: Ignore all Health Threshold Penalties while in the Furious level of the Raging State.
+  (3)-[Passive]: Increase your Soak Value and Wound Rolls by 1(T) while you are not suffering from any Health Threshold Penalties.
+  (4)-[Automatic]: If you fail a Steadfast Check, return to the Angry level of the Raging State – exiting any higher levels.
+  (5)-[Automatic/Start of Turn]: If you do not trigger the 1st effect of Explosive Fury, return to the Angry level of the Raging State – exiting any higher levels.
+  (6)-[Triggered, 1/Encounter]: If you target only 1 Character with an Attacking Maneuver while below the Injured Health Threshold, enter the Determined State for the duration of that Attacking Maneuver.
+
+  Frenzied Assault: The force of your fury pushes you to continue attacking your enemies until they stop moving.
+  (1)-[Passive]: While in the Determined State, increase the Attribute Modifier Bonus (FO/MA) of this Transformation by 1(T).
+  (2)-[Passive]: While in the 3rd or higher Level of the Raging State, you automatically win all Clashes initiated by another Character that uses your Cognitive or Morale Saving Throw.
+  (3)-[Triggered, 1/Round]: If you use an Attacking Maneuver while in the 2nd or higher Level of the Raging State, increase the Damage Category of that Attacking Maneuver by 1 Category.
+  (4)-[Triggered, 1/Round]: If you are targeted by an Attacking Maneuver, you may use the Defend Maneuver without spending a Counter Action. If you do, you must select the Cross Counter option of the Defend maneuver.
+
+  BURST LIMIT — Unleashed Rage: Your anger explodes, making you stronger than you've ever been.
+  (1)-[Triggered/Transform]: Enter the Apoplectic Level of the Raging State until the end of your next turn (ignoring the 5th effect of Explosive Fury). If you do, use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. Enter the Determined State for the duration of that Maneuver.
+
+  MASTERY TRAIT — Directed Anger: Channeling your titanic rage, you take control of your anger and use it as a weapon against your foes.
+  (1)-[Passive]: While you possess the Guard Down Combat Condition, it does not count as a Combat Condition for the effects of your Opponents.
+  (2)-[Passive]: Ignore the second effect of the Angry level of the Raging State.
+  (3)-[Passive]: While you are in the Apoplectic Level of the Raging State, this Transformation possesses the Armored Aspect.
+  (4)-[Triggered, 1/Round]: If you use the Cross Counter option of the Defend Maneuver, you may spend 5(bT) Ki Points to enter the Determined State for the duration of that Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

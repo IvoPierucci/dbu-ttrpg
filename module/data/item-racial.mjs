@@ -30,6 +30,8 @@ export default class DBURacialData extends DBUTalentData {
       factor: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** An Other Trait's group - evolution, bestial, monstrous - for one: listed apart from the Racial Traits. */
       other: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** A Transformation Trait's: the id of the Transformation Item it belongs to (transformations.mjs) - made and taken away with it. */
+      transformation: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** What was chosen when it was added: its Option, and any choice its effects ask for. */
       chosen: new fields.ArrayField(new fields.SchemaField({
         key: new fields.StringField({ required: true, blank: true, initial: "" }),

@@ -1,0 +1,17 @@
+id: partial-suppression-mutants-resilience
+name: Mutant's Resilience
+order: 2
+slot: mastery
+mastery: 1
+description: >
+  Because of your overflowing power, you never seem to run out of stamina.
+text: >
+  Mutant's Resilience: Because of your overflowing power, you never seem to run out of stamina.
+  (1)-[Passive]: When you regain Life Points through the 6th effect of Suppression of Power, regain Ki Points equal to 1/2 of the Life Points gained.
+  (2)-[1/Round]: As an Instant Maneuver, you may spend 2 stacks of Overwhelm to gain a Counter Action.
+  (3)-[Triggered, 1/Round]: If you trigger the 3rd effect of the Emperor Mutation Trait, enter the Superior State until the start of your next turn.
+  (4)-[Triggered/Power, 1/Round]: If you haven't applied Legend Realized to a lower Stage of Metamorphosis, you may apply Legend Realized as if you were entering that Transformation.
+
+---
+
+# Written, not applied yet: its effects arrive with its stage (the plan).

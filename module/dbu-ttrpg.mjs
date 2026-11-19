@@ -17,6 +17,7 @@ import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
 import DBUManeuverData from "./data/item-maneuver.mjs";
 import DBUManeuverSheet from "./sheets/item-maneuver-sheet.mjs";
 import DBUGearData from "./data/item-gear.mjs";
+import DBUTransformationData from "./data/item-transformation.mjs";
 import DBUGearSheet from "./sheets/item-gear-sheet.mjs";
 import { registerChatHooks, registerManeuverSocket } from "./chat.mjs";
 import { registerDebugTools } from "./effects/debug.mjs";
@@ -87,6 +88,8 @@ Hooks.once("init", () => {
   CONFIG.Item.dataModels.racial = DBURacialData;
   CONFIG.Item.dataModels.maneuver = DBUManeuverData;
   CONFIG.Item.dataModels.gear = DBUGearData;
+  // A Transformation a character has (transformations.mjs): read on the Transformations tab, never opened on a sheet of its own.
+  CONFIG.Item.dataModels.transformation = DBUTransformationData;
 
   // Initiative. Without this, Foundry has no formula to roll at all, and the button in
   // the Combat Tracker does nothing - which is exactly how it behaved.

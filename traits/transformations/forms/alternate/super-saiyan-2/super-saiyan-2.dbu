@@ -1,0 +1,40 @@
+id: super-saiyan-2
+name: Super Saiyan 2
+type: form
+subtype: alternate
+racial: Same as the 1st Stage of this Transformation Line
+prerequisites: N/A
+line: super-saiyan
+stage: 2
+tier: 3+
+stress: 16
+aspects: Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Draining (LV2), Power High (LV2), Difficult (LV1)
+bonuses: AG +2(T), FO +2(T), TE +2(T), IN +1(T), MA +2(T)
+description: >
+  A golden aura blazes to life around you as the energy radiating off of you in waves lifts your hair towards the heavens and washes it gold with power. You're not the average Saiyan warrior anymore. You have ascended beyond and become a Super Saiyan.
+text: >
+  A golden aura blazes to life around you as the energy radiating off of you in waves lifts your hair towards the heavens and washes it gold with power. You're not the average Saiyan warrior anymore. You have ascended beyond and become a Super Saiyan.
+
+  **Super Saiyan 2** — Racial Requirement: Same as the 1st Stage of this Transformation Line / Form / Alternate / Prerequisite(s): N/A / Line: Super Saiyan / Stage: 2 / Stress Test Requirement: 16 / Tier of Power Requirement. 3+
+  Aspects: Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Draining (LV2), Power High (LV2), Difficult (LV1)
+  AG +2(T) · FO +2(T) · TE +2(T) · SC – · IN +1(T) · MA +2(T) · PE –
+
+  Sparking Momentum: Your energy is too great to contain, taking the form of lightning coursing around your aura.
+  (1)-[Passive]: Increase the Dice Category of your Tier of Power Extra Dice by S-1 Categories.
+  (2)-[Passive]: While you are in the Raging or Superior State, increase your Strike and Dodge Rolls by 1(T).
+  (3)-[Passive]: Your Attacking Maneuvers that possess a Ki Wager equal to or exceeding 1/4 of your Max Capacity have their Damage Category increased by 1 Category.
+  (4)-[Triggered, 1/Encounter]: If you knock an Opponent through a Health Threshold, that Opponent gains a stack of the Broken Combat Condition until the start of your next turn. Additionally, gain an additional Action from Bonus Momentum.
+  (5)-[Triggered/Start of Combat Round, 1/Encounter]: Take your Turn immediately, ignoring the current Initiative Order. If multiple Characters apply this effect, they take their turns in order of highest to lowest Initiative Value.
+
+  MASTERY TRAIT
+  Ascended Past a Super Saiyan (1): You have reined in the rampant power of this form, making it your own.
+  (1)-[Permanent]: Super Saiyan 2 loses both the Power High Aspect and 1 level of the Draining Aspect.
+  (2)-[Passive]: Increase the Dice Score of your Steadfast Checks by 1.
+  (3)-[Triggered, 1/Round]: If you succeed at a Steadfast Check, regain Ki Points equal to your Surgency.
+  Sparking Ascension (2): Your fine control of this form allows you to access its full power without restraint.
+  (1)-[Permanent]: Super Saiyan 2 loses the Draining Aspect.
+  (2)-[Passive]: Gain access to the Full Force Super Saiyan 2 Evolved Stage.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).
