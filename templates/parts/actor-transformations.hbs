@@ -1,0 +1,180 @@
+<div class="tab {{tabs.transformations.cssClass}}" data-group="primary" data-tab="transformations">
+
+{{! The Transformations this character has (transformations.mjs) - the user's approved mockup, 2026-11-16: what is in use above,
+    a section for each type they have one of, a row each that opens to its Grades, Aspects and Traits, and below the Traits of
+    what is in use (and the Constant effects of what is not). Every field is written onto its Transformation Item
+    (actor-character-sheet.mjs), never submitted with the character's form. }}
+  {{#with transformationsTab as |tf|}}
+  <section class="panel dbu-tf">
+    <h3 class="panel-title">
+      <span>Transformations</span>
+      {{#if @root.editable}}
+      <button type="button" class="edit-toggle" data-action="addTransformation" data-tooltip="Add a Transformation">Add</button>
+      {{/if}}
+    </h3>
+
+    <div class="dbu-tf-bar">
+      <span class="dbu-tf-dim">Active Aspects</span>
+      {{#each tf.aspects as |aspect|}}
+      <span class="dbu-tf-chip" data-tooltip="From {{aspect.from}}{{#if aspect.summary}}: {{aspect.summary}}{{/if}}">{{aspect.label}}</span>
+      {{else}}
+      <span class="dbu-tf-dim">none</span>
+      {{/each}}
+      <span class="dbu-tf-chip dbu-tf-push" data-tooltip="Power Level + Determination">Stress Bonus {{tf.stressBonus}}</span>
+    </div>
+
+    {{#if tf.sections.length}}
+    <nav class="dbu-tf-sections">
+      {{#each tf.sections as |section|}}
+      <button type="button" class="dbu-tf-section{{#if section.active}} active{{/if}}" data-action="transformationSection"
+              data-key="{{section.key}}">{{section.label}}<b>{{section.count}}</b></button>
+      {{/each}}
+    </nav>
+
+    <ul class="dbu-tf-list">
+      {{#each tf.rows as |row|}}
+      {{#if row.line}}
+      <li class="dbu-tf-line">{{row.line}}{{#if row.race}} <span class="dbu-tf-dim">({{row.race}})</span>{{/if}}</li>
+      {{else}}
+      <li class="dbu-tf-row{{#if row.inUse}} in-use{{/if}}{{#if row.open}} maneuver-open{{/if}}" data-tf-id="{{row.id}}">
+        <div class="dbu-tf-head maneuver-head">
+          <input type="checkbox" data-tf-field="active" {{checked row.active}} {{#if row.fixed}}disabled{{/if}}
+                 data-tooltip="{{#if row.fixed}}An Awakening is always in use{{else}}In use: its bonuses, Aspects and Traits - no Stress Test{{/if}}"/>
+          <button type="button" class="dbu-tf-open" data-action="toggleTransformation" aria-label="Open">
+            <span class="maneuver-mark" aria-hidden="true"></span></button>
+          <span class="dbu-tf-name"{{#if row.gone}} data-tooltip="Its file is no longer in this system"{{/if}}>{{row.name}}</span>
+          {{#each row.facts as |fact|}}<span class="dbu-tf-dim">{{fact}}</span>{{/each}}
+          {{#if row.variant}}<span class="dbu-tf-chip">{{row.variant}}</span>{{/if}}
+          {{#if row.racialUnmet}}<span class="dbu-tf-chip warn" data-tooltip="Its Racial Requirement: said, never refused">{{row.racialUnmet}}</span>{{/if}}
+          {{#if row.prerequisite}}<span class="dbu-tf-chip warn" data-tooltip="Its Prerequisite: the table's to check">Prerequisite: {{row.prerequisite}}</span>{{/if}}
+          <span class="dbu-tf-fields">
+            {{#if row.transcendent}}
+            <label class="dbu-tf-in"><input type="checkbox" data-tf-field="transcended" {{checked row.transcended}}/>Transcended</label>
+            {{/if}}
+            {{#if row.grades}}
+            <label class="dbu-tf-in" data-tooltip="{{row.gradeTip}}">Grade<input type="number" class="dbu-tf-n" data-tf-field="grade" min="1"
+              max="{{row.grades}}" value="{{row.grade}}"/></label>
+            {{/if}}
+            {{#if row.awakening}}
+            <label class="dbu-tf-in">Stacks<input type="number" class="dbu-tf-n" data-tf-field="stacks" min="0" value="{{row.stacks}}"/>
+              <span class="dbu-tf-dim{{#if row.overStacks}} warn{{/if}}">of {{row.maxStacks}}</span></label>
+            {{/if}}
+            <span class="dbu-tf-dim">Tier {{row.tier}}</span>
+            {{#if row.stress}}<span class="dbu-tf-dim">Stress {{row.stress}}</span>{{/if}}
+            {{#if row.peaked}}<span class="dbu-tf-chip">Peaked</span>{{/if}}
+            {{#if row.masteryMax}}
+            <label class="dbu-tf-in" data-tooltip="Times Mastered (M) - the most shown is said, never refused">Mastery<input type="number"
+              class="dbu-tf-n" data-tf-field="mastery" min="0" value="{{row.mastery}}"/><span class="dbu-tf-dim{{#if row.overMastery}} warn{{/if}}">of {{row.masteryMax}}</span></label>
+            {{/if}}
+            {{#if @root.editable}}
+            <a class="dbu-tf-delete" data-action="removeTransformation" data-tooltip="Remove {{row.name}} - and its Traits"><i class="fa-solid fa-trash"></i></a>
+            {{/if}}
+          </span>
+        </div>
+        {{#if row.on}}
+        <div class="dbu-tf-on">
+          <span class="dbu-tf-dim">On:</span>
+          {{#each row.on as |original|}}<span class="dbu-tf-chip{{#if original.active}} active{{/if}}">{{original.name}}</span>{{else}}<span class="dbu-tf-dim">no Form yet</span>{{/each}}
+          {{#if @root.editable}}<button type="button" class="dbu-tf-small" data-action="transformationOriginals">Change</button>{{/if}}
+        </div>
+        {{/if}}
+        {{#if row.evolved.length}}
+        <div class="dbu-tf-on">
+          <span class="dbu-tf-dim">Evolved Stages:</span>
+          {{#each row.evolved as |stage|}}<span class="dbu-tf-chip{{#if stage.active}} active{{/if}}">{{stage.name}}</span>{{/each}}
+        </div>
+        {{/if}}
+        {{#if row.temporary}}<div class="dbu-tf-on"><span class="dbu-tf-chip ext">Temporary Awakening, level {{row.temporary}}</span></div>{{/if}}
+        <div class="dbu-tf-bonuses">
+          {{#each row.bonuses as |bonus|}}<span class="dbu-tf-bonus{{#if bonus.up}} up{{/if}}">{{bonus.label}} {{bonus.value}}</span>{{/each}}
+        </div>
+        <div class="dbu-tf-detail maneuver-body">
+          {{#if row.gradeValues.length}}
+          <div class="dbu-tf-part"><div class="dbu-tf-heading">Grade {{row.grade}}</div>
+            <div class="dbu-tf-kv">{{#each row.gradeValues as |value|}}<span class="dbu-tf-dim">{{value}}</span>{{/each}}</div></div>
+          {{/if}}
+          {{#if row.aspects.length}}
+          <div class="dbu-tf-part"><div class="dbu-tf-heading">Aspects</div>
+            <div class="dbu-tf-chips">{{#each row.aspects as |aspect|}}<span class="dbu-tf-chip"{{#if aspect.summary}} data-tooltip="{{aspect.summary}}"{{/if}}>{{aspect.label}}</span>{{/each}}</div></div>
+          {{/if}}
+          <div class="dbu-tf-part"><div class="dbu-tf-heading">Traits</div>
+            {{#each row.traits as |trait|}}
+            <div class="dbu-tf-trait{{#if trait.off}} off{{/if}}">
+              {{#if trait.note}}<div class="dbu-tf-trait-note">{{trait.note}}</div>{{/if}}
+              {{#each trait.lines as |line|}}{{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}<div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}{{/each}}
+            </div>
+            {{/each}}
+          </div>
+          {{#unless row.fixed}}
+          <label class="dbu-tf-in"><input type="checkbox" data-tf-field="newLevel" {{checked row.newLevel}}/>New Level of Power</label>
+          {{/unless}}
+        </div>
+      </li>
+      {{/if}}
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="panel-note">No Transformations yet. Add one: the ARC gives access to them.</p>
+    {{/if}}
+  </section>
+
+  <details class="trait-group" data-section="transformationTraits" {{#if @root.openSections.transformationTraits}}open{{/if}}>
+    <summary>
+      Transformation Traits
+      <span class="trait-count">{{tf.traitCount}}</span>
+    </summary>
+    {{#if tf.traits.length}}
+    <div class="dbu-tf-dim dbu-tf-subhead">From what is in use</div>
+    <ul class="trait-list">
+      {{#each tf.traits as |entry|}}
+      <li class="trait{{#if entry.open}} trait-open{{/if}}" data-item-id="{{entry.item.id}}">
+        <div class="trait-head trait-fold" data-action="toggleTrait">
+          <span class="maneuver-mark" aria-hidden="true"></span>
+          <span class="trait-name">{{entry.item.name}}</span>
+          <span class="trait-prereq">{{entry.from}}</span>
+          {{#each entry.triggered as |trigger|}}
+          <button type="button" class="trait-arm {{#if trigger.automatic}}active{{/if}}"
+                  data-action="automateTrigger" data-effect-id="{{trigger.id}}"
+                  data-tooltip="{{trigger.label}}{{#if trigger.limits}} - {{trigger.limits}}{{/if}}">
+            {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
+          </button>
+          {{/each}}
+          <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
+                  data-tooltip="Edit this Trait - its Effect is what it does on this character">&#9998;</button>
+        </div>
+        <div class="trait-body">
+          {{#each entry.lines as |line|}}{{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}<div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}{{/each}}
+        </div>
+      </li>
+      {{/each}}
+    </ul>
+    {{/if}}
+    {{#if tf.constant.length}}
+    <div class="dbu-tf-dim dbu-tf-subhead">Outside their Transformation: only their Constant effects</div>
+    <ul class="trait-list">
+      {{#each tf.constant as |entry|}}
+      <li class="trait{{#if entry.open}} trait-open{{/if}}" data-item-id="{{entry.item.id}}">
+        <div class="trait-head trait-fold" data-action="toggleTrait">
+          <span class="maneuver-mark" aria-hidden="true"></span>
+          <span class="trait-name">{{entry.item.name}}</span>
+          <span class="trait-prereq">{{entry.from}}, not in use</span>
+          {{#each entry.triggered as |trigger|}}
+          <button type="button" class="trait-arm {{#if trigger.automatic}}active{{/if}}"
+                  data-action="automateTrigger" data-effect-id="{{trigger.id}}"
+                  data-tooltip="{{trigger.label}}{{#if trigger.limits}} - {{trigger.limits}}{{/if}}">
+            {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
+          </button>
+          {{/each}}
+        </div>
+        {{#each entry.constantLines as |line|}}<div class="dbu-tf-constant">{{{line}}}</div>{{/each}}
+        <div class="trait-body">
+          {{#each entry.lines as |line|}}{{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}<div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}{{/each}}
+        </div>
+      </li>
+      {{/each}}
+    </ul>
+    {{/if}}
+    {{#unless tf.traitCount}}<p class="panel-note">None in use.</p>{{/unless}}
+  </details>
+  {{/with}}
+</div>

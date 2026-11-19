@@ -10,10 +10,10 @@ text: >
   (2)-[Passive]: Increase your Wound Rolls by 1/2 (rounded up) of G(T).
   (3)-[Passive, Ruling]: Increase your Combat Rolls by the 'Kaioken Dice'. Your Kaioken Dice is decided by the Grade of Kaioken, detailed in the Kaioken Grades table below.
   (4)-[Graded]: Kaioken has 3 Grades. Each Kaioken Grade:
-  Each Grade after the first increases the Stress Test Requirement by 2.
-  Sets the Kaioken Dice.
-  Sets the AMB (Attribute Modifier Bonus) of Kaioken for the listed Attributes to the amount listed on the Kaioken Grades table.
-  Has a Life Point Cost you must pay to be able to use any Attacking Maneuver.
+  • Each Grade after the first increases the Stress Test Requirement by 2.
+  • Sets the Kaioken Dice.
+  • Sets the AMB (Attribute Modifier Bonus) of Kaioken for the listed Attributes to the amount listed on the Kaioken Grades table.
+  • Has a Life Point Cost you must pay to be able to use any Attacking Maneuver.
 
 ---
 

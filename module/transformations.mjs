@@ -440,6 +440,59 @@ export function transformationTraitProgram(item, program, items = item?.parent?.
 
 useTransformationGate((item, items) => transformationTraitAside(item, items));
 
+/**
+ * How a Transformation Trait Item stands now, for the list of them: "in" (all of it applies), "permanent" (its Transformation not
+ * in use: its [Permanent] effects alone), "constant" (not in use, with a [Constant] effect to use from outside it), "aside".
+ */
+export function traitStanding(item, items = item?.parent?.items) {
+  if (transformationTraitAside(item, items)) return "aside";
+  const list = Array.from(items ?? []);
+  const owner = list.find(each => each.id === item?.system?.transformation);
+  const trait = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  const file = fileOf(owner);
+  if ((kindOf(file) === "awakening") || ((trait?.slot === "legendary") && (formTypeOf(file) === "legendary"))) return "in";
+  if (traitsInUse(owner, list)) return "in";
+  return numbersOf(trait?.constant).length ? "constant" : "permanent";
+}
+
+// --- What the tab shows ------------------------------------------------------------------------------------------------------
+
+/** Its Racial Requirement - "Same as the 1st Stage of this Transformation Line" read off that Stage. */
+export function racialRequirementOf(file) {
+  const own = String(file?.racial ?? "").trim();
+  if (!/^same as/i.test(own) || !file?.line) return own;
+  const first = transformationFiles().find(each => (String(each.line ?? "") === String(file.line)) && ((Number(each.stage) || 0) === 1));
+  return String(first?.racial ?? own).trim();
+}
+
+/** Why a character's Races do not meet its Racial Requirement - said, never refused (the user's) - or "". */
+export function racialUnmet(file, races = []) {
+  const need = racialRequirementOf(file);
+  if (!need || /^any\b/i.test(need) || (kindOf(file) === "evolved")) return "";
+  const wanted = aspectId(need);
+  return races.map(race => aspectId(race)).includes(wanted) ? "" : `not a${/^[aeiou]/i.test(need) ? "n" : ""} ${need}`;
+}
+
+/** The most it may be Mastered: once, a time more for each level of Difficult, and once more for a Transcendent Trait. None if Peaked. */
+export function masteryMax(file) {
+  const aspects = parseAspects(file?.aspects);
+  if (aspects.some(aspect => aspect.id === "peaked") || (kindOf(file) === "awakening")) return 0;
+  const difficult = Number(aspects.find(aspect => aspect.id === "difficult")?.level) || 0;
+  const transcendent = traitFilesOf(file).some(trait => trait.slot === "transcendent") ? 1 : 0;
+  return 1 + difficult + transcendent;
+}
+
+/** Its number of Grades, or 0 for one not Graded. */
+export function gradesOf(file) {
+  return Math.max(0, Number(file?.grades) || 0);
+}
+
+/** Its Stress Test Requirement as written for its Grade now - its Grade's line first. */
+export function stressOf(item, file = fileOf(item)) {
+  const row = gradeRow(file, lettersOf(item, file).G);
+  return String(row.values.stress ?? file?.stress ?? "");
+}
+
 // --- Adding and removing -------------------------------------------------------------------------------------------------------
 
 /**

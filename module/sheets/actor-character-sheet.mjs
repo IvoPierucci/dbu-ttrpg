@@ -4,6 +4,10 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, isFusion, mayBeMaster, typicalMinion } from "../actor-types.mjs";
 import { fusionContext, racesOf } from "../fusion.mjs";
+import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransformation, aspectFile, aspectsOf, bonusesOf, bonusWritten,
+  combineAspects, fileOf, formTypeOf, gradeRow, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
+  removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
+  lettersOf } from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
@@ -456,6 +460,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
       bestialApply: DBUCharacterSheet._onBestialApply,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
+      addTransformation: DBUCharacterSheet._onAddTransformation,
+      removeTransformation: DBUCharacterSheet._onRemoveTransformation,
+      transformationSection: DBUCharacterSheet._onTransformationSection,
+      toggleTransformation: DBUCharacterSheet._onToggleTransformation,
+      transformationOriginals: DBUCharacterSheet._onTransformationOriginals,
       addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
       addOtherTrait: DBUCharacterSheet._onAddOtherTrait,
       addVillainousTrait: DBUCharacterSheet._onAddVillainousTrait,
@@ -649,6 +658,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     fusion: { template: "systems/dbu-ttrpg/templates/parts/actor-fusion.hbs", scrollable: [""] },
     techniques: { template: "systems/dbu-ttrpg/templates/parts/actor-techniques.hbs", scrollable: [""] },
     uniqueAbilities: { template: "systems/dbu-ttrpg/templates/parts/actor-unique-abilities.hbs", scrollable: [""] },
+    // The Transformations this character has (transformations.mjs) - the user's approved mockup, 2026-11-16.
+    transformations: { template: "systems/dbu-ttrpg/templates/parts/actor-transformations.hbs", scrollable: [""] },
     traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs", scrollable: [""] },
     battlefields: {
       template: "systems/dbu-ttrpg/templates/parts/actor-battlefields.hbs",
@@ -761,7 +772,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   // Anything not named here starts closed - States and Combat Conditions among them,
   // which is what keeps a long checklist from taking over the Combat tab. The Maneuver
   // groups default the other way, in _prepareManeuverGroups.
-  #openSections = { villainousTraits: true, racialTraits: true, otherTraits: true, talents: true };
+  #openSections = { villainousTraits: true, racialTraits: true, otherTraits: true, talents: true, transformationTraits: true };
 
   /** ApplicationV2 does not wire drag and drop itself; each sheet binds its own. */
   #dragDrop = this.options.dragDrop.map(config => new foundry.applications.ux.DragDrop.implementation({
@@ -828,6 +839,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     techniques: { id: "techniques", group: "primary", label: "Signature Techniques" },
     // The Unique Abilities, on a tab of their own beside the Techniques (the user's).
     uniqueAbilities: { id: "uniqueAbilities", group: "primary", label: "Unique Abilities" },
+    // In the first row, between the Unique Abilities and the Traits (the user's): seven and seven, the strip breaking after the seventh.
+    transformations: { id: "transformations", group: "primary", label: "Transformations" },
     traits: { id: "traits", group: "primary", label: "Traits" },
     // Gear, which is the rulebook's Equipment.
     gear: { id: "gear", group: "primary", label: "Gear" },
@@ -1635,6 +1648,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.specialties = this.#specialtyGroups();
     // Evolution, Bestial and Monstrous Traits: the same rows, in a list of their own (the user's).
     context.otherTraits = this.#racialTraitChoices(triggered, ownedOtherTraits(this.actor));
+    // The Transformations tab (transformations.mjs).
+    context.transformationsTab = this.#transformationsTab(triggered);
     // An Adversary's Villainous Traits: the same rows, a list of their own above the Racial Traits and on the Adversary tab
     // (the user's) - each switched on and off, one of the ARC's own said as such.
     context.villainousTraits = isAdversary(this.actor) ? this.#racialTraitChoices(triggered, ownedVillainousTraits(this.actor))
@@ -3929,6 +3944,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       input.addEventListener("change", event => {
         event.stopPropagation();
         this.#writeCustomBuff(input.closest("[data-buff-id]")?.dataset.buffId, input.dataset.customBuff, input);
+      });
+    }
+
+    // A Transformation's fields - in use, Grade, Stacks, Mastery, Transcended, New Level of Power: written onto its Item.
+    for (const input of this.element.querySelectorAll("[data-tf-field]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        this.#writeTransformation(input.closest("[data-tf-id]")?.dataset.tfId, input.dataset.tfField, input);
       });
     }
 
@@ -7099,6 +7122,315 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return;
     }
     return addRacialTrait(this.actor, trait);
+  }
+
+  /** The section of the Transformations tab open - one of the types this character has. */
+  #transformationSection = "";
+
+  /**
+   * The Transformations tab (the user's approved mockup, 2026-11-16): the Aspects in use and the Stress Bonus above; a section
+   * for each type this character has one of; a row each, with its fields, its seven bonuses, and opened its Grade, Aspects and
+   * Traits; and the Traits of what is in use below, with the Constant effects of what is not.
+   */
+  #transformationsTab(triggered) {
+    const items = transformationItems(this.actor);
+    const all = Array.from(this.actor.items);
+    const races = racesOf(this.actor).length ? racesOf(this.actor) : [this.actor.system.race].filter(Boolean);
+    const kindOfItem = item => kindOf(fileOf(item)) || "form";
+    const sections = Object.entries(TRANSFORMATION_KINDS).map(([key, label]) => ({ key, label,
+      count: items.filter(item => kindOfItem(item) === key).length })).filter(section => section.count);
+    if (!sections.some(section => section.key === this.#transformationSection)) this.#transformationSection = sections[0]?.key ?? "";
+    for (const section of sections) section.active = section.key === this.#transformationSection;
+    const capital = text => String(text ?? "").replace(/(^|[\s-])([a-z])/g, (all, gap, letter) => gap + letter.toUpperCase());
+    const aspectLabel = aspect => `${aspectFile(aspect.id)?.name ?? aspect.name}${aspect.level !== null ? ` ${aspect.level}` : ""}`
+      + (aspect.params?.length ? ` (${aspect.params.join("/")})` : "");
+    const rowOf = item => {
+      const file = fileOf(item);
+      const kind = kindOfItem(item);
+      const own = file ? traitFilesFor(file) : [];
+      const original = file?.variantOf ? transformationFile(file.variantOf) : null;
+      const grades = gradesOf(file);
+      const row = gradeRow(file, lettersOf(item, file).G);
+      const bonuses = bonusesOf(item, file);
+      const stage = (file?.stage !== undefined) && (file?.stage !== "") ? Number(file.stage) : null;
+      const facts = (kind === "awakening") ? [capital(file?.subtype), capital(file?.origin)]
+        : (kind === "form") ? [(stage === 0) ? "Null Stage" : (stage ? `Stage ${stage}` : ""), file?.line ? "" : capital(formTypeOf(file))]
+        : (kind === "evolved") ? [capital(file?.evolvedType), capital(file?.subtype === "same" ? "Same as Original" : file?.subtype)] : [];
+      const prerequisite = String(file?.prerequisites ?? "").trim();
+      const peaked = file ? aspectsOf(item, all).some(aspect => aspect.id === "peaked") : false;
+      const max = masteryMax(file);
+      const offOf = trait => {
+        if (trait.stacks && ((Number(item.system.stacks) || 0) < Number(trait.stacks))) return "missing Stacks";
+        if (trait.mastery && ((Number(item.system.mastery) || 0) < Number(trait.mastery))) return `missing Mastery ${trait.mastery}`;
+        if ((trait.slot === "transcendent") && !item.system.transcended) return "only Transcended";
+        if (trait.group && !all.some(each => (each.system?.transformation === item.id) && (each.flags?.["dbu-ttrpg"]?.sourceId === trait.id))) {
+          return "not chosen";
+        }
+        return "";
+      };
+      const noteOf = trait => [
+        (trait.slot === "burst") ? "Burst Limit" : (trait.slot === "mastery") ? `Mastery ${trait.mastery || 1}`
+          : (trait.slot === "transcendent") ? "Transcendent Trait" : (trait.slot === "legendary") ? "Legendary Trait" : "",
+        trait.stacks ? `${trait.stacks} Stacks` : "",
+        trait.groupLabel ? String(trait.groupLabel) : "",
+        trait.replaces ? `replaces ${trait.replaces}` : "",
+        (original && (trait.owner === original.transformation)) ? `from ${original.name}` : "",
+        offOf(trait)].filter(Boolean).join(", ");
+      return {
+        id: item.id,
+        name: item.name,
+        gone: !file,
+        kind,
+        inUse: inUse(item),
+        active: Boolean(item.system.active) || (kind === "awakening"),
+        fixed: kind === "awakening",
+        awakening: kind === "awakening",
+        open: Boolean(this.#openSections[`tf-${item.id}`]),
+        facts: facts.filter(Boolean),
+        variant: original ? `Variant of ${original.name}` : "",
+        racialUnmet: file ? racialUnmet(file, races) : "",
+        prerequisite: (/^(n\/a|none)?$/i.test(prerequisite)) ? "" : prerequisite,
+        transcendent: file ? aspectsOf(item, all).some(aspect => aspect.id === "transcendent") : false,
+        transcended: Boolean(item.system.transcended),
+        grades,
+        grade: Math.min(Number(item.system.grade) || 1, Math.max(grades, 1)),
+        gradeTip: [row.values.label, row.values.needs ? `needs ${row.values.needs} - said, never refused` : ""].filter(Boolean).join(" - "),
+        gradeValues: Object.entries(row.values).filter(([key]) => !["label", "needs", "stress", "tier"].includes(key))
+          .map(([key, value]) => `${capital(key.replace(/([A-Z])/g, " $1").trim())} ${value}`),
+        stacks: Number(item.system.stacks) || 0,
+        maxStacks: Number(file?.maxStacks) || 1,
+        overStacks: (Number(item.system.stacks) || 0) > (Number(file?.maxStacks) || 1),
+        tier: String(row.values.tier ? `${row.values.tier}+` : (file?.tier ?? "")),
+        stress: (kind === "awakening") ? "" : stressOf(item, file),
+        peaked,
+        mastery: Number(item.system.mastery) || 0,
+        masteryMax: peaked ? 0 : max,
+        overMastery: (Number(item.system.mastery) || 0) > max,
+        temporary: Number(item.system.temporary) || 0,
+        newLevel: Boolean(item.system.newLevel),
+        on: (kind === "evolved") ? (item.system.originals ?? []).map(id => this.actor.items.get(id)).filter(Boolean)
+          .map(form => ({ name: form.name, active: item.system.original === form.id })) : null,
+        evolved: (kind === "form") ? items.filter(each => (each.system.originals ?? []).includes(item.id))
+          .map(each => ({ name: each.name, active: inUse(each) && (each.system.original === item.id) })) : [],
+        bonuses: Object.entries(BONUS_ATTRIBUTES).map(([label, attribute]) => ({ label,
+          value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
+        aspects: file ? aspectsOf(item, all).map(aspect => ({ label: aspectLabel(aspect), summary: aspectFile(aspect.id)?.summary ?? "" })) : [],
+        traits: own.map(trait => ({ name: trait.name, note: noteOf(trait), off: Boolean(offOf(trait)),
+          lines: racialTraitLines({ system: { text: trait.text ?? "", chosen: [] }, flags: { "dbu-ttrpg": { sourceId: trait.id } } }) }))
+      };
+    };
+    const current = items.filter(item => kindOfItem(item) === this.#transformationSection);
+    let rows = current.map(rowOf);
+    // Forms by their Line, each Line's Stages in order; those of no Line after them.
+    if (this.#transformationSection === "form") {
+      const lineOf = item => String(fileOf(item)?.line ?? "");
+      const lines = [...new Set(current.map(lineOf))].sort((a, b) => (!a) - (!b) || a.localeCompare(b));
+      rows = lines.flatMap(line => {
+        const members = current.filter(item => lineOf(item) === line)
+          .sort((a, b) => (Number(fileOf(a)?.stage) || 0) - (Number(fileOf(b)?.stage) || 0));
+        const first = members.map(fileOf).find(Boolean);
+        const head = line ? { line: `${capital(line.replace(/-/g, " "))} Line`, race: racialRequirementOf(first) }
+          : (lines.length > 1 ? { line: "No Line" } : null);
+        return [head, ...members.map(rowOf)].filter(Boolean);
+      });
+    }
+    // The Traits of what is in use, and outside theirs the Constant effects alone.
+    const traitItems = all.filter(item => (item.type === "racial") && item.system?.transformation);
+    const fromOf = item => this.actor.items.get(item.system.transformation)?.name ?? "";
+    const standing = new Map(traitItems.map(item => [item.id, traitStanding(item, all)]));
+    const constantLines = item => {
+      const numbers = String(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.constant ?? "").split(",").map(Number).filter(Boolean);
+      return racialTraitLines(item).filter(line => numbers.some(n => String(line.html ?? "").includes(`(${n})-`))).map(line => line.html);
+    };
+    const traits = this.#racialTraitChoices(triggered, traitItems.filter(item => ["in", "permanent"].includes(standing.get(item.id))))
+      .map(entry => ({ ...entry, from: fromOf(entry.item) + ((standing.get(entry.item.id) === "permanent") ? ", its [Permanent] effects" : "") }));
+    const constant = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "constant"))
+      .map(entry => ({ ...entry, from: fromOf(entry.item), constantLines: constantLines(entry.item) }));
+    return {
+      aspects: combineAspects(this.actor).map(aspect => ({ label: aspectLabel(aspect), from: aspect.from.join(", "),
+        summary: aspect.file?.summary ?? "" })),
+      stressBonus: Number(this.actor.system.stressBonus) || 0,
+      sections,
+      rows,
+      traits,
+      constant,
+      traitCount: traits.length + constant.length
+    };
+  }
+
+  /** A Transformation's field, written onto its Item. In use: a Form puts any other Form by, an Enhancement any other Enhancement. */
+  async #writeTransformation(id, field, input) {
+    const item = this.actor.items.get(id ?? "");
+    if (!item || !this.isEditable) return;
+    if (["active", "transcended", "newLevel"].includes(field)) {
+      const on = Boolean(input.checked);
+      const updates = [{ _id: item.id, [`system.${field}`]: on }];
+      if ((field === "active") && on) {
+        const kind = kindOf(fileOf(item));
+        const rival = each => ["form", "evolved"].includes(kind) ? ["form", "evolved"].includes(kindOf(fileOf(each))) : kindOf(fileOf(each)) === kind;
+        if (kind !== "awakening") {
+          for (const other of transformationItems(this.actor).filter(each => (each.id !== item.id) && each.system.active && rival(each))) {
+            // An Evolved Stage on this Form stays in use with it.
+            if ((kindOf(fileOf(other)) === "evolved") && (other.system.original === item.id)) continue;
+            if ((kind === "evolved") && (item.system.original === other.id)) continue;
+            updates.push({ _id: other.id, "system.active": false });
+          }
+        }
+      }
+      return this.actor.updateEmbeddedDocuments("Item", updates);
+    }
+    const number = Math.max(0, Math.floor(Number(input.value) || 0));
+    if (field === "grade") return item.update({ "system.grade": Math.max(1, number) });
+    if (["stacks", "mastery"].includes(field)) return item.update({ [`system.${field}`]: number });
+  }
+
+  /** The Transformations tab's section. */
+  static _onTransformationSection(event, target) {
+    this.#transformationSection = target.dataset.key ?? "";
+    return this.render();
+  }
+
+  /** A Transformation's row opened or closed. */
+  static _onToggleTransformation(event, target) {
+    const row = target.closest("[data-tf-id]");
+    if (!row) return;
+    const open = !row.classList.contains("maneuver-open");
+    row.classList.toggle("maneuver-open", open);
+    this.#openSections[`tf-${row.dataset.tfId}`] = open;
+  }
+
+  /** A Transformation taken away - its Traits with it (the user's: the table's decision). */
+  static async _onRemoveTransformation(event, target) {
+    if (!this.isEditable) return;
+    const id = target.closest("[data-tf-id]")?.dataset.tfId;
+    if (!id) return;
+    // An Evolved Stage on it loses that Original.
+    const updates = transformationItems(this.actor).filter(each => (each.system.originals ?? []).includes(id))
+      .map(each => ({ _id: each.id, "system.originals": each.system.originals.filter(other => other !== id),
+        ...(each.system.original === id ? { "system.original": "", "system.active": false } : {}) }));
+    if (updates.length) await this.actor.updateEmbeddedDocuments("Item", updates);
+    return removeTransformation(this.actor, id);
+  }
+
+  /**
+   * Add a Transformation (the user's): a window with the four sections and a search; a name typed searches every type, the section
+   * chosen set aside. One whose Racial Requirement the character does not meet is greyed with why - and added all the same; one
+   * already had is said so.
+   */
+  static async _onAddTransformation() {
+    if (!this.isEditable) return;
+    const files = transformationFiles().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    if (!files.length) {
+      ui.notifications.info("There are no Transformations to add yet.");
+      return;
+    }
+    const escape = Handlebars.escapeExpression;
+    const had = new Set(transformationItems(this.actor).map(item => item.system.transformationId));
+    const races = racesOf(this.actor).length ? racesOf(this.actor) : [this.actor.system.race].filter(Boolean);
+    const rows = files.map(file => {
+      const kind = kindOf(file);
+      const unmet = racialUnmet(file, races);
+      const prerequisite = String(file.prerequisites ?? "").trim();
+      return `<li class="dbu-tf-pick${unmet ? " unfit" : ""}${had.has(file.id) ? " blocked" : ""}" data-pick="${escape(file.id)}"
+        data-kind="${escape(kind)}" data-name="${escape(String(file.name).toLowerCase())}">
+        <span class="dbu-tf-name">${escape(file.name)}</span>
+        <span class="dbu-tf-chip dbu-tf-kind">${escape(TRANSFORMATION_KINDS[kind] ?? "")}</span>
+        <span class="dbu-tf-dim">${escape(racialRequirementOf(file))}</span>
+        ${unmet ? `<span class="dbu-tf-chip warn">${escape(unmet)}</span>` : ""}
+        ${(!/^(n\/a|none)?$/i.test(prerequisite)) ? `<span class="dbu-tf-chip warn" data-tooltip="${escape(prerequisite)}">Prerequisite</span>` : ""}
+        ${had.has(file.id) ? '<span class="dbu-tf-dim dbu-tf-push">Already added</span>' : ""}</li>`;
+    }).join("");
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog", "dbu-tf-add"],
+      window: { title: `${this.actor.name} - Add a Transformation` },
+      position: { width: 520 },
+      content: `<div class="dbu-tf-catalogue">
+        <input type="text" data-tf-search autocomplete="off" autofocus placeholder="Search by name"/>
+        <nav class="dbu-tf-sections">${Object.entries(TRANSFORMATION_KINDS).map(([key, label], at) =>
+          `<button type="button" class="dbu-tf-section${at ? "" : " active"}" data-tf-kind="${key}">${escape(label)}</button>`).join("")}</nav>
+        <div class="dbu-tf-dim" data-tf-hint></div>
+        <ol class="dbu-tf-picks">${rows}<li class="dbu-tf-dim" data-tf-none hidden>Nothing by that name.</li></ol>
+        <p class="dbu-tf-dim">Greyed: its Racial Requirement is not met - said, and it can still be added. Its Prerequisites are the table's.</p>
+      </div>`,
+      buttons: [
+        { action: "add", label: "Add", default: true, callback: (event, button, dialog) =>
+          dialog.element.querySelector(".dbu-tf-pick.selected")?.dataset.pick ?? null },
+        { action: "cancel", label: "Cancel" }
+      ],
+      render: (event, dialog) => {
+        const root = dialog.element;
+        let kind = "awakening";
+        const search = root.querySelector("[data-tf-search]");
+        const apply = () => {
+          const query = String(search.value ?? "").trim().toLowerCase();
+          for (const button of root.querySelectorAll("[data-tf-kind]")) {
+            button.classList.toggle("active", !query && (button.dataset.tfKind === kind));
+            button.classList.toggle("off", Boolean(query));
+          }
+          root.querySelector("[data-tf-hint]").textContent = query ? "Searching every type (the section chosen is set aside)" : "";
+          let shown = 0;
+          for (const row of root.querySelectorAll("[data-pick]")) {
+            const show = query ? row.dataset.name.includes(query) : (row.dataset.kind === kind);
+            row.hidden = !show;
+            row.querySelector(".dbu-tf-kind").hidden = !query;
+            if (show) shown++;
+          }
+          root.querySelector("[data-tf-none]").hidden = Boolean(shown);
+        };
+        for (const button of root.querySelectorAll("[data-tf-kind]")) {
+          button.addEventListener("click", () => { kind = button.dataset.tfKind; search.value = ""; apply(); });
+        }
+        search.addEventListener("input", apply);
+        for (const row of root.querySelectorAll("[data-pick]")) {
+          row.addEventListener("click", () => {
+            if (row.classList.contains("blocked")) return;
+            for (const other of root.querySelectorAll(".dbu-tf-pick.selected")) other.classList.remove("selected");
+            row.classList.add("selected");
+          });
+          row.addEventListener("dblclick", () => {
+            if (row.classList.contains("blocked")) return;
+            row.click();
+            root.querySelector('button[data-action="add"]')?.click();
+          });
+        }
+        apply();
+      },
+      rejectClose: false
+    });
+    if (!picked) return;
+    if (had.has(picked)) return ui.notifications.warn(`${this.actor.name} already has it.`);
+    const item = await addTransformation(this.actor, picked);
+    if (item) this.#transformationSection = kindOf(fileOf(item));
+    return this.render();
+  }
+
+  /**
+   * An Evolved Stage's Original Forms (the user's): "which Forms?" - every Form this character has, ticked or not; it may be on
+   * several, each "a different Transformation". Its Prerequisites the table's.
+   */
+  static async _onTransformationOriginals(event, target) {
+    if (!this.isEditable) return;
+    const item = this.actor.items.get(target.closest("[data-tf-id]")?.dataset.tfId ?? "");
+    if (!item) return;
+    const forms = transformationItems(this.actor).filter(each => kindOf(fileOf(each)) === "form");
+    if (!forms.length) return ui.notifications.info("There is no Form to put it on yet.");
+    const escape = Handlebars.escapeExpression;
+    const chosen = new Set(item.system.originals ?? []);
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog", "dbu-tf-add"],
+      window: { title: `${item.name}: on which Forms?` },
+      content: `<div class="dbu-tf-originals">${forms.map(form => `<label class="dbu-tf-in"><input type="checkbox" name="${escape(form.id)}"
+        ${chosen.has(form.id) ? "checked" : ""}/>${escape(form.name)}<span class="dbu-tf-dim">Stress ${escape(stressOf(form))}</span></label>`).join("")}</div>`,
+      buttons: [
+        { action: "save", label: "Save", default: true, callback: (event, button, dialog) =>
+          forms.filter(form => dialog.element.querySelector(`[name="${form.id}"]`)?.checked).map(form => form.id) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!Array.isArray(picked)) return;
+    return item.update({ "system.originals": picked,
+      ...(picked.includes(item.system.original) ? {} : { "system.original": picked[0] ?? "" }) });
   }
 
   /** A Racial Trait taken off - and the Unique Abilities it gave with it (racial.mjs removeRacialTrait). */
