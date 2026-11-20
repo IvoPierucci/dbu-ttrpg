@@ -12,6 +12,9 @@ text: >
 
 ---
 
-# The Liquid Form Special Maneuver. The Possess Maneuver waits, with Possession, for the Transformations (its text saved).
+# The Liquid Form Special Maneuver; in the Liquid State, the Possess Maneuver.
 [passive]
 allow maneuver.liquid-form;
+if (inState("liquid")) {
+    allow maneuver.possess;
+}

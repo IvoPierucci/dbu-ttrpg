@@ -29,5 +29,7 @@ racialLifeModifier += 2;
 # (3) Inner Room (the user's ruling): a Basic Item, Apparel or Weapon stored on the Gear tab - 1 Action in a Combat Encounter, free out
 # of one - neither worn, wielded nor in hand while it is, and no Snatch takes it (gear.mjs inInnerRoom).
 allow innerRoom.store;
-# Not built: (2) - the Possess Maneuver is not in this system yet (its text is waited on). Inner Room's Characters, the space within
+# (2) The Possess Maneuver's second Clash at you not rolled - lost by whoever began it (chat.mjs settlePossessing).
+allow roomy.possessHold;
+# Not built: Inner Room's Characters, the space within
 # as a Battlefield of its own, the Absorbed (Absorption is an Awakening, not built): the table's, the Might Clashes made from the sheet.

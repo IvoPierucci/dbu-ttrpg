@@ -1247,6 +1247,9 @@ export function registerTransformationHooks() {
   Hooks.on("deleteItem", async (item, options, userId) => {
     if ((item.type !== TRANSFORMATION_TYPE) || !item.parent || (userId !== game.user.id)) return;
     const actor = item.parent;
+    // The Awakening a Possessing Character holds them through gone (the Possess Maneuver's): the possession over (chat.mjs).
+    const owner = (item.system?.choices ?? []).find(entry => entry?.key === "owner")?.value;
+    if (owner && (actor.getFlag?.("dbu-ttrpg", "possessedBy")?.uuid === owner)) (await import("./chat.mjs")).releasePossession(actor);
     const traits = Array.from(actor.items).filter(each => each.system?.transformation === item.id).map(each => each.id);
     const given = Array.from(actor.items).filter(each => traits.includes(each.flags?.["dbu-ttrpg"]?.grantedBy)).map(each => each.id);
     const ids = [...traits, ...given].filter(id => actor.items.has(id));

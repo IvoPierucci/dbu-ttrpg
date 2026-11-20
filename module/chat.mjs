@@ -310,6 +310,9 @@ function applyRequest(request) {
       ?.createEmbeddedDocuments("Item", [request.data]);
     case "deleteItem": return fromUuidSync(request.actorUuid)?.items.get(request.itemId)?.delete();
     case "removeFromEncounter": return removeFromEncounter(fromUuidSync(request.actorUuid));
+    // The Possess Maneuver won, and its Awakening lost (possessCharacter, endPossession).
+    case "possess": return possessCharacter(request.possessorUuid, request.targetUuid, request.awakening, request.control);
+    case "releasePossession": return endPossession(request.actorUuid);
     case "dismissDuplicates": return import("./combat.mjs").then(combat => combat.dismissDuplicates((request.ids ?? [])
       .map(id => game.actors?.get(id)).filter(Boolean)));
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
@@ -1405,6 +1408,8 @@ async function settleClashEffects(messageId, clash) {
   }
   if (clash.absorbing && clash.result && !clash.absorbing.applied) await settleAbsorbing(message, clash);
   if (clash.absorbHold && clash.result && !clash.absorbHold.applied) await settleAbsorbHold(message, clash);
+  if (clash.possessing && clash.result && !clash.possessing.applied) await settlePossessing(message, clash);
+  if (clash.possessHold && clash.result && !clash.possessHold.applied) await settlePossessHold(message, clash);
 
   if (clash.handcuff && clash.result && !clash.handcuff.applied) {
     await settleHandcuff(message, clash);
@@ -1995,6 +2000,153 @@ export async function absorbCharacter(actor, target) {
       [{ value: "yes", label: "Gigantic while you possess that stack" }, { value: "no", label: "Stay as you are" }]);
     await actor.setFlag(SCOPE, "absorbedGigantic", answer === "yes");
   }
+}
+
+/** The Possess Maneuver's first Clash: "Make a Clash (Strike vs Strike/Dodge) against them." */
+export async function postPossessClash(actor, target, maneuver) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        [RESPONDABLE_FLAG]: false,
+        [CLASH_FLAG]: {
+          category: "strike",
+          clashLabel: "Clash (Strike vs Strike/Dodge)",
+          maneuverName: maneuver.name,
+          reason: `Win and a Clash (Impulsive) at ${target.name} follows; lose and ${target.name} may Exploit.`,
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          defenderRoll: "",
+          possessing: { applied: false, awakening: String(getTrait(maneuver.id)?.givesAwakening ?? "") },
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/** The Possess Maneuver's first Clash settled: lost, "this triggers the Exploit Maneuver from the target"; won, "a second Clash (Impulsive)". */
+async function settlePossessing(message, clash) {
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, possessing: { ...clash.possessing, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") {
+    offerExploitTo(message, target, actor, `${clash.maneuverName} - the Clash was lost`, "possess");
+    return settledNote(message, `${target.name} keeps ${actor.name} out.`);
+  }
+  // Roomy Biology (2): "You cannot lose the second Clash for the Possess Maneuver if it is initiated by another Character" - not rolled.
+  if (target.system?.effects?.slots?.["roomy.possessHold"] === true) {
+    await settledNote(message, `${actor.name} invades ${target.name} - who cannot lose the Clash (Impulsive): Roomy Biology.`);
+    return possessLost(actor, target, clash.maneuverName);
+  }
+  await settledNote(message, `${actor.name} invades ${target.name} - a Clash (Impulsive).`);
+  return postSaveClash(actor, target, { maneuverName: clash.maneuverName, saves: ["impulsive"],
+    reason: `Win and ${actor.name} possesses ${target.name}; lose and ${target.name} is Guard Down this turn.`,
+    possessHold: { applied: false, awakening: clash.possessing?.awakening ?? "" } });
+}
+
+/**
+ * The Possess Maneuver's second Clash settled: lost, "your Opponent suffers from the Guard Down Combat Condition until the end of the current
+ * turn"; won, "your Character is removed from the Combat Encounter. Give the target of this Maneuver the Overtaken Awakening as a Level 2
+ * Temporary Awakening and then gain control of that Character". Mutualism (6): "you can choose not to take control" - asked. Tuffle Parasite
+ * (3): a Minion "become[s] your Minion" - said, the table's.
+ */
+async function settlePossessHold(message, clash) {
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, possessHold: { ...clash.possessHold, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return possessLost(actor, target, clash.maneuverName, message);
+  if (isMinion(target ?? null) && !target.system?.specialMinion && (actor.system?.effects?.slots?.["tuffleParasite.minion"] === true)) {
+    return settledNote(message, `${actor.name} wins both Clashes against the Minion ${target.name} - who becomes ${actor.name}'s Minion (Tuffle `
+      + "Parasite): the table's to make so.");
+  }
+  let control = true;
+  if (actor.system?.effects?.slots?.["mutualism.noControl"] === true) {
+    control = (await askPlayerChoice(actor, `${actor.name}: Possess ${target.name}`,
+      [{ value: "take", label: "Take control of them" }, { value: "leave", label: "Do not (Mutualism - Symbiosis)" }])) !== "leave";
+  }
+  requestPossession(actor, target, clash.possessHold?.awakening ?? "", control);
+  return settledNote(message, `${actor.name} possesses ${target.name}: out of the Combat Encounter, ${target.name} the Overtaken Awakening (a Level 2 `
+    + `Temporary Awakening) with ${actor.name} its Possessing Character${control ? `, and ${actor.name}'s to control while it lasts` : " - not controlled (Symbiosis)"}.`);
+}
+
+/** The second Clash lost: as written, "your Opponent" - the one targeted - Guard Down until the end of the current turn. */
+async function possessLost(actor, target, name, message = null) {
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  const before = Number(target.system.conditions?.["guard-down"]) || 0;
+  if ((await gainCondition(target, "guard-down", 1) !== false) && !before) {
+    await lasting(game.combat?.combatant?.actor ?? actor, { kind: KINDS.CONDITION, key: "guard-down", edge: EDGES.END, on: target.uuid, source: name });
+  }
+  const text = `${target.name} holds ${actor.name} off - Guard Down until the end of this turn.`;
+  return message ? settledNote(message, text) : ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(text)}</div>` });
+}
+
+/** The possession made - by the GM, who alone may hand a Character to other players and take one out of the Combat Encounter. */
+export function requestPossession(actor, target, awakening, control = true) {
+  if (game.user.isGM) return possessCharacter(actor.uuid, target.uuid, awakening, control);
+  if (!game.users.activeGM) return void ui.notifications.warn("Possess needs a GM connected: the Characters change hands.");
+  game.socket.emit(CHANNEL, { type: "possess", possessorUuid: actor.uuid, targetUuid: target.uuid, awakening, control });
+}
+
+/**
+ * The Possessing Character out of the Combat Encounter; the target the Awakening as a Level 2 Temporary Awakening, its Possessing
+ * Character named on it; controlled - the Possessing Character's players its owners too, what it was kept to give back (`possessedBy`).
+ */
+async function possessCharacter(possessorUuid, targetUuid, awakening, control) {
+  const possessor = fromUuidSync(possessorUuid ?? "");
+  const target = fromUuidSync(targetUuid ?? "");
+  if (!possessor || !target) return;
+  await removeFromEncounter(possessor);
+  const T = await import("./transformations.mjs");
+  if (awakening) {
+    await T.gainTemporaryAwakening(target, awakening, 2);
+    const item = T.transformationItems(target).find(each => each.system?.transformationId === awakening);
+    if (item) await item.update({ "system.choices": [...(item.system.choices ?? []).filter(entry => entry.key !== "owner"),
+      { key: "owner", value: possessor.uuid }] });
+  }
+  const changes = { [`flags.${SCOPE}.possessedBy`]: { uuid: possessor.uuid, control: Boolean(control),
+    ownership: control ? foundry.utils.deepClone(target.ownership ?? {}) : null } };
+  if (control) {
+    for (const user of game.users.filter(each => !each.isGM && possessor.testUserPermission(each, "OWNER"))) {
+      changes[`ownership.${user.id}`] = foundry.CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
+    }
+  }
+  await target.update(changes);
+}
+
+/**
+ * Overtaken (12): "If you lose access to this Awakening, stop being controlled by the Possessing Character, remove the Possessing Character
+ * from your body, and if you are in a Combat Encounter, the Possessing Character enters that Combat Encounter on a Square adjacent to you"
+ * - its owners as they were, the Possessing Character's token shown and back in the Combat Encounter (its Square, its Initiative: the table's).
+ */
+export function releasePossession(actor) {
+  if (!actor?.getFlag?.(SCOPE, "possessedBy")) return;
+  if (game.user.isGM) return endPossession(actor.uuid);
+  if (game.users.activeGM) game.socket.emit(CHANNEL, { type: "releasePossession", actorUuid: actor.uuid });
+}
+
+async function endPossession(actorUuid) {
+  const actor = fromUuidSync(actorUuid ?? "");
+  const held = actor?.getFlag?.(SCOPE, "possessedBy");
+  if (!held) return;
+  if (held.control && held.ownership) await actor.update({ ownership: held.ownership }, { diff: false, recursive: false });
+  await actor.unsetFlag(SCOPE, "possessedBy");
+  const possessor = fromUuidSync(held.uuid ?? "");
+  if (!possessor) return;
+  for (const token of possessor.getActiveTokens?.(false, true) ?? []) await token.update({ hidden: false });
+  const token = possessor.getActiveTokens?.(false, true)?.[0];
+  if (game.combat && token && !game.combat.combatants.some(each => each.actor?.uuid === possessor.uuid)) {
+    await game.combat.createEmbeddedDocuments("Combatant", [{ actorId: possessor.id, tokenId: token.id, sceneId: token.parent?.id ?? null }]);
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: possessor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `${possessor.name} leaves ${actor.name}'s body - back in the Combat Encounter, on a Square adjacent to them of their choice.`)}</div>` });
 }
 
 /** The Disarm Maneuver's Clash: "Make a Clash (Strike vs Strike/Dodge)." */

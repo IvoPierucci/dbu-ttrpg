@@ -19,5 +19,6 @@ text: >
 # (1) "Your maximum number of Minions": how many you may possess in a Combat Encounter - and so outside of one (maneuvers.mjs
 # minionCaps).
 minions.combat += 2;
-# Not built: (2), (3), (4) are a Possessing Character's - the Possess Maneuver (its text
-# waited on) and the Overtaken Awakening (Awakenings are not built) are not in this system yet.
+# (3) Winning both of the Possess Maneuver's Clashes at a Minion not Special: said that it becomes yours (chat.mjs settlePossessHold).
+allow tuffleParasite.minion;
+# (2) +1(T) on a Cognitive Clash at one possessed before, (4) the Awakening taken off for a Minion: the table's.

@@ -16,12 +16,13 @@ text: >
 
 ---
 
-# (1) The Liquid Form is the Liquid State it puts you in. The Possess Maneuver is not in this system yet - its text, and
-# (2) with it, are waited on.
+# (1) The Liquid Form is the Liquid State it puts you in: the Internal Attack and the Possess Maneuvers in it. (2) Whom it may target -
+# willing, or larger and below Bruised or Damaged by you this Round: the table's.
 [passive]
 allow maneuver.liquid-form;
 if (inState("liquid")) {
     allow maneuver.internal-attack;
+    allow maneuver.possess;
 }
 # (4) The Revenge Points an Opponent's attack just gave you (Energy of Revenge's), 3(bT) of Ki each (chat.mjs
 # applyAttackDamage).

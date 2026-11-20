@@ -548,6 +548,13 @@ const TABLE = [
   // Fusion Methods & Modifiers (traits/other/fusion-method/, fusion-modifier/).
   { key: "stress.autoSucceed", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Every Stress Test passed, whatever it rolls (Maximum Metamorese (3); chat.mjs postTransformation)." },
+  // The Possess Maneuver's (chat.mjs settlePossessing, settlePossessHold).
+  { key: "roomy.possessHold", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "The Possess Maneuver's second Clash at you never lost (Roomy Biology (2))." },
+  { key: "mutualism.noControl", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Winning the Possess Maneuver: whether to take control of them, asked (Mutualism (6))." },
+  { key: "tuffleParasite.minion", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Winning the Possess Maneuver at a Minion not Special: it becomes yours - said (Tuffle Parasite (3))." },
   { key: "legend.narrativeDouble", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Legend Realized's Life and Ki Points doubled, asked as it is applied, once a Combat Encounter (Narrative Transformation (2))." },
   { key: "stress.lifeForTwo", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],

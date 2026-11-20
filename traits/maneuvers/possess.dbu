@@ -1,0 +1,39 @@
+id: possess
+name: Possess
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+# Folded, because `coerce` splits a header value on commas and this line has one in it.
+exploitable: >
+  If you fail the initial Clash, this triggers the Exploit Maneuver from the target.
+exploitOnLoss: true
+# The Awakening it gives, by its file's id - the target's, as a Level 2 Temporary Awakening (chat.mjs possessCharacter).
+givesAwakening: overtaken
+source: Core Rule
+description: >
+  A Clash (Strike vs Strike/Dodge) at a Character in your Melee Range, then one (Impulsive): won, you leave the Combat Encounter, they gain
+  the Overtaken Awakening with you as the Possessing Character, and you control them; lost, your Opponent is Guard Down this turn.
+text: >
+  Possess Maneuver [1/Round]: You invade your target's body, taking them over from within.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –Minions: Non-Minion
+  –KP Cost: N/A
+  –Exploitable: If you fail the initial Clash, this triggers the Exploit Maneuver from the target.
+  –Effect: Target a Character within your Melee Range. Make a Clash (Strike vs Strike/Dodge) against them. If you win, make a second Clash (Impulsive) against that Character. If you lose this Clash, your Opponent suffers from the Guard Down Combat Condition until the end of the current turn. If you win, your Character is removed from the Combat Encounter. Give the target of this Maneuver the Overtaken Awakening as a Level 2 Temporary Awakening and then gain control of that Character as long as they still possess the Overtaken Awakening with your Character as the Possessing Character.
+
+---
+
+# A Special Maneuver: nobody's until an effect gives it (Parasitic Biology and Genes of a Parasite in the Liquid State, the Ball Form).
+#
+# Asked before anything is paid (use-maneuver.mjs): not a Minion yourself, a Character targeted within your Melee Range. Then (chat.mjs
+# postPossessClash, settlePossessing, settlePossessHold): the Clash, Strike against their Strike or Dodge - lost, their Exploit offered
+# on its card (`exploitOnLoss`); won, the Clash (Impulsive). That one lost: "your Opponent suffers from the Guard Down Combat Condition
+# until the end of the current turn" - as written, the one targeted. Won, by the GM (possessCharacter): you out of the Combat Encounter
+# (Combatant gone, token hidden), the target the Overtaken Awakening as a Level 2 Temporary Awakening naming you its Possessing
+# Character, and your players their owners while they hold it - given back as it is lost (releasePossession), you back in the
+# Combat Encounter, your token shown (its Square the table's).

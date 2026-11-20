@@ -9,7 +9,7 @@ tier: 1+
 maxStacks: 1
 aspects: 
 bonuses: 
-# The Possessing Character, chosen on its row (only through the Possession Maneuver - not built yet: the table's). "The Attribute
+# The Possessing Character, named by the Possess Maneuver as it gives it (or chosen on its row). "The Attribute
 # Modifier Bonus of this Transformation is +2 in the three Attributes with the highest Attribute Scores among the Possessing
 # Character's Attributes" (transformations.mjs bonusesOf).
 ownerChoice: true

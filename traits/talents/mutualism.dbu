@@ -18,5 +18,9 @@ text: >
 
 ---
 
-# Not built: every effect is a Possessing Character's - the Possess Maneuver (its text waited on) and the Overtaken Awakening
-# (Awakenings are not built) are not in this system yet.
+# (6) Winning both of the Possess Maneuver's Clashes: whether to take control, asked (chat.mjs settlePossessHold).
+[passive]
+allow mutualism.noControl;
+
+# (1)-(5), (7) Symbiosis - its Host Ally's Combat Rolls and Surgency, Overtaken (9) Triggered, a Maneuver from the Host's Square, the
+# Awakening taken off, Life or Ki at the Round's start: the table's.
