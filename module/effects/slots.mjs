@@ -615,6 +615,17 @@ const TABLE = [
     doc: "Divine Summoning, once an Encounter: each Minion moved by it, the Power Up out of sequence (True God of Many (6))." },
   { key: "freezeAttack.lend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Freeze Attack on an Ally, once an Encounter: your Damage Attribute on their attacks in that Frozen Turn (True God of Time (7))." },
+  // Pure Form's Traits.
+  { key: "size.soakPunchAsMedium", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Smaller than Medium: Medium for your Soak Value's Size and for Punching Down (Erratic Majin (4))." },
+  { key: "initiative.chaosNudge", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Initiative rerolled after this Round's Chaos Die: its Dice Score up or down by half that die (rounded up)(bT), asked (Directed Chaos (3))." },
+  { key: "chaos.keepOnEvolved", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Entering an Evolved Stage of Pure Form: Erratic Majin (1) ignored (Controlled Chaos (4))." },
+  { key: "chaos.halveDamage", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Damage from an Attacking Maneuver: a stack of Channeled Chaos spent to halve it, asked in Take Damage (Pure Chaos (5))." },
+  { key: "surge.healingReroll", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "A Healing Surge rerolled after seeing it, once a Round, asked (Chaotic Entity (2))." },
   // Oozaru's Traits.
   { key: "battleBorn.woundOnly", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Every stack of Battle Born gained put on the Wound Rolls, not asked (Furious Beast (4)) - not with battleBorn.free." },

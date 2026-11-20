@@ -1917,3 +1917,19 @@ export async function takeHeartbeat(actor, value) {
   if (!item) return;
   return heartbeatEnter(actor, item, grade ? Number(grade) : undefined);
 }
+
+/**
+ * A Condition gained that a Trait in use says to leave on - `leavesOnCondition: absorption-awakening` (Erratic Majin (2)'s "If you gain a stack of
+ * Absorption, leave this Transformation") - left, said; not where a Trait in use keeps it (`keepsOnCondition:` - Controlled Chaos (2)).
+ */
+export async function leaveOnCondition(actor, key) {
+  const items = Array.from(actor?.items ?? []);
+  const said = each => getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  const inUseTraits = items.filter(each => (each.type === "racial") && each.system?.transformation && (traitStanding(each, items) === "in"));
+  if (inUseTraits.some(each => String(said(each)?.keepsOnCondition ?? "").split(",").map(part => part.trim()).includes(key))) return;
+  const leaving = [...new Set(inUseTraits.filter(each => String(said(each)?.leavesOnCondition ?? "").split(",").map(part => part.trim()).includes(key))
+    .map(each => each.system.transformation))].filter(id => items.find(each => each.id === id)?.system?.active);
+  if (!leaving.length) return;
+  await leaveTransformations(actor, leaving);
+  ui.notifications.info(`${actor.name} leaves ${leaving.map(id => items.find(each => each.id === id)?.name).join(", ")}.`);
+}

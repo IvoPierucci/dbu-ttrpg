@@ -16,4 +16,6 @@ text: >
 
 ---
 
-# (2) The Ki Surge and the Chaos Die: the table's.
+# (2) Once an Encounter: a Ki Surge, then the Chaos Die - an Instant of its own (maneuvers/).
+[passive, effect 2]
+allow maneuver.legendary-chaos-surge;

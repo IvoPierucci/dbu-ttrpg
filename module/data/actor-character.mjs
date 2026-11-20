@@ -2612,7 +2612,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // Goblin (1): "while your Size Category is smaller than Large, you may use the Large Size Category to calculate your Soak Value
       // Bonus/Penalty" - where it is the better.
       soakModifier: (((this.effects?.slots?.["goblin.soakAsLarge"] === true) && (sizeKeys.indexOf(sizeKey) < sizeKeys.indexOf("large")))
-        ? Math.max(size.soakPerTier, DBUCharacterData.SIZES.large.soakPerTier) : size.soakPerTier) * this.tierOfPower,
+        ? Math.max(size.soakPerTier, DBUCharacterData.SIZES.large.soakPerTier)
+        // Erratic Majin (4): "for the sake of calculating your Soak Value and for the effects of Punching Down, your base Size Category is
+        // considered to be Medium".
+        : (((this.effects?.slots?.["size.soakPunchAsMedium"] === true) && (sizeKeys.indexOf(sizeKey) < sizeKeys.indexOf("medium")))
+          ? DBUCharacterData.SIZES.medium.soakPerTier : size.soakPerTier)) * this.tierOfPower,
       speedModifier: size.speed
     };
 

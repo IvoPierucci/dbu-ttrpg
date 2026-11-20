@@ -660,6 +660,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "The Raging and/or the Feral State till the end of your turn - which, asked (Monkey Mastery (4))."
   },
+  rerollInitiative: {
+    args: [0, 0],
+    doc: "Your Initiative rerolled for this Combat Round - Directed Chaos (3)'s nudge asked (Erratic Majin (6))."
+  },
   freeSurge: {
     args: [0, 0],
     doc: "A Surge, its kind asked, counting toward no Surge Maneuver's limit (Class Up's Elite (3))."

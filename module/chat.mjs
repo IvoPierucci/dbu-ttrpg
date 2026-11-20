@@ -2010,6 +2010,8 @@ export async function absorbCharacter(actor, target) {
   await setCondition(actor, "absorption-awakening", (Number(actor.system.conditions?.["absorption-awakening"]) || 0) + 1);
   // The Absorption Awakening itself, made where it is not had yet (transformations.mjs).
   await (await import("./transformations.mjs")).ensureConditionAwakening(actor, "absorption-awakening");
+  // Erratic Majin (2): "If you gain a stack of Absorption, leave this Transformation" (transformations.mjs leaveOnCondition).
+  await (await import("./transformations.mjs")).leaveOnCondition(actor, "absorption-awakening");
   await removeFromEncounter(target);
   // Assimilation (4): the Absorbed's Top Layer, asked.
   await (await import("./assimilation.mjs")).assimilateApparel(actor, target);
@@ -10695,7 +10697,11 @@ function dealDamageChoices(target, own) {
   const unique = list => [...new Map(list.map(entry => [entry.blockId, entry])).values()];
   // An Adversary's Narrative Stamina, against a hit that costs Life Points: how much of it to spend is theirs to choose.
   const stamina = ((Number(own?.damage) || 0) > 0) ? staminaLeft(target) : 0;
-  return { before, taken: unique(taken), none: unique(none), stamina, any: Boolean(before.length || taken.length || none.length || stamina) };
+  // Pure Chaos (5): "If you take Damage from an Attacking Maneuver, you may spend a stack of Channeled Chaos to halve the amount of Damage".
+  const chaosHalf = ((Number(own?.damage) || 0) > 0) && (target.system?.effects?.slots?.["chaos.halveDamage"] === true)
+    && ((Number(target.system?.resources?.channeledchaos?.stacks) || 0) > 0);
+  return { before, taken: unique(taken), none: unique(none), stamina, chaosHalf,
+    any: Boolean(before.length || taken.length || none.length || stamina) || chaosHalf };
 }
 
 /**
@@ -10734,7 +10740,8 @@ async function dealDamageWindow(message, target, attack) {
     const typed = Math.floor(Number(element.querySelector('input[name="stamina"]')?.value) || 0);
     return Math.max(0, Math.min(staminaMost, typed));
   };
-  const body = `${staminaSection}${choices.before.length ? rollSection("Before the Damage", choices.before.map(entry => row(entry, "before")).join("")) : ""}${
+  const body = `${staminaSection}${choices.chaosHalf ? rollSection("Channeled Chaos", `<label class="dbu-respond-option"><input type="checkbox" name="chaoshalf"/>
+      <span class="dbu-respond-name">Pure Chaos</span><span class="dbu-respond-source">Half the Damage (${Math.floor((Number(own.damage) || 0) / 2)}) - a stack of Channeled Chaos</span></label>`) : ""}${choices.before.length ? rollSection("Before the Damage", choices.before.map(entry => row(entry, "before")).join("")) : ""}${
     choices.taken.length ? `<div data-taken>${rollSection("On taking Damage", choices.taken.map(entry => row(entry, "taken")).join(""))}</div>` : ""}${
     choices.none.length ? `<div data-none>${rollSection("On taking no Damage", choices.none.map(entry => row(entry, "none")).join(""))}</div>` : ""}`;
   const top = `<div class="dbu-roll-resources"><span>Life <b>${life}</b> / ${max}</span><span>Soak <b>${own.soak ?? target.system.soakValue ?? 0}</b></span>
@@ -10798,6 +10805,7 @@ async function dealDamageWindow(message, target, attack) {
     buttons: [
       { action: "confirm", label: "Take Damage", default: true, callback: (event, button, dialog) => ({
         stamina: staminaIn(dialog.element),
+        chaosHalf: Boolean(dialog.element.querySelector('input[name="chaoshalf"]:checked')),
         before: [...dialog.element.querySelectorAll('input[name="before"]:checked')].map(input => input.value),
         after: [...dialog.element.querySelectorAll('input[name="taken"]:checked, input[name="none"]:checked')].map(input => input.value) }) },
       { action: "cancel", label: "Close" }
@@ -10807,14 +10815,18 @@ async function dealDamageWindow(message, target, attack) {
   if (!chosen || (typeof chosen !== "object")) return;
   // Before the Damage first: spent, and the Damage nothing.
   for (const blockId of chosen.before) await spendTriggeredEffect(target, blockId);
+  // Pure Chaos (5): half of it, a stack of Channeled Chaos spent.
   const damageOverride = chosen.before.length ? 0 : null;
+  const chaosHalved = !chosen.before.length && chosen.chaosHalf;
+  if (chaosHalved) await setResource(target, "channeledchaos", (Number(target.system.resources?.channeledchaos?.stacks) || 0) - 1);
+  const chaosOverride = chaosHalved ? Math.floor((Number(own.damage) || 0) / 2) : damageOverride;
   if (chosen.after.length) {
     await target.update({ "system.armedTalents": [...new Set([...(target.system.armedTalents ?? []), ...chosen.after])] });
   }
   // Narrative Stamina spent on it: gone, and that many Life Points fewer lost - nothing of it where the Damage was cancelled.
   const absorbed = chosen.before.length ? 0 : Math.min(Number(chosen.stamina) || 0, staminaLeft(target));
   if (absorbed) await target.update({ "system.narrativeStamina.value": staminaLeft(target) - absorbed });
-  return dealAttackDamage(message, target, attack, { damageOverride, absorbed,
+  return dealAttackDamage(message, target, attack, { damageOverride: chaosOverride, absorbed,
     answered: [...DAMAGE_MOMENTS.taken, ...DAMAGE_MOMENTS.none, "light-damage"] });
 }
 
@@ -35897,7 +35909,9 @@ async function rollAttackWoundWork(message, attack) {
     // Punching Down: "If you hit a Character with an Attacking Maneuver that is 2+ Size Categories smaller than you,
     // increase the amount of Damage they receive by 1d6(T)" - Damage there already is (the user's ruling).
     // Giant Gene (3): "While your Size Category is Enormous, treat your Size Category as if it was Gigantic for calculating Punching Down."
-    const gap = sizeDifference(attacker, target)
+    // Erratic Majin (4): smaller than Medium, Medium for Punching Down.
+    const gap = sizeDifference(attacker, target) + (((attacker.system?.effects?.slots?.["size.soakPunchAsMedium"] === true)
+      && ((Number(attacker.system.size?.steps) || 0) < 0)) ? -(Number(attacker.system.size?.steps) || 0) : 0)
       + (((attacker.system?.effects?.slots?.["giantGene.size"] === true) && (attacker.system.size?.key === "enormous")) ? 1 : 0);
     // Troll (3): "You may apply Punching Down if a target is only 1 Size Category smaller than you."
     const punchingRoll = ((dealt > 0) && (gap >= ((attacker.system?.effects?.slots?.["troll.punchDown"] === true) ? 1 : 2)) && !own.noPunchingDown)
@@ -40528,8 +40542,10 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
     }
     // Triggered/Transform: what answers entering one through the Transformation Maneuver - its Burst Limit among them.
     if (item) {
+      // Whether it was an Evolved Stage - Controlled Chaos (4)'s.
+      const transformContext = { evolvedEntered: T.kindOf(T.fileOf(item)) === "evolved" };
       await offerTriggers(actor, "transform");
-      await (await import("./effects/moments-runtime.mjs")).fireMoment(actor, "transform");
+      await (await import("./effects/moments-runtime.mjs")).fireMoment(actor, "transform", transformContext);
     }
     return card;
   };
@@ -40733,8 +40749,16 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     const tierDie = extraDie ? `${Math.max(1, Number(actor.system.tierOfPower) || 1)}d${extraDie}` : "";
     const formula = [`${dice}d10`, ...extra.map(d => d.formula), ...(tierDie ? [tierDie] : []), "@surgency",
       ...(regen ? ["@regen[Health Thresholds]"] : []), ...(adaptedLife ? ["@adapted[Genetic Focus: Namekians]"] : [])].join(" + ");
-    const roll = new Roll(formula, { surgency, regen, adapted: adaptedLife });
+    let roll = new Roll(formula, { surgency, regen, adapted: adaptedLife });
     await roll.evaluate();
+    // Chaotic Entity (2): "After seeing the result, you may reroll your Healing Surge" - once a Round, asked.
+    if ((actor.system.effects?.slots?.["surge.healingReroll"] === true) && (actor.getFlag?.(SCOPE, "healingRerollRound") !== roundKey())
+      && ((await askPlayerChoice(actor, `${actor.name}: Healing Surge - ${roll.total}`, [{ value: "keep", label: `Keep ${roll.total}` },
+        { value: "reroll", label: "Reroll it (Chaotic Entity, once a Round)" }])) === "reroll")) {
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.healingRerollRound`]: roundKey() });
+      roll = new Roll(formula, { surgency, regen, adapted: adaptedLife });
+      await roll.evaluate();
+    }
 
     // "Double the amount of Life Points you regain from this Healing Surge" - Majin Regeneration's at Defeated.
     const multiplier = Math.max(1, Number(lifeMultiplier) || 1);
@@ -42569,4 +42593,27 @@ export async function ragingAndOrFeral(actor) {
 export async function offerTail(actor, profile = "powered") {
   return offerOutOfSequence(actor, { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "tail-attack", maneuverName: "Tail Attack",
     reason: `Rampaging Assault - the ${PROFILES[profile]?.label ?? profile} Profile`, grants: { profileChoices: [profile] } });
+}
+
+/**
+ * Erratic Majin (6): "Reroll your Initiative" - at the start of the Combat Round, for this Round (put back as it ends, as Precognition's is). Directed
+ * Chaos (3): "If you reroll your Initiative ... after rolling your Chaos Die ..., you may increase or reduce the Dice Score of your Initiative roll by
+ * x(bT), where x is equal to 1/2 (rounded up) of your result on that roll of the Chaos Die" - asked.
+ */
+export async function rerollInitiative(actor) {
+  const combat = game.combat;
+  const mine = (combat?.turns ?? []).find(combatant => combatant.actor?.uuid === actor?.uuid);
+  if (!combat?.started || !mine) return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  const roll = await mine.getInitiativeRoll().evaluate();
+  let total = Number(roll.total) || 0;
+  const die = Number(actor.system.conditions?.["chaos-die"]) || 0;
+  if (die && (actor.system.effects?.slots?.["initiative.chaosNudge"] === true)) {
+    const x = Math.ceil(die / 2) * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+    const how = await askPlayerChoice(actor, `${actor.name}: Initiative ${total}`, [{ value: "up", label: `${total + x} (Directed Chaos)` },
+      { value: "down", label: `${total - x} (Directed Chaos)` }, { value: "keep", label: `Keep ${total}` }]);
+    if (how === "up") total += x;
+    if (how === "down") total -= x;
+  }
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Initiative rerolled (Erratic Majin)${(total !== roll.total) ? ` - ${total} (Directed Chaos)` : ""}` });
+  return requestForesee(combat, mine.id, total);
 }

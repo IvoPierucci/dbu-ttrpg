@@ -528,7 +528,7 @@ const PREDICATE_NAMES = new Set([
 ]);
 
 /** The ones written without brackets, because they take nothing. */
-const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver", "paidWithDivine", "favoredAttack", "kiRegainHalved", "magicalUniqueThisRound",
+const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver", "paidWithDivine", "favoredAttack", "kiRegainHalved", "evolvedEntered", "magicalUniqueThisRound",
   // Bonded to an Ally - Power of the Weak (4)'s (Battle Yardrat's "While you are not Bonded").
   "bonded",
   "intendedForYou", "wieldingWeapon", "adventuring",

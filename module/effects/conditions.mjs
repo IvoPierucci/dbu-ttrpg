@@ -347,6 +347,8 @@ const PREDICATES = {
   paidWithDivine: scope => Boolean(scope.context?.divinePaid),
   favoredAttack: scope => Boolean(scope.context?.favoredProfile),
   /** Limitless (3)'s halving, not ignored by Even Further Beyond (2) - Combat Recovery's Ki. */
+  /** The Transformation just entered is an Evolved Stage - the transform Moment's (Controlled Chaos (4)). */
+  evolvedEntered: scope => Boolean(scope.context?.evolvedEntered),
   kiRegainHalved: scope => (scope.data?.effects?.slots?.["kiRegain.halved"] === true) && (scope.data?.effects?.slots?.["kiRegain.kept"] !== true),
   /** A Magical Unique Ability used this Combat Round (True God of Magic (5)). */
   magicalUniqueThisRound: scope => Boolean(globalThis.game?.combat?.started)

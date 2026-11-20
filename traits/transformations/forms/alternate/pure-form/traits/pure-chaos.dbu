@@ -31,5 +31,11 @@ tenacity.mod += 1(T);
 insight.mod += 1(T);
 magic.mod += 1(T);
 
-# (3) In the Superior State: an Energy Charge on every Attacking Maneuver - the table's. (4) The Chaos Die doubled: read by its mark
-# (chaos-die). (5) Channeled Chaos for half the Damage: the table's.
+# (3) In the Superior State: an Energy Charge on every Attacking Maneuver.
+[automatic/declare-maneuver, effect 3]
+requires attackingManeuver && inState("superior");
+attack.energyCharges += 1;
+
+# (4) The Chaos Die doubled: read by its mark (chaos-die). (5) Channeled Chaos for half the Damage - asked in Take Damage (chat.mjs).
+[passive, effect 5]
+allow chaos.halveDamage;

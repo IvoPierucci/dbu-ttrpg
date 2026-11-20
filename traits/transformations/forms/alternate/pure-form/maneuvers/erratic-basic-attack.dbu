@@ -1,0 +1,23 @@
+id: erratic-basic-attack
+name: Erratic Majin: Basic Attack
+type: instant
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+# Erratic Majin (5)'s, open while it applies.
+special: true
+source: Core Rule
+description: >
+  You may use the Basic Attack Maneuver as an Instant Maneuver, instead of a Standard Maneuver, but you must still spend 1 Action to use it.
+text: >
+  (5)-[Passive]: You may use the Basic Attack Maneuver as an Instant Maneuver, instead of a Standard Maneuver, but you must still spend 1 Action to use the Basic Attack Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: 1 Action
+  –KP Cost: N/A (the Basic Attack's)
+  –Effect: Use the Basic Attack Maneuver.
+
+---
+
+[on used]
+maneuverOutOfSequence(basic-attack);

@@ -4,6 +4,11 @@ order: 1
 slot: trait
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 3
+# (2) "If you gain a stack of Absorption, leave this Transformation" (transformations.mjs leaveOnCondition).
+leavesOnCondition: absorption-awakening
+# (3) "select a Majin Secondary Racial Trait. You gain access to that Racial Trait while you are in this Transformation".
+grantsRacialOf: majin
+grantsRacialImportance: secondary
 description: >
   Your irrational and ever-changing nature makes it impossible to gauge what you will do at any given time.
 text: >
@@ -24,16 +29,26 @@ text: >
 
 ---
 
-# (1) Entering it: every stack of Absorption lost (its Characters let go - the table's to place).
+# (1) Entering it: every stack of Absorption lost (its Characters let go - where they stand, the table's) - not entering an Evolved Stage of it
+# with Controlled Chaos (4).
 [automatic/transform, effect 1]
+requires !evolvedEntered || !flagged("chaos.keepOnEvolved");
 remove("absorption-awakening");
 
-# (2) Leaving it on gaining a stack of Absorption, (3) a Majin Secondary Racial Trait in it, (5) the Basic Attack as an Instant, (6) the
-# Initiative rerolled: the table's.
+# (2) Its header's `leavesOnCondition`. (3) Its header's `grantsRacialOf`: had while it applies.
 
-# (4) Small - Medium for the Soak Value and Punching Down (the table's).
+# (5) The Basic Attack as an Instant, still for 1 Action - its own Maneuver (maneuvers/).
+[passive, effect 5]
+allow maneuver.erratic-basic-attack;
+
+# (6) At the start of the Combat Round: your Initiative rerolled (chat.mjs rerollInitiative).
+[triggered/start-of-round, effect 6]
+rerollInitiative();
+
+# (4) Small - Medium for the Soak Value and Punching Down.
 [passive, effect 4]
 allow size.base.small;
+allow size.soakPunchAsMedium;
 
 # (7) The Chaos Die at the start of each Combat Round - its result till the Round ends (its mark, chaos-die).
 [passive, effect 7]

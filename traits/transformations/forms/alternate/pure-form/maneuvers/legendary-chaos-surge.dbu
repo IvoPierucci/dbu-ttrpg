@@ -1,0 +1,25 @@
+id: legendary-chaos-surge
+name: Legendary Chaos
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# Legendary Chaos (2)'s, open while it applies.
+special: true
+source: Core Rule
+description: >
+  As an Instant Maneuver, use a Ki Surge. Then, roll your Chaos Die.
+text: >
+  (2)-[1/Encounter]: As an Instant Maneuver, use a Ki Surge. Then, roll your Chaos Die.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: A Ki Surge, then the Chaos Die.
+
+---
+
+[on used]
+surge(ki);
+chaosDie();

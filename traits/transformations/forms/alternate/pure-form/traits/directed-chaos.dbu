@@ -25,7 +25,9 @@ if (inState("superior")) {
     soakValue += 1(T);
 }
 
-# (3) The Initiative's Dice Score moved by half the Chaos Die after its reroll: the table's.
+# (3) The Initiative rerolled after the Chaos Die: its Dice Score up or down by half that die (rounded up)(bT), asked (chat.mjs rerollInitiative).
+[passive, effect 3]
+allow initiative.chaosNudge;
 
 # (4) A 6 on the Chaos Die, once a Round: the Power Up Maneuver out of sequence.
 [triggered/chaos-die, 1/round, outOfSequence, effect 4]
