@@ -7253,7 +7253,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stressBonus: Number(this.actor.system.stressBonus) || 0,
       sections,
       rows,
-      traits,
+      // By type of the Transformation each belongs to (the user's): an Evolved Stage's among the Forms.
+      traitGroups: [["awakening", "Awakenings"], ["enhancement", "Enhancements"], ["form", "Forms"]].map(([key, label]) => ({ label,
+        entries: traits.filter(entry => (kind => ((kind === "evolved") ? "form" : (kind || "form")))(kindOf(fileOf(this.actor.items.get(entry.item.system.transformation)))) === key) }))
+        .filter(group => group.entries.length),
       constant,
       traitCount: traits.length + constant.length
     };

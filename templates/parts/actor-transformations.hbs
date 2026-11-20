@@ -123,10 +123,11 @@
       Transformation Traits
       <span class="trait-count">{{tf.traitCount}}</span>
     </summary>
-    {{#if tf.traits.length}}
-    <div class="dbu-tf-dim dbu-tf-subhead">From what is in use</div>
+    {{! Those of what is in use, by type (the user's): Awakenings, Enhancements, Forms - an Evolved Stage's among the Forms. }}
+    {{#each tf.traitGroups as |group|}}
+    <div class="dbu-tf-dim dbu-tf-subhead">{{group.label}}</div>
     <ul class="trait-list">
-      {{#each tf.traits as |entry|}}
+      {{#each group.entries as |entry|}}
       <li class="trait{{#if entry.open}} trait-open{{/if}}" data-item-id="{{entry.item.id}}">
         <div class="trait-head trait-fold" data-action="toggleTrait">
           <span class="maneuver-mark" aria-hidden="true"></span>
@@ -148,7 +149,7 @@
       </li>
       {{/each}}
     </ul>
-    {{/if}}
+    {{/each}}
     {{#if tf.constant.length}}
     <div class="dbu-tf-dim dbu-tf-subhead">Outside their Transformation: only their Constant effects</div>
     <ul class="trait-list">
