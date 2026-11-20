@@ -1,0 +1,24 @@
+id: divine-peace
+name: Divine Peace
+type: counter
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
+godManeuver: true
+# Taken in Respond (chat.mjs playDivinePeace): its Divine Ki the attack's own Ki and Ki Wager.
+divinePeace: true
+source: Core Rule
+description: >
+  Your resolve to solve conflicts without violence is, by itself, enough to stop attacks from harming you altogether.
+text: >
+  Divine Peace [1/Round]: Your resolve to solve conflicts without violence is, by itself, enough to stop attacks from harming you altogether.
+  –Maneuver Type: Counter
+  –Action Cost: 2 Counter Actions
+  –Minions: N/A
+  –DKP Cost: Varies
+  –Effect: If you are in the Mindful State, you may use this Maneuver in response to being targeted by an Attacking Maneuver (that is not an Ultimate Signature Technique). Spend Divine Ki Points equal to the combined Ki Point Cost and Ki Wager for that Attacking Maneuver. If you do, that Attacking Maneuver is cancelled (the attacking Character does not regain any Actions or Ki Points). For every Energy Charge applied to that Attacking Maneuver, treat their Ki Point Cost as if it was 2(T) (using the Tier of Power of the attacking Character) higher.
+
+---

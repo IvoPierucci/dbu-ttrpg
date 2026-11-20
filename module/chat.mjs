@@ -8791,7 +8791,8 @@ function godListed(actor, maneuver) {
 }
 
 function counterManeuvers() {
-  return allManeuvers().filter(maneuver => maneuver.type === "counter");
+  // Not one used only once its attack's Damage is taken - Divine Healing's, offered then (`afterDamage`).
+  return allManeuvers().filter(maneuver => (maneuver.type === "counter") && !maneuver.afterDamage);
 }
 
 /**
@@ -11546,6 +11547,8 @@ async function playCounter(message, actor, answer, attack, preset = null) {
   if (maneuver.duel) return enterDuel(message, actor);
   if (maneuver.divineCounter) return playDivineCounter(message, actor, maneuver);
   if (maneuver.divineFlex) return playDivineFlex(message, actor, maneuver);
+  if (maneuver.divinePeace) return playDivinePeace(message, actor, maneuver);
+  if (maneuver.divineMuscle) return playDivineMuscle(message, actor, maneuver);
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
   await recordManeuverType(actor, "counter");
@@ -30019,6 +30022,15 @@ async function takeOutOfSequence(message, actor, offer) {
   }
   // An offer that costs a Counter Action to take - Environment Shift's Movement.
   if (offer.counterCost && !await spendActions(actor, offer.counterCost, "counter")) return;
+  // A God Maneuver taken through an offer - Divine Judgement's Basic Attack: its Divine Ki Points and its use, as it is taken.
+  if (offer.grants?.godCost) {
+    const god = getManeuver(offer.grants.godCost.id);
+    if (god && (maneuverUsesLeft(actor, god) <= 0)) return ui.notifications.warn(`${god.name} is once per Combat Round.`);
+    if (!(actor.system.divineKi?.active)) return ui.notifications.warn(`${actor.name} is not in the God Ki State.`);
+    const cost = Number(offer.grants.godCost.cost) || 0;
+    if (cost && !await spendManeuverCost(actor, { ...(god ?? {}), id: god?.id ?? offer.grants.godCost.id, godManeuver: true }, cost)) return;
+    if (god) await recordManeuverUse(actor, god);
+  }
   // Inherited Freedom's price as well: "If you do, you cannot use a Counter Maneuver until the start of your next turn."
   if (offer.noCounterAfter) await actor.setFlag(SCOPE, "noCounterUntilTurn", true);
   // Energy Gathering's Energy Charge, for the Genki Dramatic Finisher.
@@ -30349,6 +30361,8 @@ async function takeOutOfSequence(message, actor, offer) {
     if (granted?.rangerRetreat) declared = { ...declared, rangerRetreat: granted.rangerRetreat };
     // Hocus Pocus (6)'s 7(T) on its Wound Roll.
     if (granted?.woundExtra?.length) declared = { ...declared, woundExtra: [...(declared.woundExtra ?? []), ...granted.woundExtra] };
+    // Your Damage Attribute an additional time - True God of War (5)'s Divine Weapon.
+    if (granted?.damageAttributeAgain) declared = { ...declared, damageAttributeAgain: Number(granted.damageAttributeAgain) || 0 };
     // Greed of the Hera's and Mage's AoE and Magnitudes, out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askBoughtAreas(actor, maneuver, declared,
       { noArea: Boolean(granted?.noArea) });
@@ -30647,7 +30661,7 @@ async function takeOutOfSequence(message, actor, offer) {
  * other's result in advance.
  */
 export async function postAttack(actor, target, maneuver,
-                                 { profile, foundation, kiWager = 0, wagerFromLife = false, wagerFromDivine = false,
+                                 { profile, foundation, kiWager = 0, wagerFromLife = false, wagerFromDivine = false, damageAttributeAgain = 0,
                                    charges = 0, damageAttribute = null, autoHit = false,
                                    advantages = [], squaresCharged = 0, thrown = null,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
@@ -31236,6 +31250,8 @@ export async function postAttack(actor, target, maneuver,
           // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it
           // is a Ki Wager either way - and only the card's note says the difference.
           wagerFromLife: Boolean(wagerFromLife && kiWager),
+          // The Damage Attribute applied so many more times, for this attack alone (profileWoundParts).
+          ...((damageAttributeAgain && !reflecting) ? { damageAttributeAgain } : {}),
           // In Divine Ki Points - Cosmic Flow (4) reads it.
           ...((wagerFromDivine && kiWager) ? { wagerFromDivine: true } : {}),
           // What stands in for the Damage Attribute, where something other than the
@@ -32857,7 +32873,7 @@ async function settleAttack(message, attack) {
   // Exploit waits on it, and is cancelled by it.
   if (!attackIsReady(attack) || (attack.pending ?? []).length || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending
     || attack.punisherHold?.pending || attack.punished || attack.trapHold?.pending || attack.stealthHold?.pending
-    || attack.divineHold?.pending || attack.divineCancelled
+    || attack.divineHold?.pending || attack.divineCancelled || attack.peaceCancelled
     || attack.godBindHold?.pending || attack.godBindCancelled
     || attack.disarmingSwap?.pending || attack.disarmingSwapped) {
     return requestEdit(message, { type: "attack", attack });
@@ -33485,7 +33501,9 @@ async function resolveAttackWork(message, attack) {
       // Said on the card, since a defence that was never rolled needs a reason beside
       // it or it looks like it was simply forgotten.
       forced,
-      damageCategory: resolveDamageCategory(attack.damageCategory, shift - tough.step - adapt.step),
+      // True God of Power (5): Divine Muscle - "set the Damage Category of that Attacking Maneuver to Standard" for you.
+      damageCategory: defenceFor(attack, uuid)?.divineMuscle?.standard ? "standard"
+        : resolveDamageCategory(attack.damageCategory, shift - tough.step - adapt.step),
       // The steps the Category took here, kept so a defence made again can be put in place of this one.
       categoryShift: shift - tough.step - adapt.step,
       // Carried on the attack so the Wound Roll can apply it: the defender's client
@@ -34936,6 +34954,16 @@ function profileWoundParts(attacker, attack) {
     }
   }
 
+  // And for this attack alone (`damageAttributeAgain` - True God of War (5)'s Divine Weapon).
+  const again = Math.max(0, Number(attack.damageAttributeAgain) || 0);
+  if (again) {
+    const foundation = DBUCharacterData.FOUNDATIONS[attack.foundation];
+    const own = namedDamageAttribute(attacker, attack);
+    const modifier = (own ? (Number(own.value) || 0) : (attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0))
+      + (Number(attacker.system.effects?.slots?.[`damageAttribute.${attack.foundation}`]?.add) || 0);
+    if (modifier) parts.push({ label: `Damage Attribute again (${own ? own.label : (foundation?.label ?? "")})`, value: modifier * again });
+  }
+
   // Glass: "For every 2 Energy Charges applied to this Attacking Maneuver, increase its Wound Roll by 1(T)".
   if (profile?.perTwoCharges) {
     const steps = Math.floor((Number(attack.energyCharges) || 0) / 2);
@@ -35645,7 +35673,10 @@ async function rollAttackWoundWork(message, attack) {
     // adjusts what survives that.
     // Metallic Exoskeleton (2): the Direct Hit or the Guard - its Apparel Bonus "before any calculations", asked.
     const exoSoak = await exoskeletonSoak(target, own);
-    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0) + (Number(own.ironSoak) || 0) + exoSoak
+    // Divine Muscle: 1(T) a Super Stack; True God of Power (5), the Category Standard already - the Soak Value doubled.
+    const muscleSoak = (Number(defenceFor(attack, target.uuid)?.divineMuscle?.soak) || 0)
+      + (defenceFor(attack, target.uuid)?.divineMuscle?.doubleSoak ? (Number(target.system.soakValue) || 0) : 0);
+    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0) + (Number(own.ironSoak) || 0) + exoSoak + muscleSoak
       + (Number(own.adaptationSoak) || 0)
       // Refined Combat (1) against one Studied, and Defender's half Surgency for this attack.
       + refinedParts(target, attacker).reduce((sum, part) => sum + part.value, 0) + (Number(own.refinedSoak) || 0)
@@ -38944,6 +38975,10 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     && !own.shieldedBy && !own.weaponHit && !own.buddyHit) {
     await divineFlexBack(target, armsUser, flexed.name);
   }
+  // Divine Judgement, Divine Healing: hit and Damage taken from an Opponent - offered on the card.
+  if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && areOpponents(armsUser, target)) {
+    offerDomainAfterDamage(message, target, armsUser, damage);
+  }
   // Tornado Attack: hit, and dealt 0 Damage - the Basic Attack back, offered.
   if (own.hit && !isAbsoluteMiss(own) && (damage <= 0)) offerTornadoStrike(message, attack, target, "no Damage");
   if (attack.spiritSword && armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) {
@@ -41431,6 +41466,8 @@ function renderAttack(message, html) {
       ? "Divine Counter: cancelled - its Ki Points and Capacity are regained, its Action Cost is not."
       : attack.godBindCancelled
       ? "God Bind: cancelled - its Ki Points and Actions are lost."
+      : attack.peaceCancelled
+      ? "Divine Peace: cancelled - its Actions and Ki Points are not regained."
       : attack.disarmingSwapped
       ? "Disarming Demeanor: cancelled - its Ki Points are regained, another attack in its place."
       : attack.disarmingSwap?.pending
@@ -41446,6 +41483,7 @@ function renderAttack(message, html) {
       : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
   card.querySelector(".dbu-gm-targets")?.addEventListener("click", () => targetsWindow(message));
+  if (attack.peaceCancelled) return;
   if (attack.unitedFailed || attack.punished || attack.divineCancelled || attack.godBindCancelled
     || attack.disarmingSwapped || attack.icCancelled || attack.planetGone) return;
   disarmingSwapButtons(message, html, attack);
@@ -42034,4 +42072,201 @@ export async function basicStrikeNoRecovery(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   if (!await ownOutOfSequence(actor, "basic-attack")) return UNSPENT;
   if (game.combat?.started) await requestActorUpdate(actor, { [`flags.${SCOPE}.noRecoveryRound`]: `${game.combat.id}:${game.combat.round ?? 0}` });
+}
+
+/**
+ * Divine Peace (God of Peace), played from Respond: "If you are in the Mindful State, you may use this Maneuver in response to being targeted
+ * by an Attacking Maneuver (that is not an Ultimate Signature Technique). Spend Divine Ki Points equal to the combined Ki Point Cost and Ki
+ * Wager for that Attacking Maneuver. If you do, that Attacking Maneuver is cancelled (the attacking Character does not regain any Actions or
+ * Ki Points). For every Energy Charge applied to that Attacking Maneuver, treat their Ki Point Cost as if it was 2(T) ... higher" - what it
+ * took from its maker's Ki and Divine Ki (its Ki Wager among them), less True God of Peace (6)'s L(T).
+ */
+async function playDivinePeace(message, actor, maneuver) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || endedByDuel(attack)) return;
+  const why = whyNotSpecial(actor, maneuver);
+  if (why) return ui.notifications.warn(why);
+  if (!((Number(actor.system.states?.mindful) || 0) > 0)) return ui.notifications.warn(`${maneuver.name}: only in the Mindful State.`);
+  if (attack.technique?.ultimate || (attack.technique?.level === "ultimate")) return ui.notifications.warn(`${maneuver.name}: not against an Ultimate Signature Technique.`);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Round.`);
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  const paid = attack.paid ?? {};
+  const charges = (Number(attack.energyCharges) || 0) * 2 * Math.max(1, Number(attacker?.system?.tierOfPower) || 1);
+  const off = Number(actor.system.effects?.slots?.["divinePeace.costOff"]?.add) || 0;
+  const cost = Math.max(0, (Number(paid.ki) || 0) + (Number(paid.divine) || 0) + charges - off);
+  if (cost && !await spendManeuverCost(actor, maneuver, cost)) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 2, "counter")) {
+    if (cost) await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  return requestEdit(message, { type: "attack", attack: { ...fresh, peaceCancelled: true } });
+}
+
+/**
+ * Divine Muscle (God of Power), played from Respond: "If you are hit by an Attacking Maneuver, you may use this Counter Maneuver and increase
+ * your Soak Value by 1(T) for each Super Stack you possess (before any calculations). This Maneuver is treated as the Direct Hit option of
+ * Defend Maneuver for any effects and gains its effects." True God of Power (5), once an Encounter, asked: the Category Standard for you -
+ * where it is Standard already as declared, the Soak Value doubled.
+ */
+async function playDivineMuscle(message, actor, maneuver) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || endedByDuel(attack)) return;
+  const why = whyNotSpecial(actor, maneuver);
+  if (why) return ui.notifications.warn(why);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Round.`);
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const soak = (Number(actor.system.superStack?.stacks) || 0) * tier;
+  let standard = false;
+  let doubleSoak = false;
+  const encounter = game.combat?.id ?? "none";
+  if ((actor.system.effects?.slots?.["divineMuscle.standard"] === true) && (actor.getFlag?.(SCOPE, "divineMuscleEncounter") !== encounter)) {
+    const already = resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0) === "standard";
+    const take = await askPlayerChoice(actor, `${actor.name}: True God of Power`, [
+      { value: "yes", label: already ? "Your Soak Value doubled (once an Encounter)" : "The Damage Category Standard for you (once an Encounter)" },
+      { value: "no", label: "Not now" }]);
+    if (take === "yes") {
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.divineMuscleEncounter`]: encounter });
+      if (already) doubleSoak = true;
+      else standard = true;
+    }
+  }
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const others = (fresh.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
+  return settleAttack(message, {
+    ...fresh,
+    defences: [...others, { uuid: actor.uuid, defence: "directHit", wager: 0, foundation: "energy", parryWith: [],
+      divineMuscle: { name: maneuver.name, soak, standard, doubleSoak } }],
+    ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
+  });
+}
+
+/**
+ * Hit and Damage taken from an Opponent's attack - offered on its card, where the Maneuver is open to them in the God Ki State:
+ * Divine Judgement (God of Judgement): "Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but you must target the Character that hit
+ * you ... Increase the Wound Roll of this Attacking Maneuver by 1/2 of the Damage you received from that Attacking Maneuver. This additional
+ * Damage cannot exceed your Damage Attribute" - the higher of your Force and Magic Modifiers (my reading: the Foundation is chosen after);
+ * True God of Judgement (6) in the Injured Health Threshold, once an Encounter: free, an Energy Charge.
+ * Divine Healing (God of Survival): its own Counter Maneuver, out of sequence.
+ */
+function offerDomainAfterDamage(message, target, attacker, damage) {
+  const slots = target.system?.effects?.slots ?? {};
+  if (!target.system?.divineKi?.active) return;
+  const judgement = getManeuver("divine-judgement");
+  if ((slots["maneuver.divine-judgement"] === true) && judgement && (maneuverUsesLeft(target, judgement) > 0)) {
+    const tier = Math.max(1, Number(target.system.tierOfPower) || 1);
+    const cap = Math.max(0, Number(target.system.attributes?.force?.mod) || 0, Number(target.system.attributes?.magic?.mod) || 0);
+    const extra = Math.min(Math.floor(damage / 2), cap);
+    const encounter = game.combat?.id ?? "none";
+    const free = (slots["divineJudgement.injuredFree"] === true) && (target.system.threshold?.key === "injured")
+      && (target.getFlag?.(SCOPE, "divineJudgementFree") !== encounter);
+    requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: free ? "Divine Judgement - free, an Energy Charge (True God of Judgement)" : "Divine Judgement",
+      grants: { godCost: { id: "divine-judgement", cost: free ? 0 : 5 * tier }, ...(free ? { charges: 1, encounterFlag: "divineJudgementFree" } : {}),
+        ...(extra ? { woundExtra: [{ label: "Divine Judgement (half the Damage taken)", value: extra }] } : {}) } } });
+  }
+  const healing = getManeuver("divine-healing");
+  if ((slots["maneuver.divine-healing"] === true) && healing && (maneuverUsesLeft(target, healing) > 0)) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "divine-healing",
+      maneuverName: healing.name, reason: "Hit and Damage taken" } });
+  }
+}
+
+/**
+ * Divine Healing, used: "Regain 2d10(bT) Life Points, increasing the Dice Score by your Surgency. This effect is considered a use of Combat
+ * Recovery for all of your effects" - what answers Combat Recovery being used asked (Divine Role (4), True God of Peace (8)); Cosmic Flow (5)'s
+ * Divine Ki with it. True God of Survival (6) below the Injured Health Threshold, once an Encounter: its Divine Ki given back, the Life Points
+ * doubled.
+ */
+export async function divineHealing(actor, maneuver = null) {
+  if (!actor) return;
+  const slots = actor.system.effects?.slots ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const below = ["injured", "critical"].includes(actor.system.threshold?.key ?? "");
+  const survival = below && (slots["divineHealing.injuredFree"] === true) && (actor.getFlag?.(SCOPE, "divineHealingFree") !== encounter);
+  if (survival && maneuver) {
+    await refundManeuverCost(actor, maneuver);
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.divineHealingFree`]: encounter });
+  }
+  const base = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const roll = await new Roll(`${2 * base}d10 + ${Math.max(0, Number(actor.system.surgency) || 0)}`).evaluate();
+  const gain = roll.total * (survival ? 2 : 1);
+  const life = actor.system.life ?? {};
+  const surgency = Math.max(0, Number(actor.system.surgency) || 0);
+  const divine = (slots["cosmicFlow.recovery"] === true) ? ((slots["cosmicFlow.whole"] === true) ? surgency : Math.floor(surgency / 2)) : 0;
+  await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + gain),
+    ...(divine ? { "system.divineKi.value": Math.min(Number(actor.system.divineKi?.max) || 0, (Number(actor.system.divineKi?.value) || 0) + divine) } : {}) });
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
+    flavor: `Divine Healing - ${gain} Life Points${survival ? " (True God of Survival: doubled, no Divine Ki)" : ""}${divine ? `, ${divine} Divine Ki Points (Cosmic Flow)` : ""}` });
+  await answerFor(actor, "declare-maneuver", { maneuver: { id: "combat-recovery", name: "Combat Recovery" } });
+}
+
+/**
+ * Divine Wisdom (a Special Maneuver) and Divine Spell (a Unique Ability): "Use a ... that is a Standard Maneuver with an Action Cost of 1
+ * Action as an Out-of-Sequence Maneuver" - which, asked. Unspent where none is used.
+ */
+export async function domainOutOfSequence(actor, kind) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { definitionOf, useManeuver } = await import("./use-maneuver.mjs");
+  const offered = Array.from(actor?.items ?? []).filter(item => item.type === "maneuver").map(item => definitionOf(item))
+    .filter(each => each && (each.type === "standard") && ((Number(each.actionCost) || 0) === 1) && !each.actionCostOpen && !(each.actionCostMax > 1)
+      && ((kind === "unique") ? Boolean(each.unique) : (Boolean(each.special) && !each.unique)))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!offered.length) {
+    ui.notifications.warn(`${actor.name} has no ${(kind === "unique") ? "Unique Ability" : "Special Maneuver"} of 1 Action to use.`);
+    return UNSPENT;
+  }
+  const id = await askPlayerChoice(actor, `${actor.name}: out of sequence`, offered.map(each => ({ value: each.itemId ?? each.id, label: each.name })));
+  const picked = offered.find(each => (each.itemId ?? each.id) === id);
+  if (!picked) return UNSPENT;
+  return (await useManeuver(actor, picked, { outOfSequence: true })) ? undefined : UNSPENT;
+}
+
+/**
+ * Divine Weapon: "Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. This Attacking Maneuver must be an Armed Attack" - True God of
+ * War (5) your Damage Attribute an additional time. Divine Element: "This Attacking Maneuver must use your Favored Element as a Profile".
+ * Offered on a card of its own, taken there.
+ */
+export async function domainStrike(actor, kind) {
+  const { favoredElement, PROFILES } = await import("./maneuvers.mjs");
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (kind === "element") {
+    const elements = Object.keys(PROFILES).filter(key => favoredElement(actor, key));
+    if (!elements.length) {
+      ui.notifications.warn(`${actor.name} has no Favored Element.`);
+      return UNSPENT;
+    }
+    return offerOutOfSequence(actor, { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+      reason: "Divine Element - your Favored Element", grants: { profileChoices: elements } });
+  }
+  const twice = actor.system.effects?.slots?.["divineWeapon.damageTwice"] === true;
+  return offerOutOfSequence(actor, { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    reason: twice ? "Divine Weapon - an Armed Attack, your Damage Attribute twice (True God of War)" : "Divine Weapon - an Armed Attack",
+    grants: { armedOnly: true, ...(twice ? { damageAttributeAgain: 1 } : {}) } });
+}
+
+/**
+ * Freeze Attack (God of Time): "Target yourself or an Ally. That Character begins a Frozen Turn (see - Time Freeze) with 1 Action (instead of the
+ * 2 granted by Time Freeze). This Action must be spent on the Basic Attack Maneuver" - the Ally the one targeted, or yourself.
+ */
+export async function freezeAttack(actor, maneuver = null) {
+  const ally = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid) && areAllies(other, actor));
+  const who = ally ?? actor;
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>Freeze Attack: ${Handlebars.escapeExpression(who.name)} begins a Frozen Turn - 1 Action, for the Basic Attack Maneuver.</p>`,
+    flags: { [SCOPE]: { [FREEZE_FLAG]: { actorUuid: who.uuid, ended: false } } } });
+  await requestActorUpdate(who, { [`flags.${SCOPE}.frozenTurn`]: { left: 1, name: maneuver?.name ?? "Freeze Attack", messageId: card.id,
+    attacksAtStart: Number(who.system.attacksThisRound) || 0, limited: false, difficult: false, straining: false, pained: false } });
+  const { setCondition } = await import("./conditions.mjs");
+  for (const other of frozenOthers(who)) await setCondition(other, "frozen-in-time", 1);
+  return card;
 }

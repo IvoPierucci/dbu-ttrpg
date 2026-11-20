@@ -1,0 +1,27 @@
+id: divine-healing
+name: Divine Healing
+type: counter
+actionCost: 2
+kiCostPerBaseTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
+godManeuver: true
+afterDamage: true
+# Offered on an attack's card once its Damage is taken (chat.mjs offerDomainAfterDamage), used out of sequence.
+source: Core Rule
+description: >
+  You recover your stamina even as you are being struck, healing yourself with divine grace.
+text: >
+  Divine Healing [1/Round]: You recover your stamina even as you are being struck, healing yourself with divine grace.
+  –Maneuver Type: Counter
+  –Action Cost: 2 Counter Actions
+  –Minions: N/A
+  –DKP Cost: 2(bT)
+  –Effect: If you are hit by an Attacking Maneuver and take Damage, you may use this Maneuver. Regain 2d10(bT) Life Points, increasing the Dice Score by your Surgency. This effect is considered a use of Combat Recovery for all of your effects.
+
+---
+
+[on used]
+divineHealing();

@@ -12,8 +12,41 @@ text: >
 
 ---
 
-# (1) The Domain: Divine Magic (3)'s Option. (3) The Domain Maneuver it names: the table's.
+# (1) The Domain: Divine Magic (3)'s Option.
 
 # (2) Maximum Divine Ki Points half again.
 [passive, effect 2]
 allow divineKi.halfMore;
+
+# (3) The Domain Maneuver whose Domain is yours - a God Maneuver (maneuvers/).
+[passive, effect 3]
+if (holdsTrait("god-of-peace")) {
+    allow maneuver.divine-peace;
+}
+if (holdsTrait("god-of-judgment")) {
+    allow maneuver.divine-judgement;
+}
+if (holdsTrait("god-of-power")) {
+    allow maneuver.divine-muscle;
+}
+if (holdsTrait("god-of-survival")) {
+    allow maneuver.divine-healing;
+}
+if (holdsTrait("god-of-wisdom")) {
+    allow maneuver.divine-wisdom;
+}
+if (holdsTrait("god-of-war")) {
+    allow maneuver.divine-weapon;
+}
+if (holdsTrait("god-of-magic")) {
+    allow maneuver.divine-spell;
+}
+if (holdsTrait("god-of-many")) {
+    allow maneuver.divine-summoning;
+}
+if (holdsTrait("god-of-time")) {
+    allow maneuver.freeze-attack;
+}
+if (holdsTrait("god-of-an-element")) {
+    allow maneuver.divine-element;
+}

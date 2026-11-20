@@ -528,8 +528,10 @@ const PREDICATES = {
   /** A Racial or Other Trait held by its id - and applied: one the Bestial Limit set aside, not (Underwater Beast's). */
   holdsTrait: (scope, id) => {
     const items = Array.from(scope.data?.parent?.items ?? []);
-    return items.some(item => (item.type === "racial") && (item.flags?.["dbu-ttrpg"]?.sourceId === String(id))
-      && !traitAside(item, items, scope.data?.parent));
+    return items.some(item => (item.type === "racial") && !traitAside(item, items, scope.data?.parent)
+      && ((item.flags?.["dbu-ttrpg"]?.sourceId === String(id))
+        // An Option chosen on one - Divine Magic (3)'s Domain, God of a Domain (3)'s.
+        || (item.system?.chosen ?? []).some(entry => (entry?.key === "option") && (entry.value === String(id)))));
   },
 
   /** In that Battle Weather - Weather Resilient's "within your selected Battle Weather". */

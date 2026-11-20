@@ -857,6 +857,11 @@ async function runVerb(actor, call, context) {
     case "casteKnightStrike": return (await import("../chat.mjs")).casteKnightStrike(actor);
     case "castePawnStrike": return (await import("../chat.mjs")).castePawnStrike(actor);
     case "basicStrike": return (await import("../chat.mjs")).basicStrike(actor);
+    // The Domain Maneuvers (Divinity Unleashed's God of a Domain (3)).
+    case "divineHealing": return (await import("../chat.mjs")).divineHealing(actor, context?.maneuver ?? null);
+    case "domainOutOfSequence": return (await import("../chat.mjs")).domainOutOfSequence(actor, String(args[0] ?? ""));
+    case "domainStrike": return (await import("../chat.mjs")).domainStrike(actor, String(args[0] ?? ""));
+    case "freezeAttack": return (await import("../chat.mjs")).freezeAttack(actor, context?.maneuver ?? null);
     // Divine Role (4): Ki to the Allies within so many Squares; (5): the Basic Attack, no Combat Recovery this Round after it.
     case "kiToAlliesNear": return (await import("../chat.mjs")).kiToAlliesNear(actor, Number(args[0]) || 0);
     case "basicStrikeNoRecovery": return (await import("../chat.mjs")).basicStrikeNoRecovery(actor);

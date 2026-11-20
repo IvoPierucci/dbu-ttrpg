@@ -1,0 +1,25 @@
+id: freeze-attack
+name: Freeze Attack
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 5
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
+godManeuver: true
+source: Core Rule
+description: >
+  You bend the flow of time with divine skill, allowing a single attack to catch an enemy off-guard.
+text: >
+  Freeze Attack [1/Round]: You bend the flow of time with divine skill, allowing a single attack to catch an enemy off-guard.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –DKP Cost: 5(bT)
+  –Effect: Target yourself or an Ally. That Character begins a Frozen Turn (see — Time Freeze) with 1 Action (instead of the 2 granted by Time Freeze). This Action must be spent on the Basic Attack Maneuver.
+
+---
+
+[on used]
+freezeAttack();

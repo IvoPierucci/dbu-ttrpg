@@ -1,0 +1,25 @@
+id: divine-wisdom
+name: Divine Wisdom
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
+godManeuver: true
+source: Core Rule
+description: >
+  You impart words of wisdom from Otherworld upon all who are humble enough to listen.
+text: >
+  Divine Wisdom [1/Round]: You impart words of wisdom from Otherworld upon all who are humble enough to listen.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –DKP Cost: 2(bT)
+  –Effect: Use a Special Maneuver that is a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+
+---
+
+[on used]
+domainOutOfSequence(special);

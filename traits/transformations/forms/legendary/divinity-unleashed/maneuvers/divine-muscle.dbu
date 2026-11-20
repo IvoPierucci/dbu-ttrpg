@@ -1,0 +1,24 @@
+id: divine-muscle
+name: Divine Muscle
+type: counter
+actionCost: 1
+kiCostPerBaseTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
+godManeuver: true
+# Taken in Respond (chat.mjs playDivineMuscle): a Direct Hit, the Soak Value 1(T) a Super Stack.
+divineMuscle: true
+source: Core Rule
+description: >
+  Flexing your divine physique, you brace for incoming attacks.
+text: >
+  Divine Muscle [1/Round]: Flexing your divine physique, you brace for incoming attacks.
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –DKP Cost: 2(bT)
+  –Effect: If you are hit by an Attacking Maneuver, you may use this Counter Maneuver and increase your Soak Value by 1(T) for each Super Stack you possess (before any calculations). This Maneuver is treated as the Direct Hit option of Defend Maneuver for any effects and gains its effects.
+
+---

@@ -629,6 +629,26 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "The Basic Attack out of sequence - Pieces of the Hive (1)'s (chat.mjs basicStrike)."
   },
+  divineHealing: {
+    args: [0, 0],
+    doc: "Divine Healing: 2d10(bT) + your Surgency Life Points, as a use of Combat Recovery (chat.mjs divineHealing)."
+  },
+  domainOutOfSequence: {
+    args: [1, 1],
+    names: [0],
+    doc: "A Special Maneuver (`special`) or a Unique Ability (`unique`) of yours that is a Standard Maneuver of 1 Action, out of sequence - "
+       + "which, asked (Divine Wisdom, Divine Spell)."
+  },
+  domainStrike: {
+    args: [1, 1],
+    names: [0],
+    doc: "The Basic Attack out of sequence, offered on a card: `weapon` an Armed Attack (Divine Weapon), `element` of your Favored Element "
+       + "(Divine Element)."
+  },
+  freezeAttack: {
+    args: [0, 0],
+    doc: "A Frozen Turn of 1 Action, for the Basic Attack, for the Ally targeted or yourself (Freeze Attack; chat.mjs freezeAttack)."
+  },
   kiToAlliesNear: {
     args: [1, 1],
     doc: "Ki Points to every Ally within that many Squares, 1/2 of your Surgency each (Divine Role (4); chat.mjs kiToAlliesNear)."

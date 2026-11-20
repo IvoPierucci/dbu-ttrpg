@@ -1,0 +1,24 @@
+id: divine-judgement
+name: Divine Judgement
+type: outOfSequence
+actionCost: 0
+kiCostPerTier: 5
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
+godManeuver: true
+# Offered on an attack's card once its Damage is taken (chat.mjs offerDomainAfterDamage): its Basic Attack, its Divine Ki paid as it is taken.
+outOfSequenceOnly: true
+source: Core Rule
+description: >
+  You retaliate at the audacious whelp who dared to strike divine perfection.
+text: >
+  Divine Judgement [1/Round]: You retaliate at the audacious whelp who dared to strike divine perfection.
+  –Maneuver Type: Out-of-Sequence
+  –Action Cost: N/A
+  –Minions: N/A
+  –DKP Cost: 5(T)
+  –Effect: If you are hit by an Attacking Maneuver and take Damage, you may use this Maneuver. Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but you must target the Character that hit you with an Attacking Maneuver to enable you to use this Maneuver. Increase the Wound Roll of this Attacking Maneuver by 1/2 of the Damage you received from that Attacking Maneuver. This additional Damage cannot exceed your Damage Attribute.
+
+---

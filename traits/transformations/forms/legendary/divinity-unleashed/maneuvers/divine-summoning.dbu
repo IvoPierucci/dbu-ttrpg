@@ -1,0 +1,23 @@
+id: divine-summoning
+name: Divine Summoning
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
+godManeuver: true
+# Where the Minions are placed: the table's (its Squares). Its 2(bT) for one Minion; more, the rest paid by hand - said on its card.
+source: Core Rule
+description: >
+  Calling your subordinates into battle, you lead with heavenly insight and strategic might.
+text: >
+  Divine Summoning [1/Round]: Calling your subordinates into battle, you lead with heavenly insight and strategic might.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –DKP Cost: 2(bT) for each Minion targeted
+  –Effect: Target any number of your Minions. Place them on any unoccupied Square(s) on the Battlefield. If this places a Minion on a Square adjacent to an Opponent, this triggers that Minion's Exploit Maneuver. Only one Minion can use the Exploit Maneuver through this effect.
+
+---

@@ -1,0 +1,25 @@
+id: divine-spell
+name: Divine Spell
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
+godManeuver: true
+source: Core Rule
+description: >
+  Arcane secrets unfold before you as you cast a spell backed by divine power.
+text: >
+  Divine Spell [1/Round]: Arcane secrets unfold before you as you cast a spell backed by divine power.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –DKP Cost: 2(bT)
+  –Effect: Use a Unique Ability that is a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+
+---
+
+[on used]
+domainOutOfSequence(unique);

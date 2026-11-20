@@ -2024,6 +2024,16 @@
     "transformations/forms/legendary/divinity-unleashed/crafting/apparel-qualities/rejuvenating-light.dbu",
     "transformations/forms/alternate/partial-suppression/maneuvers/coup-de-grace-strike.dbu",
     "transformations/forms/alternate/partial-suppression/maneuvers/mutants-resilience-counter.dbu",
-    "conditions/recovery-doubled.dbu"
+    "conditions/recovery-doubled.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-element.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-healing.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-judgement.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-muscle.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-peace.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-spell.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-summoning.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-weapon.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/divine-wisdom.dbu",
+    "transformations/forms/legendary/divinity-unleashed/maneuvers/freeze-attack.dbu"
   ]
 }
