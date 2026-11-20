@@ -1,0 +1,15 @@
+id: chaos-free-mark
+name: Chaos Unleashed
+kind: conditions
+maxStacks: 1
+combatCondition: no
+source: Pure Form
+description: >
+  Unpredictable (5): the Ki Point Cost of your Attacking Maneuvers reduced to 0 till the end of the Combat Round.
+text: >
+  (5)-[Triggered/Start of Combat Round]: Spend 2 stacks of Channeled Chaos. Until the end of this Combat Round, the Ki Point Cost of your Attacking Maneuvers is reduced to 0.
+
+---
+
+[passive]
+attack.kiCost *= 0;

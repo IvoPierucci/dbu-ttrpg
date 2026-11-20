@@ -19,4 +19,40 @@ text: >
 
 ---
 
-# (1)-(7) What the Chaos Die rolls: the table's.
+# (1) A 6 on the Chaos Die, once a Round: the Superior State till the start of your next turn.
+[triggered/chaos-die, 1/round, effect 1]
+requires naturalAtLeast(6);
+enterState(superior, 1, start-of-next-turn);
+
+# (2) A Healing Surge, once a Round: the Chaos Die rolled again.
+[triggered/healing-surge, 1/round, effect 2]
+chaosDie();
+
+# (3) A 6 on the Chaos Die: a stack of Channeled Chaos.
+[triggered/chaos-die, effect 3]
+requires naturalAtLeast(6);
+channeledchaos.stacks += 1;
+
+# (4) After seeing it, a stack of Channeled Chaos for 1 more or less - asked as it is rolled (chat.mjs rollChaosDie).
+[passive, effect 4]
+allow chaos.nudge;
+
+# (5) At the start of the Combat Round, 2 stacks: the Ki Point Cost of your Attacking Maneuvers 0 till it ends.
+[triggered/start-of-round, effect 5]
+requires channeledchaos.stacks >= 2;
+channeledchaos.stacks -= 2;
+gain(chaos-free-mark);
+expires(chaos-free-mark, round);
+
+# (6) 3 stacks: your Damage Attribute once more on every Attacking Maneuver till it ends.
+[triggered/start-of-round, effect 6]
+requires channeledchaos.stacks >= 3;
+channeledchaos.stacks -= 3;
+gain(chaos-twice-mark);
+expires(chaos-twice-mark, round);
+
+# (7) At the start of the Combat Round, in the Superior State: an Action instead of a Counter Action.
+[triggered/start-of-round, effect 7]
+requires inState("superior");
+actions.remaining += 1;
+actions.counterSpent += 1;

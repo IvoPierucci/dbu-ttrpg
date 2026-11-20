@@ -161,6 +161,9 @@ const TABLE = [
   { key: "demon-genes-superior", label: "You enter the Superior State through Demon Genes' 1d10", provides: [],
     doc: "Fired as its roll puts you in Superior (chat.mjs demonGenesRoll) - Phantom Genes'. What is the player's is asked in a window "
        + "first." },
+  { key: "chaos-die", label: "Your Chaos Die is rolled", provides: [],
+    doc: "Fired once the Chaos Die is kept, its result in `natural` (chat.mjs rollChaosDie) - Unpredictable's (1) and (3), Directed Chaos (4), "
+       + "Sensation of Purity (3). What is the player's is asked in a window first." },
   { key: "demon-genes-rolled", label: "Your Demon Genes 1d10 is rolled", provides: [],
     doc: "Fired once Demon Genes' 1d10 is read, its Natural Result as changed by its Option in `natural` (chat.mjs demonGenesRoll) - "
        + "its (2). What is the player's is asked in a window first." },

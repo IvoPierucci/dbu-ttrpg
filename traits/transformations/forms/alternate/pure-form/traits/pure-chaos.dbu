@@ -7,6 +7,10 @@ mastery: 3
 permanent: 1, 2
 # (2) Perfect Ki Control. (1) Legendary and Stress 9 more: the table's.
 aspects: +Perfect Ki Control
+# (1) "Pure Form becomes a Legendary Form. Increase the Stress Test Requirement of this Transformation by 9" (transformations.mjs
+# formTypeFor, ownStressRequirement) - its Legendary Trait, Sensation of Purity, then had.
+formTypeBecomes: legendary
+stressAdd: 9
 description: >
   The destructive energy gathering inside you boils to the surface, making you an extremely deadly foe.
 text: >
@@ -19,7 +23,7 @@ text: >
 
 ---
 
-# (1) Its Attribute Modifier Bonuses 1(T) more.
+# (1) Legendary, Stress 9 higher (its header); its Attribute Modifier Bonuses 1(T) more.
 [passive, effect 1]
 agility.mod += 1(T);
 force.mod += 1(T);
@@ -27,4 +31,5 @@ tenacity.mod += 1(T);
 insight.mod += 1(T);
 magic.mod += 1(T);
 
-# (3)-(5) The Energy Charge in Superior, the Chaos Die doubled, Damage halved: the table's.
+# (3) In the Superior State: an Energy Charge on every Attacking Maneuver - the table's. (4) The Chaos Die doubled: read by its mark
+# (chaos-die). (5) Channeled Chaos for half the Damage: the table's.

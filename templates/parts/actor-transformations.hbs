@@ -65,6 +65,9 @@
             {{#if row.transcendent}}
             <label class="dbu-tf-in"><input type="checkbox" data-tf-field="transcended" {{checked row.transcended}}/>Transcended</label>
             {{/if}}
+            {{#if row.prelude}}
+            <label class="dbu-tf-in" data-tooltip="Prelude: Tier of Power Requirement -1, Stress -3; its Attribute Modifier Bonuses -1(T) and its last Trait left out. Untick it while something raises your Tier of Power."><input type="checkbox" data-tf-field="prelude" {{checked row.inPrelude}}/>Prelude</label>
+            {{/if}}
             {{#if row.grades}}
             <label class="dbu-tf-in" data-tooltip="{{row.gradeTip}}">Grade<input type="number" class="dbu-tf-n" data-tf-field="grade" min="1"
               max="{{row.grades}}" value="{{row.grade}}"/></label>

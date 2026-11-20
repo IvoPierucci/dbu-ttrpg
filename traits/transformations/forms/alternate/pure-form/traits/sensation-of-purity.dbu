@@ -12,10 +12,26 @@ text: >
 
 ---
 
-# (1) Erratic Majin (7) and Unpredictable (3)(4) outside it, (3): the table's.
+# (1) Erratic Majin (7) and Unpredictable (3)(4) outside Pure Form too.
+[passive, effect 1]
+allow chaos.die;
+allow chaos.nudge;
+
+[automatic/start-of-round, effect 1]
+chaosDie(start);
+
+[triggered/chaos-die, effect 1]
+requires naturalAtLeast(6) && !inTransformation("pure-form");
+channeledchaos.stacks += 1;
 
 # (2) In the Superior State: Surgency 2(T).
 [passive, effect 2]
 if (inState("superior")) {
     surgency += 2(T);
 }
+
+# (3) A 6 on the Chaos Die: Life and Ki Points, half your Surgency.
+[triggered/chaos-die, effect 3]
+requires naturalAtLeast(6);
+life.value += floor(surgency / 2);
+ki.value += floor(surgency / 2);

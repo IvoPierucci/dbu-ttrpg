@@ -245,10 +245,8 @@ export function aspectsOf(item, items = item?.parent?.items) {
     .map(each => getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")).filter(trait => trait?.grantsAspect)
     .filter(trait => !trait.grantsAspectIf || ownIds.has(aspectId(trait.grantsAspectIf)))
     .flatMap(trait => parseAspects(trait.grantsAspect).map(aspect => ({ ...aspect, sign: 1 })));
-  // Given to this one by name, by any Trait or Talent had (`grantsAspectTo: <transformation id> <Aspect>`, a list) - Heart of Evil's "Evil
-  // Saiyan ... gains the Natural (LV2) Aspect", Tremendous Lord's for Great Namekian ("not to any other Transformation that would be treated
-  // as Great Namekian": by its own id alone).
-  given.push(...grantsFor(items, "grantsAspectTo", file.id).flatMap(rest => parseAspects(rest).map(aspect => ({ ...aspect, sign: 1 }))));
+  // Given to this one by any Trait or Talent had - `grantsAspectTo:` (aspectsGivenTo).
+  given.push(...aspectsGivenTo(item, file, items).map(aspect => ({ ...aspect, sign: 1 })));
   const held = new Map();
   for (const aspect of [...own.map(each => ({ ...each, sign: 1 })), ...changes, ...given]) {
     const level = levelOf(aspect.level, letters);
@@ -539,10 +537,10 @@ export function transformationsInUse(actor) {
 function traitsInUse(owner, items) {
   if (inUse(owner)) return true;
   const file = fileOf(owner);
-  const line = String(file?.line ?? "");
+  const line = lineOf(file, items);
   const list = Array.from(items ?? []).filter(each => each.type === TRANSFORMATION_TYPE);
-  if (line && list.some(each => inUse(each) && (String(fileOf(each)?.line ?? "") === line)
-    && ((Number(fileOf(each)?.stage) || 0) > (Number(file?.stage) || 0)))) return "inherited";
+  if (line && list.some(each => inUse(each) && (lineOf(fileOf(each), items) === line)
+    && (stageOf(fileOf(each), items) > stageOf(file, items)))) return "inherited";
   return false;
 }
 
@@ -565,11 +563,25 @@ export function transformationTraitAside(item, items = item?.parent?.items) {
   if (trait?.stacks && (stacksOf(owner, ownerFile) < Number(trait.stacks))) return "stacks";
   if (trait?.mastery && ((Number(owner.system?.mastery) || 0) < Number(trait.mastery))) return "mastery";
   if (kind === "awakening") return "";
-  if ((trait?.slot === "legendary") && (formTypeOf(ownerFile) === "legendary")) return "";
+  // "A Legendary Trait applies only while the Form is Legendary" (the user's, 2026-11-16) - Pure Form's once Pure Chaos makes it one.
+  if (trait?.slot === "legendary") return (formTypeFor(owner, list) === "legendary") ? "" : "legendary";
   const using = traitsInUse(owner, list);
   if ((using === "inherited") && trait?.mastery) return "mastery";
+  // Prelude: "you do not benefit from the last Transformation Trait of this Transformation while in this Transformation (any Permanent
+  // effects are still in effect)".
+  if (using && preludeDrops(owner, ownerFile, trait)) return effectsOutside(trait).length ? "" : "prelude";
   if (using && ((trait?.slot !== "transcendent") || owner.system?.transcended)) return "";
   return effectsOutside(trait).length ? "" : "outside";
+}
+
+/**
+ * Prelude's: the Trait it leaves out - "the last Transformation Trait of this Transformation" in its own list (the user's): not a Mastery,
+ * Legendary, Burst Limit or Transcendent Trait, nor one of a group chosen, nor a lower Stage's - while it is entered with Prelude.
+ */
+export function preludeDrops(owner, file, trait) {
+  if (!owner?.system?.prelude || !trait || !file) return false;
+  const own = traitFilesOf(file).filter(each => (!each.slot || (each.slot === "trait")) && !each.group);
+  return own.length > 0 && (own[own.length - 1].id === trait.id);
 }
 
 /** The effects of a Transformation Trait that hold outside its Transformation: its [Permanent] and its [Constant] ones, by number. */
@@ -586,9 +598,9 @@ export function transformationTraitProgram(item, program, items = item?.parent?.
   const owner = Array.from(items ?? []).find(each => each.id === item.system.transformation);
   const trait = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   if (owner && (kindOf(fileOf(owner)) === "awakening")) return program;
-  if ((trait?.slot === "legendary") && (formTypeOf(fileOf(owner)) === "legendary")) return program;
+  if (trait?.slot === "legendary") return (formTypeFor(owner, items) === "legendary") ? program : { ...program, blocks: [] };
   const using = owner ? traitsInUse(owner, items) : false;
-  if (using && ((trait?.slot !== "transcendent") || owner.system?.transcended)) return program;
+  if (using && !preludeDrops(owner, fileOf(owner), trait) && ((trait?.slot !== "transcendent") || owner.system?.transcended)) return program;
   const kept = new Set(effectsOutside(trait));
   return { ...program, blocks: (program.blocks ?? []).filter(block => kept.has(Number(block.modifiers?.effect) || 0)) };
 }
@@ -633,8 +645,8 @@ export function traitStanding(item, items = item?.parent?.items) {
   const owner = list.find(each => each.id === item?.system?.transformation);
   const trait = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   const file = fileOf(owner);
-  if ((kindOf(file) === "awakening") || ((trait?.slot === "legendary") && (formTypeOf(file) === "legendary"))) return "in";
-  if (traitsInUse(owner, list)) return "in";
+  if ((kindOf(file) === "awakening") || ((trait?.slot === "legendary") && (formTypeFor(owner, list) === "legendary"))) return "in";
+  if (traitsInUse(owner, list) && !preludeDrops(owner, file, trait)) return "in";
   return numbersOf(trait?.constant).length ? "constant" : "permanent";
 }
 
@@ -856,7 +868,17 @@ export function ownStressRequirement(item, { grade, scales, prelude } = {}, item
   const written = String(gradeRow(file, g).values.stress ?? file?.stress ?? "").trim();
   const base = Number(/^-?\d+/.exec(written)?.[0]);
   const s = Math.max(0, Number(scales ?? item?.system?.scales) || 0);
-  return base + (2 * s) - ((prelude ?? item?.system?.prelude) ? 3 : 0) - stressTakenOff(item, items);
+  // Pure Chaos (1): "Increase the Stress Test Requirement of this Transformation by 9" - its Traits that apply (`stressAdd:`).
+  const added = ownTraitHeaders(item, items, "stressAdd").reduce((sum, value) => sum + (Number(value) || 0), 0);
+  return base + added + (2 * s) - ((prelude ?? item?.system?.prelude) ? 3 : 0) - stressTakenOff(item, items);
+}
+
+/** A header's values on the Transformation Traits of one Transformation that apply now - set aside, not (a Mastery not reached). */
+function ownTraitHeaders(item, items, key) {
+  return Array.from(items ?? []).filter(each => (each.type === "racial") && (each.system?.transformation === item?.id))
+    .map(each => [each, getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")])
+    .filter(([each, trait]) => (trait?.[key] !== undefined) && (trait.slot !== "legendary") && !transformationTraitAside(each, items))
+    .map(([, trait]) => trait[key]);
 }
 
 /**
@@ -882,10 +904,11 @@ export function stressTakenOff(item, items = item?.parent?.items) {
   const id = item?.system?.transformationId;
   if (!id) return 0;
   const sum = list => list.reduce((total, rest) => total + (Number(/-?\d+/.exec(rest)?.[0]) || 0), 0);
-  let off = sum(grantsFor(items, "stressFor", id));
-  if (kindOf(fileOf(item)) === "evolved") {
+  const file = fileOf(item);
+  let off = sum(grantsFor(items, "stressFor", file));
+  if (kindOf(file) === "evolved") {
     const on = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item.id));
-    if (on) off += sum(grantsFor(items, "stressForOn", id, each => each.system?.transformation === on.id));
+    if (on) off += sum(grantsFor(items, "stressForOn", file, each => each.system?.transformation === on.id));
   }
   return Math.abs(off);
 }
@@ -895,17 +918,66 @@ export function stressTakenOff(item, items = item?.parent?.items) {
  * `grantsAspectTo: evil-saiyan Natural (LV2)` - the rest of each entry naming that one. A Transformation Trait set aside, or a Racial Trait
  * set aside, says nothing.
  */
-function grantsFor(items, key, id, only = null) {
+function grantsFor(items, key, file, only = null) {
   const out = [];
   for (const each of Array.from(items ?? [])) {
     if (!["racial", "talent"].includes(each.type) || (only && !only(each))) continue;
     const trait = getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
     if (!trait?.[key]) continue;
     if (each.system?.transformation && transformationTraitAside(each, items)) continue;
-    for (const entry of String(trait[key]).split(";").map(part => part.trim()).filter(Boolean)) {
-      const [first, ...rest] = entry.split(/\s+/);
-      if (first === id) out.push(rest.join(" "));
+    for (const entry of headerEntries(trait[key])) {
+      const named = namedEntry(entry);
+      if (named && namesTransformation(named.target, file, items)) out.push(named.rest);
     }
+  }
+  return out;
+}
+
+/** A header's entries, parted by ";" - a value with commas in it comes as a list, put back together. */
+function headerEntries(value) {
+  return [].concat(value ?? []).join(", ").split(";").map(part => part.trim()).filter(Boolean);
+}
+
+/**
+ * One entry naming a Transformation, then what is said of it: "Pure Form = Prelude" (its name or its id, then "="), or the older
+ * "pure-form Prelude" (its id, then the rest). Null where it is neither.
+ */
+function namedEntry(entry) {
+  const at = entry.indexOf("=");
+  if (at > 0) return { target: entry.slice(0, at).trim(), rest: entry.slice(at + 1).trim() };
+  const [first, ...rest] = entry.split(/\s+/);
+  return first ? { target: first, rest: rest.join(" ") } : null;
+}
+
+/**
+ * Whether a name in a header means this Transformation: its id (pure-form), its name (Pure Form), any of a Line ("line:metamorphosis"),
+ * or any at all ("any").
+ */
+export function namesTransformation(target, file, items = []) {
+  const wanted = String(target ?? "").trim();
+  if (!wanted || !file) return false;
+  if (wanted.toLowerCase() === "any") return true;
+  if (/^line:/i.test(wanted)) return lineOf(file, items) === aspectId(wanted.slice(5));
+  return [file.id, aspectId(file.name)].includes(aspectId(wanted));
+}
+
+/**
+ * The Aspects every Trait and Talent had gives this Transformation (`grantsAspectTo:`, entries parted by ";"): "<Transformation> = <Aspect(s)>",
+ * the Transformation by its name or its id (Pure Form, pure-form), any of a Line ("line:pure-majin") or "any"; the Aspects as a page
+ * writes them ("Natural (LV1)", "Enhanced Save (Cognitive)", several parted by ","). And after them, when: "if mastered", "if fully
+ * mastered", "if has <Aspect>" - Absolute Chaos (3)'s "Upon mastering Pure Form, it gains the Natural (LV1) Aspect. Increase the level of
+ * this Aspect by 1 if it is Fully Mastered". The older "<id> <Aspect>" too (Heart of Evil's).
+ */
+function aspectsGivenTo(item, file, items) {
+  const own = new Set([...parseAspects(file.aspects), ...gradeRow(file, lettersOf(item, file).G).aspects].map(aspect => aspect.id));
+  const out = [];
+  for (const rest of grantsFor(items, "grantsAspectTo", file)) {
+    const [aspects, when = ""] = rest.split(/\s+if\s+/i);
+    const condition = when.trim().toLowerCase();
+    if ((condition === "mastered") && !isMastered(item)) continue;
+    if ((condition === "fully mastered") && !isFullyMastered(item)) continue;
+    if (condition.startsWith("has ") && !own.has(aspectId(condition.slice(4)))) continue;
+    out.push(...parseAspects(aspects));
   }
   return out;
 }
@@ -1129,6 +1201,9 @@ export function isFullyMastered(item) {
  */
 export function formTypeFor(item, items = item?.parent?.items) {
   const file = fileOf(item);
+  // Pure Chaos (1): "Pure Form becomes a Legendary Form" - one of its Traits that applies (`formTypeBecomes:`).
+  const becomes = ownTraitHeaders(item, items, "formTypeBecomes")[0];
+  if (becomes) return String(becomes).trim().toLowerCase();
   const own = formTypeOf(file);
   if (own || (kindOf(file) !== "evolved")) return own;
   const on = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
@@ -1218,6 +1293,9 @@ export function inTransformationOf(actor, wanted) {
 export function lineOf(file, items = []) {
   const own = String(file?.line ?? "");
   if (own || (kindOf(file) !== "form")) return own;
+  // Absolute Chaos (4): "Pure Form becomes part of the Pure Majin Transformation Line" (`addsToLine: Pure Form = pure-majin 1`).
+  const added = lineAddedTo(file, items);
+  if (added) return added.line;
   const race = aspectId(racialRequirementOf(file));
   for (const each of Array.from(items ?? [])) {
     if (!["racial", "talent"].includes(each.type)) continue;
@@ -1225,6 +1303,27 @@ export function lineOf(file, items = []) {
     if (forRace && line && (aspectId(forRace) === race)) return line;
   }
   return "";
+}
+
+/** A Line, and its Stage there, a Trait had puts a Form in (`addsToLine: <Form> = <line> <stage>`) - or null. */
+function lineAddedTo(file, items = []) {
+  for (const each of Array.from(items ?? [])) {
+    if (!["racial", "talent"].includes(each.type)) continue;
+    const trait = getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    for (const entry of headerEntries(trait?.addsToLine)) {
+      const named = namedEntry(entry);
+      if (!named || !namesTransformation(named.target, file, [])) continue;
+      const [line, stage] = named.rest.split(/\s+/);
+      if (line) return { line: aspectId(line), stage: Number(stage) || 1 };
+    }
+  }
+  return null;
+}
+
+/** Its Stage in its Line - a Trait's `addsToLine:` too. */
+export function stageOf(file, items = []) {
+  if (String(file?.stage ?? "") !== "") return Number(file.stage) || 0;
+  return lineAddedTo(file, items)?.stage ?? 0;
 }
 
 /** The highest Tier of Power Requirement among those in use - 0 in none (Conserving Strength's "a Transformation with ... 4+"). */

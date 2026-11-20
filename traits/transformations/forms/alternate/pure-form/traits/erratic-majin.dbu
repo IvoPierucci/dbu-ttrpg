@@ -24,8 +24,20 @@ text: >
 
 ---
 
-# (1)(2) Absorption lost and leaving it, (3) a Majin Secondary Racial Trait, (5)(6), (7) the Chaos Die: the table's.
+# (1) Entering it: every stack of Absorption lost (its Characters let go - the table's to place).
+[automatic/transform, effect 1]
+remove("absorption-awakening");
+
+# (2) Leaving it on gaining a stack of Absorption, (3) a Majin Secondary Racial Trait in it, (5) the Basic Attack as an Instant, (6) the
+# Initiative rerolled: the table's.
 
 # (4) Small - Medium for the Soak Value and Punching Down (the table's).
 [passive, effect 4]
 allow size.base.small;
+
+# (7) The Chaos Die at the start of each Combat Round - its result till the Round ends (its mark, chaos-die).
+[passive, effect 7]
+allow chaos.die;
+
+[automatic/start-of-round, effect 7]
+chaosDie(start);

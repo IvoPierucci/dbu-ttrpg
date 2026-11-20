@@ -706,6 +706,10 @@ async function runVerb(actor, call, context) {
       const { impairKnocked } = await import("../chat.mjs");
       return impairKnocked(actor, context?.knockedUuid);
     }
+    case "chaosDie": {
+      const { rollChaosDie } = await import("../chat.mjs");
+      return rollChaosDie(actor, { start: String(args[0] ?? "") === "start" });
+    }
     case "stressTest": {
       const { forcedStressTest } = await import("../chat.mjs");
       return forcedStressTest(actor, "Straining");

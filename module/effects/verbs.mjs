@@ -974,6 +974,12 @@ export const VERBS = Object.freeze({
     doc: "A stack of Impaired on whoever this Moment says was knocked through, till the start of your next turn, on your clock "
        + "(chat.mjs impairKnocked) - Draconic Physique's Elemental Dragon."
   },
+  chaosDie: {
+    args: [0, 1],
+    names: [0],
+    doc: "Roll the Chaos Die (chat.mjs rollChaosDie): its result its mark's stacks till the end of the Combat Round, then the `chaos-die` "
+       + "Moment. `start` - the one at the start of the Combat Round, once a Round whatever gives it."
+  },
   stressTest: {
     args: [0, 0],
     doc: "A Stress Test to remain in the Transformations you are in, against their Requirement together (chat.mjs forcedStressTest) - "

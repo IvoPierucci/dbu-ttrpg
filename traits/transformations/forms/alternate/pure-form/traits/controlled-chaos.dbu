@@ -17,4 +17,9 @@ text: >
 
 ---
 
-# (1)-(5): the table's.
+# (1) Its third Mastery only at base Tier of Power 4+: said, the table's. (2) Erratic Majin (2), (3) Superior (2) ignored, (4) Erratic Majin
+# (1) into an Evolved Stage: the table's.
+
+# (5) With the Power Up, once a Round: the Chaos Die rolled again.
+[triggered/power, 1/round, effect 5]
+chaosDie();

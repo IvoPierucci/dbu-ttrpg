@@ -2002,6 +2002,57 @@ export async function absorbCharacter(actor, target) {
   }
 }
 
+/** The mark that holds a Chaos Die's result till the end of its Combat Round: its stacks the result (Pure Form's own file). */
+const CHAOS_DIE = "chaos-die";
+
+/**
+ * The Chaos Die - Erratic Majin (7): "Roll a 1d6 - this d6 is known as your 'Chaos Die'. Then, until the end of the Combat Round, gain the
+ * following effects depending on the result" - its result its mark's stacks, till the end of the Combat Round. Before it is kept: Chaotic
+ * Entity (3)'s reroll, once an Encounter (`chaos.reroll`); Unpredictable (4)'s "spend a stack of Channeled Chaos to increase or reduce the
+ * result by 1" (`chaos.nudge`) - asked of whoever plays them. Then the `chaos-die` Moment, its result as `natural`. `start`: the one at
+ * the start of the Combat Round, once a Round however many effects give it.
+ */
+export async function rollChaosDie(actor, { start = false } = {}) {
+  if (!actor) return;
+  const slots = actor.system.effects?.slots ?? {};
+  if (start) {
+    if (slots["chaos.die"] !== true) return;
+    if (actor.getFlag?.(SCOPE, "chaosRound") === roundKey()) return;
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.chaosRound`]: roundKey() });
+  }
+  let result = Number((await new Roll("1d6").evaluate()).total) || 1;
+  const said = [`rolled ${result}`];
+  const encounter = game.combat?.id ?? "none";
+  for (let asked = 0; asked < 12; asked++) {
+    const chaos = Number(actor.system.resources?.channeledchaos?.stacks) || 0;
+    const nudge = (slots["chaos.nudge"] === true) && (chaos > 0);
+    const reroll = (slots["chaos.reroll"] === true) && (actor.getFlag?.(SCOPE, "chaosRerollEncounter") !== encounter);
+    const options = [{ value: "keep", label: `Keep ${result}` },
+      ...((nudge && (result < 6)) ? [{ value: "up", label: `${result + 1} - a stack of Channeled Chaos (${chaos} held)` }] : []),
+      ...((nudge && (result > 1)) ? [{ value: "down", label: `${result - 1} - a stack of Channeled Chaos (${chaos} held)` }] : []),
+      ...(reroll ? [{ value: "reroll", label: "Reroll it (Chaotic Entity, 1/Encounter)" }] : [])];
+    if (options.length === 1) break;
+    const answer = await askPlayerChoice(actor, `${actor.name}: Chaos Die - ${result}`, options);
+    if (!answer || (answer === "keep")) break;
+    if (answer === "reroll") {
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.chaosRerollEncounter`]: encounter });
+      result = Number((await new Roll("1d6").evaluate()).total) || 1;
+      said.push(`rerolled ${result}`);
+      continue;
+    }
+    await setResource(actor, "channeledchaos", chaos - 1);
+    result += (answer === "up") ? 1 : -1;
+    said.push(`Channeled Chaos: ${result}`);
+  }
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, CHAOS_DIE, result);
+  await lasting(actor, { kind: KINDS.CONDITION, key: CHAOS_DIE, edge: EDGES.ROUND, source: "Chaos Die" });
+  const effect = getTrait(CHAOS_DIE)?.[`result${result}`] ?? "";
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `Chaos Die: ${result} (${said.join(", ")})${effect ? ` - ${effect}` : ""}, till the end of the Combat Round.`)}</div>` });
+  await answerFor(actor, "chaos-die", { natural: result });
+}
+
 /** The Possess Maneuver's first Clash: "Make a Clash (Strike vs Strike/Dodge) against them." */
 export async function postPossessClash(actor, target, maneuver) {
   return ChatMessage.create({

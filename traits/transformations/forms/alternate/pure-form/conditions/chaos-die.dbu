@@ -1,0 +1,82 @@
+id: chaos-die
+name: Chaos Die
+kind: conditions
+maxStacks: 6
+# Not a Combat Condition: the Chaos Die's result, as its stacks, till the end of the Combat Round (chat.mjs rollChaosDie).
+combatCondition: no
+source: Pure Form
+# What each result does, said on its card.
+result1: Defense Value and Soak Value 1(bT) lower
+result2: Strike and Wound Rolls 1(bT) lower
+result3: Surgency 2(T) higher
+result4: Force and Magic Modifiers 1(T) higher
+result5: Agility and Tenacity Modifiers 1(T) higher
+result6: Combat Rolls and Soak Value 1(T) higher
+description: >
+  Erratic Majin (7): the Chaos Die's result, till the end of the Combat Round.
+text: >
+  (7)-[Automatic/Start of Combat Round, Ruling]: Roll a 1d6 – this d6 is known as your 'Chaos Die'. Then, until the end of the Combat Round, gain the following effects depending on the result for your Chaos Die:
+  1 [Passive]: Reduce your Defense Value and Soak Value by 1(bT).
+  2 [Passive]: Reduce your Strike Rolls and Wound Rolls by 1(bT).
+  3 [Passive]: Increase your Surgency by 2(T).
+  4 [Passive]: Increase your Attribute Modifiers (FO/MA) by 1(T).
+  5 [Passive]: Increase your Attribute Modifiers (AG/TE) by 1(T).
+  6 [Passive]: Increase your Combat Rolls and Soak Value by 1(T).
+
+---
+
+# Each result, once; doubled - Pure Chaos (4): "Double the reductions and increases from the 7th effect of Erratic Majin" - in Pure Form with
+# Pure Chaos had (its third Mastery).
+[passive]
+if (stacks == 1) {
+    if (inTransformation("pure-form") && holdsTrait("pure-form-pure-chaos")) {
+        defenseValue -= 2(bT);
+        soakValue -= 2(bT);
+    } else {
+        defenseValue -= 1(bT);
+        soakValue -= 1(bT);
+    }
+}
+if (stacks == 2) {
+    if (inTransformation("pure-form") && holdsTrait("pure-form-pure-chaos")) {
+        strike -= 2(bT);
+        wound -= 2(bT);
+    } else {
+        strike -= 1(bT);
+        wound -= 1(bT);
+    }
+}
+if (stacks == 3) {
+    if (inTransformation("pure-form") && holdsTrait("pure-form-pure-chaos")) {
+        surgency += 4(T);
+    } else {
+        surgency += 2(T);
+    }
+}
+if (stacks == 4) {
+    if (inTransformation("pure-form") && holdsTrait("pure-form-pure-chaos")) {
+        force.mod += 2(T);
+        magic.mod += 2(T);
+    } else {
+        force.mod += 1(T);
+        magic.mod += 1(T);
+    }
+}
+if (stacks == 5) {
+    if (inTransformation("pure-form") && holdsTrait("pure-form-pure-chaos")) {
+        agility.mod += 2(T);
+        tenacity.mod += 2(T);
+    } else {
+        agility.mod += 1(T);
+        tenacity.mod += 1(T);
+    }
+}
+if (stacks == 6) {
+    if (inTransformation("pure-form") && holdsTrait("pure-form-pure-chaos")) {
+        combatRolls += 2(T);
+        soakValue += 2(T);
+    } else {
+        combatRolls += 1(T);
+        soakValue += 1(T);
+    }
+}

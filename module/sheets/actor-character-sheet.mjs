@@ -7219,6 +7219,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         prerequisite: (/^(n\/a|none)?$/i.test(prerequisite)) ? "" : prerequisite,
         transcendent: file ? aspectsOf(item, all).some(aspect => aspect.id === "transcendent") : false,
         transcended: Boolean(item.system.transcended),
+        // Prelude: chosen as it is entered; on its row while in it, to take off when your Tier of Power is raised - or put back.
+        prelude: Boolean(item.system.active) && aspectsOf(item, all).some(aspect => aspect.id === "prelude"),
+        inPrelude: Boolean(item.system.prelude),
         grades,
         grade: Math.min(Number(item.system.grade) || 1, Math.max(grades, 1)),
         gradeTip: [row.values.label, row.values.needs ? `needs ${row.values.needs} - said, never refused` : ""].filter(Boolean).join(" - "),
@@ -7303,7 +7306,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   async #writeTransformation(id, field, input) {
     const item = this.actor.items.get(id ?? "");
     if (!item || !this.isEditable) return;
-    if (["active", "transcended", "newLevel"].includes(field)) {
+    if (["active", "transcended", "newLevel", "prelude"].includes(field)) {
       const on = Boolean(input.checked);
       const updates = [{ _id: item.id, [`system.${field}`]: on }];
       // "You can only benefit from one New Level of Power at a time": ticking one unticks any other. An Awakening's: "regain Life and Ki

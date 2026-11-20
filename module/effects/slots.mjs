@@ -548,6 +548,13 @@ const TABLE = [
   // Fusion Methods & Modifiers (traits/other/fusion-method/, fusion-modifier/).
   { key: "stress.autoSucceed", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Every Stress Test passed, whatever it rolls (Maximum Metamorese (3); chat.mjs postTransformation)." },
+  // The Chaos Die's (chat.mjs rollChaosDie).
+  { key: "chaos.die", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "The Chaos Die rolled at the start of each Combat Round (Erratic Majin (7); Internalized Chaos's and Sensation of Purity's outside it)." },
+  { key: "chaos.nudge", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "A stack of Channeled Chaos for 1 more or less on the Chaos Die, asked as it is rolled (Unpredictable (4))." },
+  { key: "chaos.reroll", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "The Chaos Die rerolled, once a Combat Encounter, asked as it is rolled (Chaotic Entity (3))." },
   // The Possess Maneuver's (chat.mjs settlePossessing, settlePossessHold).
   { key: "roomy.possessHold", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Possess Maneuver's second Clash at you never lost (Roomy Biology (2))." },

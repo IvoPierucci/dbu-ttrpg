@@ -2016,6 +2016,9 @@
     "transformations/forms/alternate/super-saiyan-1/traits/s-cells/super-surger.dbu",
     "transformations/forms/legendary/suppressed-divinity/unique/injury-transfer.dbu",
     "transformations/forms/legendary/suppressed-divinity/unique/space-time-connection.dbu",
-    "maneuvers/possess.dbu"
+    "maneuvers/possess.dbu",
+    "transformations/forms/alternate/pure-form/conditions/chaos-die.dbu",
+    "transformations/forms/alternate/pure-form/conditions/chaos-free-mark.dbu",
+    "transformations/forms/alternate/pure-form/conditions/chaos-twice-mark.dbu"
   ]
 }

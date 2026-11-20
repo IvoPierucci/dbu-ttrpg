@@ -1,0 +1,15 @@
+id: chaos-twice-mark
+name: Chaos Doubled
+kind: conditions
+maxStacks: 1
+combatCondition: no
+source: Pure Form
+description: >
+  Unpredictable (6): your Damage Attribute an additional time for all of your Attacking Maneuvers till the end of the Combat Round.
+text: >
+  (6)-[Triggered/Start of Combat Round]: Spend 3 stacks of Channeled Chaos. Until the end of this Combat Round, apply your Damage Attribute an additional time for all of your Attacking Maneuvers.
+
+---
+
+[passive]
+damageAttribute.times += 1;

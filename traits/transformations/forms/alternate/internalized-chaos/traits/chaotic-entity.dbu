@@ -12,4 +12,21 @@ text: >
 
 ---
 
-# (1)-(3) The Chaos Die and its rerolls: the table's.
+# (1) Erratic Majin (7) and Unpredictable (3)(4): the Chaos Die at the start of each Combat Round, Channeled Chaos on a 6 (not in Pure Form,
+# where Unpredictable's own gives it), a stack for 1 more or less.
+[passive, effect 1]
+allow chaos.die;
+allow chaos.nudge;
+
+[automatic/start-of-round, effect 1]
+chaosDie(start);
+
+[triggered/chaos-die, effect 1]
+requires naturalAtLeast(6) && !inTransformation("pure-form");
+channeledchaos.stacks += 1;
+
+# (2) The Healing Surge rerolled, once a Round: the table's.
+
+# (3) The Chaos Die rerolled after seeing it, once an Encounter - asked as it is rolled (chat.mjs rollChaosDie).
+[passive, effect 3]
+allow chaos.reroll;
