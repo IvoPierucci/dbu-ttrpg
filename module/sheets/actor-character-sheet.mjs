@@ -5,7 +5,7 @@ import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, isFusion, mayBeMaster, typicalMinion } from "../actor-types.mjs";
 import { fusionContext, racesOf } from "../fusion.mjs";
 import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransformation, aspectFile, aspectsOf, bonusesOf, bonusWritten,
-  combineAspects, fileOf, formTypeOf, gradeRow, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
+  combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
   lettersOf } from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
@@ -7269,18 +7269,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (["active", "transcended", "newLevel"].includes(field)) {
       const on = Boolean(input.checked);
       const updates = [{ _id: item.id, [`system.${field}`]: on }];
-      if ((field === "active") && on) {
-        const kind = kindOf(fileOf(item));
-        const rival = each => ["form", "evolved"].includes(kind) ? ["form", "evolved"].includes(kindOf(fileOf(each))) : kindOf(fileOf(each)) === kind;
-        if (kind !== "awakening") {
-          for (const other of transformationItems(this.actor).filter(each => (each.id !== item.id) && each.system.active && rival(each))) {
-            // An Evolved Stage on this Form stays in use with it.
-            if ((kindOf(fileOf(other)) === "evolved") && (other.system.original === item.id)) continue;
-            if ((kind === "evolved") && (item.system.original === other.id)) continue;
-            updates.push({ _id: other.id, "system.active": false });
-          }
-        }
-      }
+      if (field === "active") updates.push(...inUseChanges(transformationItems(this.actor), item, on, updates[0]));
       return this.actor.updateEmbeddedDocuments("Item", updates);
     }
     const number = Math.max(0, Math.floor(Number(input.value) || 0));

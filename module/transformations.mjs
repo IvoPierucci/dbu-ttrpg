@@ -371,6 +371,58 @@ export function inUse(item) {
   return Boolean(item.system?.active);
 }
 
+/**
+ * What else changes as one Transformation is put in use or by, ticked by hand (the user's) - the changes to the others, and what the
+ * one ticked gains (written onto `own`, its own update):
+ * - an Evolved Stage goes on the Form you are in, where it is one of its Originals - the Form stays in use with it; in none of them,
+ *   on the one it was last on (or its first), entered with it; with no Original yet, on the Form you are in, made its Original. Any
+ *   other Form or Evolved Stage put by - but another on the same Form where either is Pinnacle;
+ * - a Form puts any other Form by; an Evolved Stage in use that may be on it moves onto it, any other goes with the Form left;
+ * - an Enhancement puts any other Enhancement by;
+ * - a Form put by takes the Evolved Stages on it with it.
+ */
+export function inUseChanges(items, item, on, own = {}) {
+  const kind = kindOf(fileOf(item));
+  const all = Array.from(items ?? []).filter(each => (each.type === TRANSFORMATION_TYPE) && (each.id !== item.id));
+  const kindOfEach = each => kindOf(fileOf(each));
+  const isForm = each => ["form", "evolved"].includes(kindOfEach(each));
+  const pinnacle = each => parseAspects(fileOf(each)?.aspects).some(aspect => aspect.id === "pinnacle");
+  const changes = [];
+  if (on && (kind === "evolved")) {
+    let originals = (item.system?.originals ?? []).filter(id => all.some(each => each.id === id));
+    if (!originals.length) {
+      const form = all.find(each => each.system?.active && (kindOfEach(each) === "form"));
+      if (form) {
+        originals = [form.id];
+        own["system.originals"] = originals;
+      }
+    }
+    const current = originals.find(id => all.find(each => each.id === id)?.system?.active);
+    const original = current || (originals.includes(item.system?.original) ? item.system.original : originals[0]) || "";
+    own["system.original"] = original;
+    if (original && !current) changes.push({ _id: original, "system.active": true });
+    for (const other of all.filter(each => each.system?.active && isForm(each) && (each.id !== original))) {
+      const stacked = (kindOfEach(other) === "evolved") && (other.system?.original === original) && (pinnacle(item) || pinnacle(other));
+      if (!stacked) changes.push({ _id: other.id, "system.active": false });
+    }
+  }
+  else if (on && (kind === "form")) {
+    for (const other of all.filter(each => each.system?.active && isForm(each))) {
+      if ((kindOfEach(other) === "evolved") && (other.system?.originals ?? []).includes(item.id)) changes.push({ _id: other.id, "system.original": item.id });
+      else changes.push({ _id: other.id, "system.active": false });
+    }
+  }
+  else if (on && (kind === "enhancement")) {
+    for (const other of all.filter(each => each.system?.active && (kindOfEach(each) === "enhancement"))) changes.push({ _id: other.id, "system.active": false });
+  }
+  else if (!on && (kind === "form")) {
+    for (const other of all.filter(each => each.system?.active && (kindOfEach(each) === "evolved") && (each.system?.original === item.id))) {
+      changes.push({ _id: other.id, "system.active": false });
+    }
+  }
+  return changes;
+}
+
 /** Those in use. */
 export function transformationsInUse(actor) {
   return transformationItems(actor).filter(inUse);
