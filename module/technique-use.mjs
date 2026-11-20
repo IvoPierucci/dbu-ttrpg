@@ -12,7 +12,8 @@
  */
 
 import { environmentIdOf } from "./environments.mjs";
-import { inNormalState, inTransformationOf } from "./transformations.mjs";
+import { inNormalState, inTransformationOf, traitStanding } from "./transformations.mjs";
+import { getTrait } from "./effects/traits.mjs";
 import { featureRanks } from "./signature.mjs";
 import { ULTIMATES_PER_ENCOUNTER } from "./technique.mjs";
 
@@ -137,6 +138,13 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
     }
   }
 
+  // A Technique a Trait chose as its own (`chosenTechnique:` - Violent Monster's Vile Technique: "You only have access to your Vile Technique
+  // while you are in Monster Form and have access to the Violent Monster Trait"): only while that Trait wholly applies.
+  const keeper = chosenTechniqueTrait(actor, technique.itemId);
+  if (keeper && keeper.system?.transformation && (traitStanding(keeper, actor.items) !== "in")) {
+    return `${name} is ${getTrait(keeper.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.chosenTechnique || "this Trait's"} - only used while ${keeper.name} applies.`;
+  }
+
   // Restricted - Transformation: in the chosen kind of Transformation, the chosen one, or one of the chosen Line.
   if (!unrestricted && has(technique, "restricted-transformation")) {
     const wanted = choice(technique, "restricted-transformation");
@@ -226,6 +234,19 @@ export const DEEP_SPACE_RANK = 4;
 export function usedThisRoundTwice(actor, technique) {
   return (actor?.system?.effects?.slots?.["techniqueMaster.sameOnce"] === true)
     && (actor.system?.usedManeuvers ?? []).includes(`round:${technique?.id}.technique`);
+}
+
+/**
+ * The Trait that chose this Technique as its own - its file's `chosenTechnique:` (what it calls it: "Vile Technique") and its `choose:
+ * ownTechnique` answered with it - or null.
+ */
+export function chosenTechniqueTrait(actor, techniqueId) {
+  if (!techniqueId) return null;
+  return Array.from(actor?.items ?? []).find(item => {
+    if (item.type !== "racial") return false;
+    const trait = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    return Boolean(trait?.chosenTechnique) && (item.system?.chosen ?? []).some(entry => (entry.key === trait.id) && (entry.value === techniqueId));
+  }) ?? null;
 }
 
 /** Flexible Technique (2): open on this Technique - the Favored one, its once an Encounter not spent. */

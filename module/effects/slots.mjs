@@ -565,6 +565,11 @@ const TABLE = [
     doc: "Winning the Possess Maneuver: whether to take control of them, asked (Mutualism (6))." },
   { key: "tuffleParasite.minion", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Winning the Possess Maneuver at a Minion not Special: it becomes yours - said (Tuffle Parasite (3))." },
+  // Violent Monster's Vile Technique (technique-use.mjs chosenTechniqueTrait).
+  { key: "wound.perTargetThresholdChosen", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "More Wound for each Health Threshold the target is below, on the Technique a Trait chose as its own (Violent Monster (4))." },
+  { key: "chosenTechnique.ascend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "The Ascended Signature Advantage offered on the Technique a Trait chose, once a Combat Encounter (Violent Monster (7))." },
   { key: "legend.extra", phase: PHASES.LATE, kind: N, ops: ["add"],
     doc: "Life and Ki Points more from Legend Realized (Monstrous Ascension (2): half the chosen Attribute's Modifier)." },
   { key: "legend.narrativeDouble", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],

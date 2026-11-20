@@ -5197,7 +5197,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Signature Technique" - offered while one of the three Ultimates is left.
     // Legacy of the Scholars (2): "If you would use a Super Signature, you may spend 2 Revenge Points to apply the Ascended
     // Signature Advantage to that Attacking Maneuver" - the same question, the 2 spent if it ascends.
-    const owned = (technique.advantages ?? []).includes("ascended-signature");
+    // Violent Monster (7): "If you use your Vile Technique, you may apply the Ascended Signature Advantage to that Attacking Maneuver" - once
+    // a Combat Encounter (`chosenTechnique.ascend`, the Technique its Trait chose).
+    const encounterKey = game.combat?.id ?? "none";
+    const { chosenTechniqueTrait } = await import("./technique-use.mjs");
+    const chosenAscend = (actor.system.effects?.slots?.["chosenTechnique.ascend"] === true) && Boolean(chosenTechniqueTrait(actor, technique.itemId))
+      && (actor.getFlag?.("dbu-ttrpg", "chosenAscendEncounter") !== encounterKey);
+    const owned = (technique.advantages ?? []).includes("ascended-signature") || chosenAscend;
     const bought = !owned && !technique.ultimate && ((technique.level ?? "super") === "super")
       && (actor.system.effects?.slots?.["scholars.ascend"] === true)
       && ((Number(actor.system.resources?.revengepoints?.stacks) || 0) >= 2)
@@ -5214,6 +5220,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       });
       if (!["ascend", "super"].includes(ascend)) return false;
       ascended = (ascend === "ascend");
+      if (ascended && chosenAscend && !(technique.advantages ?? []).includes("ascended-signature")) {
+        await actor.setFlag("dbu-ttrpg", "chosenAscendEncounter", encounterKey);
+      }
       if (ascended && bought) {
         const { spendRevenge } = await import("./chat.mjs");
         await spendRevenge(actor, 2);

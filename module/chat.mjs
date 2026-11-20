@@ -34634,9 +34634,21 @@ function twoWorldsWoundParts(attacker, attack) {
 }
 
 /** Inherited Aggression: "For each Health Threshold an Opponent is below, increase your Wound Rolls against them by 1(bT)." */
-function aggressionAgainst(attacker, target) {
-  const per = Number(attacker?.system?.effects?.slots?.["wound.perTargetThreshold"]?.add) || 0;
+function aggressionAgainst(attacker, target, attack = null) {
+  // Violent Monster (4): "Double the bonus to your Wound Rolls for the 3rd effect of Violent Monster if the Attacking Maneuver is your Vile
+  // Technique" - `wound.perTargetThresholdChosen`, its own once more, on the Technique its Trait chose.
+  const chosen = Number(attacker?.system?.effects?.slots?.["wound.perTargetThresholdChosen"]?.add) || 0;
+  const per = (Number(attacker?.system?.effects?.slots?.["wound.perTargetThreshold"]?.add) || 0)
+    + ((chosen && chosenTechniqueHeld(attacker, attack?.technique?.itemId)) ? chosen : 0);
   return per ? per * thresholdsBelow(target) : 0;
+}
+
+/** Whether a Technique is one a Trait of theirs chose as its own (technique-use.mjs chosenTechniqueTrait) - by the same reading, here. */
+function chosenTechniqueHeld(actor, techniqueId) {
+  if (!techniqueId) return false;
+  return Array.from(actor?.items ?? []).some(item => (item.type === "racial")
+    && (trait => Boolean(trait?.chosenTechnique) && (item.system?.chosen ?? []).some(entry => (entry.key === trait.id) && (entry.value === techniqueId)))(
+      getTrait(item.flags?.[SCOPE]?.sourceId ?? "")));
 }
 
 /**
@@ -35459,7 +35471,7 @@ async function rollAttackWoundWork(message, attack) {
       { label: "Mystic Attack", value: mysticReach(attacker, attack, target) },
       // Inherited Aggression's, Blood in the Water (1)'s - named by whatever gave it.
       { label: (attacker.system.effects?.slots?.["wound.perTargetThreshold"]?.parts ?? []).map(part => part.source).filter(Boolean)
-          .join(", ") || "Inherited Aggression", value: aggressionAgainst(attacker, target) },
+          .join(", ") || "Inherited Aggression", value: aggressionAgainst(attacker, target, attack) },
       // Demonic Combat (2): against one suffering from a Combat Condition.
       // And Perfected Tactics (1)'s - the line named by whatever gave it.
       { label: (attacker.system.effects?.slots?.["wound.vsConditioned"]?.parts ?? []).map(part => part.source).filter(Boolean)
