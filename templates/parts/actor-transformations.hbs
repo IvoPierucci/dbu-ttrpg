@@ -114,6 +114,17 @@
                 <button type="button" class="dbu-tf-small" data-action="releaseTransformationOwner" data-uuid="{{owner.uuid}}">Release</button>{{/if}}</span>{{else}}<span class="dbu-tf-dim">none</span>{{/each}}
             </div></div>
           {{/if}}
+          {{#if row.choices.length}}
+          {{! What it asks to be chosen as it is gained - Monster Form's Attribute, Aspect, Saves, Growth, Rampaging. }}
+          <div class="dbu-tf-part"><div class="dbu-tf-heading">Choices</div>
+            <div class="dbu-tf-choices">
+              {{#each row.choices as |choice|}}<label class="dbu-tf-in"><span>{{choice.label}}</span>
+                <select data-tf-choice="{{choice.key}}" {{#unless @root.editable}}disabled{{/unless}}>
+                  <option value="">Not chosen</option>
+                  {{#each choice.options as |option|}}<option value="{{option.value}}" {{#if (eq option.value choice.chosen)}}selected{{/if}}>{{option.label}}</option>{{/each}}
+                </select></label>{{/each}}
+            </div></div>
+          {{/if}}
           {{#if row.ownerChoice}}
           <div class="dbu-tf-part"><div class="dbu-tf-heading">Its Character</div>
             <select data-tf-owner {{#unless @root.editable}}disabled{{/unless}}>

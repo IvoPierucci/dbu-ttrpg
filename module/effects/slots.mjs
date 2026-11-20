@@ -565,6 +565,8 @@ const TABLE = [
     doc: "Winning the Possess Maneuver: whether to take control of them, asked (Mutualism (6))." },
   { key: "tuffleParasite.minion", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Winning the Possess Maneuver at a Minion not Special: it becomes yours - said (Tuffle Parasite (3))." },
+  { key: "legend.extra", phase: PHASES.LATE, kind: N, ops: ["add"],
+    doc: "Life and Ki Points more from Legend Realized (Monstrous Ascension (2): half the chosen Attribute's Modifier)." },
   { key: "legend.narrativeDouble", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Legend Realized's Life and Ki Points doubled, asked as it is applied, once a Combat Encounter (Narrative Transformation (2))." },
   { key: "stress.lifeForTwo", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],

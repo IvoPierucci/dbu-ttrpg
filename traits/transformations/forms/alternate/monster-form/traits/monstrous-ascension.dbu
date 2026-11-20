@@ -6,6 +6,8 @@ slot: trait
 permanent: 1
 # (1) A Monstrous Trait and a Bestial Trait, chosen as it is gained, had while it is.
 grantsOther: monstrous, bestial
+# (4) Raging chosen: "This Transformation gains the Innate State (Raging) Aspect."
+grantsAspectTo: This = Innate State (Raging) if $is.aspect.raging == 1
 description: >
   Your transformation into your monstrous persona has many benefits, allowing your strength to grow in many unexpected ways.
 text: >
@@ -27,4 +29,29 @@ text: >
 
 ---
 
-# (1) The Attribute, the Aspect, the Saves, Growth and Rampaging chosen, (2)-(4): the table's.
+# (1) The Attribute, the Aspect, the Saves, Growth and Rampaging: chosen on its row (its Transformation's file). Its Monstrous Trait and Bestial
+# Trait: chosen as it is gained (grantsOther), had while in it.
+
+# (2) Legend Realized: half the chosen Attribute's Modifier more - Force and Magic chosen, the higher of the two (my reading).
+[passive, effect 2]
+if ($is.attribute.ag == 1) {
+    legend.extra += floor(agility.mod / 2);
+}
+if ($is.attribute.te == 1) {
+    legend.extra += floor(tenacity.mod / 2);
+}
+if ($is.attribute.fo-ma == 1) {
+    legend.extra += floor(max(force.mod, magic.mod) / 2);
+}
+
+# (3) For each level of Rampaging it has: Soak and Wound 1(T).
+[passive, effect 3]
+soakValue += $aspect.rampaging * 1(T);
+wound += $aspect.rampaging * 1(T);
+
+# (4) High Speed chosen: the Wound after moving your full Boosted Speed - the table's. Bulky: up to 2 Super Stacks, Strike 1(T). Raging: its
+# header.
+[passive, effect 4]
+if (($is.aspect.bulky == 1) && (superStack.stacks <= 2)) {
+    strike += 1(T);
+}

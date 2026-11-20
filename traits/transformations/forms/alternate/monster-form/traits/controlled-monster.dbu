@@ -6,7 +6,9 @@ mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
 # (2) Realization and M levels of Scaling.
-aspects: +Realization, +Scaling (LV M)
+aspects: +Realization, +Scaling (LV M), -Rampaging, +Rampaging (LV2)
+# (3) "Ignore the effects of the Rampaging Aspect" - its level still counted (Monstrous Ascension (3)).
+ignoresAspect: Rampaging
 description: >
   With your mastery of your monstrous form, you have managed to rein in its vicious nature and take full control of your mind and body.
 text: >
@@ -18,4 +20,4 @@ text: >
 
 ---
 
-# (1)(3)(4) Rampaging at 2 and ignored, Combat Rolls while every Opponent is below Bruised: the table's.
+# (1)-(3) Its header. (4) Combat Rolls while every Opponent is below Bruised: the table's.

@@ -18,8 +18,39 @@ text: >
 
 ---
 
-# (1) The Vile Technique (designed on the Signature Techniques tab), (2) Strike against the lower, (4)-(7): the table's.
+# (1) The Vile Technique (designed on the Signature Techniques tab), (2) Strike against the lower, (4) its Wound doubled, (5) the Basic Attack
+# out of sequence, (7) Ascended Signature: the table's.
 
 # (3) Wound Rolls 1(T) for each Health Threshold the target is below.
 [passive, effect 3]
 wound.perTargetThreshold += 1(T);
+
+# (6) Defeating an Opponent or knocking one through a Health Threshold, once a Round: Life and Ki, half the chosen Attribute's Modifier.
+[triggered/knock-through, 1/round, effect 6]
+requires knockedOpponent;
+if ($is.attribute.ag == 1) {
+    life.value += floor(agility.mod / 2);
+    ki.value += floor(agility.mod / 2);
+}
+if ($is.attribute.te == 1) {
+    life.value += floor(tenacity.mod / 2);
+    ki.value += floor(tenacity.mod / 2);
+}
+if ($is.attribute.fo-ma == 1) {
+    life.value += floor(max(force.mod, magic.mod) / 2);
+    ki.value += floor(max(force.mod, magic.mod) / 2);
+}
+
+[triggered/defeat-opponent, 1/round, effect 6]
+if ($is.attribute.ag == 1) {
+    life.value += floor(agility.mod / 2);
+    ki.value += floor(agility.mod / 2);
+}
+if ($is.attribute.te == 1) {
+    life.value += floor(tenacity.mod / 2);
+    ki.value += floor(tenacity.mod / 2);
+}
+if ($is.attribute.fo-ma == 1) {
+    life.value += floor(max(force.mod, magic.mod) / 2);
+    ki.value += floor(max(force.mod, magic.mod) / 2);
+}

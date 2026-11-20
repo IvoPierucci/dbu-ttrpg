@@ -2,6 +2,8 @@ id: overtaken-i-become-you
 name: I BECOME YOU
 order: 1
 slot: trait
+# (8) "Ignore the effects of the Rampaging Aspect."
+ignoresAspect: Rampaging
 description: >
   You are no longer in control of your body, having been taken over by another.
 text: >
@@ -24,5 +26,5 @@ text: >
 
 # (1) The Possessing Character: chosen on its row; (6) its Attribute Modifier Bonus from them.
 # (3) Their Signature Techniques, Unique Abilities, Forms and Enhancements, (4) the higher Scholarship and Personality Scores, (5) the
-# higher Skill Bonus, (7) a Primary Racial Trait and 2 Talents of theirs, (8) Rampaging ignored, (9) the Urgent Clash each turn, (10)
+# higher Skill Bonus, (7) a Primary Racial Trait and 2 Talents of theirs, (9) the Urgent Clash each turn, (10)
 # half the Damage to them, (11)-(13) losing it and its Clash as the Encounter ends: the table's.

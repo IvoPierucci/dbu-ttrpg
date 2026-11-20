@@ -37,6 +37,10 @@ export function traitAside(item, items, actor = item?.parent) {
   const list = Array.from(items ?? []);
   // A Transformation's Trait (transformations.mjs): "outside of the Transformation you don't have its Traits" (the user's).
   if (item?.system?.transformation) return transformationGate ? transformationGate(item, list, actor) : "transformation";
+  // Given by a Transformation's Trait - Monstrous Ascension's "a Monstrous Trait ... a Bestial Trait to gain access to while in this
+  // Transformation": had while that Trait applies, not outside it.
+  const giver = flags.grantedBy ? list.find(other => other.id === flags.grantedBy) : null;
+  if (giver?.system?.transformation && (transformationQuestion("traitApplies", giver, list) !== true)) return "transformation";
   // A Villainous Trait switched off - by hand, or by a Weakpoint hit: had, and doing nothing (the user's).
   if (flags.villainousOff) return "villainous";
   if (flags.bestialOff && list.some(other => other.id === flags.bestialOff)) return "bestial";

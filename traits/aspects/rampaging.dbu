@@ -21,11 +21,13 @@ text: >
 ---
 
 # Entering it and at the start of each turn: Compelled till the start of your next turn - against the nearest Opponent (Character at
-# level 2), the table's to name; 1 Karma Point to ignore it, the table's.
+# level 2), the table's to name; 1 Karma Point to ignore it, the table's. Not where a Trait says to ignore it (Controlled Monster, Overtaken).
 [automatic/transform]
+requires !ignoresAspect("rampaging");
 gain(compelled);
 expires(compelled, start-of-next-turn);
 
 [automatic/start-of-turn]
+requires !ignoresAspect("rampaging");
 gain(compelled);
 expires(compelled, start-of-next-turn);

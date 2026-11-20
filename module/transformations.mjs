@@ -226,7 +226,7 @@ export function aspectsOf(item, items = item?.parent?.items) {
   const file = fileOf(item);
   if (!file) return [];
   const letters = lettersOf(item, file);
-  const own = [...parseAspects(file.aspects), ...gradeRow(file, letters.G).aspects];
+  const own = [...parseAspects(file.aspects), ...gradeRow(file, letters.G).aspects, ...chosenAspects(item, file)];
   const changes = Array.from(items ?? []).filter(each => (each.type === "racial") && (each.system?.transformation === item.id)
     && !transformationTraitAside(each, items))
     .flatMap(each => {
@@ -259,6 +259,8 @@ export function aspectsOf(item, items = item?.parent?.items) {
       else held.set(aspect.id, { ...had, level: had.level - level });
       continue;
     }
+    // "Choose between 0~3 levels of the Growth Aspect": none of it at 0.
+    if ((level === 0) && /^\d+$/.test(String(aspect.level ?? ""))) continue;
     if (!had) held.set(aspect.id, { id: aspect.id, name: aspect.name, level, params: [...aspect.params] });
     else held.set(aspect.id, { ...had, level: (had.level === null) ? level : had.level + (level ?? 0),
       params: [...new Set([...had.params, ...aspect.params])] });
@@ -365,6 +367,20 @@ export function bonusesOf(item, file = fileOf(item)) {
     for (const each of attributes) table[BONUS_ATTRIBUTES[each]] = rest.join("");
   }
   for (const [attribute, value] of Object.entries(row.bonuses)) table[attribute] = value;
+  // Monstrous Ascension (1): "Choose an Attribute (AG/TE or FO+MA). Increase the Attribute Modifier Bonus of that Attribute(s) by 1(T)" -
+  // `bonusChosen: <choice> 1(T)`, its value the Attributes ("ag", "fo-ma").
+  const [bonusKey, bonusAmount] = String(file.bonusChosen ?? "").split(/\s+/);
+  const extraFor = new Map();
+  if (bonusKey) {
+    for (const code of String(rowChoice(item, bonusKey)).split("-").map(each => each.toUpperCase()).filter(each => each in BONUS_ATTRIBUTES)) {
+      extraFor.set(BONUS_ATTRIBUTES[code], readBonus(bonusAmount, letters));
+    }
+  }
+  for (const [attribute, extra] of extraFor) {
+    const had = readBonus(table[attribute], letters);
+    if (!extra) continue;
+    table[attribute] = had ? `${had.coefficient + extra.coefficient}(${had.unit || extra.unit})` : bonusWritten(extra);
+  }
   const scales = Math.max(0, Number(item?.system?.scales) || 0);
   const awakening = kindOf(file) === "awakening";
   const bonuses = {};
@@ -630,7 +646,11 @@ export function transformationTraitScript(item, items = item?.parent?.items) {
   }
   const owner = Array.from(items ?? []).find(each => each.id === item.system?.transformation);
   const letters = lettersOf(owner, fileOf(owner));
-  return parts.filter(Boolean).join("\n\n").replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0));
+  // "For each level of the Rampaging Aspect this Transformation possesses" - $aspect.<id>, its level on its Transformation (0 without it).
+  const levels = owner ? aspectsOf(owner, items) : [];
+  return rowWritten(owner, fileOf(owner), parts.filter(Boolean).join("\n\n"))
+    .replace(/\$aspect\.([a-z0-9-]+)/g, (all, id) => String((found => found ? (found.level ?? 1) : 0)(levels.find(aspect => aspect.id === id))))
+    .replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0));
 }
 
 useTransformationGate((item, items) => transformationTraitAside(item, items));
@@ -987,7 +1007,7 @@ function aspectsGivenTo(item, file, items) {
     // Stacks, Stage or Mastery written in). Read as the character's Items are gathered: what is worked out later in the same preparing
     // - the Size - is not there yet; a State, a Resource, a Condition is.
     else if (condition) {
-      const written = condition.replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0));
+      const written = rowWritten(item, file, condition).replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0));
       if (transformationQuestion("scriptCondition", item?.parent, written) !== true) continue;
     }
     out.push(...parseAspects(aspects));
@@ -1413,3 +1433,73 @@ useTransformationQuestion("normalState", actor => inNormalState(actor));
 // file says `superiorAsRaging: true`.
 useTransformationQuestion("superiorAsRaging", actor => Array.from(actor?.items ?? []).some(each => (each.type === "racial") && each.system?.transformation
   && getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.superiorAsRaging && (traitStanding(each, actor.items) === "in")));
+
+// --- Choices on its row ----------------------------------------------------------------------------------------------------------
+
+/**
+ * What a Transformation asks to be chosen "upon gaining access" (Monster Form's Attribute, Aspect, Saves, Growth and Rampaging) - its file's
+ * `choice1:` ... `choice9:`, each "key | Label | value=Label; value=Label" - with what its Item holds for each (`system.choices`), on its row.
+ */
+export function rowChoicesOf(item, file = fileOf(item)) {
+  if (!file) return [];
+  return Object.keys(file).filter(key => /^choice\d+$/.test(key)).sort((a, b) => Number(a.slice(6)) - Number(b.slice(6)))
+    .map(key => [].concat(file[key]).join(", ").split("|").map(part => part.trim()))
+    .filter(([key]) => key)
+    .map(([key, label = key, list = ""]) => ({ key, label,
+      options: list.split(";").map(part => part.trim()).filter(Boolean).map(part => {
+        const [value, shown] = part.split("=").map(each => each.trim());
+        return { value, label: shown || value };
+      }),
+      chosen: rowChoice(item, key) }));
+}
+
+/** One of its row's choices, or "". */
+export function rowChoice(item, key) {
+  return String((item?.system?.choices ?? []).find(entry => entry?.key === `choice:${key}`)?.value ?? "");
+}
+
+/** One of its row's choices set (an empty value takes it off). */
+export async function setRowChoice(item, key, value) {
+  const choices = (item.system.choices ?? []).filter(entry => entry?.key !== `choice:${key}`);
+  if (value) choices.push({ key: `choice:${key}`, value: String(value) });
+  return item.update({ "system.choices": choices });
+}
+
+/**
+ * Its row's choices written into a text: $row.<key> its value, $label.<key> its label, $is.<key>.<value> 1 where that one is chosen and 0
+ * where not. One not chosen: nothing.
+ */
+function rowWritten(item, file, text) {
+  if (!String(text ?? "").includes("$")) return String(text ?? "");
+  const choices = rowChoicesOf(item, file);
+  const of = key => choices.find(choice => choice.key === key);
+  return String(text)
+    .replace(/\$is\.([\w]+)\.([\w-]+)/g, (all, key, value) => (rowChoice(item, key) === value) ? "1" : "0")
+    .replace(/\$label\.([\w]+)/g, (all, key) => (choice => choice?.options.find(option => option.value === choice.chosen)?.label ?? "")(of(key)))
+    .replace(/\$row\.([\w]+)/g, (all, key) => rowChoice(item, key));
+}
+
+/**
+ * The Aspects its row's choices give it (`aspectsChosen:` - "$label.aspect; Enhanced Save ($label.save1/$label.save2); Growth (LV$row.growth)")
+ * - one whose choice is not made yet left out.
+ */
+function chosenAspects(item, file) {
+  return headerEntries(file?.aspectsChosen).map(entry => rowWritten(item, file, entry).trim())
+    .filter(entry => entry && !/\(\s*LV\s*\)/i.test(entry))
+    .map(entry => entry.replace(/\(\s*\/\s*/, "(").replace(/\s*\/\s*\)/, ")").replace(/\(\s*\)/, "").trim())
+    .filter(entry => entry && !/^(enhanced save)$/i.test(entry))
+    .flatMap(entry => parseAspects(entry));
+}
+
+// A Trait or Talent had whose effects say to "Ignore the effects of the <Aspect>" (`ignoresAspect:` - Controlled Monster's Rampaging,
+// Overtaken's): its Aspect's own file asks (ignoresAspect).
+useTransformationQuestion("ignoresAspect", (actor, id) => Array.from(actor?.items ?? []).some(each => {
+  if (!["racial", "talent"].includes(each.type)) return false;
+  const trait = getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  if (!trait?.ignoresAspect) return false;
+  if (each.system?.transformation && (traitStanding(each, actor.items) !== "in")) return false;
+  return headerEntries(trait.ignoresAspect).flatMap(entry => entry.split(",")).map(aspectId).includes(aspectId(id));
+}));
+// A Trait given by a Transformation Trait "while you are in this Transformation" (Monstrous Ascension's Monstrous and Bestial Traits):
+// whether that one applies wholly now.
+useTransformationQuestion("traitApplies", (giver, items) => traitStanding(giver, items) === "in");

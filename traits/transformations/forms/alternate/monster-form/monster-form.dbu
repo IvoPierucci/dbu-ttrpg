@@ -8,6 +8,16 @@ tier: 2+
 stress: 12
 aspects: Prelude, Difficult (LV1)
 bonuses: AG +1(T), FO +1(T), TE +1(T), IN +1(T), MA +1(T)
+# Monstrous Ascension (1)'s choices, on its row: "key | Label | value=Label; ..." (transformations.mjs rowChoicesOf).
+choice1: attribute | Attribute | ag=Agility; te=Tenacity; fo-ma=Force and Magic
+choice2: aspect | Aspect | high-speed=High Speed; bulky=Bulky; raging=Raging
+choice3: save1 | Saving Throw | impulsive=Impulsive; cognitive=Cognitive; corporeal=Corporeal; morale=Morale
+choice4: save2 | Saving Throw | impulsive=Impulsive; cognitive=Cognitive; corporeal=Corporeal; morale=Morale
+choice5: growth | Growth | 0=None; 1=Level 1; 2=Level 2; 3=Level 3
+choice6: rampaging | Rampaging | 0=None; 1=Level 1; 2=Level 2
+# What they give it: the Aspect, Enhanced Save for the two Saves, Growth and Rampaging at their levels; +1(T) to the Attribute(s).
+aspectsChosen: $label.aspect; Enhanced Save ($label.save1/$label.save2); Growth (LV$row.growth); Rampaging (LV$row.rampaging)
+bonusChosen: attribute 1(T)
 description: >
   A monstrous transformation that shifts your body into a violent, terrifying beast. This may be the true form of your alien race or born from some kind of mutation or curse. Whatever the cause, this is a power that grows with you as it harnesses the depths of your primal abilities. While the power is immense, unfortunately this horrific transformation will not let you win any beauty pageants.
 text: >

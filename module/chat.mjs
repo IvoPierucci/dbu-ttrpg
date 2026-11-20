@@ -40073,9 +40073,12 @@ export async function legendRealized(actor, { double = false } = {}) {
   // Realized", asked, once an Encounter.
   const narrative = !double && await narrativeDouble(actor);
   const both = (double || narrative) ? 2 : 1;
-  const kiGain = roll.total * both;
+  // Monstrous Ascension (2): "Increase the amount of Life and Ki Points you regain through Legend Realized by 1/2 of the Attribute Modifier
+  // for the Attribute you chose" (`legend.extra`).
+  const extra = Math.max(0, Number(actor.system.effects?.slots?.["legend.extra"]?.add) || 0);
+  const kiGain = (roll.total + extra) * both;
   // Shedding Transformation (1): "Double the amount of Life Points you gain from Legend Realized."
-  const lifeGain = roll.total * both * ((actor.system.effects?.slots?.["shedding.legend"] === true) ? 2 : 1);
+  const lifeGain = (roll.total + extra) * both * ((actor.system.effects?.slots?.["shedding.legend"] === true) ? 2 : 1);
   await requestActorUpdate(actor, { "system.life.value": Math.min(life.ceiling ?? life.max, life.value + lifeGain),
     "system.ki.value": Math.min(ki.max, ki.value + kiGain) });
   const why = double ? " (New Level of Power: doubled)" : (narrative ? " (Narrative Transformation: doubled)" : "");

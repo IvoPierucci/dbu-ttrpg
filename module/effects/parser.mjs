@@ -524,7 +524,7 @@ const PREDICATE_NAMES = new Set([
   // That many Weapons wielded or more (Dual Wielding Specialist's).
   "weaponsWieldedAtLeast", "grantedOthersAtLeast",
   // One with that Aspect in use (Unstoppable Legend's Super Saiyan Form); that Transformation in use; Enhancements, a Tier of Power asked.
-  "aspectInUse", "inTransformation", "enhancementsAtLeast", "transformedTierAtLeast"
+  "aspectInUse", "inTransformation", "enhancementsAtLeast", "transformedTierAtLeast", "ignoresAspect"
 ]);
 
 /** The ones written without brackets, because they take nothing. */

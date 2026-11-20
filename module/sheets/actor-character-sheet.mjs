@@ -7,7 +7,8 @@ import { fusionContext, racesOf } from "../fusion.mjs";
 import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransformation, aspectFile, aspectsOf, bonusesOf, bonusWritten,
   combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
-  lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait, ownersOf, releaseOwner, stacksOf, evolvedUnmet }
+  lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait, ownersOf, releaseOwner, stacksOf, evolvedUnmet,
+  rowChoicesOf, setRowChoice }
   from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
@@ -3950,6 +3951,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       });
     }
 
+    // What a Transformation asks to be chosen, on its row (transformations.mjs rowChoicesOf).
+    for (const select of this.element.querySelectorAll("[data-tf-choice]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        const item = this.actor.items.get(select.closest("[data-tf-id]")?.dataset.tfId ?? "");
+        if (!item || !this.isEditable) return;
+        await setRowChoice(item, select.dataset.tfChoice, select.value);
+      });
+    }
+
     // The Character an Awakening is held through, chosen on its row (`ownerChoice` - the Possessing Character, the Past Life).
     for (const select of this.element.querySelectorAll("[data-tf-owner]")) {
       select.addEventListener("change", async event => {
@@ -7248,6 +7259,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         groups: file ? groupsOf(item, all).map(group => ({ ...group, open: group.chosen.length < group.picks,
           over: group.chosen.length > group.picks })) : [],
         newLevel: Boolean(item.system.newLevel),
+        // What it asks to be chosen as it is gained (its file's `choice1:`...) - Monster Form's.
+        choices: rowChoicesOf(item, file),
         bonuses: Object.entries(BONUS_ATTRIBUTES).map(([label, attribute]) => ({ label,
           value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
         aspects: file ? aspectsOf(item, all).map(aspect => ({ label: aspectLabel(aspect), summary: aspectFile(aspect.id)?.summary ?? "" })) : [],

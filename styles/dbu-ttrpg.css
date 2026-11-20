@@ -6475,3 +6475,8 @@
 .dbu-tf-add .dbu-tf-pick.unfit .dbu-tf-name { opacity: 0.6; }
 .dbu-tf-add .dbu-tf-pick.blocked { cursor: default; opacity: 0.6; }
 .dbu-tf-add .dbu-tf-name { color: #dfe288; }
+
+/* A Transformation's own choices, on its row (Monster Form's). */
+.dbu-ttrpg .dbu-tf-choices { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.dbu-ttrpg .dbu-tf-choices .dbu-tf-in { display: inline-flex; align-items: center; gap: 6px; }
+.dbu-ttrpg .dbu-tf-choices select { width: auto; min-width: 9em; }
