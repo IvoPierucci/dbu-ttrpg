@@ -615,6 +615,12 @@ const TABLE = [
     doc: "Divine Summoning, once an Encounter: each Minion moved by it, the Power Up out of sequence (True God of Many (6))." },
   { key: "freezeAttack.lend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Freeze Attack on an Ally, once an Encounter: your Damage Attribute on their attacks in that Frozen Turn (True God of Time (7))." },
+  // Monster Form's Traits.
+  { key: "monster.highSpeedWound", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "An Opponent hit after moving your Boosted Speed this Combat Round, once a Round: the Wound 1/2 of your Boosted Speed, asked "
+       + "(Monstrous Ascension (4), High Speed chosen)." },
+  { key: "strike.vsLower", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Strike Rolls where every target is below a lower Health Threshold than you (Violent Monster (2))." },
   // Super Demon's Traits.
   { key: "punchingDown.category", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "Punching Down's Extra Dice so many Dice Categories larger - d6, d8, d10, d12 (Gigantic Demon, Accelerated Growth (1))." },

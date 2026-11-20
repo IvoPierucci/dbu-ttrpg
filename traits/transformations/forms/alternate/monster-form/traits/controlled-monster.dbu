@@ -20,4 +20,10 @@ text: >
 
 ---
 
-# (1)-(3) Its header. (4) Combat Rolls while every Opponent is below Bruised: the table's.
+# (1)-(3) Its header.
+
+# (4) Every Opponent in the Combat Encounter below the Bruised Health Threshold: Combat Rolls 1(T).
+[passive, effect 4]
+if (opponentsBelowBruised) {
+    combatRolls += 1(T);
+}

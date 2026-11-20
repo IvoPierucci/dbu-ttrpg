@@ -7075,6 +7075,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
     // Mimicry of Rending Claws (3): "during a turn in which you moved your Boosted Speed" - this turn.
     if (crossing.speed === "boosted") await actor.setFlag("dbu-ttrpg", "boostedTurn", `${game.combat.id}:${game.combat.round}:${game.combat.turn}`);
+    // Monstrous Ascension (4)'s "this Combat Round".
+    if (crossing.speed === "boosted") await actor.setFlag("dbu-ttrpg", "boostedRound", `${game.combat.id}:${game.combat.round}`);
   }
 
   // And the Profile it was made with, if this is the Maneuver that limit is about. Only

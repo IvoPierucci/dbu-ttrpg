@@ -33267,7 +33267,8 @@ async function resolveAttackWork(message, attack) {
   const weakPoint = await weakPointNatural(attacker, targets.map(entry => entry.uuid), message);
   // Divine Armament (True God of War (3)): the Greater Dice on a Weapon's attack paid in Divine Ki.
   const armament = armamentFormula(attacker, attack);
-  const strike = await rollSide(attacker, strikeParts(attacker, attack), {
+  // Violent Monster (2): every target at a lower Health Threshold.
+  const strike = await rollSide(attacker, [...strikeParts(attacker, attack), ...lowerThresholdStrike(attacker, attack)], {
     ...attackerOptions, ...(armament ? { extraDice: [attackerOptions.extraDice, armament].filter(Boolean).join(" + ") } : {}),
     slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
     // A Signature Technique's: its own dice and Critical Target (a Custom Buff's). Its Adaptation Points are a Wound Roll's alone.
@@ -34462,7 +34463,7 @@ async function attackerStage(message, attack, attacker) {
       top: `${resourceLine(attacker)}${rollAttackLine(attack, "Attacking")}`,
       formula: { what: "Strike Roll", base: DBUCharacterData.BASE_DIE,
         dice: combatDiceGroups(attacker, null, "strike", effectSignature(attacker, attack)),
-        parts: windowParts(attacker, [...strikeParts(attacker, attack), ...techniqueAgainstParts(attacker, attack)]) } });
+        parts: windowParts(attacker, [...strikeParts(attacker, attack), ...lowerThresholdStrike(attacker, attack), ...techniqueAgainstParts(attacker, attack)]) } });
   if (!ready) return;
   // What the window armed, kept on the card, so Change can put it back (the user's).
   const armed = (attacker.system.armedTalents ?? []).filter(id => !before.has(id));
@@ -34608,6 +34609,16 @@ async function answerHit(message, attack, attacker, struck, script = null) {
     revengeSpent: Number(attack.revengeSpentDone) || 0 });
   // Variable Champion (2): the other kind of attack, out of sequence - on this card.
   offerVariableChampion(message, attacker, armedHit);
+  // Monstrous Ascension (4), High Speed: moved your Boosted Speed this Round - half of it on the Wound, asked, once a Round.
+  if ((attacker.system.effects?.slots?.["monster.highSpeedWound"] === true) && (attacker.getFlag?.(SCOPE, "boostedRound") === roundKey())
+    && (attacker.getFlag?.(SCOPE, "monsterSpeedRound") !== roundKey())) {
+    const half = Math.floor((Number(attacker.system.speed?.boosted) || 0) / 2);
+    if (half && ((await askPlayerChoice(attacker, `${attacker.name}: Monstrous Ascension`, [{ value: "yes", label: `+${half} on the Wound (once a Round)` },
+      { value: "no", label: "No" }])) === "yes")) {
+      await requestActorUpdate(attacker, { [`flags.${SCOPE}.monsterSpeedRound`]: roundKey() });
+      answer.marks.monsterSpeedWound = half;
+    }
+  }
   // Full Power of the Super Saiyan (4): Battle Born on the Wound, asked.
   const bornWound = await battleBornAsked(attacker, "battleBorn.wound", "your Wound Roll");
   if (bornWound) answer.marks.battleBornWound = bornWound;
@@ -34895,6 +34906,7 @@ function twoWorldsWoundParts(attacker, attack) {
     const x = DAMAGE_CATEGORIES[resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0)]?.value ?? 1;
     parts.push({ label: `${named("wound.signaturePerCategory")} (Damage Category ${x})`, value: perCategory * x });
   }
+  if (attack.monsterSpeedWound) parts.push({ label: "Monstrous Ascension (half the Boosted Speed)", value: Number(attack.monsterSpeedWound) || 0 });
   // Full Power of the Super Saiyan (4), taken as the hit landed.
   if (attack.battleBornWound) parts.push({ label: "Full Power of the Super Saiyan (Battle Born)", value: Number(attack.battleBornWound) || 0 });
   // Shared Heritage (4): "Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess."
@@ -42707,3 +42719,20 @@ useTransformationQuestion("inflictedOnOpponent", actor => inflictedOnOpponent(ac
 // Demonic Battle (3), (4)'s questions: a target suffering a Combat Condition; an Opponent beside you suffering one.
 useTransformationQuestion("conditioned", actor => conditioned(actor));
 useTransformationQuestion("conditionedOpponentAdjacent", actor => opponentsWithin(actor, 1).some(other => conditioned(other)));
+
+/** Violent Monster (2): every target of the attack at a lower Health Threshold than its maker - `strike.vsLower`. */
+function lowerThresholdStrike(attacker, attack) {
+  const add = Number(attacker?.system?.effects?.slots?.["strike.vsLower"]?.add) || 0;
+  if (!add) return [];
+  const order = ["healthy", "bruised", "injured", "critical"];
+  const mine = order.indexOf(attacker.system.threshold?.key ?? "healthy");
+  const targets = attackTargets(attack ?? {}).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  if (!targets.length || !targets.every(target => order.indexOf(target.system?.threshold?.key ?? "healthy") > mine)) return [];
+  return [{ label: "Violent Monster (a lower Health Threshold)", value: add }];
+}
+
+// Controlled Monster (4)'s question: every Opponent in the Combat Encounter below the Bruised Health Threshold.
+useTransformationQuestion("opponentsBelowBruised", actor => {
+  const others = (game.combat?.combatants ?? []).map(combatant => combatant.actor).filter(other => other && !other.system?.defeated && areOpponents(other, actor));
+  return others.length > 0 && others.every(other => ["bruised", "injured", "critical"].includes(other.system?.threshold?.key ?? "healthy"));
+});

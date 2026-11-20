@@ -7,6 +7,8 @@ mastery: 2
 permanent: 1, 2
 # (1) Armored.
 aspects: +Armored
+# (2) "select and gain access to a Monstrous Trait while in this Transformation".
+grantsOther: monstrous
 description: >
   Thanks to your total mastery over your monstrous self, you've become impossible to defeat.
 text: >
@@ -17,4 +19,8 @@ text: >
 
 ---
 
-# (2) A Monstrous Trait more, (3) Legend Realized: the table's.
+# (2) A Monstrous Trait more - asked as the Trait is made, had once this Mastery is (its header's grantsOther).
+
+# (3) Knocked through a Health Threshold and the Steadfast Check passed, once an Encounter: Legend Realized - outside Realization's count.
+[triggered/steadfast-passed, 1/encounter, effect 3]
+legendRealized();

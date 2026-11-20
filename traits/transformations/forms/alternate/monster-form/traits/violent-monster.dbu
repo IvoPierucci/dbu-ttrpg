@@ -25,7 +25,7 @@ text: >
 
 # (1) The Vile Technique: one of your Signature Techniques, chosen as it is gained (as Favored Technique's) - changeable with its pencil; used
 # only while in Monster Form with this Trait (technique-use.mjs). Designed on the Signature Techniques tab - a Super of 25 TP or less, free
-# (its header); its level and its TP not checked here. (2) Strike against the lower, (5) the Basic Attack out of sequence: the table's.
+# (its header); its level and its TP not checked here. (2) and (5) below.
 
 # (3) Wound Rolls 1(T) for each Health Threshold the target is below.
 [passive, effect 3]
@@ -68,3 +68,16 @@ if ($is.attribute.fo-ma == 1) {
     life.value += floor(max(force.mod, magic.mod) / 2);
     ki.value += floor(max(force.mod, magic.mod) / 2);
 }
+
+# (2) Every target below a lower Health Threshold than you: Strike 1(T) (chat.mjs lowerThresholdStrike).
+[passive, effect 2]
+strike.vsLower += 1(T);
+
+# (5) You or an Ally knocking an Opponent through a Health Threshold with an attack, once a Round: the Basic Attack out of sequence, at them.
+[triggered/knock-through, 1/round, outOfSequence, effect 5]
+requires knockedOpponent;
+basicStrike();
+
+[triggered/opponent-knocked, 1/round, outOfSequence, effect 5]
+requires knockedByAlly;
+basicStrike();

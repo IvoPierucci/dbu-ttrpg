@@ -350,6 +350,7 @@ const PREDICATES = {
   /** An Opponent suffering a Combat Condition you inflicted (chat.mjs inflictedOnOpponent) - Demon Realm Elite (2). */
   targetConditioned: scope => (scope.context?.targets ?? []).some(target => transformationQuestion("conditioned", target) === true),
   conditionedOpponentAdjacent: scope => transformationQuestion("conditionedOpponentAdjacent", scope.data?.parent) === true,
+  opponentsBelowBruised: scope => transformationQuestion("opponentsBelowBruised", scope.data?.parent) === true,
   inflictedOnOpponent: scope => transformationQuestion("inflictedOnOpponent", scope.data?.parent) === true,
   /** Demonic Power held before the Pressure Check just passed (pressure-passed's `powerBefore`) - Fiendish Power (6)'s "already having 2+". */
   powerBeforeAtLeast: (scope, n) => (Number(scope.context?.powerBefore) || 0) >= (Number(n?.value ?? n) || 0),

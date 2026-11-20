@@ -49,7 +49,13 @@ if ($is.attribute.fo-ma == 1) {
 soakValue += $aspect.rampaging * 1(T);
 wound += $aspect.rampaging * 1(T);
 
-# (4) High Speed chosen: the Wound after moving your full Boosted Speed - the table's. Bulky: up to 2 Super Stacks, Strike 1(T). Raging: its
+# (4) High Speed chosen: an Opponent hit after moving your Boosted Speed this Round - half of it on the Wound, asked, once a Round (chat.mjs).
+[passive, effect 4]
+if ($is.aspect.high-speed == 1) {
+    allow monster.highSpeedWound;
+}
+
+# Bulky: up to 2 Super Stacks, Strike 1(T). Raging: its
 # header.
 [passive, effect 4]
 if (($is.aspect.bulky == 1) && (superStack.stacks <= 2)) {
