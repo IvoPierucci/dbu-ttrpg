@@ -1978,9 +1978,12 @@ async function settleAbsorbHold(message, clash) {
  */
 export async function absorbCharacter(actor, target) {
   const { setCondition } = await import("./conditions.mjs");
+  // In a Combat Encounter, a Temporary Awakening's stack ("Absorption ... as a Level 2 Temporary Awakening").
   await actor.update({ [`flags.${SCOPE}.absorbedWith`]: [...(actor.getFlag?.(SCOPE, "absorbedWith") ?? []),
-    { uuid: target.uuid, name: target.name }] });
+    { uuid: target.uuid, name: target.name, temporary: Boolean(game.combat?.started) }] });
   await setCondition(actor, "absorption-awakening", (Number(actor.system.conditions?.["absorption-awakening"]) || 0) + 1);
+  // The Absorption Awakening itself, made where it is not had yet (transformations.mjs).
+  await (await import("./transformations.mjs")).ensureConditionAwakening(actor, "absorption-awakening");
   await removeFromEncounter(target);
   // Assimilation (4): the Absorbed's Top Layer, asked.
   await (await import("./assimilation.mjs")).assimilateApparel(actor, target);
@@ -18266,6 +18269,7 @@ export async function unify(actor, aimed, card = null) {
       [`flags.${SCOPE}.unifiedWith`]: [...(actor.getFlag?.(SCOPE, "unifiedWith") ?? []), { uuid: other.uuid, name: other.name }]
     });
     await setCondition(actor, "unified-awakening", (Number(actor.system.conditions?.["unified-awakening"]) || 0) + 1);
+    await (await import("./transformations.mjs")).ensureConditionAwakening(actor, "unified-awakening");
     await removeFromEncounter(other);
     said.push(`${other.name} becomes part of ${actor.name}: a stack of the Unified Lesser Awakening, `
       + `${amount} Life and Ki Points back (2d10 ${roll.total} x ${Math.max(1, Number(other.system?.baseTierOfPower) || 1)} + Surgency).`);

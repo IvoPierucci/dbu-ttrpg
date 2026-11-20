@@ -9,6 +9,9 @@ tier: 1+
 maxStacks: 7
 aspects: 
 bonuses: AG +1, FO +1, TE +1, MA +1
+# Its stacks the Unify Maneuver's marks (a Combat Condition), each naming its Merged Character (the flag unifiedWith).
+stacksFromCondition: unified-awakening
+ownersFromFlag: unifiedWith
 description: >
   Your power alone isn't enough- and you don't necessarily have the time to train to grow stronger- so you and another have decided to merge your strengths and create a new warrior of greater strength. As one, you stand united against any who threaten you.
 text: >

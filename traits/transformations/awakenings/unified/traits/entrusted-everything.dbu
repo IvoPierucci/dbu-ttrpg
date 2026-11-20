@@ -15,4 +15,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Each stack's Merged Character: on its row. (2) Where they reappear, (3) their Signature Techniques, Unique Abilities, Forms and
+# Enhancements, and (4) their Skill Ranks for a Skill Check or Clash: the table's.
+
+# (5) Surgency Z(bT).
+[passive, effect 5]
+surgency += $Z * 1(bT);
+
+# (6) Combat Rolls Z(bT) till the start of your next turn with the Power Up, once an Encounter: the table's.

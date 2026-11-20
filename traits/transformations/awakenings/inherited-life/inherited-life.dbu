@@ -9,6 +9,10 @@ tier: 2+
 maxStacks: 1
 aspects: 
 bonuses: 
+# The Past Life (Lingering Power's), chosen on its row where it is a Character of this world: "+2 in the three Attributes with
+# the highest Attribute Scores among your Past Life's Attributes" (transformations.mjs bonusesOf). A Past Life only named: the table's.
+ownerChoice: true
+bonusesPerOwner: top3 2
 description: >
   The residual power you obtained from your past life is truly yours now, as natural to you now as breathing. Your former self and your new self have fully united, in your mind, at least, if not in body. You've inherited more than just your past life's power; you've access to their memories, now, too.
 text: >

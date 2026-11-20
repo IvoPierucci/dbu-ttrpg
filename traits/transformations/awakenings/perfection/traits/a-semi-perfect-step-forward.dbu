@@ -42,7 +42,7 @@ if (optionChosen("genetic-agility")) {
     dodge += $Z * 1(T);
     wound += $Z * 1(T);
 }
-if (optionChosen("pursuit-of-perfection") && (absorption.stacks >= 1)) {
+if (optionChosen("pursuit-of-perfection") && hasCondition("absorption-awakening")) {
     combatRolls += $Z * 1(T);
     surgency += $Z * 1(T);
 }

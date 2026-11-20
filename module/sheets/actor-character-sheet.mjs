@@ -7,7 +7,7 @@ import { fusionContext, racesOf } from "../fusion.mjs";
 import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransformation, aspectFile, aspectsOf, bonusesOf, bonusWritten,
   combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
-  lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait } from "../transformations.mjs";
+  lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait, ownersOf, releaseOwner, stacksOf } from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
@@ -464,6 +464,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       removeTransformation: DBUCharacterSheet._onRemoveTransformation,
       transformationSection: DBUCharacterSheet._onTransformationSection,
       keepTemporaryAwakening: DBUCharacterSheet._onKeepTemporaryAwakening,
+      releaseTransformationOwner: DBUCharacterSheet._onReleaseTransformationOwner,
       endTemporaryAwakening: DBUCharacterSheet._onEndTemporaryAwakening,
       toggleTransformation: DBUCharacterSheet._onToggleTransformation,
       addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
@@ -3948,6 +3949,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       });
     }
 
+    // The Character an Awakening is held through, chosen on its row (`ownerChoice` - the Possessing Character, the Past Life).
+    for (const select of this.element.querySelectorAll("[data-tf-owner]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        const item = this.actor.items.get(select.closest("[data-tf-id]")?.dataset.tfId ?? "");
+        if (!item || !this.isEditable) return;
+        const choices = (item.system.choices ?? []).filter(entry => entry.key !== "owner");
+        if (select.value) choices.push({ key: "owner", value: select.value });
+        await item.update({ "system.choices": choices });
+      });
+    }
+
     // A Trait of a group chosen on a Transformation's row: made as its Traits are (transformations.mjs chooseGroupTrait).
     for (const select of this.element.querySelectorAll("[data-tf-group]")) {
       select.addEventListener("change", async event => {
@@ -7210,7 +7223,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         gradeTip: [row.values.label, row.values.needs ? `needs ${row.values.needs} - said, never refused` : ""].filter(Boolean).join(" - "),
         gradeValues: Object.entries(row.values).filter(([key]) => !["label", "needs", "stress", "tier"].includes(key))
           .map(([key, value]) => `${capital(key.replace(/([A-Z])/g, " $1").trim())} ${value}`),
-        stacks: Number(item.system.stacks) || 0,
+        stacks: stacksOf(item, file),
+        stacksFixed: Boolean(file?.stacksFromCondition),
         maxStacks: Number(file?.maxStacks) || 1,
         overStacks: (Number(item.system.stacks) || 0) > (Number(file?.maxStacks) || 1),
         tier: String(row.values.tier ? `${row.values.tier}+` : (file?.tier ?? "")),
@@ -7221,6 +7235,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         overMastery: (Number(item.system.mastery) || 0) > max,
         temporary: Number(item.system.temporary) || 0,
         temporaryStacks: Number(item.system.temporaryStacks) || 0,
+        // The Characters it is held through (transformations.mjs ownersOf): each stack's, or the one chosen.
+        owners: file?.ownersFromFlag ? ownersOf(item, file).map(owner => ({ uuid: owner.uuid, name: owner.name, temporary: owner.temporary }))
+          : null,
+        ownerChoice: file?.ownerChoice ? { chosen: ownersOf(item, file)[0]?.uuid ?? "", options: game.actors.filter(actor => actor.id !== this.actor.id
+          && ["character", "minion", "adversary", "fusion"].includes(actor.type)).map(actor => ({ uuid: actor.uuid, name: actor.name })) } : null,
         // Traits of which some are chosen - Super Saiyan Style, Demonic Traits (transformations.mjs groupsOf).
         groups: file ? groupsOf(item, all).map(group => ({ ...group, open: group.chosen.length < group.picks,
           over: group.chosen.length > group.picks })) : [],
@@ -7300,6 +7319,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const number = Math.max(0, Math.floor(Number(input.value) || 0));
     if (field === "grade") return item.update({ "system.grade": Math.max(1, number) });
     if (["stacks", "mastery"].includes(field)) return item.update({ [`system.${field}`]: number });
+  }
+
+  /** One of an Awakening's Characters let go (Release) - the Absorbed, the Merged: where they go is the table's. */
+  static async _onReleaseTransformationOwner(event, target) {
+    if (!this.isEditable) return;
+    return releaseOwner(this.actor, target.closest("[data-tf-id]")?.dataset.tfId, target.dataset.uuid);
   }
 
   /** A Temporary Awakening the ARC lets stay. */

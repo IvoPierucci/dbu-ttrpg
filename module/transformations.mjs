@@ -173,11 +173,20 @@ export function aspectFile(id) {
   return (file?.kind === "aspects") ? file : null;
 }
 
+/**
+ * An Awakening's Stacks: its own - or, one whose file says they are a Combat Condition's stacks (`stacksFromCondition:` - Absorption's,
+ * Unified's, kept as the marks the Absorb and Unify Maneuvers give), that Condition's on its character.
+ */
+export function stacksOf(item, file = fileOf(item)) {
+  if (file?.stacksFromCondition) return Math.max(0, Number(item?.parent?.system?.conditions?.[file.stacksFromCondition]) || 0);
+  return Math.max(0, Number(item?.system?.stacks) || 0);
+}
+
 /** G, Z, S and M for one Transformation Item: its Grade, Stacks, Stage and Mastery. */
 export function lettersOf(item, file = fileOf(item)) {
   return {
     G: Math.max(1, Number(item?.system?.grade) || 1),
-    Z: Math.max(0, Number(item?.system?.stacks) || 0),
+    Z: stacksOf(item, file),
     S: Math.max(0, Number(file?.stage) || 0),
     M: Math.max(0, Number(item?.system?.mastery) || 0)
   };
@@ -355,7 +364,65 @@ export function bonusesOf(item, file = fileOf(item)) {
     }
     if (bonus.coefficient) bonuses[attribute] = bonus;
   }
+  // "+N in the three Attributes with the highest Attribute Scores" of each of its Characters (`bonusesPerOwner: top3 N` - an
+  // Absorbed Character's +1 a stack, the Possessing Character's or the Past Life's +2). A tie: the first of them.
+  const [rule, amount] = String(file.bonusesPerOwner ?? "").split(/\s+/);
+  if (rule === "top3") {
+    for (const owner of ownersOf(item, file)) {
+      const scores = Object.entries(owner.actor?.system?.attributes ?? {}).map(([key, value]) => [key, Number(value?.score) || 0])
+        .sort((a, b) => b[1] - a[1]).slice(0, 3);
+      for (const [attribute] of scores) {
+        const had = bonuses[attribute] ?? { coefficient: 0, unit: "" };
+        bonuses[attribute] = { coefficient: had.coefficient + (Number(amount) || 1), unit: had.unit };
+      }
+    }
+  }
   return bonuses;
+}
+
+/**
+ * The Characters an Awakening is held through - each stack's own (the Absorbed, the Merged), read off its character's flag
+ * (`ownersFromFlag:` - the Absorb and Unify Maneuvers' lists) - or the one chosen on its row (`ownerChoice: true` - the Possessing
+ * Character, the Past Life). Each { uuid, name, temporary, actor }.
+ */
+export function ownersOf(item, file = fileOf(item)) {
+  const find = uuid => (uuid && globalThis.fromUuidSync) ? globalThis.fromUuidSync(uuid) : null;
+  if (file?.ownersFromFlag) {
+    return Array.from(item?.parent?.getFlag?.("dbu-ttrpg", file.ownersFromFlag) ?? [])
+      .map(entry => ({ uuid: entry?.uuid ?? "", name: entry?.name ?? "", temporary: Boolean(entry?.temporary), actor: find(entry?.uuid) }));
+  }
+  if (file?.ownerChoice) {
+    const uuid = (item?.system?.choices ?? []).find(entry => entry?.key === "owner")?.value ?? "";
+    const actor = find(uuid);
+    return uuid ? [{ uuid, name: actor?.name ?? uuid, temporary: false, actor }] : [];
+  }
+  return [];
+}
+
+/**
+ * A Combat Condition's stacks gained that an Awakening is made of (`stacksFromCondition:`): its Item made where the character has none,
+ * so its Traits and bonuses come with it (the Absorb and Unify Maneuvers').
+ */
+export async function ensureConditionAwakening(actor, conditionKey) {
+  const file = transformationFiles().find(each => each.stacksFromCondition === conditionKey);
+  if (!actor || !file || transformationItems(actor).some(item => item.system?.transformationId === file.id)) return null;
+  return addTransformation(actor, file.id);
+}
+
+/** One of an Awakening's Characters let go (Release): off its list, a stack of its Condition with it. */
+export async function releaseOwner(actor, itemId, uuid) {
+  const item = actor?.items.get(itemId);
+  const file = fileOf(item);
+  if (!item || !file?.ownersFromFlag) return;
+  const list = Array.from(actor.getFlag("dbu-ttrpg", file.ownersFromFlag) ?? []);
+  const at = list.findIndex(entry => entry?.uuid === uuid);
+  if (at < 0) return;
+  list.splice(at, 1);
+  await actor.setFlag("dbu-ttrpg", file.ownersFromFlag, list);
+  if (file.stacksFromCondition) {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, file.stacksFromCondition, Math.max(0, (Number(actor.system.conditions?.[file.stacksFromCondition]) || 0) - 1));
+  }
 }
 
 /** Its bonuses as a script of their own, so that each is named in the hovers by the Transformation it comes from. */
@@ -376,7 +443,7 @@ export function transformationItems(actor) {
 export function inUse(item) {
   const file = fileOf(item);
   if (!file) return false;
-  if (kindOf(file) === "awakening") return (Number(item.system?.stacks) || 0) > 0;
+  if (kindOf(file) === "awakening") return stacksOf(item, file) > 0;
   return Boolean(item.system?.active);
 }
 
@@ -451,7 +518,7 @@ export function transformationTraitAside(item, items = item?.parent?.items) {
   if (!ownerFile) return "transformation";
   const trait = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   const kind = kindOf(ownerFile);
-  if (trait?.stacks && ((Number(owner.system?.stacks) || 0) < Number(trait.stacks))) return "stacks";
+  if (trait?.stacks && (stacksOf(owner, ownerFile) < Number(trait.stacks))) return "stacks";
   if (trait?.mastery && ((Number(owner.system?.mastery) || 0) < Number(trait.mastery))) return "mastery";
   if (kind === "awakening") return "";
   if ((trait?.slot === "legendary") && (formTypeOf(ownerFile) === "legendary")) return "";

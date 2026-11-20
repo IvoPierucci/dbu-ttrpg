@@ -9,6 +9,12 @@ tier: 1+
 maxStacks: 7
 aspects: 
 bonuses: 
+# Its stacks the Absorb Maneuver's marks (a Combat Condition), each naming its Absorbed Character (the flag absorbedWith), kept as
+# they were built (transformations.mjs stacksOf, ownersOf); "Each stack of Absorption applies an AMB of +1 in the three Attributes
+# with the highest Attribute Score amongst the Absorbed Character's Attributes".
+stacksFromCondition: absorption-awakening
+ownersFromFlag: absorbedWith
+bonusesPerOwner: top3 1
 description: >
   Your power isn't limited to just your own strength. You can take and harness the power of others for yourself, by force if necessary. By taking them into your body through magical or esoteric means, you gain their strength on top of your own. Will you use their strength for good? Or for your own purposes? Will you set them free once the enemy before you is defeated? Or will you keep them trapped indefinitely to bolster your own abilities?
 text: >

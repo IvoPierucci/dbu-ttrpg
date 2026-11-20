@@ -9,6 +9,11 @@ tier: 1+
 maxStacks: 1
 aspects: 
 bonuses: 
+# The Possessing Character, chosen on its row (only through the Possession Maneuver - not built yet: the table's). "The Attribute
+# Modifier Bonus of this Transformation is +2 in the three Attributes with the highest Attribute Scores among the Possessing
+# Character's Attributes" (transformations.mjs bonusesOf).
+ownerChoice: true
+bonusesPerOwner: top3 2
 description: >
   It's inside you. You can feel it, clawing at the edges of your mind. It's taken over, and there's nothing you can do about it, now. You're forced to watch through your own eyes as someone else uses your body for their whims, their goals, their life. You've become merely a puppet, a brand-spanking new suit for them to wear. You're now just a vessel that's been Overtaken.
 text: >

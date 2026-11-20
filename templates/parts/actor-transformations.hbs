@@ -66,7 +66,7 @@
               max="{{row.grades}}" value="{{row.grade}}"/></label>
             {{/if}}
             {{#if row.awakening}}
-            <label class="dbu-tf-in">Stacks<input type="number" class="dbu-tf-n" data-tf-field="stacks" min="0" value="{{row.stacks}}"/>
+            <label class="dbu-tf-in"{{#if row.stacksFixed}} data-tooltip="Its Characters' - Released below"{{/if}}>Stacks<input type="number" class="dbu-tf-n" data-tf-field="stacks" min="0" value="{{row.stacks}}" {{#if row.stacksFixed}}disabled{{/if}}/>
               <span class="dbu-tf-dim{{#if row.overStacks}} warn{{/if}}">of {{row.maxStacks}}</span></label>
             {{/if}}
             <span class="dbu-tf-dim">Tier {{row.tier}}</span>
@@ -98,6 +98,21 @@
           {{#if row.gradeValues.length}}
           <div class="dbu-tf-part"><div class="dbu-tf-heading">Grade {{row.grade}}</div>
             <div class="dbu-tf-kv">{{#each row.gradeValues as |value|}}<span class="dbu-tf-dim">{{value}}</span>{{/each}}</div></div>
+          {{/if}}
+          {{#if row.owners}}
+          {{! Each stack's Character - the Absorbed, the Merged: let go with Release (where they go is the table's). }}
+          <div class="dbu-tf-part"><div class="dbu-tf-heading">Stacks, each with its Character</div>
+            <div class="dbu-tf-chips">
+              {{#each row.owners as |owner|}}<span class="dbu-tf-chip{{#if owner.temporary}} ext{{/if}}"{{#if owner.temporary}} data-tooltip="Temporary"{{/if}}>{{owner.name}}{{#if @root.editable}}
+                <button type="button" class="dbu-tf-small" data-action="releaseTransformationOwner" data-uuid="{{owner.uuid}}">Release</button>{{/if}}</span>{{else}}<span class="dbu-tf-dim">none</span>{{/each}}
+            </div></div>
+          {{/if}}
+          {{#if row.ownerChoice}}
+          <div class="dbu-tf-part"><div class="dbu-tf-heading">Its Character</div>
+            <select data-tf-owner {{#unless @root.editable}}disabled{{/unless}}>
+              <option value="">None chosen</option>
+              {{#each row.ownerChoice.options as |option|}}<option value="{{option.uuid}}" {{#if (eq option.uuid ../row.ownerChoice.chosen)}}selected{{/if}}>{{option.name}}</option>{{/each}}
+            </select></div>
           {{/if}}
           {{#each row.groups as |group|}}
           {{! Traits of which some are chosen (the Trait's group): those chosen, taken away by their trash; one more picked from the list. }}
