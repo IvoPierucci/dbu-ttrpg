@@ -27,4 +27,11 @@ charges.category += 1;
 
 [passive, effect 4]
 combatRolls += threshold.depth * 1(T);
-# (5)(6): the table's.
+# (5) Below the Injured Health Threshold: God of Judgment's Energy Charge doubled - one more on the Signature Technique, once a Round.
+[triggered/declare-maneuver, 1/round, effect 5]
+requires signatureTechnique && belowThreshold("injured");
+attack.energyCharges += 1;
+
+# (6) Divine Judgement in the Injured Health Threshold, once an Encounter: free, an Energy Charge (chat.mjs offerDomainAfterDamage).
+[passive, effect 6]
+allow divineJudgement.injuredFree;

@@ -21,4 +21,13 @@ text: >
 if (wieldingWeapon) {
     combatRolls += 2(T);
 }
-# (3)-(5) Divine Armament, Magical Materialization, Divine Weapon: the table's.
+# (3) A wielded Weapon has the Divine Armament Quality: paid in Divine Ki, your Greater Dice on its Strike and Wound (chat.mjs armamentFormula).
+[passive, effect 3]
+allow divineArmament;
+
+# (4) Magical Materialization making a Weapon: no Ki Point Cost (use-maneuver.mjs). (5) Divine Weapon: your Damage Attribute again.
+[passive, effect 4]
+allow materialize.freeWeapon;
+
+[passive, effect 5]
+allow divineWeapon.damageTwice;

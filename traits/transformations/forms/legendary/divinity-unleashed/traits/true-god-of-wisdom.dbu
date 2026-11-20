@@ -18,4 +18,29 @@ text: >
 
 ---
 
-# (2)-(6) Its Modifiers matched, God of Wisdom doubled, Divine Wisdom: the table's.
+# (2) Its Attribute Modifier Bonus (SC/PE) that of its (MA): 4(T), and 1(T) a Higher Scale.
+[passive, effect 2]
+scholarship.mod += (4 + $scales) * 1(T);
+personality.mod += (4 + $scales) * 1(T);
+
+# (3) God of Wisdom's bonus doubled: its 1(bT) once more.
+[passive, effect 3]
+if (max(scholarship.score, personality.score) >=
+    max(max(agility.score, force.score), max(max(tenacity.score, insight.score), magic.score))) {
+    combatRolls += 1(bT);
+    initiative += 1(bT);
+}
+
+# (4) Divine Wisdom used, once a Round: Life Points, 1/2 of your Personality or Scholarship Modifier, the higher.
+[triggered/declare-maneuver, 1/round, effect 4]
+requires using("divine-wisdom");
+life.value += floor(max(personality.mod, scholarship.mod) / 2);
+
+# (5) The Hype and/or the Analysis, once a Round: a Combat Condition off you or an adjacent Ally, asked (chat.mjs cleanseNear).
+[triggered/declare-maneuver, 1/round, effect 5]
+requires using("hype") || using("analysis");
+cleanseNear();
+
+# (6) Entering it, once an Encounter: Divine Wisdom's effect - free, its 1/Round untouched.
+[triggered/transform, 1/encounter, outOfSequence, effect 6]
+domainOutOfSequence(special);

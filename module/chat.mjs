@@ -31270,7 +31270,9 @@ export async function postAttack(actor, target, maneuver,
           // Sphere. Null for every attack whose Area, if any, is its Profile's. A Technique's is
           // the one its features built - or, with none, one an effect added (`areaAdded`, Artillery Shot's).
           area: greedArea(overwhelmedArea(sizedArea(actor, target, technique ? (technique.area ?? (areaAdded ? area : null)) : (area ?? PROFILES[profile]?.area ?? null),
-            { portal }), reflecting ? null : overwhelm), reflecting ? 0 : (boughtMagnitude + blaster.magnitude)),
+            { portal }), reflecting ? null : overwhelm), reflecting ? 0 : (boughtMagnitude + blaster.magnitude
+              // True God of an Element's God of Focus: the Divine Focus's AoE a Magnitude larger.
+              + ((actor.system.effects?.slots?.[`divineFocus.${profile}`] === true) ? 1 : 0))),
           // Critical Point (2): primed by the Energy Charge Maneuver this Round.
           ...((primed && !reflecting) ? { primed: true } : {}),
           // Concentrated Energy (4): the attack the Energy Charge Maneuver declared - its stacks lost once it is done.
@@ -32931,7 +32933,8 @@ function profileSlotStrike(attacker, attack) {
 /** A Favored Element's: "You increase your Strike and Wound Rolls by 1(T) and 2(T) respectively". */
 function favoredParts(attacker, attack, roll) {
   if (!favoredElement(attacker, attack?.profile)) return [];
-  const per = (roll === "strike") ? 1 : 2;
+  // True God of an Element (3): "Double the bonus to your Strike and Wound Rolls from Favored Element."
+  const per = ((roll === "strike") ? 1 : 2) * ((attacker.system.effects?.slots?.["favored.double"] === true) ? 2 : 1);
   const tier = Math.max(1, attacker.system.tierOfPower ?? 1);
   // Elemental Assault's Counter Elemental: "Increase the Wound Rolls of your Favored Element by 3(T)".
   const counter = (roll !== "strike") && (attacker.system.effects?.slots?.["elementalAssault.counter"] === true);
@@ -33214,8 +33217,11 @@ async function resolveAttackWork(message, attack) {
   const tactics = criticalTactics(targets.map(entry => entry.uuid));
   // Weak Point Analysis: the first attack at them this Round, its Natural 2 higher.
   const weakPoint = await weakPointNatural(attacker, targets.map(entry => entry.uuid), message);
+  // Divine Armament (True God of War (3)): the Greater Dice on a Weapon's attack paid in Divine Ki.
+  const armament = armamentFormula(attacker, attack);
   const strike = await rollSide(attacker, strikeParts(attacker, attack), {
-    ...attackerOptions, slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
+    ...attackerOptions, ...(armament ? { extraDice: [attackerOptions.extraDice, armament].filter(Boolean).join(" + ") } : {}),
+    slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
     // A Signature Technique's: its own dice and Critical Target (a Custom Buff's). Its Adaptation Points are a Wound Roll's alone.
     signatureRoll: effectSignature(attacker, attack),
     forceCritical: Boolean(attack.profileCritical),
@@ -34888,6 +34894,7 @@ function woundDice(attacker, attack) {
     // Synthetic Muscle (2)'s, and (3)'s again.
     ...syntheticDice(attacker, attack),
     ...combatCatDice(attacker, attack),
+    ...(armamentFormula(attacker, attack) ? [{ label: "Divine Armament", formula: armamentFormula(attacker, attack) }] : []),
     { label: "Extra dice", formula: tierDice(attacker, "wound") },
     { label: "Energy charges", formula: energyChargeDice(attacker, attack) },
     ...phantomEdgeDice(attacker, attack),
@@ -34953,6 +34960,17 @@ function profileWoundParts(attacker, attack) {
       parts.push({ label: `${giver} (${said}${moreTimes > 1 ? ` x${moreTimes}` : ""})`, value: modifier * moreTimes });
     }
   }
+
+  // True God of Magic (5): "During a Combat Round in which you have used a Magical Unique Ability, your Magic Attacks have their Wound Rolls
+  // increased by 1/4 (rounded up) of your Magic Modifier."
+  if ((attack.foundation === "magic") && (attacker.system.effects?.slots?.["magical.roundWound"] === true) && game.combat?.started
+    && (attacker.getFlag?.(SCOPE, "magicalUniqueRound") === roundKey())) {
+    const quarter = Math.ceil((Number(attacker.system.attributes?.magic?.mod) || 0) / 4);
+    if (quarter) parts.push({ label: "True God of Magic (a Magical Unique Ability this Round)", value: quarter });
+  }
+  // True God of Time (7): the Damage Attribute of whoever's Freeze Attack began this Frozen Turn.
+  const lent = attacker.getFlag?.(SCOPE, "frozenTurn")?.lent;
+  if (lent?.value) parts.push({ label: `${lent.name}'s Damage Attribute (True God of Time)`, value: Number(lent.value) || 0 });
 
   // And for this attack alone (`damageAttributeAgain` - True God of War (5)'s Divine Weapon).
   const again = Math.max(0, Number(attack.damageAttributeAgain) || 0);
@@ -42264,9 +42282,111 @@ export async function freezeAttack(actor, maneuver = null) {
   const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>Freeze Attack: ${Handlebars.escapeExpression(who.name)} begins a Frozen Turn - 1 Action, for the Basic Attack Maneuver.</p>`,
     flags: { [SCOPE]: { [FREEZE_FLAG]: { actorUuid: who.uuid, ended: false } } } });
+  // True God of Time (7): "If you target an Ally with the Freeze Attack God Maneuver, apply your Damage Attribute to any Attacking Maneuver they
+  // make through its effects" - asked, once an Encounter; the higher of your Force and Magic Modifiers (my reading).
+  let lent = null;
+  const encounter = game.combat?.id ?? "none";
+  if (ally && (actor.system.effects?.slots?.["freezeAttack.lend"] === true) && (actor.getFlag?.(SCOPE, "freezeLendEncounter") !== encounter)) {
+    const value = Math.max(0, Number(actor.system.attributes?.force?.mod) || 0, Number(actor.system.attributes?.magic?.mod) || 0);
+    if ((await askPlayerChoice(actor, `${actor.name}: True God of Time`, [{ value: "yes", label: `Your Damage Attribute (${value}) on ${ally.name}'s attack` },
+      { value: "no", label: "Not now" }])) === "yes") {
+      lent = { value, name: actor.name };
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.freezeLendEncounter`]: encounter });
+    }
+  }
   await requestActorUpdate(who, { [`flags.${SCOPE}.frozenTurn`]: { left: 1, name: maneuver?.name ?? "Freeze Attack", messageId: card.id,
-    attacksAtStart: Number(who.system.attacksThisRound) || 0, limited: false, difficult: false, straining: false, pained: false } });
+    attacksAtStart: Number(who.system.attacksThisRound) || 0, limited: false, difficult: false, straining: false, pained: false, ...(lent ? { lent } : {}) } });
   const { setCondition } = await import("./conditions.mjs");
   for (const other of frozenOthers(who)) await setCondition(other, "frozen-in-time", 1);
   return card;
+}
+
+/** Divine Armament (True God of War (3)): "If an Attacking Maneuver made with this Weapon has its Ki Point Cost paid with Divine Ki Points, apply your
+ * Greater Dice to the Strike and Wound Rolls of that Attacking Maneuver" - a wielded Weapon's, while the Trait applies. "" where not. */
+function armamentFormula(attacker, attack) {
+  if ((attacker?.system?.effects?.slots?.["divineArmament"] !== true) || !attack?.weapon || attack.weapon.unarmed) return "";
+  if (!((Number(attack.paid?.divine) || 0) > 0)) return "";
+  return attacker.system.dice?.greater?.formula ?? "";
+}
+
+/**
+ * Divine Summoning: "Target any number of your Minions. Place them on any unoccupied Square(s) on the Battlefield" - which, ticked; 2(bT) Divine
+ * Ki Points each past the first (the first paid as it was used); where they go, the table's. True God of Many (6), once an Encounter: each
+ * moved, the Power Up out of sequence, offered.
+ */
+export async function divineSummoning(actor) {
+  const { minionsOf } = await import("./allies.mjs");
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const minions = minionsOf(actor).filter(minion => !minion.system?.defeated);
+  if (!minions.length) {
+    ui.notifications.warn(`${actor.name} has no Minions to summon.`);
+    return UNSPENT;
+  }
+  const escape = Handlebars.escapeExpression;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name}: Divine Summoning` },
+    content: minions.map(minion => `<label class="dbu-respond-option"><input type="checkbox" name="who" value="${escape(minion.uuid)}"/>
+      <span class="dbu-respond-name">${escape(minion.name)}</span></label>`).join(""),
+    buttons: [{ action: "ok", label: "Summon", default: true, callback: (event, button, dialog) =>
+      [...dialog.element.querySelectorAll('input[name="who"]:checked')].map(input => input.value) }, { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!Array.isArray(chosen) || !chosen.length) return;
+  const more = (chosen.length - 1) * 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  if (more && !await spendManeuverCost(actor, { id: "divine-summoning.more", name: "Divine Summoning", godManeuver: true }, more)) return;
+  const picked = chosen.map(uuid => minions.find(minion => minion.uuid === uuid)).filter(Boolean);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${escape(
+    `Divine Summoning: ${picked.map(minion => minion.name).join(", ")} - placed on any unoccupied Squares; one placed beside an Opponent may use its Exploit Maneuver (one Minion only).`)}</div>` });
+  const encounter = game.combat?.id ?? "none";
+  if ((actor.system.effects?.slots?.["summoning.powerUp"] === true) && (actor.getFlag?.(SCOPE, "summoningPowerEncounter") !== encounter)) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.summoningPowerEncounter`]: encounter });
+    for (const minion of picked) {
+      await offerOutOfSequence(minion, { actorUuid: minion.uuid, actorName: minion.name, maneuverId: "power-up", maneuverName: "Power Up",
+        reason: "True God of Many - Divine Summoning" });
+    }
+  }
+}
+
+/**
+ * True God of Wisdom (5): "remove a Combat Condition (except Suffocating or Pinned) from yourself or an adjacent Ally" - which, asked among
+ * yours and those of the Allies within 1 Square. Unspent where none is.
+ */
+export async function cleanseNear(actor) {
+  const { alliesNear } = await import("./guidance.mjs");
+  const { conditionsFor, setCondition } = await import("./conditions.mjs");
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const options = [actor, ...alliesNear(actor, 1)].flatMap(who => conditionsFor(who)
+    .filter(each => each.combatCondition && each.active && !["suffocating", "pinned"].includes(each.key))
+    .map(each => ({ value: `${who.uuid}|${each.key}`, label: `${who.name}: ${each.name ?? each.key}` })));
+  if (!options.length) return UNSPENT;
+  const picked = await askPlayerChoice(actor, `${actor.name}: True God of Wisdom - a Combat Condition removed`, options);
+  if (!picked) return UNSPENT;
+  const [uuid, key] = String(picked).split("|");
+  const who = fromUuidSync(uuid);
+  if (who) await setCondition(who, key, 0);
+}
+
+/**
+ * True God of Magic (6): "Upon entering Divinity Unleashed, select a Magical Unique Ability that you meet the Prerequisites for. You gain access to
+ * that Magical Unique Ability until you leave Divinity Unleashed" - one not had, asked (its Prerequisites said, not checked); given by the Form you
+ * are in and gone as you leave it (`whileIn` - transformations.mjs).
+ */
+export async function borrowMagicalUnique(actor) {
+  const T = await import("./transformations.mjs");
+  const { uniqueItemFrom, isUniqueAbility } = await import("./unique.mjs");
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const form = T.originalFormOf(actor?.items ?? []);
+  if (!form) return UNSPENT;
+  const held = new Set(Array.from(actor.items).filter(isUniqueAbility).map(each => each.system.unique?.libraryId));
+  const offered = traitsOfKind("unique").filter(each => !each.owner && !held.has(each.id) && ["magical", "both"].includes(each.uaType))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!offered.length) return UNSPENT;
+  const id = await askPlayerChoice(actor, `${actor.name}: True God of Magic - a Magical Unique Ability`, offered.map(each => ({ value: each.id,
+    label: `${each.name}${each.prerequisites ? ` (${String(each.prerequisites).trim()})` : ""}` })));
+  const definition = offered.find(each => each.id === id);
+  if (!definition) return UNSPENT;
+  const data = uniqueItemFrom(definition, traitsOfKind("unique", definition.id), { chosenType: "magical", applied: [], choices: {} });
+  data.system.unique.free = true;
+  data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), grantedBy: form.id, whileIn: form.id } };
+  await actor.createEmbeddedDocuments("Item", [data]);
 }

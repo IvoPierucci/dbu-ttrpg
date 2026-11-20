@@ -859,6 +859,16 @@ async function runVerb(actor, call, context) {
     case "basicStrike": return (await import("../chat.mjs")).basicStrike(actor);
     // The Domain Maneuvers (Divinity Unleashed's God of a Domain (3)).
     case "divineHealing": return (await import("../chat.mjs")).divineHealing(actor, context?.maneuver ?? null);
+    case "divineSummoning": return (await import("../chat.mjs")).divineSummoning(actor);
+    case "cleanseNear": return (await import("../chat.mjs")).cleanseNear(actor);
+    case "borrowMagicalUnique": return (await import("../chat.mjs")).borrowMagicalUnique(actor);
+    // A State's level set, where it is in it at a higher one - True God of Peace (7)'s "set your level of the Mindful State to Calm".
+    case "setStateLevel": {
+      const key = String(args[0] ?? "");
+      const level = Math.max(1, Number(args[1]) || 1);
+      if ((Number(actor.system?.states?.[key]) || 0) > level) await actor.update({ [`system.states.${key}`]: level });
+      return;
+    }
     case "domainOutOfSequence": return (await import("../chat.mjs")).domainOutOfSequence(actor, String(args[0] ?? ""));
     case "domainStrike": return (await import("../chat.mjs")).domainStrike(actor, String(args[0] ?? ""));
     case "freezeAttack": return (await import("../chat.mjs")).freezeAttack(actor, context?.maneuver ?? null);

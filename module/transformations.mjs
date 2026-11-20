@@ -655,7 +655,9 @@ export function transformationTraitScript(item, items = item?.parent?.items) {
   const levels = owner ? aspectsOf(owner, items) : [];
   return rowWritten(owner, fileOf(owner), parts.filter(Boolean).join("\n\n"))
     .replace(/\$aspect\.([a-z0-9-]+)/g, (all, id) => String((found => found ? (found.level ?? 1) : 0)(levels.find(aspect => aspect.id === id))))
-    .replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0));
+    .replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0))
+    // Its Higher Scales - True God of Wisdom (2)'s "the Transformation's Attribute Modifier Bonus (MA)".
+    .replace(/\$scales/g, String(Number(owner?.system?.scales) || 0));
 }
 
 useTransformationGate((item, items) => transformationTraitAside(item, items));
@@ -1867,6 +1869,9 @@ export function registerAspectHooks() {
       await setApparelAside(actor, item);
     }
     else {
+      // What it gave only while in it - True God of Magic (6)'s Unique Ability (`whileIn`).
+      const borrowed = Array.from(actor.items).filter(each => each.flags?.["dbu-ttrpg"]?.whileIn === item.id).map(each => each.id);
+      if (borrowed.length) await actor.deleteEmbeddedDocuments("Item", borrowed);
       await restoreApparel(actor, item);
       if (rowChoice(item, "enteredRound")) await setRowChoice(item, "enteredRound", "");
       if (rowChoice(item, "burstBonus")) await setRowChoice(item, "burstBonus", "");

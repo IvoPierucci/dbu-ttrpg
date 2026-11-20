@@ -1,0 +1,16 @@
+id: true-god-of-an-element-god-of-focus
+name: God of Focus
+order: 2
+optionOf: divinity-unleashed-true-god-of-an-element
+optionEffect: 6
+choose: elementalProfile
+description: >
+  Upon gaining this effect, select a Favored Element. That Element becomes your 'Divine Focus'.
+text: >
+  God of Focus [Permanent, Passive, Ruling]: Upon gaining this effect, select a Favored Element. That Element becomes your 'Divine Focus'. Any Attacking Maneuvers of your Divine Focus may target an additional Character if they do not possess an AoE, and if they do possess an AoE, increase the Magnitude of that AoE by 1 Magnitude.
+
+---
+
+# A Magnitude more on its AoE (chat.mjs postAttack); without one, the additional target the table's to pick.
+[passive, effect 6]
+allow divineFocus.$choice;

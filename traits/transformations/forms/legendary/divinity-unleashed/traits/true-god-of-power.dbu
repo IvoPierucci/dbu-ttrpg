@@ -27,4 +27,6 @@ superStack.musclePenalty -= 1(bT);
 [passive, effect 4]
 force.mod += superStacks * 1(T);
 tenacity.mod += superStacks * 1(T);
-# (5) Divine Muscle: the table's.
+# (5) Divine Muscle, once an Encounter: the Category Standard for you - Standard already, your Soak Value doubled (chat.mjs playDivineMuscle).
+[passive, effect 5]
+allow divineMuscle.standard;

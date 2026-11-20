@@ -18,4 +18,25 @@ text: >
 
 ---
 
-# (2)-(6) Its Minions: the table's.
+# (2) Your Minions' Combat Rolls and Soak Value 1(T).
+[passive, effect 2]
+minions.combatRolls += 1(T);
+minions.soakValue += 1(T);
+
+# (3) Your Minions double Divine Role (3)'s: its 1(T) on their Combat Rolls once more.
+[passive, effect 3]
+minions.combatRolls += 1(T);
+
+# (4) In the Spectator State: Soak Value and Damage Reduction 2(T).
+[passive, effect 4]
+if (inState("spectator")) {
+    soakValue += 2(T);
+    damageReduction += 2(T);
+}
+
+# (5) Your Minions spend your Counter Actions as their own where theirs are short (combat.mjs spendActions). (6) Divine Summoning's Power Up.
+[passive, effect 5]
+allow minions.shareCounter;
+
+[passive, effect 6]
+allow summoning.powerUp;

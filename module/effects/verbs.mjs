@@ -629,6 +629,23 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "The Basic Attack out of sequence - Pieces of the Hive (1)'s (chat.mjs basicStrike)."
   },
+  divineSummoning: {
+    args: [0, 0],
+    doc: "Divine Summoning: which of your Minions, ticked - 2(bT) Divine Ki each past the first; True God of Many (6)'s Power Up offered."
+  },
+  cleanseNear: {
+    args: [0, 0],
+    doc: "A Combat Condition (not Suffocating or Pinned) off yourself or an adjacent Ally - which, asked (True God of Wisdom (5))."
+  },
+  borrowMagicalUnique: {
+    args: [0, 0],
+    doc: "A Magical Unique Ability not had, asked - had until you leave the Form you are in (True God of Magic (6))."
+  },
+  setStateLevel: {
+    args: [2, 2],
+    names: [0],
+    doc: "That State's level set to the number, where you are in it at a higher one (True God of Peace (7): Mindful to Calm)."
+  },
   divineHealing: {
     args: [0, 0],
     doc: "Divine Healing: 2d10(bT) + your Surgency Life Points, as a use of Combat Recovery (chat.mjs divineHealing)."

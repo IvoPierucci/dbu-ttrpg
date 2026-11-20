@@ -1,0 +1,19 @@
+id: true-god-of-an-element-god-of-the-elements
+name: God of the Elements
+order: 1
+optionOf: divinity-unleashed-true-god-of-an-element
+optionEffect: 6
+choose: elementalProfile
+choose2: elementalProfile
+choose3: elementalProfile
+description: >
+  Upon gaining this effect, select up to 3 Profiles with 'Elemental' in their name. They become your Favored Elements while in this Transformation.
+text: >
+  God of the Elements [Permanent, Passive]: Upon gaining this effect, select up to 3 Profiles with 'Elemental' in their name. They become your Favored Elements while in this Transformation.
+
+---
+
+[passive, effect 6]
+favored.$choice = true;
+favored.$choice2 = true;
+favored.$choice3 = true;

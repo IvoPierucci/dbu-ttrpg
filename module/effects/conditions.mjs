@@ -343,6 +343,12 @@ const PREDICATES = {
   /** That Maneuver used this Combat Round - Divine Role (5)'s "you have not used Combat Recovery this Combat Round". */
   /** A flag Slot of theirs on - Cosmic Flow (5)'s and Divine Entity (2)'s, read by Combat Recovery's own script. */
   flagged: (scope, key) => scope.data?.effects?.slots?.[String(key?.value ?? key ?? "")] === true,
+  /** The attack declared is paid in Divine Ki Points / of a Favored Element - the declaration's (True God of an Element (5)). */
+  paidWithDivine: scope => Boolean(scope.context?.divinePaid),
+  favoredAttack: scope => Boolean(scope.context?.favoredProfile),
+  /** A Magical Unique Ability used this Combat Round (True God of Magic (5)). */
+  magicalUniqueThisRound: scope => Boolean(globalThis.game?.combat?.started)
+    && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "magicalUniqueRound") === `${game.combat.id}:${game.combat.round ?? 0}`),
   usedThisRound: (scope, id) => Array.from(scope.data?.usedManeuvers ?? []).includes(`round:${String(id?.value ?? id ?? "").trim()}`),
   /** The Counter Actions just spent brought this Round's to that many - True Divinity (3)'s "3 Counter Actions in a Combat Round". */
   counterReached: (scope, n) => {

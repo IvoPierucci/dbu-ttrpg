@@ -6256,6 +6256,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     if (maneuver.materialize) {
       materializing = await askMaterialize(actor, maneuver);
       if (!materializing) return false;
+      // True God of War (4): "Ignore the Ki Point Cost for Magical Materialization if you create a Weapon through its effects."
+      if ((materializing.kind === "weapon") && (actor.system.effects?.slots?.["materialize.freeWeapon"] === true)) {
+        maneuver = { ...maneuver, kiCost: 0, kiCostPerTier: 0, kiCostPerBaseTier: 0 };
+      }
     }
 
     // Precognition: which Opponent yet to act moves up.
@@ -7113,7 +7117,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   const glassDeclared = Boolean(declared) && [declared.profile, declared.secondProfile, maneuver.secondProfile,
     ...(declared.appliedProfiles ?? [])].includes("glass");
   // An attack's Ki Wager, and that it is one (Limitless's, Full Power's "an Attacking Maneuver that has a Ki Wager ...").
-  const wagerContext = declared ? { attackingManeuver: true, kiWager: Number(declared.kiWager) || 0 } : {};
+  const wagerContext = declared ? { attackingManeuver: true, kiWager: Number(declared.kiWager) || 0,
+    // Paid in Divine Ki Points, of a Favored Element - True God of an Element (5)'s.
+    divinePaid: (Number(declared.paid?.divine) || 0) > 0,
+    favoredProfile: (await import("./maneuvers.mjs")).favoredElement(actor, declared.profile) } : {};
   await (await import("./chat.mjs")).answerDeclare(actor, { maneuver, targets: targetActor ? [targetActor] : [], ...wagerContext,
     ...(glassDeclared ? { glass: true } : {}), ...(declared?.glassForced ? { glassForced: true } : {}) });
   // What its effects give back is said on its own card, each source on hover (chat.mjs gainsHtml) - not on cards of their own.
@@ -7132,6 +7139,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) + bioCharges
     + (declared.glassForced ? 1 : 0) : 0;
 
+  // A Magical Unique Ability used: this Combat Round's, for True God of Magic (5).
+  if (maneuver.unique && (maneuver.uniqueType === "magical") && game.combat?.started) {
+    await actor.setFlag("dbu-ttrpg", "magicalUniqueRound", `${game.combat.id}:${game.combat.round ?? 0}`);
+  }
   // Its price in stacks, paid now it is certain to happen (`stacksCost`) - spent, as Overwhelm's Moment hears it.
   {
     const [costName, costCount] = String(getTrait(maneuver.id)?.stacksCost ?? "").trim().split(/\s+/);

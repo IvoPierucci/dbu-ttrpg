@@ -21,3 +21,6 @@ text: >
   –Effect: Target any number of your Minions. Place them on any unoccupied Square(s) on the Battlefield. If this places a Minion on a Square adjacent to an Opponent, this triggers that Minion's Exploit Maneuver. Only one Minion can use the Exploit Maneuver through this effect.
 
 ---
+
+[on used]
+divineSummoning();

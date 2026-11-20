@@ -30,4 +30,9 @@ text: >
 if (frozenTurn) {
     combatRolls += 1(T);
 }
-# (2), (4) Its header. (6), (7) the Freeze Attack's: the table's.
+# (2), (4) Its header. (6) The Signature Technique Maneuver in the Freeze Attack's Basic Attack's place: the Frozen Turn's Action is not
+# policed, so nothing stops it.
+
+# (7) Freeze Attack on an Ally, once an Encounter: your Damage Attribute on their attack in it, asked (chat.mjs freezeAttack).
+[passive, effect 7]
+allow freezeAttack.lend;

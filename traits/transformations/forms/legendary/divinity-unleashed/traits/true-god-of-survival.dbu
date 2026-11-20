@@ -29,4 +29,10 @@ if (!belowThreshold("injured")) {
     combatRolls += 2(T);
     soakValue += 2(T);
 }
-# (5)(6): the table's.
+# (5) Hit and Damaged by an Opponent's attack, once a Round: Life Points equal to your Insight Modifier.
+[triggered/opponent-damage, 1/round, effect 5]
+life.value += insight.mod;
+
+# (6) Divine Healing below the Injured Health Threshold, once an Encounter: no Divine Ki, its Life Points doubled (chat.mjs divineHealing).
+[passive, effect 6]
+allow divineHealing.injuredFree;

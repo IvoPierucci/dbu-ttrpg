@@ -24,4 +24,14 @@ magic.mod += 1(T);
 
 [passive, effect 3]
 combatRolls += 2(T);
-# (4)-(6): the table's.
+# (4) Divine Spell's Divine Ki Point Cost 1(bT) lower.
+[passive, effect 4]
+divine-spell.kiCost -= 1(bT);
+
+# (5) A Combat Round you used a Magical Unique Ability: your Magic Attacks' Wound 1/4 (rounded up) of your Magic Modifier (chat.mjs).
+[passive, effect 5]
+allow magical.roundWound;
+
+# (6) Entering it: a Magical Unique Ability, asked - had until you leave it (chat.mjs borrowMagicalUnique).
+[triggered/transform, effect 6]
+borrowMagicalUnique();

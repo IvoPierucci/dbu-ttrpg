@@ -24,4 +24,34 @@ text: >
 
 ---
 
-# (3)-(8) L, the Mindful State's levels: the table's.
+# (3) L: your level of the Mindful State (`states.mindful`).
+
+# (4) The Mindful State's 2nd effect ignored - its L(T) off your Wound Rolls given back. (5) Strike and Dodge L(T).
+[passive, effect 4]
+if (inState("mindful")) {
+    wound += states.mindful * 1(T);
+}
+
+[passive, effect 5]
+if (inState("mindful")) {
+    strike += states.mindful * 1(T);
+    dodge += states.mindful * 1(T);
+}
+
+# (6) Divine Peace's Divine Ki Point Cost L(T) lower (chat.mjs playDivinePeace).
+[passive, effect 6]
+divinePeace.costOff += states.mindful * 1(T);
+
+# (7) A Steadfast Check failed, or the Combat Round over with no Combat Recovery: the Mindful State back to Calm.
+[automatic/steadfast-failed, effect 7]
+requires inState("mindful");
+setStateLevel(mindful, 1);
+
+[automatic/end-of-round, effect 7]
+requires inState("mindful") && !usedThisRound("combat-recovery");
+setStateLevel(mindful, 1);
+
+# (8) Combat Recovery, once a Round: the next level of the Mindful State.
+[triggered/declare-maneuver, 1/round, effect 8]
+requires using("combat-recovery");
+enterState(mindful, 1);

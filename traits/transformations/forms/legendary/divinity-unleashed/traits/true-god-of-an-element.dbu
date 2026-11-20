@@ -25,4 +25,17 @@ text: >
 [passive, effect 2]
 force.mod += 1(T);
 magic.mod += 1(T);
-# (3)-(6) Favored Element, Divine Element: the table's.
+# (3) The Favored Element's Strike and Wound bonus doubled (chat.mjs favoredParts).
+[passive, effect 3]
+allow favored.double;
+
+# (4) Divine Element's Divine Ki Point Cost 2(bT) lower.
+[passive, effect 4]
+divine-element.kiCost -= 2(bT);
+
+# (5) An attack of a Favored Element paid in Divine Ki, once a Round: an Energy Charge.
+[triggered/declare-maneuver, 1/round, effect 5]
+requires paidWithDivine && favoredAttack;
+attack.energyCharges += 1;
+
+# (6) Its Option, one file each beside this one.

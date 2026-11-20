@@ -1771,6 +1771,14 @@ export async function spendActions(actor, amount, kind = "standard") {
     if (convert) await convertActions(actor, short);
   }
 
+  // True God of Many (5): "Your Minions may spend your Counter Actions as if they were their own" - theirs short, their Master's.
+  if ((kind === "counter") && (actionsLeft(actor, kind) < amount)) {
+    const master = masterOf(actor);
+    if (master && (master.system?.effects?.slots?.["minions.shareCounter"] === true) && (actionsLeft(master, kind) >= amount)) {
+      await master.update({ "system.actionsSpent.counter": (master.system.actionsSpent?.counter ?? 0) + amount });
+      return true;
+    }
+  }
   if (actionsLeft(actor, kind) < amount) {
     ui.notifications.warn(
       `${actor.name} has no ${kind} Actions left this round.`
