@@ -25,7 +25,9 @@ if (inState("undying")) {
     wound += 2(T);
 }
 
-# (3) Battle Born for the Power Up: the table's.
+# (3) A stack of Battle Born for the Power Up, once a Round - an Instant of its own (maneuvers/).
+[passive, effect 3]
+allow maneuver.pinnacle-of-legacy-power-up;
 
 # (4) With the Power Up, once an Encounter: Undying till the start of your next turn.
 [triggered/power, 1/encounter, effect 4]

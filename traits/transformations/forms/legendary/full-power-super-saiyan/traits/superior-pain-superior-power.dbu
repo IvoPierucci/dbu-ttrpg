@@ -21,4 +21,16 @@ text: >
 [passive, effect 2]
 surgency += min(3, floor((battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) / 4)) * 1(T);
 
-# (3)(4): the table's.
+# (3) Hit by an Attacking Maneuver - Damage taken or not: Ki Points 1/4 (rounded up) of your Surgency.
+[triggered/opponent-damage, effect 3]
+ki.value += ceil(surgency / 4);
+
+[triggered/hit-unharmed, effect 3]
+ki.value += ceil(surgency / 4);
+
+# (4) The Power Up, once a Round: a stack of Battle Born spent - Life Points 1/2 of your Surgency, Superior till the end of your turn.
+[triggered/power, 1/round, effect 4]
+requires max(0, battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) >= 1;
+life.value += floor(surgency / 2);
+enterState(superior, 1, turn);
+spendBattleBorn();

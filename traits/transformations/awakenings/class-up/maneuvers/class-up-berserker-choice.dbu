@@ -1,0 +1,24 @@
+id: class-up-berserker-choice
+name: Class Up: Berserker
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# A Special Maneuver, open while its Trait effect applies (its `allow`).
+special: true
+source: Core Rule
+description: >
+  Use the Basic Attack Maneuver or Signature Technique Maneuver as an Instant Maneuver. If you do, apply an Energy Charge to that Attacking Maneuver.
+text: >
+  Use the Basic Attack Maneuver or Signature Technique Maneuver as an Instant Maneuver. If you do, apply an Energy Charge to that Attacking Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: The Basic Attack or Signature Technique Maneuver, an Energy Charge on it.
+
+---
+
+[on used]
+berserkerStrike();

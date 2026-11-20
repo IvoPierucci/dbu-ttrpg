@@ -5,6 +5,14 @@ slot: trait
 # One of these is chosen (the Transformation's row asks).
 group: super-saiyan-style-traits
 groupLabel: Super Saiyan Style Traits
+# (2) All-Out Power, three at most - lost with the Encounter, as every Resource is.
+resource: allout
+resourceLabel: All-Out Power
+resourceMax: 3
+# (3) "treated as a stack of Power for all of your effects".
+stacksCountAs: allout = power
+# (4) "For each stack of All-Out Power you possess, this Transformation gains a level of the Draining Aspect."
+grantsAspectTo: This = Draining (LV1) if allout.stacks >= 1; This = Draining (LV1) if allout.stacks >= 2; This = Draining (LV1) if allout.stacks >= 3
 description: >
   T
 text: >
@@ -19,4 +27,27 @@ text: >
 
 ---
 
-# (2)-(7) All-Out Power: the table's.
+# (2) Entering it: all Holding Back lost, a stack of All-Out Power (max. 3).
+[automatic/transform, effect 2]
+holdingback.stacks = 0;
+allout.stacks += 1;
+
+# (3) Each stack: Combat Rolls 1(T), the Tier of Power Extra Dice a Category, and a stack of Power for your effects (its header).
+[passive, effect 3]
+combatRolls += allout.stacks * 1(T);
+dice.extra.category += allout.stacks;
+
+# (4) A level of Draining a stack (its header's grantsAspectTo). (5) No Holding Back gained while in it: its most nothing.
+[passive, effect 5]
+holdingback.max -= 99;
+
+# (6) The Power Up below the Injured Health Threshold, once an Encounter: a stack of All-Out Power.
+[triggered/power, 1/encounter, effect 6]
+requires belowThreshold("injured");
+allout.stacks += 1;
+
+# (7) Entering it through Unleash your Power (1), once an Encounter - the player's to say: the Power Up out of sequence, and the Superior State
+# till the start of your next turn.
+[triggered/transform, 1/encounter, outOfSequence, effect 7]
+maneuverOutOfSequence(power-up);
+enterState(superior, 1, start-of-next-turn);

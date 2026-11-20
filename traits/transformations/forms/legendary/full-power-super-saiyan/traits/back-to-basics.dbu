@@ -17,9 +17,26 @@ text: >
 
 ---
 
-# (2) The Option chosen for S-Cells (3): the table's. (3) The Power Up as an Instant with 4+ Battle Born: the table's.
+# (2) S-Cells (3)'s Option: [Permanent], so it holds outside Super Saiyan 1 already (the user's ruling on [Permanent]).
 
-# (4) 2+ stacks of Power: up to 2 Energy Charges for Battle Born, the table's. 4+: a Signature Technique with a Ki Wager - half the Ki
+# (3) With 4+ stacks of Battle Born: the Power Up as an Instant, once a Round - its own Maneuver (maneuvers/).
+[passive, effect 3]
+if (max(0, battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) >= 4) {
+    allow maneuver.back-to-basics-power-up;
+}
+
+# (4) 2+ stacks of Power, once a Round: up to 2 Energy Charges, as many stacks of Battle Born lost - two where 2+ are held, one where one is.
+[triggered/declare-maneuver, 1/round, effect 4]
+requires attackingManeuver && power.stacks >= 2 && max(0, battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) >= 2;
+attack.energyCharges += 2;
+oweBattleBorn(2);
+
+[triggered/declare-maneuver, 1/round, effect 4]
+requires attackingManeuver && power.stacks >= 2 && max(0, battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) == 1;
+attack.energyCharges += 1;
+oweBattleBorn(1);
+
+# 4+: a Signature Technique with a Ki Wager - half the Ki
 # Points wagered on its Wound Roll.
 [passive, effect 4]
 if (power.stacks >= 4) {

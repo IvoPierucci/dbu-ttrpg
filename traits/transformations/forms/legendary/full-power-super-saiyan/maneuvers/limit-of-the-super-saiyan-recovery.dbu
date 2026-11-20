@@ -1,0 +1,24 @@
+id: limit-of-the-super-saiyan-recovery
+name: Limit of the Super Saiyan
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Special Maneuver, open while its Trait effect applies (its `allow`).
+special: true
+source: Core Rule
+description: >
+  As an Instant Maneuver, you can spend a stack of Battle Born to regain Ki Points and Capacity equal to 1/4 of your Max Capacity.
+text: >
+  As an Instant Maneuver, you can spend a stack of Battle Born to regain Ki Points and Capacity equal to 1/4 of your Max Capacity.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A (a stack of Battle Born)
+  –Effect: Regain Ki Points and Capacity equal to 1/4 of your Max Capacity.
+
+---
+
+[on used]
+spendBattleBorn(ki-capacity);

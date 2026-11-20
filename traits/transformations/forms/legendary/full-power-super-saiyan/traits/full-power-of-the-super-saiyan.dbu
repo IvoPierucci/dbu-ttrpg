@@ -14,13 +14,21 @@ text: >
 
 ---
 
-# (1) Duel Clashes: the table's.
+# (1) Duel Clashes 1(T) for every 4 stacks of Battle Born (max. 3(T)).
+[passive, effect 1]
+clash.duel += min(3, floor((battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) / 4)) * 1(T);
 
 # (2) The Tier of Power Extra Dice a Category for every 4 stacks of Battle Born (max. 3).
 [passive, effect 2]
 dice.extra.category += min(3, floor((battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) / 4));
 
-# (3)(4) Damage Reduction and Wound by Battle Born spent: the table's.
+# (3) Hit: Damage Reduction, (4) hitting: the Wound, 1(T) for every 2 stacks of Battle Born - asked, a stack lost once the attack is over
+# (chat.mjs battleBornAsked).
+[passive, effect 3]
+allow battleBorn.reduction;
+
+[passive, effect 4]
+allow battleBorn.wound;
 
 # (5) Entering it, once an Encounter: Raging till the end of your turn - or Superior, where Deeper into the Depths (4) offers it.
 [triggered/transform, 1/encounter, effect 5]

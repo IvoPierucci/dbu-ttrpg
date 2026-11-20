@@ -15,4 +15,6 @@ text: >
 wound += 1(T);
 might += 1(T);
 
-# (3) Its Choice effect - an Instant Maneuver once an Encounter: the table's.
+# (3) Its Choice effect - an Instant once an Encounter, its own Maneuver (maneuvers/).
+[passive, effect 3]
+allow maneuver.class-up-berserker-choice;

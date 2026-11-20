@@ -615,6 +615,13 @@ const TABLE = [
     doc: "Divine Summoning, once an Encounter: each Minion moved by it, the Power Up out of sequence (True God of Many (6))." },
   { key: "freezeAttack.lend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Freeze Attack on an Ally, once an Encounter: your Damage Attribute on their attacks in that Frozen Turn (True God of Time (7))." },
+  // Full Power Super Saiyan's Traits.
+  { key: "battleBorn.reduction", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Hit by an Attacking Maneuver: Damage Reduction 1(T) for every 2 stacks of Battle Born, asked - a stack lost once it is over (Full "
+       + "Power of the Super Saiyan (3))." },
+  { key: "battleBorn.wound", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Hitting an Opponent: the Wound Roll 1(T) for every 2 stacks of Battle Born, asked - a stack lost once it is over (Full Power of the "
+       + "Super Saiyan (4))." },
   { key: "divineKi.halfMore", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Maximum Divine Ki Points half again (God of a Domain (2))." },
   { key: "clash.vsOpponent", phase: PHASES.CORE, kind: N, ops: ["add"],

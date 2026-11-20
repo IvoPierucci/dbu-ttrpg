@@ -22,7 +22,11 @@ text: >
 [passive, effect 2]
 soakValue += power.stacks * 1(T);
 
-# (3) A stack more of Power with the Power Up: the table's.
+# (3) A stack more of Power with the Power Up, where there is room for it.
+[automatic/power, effect 3]
+requires roomFor("power");
+power.stacks += 1;
+expires(power, next-turn);
 
 # (4) Combat Rolls by half (rounded up) the Apparel Bonus of the piece Bursting destroyed as it was entered (its row's burstBonus).
 [passive, effect 4]

@@ -2,6 +2,8 @@ id: full-power-super-saiyan-true-power-of-the-saiyan-race
 name: True Power of the Saiyan Race
 order: 12
 slot: legendary
+# (1) "Your stacks of Power are treated as if they are Battle Born stacks applied to your Wound Rolls for your effects".
+stacksCountAs: power = battlebornwound
 description: >
   You know beyond a shadow of a doubt that the classics are the best, and you rock those golden flames and green eyes with effortless swagger.
 text: >
@@ -13,10 +15,18 @@ text: >
 
 ---
 
-# (1) Power stacks as Battle Born on the Wound: the table's.
+# (1) Your Power stacks read as Battle Born on the Wound for your effects (its header's `stacksCountAs`; amounts.mjs) - not toward its most.
 
 # (2) Wound Rolls 1(T) a stack of Power.
 [passive, effect 2]
 wound += power.stacks * 1(T);
 
-# (3)(4): the table's.
+# (3) In a Transformation with the Super Saiyan Form Aspect: its Max Capacity increase doubled - 1/4 more.
+[passive, effect 3]
+if (aspectInUse("super-saiyan-form")) {
+    capacity.maxFraction += 0.25;
+}
+
+# (4) A Steadfast Check passed, once an Encounter: the Transformation Maneuver out of sequence - into one with the Super Saiyan Form Aspect.
+[triggered/steadfast-passed, 1/encounter, outOfSequence, effect 4]
+transformationOutOfSequence();

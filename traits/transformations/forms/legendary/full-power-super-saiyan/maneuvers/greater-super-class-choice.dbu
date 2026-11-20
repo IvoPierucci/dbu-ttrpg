@@ -1,0 +1,24 @@
+id: greater-super-class-choice
+name: Greater Super Class
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# A Special Maneuver, open while its Trait effect applies (its `allow`).
+special: true
+source: Core Rule
+description: >
+  If you have 6+ stacks of Battle Born, use your Choice effect for the 3rd effect of Class Selection. This does not count towards that effect's [1/Encounter] Keyword.
+text: >
+  If you have 6+ stacks of Battle Born, use your Choice effect for the 3rd effect of Class Selection. This does not count towards that effect's [1/Encounter] Keyword.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: Class Selection (3)'s Choice effect.
+
+---
+
+[on used]
+classUpChoice();

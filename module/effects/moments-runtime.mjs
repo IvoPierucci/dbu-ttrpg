@@ -860,6 +860,12 @@ async function runVerb(actor, call, context) {
     // The Domain Maneuvers (Divinity Unleashed's God of a Domain (3)).
     case "divineHealing": return (await import("../chat.mjs")).divineHealing(actor, context?.maneuver ?? null);
     case "divineSummoning": return (await import("../chat.mjs")).divineSummoning(actor);
+    // Full Power Super Saiyan's Battle Born spent; Class Up's Choice effects.
+    case "spendBattleBorn": return (await import("../chat.mjs")).spendBattleBorn(actor, String(args[0] ?? ""));
+    case "freeSurge": return (await import("../chat.mjs")).freeSurge(actor);
+    case "oweBattleBorn": return (await import("../chat.mjs")).oweBattleBorn(actor, Number(args[0]) || 1);
+    case "classUpChoice": return (await import("../chat.mjs")).classUpChoice(actor);
+    case "berserkerStrike": return (await import("../chat.mjs")).berserkerStrike(actor);
     case "injuryTransfer": return (await import("../chat.mjs")).injuryTransfer(actor);
     case "cleanseNear": return (await import("../chat.mjs")).cleanseNear(actor);
     case "borrowMagicalUnique": return (await import("../chat.mjs")).borrowMagicalUnique(actor);

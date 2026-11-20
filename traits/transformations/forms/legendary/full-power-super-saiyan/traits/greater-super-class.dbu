@@ -15,4 +15,11 @@ text: >
 
 ---
 
-# (2)(3) Super Saiyan Class, Class Selection: the table's.
+# (2) Super Saiyan Class (4): its text not given yet - the table's.
+
+# (3) With 6+ stacks of Battle Born, once an Encounter: Class Up (3)'s Choice effect, not counting toward its own once an Encounter - an Instant
+# of its own (maneuvers/).
+[passive, effect 3]
+if (max(0, battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) >= 6) {
+    allow maneuver.greater-super-class-choice;
+}

@@ -216,6 +216,12 @@ export function resolvePath(p, scope) {
     return numeric(foundry.utils.getProperty(data.skills[root], parts.slice(1).join(".")), p, scope);
   }
 
+  // Stacks of another Resource counted as this one's "for your effects" (actor-character.mjs stacksAlso) - True Power of the Saiyan Race's
+  // Power as Battle Born on the Wound, All-Out Super Saiyan's All-Out Power as Power.
+  if ((parts[1] === "stacks") && (parts.length === 2) && data.stacksAlso?.[root]?.length) {
+    return (Number(data.resources?.[root]?.stacks) || 0)
+      + data.stacksAlso[root].reduce((sum, other) => sum + (Number(data.resources?.[other]?.stacks) || 0), 0);
+  }
   // A Resource is read as `<name>.stacks` or `<name>.max`.
   if (data.resources?.[root]) {
     return numeric(foundry.utils.getProperty(data.resources[root], parts.slice(1).join(".")), p, scope);

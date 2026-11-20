@@ -2396,6 +2396,21 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }
     }
 
+    // A Trait had whose file says `stacksCountAs: <source> = <target>`: the source's stacks read as the target's too, for its owner's effects
+    // (amounts.mjs) - True Power of the Saiyan Race's "Your stacks of Power are treated as if they are Battle Born stacks applied to your Wound
+    // Rolls", All-Out Super Saiyan's "treated as a stack of Power".
+    {
+      const all = Array.from(this.parent?.items ?? []);
+      const also = {};
+      for (const item of all.filter(each => (each.type === "racial") && !traitAside(each, all, this.parent))) {
+        for (const entry of String(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.stacksCountAs ?? "").split(";").map(part => part.trim()).filter(Boolean)) {
+          const [source, target] = entry.split("=").map(part => part.trim());
+          if (source && target) also[target] = [...new Set([...(also[target] ?? []), source])];
+        }
+      }
+      this.stacksAlso = also;
+    }
+
     // The Health Threshold as the effects asking it find it - Discarded Divinity's "above the Bruised Health Threshold" -
     // before the Maximum Life Points it is read against are worked out again below: against those of the last time they
     // were, kept on the Actor. Without it the bulk read no Threshold at all - always Healthy. Settled for good further down.

@@ -633,6 +633,28 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Injury Transfer: your Life Points and the targeted Ally's swapped, yours higher; your Thresholds fallen under failed (chat.mjs)."
   },
+  spendBattleBorn: {
+    args: [0, 1],
+    names: [0],
+    doc: "A stack of Battle Born spent, which asked - then `power-up` out of sequence, a `healing-surge`, or `ki-capacity` (1/4 of the Max "
+       + "Capacity back as Ki and Capacity); nothing more with none named (chat.mjs spendBattleBorn)."
+  },
+  oweBattleBorn: {
+    args: [1, 1],
+    doc: "So many stacks of Battle Born lost once the attack being made is over (Back to Basics (4); chat.mjs settleOwedBattleBorn)."
+  },
+  classUpChoice: {
+    args: [0, 0],
+    doc: "Class Up (3)'s Choice effect of the Option chosen - Hero, Elite or Berserker - not counting toward its once an Encounter (Greater Super Class (3))."
+  },
+  freeSurge: {
+    args: [0, 0],
+    doc: "A Surge, its kind asked, counting toward no Surge Maneuver's limit (Class Up's Elite (3))."
+  },
+  berserkerStrike: {
+    args: [0, 0],
+    doc: "The Basic Attack or the Signature Technique Maneuver out of sequence, an Energy Charge on it - both offered on one card (Class Up's Berserker (3))."
+  },
   divineSummoning: {
     args: [0, 0],
     doc: "Divine Summoning: which of your Minions, ticked - 2(bT) Divine Ki each past the first; True God of Many (6)'s Power Up offered."

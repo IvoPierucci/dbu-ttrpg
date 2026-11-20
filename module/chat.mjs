@@ -33581,6 +33581,8 @@ async function resolveAttackWork(message, attack) {
   if (!branches.some(entry => entry.hit)) {
     await endConcentrated(attack);
     await spendOverwhelm(attack);
+  await settleOwedBattleBorn(attack);
+    await settleOwedBattleBorn(attack);
   }
   // "If you dodge an Attacking Maneuver" - a Dodge Roll that beat it: Aerodynamic's.
   for (const entry of branches) {
@@ -34558,6 +34560,9 @@ async function answerHit(message, attack, attacker, struck, script = null) {
     revengeSpent: Number(attack.revengeSpentDone) || 0 });
   // Variable Champion (2): the other kind of attack, out of sequence - on this card.
   offerVariableChampion(message, attacker, armedHit);
+  // Full Power of the Super Saiyan (4): Battle Born on the Wound, asked.
+  const bornWound = await battleBornAsked(attacker, "battleBorn.wound", "your Wound Roll");
+  if (bornWound) answer.marks.battleBornWound = bornWound;
   answer.pressure = answered?.slots?.["wound.pressure"] === true;
   answer.pressureMost = answered?.slots?.["wound.pressureMost"] === true;
   if (answered?.slots?.["wound.oblivious"] === true) {
@@ -34842,6 +34847,8 @@ function twoWorldsWoundParts(attacker, attack) {
     const x = DAMAGE_CATEGORIES[resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0)]?.value ?? 1;
     parts.push({ label: `${named("wound.signaturePerCategory")} (Damage Category ${x})`, value: perCategory * x });
   }
+  // Full Power of the Super Saiyan (4), taken as the hit landed.
+  if (attack.battleBornWound) parts.push({ label: "Full Power of the Super Saiyan (Battle Born)", value: Number(attack.battleBornWound) || 0 });
   // Shared Heritage (4): "Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess."
   const fusedWound = Number(slots["wound.fusedTechnique"]?.add) || 0;
   const fusedCount = (attacker.system.fusion?.fused ?? []).length;
@@ -35834,7 +35841,10 @@ async function rollAttackWoundWork(message, attack) {
     // that Maneuver" - its 1/Round spent here.
     const wiseReduction = Number(defending?.slots?.damageReduction?.add) || 0;
     if (wiseReduction) spendWriting(target, defending, "damageReduction");
+    // Full Power of the Super Saiyan (3): Battle Born on the Damage Reduction, asked.
+    const bornReduction = (own.hit && !isAbsoluteMiss(own)) ? await battleBornAsked(target, "battleBorn.reduction", "your Damage Reduction") : 0;
     const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic + taunted
+      + bornReduction
       + fullCounter + wiseReduction + (Number(own.taiChiReduction) || 0)
       + (Number(own.greedReduction) || 0) + (Number(own.adaptationReduction) || 0) + (Number(own.toughReduction) || 0)
       // Party Tactics (3): a stack of an Ally's Tension, for this attack.
@@ -42419,4 +42429,120 @@ export async function injuryTransfer(actor) {
   await requestActorUpdate(ally, { "system.life.value": Math.min(allyMax, mine) });
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
     `Injury Transfer: ${actor.name} and ${ally.name} swap their Life Points.`)}</div>` });
+}
+
+/** Battle Born's three Resources, and what they are called. */
+const BATTLE_BORN_KEYS = Object.freeze({ battlebornwound: "Battle Born (Wound)", battlebornstrike: "Battle Born (Strike)", battleborndodge: "Battle Born (Dodge)" });
+
+/** Their stacks together. */
+function battleBornTotal(actor) {
+  return Object.keys(BATTLE_BORN_KEYS).reduce((sum, key) => sum + (Number(actor?.system?.resources?.[key]?.stacks) || 0), 0);
+}
+
+/**
+ * Full Power of the Super Saiyan (3), (4): "increase your Damage Reduction (Wound Rolls) by 1(T) for every 2 stacks of Battle Born you possess for
+ * the duration of that Attacking Maneuver. After concluding that Maneuver, lose 1 stack of Battle Born" - where the Slot is on and 2+ stacks are
+ * held: asked, the stack owed till the attack is over (settleOwedBattleBorn). How much, or 0.
+ */
+async function battleBornAsked(actor, slot, what) {
+  if (actor?.system?.effects?.slots?.[slot] !== true) return 0;
+  const pairs = Math.floor(battleBornTotal(actor) / 2);
+  if (!pairs) return 0;
+  const value = pairs * Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const take = await askPlayerChoice(actor, `${actor.name}: Full Power of the Super Saiyan`, [
+    { value: "yes", label: `+${value} on ${what} - a stack of Battle Born lost after the attack` }, { value: "no", label: "Not this time" }]);
+  if (take !== "yes") return 0;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.battleBornOwed`]: (Number(actor.getFlag?.(SCOPE, "battleBornOwed")) || 0) + 1 });
+  return value;
+}
+
+/** The Battle Born owed by whoever made or took this attack, lost now it is concluded - from the Combat Roll with the most stacks. */
+async function settleOwedBattleBorn(attack) {
+  const people = [fromUuidSync(attack?.attackerUuid ?? ""), ...attackTargets(attack ?? {}).map(entry => fromUuidSync(entry.uuid))].filter(Boolean);
+  for (const who of [...new Map(people.map(each => [each.uuid, each])).values()]) {
+    const owed = Number(who.getFlag?.(SCOPE, "battleBornOwed")) || 0;
+    if (!owed) continue;
+    await requestActorUpdate(who, { [`flags.${SCOPE}.-=battleBornOwed`]: null });
+    await loseBattleBorn(who, owed);
+  }
+}
+
+/** So many stacks of Battle Born lost, one at a time from the Combat Roll with the most (my reading - the text names none). */
+async function loseBattleBorn(actor, count) {
+  for (let n = 0; n < count; n++) {
+    const key = Object.keys(BATTLE_BORN_KEYS).sort((a, b) => (Number(actor.system.resources?.[b]?.stacks) || 0) - (Number(actor.system.resources?.[a]?.stacks) || 0))[0];
+    const held = Number(actor.system.resources?.[key]?.stacks) || 0;
+    if (!held) return;
+    await setResource(actor, key, held - 1, { lost: true });
+  }
+}
+
+/**
+ * A stack of Battle Born spent - which, asked where there is a choice - and then: the Power Up out of sequence (Pinnacle of Legacy (3)), a
+ * Healing Surge (Limit of the Super Saiyan (3)), Ki Points and Capacity 1/4 of the Max Capacity (Limit of the Super Saiyan (2)), or nothing more
+ * (Superior Pain, Superior Power (4)). Unspent where none is held.
+ */
+export async function spendBattleBorn(actor, then = "") {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const held = Object.keys(BATTLE_BORN_KEYS).filter(key => (Number(actor?.system?.resources?.[key]?.stacks) || 0) > 0);
+  if (!held.length) {
+    ui.notifications.warn(`${actor?.name}: no Battle Born to spend.`);
+    return UNSPENT;
+  }
+  const key = (held.length === 1) ? held[0]
+    : await askPlayerChoice(actor, `${actor.name}: a stack of Battle Born spent`, held.map(each => ({ value: each, label: BATTLE_BORN_KEYS[each] })));
+  if (!key) return UNSPENT;
+  await setResource(actor, key, (Number(actor.system.resources?.[key]?.stacks) || 0) - 1);
+  if (then === "power-up") return (await ownOutOfSequence(actor, "power-up")) ? undefined : UNSPENT;
+  if (then === "healing-surge") return takeSurge(actor, { source: "Limit of the Super Saiyan", kind: "healing" });
+  if (then === "ki-capacity") {
+    const quarter = Math.floor((Number(actor.system.capacity?.max) || 0) / 4);
+    await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + quarter),
+      "system.capacity.spent": Math.max(0, (Number(actor.system.capacity?.spent) || 0) - quarter) });
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+      `Limit of the Super Saiyan: ${actor.name} regains ${quarter} Ki Points and Capacity.`)}</div>` });
+  }
+}
+
+/** Battle Born owed: lost once the attack being made is over (settleOwedBattleBorn) - Back to Basics (4)'s. */
+export async function oweBattleBorn(actor, count = 1) {
+  if (!actor) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.battleBornOwed`]: (Number(actor.getFlag?.(SCOPE, "battleBornOwed")) || 0) + count });
+}
+
+/**
+ * Greater Super Class (3): "use your Choice effect for the 3rd effect of Class Selection. This does not count towards that effect's [1/Encounter]
+ * Keyword" - Class Up's Option chosen: Hero's Power Up and a stack of Power, Elite's Surge, Berserker's attack with an Energy Charge.
+ */
+export async function classUpChoice(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const chosen = ["hero", "elite", "berserker"].find(id => Array.from(actor?.items ?? []).some(item => (item.type === "racial")
+    && (item.system?.chosen ?? []).some(entry => (entry?.key === "option") && (entry.value === `class-up-${id}`))));
+  if (!chosen) {
+    ui.notifications.warn(`${actor?.name}: no Class chosen for Class Up.`);
+    return UNSPENT;
+  }
+  if (chosen === "elite") return freeSurge(actor, "Greater Super Class");
+  if (chosen === "berserker") return berserkerStrike(actor, "Greater Super Class - Berserker");
+  const used = await ownOutOfSequence(actor, "power-up");
+  if (!used) return UNSPENT;
+  const held = Number(actor.system.resources?.power?.stacks) || 0;
+  await setResource(actor, "power", held + 1);
+}
+
+/** Class Up's Elite (3): "Use the Surge Maneuver as an Instant Maneuver. If you do, it does not count towards the [1/Encounter] Keyword" - a Surge, asked which. */
+export async function freeSurge(actor, source = "Class Up") {
+  return takeSurge(actor, { source });
+}
+
+/**
+ * Class Up's Berserker (3): "Use the Basic Attack Maneuver or Signature Technique Maneuver as an Instant Maneuver. If you do, apply an Energy Charge to
+ * that Attacking Maneuver" - both offered on one card, an Energy Charge with each.
+ */
+export async function berserkerStrike(actor, source = "Class Up - Berserker") {
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "", flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [
+    { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack", reason: `${source} - an Energy Charge`,
+      grants: { charges: 1 } },
+    { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique", maneuverName: "Signature Technique", reason: `${source} - an Energy Charge`,
+      technique: { via: "", any: true }, grants: { charges: 1 } }] } } });
 }

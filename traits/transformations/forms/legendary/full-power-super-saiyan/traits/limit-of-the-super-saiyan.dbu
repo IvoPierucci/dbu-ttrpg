@@ -17,4 +17,10 @@ text: >
 
 ---
 
-# (2)(3) Battle Born spent: the table's.
+# (2) A stack of Battle Born for Ki Points and Capacity, 1/4 of the Max Capacity, once a Round; (3) for a Healing Surge, once an Encounter -
+# Instants of their own (maneuvers/).
+[passive, effect 2]
+allow maneuver.limit-of-the-super-saiyan-recovery;
+
+[passive, effect 3]
+allow maneuver.limit-of-the-super-saiyan-surge;

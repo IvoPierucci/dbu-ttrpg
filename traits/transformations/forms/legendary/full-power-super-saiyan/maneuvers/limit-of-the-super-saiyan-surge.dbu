@@ -1,0 +1,24 @@
+id: limit-of-the-super-saiyan-surge
+name: Limit of the Super Saiyan: Surge
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# A Special Maneuver, open while its Trait effect applies (its `allow`).
+special: true
+source: Core Rule
+description: >
+  As an Instant Maneuver, you may spend a stack of Battle Born to use a Healing Surge as an Out-of-Sequence Maneuver.
+text: >
+  As an Instant Maneuver, you may spend a stack of Battle Born to use a Healing Surge as an Out-of-Sequence Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A (a stack of Battle Born)
+  –Effect: Use a Healing Surge.
+
+---
+
+[on used]
+spendBattleBorn(healing-surge);

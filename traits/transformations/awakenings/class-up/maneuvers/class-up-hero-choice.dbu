@@ -1,0 +1,26 @@
+id: class-up-hero-choice
+name: Class Up: Hero
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# A Special Maneuver, open while its Trait effect applies (its `allow`).
+special: true
+source: Core Rule
+description: >
+  Use the Power Up Maneuver as an Instant Maneuver. If you do, gain an additional stack of Power from this use of the Power Up Maneuver.
+text: >
+  Use the Power Up Maneuver as an Instant Maneuver. If you do, gain an additional stack of Power from this use of the Power Up Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: Use the Power Up Maneuver, a stack of Power more.
+
+---
+
+[on used]
+maneuverOutOfSequence(power-up);
+power.stacks += 1;
+expires(power, next-turn);

@@ -1,0 +1,24 @@
+id: class-up-elite-choice
+name: Class Up: Elite
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# A Special Maneuver, open while its Trait effect applies (its `allow`).
+special: true
+source: Core Rule
+description: >
+  Use the Surge Maneuver as an Instant Maneuver. If you do, it does not count towards the [1/Encounter] Keyword for the Surge Maneuver.
+text: >
+  Use the Surge Maneuver as an Instant Maneuver. If you do, it does not count towards the [1/Encounter] Keyword for the Surge Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: Use a Surge.
+
+---
+
+[on used]
+freeSurge();

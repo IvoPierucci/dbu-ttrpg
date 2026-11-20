@@ -1,0 +1,24 @@
+id: back-to-basics-power-up
+name: Back to Basics
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Special Maneuver, open while its Trait effect applies (its `allow`).
+special: true
+source: Core Rule
+description: >
+  While you have 4+ stacks of Battle Born, you may use the Power Up Maneuver as an Instant Maneuver.
+text: >
+  While you have 4+ stacks of Battle Born, you may use the Power Up Maneuver as an Instant Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: Use the Power Up Maneuver.
+
+---
+
+[on used]
+maneuverOutOfSequence(power-up);

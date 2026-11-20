@@ -1,0 +1,24 @@
+id: pinnacle-of-legacy-power-up
+name: Pinnacle of Legacy
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Special Maneuver, open while its Trait effect applies (its `allow`).
+special: true
+source: Core Rule
+description: >
+  As an Instant Maneuver, you may spend a stack of Battle Born to use the Power Up Maneuver.
+text: >
+  As an Instant Maneuver, you may spend a stack of Battle Born to use the Power Up Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A (a stack of Battle Born)
+  –Effect: Use the Power Up Maneuver.
+
+---
+
+[on used]
+spendBattleBorn(power-up);
