@@ -21,7 +21,7 @@ text: >
 if (hasResource("maximetamorese")) {
     actions.standard += 2;
 }
-# (1) Then the Ultra Fusion Legendary Form, out of sequence: waits on the Transformations, not built yet.
+# (1) Then the Ultra Fusion Legendary Form, out of sequence: its text not given yet - the table's.
 # (2) The Metamoran Clothing, with Divine Apparel, made and worn as the Fusion is fused (fusion-make.mjs).
 # (3) Read where the Stress Test is rolled (chat.mjs postTransformation).
 allow stress.autoSucceed;

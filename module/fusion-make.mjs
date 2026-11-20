@@ -12,6 +12,7 @@ import { isCharacter, isFusion, isMinion } from "./actor-types.mjs";
 import { masterOf } from "./allies.mjs";
 import { FUSION_METHODS, baseTierFor, fusionPowerLevel, leadFused, modifiersAllowed } from "./fusion.mjs";
 import { isVillainous } from "./racial.mjs";
+import { getTrait } from "./effects/traits.mjs";
 import { APPAREL_LAYERS, GEAR_ICON, composeEffects, gearItemFrom, qualityInactive } from "./gear.mjs";
 
 /** The flags an Item copied onto a Fusion carries: taken again as it is fused again; its Racial Traits, chosen once and kept. */
@@ -227,9 +228,29 @@ export function racialWarnings(picked) {
 export function copiedItems(actors, { talentPicks = {} } = {}) {
   const talents = new Set();
   const out = [];
+  // Step 6: "all ... Transformations (including Masteries)" - each once, the one Mastered most (then of most Stacks) kept with its Traits,
+  // the others' left; none in use on the Fusion as it is made.
+  const best = new Map();
+  for (const actor of actors) {
+    for (const item of Array.from(actor.items ?? []).filter(each => each.type === "transformation")) {
+      const key = String(item.system?.transformationId ?? item.name);
+      const had = best.get(key);
+      const rank = each => ((Number(each.item.system?.mastery) || 0) * 100) + (Number(each.item.system?.stacks) || 0);
+      if (!had || (rank({ item }) > rank(had))) best.set(key, { actor, item });
+    }
+  }
+  const keptTransformations = new Set([...best.values()].map(({ actor, item }) => `${actor.uuid}|${item.id}`));
   for (const actor of actors) {
     for (const item of Array.from(actor.items ?? [])) {
       if (coreManeuver(item) || raceTrait(item)) continue;
+      if ((item.type === "transformation") && !keptTransformations.has(`${actor.uuid}|${item.id}`)) continue;
+      if (item.system?.transformation && !keptTransformations.has(`${actor.uuid}|${item.system.transformation}`)) continue;
+      if (item.type === "transformation") {
+        const data = copyOf(item, actor, { [FUSED_COPY]: true });
+        Object.assign(data.system, { active: false, newLevel: false, transcended: false, prelude: false });
+        out.push(data);
+        continue;
+      }
       const data = copyOf(item, actor, { [FUSED_COPY]: true });
       if (item.type === "talent") {
         const key = talentKey(item);
@@ -423,14 +444,20 @@ export function modifierChecks(actors, { racialCount = 0, bT = 1, partnerOf = ()
   const shared = talentSets.length ? [...talentSets[0]].filter(key => talentSets.every(set => set.has(key))).length : 0;
   const pair = (actors.length === 2) ? actors : null;
   const mutual = ask => Boolean(pair) && (ask(pair[0])?.uuid === pair[1].uuid) && (ask(pair[1])?.uuid === pair[0].uuid);
-  const waits = { ok: null, why: "Waits on the Transformations: the table's to say." };
+  // Enhanced Fusion's "You do not have access to any Forms"; Fused Transformation's "All of the Fused Characters have access to the same Form".
+  const formIds = actor => new Set(Array.from(actor.items ?? []).filter(item => item.type === "transformation")
+    .map(item => item.system?.transformationId).filter(id => ["forms/alternate", "forms/legendary"].includes(getTrait(id ?? "")?.transformationFolder ?? "")));
+  const formSets = actors.map(formIds);
+  const sharedForms = formSets.length ? [...formSets[0]].filter(id => formSets.every(set => set.has(id))) : [];
   return {
     "balanced-fusion": { ok: balanced.length >= 2,
       why: balanced.length ? `Within 1 of each other: ${balanced.map(titled).join(", ")}.` : "No Attribute within 1 among them." },
     "dominant-personality": { ok: (nonMinions === 1) || (levels.filter(level => level === top).length === 1),
       why: (nonMinions === 1) ? "1 Non-Minion Fused Character." : `Highest Power Level ${top}${(levels.filter(level => level === top).length === 1) ? ", one alone" : ", shared"}.` },
-    "enhanced-fusion": waits,
-    "fused-transformation": waits,
+    "enhanced-fusion": { ok: formSets.every(set => !set.size), why: formSets.every(set => !set.size) ? "No Form among them."
+      : `${actors.filter((actor, at) => formSets[at].size).map(actor => actor.name).join(", ")} ${(formSets.filter(set => set.size).length === 1) ? "has" : "have"} a Form.` },
+    "fused-transformation": { ok: sharedForms.length > 0, why: sharedForms.length
+      ? `Fused Form: ${sharedForms.map(id => getTrait(id)?.name ?? id).join(", ")}.` : "No Form all of them have." },
     "power-of-friendship": { ok: mutual(partnerOf), why: pair ? "Each the other's 'Partner' (Synchronized Combatant (1))." : "2 Fused Characters only." },
     "shared-heritage": { ok: (races.size === 1) && (racialCount < 7),
       why: `${(races.size === 1) ? "All of one Race" : `${races.size} Races`}; ${racialCount} Racial Trait${(racialCount === 1) ? "" : "s"} (less than 7).` },

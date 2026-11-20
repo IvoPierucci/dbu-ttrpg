@@ -386,6 +386,18 @@ export function bonusesOf(item, file = fileOf(item)) {
   if (ki && (Number(ki.value) < (Number(ki.max) || 0) / 4) && aspectsOf(item, item.parent?.items).some(aspect => aspect.id === "weakening")) {
     for (const bonus of Object.values(bonuses)) bonus.coefficient = Math.floor(bonus.coefficient / 2);
   }
+  // Fused Transformation (4): "Increase the Attribute Modifier Bonus (AG/FO/TE/MA) of your Fused Form ... Alternate Form: 1(T), Legendary
+  // Form: 2(T)" (`fusedFormBonus: alternate 1; legendary 2` on the Fusion Modifier).
+  if ((kindOf(file) === "form") && item?.parent) {
+    const rule = Array.from(item.parent.items ?? []).map(each => getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.fusedFormBonus).find(Boolean);
+    if (rule && fusedFormIds(item.parent).includes(file.id)) {
+      const amount = Number(new RegExp(`${formTypeOf(file) || "alternate"}\\s+(\\d+)`).exec(String(rule))?.[1]) || 0;
+      for (const attribute of ["agility", "force", "tenacity", "magic"].filter(() => amount)) {
+        const had = bonuses[attribute] ?? { coefficient: 0, unit: "T" };
+        bonuses[attribute] = { coefficient: had.coefficient + amount, unit: had.unit || "T" };
+      }
+    }
+  }
   // "+N in the three Attributes with the highest Attribute Scores" of each of its Characters (`bonusesPerOwner: top3 N` - an
   // Absorbed Character's +1 a stack, the Possessing Character's or the Past Life's +2). A tie: the first of them.
   const [rule, amount] = String(file.bonusesPerOwner ?? "").split(/\s+/);
@@ -936,8 +948,11 @@ export function stressRequirementFor(actor, item, options = {}) {
       parts.push("Step-by-Step -2");
     }
   }
-  // Natural: every one of them; "an Evolved Stage does not gain ... Natural" from its Original.
-  const natural = [item, ...others].every(each => aspectsOf(each, items).some(aspect => aspect.id === "natural"));
+  // Natural: every one of them; "an Evolved Stage does not gain ... Natural" from its Original. Narrative Transformation (1): the Form or
+  // Line chosen (`naturalForChosen:`) - "You do not need to roll Stress Tests for that Transformation or Transformation Line unless you are
+  // using another Transformation in conjunction with them".
+  const natural = [item, ...others].every(each => aspectsOf(each, items).some(aspect => aspect.id === "natural"))
+    || (!others.length && narrativeFor(item, items));
   return { requirement, parts, natural };
 }
 
@@ -1253,3 +1268,28 @@ useTransformationQuestion("inEnhancement", actor => transformationsInUse(actor)
 useTransformationQuestion("enhancementsAtLeast", (actor, n) => transformationsInUse(actor)
   .filter(item => kindOf(fileOf(item)) === "enhancement").length >= (Number(n) || 0));
 useTransformationQuestion("transformedTierAtLeast", (actor, n) => topTierInUse(actor) >= (Number(n) || 0));
+
+/** Whether a Trait had names this one, or its Line, as the one with no Stress Tests alone (`naturalForChosen:` - its choice). */
+function narrativeFor(item, items) {
+  const file = fileOf(item);
+  const line = lineOf(file, items);
+  return Array.from(items ?? []).some(each => {
+    if (each.type !== "racial") return false;
+    const trait = getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    if (!trait?.naturalForChosen) return false;
+    const chosen = (each.system?.chosen ?? []).find(entry => entry?.key === trait.id)?.value ?? "";
+    return Boolean(chosen) && ((chosen === file?.id) || (line && (chosen === `line:${line}`)));
+  });
+}
+
+/**
+ * Fused Transformation: "Any Forms that are possessed by all Fused Characters are known as the 'Fused Form'" - the ids of those, read off
+ * the Fusion's Fused Characters (system.fusion.fused); none where they cannot be read.
+ */
+export function fusedFormIds(actor) {
+  const fused = Array.from(actor?.system?.fusion?.fused ?? []).map(entry => globalThis.fromUuidSync?.(entry?.uuid ?? "")).filter(Boolean);
+  if (fused.length < 2) return [];
+  const formsOf = each => new Set(transformationItems(each).filter(item => kindOf(fileOf(item)) === "form").map(item => item.system?.transformationId));
+  const [first, ...rest] = fused.map(formsOf);
+  return [...first].filter(id => rest.every(set => set.has(id)));
+}

@@ -1,5 +1,8 @@
 id: narrative-transformation
 name: Narrative Transformation
+# (1) Which Form or Line, chosen as it is gained - changeable on its Options tab.
+choose: formOrLine
+naturalForChosen: true
 description: >
   You are able to transform without any stress at all, allowing you to focus on reducing your enemies to ashes.
 text: >
@@ -9,4 +12,8 @@ text: >
 
 ---
 
-# Both effects wait for the Transformations (the user's: written, and left for when they are built).
+# (1) That Form or Line: no Stress Test to enter it alone (transformations.mjs stressRequirementFor, `naturalForChosen`).
+
+# (2) Legend Realized doubled, asked as it is applied, once an Encounter (chat.mjs narrativeDouble).
+[passive]
+allow legend.narrativeDouble;

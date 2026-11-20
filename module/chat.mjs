@@ -39990,6 +39990,13 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
     if (item) await T.enterTransformation(actor, item, into);
     // New Level of Power, a Form's: "double the amount of Life and Ki Points regained through Legend Realized upon entering it".
     if (into.form) await legendRealizedByForm(actor, into.name, item, { double: Boolean(item?.system?.newLevel) });
+    // "Stop Wasting My Time": entered this turn, out of sequence as it offered - Legend Realized for the Adversary who used it.
+    const wasting = actor.getFlag?.(SCOPE, "stopWastingBy");
+    if (wasting?.uuid && (wasting.turn === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}:${game.combat?.turn ?? 0}`)) {
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.-=stopWastingBy`]: null });
+      const adversary = fromUuidSync(wasting.uuid);
+      if (adversary) await legendRealized(adversary);
+    }
     // Triggered/Transform: what answers entering one through the Transformation Maneuver - its Burst Limit among them.
     if (item) {
       await offerTriggers(actor, "transform");

@@ -9,9 +9,10 @@ text: >
 
 ---
 
-# (1), and (2)'s Transformation Maneuver, wait for the Transformations (the user's).
+# (1) Not entering the one of your highest Tier of Power Requirement until (2): the table's to hold to.
 
 # (2) Defeated - once an Encounter, as the Triggered/Defeated Keyword is (the user's): half the Maximum Life Points back, before the
 # Defeat is settled, so it is not.
 [triggered/defeated, effect 2]
 life.value += floor(life.max / 2);
+transformationOutOfSequence();

@@ -672,6 +672,14 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
   }
   // A Foundation - Super Specialist's "select a Foundation".
   if (kind === "foundation") return [["physical", "Physical"], ["energy", "Energy"], ["magic", "Magic"]];
+  // Narrative Transformation (1)'s "Select a Form or Transformation Line you possess": the Forms had, and their Lines.
+  if (kind === "formOrLine") {
+    const T = await import("./transformations.mjs");
+    const forms = T.transformationItems(actor).map(item => T.fileOf(item)).filter(file => T.kindOf(file) === "form");
+    const lines = [...new Set(forms.map(file => T.lineOf(file, actor?.items)).filter(Boolean))];
+    return [...forms.map(file => [file.id, file.name]),
+      ...lines.map(line => [`line:${line}`, `${line.replace(/(^|-)\w/g, c => c.toUpperCase()).replace(/-/g, " ")} Line`])];
+  }
   // Category Specialist's "Select a Weapon Category" - not the Shield, which is no attack's.
   if (kind === "weaponCategory") {
     const { traitsOfKind } = await import("./effects/traits.mjs");

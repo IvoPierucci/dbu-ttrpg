@@ -13,5 +13,19 @@ text: >
 
 ---
 
+# (1) Its Prerequisite: shown as the Fusion is fused (fusion-make.mjs modifierChecks), never enforced.
+
 [passive]
-# (2), (3) and (4) wait on the Transformations - Enhancements, Forms - not built yet: the table's until then.
+# (2) In a non-Transcended Enhancement: Combat Rolls 1(T).
+if (inEnhancement) {
+    combatRolls += 1(T);
+}
+# (3) 2+ Enhancements together (a Transcended one with another): Wound 2(T).
+if (enhancementsAtLeast(2)) {
+    wound += 2(T);
+}
+
+# (4) At the start of your turn: the Transformation Maneuver out of sequence, into a non-Transcended Enhancement; leaving it at the end of
+# that turn, with no Stress Exhaustion: the table's.
+[triggered/start-of-turn, outOfSequence, effect 4]
+transformationOutOfSequence();

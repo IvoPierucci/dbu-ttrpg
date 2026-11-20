@@ -15,8 +15,6 @@ export function isVillainousManeuver(maneuver) {
   return maneuver?.source === VILLAINOUS_SOURCE;
 }
 
-/** Those waiting for the Transformations (the user's: written, and left for when they are built). */
-const WAITING = new Set(["face-me-at-full-power", "stop-wasting-my-time"]);
 
 /**
  * Its Action Cost paid in Adversary Actions - the Counter Actions One-Man Army gives in their place: whether it may be, and
@@ -42,10 +40,6 @@ function targeted(actor) {
  */
 export async function villainousBefore(actor, maneuver) {
   const escape = Handlebars.escapeExpression;
-  if (WAITING.has(maneuver.id)) {
-    ui.notifications.warn(`${maneuver.name} waits for the Transformations.`);
-    return null;
-  }
   if (!isAdversary(actor)) {
     ui.notifications.warn(`${maneuver.name} is an Adversary's.`);
     return null;
@@ -113,6 +107,21 @@ export async function villainousBefore(actor, maneuver) {
     if (why) return void ui.notifications.warn(why) ?? null;
     return { stamina: Number(actor.system.narrativeStamina?.value) || 0 };
   }
+  // "Face Me at Full Power": "This Maneuver can only be used at the start of a Combat Round" - said where it is not, never refused (the
+  // table's to hold it to).
+  if (maneuver.id === "face-me-at-full-power") {
+    if (game.combat?.started && ((Number(game.combat.turn) || 0) > 0)) ui.notifications.warn(`${maneuver.name}: at the start of a Combat Round (said, not refused).`);
+    return {};
+  }
+  // "Stop Wasting My Time": "only ... at the start of an Opponent's turn" - the Opponent targeted, whose turn it should be.
+  if (maneuver.id === "stop-wasting-my-time") {
+    const [who] = targeted(actor);
+    if (!who) return void ui.notifications.warn(`${maneuver.name}: target the Opponent whose turn is starting.`) ?? null;
+    if (game.combat?.started && (game.combat.combatant?.actor?.uuid !== who.uuid)) {
+      ui.notifications.warn(`${maneuver.name}: at the start of ${who.name}'s turn (said, not refused).`);
+    }
+    return { who };
+  }
   if (maneuver.id === "act-again") {
     const combat = game.combat;
     const ended = combat?.previous?.combatantId ? combat.combatants.get(combat.previous.combatantId) : null;
@@ -170,6 +179,29 @@ export async function villainousAfter(actor, maneuver, plan = {}, card = null) {
     }
     const { legendRealized } = await import("./chat.mjs");
     return legendRealized(actor);
+  }
+  // "Use the Transformation Maneuver as an Out-of-Sequence Maneuver, then remove all Combat Conditions you are suffering from (except
+  // Pinned or Suffocating)" - the Transformation offered on its card, the Conditions off now.
+  if (maneuver.id === "face-me-at-full-power") {
+    const { allOutTransform } = await import("./chat.mjs");
+    await allOutTransform(actor);
+    const { conditionsFor, setCondition } = await import("./conditions.mjs");
+    for (const condition of conditionsFor(actor).filter(each => each.combatCondition && each.active && !["pinned", "suffocating"].includes(each.key))) {
+      await setCondition(actor, condition.key, 0);
+    }
+    return say(`<b>"Face Me at Full Power"</b> - the Transformation Maneuver out of sequence for ${escape(actor.name)}, and every Combat Condition
+      but Pinned and Suffocating gone.`);
+  }
+  // "They may use the Transformation Maneuver as an Out-of-Sequence Maneuver. If they do, you may apply Legend Realized" - offered on their
+  // card; entering one this turn, Legend Realized for the one who used it (chat.mjs postTransformation, `stopWastingBy`).
+  if (maneuver.id === "stop-wasting-my-time") {
+    const who = plan.who;
+    const { allOutTransform, requestActorUpdate } = await import("./chat.mjs");
+    await requestActorUpdate(who, { "flags.dbu-ttrpg.stopWastingBy": { uuid: actor.uuid,
+      turn: `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}:${game.combat?.turn ?? 0}` } });
+    await allOutTransform(who);
+    return say(`<b>"Stop Wasting My Time"</b> - ${escape(who.name)} may use the Transformation Maneuver out of sequence; if they do,
+      ${escape(actor.name)} applies Legend Realized.`);
   }
   if (maneuver.id === "get-up") {
     const who = plan.who;

@@ -2,6 +2,8 @@ id: fused-transformation
 name: Fused Transformation
 # A Fusion Modifier: chosen as a Fusion is fused (fusion-make.mjs), never picked by hand. Its Prerequisite is shown there, never enforced.
 fusionModifier: true
+# (4) The Fused Form's Attribute Modifier Bonus (AG/FO/TE/MA) by its Form Type (transformations.mjs bonusesOf, fusedFormIds).
+fusedFormBonus: alternate 1; legendary 2
 description: >
   Your disparate experiences with the transformations at your command allow you to empower those transformations shared by your Fused Characters.
 text: >
@@ -16,5 +18,7 @@ text: >
 
 ---
 
-[passive]
-# (2), (3) and (4) wait on the Transformations - Forms, Lines, Stages - not built yet: the table's until then.
+# (1) Its Prerequisite: shown as the Fusion is fused (fusion-make.mjs modifierChecks) - the Fused Forms named.
+# (2) The higher Stages of a Fused Form's Line, by base Tier of Power: added from the Transformations tab - the table's.
+# (3) The Health Threshold Penalties to the Stress Bonus ignored for a Fused Form: the table's.
+# (4) Its header.
