@@ -16,4 +16,6 @@ text: >
 
 ---
 
-# (2) Limitless (3) ignored: the table's.
+# (2) Limitless (3) ignored.
+[passive, effect 2]
+allow kiRegain.kept;

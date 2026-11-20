@@ -647,6 +647,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Class Up (3)'s Choice effect of the Option chosen - Hero, Elite or Berserker - not counting toward its once an Encounter (Greater Super Class (3))."
   },
+  extraBonusMomentum: {
+    args: [0, 0],
+    doc: "An Action more from Bonus Momentum this Combat Round (Sparking Momentum (4))."
+  },
   freeSurge: {
     args: [0, 0],
     doc: "A Surge, its kind asked, counting toward no Surge Maneuver's limit (Class Up's Elite (3))."

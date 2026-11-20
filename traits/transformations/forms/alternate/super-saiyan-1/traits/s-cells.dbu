@@ -26,4 +26,10 @@ if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) 
     damageReduction += 1(T);
 }
 
-# (2) The Power Up as an Instant at 6+: the table's. (3) Its Option, chosen as it is gained (its own files).
+# (2) With 6+ stacks of Battle Born: the Power Up as an Instant, once a Round - its own Maneuver (maneuvers/).
+[passive, effect 2]
+if (max(0, battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) >= 6) {
+    allow maneuver.s-cells-power-up;
+}
+
+# (3) Its Option, chosen as it is gained (its own files).

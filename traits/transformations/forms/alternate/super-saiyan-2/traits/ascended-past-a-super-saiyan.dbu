@@ -21,4 +21,6 @@ text: >
 [passive, effect 2]
 steadfast.dice += 1;
 
-# (3) Ki Points with a Steadfast Check passed: the table's.
+# (3) A Steadfast Check passed, once a Round: Ki Points equal to your Surgency.
+[triggered/steadfast-passed, 1/round, effect 3]
+ki.value += surgency;

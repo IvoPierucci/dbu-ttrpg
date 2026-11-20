@@ -14,13 +14,17 @@ text: >
 
 ---
 
-# (1) Every Attacking Maneuver with the Full Wager Advantage: the table's.
+# (1) Every Attacking Maneuver with the Full Wager Advantage: its Ki Wager limited by your remaining Capacity alone (maneuvers.mjs maxKiWager).
+[passive, effect 1]
+allow attack.fullWager;
 
 # (2) An Attacking Maneuver with a Ki Wager: half the Ki Points wagered on its Wound Roll (chat.mjs halfWagerParts).
 [passive, effect 2]
 allow wound.halfWager;
 
-# (3) The Ki Points from Ki Surges and Combat Recovery halved: the table's.
+# (3) The Ki Points from Ki Surges and Combat Recovery halved (chat.mjs takeSurge, combat-recovery.dbu).
+[passive, effect 3]
+allow kiRegain.halved;
 
 # (4) In the Raging or Superior State: Wound and Soak 1(T).
 [passive, effect 4]

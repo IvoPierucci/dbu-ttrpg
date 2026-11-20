@@ -85,21 +85,21 @@ recovery.stacks += actionsSpent;
 if (actionsSpent >= 1) {
     life.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     if (!kiLocked) {
-        ki.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
+        ki.value += floor(1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1) / (kiRegainHalved ? 2 : 1));
     }
     expires(recovery, start-of-next-turn);
 }
 if (actionsSpent >= 2) {
     life.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     if (!kiLocked) {
-        ki.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
+        ki.value += floor(1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1) / (kiRegainHalved ? 2 : 1));
     }
     expires(recovery, start-of-next-turn);
 }
 if (actionsSpent >= 3) {
     life.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     if (!kiLocked) {
-        ki.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
+        ki.value += floor(1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1) / (kiRegainHalved ? 2 : 1));
     }
     expires(recovery, start-of-next-turn);
 }

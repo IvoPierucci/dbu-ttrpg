@@ -3909,7 +3909,7 @@ export function maxKiWager(actor, advantages = []) {
   // remaining Capacity." So the half-Capacity limit is lifted and the other two stay -
   // "only limited by your remaining Capacity" still cannot let you spend Ki you do not
   // have, and a wager of Ki that is not there is not a wager.
-  const half = advantages.includes("full-wager")
+  const half = (advantages.includes("full-wager") || (actor?.system?.effects?.slots?.["attack.fullWager"] === true))
     ? Number.POSITIVE_INFINITY
     : Math.floor(capacity.max / 2);
 
@@ -3934,7 +3934,7 @@ function wagerShareCap(actor) {
 export function maxLifeWager(actor, advantages = []) {
   const { capacity, life } = actor.system;
   if (!permits(actor.system.effects?.slots, "kiWagers")) return 0;
-  const half = advantages.includes("full-wager")
+  const half = (advantages.includes("full-wager") || (actor?.system?.effects?.slots?.["attack.fullWager"] === true))
     ? Number.POSITIVE_INFINITY
     : Math.floor(capacity.max / 2);
   return Math.max(0, Math.min(half, capacity.remaining, life.value, wagerShareCap(actor)));

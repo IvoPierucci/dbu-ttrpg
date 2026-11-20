@@ -13,7 +13,14 @@ text: >
 
 ---
 
-# (1) Duel Clashes 1(T), (2) the Damage Category below Bruised: the table's.
+# (1) Duel Clashes 1(T).
+[passive, effect 1]
+clash.duel += 1(T);
+
+# (2) Hit below the Bruised Health Threshold, once a Round: the attack's Damage Category 1 lower for you - ticked in Respond.
+[triggered/being-hit, 1/round, effect 2]
+requires belowThreshold("bruised");
+incoming.damage.category.shift -= 1;
 
 # (3) Entering it: Raging till the end of your turn - or Superior till the start of your next, where This is a Super Saiyan (4) offers it (its
 # button: Automatic, Superior; Triggered, asked which - chat.mjs ragingOrSuperior).

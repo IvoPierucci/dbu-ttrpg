@@ -29,11 +29,12 @@ if (inState("raging") || inState("superior")) {
 [passive, effect 3]
 attack.damageCategory.heavyWager += 1;
 
-# (4) Knocking an Opponent through a Health Threshold, once an Encounter: a stack of Broken till the start of your next turn; the Action
-# from Bonus Momentum more: the table's.
+# (4) Knocking an Opponent through a Health Threshold, once an Encounter: a stack of Broken till the start of your next turn, and an Action
+# more from Bonus Momentum.
 [triggered/knock-through, 1/encounter, effect 4]
 requires knockedOpponent;
 markKnocked(broken, 1, start);
+extraBonusMomentum();
 
 # (5) On the Round's card, once an Encounter: your turn now, ignoring the Initiative Order - several, highest Initiative first (Jump
 # Start's: chat.mjs jumpStart).

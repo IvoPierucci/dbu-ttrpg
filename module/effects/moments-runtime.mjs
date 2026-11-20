@@ -863,6 +863,7 @@ async function runVerb(actor, call, context) {
     // Full Power Super Saiyan's Battle Born spent; Class Up's Choice effects.
     case "spendBattleBorn": return (await import("../chat.mjs")).spendBattleBorn(actor, String(args[0] ?? ""));
     case "freeSurge": return (await import("../chat.mjs")).freeSurge(actor);
+    case "extraBonusMomentum": return (await import("../chat.mjs")).extraBonusMomentum(actor);
     case "oweBattleBorn": return (await import("../chat.mjs")).oweBattleBorn(actor, Number(args[0]) || 1);
     case "classUpChoice": return (await import("../chat.mjs")).classUpChoice(actor);
     case "berserkerStrike": return (await import("../chat.mjs")).berserkerStrike(actor);

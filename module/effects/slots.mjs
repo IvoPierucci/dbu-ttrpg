@@ -615,6 +615,13 @@ const TABLE = [
     doc: "Divine Summoning, once an Encounter: each Minion moved by it, the Power Up out of sequence (True God of Many (6))." },
   { key: "freezeAttack.lend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Freeze Attack on an Ally, once an Encounter: your Damage Attribute on their attacks in that Frozen Turn (True God of Time (7))." },
+  // Super Saiyan's Traits.
+  { key: "attack.fullWager", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Every Attacking Maneuver of yours with the Full Wager Advantage - its Ki Wager limited by your remaining Capacity alone (Limitless (1))." },
+  { key: "kiRegain.halved", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "The Ki Points regained through Ki Surges and Combat Recovery halved (Limitless (3)) - not with kiRegain.kept." },
+  { key: "kiRegain.kept", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Limitless (3)'s halving ignored (Even Further Beyond (2))." },
   // Full Power Super Saiyan's Traits.
   { key: "battleBorn.reduction", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Hit by an Attacking Maneuver: Damage Reduction 1(T) for every 2 stacks of Battle Born, asked - a stack lost once it is over (Full "

@@ -14604,6 +14604,12 @@ function renderShock(message, html) {
  * Bonus Momentum: "You gain an additional Standard Action to spend if you knock an Opponent through a Health Threshold or
  * Defeat a Minion with an Attacking Maneuver. You can only gain Bonus Momentum once per Combat Round."
  */
+/** Sparking Momentum (4): "gain an additional Action from Bonus Momentum" - its Action, and one more. */
+export async function extraBonusMomentum(actor) {
+  if (!game.combat?.started || !actor) return;
+  await requestActorUpdate(actor, { "system.momentum.bonus": (Number(actor.system.momentum?.bonus) || 0) + 1 });
+}
+
 async function bonusMomentum(attacker, why) {
   if (!game.combat?.started || ((Number(attacker.system.momentum?.bonus) || 0) > 0)) return;
   await requestActorUpdate(attacker, { "system.momentum.bonus": 1 });
@@ -40791,8 +40797,10 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   }
   const { ki, capacity } = actor.system;
   // Power Battery: "you cannot regain Ki Points through Ki Surges" - the Capacity still comes back.
-  const kiGain = (actor.system.effects?.slots?.["ki.noRegain"] === true) ? 0
+  let kiGain = (actor.system.effects?.slots?.["ki.noRegain"] === true) ? 0
     : Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency;
+  // Limitless (3): "Halve the Ki Points you regain through Ki Surges and Combat Recovery" (rounded down).
+  if ((actor.system.effects?.slots?.["kiRegain.halved"] === true) && (actor.system.effects?.slots?.["kiRegain.kept"] !== true)) kiGain = Math.floor(kiGain / 2);
   const capacityGain = Math.floor(capacity.max / DBUCharacterData.KI_SURGE_FRACTION);
 
   const kiRestored = Math.min(ki.max, ki.value + kiGain) - ki.value;

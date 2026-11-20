@@ -346,6 +346,8 @@ const PREDICATES = {
   /** The attack declared is paid in Divine Ki Points / of a Favored Element - the declaration's (True God of an Element (5)). */
   paidWithDivine: scope => Boolean(scope.context?.divinePaid),
   favoredAttack: scope => Boolean(scope.context?.favoredProfile),
+  /** Limitless (3)'s halving, not ignored by Even Further Beyond (2) - Combat Recovery's Ki. */
+  kiRegainHalved: scope => (scope.data?.effects?.slots?.["kiRegain.halved"] === true) && (scope.data?.effects?.slots?.["kiRegain.kept"] !== true),
   /** A Magical Unique Ability used this Combat Round (True God of Magic (5)). */
   magicalUniqueThisRound: scope => Boolean(globalThis.game?.combat?.started)
     && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "magicalUniqueRound") === `${game.combat.id}:${game.combat.round ?? 0}`),
