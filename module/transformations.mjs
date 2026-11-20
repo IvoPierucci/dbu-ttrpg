@@ -1391,7 +1391,8 @@ export function registerTransformationHooks() {
     const owner = (item.system?.choices ?? []).find(entry => entry?.key === "owner")?.value;
     if (owner && (actor.getFlag?.("dbu-ttrpg", "possessedBy")?.uuid === owner)) (await import("./chat.mjs")).releasePossession(actor);
     const traits = Array.from(actor.items).filter(each => each.system?.transformation === item.id).map(each => each.id);
-    const given = Array.from(actor.items).filter(each => traits.includes(each.flags?.["dbu-ttrpg"]?.grantedBy)).map(each => each.id);
+    const given = Array.from(actor.items).filter(each => traits.includes(each.flags?.["dbu-ttrpg"]?.grantedBy)
+      || (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)).map(each => each.id);
     const ids = [...traits, ...given].filter(id => actor.items.has(id));
     if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids);
   });
@@ -1437,6 +1438,8 @@ export function fusedFormIds(actor) {
   return [...first].filter(id => rest.every(set => set.has(id)));
 }
 useTransformationQuestion("normalState", actor => inNormalState(actor));
+// An Item given by a Transformation itself (a row's "@other:" choice - a Metamorphosis Stage's Evolution Traits): that one in use.
+useTransformationQuestion("itemInUse", item => inUse(item));
 // This is a Super Saiyan (3), Deeper into the Depths (3): a Trait of one in use, wholly in use (not by its [Permanent] effects alone), whose
 // file says `superiorAsRaging: true`.
 useTransformationQuestion("superiorAsRaging", actor => Array.from(actor?.items ?? []).some(each => (each.type === "racial") && each.system?.transformation
@@ -1453,12 +1456,18 @@ export function rowChoicesOf(item, file = fileOf(item)) {
   return Object.keys(file).filter(key => /^choice\d+$/.test(key)).sort((a, b) => Number(a.slice(6)) - Number(b.slice(6)))
     .map(key => [].concat(file[key]).join(", ").split("|").map(part => part.trim()))
     .filter(([key]) => key)
-    .map(([key, label = key, list = ""]) => ({ key, label,
-      options: list.split(";").map(part => part.trim()).filter(Boolean).map(part => {
-        const [value, shown] = part.split("=").map(each => each.trim());
-        return { value, label: shown || value };
-      }),
-      chosen: rowChoice(item, key) }));
+    .map(([key, label = key, list = ""]) => {
+      // "@other:evolution" - one of that group of Other Traits (Metamorphosis's Evolution Traits for a Stage), had while it is in use.
+      const other = /^@other:/.test(list.trim()) ? list.trim().slice(7).trim() : "";
+      return { key, label, other,
+        options: other ? traitsOfKind("other", other).filter(trait => !trait.optionOf).sort((a, b) => a.name.localeCompare(b.name))
+          .map(trait => ({ value: trait.id, label: trait.name }))
+          : list.split(";").map(part => part.trim()).filter(Boolean).map(part => {
+            const [value, shown] = part.split("=").map(each => each.trim());
+            return { value, label: shown || value };
+          }),
+        chosen: rowChoice(item, key) };
+    });
 }
 
 /** One of its row's choices, or "". */
@@ -1466,11 +1475,112 @@ export function rowChoice(item, key) {
   return String((item?.system?.choices ?? []).find(entry => entry?.key === `choice:${key}`)?.value ?? "");
 }
 
-/** One of its row's choices set (an empty value takes it off). */
+/**
+ * One of its row's choices set (an empty value takes it off). One of Other Traits: that Trait given, the one before taken away; and one
+ * of a Transformation in use, what it replaces while in use put right (syncWhileIn).
+ */
 export async function setRowChoice(item, key, value) {
   const choices = (item.system.choices ?? []).filter(entry => entry?.key !== `choice:${key}`);
   if (value) choices.push({ key: `choice:${key}`, value: String(value) });
-  return item.update({ "system.choices": choices });
+  const done = await item.update({ "system.choices": choices });
+  const choice = rowChoicesOf(item).find(each => each.key === key);
+  if (choice?.other && item.parent) await rowTraitChosen(item, key, value);
+  if (choice && item.parent && inUse(item)) await syncWhileIn(item.parent);
+  return done;
+}
+
+/**
+ * An Other Trait chosen on a Transformation's row ("@other:<group>" - Metamorphosis's S Evolution Traits "to possess while in that Stage"):
+ * a Racial Trait Item given by the Transformation (`grantedBy`, `rowChoice`), set aside while it is not in use (aside.mjs) and gone with
+ * it; the one chosen before for that choice taken away.
+ */
+async function rowTraitChosen(item, key, value) {
+  const actor = item.parent;
+  const before = Array.from(actor.items).filter(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
+    && (each.flags["dbu-ttrpg"].rowChoice === key)).map(each => each.id);
+  if (before.length) await actor.deleteEmbeddedDocuments("Item", before);
+  const trait = value ? getTrait(value) : null;
+  if (!trait) return;
+  const { addRacialTrait } = await import("./racial.mjs");
+  const given = await addRacialTrait(actor, trait, { grantedBy: item.id });
+  if (given) await given.setFlag("dbu-ttrpg", "rowChoice", key);
+}
+
+/**
+ * A Transformation's own script (its file's, after its `---`), run while it is in use (registry.mjs) - Metamorphosis's per-Stage Size -
+ * with its row's choices and its G, Z, S and M written in. "" where it has none.
+ */
+export function inUseScript(item) {
+  const file = fileOf(item);
+  const script = String(file?.script ?? "");
+  if (!/^\s*\[/m.test(script)) return "";
+  const letters = lettersOf(item, file);
+  return rowWritten(item, file, script).replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0)).trim();
+}
+
+/**
+ * What a Transformation in use replaces while it is - Metamorphosis's "for each Stage ... make a choice for the Tail Attack Maneuver to
+ * replace the choice you made upon gaining access to the Maneuver while in that Stage" and "a choice for the Option effect of Survivor to
+ * replace your Option while in that Stage":
+ *   optionWhileIn: survivor = $row.survivor     that Racial Trait's Option
+ *   tailWhileIn: $row.tail                      the Tail Attack Maneuver's choice
+ * Put in place as one comes into use, what was had before kept on the Item (`heldOption`, `heldTail`) and put back when none in use
+ * replaces it any more. An Evolved Stage has none of its own: its Original Form's, in use beneath it, stand (the addendum's). One at a
+ * time per character, in order.
+ */
+const syncing = new WeakMap();
+export function syncWhileIn(actor) {
+  if (!actor) return Promise.resolve();
+  const run = (syncing.get(actor) ?? Promise.resolve()).then(() => syncNow(actor)).catch(error => console.error(error));
+  syncing.set(actor, run);
+  return run;
+}
+
+/** What each Transformation in use asks to replace: { options: Map(trait id -> Option id), tail: variant or "" }. */
+export function whileInWanted(actor) {
+  const options = new Map();
+  let tail = "";
+  for (const item of transformationsInUse(actor)) {
+    const file = fileOf(item);
+    for (const entry of headerEntries(file?.optionWhileIn)) {
+      const [trait, value] = rowWritten(item, file, entry).split("=").map(part => part.trim());
+      if (trait && value && (value !== "0") && !options.has(trait)) options.set(trait, value);
+    }
+    const variant = file?.tailWhileIn ? rowWritten(item, file, String(file.tailWhileIn)).trim() : "";
+    if (variant && (variant !== "0") && !tail) tail = variant;
+  }
+  return { options, tail };
+}
+
+async function syncNow(actor) {
+  const { options, tail } = whileInWanted(actor);
+  const { changeRacialOption, racialOptionOf } = await import("./racial.mjs");
+  for (const racial of Array.from(actor.items).filter(each => each.type === "racial")) {
+    const flags = racial.flags?.["dbu-ttrpg"] ?? {};
+    const held = flags.heldOption;
+    const now = racialOptionOf(racial);
+    const wanted = options.get(flags.sourceId ?? "");
+    if (wanted) {
+      if (wanted === now) continue;
+      if (held === undefined) await racial.setFlag("dbu-ttrpg", "heldOption", now);
+      await changeRacialOption(racial, wanted, now);
+    }
+    else if (held !== undefined) {
+      if (held && (held !== now)) await changeRacialOption(racial, held, now);
+      await racial.unsetFlag("dbu-ttrpg", "heldOption");
+    }
+  }
+  for (const maneuver of Array.from(actor.items).filter(each => (each.type === "maneuver") && each.system?.tailAttack)) {
+    const held = maneuver.flags?.["dbu-ttrpg"]?.heldTail;
+    const now = String(maneuver.system.tailVariant ?? "");
+    if (tail) {
+      if (tail === now) continue;
+      await maneuver.update({ "system.tailVariant": tail, ...((held === undefined) ? { "flags.dbu-ttrpg.heldTail": now } : {}) });
+    }
+    else if (held !== undefined) {
+      await maneuver.update({ "system.tailVariant": String(held), "flags.dbu-ttrpg.-=heldTail": null });
+    }
+  }
 }
 
 /**
@@ -1709,6 +1819,7 @@ export function registerAspectHooks() {
     if ((item.type !== TRANSFORMATION_TYPE) || !item.parent || (userId !== game.user.id)) return;
     if (!foundry.utils.hasProperty(changes, "system.active")) return;
     const actor = item.parent;
+    await syncWhileIn(actor);
     if (item.system.active) {
       if (game.combat?.started) await setRowChoice(item, "enteredRound", `${game.combat.id}:${game.combat.round ?? 0}`);
       await setApparelAside(actor, item);

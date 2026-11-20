@@ -41,6 +41,8 @@ export function traitAside(item, items, actor = item?.parent) {
   // Transformation": had while that Trait applies, not outside it.
   const giver = flags.grantedBy ? list.find(other => other.id === flags.grantedBy) : null;
   if (giver?.system?.transformation && (transformationQuestion("traitApplies", giver, list) !== true)) return "transformation";
+  // Given by a Transformation itself - a Metamorphosis Stage's Evolution Traits, "to possess while in that Stage": had while it is in use.
+  if ((giver?.type === "transformation") && (transformationQuestion("itemInUse", giver) !== true)) return "transformation";
   // A Villainous Trait switched off - by hand, or by a Weakpoint hit: had, and doing nothing (the user's).
   if (flags.villainousOff) return "villainous";
   if (flags.bestialOff && list.some(other => other.id === flags.bestialOff)) return "bestial";

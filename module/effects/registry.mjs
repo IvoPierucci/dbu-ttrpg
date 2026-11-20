@@ -19,7 +19,7 @@ import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { shelteredBy } from "../vehicle-crew.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { attributeShareScript } from "../fusion-of-ki.mjs";
-import { aspectScript, bonusScript, combineAspects, inAForm, transformationsInUse, transformationTraitProgram, transformationTraitScript }
+import { aspectScript, bonusScript, combineAspects, inUseScript, inAForm, transformationsInUse, transformationTraitProgram, transformationTraitScript }
   from "../transformations.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, categoryApplies, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
@@ -578,6 +578,15 @@ function transformationPrograms(actor, report) {
     const { program, errors } = compile(`transformation:${item.id}`, { script }, message => report(`${item.name}: ${message}`));
     if (errors.length) continue;
     entries.push({ program, priority: PRIORITY.transformation, sourceId: `transformation:${item.id}`, sourceUuid: item.uuid ?? null,
+      sourceName: item.name, level: 0, stacks: 1 });
+  }
+  // Its own script, while in use - a Metamorphosis Stage's Size (transformations.mjs inUseScript).
+  for (const item of transformationsInUse(actor)) {
+    const script = inUseScript(item);
+    if (!script) continue;
+    const { program, errors } = compile(`transformation-own:${item.id}`, { script }, message => report(`${item.name}: ${message}`));
+    if (errors.length) continue;
+    entries.push({ program, priority: PRIORITY.transformation, sourceId: `transformation-own:${item.id}`, sourceUuid: item.uuid ?? null,
       sourceName: item.name, level: 0, stacks: 1 });
   }
   return entries;

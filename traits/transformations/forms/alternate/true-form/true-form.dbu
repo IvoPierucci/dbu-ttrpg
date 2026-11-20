@@ -10,6 +10,17 @@ tier: 4+
 stress: 20
 aspects: Enhanced Save (Corporeal/Impulsive), Draining (LV2), Power High (LV1), Long Transformation (LV2), Exhausting
 bonuses: AG +3(T), FO +3(T), TE +3(T), IN +1(T), MA +3(T)
+# The Metamorphosis Forms text box: for this Stage, a Size Category, S Evolution Traits, a Tail Attack choice and a Survivor Option -
+# chosen on its row, had while in it (transformations.mjs rowChoicesOf, syncWhileIn; its script below).
+choice1: size | Size | small=Small; medium=Medium; large=Large
+choice2: tail | Tail Attack | none=None; elongated=Elongated; multiple=Multiple; spiked=Spiked; heavy=Heavy
+choice3: survivor | Survivor | dense-plating=Dense Plating; sleek-plating=Sleek Plating; power-plating=Power Plating; combat-plating=Combat Plating
+choice4: evolution1 | Evolution Trait | @other:evolution
+choice5: evolution2 | Evolution Trait | @other:evolution
+choice6: evolution3 | Evolution Trait | @other:evolution
+# The Tail Attack Maneuver's choice and Survivor's Option replaced while in this Stage, put back on leaving it.
+tailWhileIn: $row.tail
+optionWhileIn: survivor = $row.survivor
 description: >
   The overflowing power within your body is so great that- at least, at first- even you cannot control it. You must reinforce your body with layers upon layers of bio-armor, creating transformations to suppress your full power. Even with your power concealed in this way, you still remain among the strongest fighters in the universe, and when push comes to shove, you can unleash your full power, even if only for a moment.
 text: >
@@ -32,4 +43,17 @@ text: >
 
 ---
 
-# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).
+# The Metamorphosis Forms text box: what was chosen for this Stage, on its row, while in it. An Evolved Stage on it uses these (it has
+# none of its own; this Stage stays in use beneath it).
+
+# "A Size Category between Small and Large. This replaces your base Size Category while you are in that Stage."
+[passive]
+if ($is.size.small == 1) {
+    allow size.base.small;
+}
+if ($is.size.medium == 1) {
+    allow size.base.medium;
+}
+if ($is.size.large == 1) {
+    allow size.base.large;
+}
