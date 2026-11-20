@@ -4807,6 +4807,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // A named Maneuver can be discounted on its own; an Attacking one also takes whatever
   // applies to attacks in general.
   let cost = applySlot(slots, `${maneuver.id}.kiCost`, base);
+  // Elemental Demon (Demon Realm Elite (4)): "Reduce the Ki Point Cost of your Favored Elements by 2(T)".
+  if (declared?.profile && favoredElement(actor, declared.profile)) cost += Number(slots?.["favored.kiCost"]?.add) || 0;
   // Every Maneuver's - Slow Starter (2)'s 1(T) off while Holding Back - never below nothing.
   if (actor && (Number(slots?.["maneuvers.kiCost"]?.add) || 0)) cost = Math.max(0, applySlot(slots, "maneuvers.kiCost", cost));
   // A Unique Ability's, by its type - God of Magic's 2(T) off every Magical one.

@@ -35,4 +35,8 @@ attack.kiCost += demonicfatigue.stacks * 1(T);
 [triggered/legend-realized, 1/round, effect 5]
 pressureCheck();
 
-# (6) The Huge Sphere's Might: the table's.
+# (6) A Pressure Check passed with 2+ stacks of Demonic Power already, once an Encounter: every Opponent within a Huge Sphere loses Life
+# Points equal to your Might - Fiendish Mastery (3) writes it otherwise.
+[triggered/pressure-passed, 1/encounter, effect 6]
+requires powerBeforeAtLeast(2) && !flagged("fiendish.mastered");
+mightToOpponentsNear(4);

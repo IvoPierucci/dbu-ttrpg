@@ -532,7 +532,10 @@ async function beginTurn(actor) {
   await (await import("./chat.mjs")).swaggerEnds(actor);
   // Galaxy at the Brink (3): Greed of the Hera's 7th ignored and a Ki Surge - asked before the Moment it would answer.
   await (await import("./chat.mjs")).galaxyHoldsPower(actor);
+  // Fiendish Evolution (2): Demonic Pressure (3) ignored once an Encounter - asked before the Moment loses the stacks, put back after it.
+  const fiendishKept = await (await import("./chat.mjs")).demonicPressureKeep(actor);
   const { slots } = await fireMoment(actor, "start-of-turn");
+  if (fiendishKept) await (await import("./chat.mjs")).demonicPressureRestore(actor, fiendishKept);
   // Konatsian Genes (6): asked, once an Encounter.
   await (await import("./chat.mjs")).konatsianSuperior(actor);
 

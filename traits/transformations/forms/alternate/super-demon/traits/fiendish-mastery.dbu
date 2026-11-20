@@ -19,4 +19,19 @@ text: >
 
 ---
 
-# (3)-(5) Fiendish Power (6)'s Keywords, M(bT) Life and Ki, the Pressure Check: the table's.
+# (3) Fiendish Power (6) M times a Round, 3 an Encounter, in place of its once an Encounter.
+[passive, effect 3]
+allow fiendish.mastered;
+
+[triggered/pressure-passed, $M/round, effect 3]
+requires powerBeforeAtLeast(2);
+mightToOpponentsNear(4);
+
+# (4) A Pressure Check passed: M(bT) Life and Ki Points.
+[triggered/pressure-passed, effect 4]
+life.value += $M * 1(bT);
+ki.value += $M * 1(bT);
+
+# (5) The Power Up, M times an Encounter: a Pressure Check.
+[triggered/power, $M/encounter, effect 5]
+pressureCheck();

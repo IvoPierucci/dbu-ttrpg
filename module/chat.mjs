@@ -31,6 +31,7 @@ import { environmentOf } from "./breath.mjs";
 import { highTraitOf, isAirborne, qualitiesOf } from "./environments.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { heartbeatOptions, takeHeartbeat } from "./transformations.mjs";
+import { useTransformationQuestion } from "./aside.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { customBuffBasicIsSignature, customBuffMarked, customBuffOn } from "./custom-buffs.mjs";
 import { armorPiercing, damageAttributeOf, namedDamageAttribute, karmicSteps, linkedPick, skyAssaultWaives,
@@ -791,6 +792,8 @@ export function conditionGained(actor, key) {
     if (!context.demonicCombat) honorableInstead(by, actor, key);
     else requestActorUpdate(by, { [`flags.${SCOPE}.inflictedEncounter`]: game.combat.id });
   }
+  // Demonic Battle (5): "If you inflict a Combat Condition on an Opponent, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver".
+  if (opponent && combat) demonicBattlePower(by);
   // Sadistic Demon Lord: "If you inflict a Combat Condition upon an Opponent" - asked.
   if (opponent && combat) sadisticCondition(by, actor, key);
 }
@@ -14849,7 +14852,9 @@ export async function tinyTarget(actor) {
 
 /** Punching Down's 1d6(T). */
 async function punchingDownRoll(attacker) {
-  const roll = new Roll(`${Math.max(1, attacker.system.tierOfPower ?? 1)}d6`);
+  // So many Dice Categories larger (`punchingDown.category` - Gigantic Demon's, Accelerated Growth's).
+  const faces = [6, 8, 10, 12][Math.min(3, Math.max(0, Number(attacker.system.effects?.slots?.["punchingDown.category"]?.add) || 0))];
+  const roll = new Roll(`${Math.max(1, attacker.system.tierOfPower ?? 1)}d${faces}`);
   await roll.evaluate();
   return roll.total;
 }
@@ -26673,8 +26678,16 @@ export async function pressureCheck(actor) {
       window: { title: `${actor.name} - Pressure Check` },
       content: "<p>The 1d10 twice, the higher kept - failing still, 2 stacks of Demonic Fatigue?</p>", rejectClose: false });
   if (twice) await requestActorUpdate(actor, { [`flags.${SCOPE}.pressureTwice`]: { round: roundKey(), encounter, count: thisEncounter + 1 } });
-  const roll = await new Roll([twice ? "2d10kh" : "1d10", more ? `${more}` : "", gamble ? "-2" : ""].filter(Boolean).join(" + ")
-    .replace("+ -", "- ")).evaluate();
+  // Makyan Might (5): Demons of the Makyo Star (4) taken, once a Round - 2 more off it; succeeding, an Action.
+  const makyan = gamble && (actor.system.effects?.slots?.["pressure.makyanAction"] === true) && (actor.getFlag?.(SCOPE, "makyanRound") !== roundKey())
+    && ((await askPlayerChoice(actor, `${actor.name}: Makyan Might`, [{ value: "yes", label: "2 more off it - succeeding, an Action (once a Round)" },
+      { value: "no", label: "No" }])) === "yes");
+  if (makyan) await requestActorUpdate(actor, { [`flags.${SCOPE}.makyanRound`]: roundKey() });
+  // Fallen Idol's Superiority (3): 2, less 1 a Bestial Trait it gave (`pressure.bonus`, its file's).
+  const idol = pressureIdolBonus(actor);
+  const powerBefore = Number(actor.system.resources?.demonicpower?.stacks) || 0;
+  const roll = await new Roll([twice ? "2d10kh" : "1d10", more ? `${more}` : "", gamble ? "-2" : "", makyan ? "-2" : "", idol ? `${idol}` : ""]
+    .filter(Boolean).join(" + ").replaceAll("+ -", "- ")).evaluate();
   let success = roll.total >= 4;
   // Hedge Your Bets (1), (2): a success failed instead - a stack of Risk Aversion, 2(bT) Life and Ki back. (3): a fail - a stack
   // spent for 2 on it. Each asked.
@@ -26696,6 +26709,13 @@ export async function pressureCheck(actor) {
   }
   // Fallen Idol (4): succeeded, with one of those on them - a Clash to hand one on.
   if (success) await offerConditionHandOff(actor);
+  // Makyan Might (5): an Action.
+  if (success && makyan && game.combat?.started) {
+    const { refundActions } = await import("./combat.mjs");
+    await refundActions(actor, 1, "standard");
+  }
+  // Fiendish Power (6), Fiendish Mastery (4): a Pressure Check passed.
+  if (success) await answerFor(actor, "pressure-passed", { powerBefore });
   return { success };
 }
 
@@ -28621,6 +28641,16 @@ async function settleConditionHandOff(message, clash) {
   await setCondition(challenger, key, (Number(challenger.system.conditions?.[key]) || 0) - 1);
   if (await gainCondition(target, key, 1) !== false) {
     await lasting(challenger, { kind: KINDS.CONDITION, key, edge: EDGES.END, on: target.uuid, source: "Fallen Idol" });
+    // Fallen Idol's Superiority (5): "If an Opponent gains a Combat Condition due to your use of the 4th effect of Fallen Idol, enter the
+    // Superior State until the start of your next turn" - once an Encounter, asked.
+    const encounter = game.combat?.id ?? "none";
+    if ((challenger.system.effects?.slots?.["handOff.superior"] === true) && (challenger.getFlag?.(SCOPE, "idolSuperiorEncounter") !== encounter)
+      && ((await askPlayerChoice(challenger, `${challenger.name}: Fallen Idol's Superiority`, [{ value: "yes", label: "Superior till the start of your next turn" },
+        { value: "no", label: "Not now" }])) === "yes")) {
+      await requestActorUpdate(challenger, { [`flags.${SCOPE}.idolSuperiorEncounter`]: encounter });
+      const { enterState } = await import("./effects/moments-runtime.mjs");
+      await enterState(challenger, "superior", 1, "start-of-next-turn", "Fallen Idol's Superiority");
+    }
   }
   return settledNote(message, `${challenger.name}'s ${getTrait(key)?.name ?? key} goes to ${target.name} until the end of their turn.`);
 }
@@ -42617,3 +42647,63 @@ export async function rerollInitiative(actor) {
   await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Initiative rerolled (Erratic Majin)${(total !== roll.total) ? ` - ${total} (Directed Chaos)` : ""}` });
   return requestForesee(combat, mine.id, total);
 }
+
+/** Fallen Idol's Superiority (3): "Increase the Dice Score of your Pressure Checks by 2. Reduce this bonus by 1 for every Bestial Trait you possess from
+ * the 2nd effect" - `pressure.bonus`, less the Bestial Traits the Trait whose file says `pressureLessPerGranted` gave. */
+function pressureIdolBonus(actor) {
+  const base = Number(actor?.system?.effects?.slots?.["pressure.bonus"]?.add) || 0;
+  if (!base) return 0;
+  const items = Array.from(actor.items ?? []);
+  const giver = items.find(item => (item.type === "racial") && getTrait(item.flags?.[SCOPE]?.sourceId ?? "")?.pressureLessPerGranted);
+  const granted = giver ? items.filter(item => (item.flags?.[SCOPE]?.grantedBy === giver.id) && (item.system?.other === "bestial")).length : 0;
+  return Math.max(0, base - granted);
+}
+
+/** Demonic Battle (5): the Power Up out of sequence, once a Round, asked - a Combat Condition put on an Opponent. */
+async function demonicBattlePower(by) {
+  if ((by?.system?.effects?.slots?.["demonicBattle.powerUp"] !== true) || (by.getFlag?.(SCOPE, "demonicBattleRound") === roundKey())) return;
+  if ((await askPlayerChoice(by, `${by.name}: Demonic Battle`, [{ value: "yes", label: "The Power Up out of sequence (once a Round)" },
+    { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(by, { [`flags.${SCOPE}.demonicBattleRound`]: roundKey() });
+  return ownOutOfSequence(by, "power-up");
+}
+
+/** Fiendish Power (6): every Opponent within a Huge Sphere centered on you, their Life Points down by your Might. */
+export async function mightToOpponentsNear(actor, gap = 4) {
+  const might = Math.max(0, Number(actor?.system?.might) || 0);
+  const hit = opponentsWithin(actor, gap);
+  if (!might || !hit.length) return;
+  for (const other of hit) await requestActorUpdate(other, { "system.life.value": (Number(other.system.life?.value) || 0) - might });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `Fiendish Power: ${hit.map(other => other.name).join(", ")} lose ${might} Life Points.`)}</div>` });
+}
+
+/**
+ * Fiendish Evolution (2): "[Triggered/Start of Turn, 1/Encounter]: Ignore the 3rd effect of Demonic Pressure" - asked before the turn's start loses
+ * the stacks; how many of each to put back after it (0s where not).
+ */
+export async function demonicPressureKeep(actor) {
+  const power = Number(actor?.system?.resources?.demonicpower?.stacks) || 0;
+  const fatigue = Number(actor?.system?.resources?.demonicfatigue?.stacks) || 0;
+  const encounter = game.combat?.id ?? "none";
+  if ((!power && !fatigue) || (actor.system.effects?.slots?.["demonicPressure.keepOnce"] !== true)
+    || (actor.getFlag?.(SCOPE, "fiendishKeepEncounter") === encounter)) return null;
+  if ((await askPlayerChoice(actor, `${actor.name}: Fiendish Evolution`, [{ value: "keep", label: `Keep your Demonic Power (${power}) and Fatigue (${fatigue})` },
+    { value: "no", label: "No" }])) !== "keep") return null;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.fiendishKeepEncounter`]: encounter });
+  return { power, fatigue };
+}
+
+/** Its stacks put back once the turn's start is done (setResource, lost: true - not gained). */
+export async function demonicPressureRestore(actor, kept) {
+  if (!actor || !kept) return;
+  if (kept.power) await setResource(actor, "demonicpower", kept.power, { lost: true });
+  if (kept.fatigue) await setResource(actor, "demonicfatigue", kept.fatigue, { lost: true });
+}
+
+// Demon Realm Elite (2)'s question: an Opponent suffering a Combat Condition you inflicted.
+useTransformationQuestion("inflictedOnOpponent", actor => inflictedOnOpponent(actor));
+
+// Demonic Battle (3), (4)'s questions: a target suffering a Combat Condition; an Opponent beside you suffering one.
+useTransformationQuestion("conditioned", actor => conditioned(actor));
+useTransformationQuestion("conditionedOpponentAdjacent", actor => opponentsWithin(actor, 1).some(other => conditioned(other)));

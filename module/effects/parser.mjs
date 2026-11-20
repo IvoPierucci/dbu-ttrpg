@@ -494,7 +494,7 @@ const PREDICATE_NAMES = new Set([
   // Elemental Adaptation's: a Profile some Battle Weather is connected to.
   "weatherConnected", "holdsTrait", "inWeather",
   // Is the Maneuver being declared that one - Cosmic Efficiency's Combat Recovery.
-  "using", "flagged", "alliesNear", "usedThisRound", "counterReached",
+  "using", "powerBeforeAtLeast", "flagged", "alliesNear", "usedThisRound", "counterReached",
   // Resources' stacks between them, and a Health Threshold reached - Blood of the Warrior's.
   "stacksAtLeast", "belowThreshold",
   // That Attribute's Score the highest (Caste Combat's Queen).
@@ -528,7 +528,7 @@ const PREDICATE_NAMES = new Set([
 ]);
 
 /** The ones written without brackets, because they take nothing. */
-const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver", "paidWithDivine", "favoredAttack", "kiRegainHalved", "evolvedEntered", "magicalUniqueThisRound",
+const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver", "paidWithDivine", "favoredAttack", "kiRegainHalved", "evolvedEntered", "inflictedOnOpponent", "targetConditioned", "conditionedOpponentAdjacent", "magicalUniqueThisRound",
   // Bonded to an Ally - Power of the Weak (4)'s (Battle Yardrat's "While you are not Bonded").
   "bonded",
   "intendedForYou", "wieldingWeapon", "adventuring",

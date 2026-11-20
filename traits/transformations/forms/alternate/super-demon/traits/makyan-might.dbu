@@ -33,4 +33,6 @@ if (demonicpower.stacks >= 3) {
     might += 1(T);
 }
 
-# (5) The Pressure Check's Dice Score, and an Action: the table's.
+# (5) Demons of the Makyo Star (4) taken on a Pressure Check, once a Round: 2 more off it - succeeding, an Action (chat.mjs pressureCheck).
+[passive, effect 5]
+allow pressure.makyanAction;

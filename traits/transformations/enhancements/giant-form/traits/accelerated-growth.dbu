@@ -19,4 +19,9 @@ text: >
 
 ---
 
-# (1) Punching Down's Extra Dice a Category higher, (3) Sudden Stop without a Counter Action: the table's. (2) Armored: its header. (4) Its Grades: Growth G (its Aspect), its Attribute Modifier Bonuses G(T).
+# (2) Armored: its header. (3) Sudden Stop without a Counter Action: the table's. (4) Its Grades: Growth G (its Aspect), its Attribute Modifier
+# Bonuses G(T).
+
+# (1) Punching Down's Extra Dice a Category higher.
+[passive, effect 1]
+punchingDown.category += 1;

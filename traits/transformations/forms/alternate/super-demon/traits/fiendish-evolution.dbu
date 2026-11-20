@@ -16,4 +16,6 @@ text: >
 
 # (1) 2+ stacks of Demonic Power: the Armored Aspect - its header (the Aspect's own file does what it does).
 
-# (2) Demonic Pressure (3) ignored once an Encounter: the table's.
+# (2) Demonic Pressure (3) ignored at the start of your turn, once an Encounter - asked before it loses the stacks (chat.mjs demonicPressureKeep).
+[passive, effect 2]
+allow demonicPressure.keepOnce;

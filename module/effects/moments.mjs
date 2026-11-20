@@ -261,6 +261,9 @@ const TABLE = [
   { key: "power-gained", label: "You gain a stack of Power", provides: [],
     doc: "Fired as Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Greed of the Hera's. "
        + "What is the player's is asked in a window first." },
+  { key: "pressure-passed", label: "You succeed at a Pressure Check", provides: [],
+    doc: "Fired once a Pressure Check succeeds, with the Demonic Power held before it as `powerBefore` (chat.mjs pressureCheck) - Fiendish Power "
+       + "(6)'s, Fiendish Mastery (4)'s. What is the player's is asked in a window first." },
   { key: "counter-spent", label: "You spend Counter Actions", provides: [],
     doc: "Fired as Counter Actions are spent, with how many as `spent` and this Combat Round's as `counterTotal` (combat.mjs spendActions) - "
        + "Divine Entity (3)'s, True Divinity (3)'s. What is the player's is asked in a window first." },

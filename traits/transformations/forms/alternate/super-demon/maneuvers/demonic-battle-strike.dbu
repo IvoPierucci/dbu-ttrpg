@@ -1,0 +1,24 @@
+id: demonic-battle-strike
+name: Demonic Battle
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Demonic Battle (4)'s, open beside an Opponent suffering a Combat Condition - that Opponent the target, the table's to keep.
+special: true
+source: Core Rule
+description: >
+  If you are adjacent to an Opponent suffering from a Combat Condition, you may use the Basic Attack Maneuver as an Instant Maneuver.
+text: >
+  (4)-[1/Round]: If you are adjacent to an Opponent suffering from a Combat Condition, you may use the Basic Attack Maneuver as an Instant Maneuver. If you do, you must target that Opponent with that Attacking Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A (the Basic Attack's)
+  –Effect: Use the Basic Attack Maneuver at that Opponent.
+
+---
+
+[on used]
+maneuverOutOfSequence(basic-attack);

@@ -2713,6 +2713,19 @@ async function payActions(actor, maneuver, spent = null) {
     await spendActions(actor, amount, "counter");
     return;
   }
+  // Demon Realm Elite (3): "You may spend stacks of Demonic Power as if they were Actions/Counter Actions for the Action Cost of your Magical Unique
+  // Abilities that have an Action Cost of 1 Action/Counter Action" - once a Round, asked.
+  if (maneuver.unique && (maneuver.uniqueType === "magical") && (amount === 1) && game.combat?.started
+    && (actor.system.effects?.slots?.["demonicPower.asActions"] === true) && ((Number(actor.system.resources?.demonicpower?.stacks) || 0) > 0)
+    && (actor.getFlag?.("dbu-ttrpg", "demonicActionRound") !== `${game.combat.id}:${game.combat.round ?? 0}`)) {
+    const { askPlayerChoice, setResource } = await import("./chat.mjs");
+    if ((await askPlayerChoice(actor, `${actor.name}: Demon Realm Elite`, [{ value: "power", label: "A stack of Demonic Power for its Action" },
+      { value: "action", label: "An Action" }])) === "power") {
+      await actor.setFlag("dbu-ttrpg", "demonicActionRound", `${game.combat.id}:${game.combat.round ?? 0}`);
+      await setResource(actor, "demonicpower", (Number(actor.system.resources?.demonicpower?.stacks) || 0) - 1);
+      return;
+    }
+  }
   // True Divinity (2): "You may spend your Counter Actions as if they were Actions for Combat Recovery" - how many, asked.
   const owed = Math.max(0, amount - (Number(maneuver.actionDiscount) || 0));
   if ((kind === "standard") && (maneuver.id === "combat-recovery") && owed && game.combat?.started

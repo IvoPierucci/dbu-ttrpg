@@ -22,4 +22,38 @@ text: >
 
 ---
 
-# (2)-(4) Its Combat Rolls and Soak, Demonic Power as Actions, Denizen of the Demon Realm (3)'s Choice: the table's.
+# (2) An Opponent suffering a Combat Condition you inflicted: Combat Rolls and Soak Value 1(T).
+[passive, effect 2]
+if (inflictedOnOpponent) {
+    combatRolls += 1(T);
+    soakValue += 1(T);
+}
+
+# (3) Demonic Power as the Action of a Magical Unique Ability of 1 Action, once a Round - asked as it is paid (use-maneuver.mjs payActions).
+[passive, effect 3]
+allow demonicPower.asActions;
+
+# (4) Denizen of the Demon Realm (3)'s Option chosen.
+[passive, effect 4]
+if (holdsTrait("demon-warrior")) {
+    strike.armed += 1(T);
+    wound.armed += 1(T);
+}
+if (holdsTrait("demon-mage")) {
+    strike.magic += 1(T);
+    wound.magic += 1(T);
+}
+if (holdsTrait("demon-face")) {
+    scholarship.mod += (1 + $scales) * 1(T);
+    personality.mod += (1 + $scales) * 1(T);
+}
+if (holdsTrait("elemental-demon")) {
+    favored.kiCost -= 2(T);
+}
+if (holdsTrait("gigantic-demon")) {
+    punchingDown.category += 1;
+}
+if (holdsTrait("transforming-demon")) {
+    force.mod += 1(T);
+    magic.mod += 1(T);
+}

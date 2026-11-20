@@ -664,6 +664,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Your Initiative rerolled for this Combat Round - Directed Chaos (3)'s nudge asked (Erratic Majin (6))."
   },
+  mightToOpponentsNear: {
+    args: [0, 1],
+    doc: "Every Opponent within that many Squares - a Huge Sphere's 4 - their Life Points down by your Might (Fiendish Power (6))."
+  },
   freeSurge: {
     args: [0, 0],
     doc: "A Surge, its kind asked, counting toward no Surge Maneuver's limit (Class Up's Elite (3))."

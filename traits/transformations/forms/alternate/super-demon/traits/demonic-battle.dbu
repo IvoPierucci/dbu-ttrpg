@@ -21,4 +21,21 @@ text: >
 [passive, effect 2]
 might += 1(T);
 
-# (1)(3)(4)(5) Against those suffering a Combat Condition: the table's.
+# (1) Combat Rolls 1(T) against an Opponent suffering a Combat Condition (chat.mjs tacticianParts).
+[passive, effect 1]
+combatRolls.vsConditioned += 1(T);
+
+# (3) A Signature Technique at an Opponent suffering a Combat Condition: an Energy Charge.
+[automatic/declare-maneuver, effect 3]
+requires signatureTechnique && targetConditioned;
+attack.energyCharges += 1;
+
+# (4) Beside an Opponent suffering a Combat Condition: the Basic Attack as an Instant, once a Round - its own Maneuver (maneuvers/), at that one.
+[passive, effect 4]
+if (conditionedOpponentAdjacent) {
+    allow maneuver.demonic-battle-strike;
+}
+
+# (5) A Combat Condition put on an Opponent, once a Round: the Power Up out of sequence, asked (chat.mjs demonicBattlePower).
+[passive, effect 5]
+allow demonicBattle.powerUp;

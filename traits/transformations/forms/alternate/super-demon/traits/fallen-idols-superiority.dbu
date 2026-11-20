@@ -10,6 +10,8 @@ permanent: 2
 # (2) Up to 2 Bestial Traits, chosen as it is chosen, had while it is.
 grantsOther: bestial
 grantsOtherCount: 2
+# (3) Its Bestial Traits from (2) take 1 each off its Pressure Check bonus.
+pressureLessPerGranted: true
 description: >
   Unbreakable and unfathomable, your monstrous intensity shatters the battlefield and distorts the mind.
 text: >
@@ -22,7 +24,9 @@ text: >
 
 ---
 
-# (3) The Pressure Check's Dice Score: the table's.
+# (3) The Pressure Check's Dice Score 2, less 1 a Bestial Trait its (2) gave (chat.mjs pressureIdolBonus; its header).
+[passive, effect 3]
+pressure.bonus += 2;
 
 # (4) 2+ stacks of Demonic Power: Combat Rolls 1(T).
 [passive, effect 4]
@@ -30,4 +34,6 @@ if (demonicpower.stacks >= 2) {
     combatRolls += 1(T);
 }
 
-# (5) Superior: the table's.
+# (5) A Combat Condition handed to an Opponent by Fallen Idol (4), once an Encounter: Superior till the start of your next turn - asked.
+[passive, effect 5]
+allow handOff.superior;
