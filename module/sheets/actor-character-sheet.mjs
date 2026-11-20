@@ -7243,7 +7243,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const constant = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "constant"))
       .map(entry => ({ ...entry, from: fromOf(entry.item), constantLines: constantLines(entry.item) }));
     return {
-      aspects: combineAspects(this.actor).map(aspect => ({ label: aspectLabel(aspect), from: aspect.from.join(", "),
+      // Not those that are only their Transformation's own (`bar: false` - Peaked, Pinnacle, Graded, Heartbeat...): the user's.
+      aspects: combineAspects(this.actor).filter(aspect => aspect.file?.bar !== false).map(aspect => ({ label: aspectLabel(aspect), from: aspect.from.join(", "),
         summary: aspect.file?.summary ?? "" })),
       stressBonus: Number(this.actor.system.stressBonus) || 0,
       sections,

@@ -5,6 +5,8 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: rule
+# Its Transformation's own: it does nothing to the character in general - shown on its row, not among the Active Aspects (the user's).
+bar: false
 # The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
 summary: >
   It can become a Transcended Enhancement.
