@@ -1,0 +1,26 @@
+id: coup-de-grace-strike
+name: Coup de Grace
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Coup de Grace (2)'s, open while it applies; 2 Overwhelm its price (`stacksCost` - use-maneuver.mjs), paid as it is used.
+special: true
+stacksCost: overwhelm 2
+source: Core Rule
+description: >
+  As an Instant Maneuver, you may spend 2 stacks of Overwhelm to use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver, you may spend 2 stacks of Overwhelm to use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A (2 stacks of Overwhelm)
+  –Effect: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# The Basic Attack out of sequence, made through this Maneuver (Unending Pressure (3) reads it - chat.mjs basicStrike).
+[on used]
+basicStrikeThrough();

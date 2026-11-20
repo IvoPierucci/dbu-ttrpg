@@ -612,6 +612,8 @@ export function naturalArmorFactor(wearer) {
 export function platingBonusPerTier(actor, getTrait) {
   return Array.from(actor?.items ?? []).filter(item => item.type === "racial").reduce((sum, item) => {
     const trait = getTrait?.(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    // A Transformation's Trait only while it applies - Overwhelming Transformation (2)'s (aside.mjs).
+    if (trait?.platingBonusPerTier && item.system?.transformation && traitAside(item, actor.items, actor)) return sum;
     // Only while a Resource is held, where it names one - Treacherous Spikes' "While you possess a stack of Power".
     const needs = String(trait?.platingBonusPerTierWhile ?? "");
     if (needs && !((Number(actor?.system?.resources?.[needs]?.stacks) || 0) > 0)) return sum;

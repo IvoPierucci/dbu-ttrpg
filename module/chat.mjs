@@ -3942,6 +3942,8 @@ export async function setResource(actor, name, stacks, { lost = false } = {}) {
   const done = await actor.update({ "system.resources": replaceObject(held) });
   // Adaptation Points spent - not lost (Demon Genes (3)'s `lost`): adaptation-spent, how many (Genetic Focus: Angel's).
   if ((name === "adaptation") && !lost && (capped < before)) await answerFor(actor, "adaptation-spent", { spent: before - capped });
+  // Overwhelm spent - Suppression of Power (6)'s overwhelm-spent.
+  if ((name === "overwhelm") && !lost && (capped < before)) await answerFor(actor, "overwhelm-spent", { spent: before - capped });
   return done;
 }
 
@@ -19600,10 +19602,13 @@ export async function namelessStrike(actor) {
   return basicStrike(actor);
 }
 
-/** The Basic Attack Maneuver as an Out-of-Sequence Maneuver - Pieces of the Hive (1)'s, Nameless Horde (5)'s. Unspent where none is made. */
-export async function basicStrike(actor) {
+/**
+ * The Basic Attack Maneuver as an Out-of-Sequence Maneuver - Pieces of the Hive (1)'s, Nameless Horde (5)'s; made through another Maneuver
+ * where one is named (`madeThrough` on the attack - Coup de Grace (2)'s, read by Unending Pressure (3)). Unspent where none is made.
+ */
+export async function basicStrike(actor, through = "") {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
-  return (await ownOutOfSequence(actor, "basic-attack")) ? undefined : UNSPENT;
+  return (await ownOutOfSequence(actor, "basic-attack", through)) ? undefined : UNSPENT;
 }
 
 /**
@@ -19952,11 +19957,123 @@ export async function maneuverOutOfSequence(actor, id) {
   return (await ownOutOfSequence(actor, id)) ? undefined : UNSPENT;
 }
 
-async function ownOutOfSequence(actor, id) {
+async function ownOutOfSequence(actor, id, through = "") {
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
   const own = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === id));
   const maneuver = own ? definitionOf(own) : getManeuver(id);
-  return maneuver ? useManeuver(actor, maneuver, { outOfSequence: true }) : null;
+  return maneuver ? useManeuver(actor, through ? { ...maneuver, madeThrough: through } : maneuver, { outOfSequence: true }) : null;
+}
+
+/**
+ * Suppression of Power (6): "If you spend a stack(s) of Overwhelm, regain 2(bT) Life Points for each stack of Overwhelm spent. You cannot
+ * regain more than 8(bT) Life Points during a single Combat Round with this effect" - `per` and `cap` the (bT) amounts; Mutant's Resilience
+ * (1)'s Ki Points too, half the Life Points gained (`overwhelmHeal.ki`).
+ */
+export async function overwhelmHeal(actor, spent, per, cap) {
+  if (!actor || !(spent > 0)) return;
+  const base = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const round = roundKey();
+  const held = actor.getFlag?.(SCOPE, "overwhelmHealed");
+  const already = (held?.round === round) ? (Number(held.amount) || 0) : 0;
+  const life = actor.system.life ?? {};
+  const room = Math.max(0, (Number(life.ceiling ?? life.max) || 0) - (Number(life.value) || 0));
+  const gain = Math.min(spent * per * base, Math.max(0, cap * base - already), room);
+  if (gain <= 0) return;
+  const ki = (actor.system.effects?.slots?.["overwhelmHeal.ki"] === true) ? Math.floor(gain / 2) : 0;
+  await requestActorUpdate(actor, { "system.life.value": (Number(life.value) || 0) + gain,
+    ...(ki ? { "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + ki) } : {}),
+    [`flags.${SCOPE}.overwhelmHealed`]: { round, amount: already + gain } });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor), content: `<div class="dbu-settled-note">${
+    Handlebars.escapeExpression(`Suppression of Power: ${actor.name} regains ${gain} Life Points${ki ? ` and ${ki} Ki Points (Mutant's Resilience)` : ""}.`)}</div>` });
+}
+
+/**
+ * Overwhelming Mutant (3) and (4), at the end of your turn - asked in a window before Overwhelming Fighter (2) loses the Overwhelm (the
+ * user's): "spend all stacks of Overwhelm to regain 3(bT) Life Points for each stack spent", or "do not trigger the 2nd effect of
+ * Overwhelming Fighter" - each once a Combat Encounter. How many to put back once the turn's end is done (kept), or 0.
+ */
+export async function overwhelmAtTurnEnd(actor) {
+  const stacks = Number(actor?.system?.resources?.overwhelm?.stacks) || 0;
+  const slots = actor?.system?.effects?.slots ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const spendOpen = (slots["overwhelm.endSpend"] === true) && (actor.getFlag?.(SCOPE, "overwhelmEndSpend") !== encounter);
+  const keepOpen = (slots["overwhelm.endKeep"] === true) && (actor.getFlag?.(SCOPE, "overwhelmEndKeep") !== encounter);
+  if (!stacks || !(spendOpen || keepOpen)) return 0;
+  const base = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const chosen = await askPlayerChoice(actor, `${actor.name}: end of turn - ${stacks} Overwhelm`, [
+    ...(spendOpen ? [{ value: "spend", label: `Spend them all: ${stacks * 3 * base} Life Points (Overwhelming Mutant)` }] : []),
+    ...(keepOpen ? [{ value: "keep", label: "Keep them (Overwhelming Mutant)" }] : []),
+    { value: "none", label: "Neither" }]);
+  if (chosen === "spend") {
+    const life = actor.system.life ?? {};
+    const gain = Math.min(stacks * 3 * base, Math.max(0, (Number(life.ceiling ?? life.max) || 0) - (Number(life.value) || 0)));
+    await requestActorUpdate(actor, { "system.life.value": (Number(life.value) || 0) + gain, [`flags.${SCOPE}.overwhelmEndSpend`]: encounter });
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+      `Overwhelming Mutant: ${actor.name} spends ${stacks} Overwhelm and regains ${gain} Life Points.`)}</div>` });
+    await setResource(actor, "overwhelm", 0);
+    return 0;
+  }
+  if (chosen === "keep") {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.overwhelmEndKeep`]: encounter });
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+      `Overwhelming Mutant: ${actor.name} keeps their ${stacks} Overwhelm this turn.`)}</div>` });
+    return stacks;
+  }
+  return 0;
+}
+
+/** Overwhelming Mutant (4)'s Overwhelm, put back once the turn's end is done (kept, not gained). */
+export async function overwhelmKept(actor, stacks) {
+  if (actor && (stacks > 0)) await setResource(actor, "overwhelm", stacks, { lost: true });
+}
+
+/**
+ * Mutant's Resilience (4): "If you haven't applied Legend Realized to a lower Stage of Metamorphosis, you may apply Legend Realized as if
+ * you were entering that Transformation" - the Stages below the one you are in, of its Line (not its Null Stage: a Null Stage gives none),
+ * not yet had this Encounter; which, asked. Unspent where there is none.
+ */
+export async function legendLowerStage(actor) {
+  const T = await import("./transformations.mjs");
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const items = Array.from(actor?.items ?? []);
+  const form = T.originalFormOf(items);
+  const line = form ? T.lineOf(T.fileOf(form), items) : "";
+  if (!line) return UNSPENT;
+  const at = T.stageOf(T.fileOf(form), items);
+  const encounter = game.combat?.id ?? "";
+  const held = actor.getFlag?.(SCOPE, "legendRealized") ?? {};
+  const had = (encounter && (held.encounter === encounter)) ? (held.names ?? []) : [];
+  const lower = T.transformationItems(actor).filter(item => (T.kindOf(T.fileOf(item)) === "form") && (T.lineOf(T.fileOf(item), items) === line)
+    && (T.stageOf(T.fileOf(item), items) > 0) && (T.stageOf(T.fileOf(item), items) < at)
+    && !had.some(name => name.split("#")[0] === String(item.name).trim().toLowerCase()));
+  if (!lower.length) {
+    ui.notifications.info(`${actor.name}: Legend Realized has been had from every lower Stage this Encounter.`);
+    return UNSPENT;
+  }
+  const picked = (lower.length === 1) ? lower[0].id : await askPlayerChoice(actor, `${actor.name}: Legend Realized - which Stage`,
+    lower.map(item => ({ value: item.id, label: item.name })));
+  const item = lower.find(each => each.id === picked);
+  if (!item) return UNSPENT;
+  return legendRealizedByForm(actor, item.name, item);
+}
+
+/**
+ * Coup de Grace (4): "If you make an Attacking Maneuver whose Damage Category would be increased beyond Lethal, that Attacking Maneuver may
+ * also ignore the Damage Reduction for all target(s)" - as declared, every step it was given before any defence (the user's): asked as
+ * its Wound is rolled, once a Combat Encounter. What it marks on the attack.
+ */
+async function beyondLethalPierce(attacker, attack) {
+  if (attack.ignoresDamageReduction || attack.reflected) return {};
+  if (attacker?.system?.effects?.slots?.["attack.beyondLethalPierce"] !== true) return {};
+  const raw = (DAMAGE_CATEGORIES[attack.damageCategory]?.value ?? 1) + (Number(attack.damageCategoryShift) || 0);
+  if (raw <= DAMAGE_CATEGORIES.lethal.value) return {};
+  const encounter = game.combat?.id ?? "none";
+  if (attacker.getFlag?.(SCOPE, "beyondLethalEncounter") === encounter) return {};
+  const take = await askPlayerChoice(attacker, `${attacker.name}: beyond Lethal`, [
+    { value: "yes", label: "Ignore every target's Damage Reduction (Coup de Grace, once an Encounter)" }, { value: "no", label: "Not now" }]);
+  if (take !== "yes") return {};
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.beyondLethalEncounter`]: encounter });
+  return { ignoresDamageReduction: true };
 }
 
 /**
@@ -23547,10 +23664,12 @@ async function spendOverwhelm(attack) {
   if (!actor) return;
   const { replaceObject } = await import("./conditions.mjs");
   const held = { ...(actor.system.resources ?? {}) };
-  const left = Math.max(0, (Number(held.overwhelm?.stacks) || 0) - spent);
+  const had = Number(held.overwhelm?.stacks) || 0;
+  const left = Math.max(0, had - spent);
   if (left > 0) held.overwhelm = { ...held.overwhelm, stacks: left };
   else delete held.overwhelm;
   await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
+  if (had > left) await answerFor(actor, "overwhelm-spent", { spent: had - left });
 }
 
 /**
@@ -28961,6 +29080,7 @@ export async function rulerAllies(actor) {
   else delete held.overwhelm;
   const { replaceObject, setCondition } = await import("./conditions.mjs");
   await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
+  await answerFor(actor, "overwhelm-spent", { spent: 2 });
   const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
   for (const uuid of chosen) {
     const ally = fromUuidSync(uuid);
@@ -31072,7 +31192,11 @@ export async function postAttack(actor, target, maneuver,
             // Sparking Momentum (3)'s: "Your Attacking Maneuvers that possess a Ki Wager equal to or exceeding 1/4 of your Max Capacity
             // have their Damage Category increased by 1 Category".
             + ((!reflecting && heavyWager(actor, { kiWager }))
-              ? (Number(actor.system.effects?.slots?.["attack.damageCategory.heavyWager"]?.add) || 0) : 0),
+              ? (Number(actor.system.effects?.slots?.["attack.damageCategory.heavyWager"]?.add) || 0) : 0)
+            // Overwhelming Strike (1): "increase the Damage Category of all of your Signature Techniques by 1 Category".
+            + ((!reflecting && technique) ? (Number(actor.system.effects?.slots?.["attack.damageCategory.signature"]?.add) || 0) : 0),
+          // Made through another Maneuver - Coup de Grace (2)'s Basic Attack (Unending Pressure (3)).
+          ...((maneuver.madeThrough && !reflecting) ? { madeThrough: maneuver.madeThrough } : {}),
           // Genki's is added here: gathered from Empower, and neither paid again nor counted.
           kiWager: kiWager + (Number(freeWager) || 0),
           // What making it took from its maker's pools - Divine Counter's cancelling gives it back.
@@ -34651,6 +34775,13 @@ function twoWorldsWoundParts(attacker, attack) {
   const parts = [];
   const signature = Number(slots["wound.signature"]?.add) || 0;
   if (signature && ((attack.technique && !attack.technique.borrowed) || customBuffBasicIsSignature(attacker.system, attack.maneuverId))) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
+  // Overwhelming Strike (2): "increase the Wound Rolls of your Signature Techniques by x(T), where x is equal to their Damage Category" -
+  // Standard 1, Direct 2, Lethal 3, as declared (the user's).
+  const perCategory = Number(slots["wound.signaturePerCategory"]?.add) || 0;
+  if (perCategory && attack.technique && !attack.technique.borrowed) {
+    const x = DAMAGE_CATEGORIES[resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0)]?.value ?? 1;
+    parts.push({ label: `${named("wound.signaturePerCategory")} (Damage Category ${x})`, value: perCategory * x });
+  }
   // Shared Heritage (4): "Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess."
   const fusedWound = Number(slots["wound.fusedTechnique"]?.add) || 0;
   const fusedCount = (attacker.system.fusion?.fused ?? []).length;
@@ -35270,6 +35401,8 @@ async function rollAttackWoundWork(message, attack) {
   // Answered as the hit landed - before the Wound's window was opened, where it was - and not again (answerHit).
   const hitAnswer = await answerHit(message, attack, attacker, struckOpponents);
   attack = { ...attack, ...hitAnswer.marks };
+  // Coup de Grace (4): beyond Lethal as declared - every target's Damage Reduction ignored, asked.
+  attack = { ...attack, ...(await beyondLethalPierce(attacker, attack)) };
   searing = hitAnswer.searing;
   unseen = hitAnswer.unseen;
   if (hitAnswer.pressure) {
@@ -35602,7 +35735,7 @@ async function rollAttackWoundWork(message, attack) {
     // by 2(T) for the duration of that Maneuver."
     const braced = ["directHit", "guard"].includes(own.defense) ? heldAt(target, "guard-or-direct-hit") : null;
     // Scarlet Spotter (1): a Called Shot that spent 2 Critical Eye - "ignore that Opponent's Damage Reduction", all of it.
-    const unreduced = (attack.modifiers ?? []).some(entry => entry.ignoresDamageReduction);
+    const unreduced = (attack.modifiers ?? []).some(entry => entry.ignoresDamageReduction) || Boolean(attack.ignoresDamageReduction);
     // Demonic Combat (2): 1(T) more against the attack of one suffering from a Combat Condition.
     const demonic = conditioned(attacker) ? (Number(target.system.effects?.slots?.["damageReduction.vsConditioned"]?.add) || 0) : 0;
     // Taunt (1): 1(bT) more against the attack of one with the Compelled Combat Condition.
@@ -38732,7 +38865,8 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     // Genetic Aggressor (Artificial Warrior): "If you deal Damage to an Opponent with an Attacking Maneuver" - for its maker.
     // And whether it was a Signature Technique - Earthling Genes'.
     if (areOpponents(armsUser, target)) {
-      await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid, ...(effectSignature(fromUuidSync(attack.attackerUuid ?? ""), attack) ? { bySignature: true } : {}) });
+      await answerFor(armsUser, "damaged-opponent", { targetUuid: target.uuid, ...(effectSignature(fromUuidSync(attack.attackerUuid ?? ""), attack) ? { bySignature: true } : {}),
+        ...(attack.madeThrough ? { madeThrough: attack.madeThrough } : {}) });
     }
     // Genetic Focus: Demon (5): an Adaptation Point for a Clash at them, asked, once a Round.
     if (areOpponents(armsUser, target)) await focusDemonClash(armsUser, target);
@@ -40081,7 +40215,10 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
   const ready = await prepareRoll(actor, [], `${name}: Stress Test`, "", {
     offerWilling: false, formula: { base: DBUCharacterData.BASE_DIE, parts: windowParts(actor, parts) } });
   if (!ready) return null;
-  if (spentOverwhelm) await setResource(actor, "overwhelm", overwhelm - spentOverwhelm);
+  if (spentOverwhelm) {
+    await setResource(actor, "overwhelm", overwhelm - spentOverwhelm);
+    await answerFor(actor, "overwhelm-transformation", { spent: spentOverwhelm });
+  }
   // Heart of Evil (2): what an Opponent near spent on it.
   const evil = await heartOfEvilAgainst(actor, "Stress Test");
   if (evil) parts.push({ label: "Heart of Evil", value: -evil });
@@ -40125,7 +40262,9 @@ async function legendRealizedByForm(actor, name, item = null, { double = false }
 export async function legendRealized(actor, { double = false } = {}) {
   if (!actor) return;
   const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
-  const roll = await new Roll(`${2 * tier}d10 + ${Math.max(0, Number(actor.system.powerLevel) || 0)}`).evaluate();
+  // Suppression of Power (5): "Increase the amount of Life and Ki Points you regain from Legend Realized by 1d6(T)" (`legend.extraD6`).
+  const d6 = Math.max(0, Math.floor(Number(actor.system.effects?.slots?.["legend.extraD6"]?.add) || 0));
+  const roll = await new Roll(`${2 * tier}d10 + ${Math.max(0, Number(actor.system.powerLevel) || 0)}${d6 ? ` + ${d6}d6` : ""}`).evaluate();
   const { life, ki } = actor.system;
   // New Level of Power's doubling; Narrative Transformation (2)'s - "Double the amount of Life and Ki Points regained through Legend
   // Realized", asked, once an Encounter.

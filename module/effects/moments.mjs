@@ -261,6 +261,13 @@ const TABLE = [
   { key: "power-gained", label: "You gain a stack of Power", provides: [],
     doc: "Fired as Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Greed of the Hera's. "
        + "What is the player's is asked in a window first." },
+  { key: "overwhelm-spent", label: "You spend stacks of Overwhelm", provides: [],
+    doc: "Fired as Overwhelm is spent - not lost, as Overwhelming Fighter (2) loses it - by an effect's script, a Maneuver's price or a "
+       + "spending asked, with how many as `spent` (chat.mjs setResource, moments-runtime.mjs writeStateful) - Suppression of Power (6)'s. "
+       + "What is the player's is asked in a window first." },
+  { key: "overwhelm-transformation", label: "You spend Overwhelm on the Transformation Maneuver (Emperor (3))", provides: [],
+    doc: "Fired once Emperor (3)'s Overwhelm is spent in the Transformation Maneuver's window, with how many as `spent` (chat.mjs) - "
+       + "Mutant's Resilience (3)'s. What is the player's is asked in a window first." },
   { key: "overwhelm-gained", label: "You gain a stack of Overwhelm", provides: [],
     doc: "Fired as Overwhelm is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Redirected Energy's. "
        + "What is the player's is asked in a window first." },

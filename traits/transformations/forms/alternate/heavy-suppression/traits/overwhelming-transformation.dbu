@@ -7,6 +7,8 @@ mastery: 1
 permanent: 1
 # (1) Draining and Power High lost; Natural (LV2).
 aspects: -Draining, -Power High, +Natural (LV2)
+# (2) Your Plating's Apparel Bonus 1(T) higher while this applies (gear.mjs platingBonusPerTier).
+platingBonusPerTier: 1
 description: >
   Even shedding a single layer of your suppression is enough to overwhelm most enemies.
 text: >
@@ -17,7 +19,7 @@ text: >
 
 ---
 
-# (2) Plating's Apparel Bonus: the table's.
+# (2) Its header's `platingBonusPerTier`.
 
 # (3) Entering it and at the start of your turn: a stack of Overwhelm.
 [triggered/transform, effect 3]

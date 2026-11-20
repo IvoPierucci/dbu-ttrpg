@@ -35,4 +35,7 @@ attack.damageCategory.heavyWager += 1;
 requires knockedOpponent;
 markKnocked(broken, 1, start);
 
-# (5) Your turn first in the Combat Round: the table's.
+# (5) On the Round's card, once an Encounter: your turn now, ignoring the Initiative Order - several, highest Initiative first (Jump
+# Start's: chat.mjs jumpStart).
+[triggered/start-of-round, 1/encounter, chosen, effect 5]
+jumpStart();

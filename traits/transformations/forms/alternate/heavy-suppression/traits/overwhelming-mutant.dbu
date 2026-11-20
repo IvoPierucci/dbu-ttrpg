@@ -20,4 +20,17 @@ if (power.stacks >= 2) {
     soakValue += floor($S / 2) * 1(T);
 }
 
-# (2)-(4) Overwhelm spent: the table's.
+# (2) The Power Up used, 2 Overwhelm to spend and room for a stack: a stack more from it.
+[triggered/power, effect 2]
+requires stacksAtLeast(2, "overwhelm") && roomFor("power");
+overwhelm.stacks -= 2;
+power.stacks += 1;
+expires(power, next-turn);
+
+# (3)(4) At the end of your turn, once an Encounter each: all your Overwhelm spent for 3(bT) Life Points a stack, or kept - asked in a
+# window before Overwhelming Fighter (2) loses it (the user's; chat.mjs overwhelmAtTurnEnd).
+[passive, effect 3]
+allow overwhelm.endSpend;
+
+[passive, effect 4]
+allow overwhelm.endKeep;

@@ -26,4 +26,12 @@ if (inState("superior")) {
     allow threshold.asHealthy;
 }
 
-# (3)(4) Overwhelm, Superior or Surging: the table's.
+# (3) Damage dealt to an Opponent by the Basic Attack made through Coup de Grace (2), once a Round: a stack of Overwhelm more.
+[triggered/damaged-opponent, 1/round, effect 3]
+requires madeThrough("coup-de-grace-strike");
+overwhelm.stacks += 1;
+
+# (4) Your Overwhelm at its most, once an Encounter: Superior till the start of your next turn - already Superior, Surging instead.
+[triggered/overwhelm-gained, 1/encounter, effect 4]
+requires !roomFor("overwhelm");
+superiorOrSurging();

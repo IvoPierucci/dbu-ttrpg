@@ -12,7 +12,18 @@ text: >
 
 ---
 
-# (1)(2) The Damage Category and Wound by it: the table's.
+# (1) In the Healthy Health Threshold: your Signature Techniques' Damage Category 1 higher, as they are declared (chat.mjs).
+[passive, effect 1]
+if (!belowThreshold("bruised")) {
+    attack.damageCategory.signature += 1;
+}
+
+# (2) Above the Injured Health Threshold: their Wound Rolls x(T), x their Damage Category as declared - Standard 1, Direct 2, Lethal 3
+# (the user's; chat.mjs).
+[passive, effect 2]
+if (!belowThreshold("injured")) {
+    wound.signaturePerCategory += 1(T);
+}
 
 # (3) Entering it, once a Round: Superior till the start of your next turn.
 [triggered/transform, 1/round, effect 3]

@@ -1,0 +1,25 @@
+id: mutants-resilience-counter
+name: Mutant's Resilience
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Mutant's Resilience (2)'s, open while it applies; 2 Overwhelm its price (`stacksCost` - use-maneuver.mjs), paid as it is used.
+special: true
+stacksCost: overwhelm 2
+source: Core Rule
+description: >
+  As an Instant Maneuver, you may spend 2 stacks of Overwhelm to gain a Counter Action.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver, you may spend 2 stacks of Overwhelm to gain a Counter Action.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A (2 stacks of Overwhelm)
+  –Effect: Gain a Counter Action.
+
+---
+
+[on used]
+actions.counterGained += 1;

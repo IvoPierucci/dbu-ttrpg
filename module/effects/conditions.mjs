@@ -781,6 +781,8 @@ const PREDICATES = {
   naturalAtLeast: (scope, amount) => (Number(scope.context?.natural) || 0) >= (Number(amount?.value ?? amount) || 0),
   /** The attack that dealt the Damage was a Signature Technique - damaged-opponent's `bySignature` (Earthling Genes'). */
   bySignatureTechnique: scope => Boolean(scope.context?.bySignature),
+  /** The attack that dealt the Damage was made through that Maneuver (damaged-opponent's `madeThrough`) - Unending Pressure (3)'s Coup de Grace. */
+  madeThrough: (scope, id) => String(scope.context?.madeThrough ?? "") === String(id ?? ""),
   /** And an Attacking Maneuver's Strike Roll (Cerealian Genes'). */
   attackStrikeRolled: scope => (String(scope.context?.rollKind ?? "") === "strike") && Boolean(scope.context?.attackRoll),
   /** And an Attacking Maneuver's Wound Roll (Arcosian Genes', Konatsian Genes'). */

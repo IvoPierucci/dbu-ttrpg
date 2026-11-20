@@ -484,7 +484,7 @@ class Parser {
 /** Questions the engine answers, as opposed to arithmetic it works out. */
 const PREDICATE_NAMES = new Set([
   "bonded",
-  "benefiting", "hasResource", "inState", "hasCondition", "targets", "aoeHits", "attacking",
+  "benefiting", "hasResource", "madeThrough", "inState", "hasCondition", "targets", "aoeHits", "attacking",
   // The Foundation of the attack whose roll answered the Moment - Archetype Focus's; the Focused Foundation (Archetype
   // Defense's).
   "ofFoundation", "focusedOn",

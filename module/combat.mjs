@@ -788,7 +788,11 @@ export function registerCombatHooks() {
       await leaving.setFlag("dbu-ttrpg", "boundBy", { ...bound, turns: (Number(bound.turns) || 0) + 1 });
     }
     if (isCharacter(leaving)) {
+      // Overwhelming Mutant (3)(4): asked before Overwhelming Fighter (2) loses the Overwhelm (chat.mjs overwhelmAtTurnEnd); kept, put back.
+      const { overwhelmAtTurnEnd, overwhelmKept } = await import("./chat.mjs");
+      const keptOverwhelm = await overwhelmAtTurnEnd(leaving);
       await fireMoment(leaving, "end-of-turn");
+      if (keptOverwhelm) await overwhelmKept(leaving, keptOverwhelm);
 
       // Hidden: "if you end your turn in their Melee Range, you stop being Hidden from them".
       const { revealAtTurnEnd, expireHiddenAtTurnEnd, expireOwnHidden } = await import("./hidden.mjs");

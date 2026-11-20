@@ -572,6 +572,25 @@ const TABLE = [
     doc: "The Ascended Signature Advantage offered on the Technique a Trait chose, once a Combat Encounter (Violent Monster (7))." },
   { key: "light.glowing", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "A Light Source: your Square's Light Level 1 higher, not past Normal (the Glowing Aspect's; the Minor Sphere around you the table's)." },
+  // Metamorphosis's Traits (traits/transformations/forms/alternate/*-suppression, true-form).
+  { key: "legend.extraD6", phase: PHASES.LATE, kind: N, ops: ["add"],
+    doc: "That many d6 more on Legend Realized's roll (Suppression of Power (5): 1d6(T))." },
+  { key: "attack.damageCategory.signature", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Damage Categories up for your Signature Techniques, as they are declared (Overwhelming Strike (1))." },
+  { key: "wound.signaturePerCategory", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "More Wound on your Signature Techniques for each step of their Damage Category as declared - Standard 1, Direct 2, Lethal 3 "
+       + "(Overwhelming Strike (2), the user's)." },
+  { key: "attack.beyondLethalPierce", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "An Attacking Maneuver whose Damage Category as declared goes beyond Lethal may ignore every target's Damage Reduction, asked, "
+       + "once a Combat Encounter (Coup de Grace (4), the user's)." },
+  { key: "overwhelmHeal.ki", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Life Points regained by Overwhelm spent (Suppression of Power (6)) give Ki Points too, half as many (Mutant's Resilience (1))." },
+  { key: "overwhelm.endSpend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "At the end of your turn, once an Encounter: all your Overwhelm spent for 3(bT) Life Points each - asked in a window before it is lost "
+       + "(Overwhelming Mutant (3), the user's)." },
+  { key: "overwhelm.endKeep", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "At the end of your turn, once an Encounter: your Overwhelm kept - Overwhelming Fighter (2) not triggered - asked in a window "
+       + "(Overwhelming Mutant (4), the user's)." },
   { key: "legend.extra", phase: PHASES.LATE, kind: N, ops: ["add"],
     doc: "Life and Ki Points more from Legend Realized (Monstrous Ascension (2): half the chosen Attribute's Modifier)." },
   { key: "legend.narrativeDouble", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],

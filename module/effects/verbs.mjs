@@ -629,6 +629,25 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "The Basic Attack out of sequence - Pieces of the Hive (1)'s (chat.mjs basicStrike)."
   },
+  basicStrikeThrough: {
+    args: [0, 0],
+    doc: "The Basic Attack out of sequence, made through the Maneuver whose `[on used]` this is - Coup de Grace (2)'s, read by Unending "
+       + "Pressure (3)'s `madeThrough` (chat.mjs basicStrike)."
+  },
+  overwhelmHeal: {
+    args: [2, 2],
+    doc: "Life Points for the Overwhelm just spent (overwhelm-spent's `spent`): the first number (bT) a stack, no more than the second (bT) "
+       + "a Combat Round - Suppression of Power (6)'s; Ki Points too, half as many, with `overwhelmHeal.ki` (chat.mjs overwhelmHeal)."
+  },
+  superiorOrSurging: {
+    args: [0, 0],
+    doc: "The Superior State till the start of your next turn - the Surging State instead, where already Superior (Unending Pressure (4))."
+  },
+  legendLowerStage: {
+    args: [0, 0],
+    doc: "Legend Realized as if entering a lower Stage of the Line you are in, not yet had this Encounter - which, asked (Mutant's "
+       + "Resilience (4); chat.mjs legendLowerStage)."
+  },
   pawnSurge: {
     args: [0, 0],
     doc: "Pawn (Pieces of the Hive): the Natural Armor broken, then a Ki Surge (chat.mjs pawnSurge)."

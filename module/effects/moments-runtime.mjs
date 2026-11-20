@@ -311,9 +311,14 @@ async function writeStateful(actor, slots) {
   // Adaptation Points spent by the script - adaptation-spent, how many (Genetic Focus: Angel's).
   const spentAdaptation = resources ? Math.max(0, (Number(actor.system.resources?.adaptation?.stacks) || 0)
     - (Number(resources.adaptation?.stacks) || 0)) : 0;
+  // And Overwhelm spent - taken off, not set to nothing as Overwhelming Fighter (2) loses it: overwhelm-spent (Suppression of Power (6)).
+  const overwhelmParts = slots["overwhelm.stacks"]?.parts ?? [];
+  const spentOverwhelm = (resources && overwhelmParts.length && !overwhelmParts.some(part => part.op === "set"))
+    ? Math.max(0, (Number(actor.system.resources?.overwhelm?.stacks) || 0) - (Number(resources.overwhelm?.stacks) || 0)) : 0;
   if (!foundry.utils.isEmpty(updates)) await actor.update(updates);
   if (gained.length) await stacksGained(actor, gained, counts);
   if (spentAdaptation) await (await import("../chat.mjs")).answerFor(actor, "adaptation-spent", { spent: spentAdaptation });
+  if (spentOverwhelm) await (await import("../chat.mjs")).answerFor(actor, "overwhelm-spent", { spent: spentOverwhelm });
 }
 
 /**
@@ -852,6 +857,17 @@ async function runVerb(actor, call, context) {
     case "casteKnightStrike": return (await import("../chat.mjs")).casteKnightStrike(actor);
     case "castePawnStrike": return (await import("../chat.mjs")).castePawnStrike(actor);
     case "basicStrike": return (await import("../chat.mjs")).basicStrike(actor);
+    // The Basic Attack out of sequence, made through the Maneuver whose `[on used]` this is - Coup de Grace (2)'s (Unending Pressure (3)).
+    case "basicStrikeThrough": return (await import("../chat.mjs")).basicStrike(actor, String(context?.maneuver?.id ?? ""));
+    // Suppression of Power (6): Life Points for the Overwhelm just spent, so many (bT) a stack, no more than so many (bT) a Combat Round.
+    case "overwhelmHeal": return (await import("../chat.mjs")).overwhelmHeal(actor, Number(context?.spent) || 0, Number(args[0]) || 0, Number(args[1]) || 0);
+    // Unending Pressure (4): Superior till the start of your next turn - Surging instead, where already Superior.
+    case "superiorOrSurging": {
+      const already = (Number(actor.system?.states?.superior) || 0) > 0;
+      return enterState(actor, already ? "surging" : "superior", 1, "start-of-next-turn");
+    }
+    // Mutant's Resilience (4): Legend Realized as if entering a lower Stage of the Line you are in, not yet had this Encounter - which, asked.
+    case "legendLowerStage": return (await import("../chat.mjs")).legendLowerStage(actor);
     case "pawnSurge": return (await import("../chat.mjs")).pawnSurge(actor);
     case "insectShellDouble": return (await import("../chat.mjs")).insectShellDouble(actor);
     case "ferociousBreak": return (await import("../chat.mjs")).ferociousBreak(actor, context);

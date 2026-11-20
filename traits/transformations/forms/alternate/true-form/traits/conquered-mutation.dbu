@@ -5,8 +5,12 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
-# (1) Long Transformation and Exhausting lost. (2) Perfect Ki Control on every Stage: on this one here.
-aspects: -Long Transformation, -Exhausting, +Perfect Ki Control
+# (1) Long Transformation and Exhausting lost.
+aspects: -Long Transformation, -Exhausting
+# (2) "All Stages of Metamorphosis gain the Perfect Ki Control Aspect" (transformations.mjs aspectsGivenTo).
+grantsAspectTo: line:metamorphosis = Perfect Ki Control
+# (3) Suppression of Power (3) ignored while this applies (transformations.mjs lockedLines).
+ignoresLineLock: true
 description: >
   You have finally, at long last, mastered the power you were born with, and this power is now wholly yours to command.
 text: >
@@ -17,4 +21,4 @@ text: >
 
 ---
 
-# (3) Suppression of Power (3) ignored: the table's.
+# (1)(2) Its header; (3) its header's `ignoresLineLock`.

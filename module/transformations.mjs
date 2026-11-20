@@ -1801,7 +1801,49 @@ export function aspectWarnings(actor, item) {
     said.push("Beyond: not with Holding Back stacks unless Fully Mastered");
   }
   if (aspects.includes("blutz-wave") && actor?.getFlag?.("dbu-ttrpg", "tailLost")) said.push("Blutz Wave: you have no tail");
+  said.push(...lineLockWarnings(actor, item));
   return said.join("; ");
+}
+
+/**
+ * Suppression of Power (3) [Permanent]: "You cannot enter a Transcended Enhancement, cannot enter another Alternate Form unless it is part of
+ * the Metamorphosis Transformation Line, and cannot leave any Transformation of this Transformation Line through the Revert Maneuver" - a
+ * Trait had whose file says `lineLock: <line>`, its effect not ignored (`ignoresLineLock:` on a Trait wholly in use - Conquered Mutation
+ * (3)'s). Said, never refused (the user's). The Lines it locks to.
+ */
+export function lockedLines(actor) {
+  const items = Array.from(actor?.items ?? []);
+  const own = each => getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  if (items.some(each => (each.type === "racial") && own(each)?.ignoresLineLock && (!each.system?.transformation || (traitStanding(each, items) === "in")))) return [];
+  return [...new Set(items.filter(each => (each.type === "racial") && own(each)?.lineLock
+    && !(each.system?.transformation && transformationTraitAside(each, items))).map(each => String(own(each).lineLock).trim()))];
+}
+
+/** What Suppression of Power (3) says of entering one. */
+export function lineLockWarnings(actor, item) {
+  const lines = lockedLines(actor);
+  if (!lines.length || !item) return [];
+  const file = fileOf(item);
+  const kind = kindOf(file);
+  const items = Array.from(actor?.items ?? []);
+  const said = [];
+  if ((kind === "enhancement") && aspectsOf(item, items).some(aspect => aspect.id === "transcendent")) {
+    said.push("Suppression of Power: you cannot enter a Transcended Enhancement");
+  }
+  if ((kind === "form") && (formTypeFor(item, items) === "alternate") && !lines.includes(lineOf(file, items))) {
+    said.push("Suppression of Power: you cannot enter an Alternate Form outside its Line");
+  }
+  return said;
+}
+
+/** And of leaving one through the Revert Maneuver: those of a locked Line left - "unless you use it to enter one of this Line with Natural (LV2)". */
+export function revertLockWarning(actor, ids) {
+  const lines = lockedLines(actor);
+  if (!lines.length) return "";
+  const items = Array.from(actor?.items ?? []);
+  const leaving = ids.map(id => items.find(each => each.id === id)).filter(item => item && lines.includes(lineOf(fileOf(item), items)));
+  return leaving.length ? `Suppression of Power: ${leaving.map(item => item.name).join(", ")} cannot be left through the Revert Maneuver, unless into a `
+    + "Stage of its Line with Natural (LV2) - said, never refused" : "";
 }
 
 /** Long Transformation's level of one - the Actions more and the Exploit it brings. */

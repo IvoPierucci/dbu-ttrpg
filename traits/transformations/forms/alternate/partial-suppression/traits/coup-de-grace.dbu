@@ -2,6 +2,10 @@ id: partial-suppression-coup-de-grace
 name: Coup de Grace
 order: 1
 slot: trait
+# (3) The Combat Roll chosen on entering the Superior State, one Resource each, gone as you leave it.
+resource: coupstrike, coupdodge, coupwound
+resourceLabel: Coup de Grace (Strike), Coup de Grace (Dodge), Coup de Grace (Wound)
+resourceMax: 1
 description: >
   The way you overpower your prey in combat, many forget just how quickly you're capable of delivering the final blow.
 text: >
@@ -20,4 +24,31 @@ if (!belowThreshold("injured")) {
     speed.all += 1(T);
 }
 
-# (2)-(4): the table's.
+# (2) Its own Maneuver, on the Maneuvers tab: an Instant, once a Round - 2 Overwhelm, the Basic Attack out of sequence (maneuvers/).
+[passive, effect 2]
+allow maneuver.coup-de-grace-strike;
+
+# (3) Entering the Superior State: a Combat Roll chosen (gainOneOf asks), 1(T) on it until you leave it.
+[triggered/state/superior, effect 3]
+gainOneOf(coupstrike, coupdodge, coupwound);
+
+[passive, effect 3]
+if (inState("superior") && hasResource("coupstrike")) {
+    strike += 1(T);
+}
+if (inState("superior") && hasResource("coupdodge")) {
+    dodge += 1(T);
+}
+if (inState("superior") && hasResource("coupwound")) {
+    wound += 1(T);
+}
+
+[automatic/left-state/superior, effect 3]
+coupstrike.stacks = 0;
+coupdodge.stacks = 0;
+coupwound.stacks = 0;
+
+# (4) An Attacking Maneuver beyond Lethal as declared, once an Encounter: every target's Damage Reduction ignored - asked as its Wound is
+# rolled (the user's; chat.mjs beyondLethalPierce).
+[passive, effect 4]
+allow attack.beyondLethalPierce;

@@ -5094,6 +5094,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Profile prompt costs nothing - the same way its Ki Point Cost is handled.
   // Out of sequence - a Technique through Counter or Exploit - its Action Cost is waived.
   // "You can only use this Unique Ability while you are in the God Ki Special State" - God Meteor's.
+  // Priced in stacks of a Resource - its file's `stacksCost: overwhelm 2` (Coup de Grace (2), Mutant's Resilience (2)): not used without them.
+  {
+    const [costName, costCount] = String(getTrait(maneuver.id)?.stacksCost ?? "").trim().split(/\s+/);
+    if (costName && ((Number(actor.system.resources?.[costName]?.stacks) || 0) < (Number(costCount) || 1))) {
+      ui.notifications.warn(`${maneuver.name} spends ${Number(costCount) || 1} stacks of ${costName} - ${actor.name} has not got them.`);
+      return false;
+    }
+  }
   if (maneuver.requiresState && !((Number(actor.system.states?.[maneuver.requiresState]) || 0) > 0)) {
     const state = getTrait(maneuver.requiresState)?.name ?? maneuver.requiresState;
     ui.notifications.warn(`${maneuver.name} is only used in the ${state} State.`);
@@ -5548,6 +5556,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       rejectClose: false
     });
     if (!Array.isArray(picked) || !picked.length) return false;
+    // Suppression of Power (3): said.
+    const locked = T.revertLockWarning(actor, picked);
+    if (locked) ui.notifications.warn(locked);
     await payActions(actor, maneuver, actionsSpent);
     await recordManeuverUse(actor, maneuver);
     const names = picked.map(id => actor.items.get(id)?.name).filter(Boolean);
@@ -7102,6 +7113,15 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Genetic Focus: Glass (4): Glass Genes (5)'s Energy Charge, its 2 Adaptation Points paid as it was applied.
   const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) + bioCharges
     + (declared.glassForced ? 1 : 0) : 0;
+
+  // Its price in stacks, paid now it is certain to happen (`stacksCost`) - spent, as Overwhelm's Moment hears it.
+  {
+    const [costName, costCount] = String(getTrait(maneuver.id)?.stacksCost ?? "").trim().split(/\s+/);
+    if (costName) {
+      const { setResource } = await import("./chat.mjs");
+      await setResource(actor, costName, Math.max(0, (Number(actor.system.resources?.[costName]?.stacks) || 0) - (Number(costCount) || 1)));
+    }
+  }
 
   // And what this Maneuver itself does, which is a different question: `declare-maneuver`
   // is heard by everything the character holds, and this is heard only by the Maneuver

@@ -4,6 +4,9 @@ order: 1
 slot: trait
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 2, 3
+# (3) [Permanent]: no Transcended Enhancement, no Alternate Form outside the Line, no Revert out of it - said, never refused
+# (transformations.mjs lineLockWarnings, revertLockWarning); Conquered Mutation (3) ignores it.
+lineLock: metamorphosis
 description: >
   You've built enough layers around your power that you can easily control it.
 text: >
@@ -18,4 +21,26 @@ text: >
 
 ---
 
-# (1) Its text box, (2)(3) its Permanent effects, (4)-(7): the table's.
+# (1) Its text box: each Stage's choices, on that Stage's row (its own file). (2) "For the sake of entering and remaining in this
+# Transformation, ignore its Tier of Power Requirement": Tier 1+, met by everyone - nothing to do. (3) Its header's `lineLock`.
+
+# (4) In the Full Suppression Stage itself: the Ki Point Cost of your Attacking Maneuvers and Unique Abilities 1(T) lower.
+[passive, effect 4]
+if (inTransformation("full-suppression")) {
+    attack.kiCost -= 1(T);
+    unique.kiCost -= 1(T);
+}
+
+# (5) Legend Realized: 1d6(T) more Life and Ki Points (chat.mjs legendRealized).
+[passive, effect 5]
+legend.extraD6 += 1(T);
+
+# (6) Overwhelm spent - by a script, a Maneuver's price, Emperor (3), Overwhelming Mutant (3): 2(bT) Life Points a stack, no more than
+# 8(bT) a Combat Round (chat.mjs overwhelmHeal).
+[triggered/overwhelm-spent, effect 6]
+overwhelmHeal(2, 8);
+
+# (7) On the Round's card, once an Encounter: your turn now, ignoring the Initiative Order - several, highest Initiative first (Jump
+# Start's: chat.mjs jumpStart).
+[triggered/start-of-round, 1/encounter, chosen, effect 7]
+jumpStart();

@@ -14,4 +14,20 @@ text: >
 
 ---
 
-# (1)-(4): the table's.
+# (1) Suppression of Power (6)'s Life Points give Ki Points too, half as many (chat.mjs overwhelmHeal).
+[passive, effect 1]
+allow overwhelmHeal.ki;
+
+# (2) Its own Maneuver, on the Maneuvers tab: an Instant, once a Round - 2 Overwhelm, a Counter Action (maneuvers/).
+[passive, effect 2]
+allow maneuver.mutants-resilience-counter;
+
+# (3) Emperor (3) triggered - Overwhelm spent in the Transformation Maneuver's window - once a Round: Superior till the start of your next
+# turn.
+[triggered/overwhelm-transformation, 1/round, effect 3]
+enterState(superior, 1, start-of-next-turn);
+
+# (4) The Power Up, once a Round: Legend Realized as if entering a lower Stage not yet had this Encounter - which, asked (chat.mjs
+# legendLowerStage).
+[triggered/power, 1/round, effect 4]
+legendLowerStage();
