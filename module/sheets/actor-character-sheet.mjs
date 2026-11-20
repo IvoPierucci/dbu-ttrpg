@@ -7286,8 +7286,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         summary: aspect.file?.summary ?? "" })),
       stressBonus: Number(this.actor.system.stressBonus) || 0,
       // On the Awakenings' section: the Awakening Limit, said and never refused.
-      awakeningLimit: (this.#transformationSection === "awakening") ? (limit => ({ ...limit, lesserOver: limit.lesser > limit.lesserMax,
-        greaterOver: limit.greater > limit.greaterMax }))(awakeningCount(this.actor)) : null,
+      awakeningLimit: (this.#transformationSection === "awakening") ? (limit => ({ ...limit,
+        lesserOver: !limit.none && (limit.lesser > limit.lesserMax), greaterOver: !limit.none && (limit.greater > limit.greaterMax) }))(awakeningCount(this.actor)) : null,
       sections,
       rows,
       // By type of the Transformation each belongs to (the user's): an Evolved Stage's among the Forms.
@@ -7306,6 +7306,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (["active", "transcended", "newLevel"].includes(field)) {
       const on = Boolean(input.checked);
       const updates = [{ _id: item.id, [`system.${field}`]: on }];
+      // "You can only benefit from one New Level of Power at a time": ticking one unticks any other. An Awakening's: "regain Life and Ki
+      // Points equal to 1/2 of your Maximum" as it is gained.
+      if ((field === "newLevel") && on) {
+        updates.push(...transformationItems(this.actor).filter(each => (each.id !== item.id) && each.system?.newLevel)
+          .map(each => ({ _id: each.id, "system.newLevel": false })));
+        if (kindOf(fileOf(item)) === "awakening") {
+          const { life, ki } = this.actor.system;
+          await this.actor.update({ "system.life.value": Math.min(life.ceiling ?? life.max, (Number(life.value) || 0) + Math.floor(life.max / 2)),
+            "system.ki.value": Math.min(ki.max, (Number(ki.value) || 0) + Math.floor(ki.max / 2)) });
+          ui.notifications.info(`${this.actor.name}: New Level of Power (${item.name}) - half the Maximum Life and Ki Points back.`);
+        }
+      }
       if (field === "active") {
         const changes = inUseChanges(transformationItems(this.actor), item, on);
         // An Evolved Stage is on the Form you are in (the user's): in none, it may not be entered - a Null Stage is one.

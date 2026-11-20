@@ -18,8 +18,11 @@ text: >
 
 ---
 
-# The Stress Bonus is here. The Modifiers wait on Transformations, which are not in this system: while
-# in a Form or a Transcended Enhancement, that part is the table's.
+# The Stress Bonus, always; Force and Magic Modifiers 1(T) "while in a Form or Transcended Enhancement" (a Null Stage is not one).
 
 [passive]
 stressBonus += 2;
+if (inFormOrTranscended) {
+    force.mod += 1(T);
+    magic.mod += 1(T);
+}

@@ -548,6 +548,8 @@ const TABLE = [
   // Fusion Methods & Modifiers (traits/other/fusion-method/, fusion-modifier/).
   { key: "stress.autoSucceed", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Every Stress Test passed, whatever it rolls (Maximum Metamorese (3); chat.mjs postTransformation)." },
+  { key: "legend.narrativeDouble", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Legend Realized's Life and Ki Points doubled, asked as it is applied, once a Combat Encounter (Narrative Transformation (2))." },
   { key: "stress.lifeForTwo", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "A Stress Test into a Transformation with the Super Saiyan Form Aspect failed by 2 or less: 1/10th of your Maximum Life Points "
        + "for +2, asked after the roll (Unstoppable Legend's)." },

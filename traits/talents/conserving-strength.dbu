@@ -20,5 +20,10 @@ patience.max += 5;
 
 # (2) Read on Reserved Combatant's file: its second effect Triggered while this is held - its Triggered/Automatic button.
 
-# (3), (4) Which Transformation you are in, and its Tier of Power Requirement, are not recorded - Transformations are not built:
-# the table's (the user's).
+# (3) Read on Reserved Combatant's file: its first effect without Holding Back, in no Transformation of a Tier of Power Requirement 4+.
+
+# (4) Entering one of a Tier of Power Requirement 4+, once an Encounter: every Patience stack for 2(bT) Ki Points each.
+[triggered/transform, 1/encounter, effect 4]
+requires transformedTierAtLeast(4) && hasResource("patience");
+ki.value += patience.stacks * 2(bT);
+patience.stacks = 0;

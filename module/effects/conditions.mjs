@@ -398,6 +398,11 @@ const PREDICATES = {
    * The Attacking Maneuver declared has "a Ki Wager equal to or exceeding 1/4 of your Max Capacity" (rounded down) - the declaration's
    * `kiWager` (Limitless's, Full Power's Energy Charge).
    */
+  inTransformation: (scope, id) => transformationQuestion("inTransformation", scope.data?.parent, String(id?.value ?? id ?? "")) === true,
+  inFormOrTranscended: scope => transformationQuestion("inFormOrTranscended", scope.data?.parent) === true,
+  inEnhancement: scope => transformationQuestion("inEnhancement", scope.data?.parent) === true,
+  enhancementsAtLeast: (scope, n) => transformationQuestion("enhancementsAtLeast", scope.data?.parent, Number(n?.value ?? n) || 0) === true,
+  transformedTierAtLeast: (scope, n) => transformationQuestion("transformedTierAtLeast", scope.data?.parent, Number(n?.value ?? n) || 0) === true,
   heavyWager: scope => {
     const wager = Number(scope.context?.kiWager) || 0;
     return (wager > 0) && (wager >= Math.max(1, Math.floor((Number(scope.data?.capacity?.max) || 0) / 4)));

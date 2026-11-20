@@ -4,6 +4,11 @@ order: 3
 optionOf: heart-of-evil
 # Its Race in brackets - shown, never enforced.
 race: saiyan
+# "You gain access to the Evil Saiyan Enhancement ... reduce the Stress Test Requirement for Evil Saiyan by 3 and it gains the Natural
+# (LV2) Aspect" (racial.mjs grantsTransformation; transformations.mjs stressTakenOff, aspectsOf).
+grantsTransformation: evil-saiyan
+stressFor: evil-saiyan 3
+grantsAspectTo: evil-saiyan Natural (LV2)
 description: >
   Evil Saiyan of Legend (Saiyan) [Passive]: You gain access to the Evil Saiyan Enhancement. Additionally, reduce the Stress Test Requirement for Evil Saiyan by 3 and it gains the Natural (LV2) Aspect.
 text: >
@@ -11,4 +16,4 @@ text: >
 
 ---
 
-# Waits on Transformations - the Evil Saiyan Enhancement - not built yet: the table's.
+# All of it in its header: Evil Saiyan given with it, 3 lower and Natural (LV2).

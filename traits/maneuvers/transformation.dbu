@@ -6,13 +6,11 @@ kiCost: 0
 attacking: false
 requiresTarget: false
 tags: transformation
-# Forms, Enhancements and their Aspects are not built yet (the user's ruling, 2026-10-03): the Transformation and its
-# Stress Test Requirement are asked, the Stress Test rolled from its window (1d10 + Stress Bonus) and settled on the card
-# (chat.mjs askTransformation / postTransformation). Failed: Stress Exhaustion, "as per the rules on Stress Tests".
-# Made: entering it - and what entering it does (Legend Realized, Burst Limit), leaving a Form or an Enhancement for it,
-# the Tier of Power Requirement - is the table's until Transformations exist. Tagged `transformation`, so Stress
-# Exhaustion's "you cannot enter any Enhancement or Form" refuses it. Exploitable only with the Long Transformation
-# Aspect - not built either, so none.
+# Which of the character's Enhancements, Forms and Evolved Stages is asked, with its Grade, Higher Scales, Prelude and Transcended,
+# its Stress Test Requirement worked out (transformations.mjs stressRequirementFor), rolled from its window (1d10 + Stress Bonus)
+# and settled on the card (chat.mjs askTransformation / postTransformation). Made: entered - what it puts by, Legend Realized,
+# the Transform Moment (Burst Limits). Failed: Stress Exhaustion, and what you were in left. Tagged `transformation`, so Stress
+# Exhaustion's "you cannot enter any Enhancement or Form" refuses it. Exploitable with the Long Transformation Aspect: the table's.
 transforms: true
 source: Core Rule
 description: >

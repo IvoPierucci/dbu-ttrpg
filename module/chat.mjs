@@ -39550,6 +39550,9 @@ async function heartOfGlassFail(actor) {
  * whose Checks these were, where known.
  */
 async function steadfastFailed(actor, failed = []) {
+  // "If you are knocked through a Health Threshold while in a Form or Enhancement and fail the Steadfast Check, you must immediately make
+  // a Stress Test" - a Health Threshold's.
+  if (failed.length) await forcedStressTest(actor, "A Steadfast Check failed");
   // Copy Being: "you stop being a Copy if you ... fail a Steadfast Check" (its mark, Copyman's).
   if ((Number(actor.system.conditions?.["being-a-copy"]) || 0) > 0) await (await import("./conditions.mjs")).setCondition(actor, "being-a-copy", 0);
   // Fight or Flight (2): "If you fail, you gain the Shaken Combat Condition against the nearest Opponent until the end of your next turn" -
@@ -39773,8 +39776,16 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
     prelude: row?.prelude ? asked.prelude : undefined, transcended: row?.transcendent ? asked.transcended : undefined,
     form: ["form", "evolved"].includes(T.kindOf(T.fileOf(item))) } : { form: asked.form };
   const natural = item ? T.stressRequirementFor(actor, item, { grade: asked.grade, scales: asked.scales, prelude: asked.prelude }).natural : false;
-  // New Level of Power: "automatically succeed on Stress Tests for this Transformation" (not used with another - the table's).
-  const automatic = Boolean(item?.system?.newLevel);
+  // New Level of Power: an Enhancement's or a Form's - "automatically succeed on Stress Tests for this Transformation (unless it is
+  // being used in conjunction with another Transformation)": none other in use but Awakenings.
+  const automatic = Boolean(item?.system?.newLevel) && !T.transformationsInUse(actor)
+    .some(each => (each.id !== item.id) && (T.kindOf(T.fileOf(each)) !== "awakening"));
+  // Holy Transformation: "Enter a Transformation with the God Ki Aspect" - one without it said, not refused.
+  const entersAspect = String(getTrait(String(maneuver.maneuverId ?? maneuver.id ?? ""))?.entersAspect ?? "");
+  if (item && entersAspect
+    && !T.aspectsWithOriginal(item, actor.items).some(aspect => aspect.id === entersAspect)) {
+    ui.notifications.warn(`${item.name} has no ${T.aspectFile(entersAspect)?.name ?? entersAspect} Aspect (${maneuver.name}): said, not refused.`);
+  }
   if (!rolls || natural) return { name, roll: false, ...entering, natural };
   if (!Number.isFinite(asked.requirement)) {
     ui.notifications.warn(`${maneuver.name}: its Stress Test Requirement is a number.`);
@@ -39806,7 +39817,7 @@ const LEGEND_TIP = "Into a Form: the first time this Combat Encounter, Legend Re
  * Encounter" - by the Transformation's name, kept for the Encounter. "Not ... from a Transformation of the same Form Type
  * and Tier of Power Requirement as another" is the table's: Forms are not built.
  */
-async function legendRealizedByForm(actor, name, item = null) {
+async function legendRealizedByForm(actor, name, item = null, { double = false } = {}) {
   const encounter = game.combat?.id ?? "";
   const held = actor.getFlag?.(SCOPE, "legendRealized") ?? {};
   const names = (encounter && (held.encounter === encounter)) ? (held.names ?? []) : [];
@@ -39821,7 +39832,7 @@ async function legendRealizedByForm(actor, name, item = null) {
   if (kind && kinds.includes(kind)) return;
   if (encounter) await requestActorUpdate(actor, { [`flags.${SCOPE}.legendRealized`]: { encounter, names: [...names, key],
     kinds: kind ? [...kinds, kind] : kinds } });
-  return legendRealized(actor);
+  return legendRealized(actor, { double });
 }
 
 /**
@@ -39829,18 +39840,24 @@ async function legendRealizedByForm(actor, name, item = null) {
  * total Dice Score." The Transformation Maneuver's limits are its own - an effect that grants it (a Talent's) is under
  * none of them (the user's). Then what answers having benefited from it - Survivor's Plating.
  */
-export async function legendRealized(actor) {
+export async function legendRealized(actor, { double = false } = {}) {
   if (!actor) return;
   const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
   const roll = await new Roll(`${2 * tier}d10 + ${Math.max(0, Number(actor.system.powerLevel) || 0)}`).evaluate();
   const { life, ki } = actor.system;
+  // New Level of Power's doubling; Narrative Transformation (2)'s - "Double the amount of Life and Ki Points regained through Legend
+  // Realized", asked, once an Encounter.
+  const narrative = !double && await narrativeDouble(actor);
+  const both = (double || narrative) ? 2 : 1;
+  const kiGain = roll.total * both;
   // Shedding Transformation (1): "Double the amount of Life Points you gain from Legend Realized."
-  const lifeGain = roll.total * ((actor.system.effects?.slots?.["shedding.legend"] === true) ? 2 : 1);
+  const lifeGain = roll.total * both * ((actor.system.effects?.slots?.["shedding.legend"] === true) ? 2 : 1);
   await requestActorUpdate(actor, { "system.life.value": Math.min(life.ceiling ?? life.max, life.value + lifeGain),
-    "system.ki.value": Math.min(ki.max, ki.value + roll.total) });
+    "system.ki.value": Math.min(ki.max, ki.value + kiGain) });
+  const why = double ? " (New Level of Power: doubled)" : (narrative ? " (Narrative Transformation: doubled)" : "");
   await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
-    flavor: (lifeGain !== roll.total) ? `Legend Realized - ${lifeGain} Life Points (Shedding Transformation), ${roll.total} Ki Points`
-      : `Legend Realized - ${roll.total} Life and Ki Points` });
+    flavor: (lifeGain !== kiGain) ? `Legend Realized${why} - ${lifeGain} Life Points (Shedding Transformation), ${kiGain} Ki Points`
+      : `Legend Realized${why} - ${kiGain} Life and Ki Points` });
   await offerTriggers(actor, "legend-realized");
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(actor, "legend-realized");
@@ -39873,6 +39890,82 @@ async function stressLifeForTwo(actor, into) {
   return true;
 }
 
+/** Narrative Transformation (2) (`legend.narrativeDouble`): Legend Realized doubled - asked, once a Combat Encounter. Whether it was. */
+async function narrativeDouble(actor) {
+  if (actor?.system?.effects?.slots?.["legend.narrativeDouble"] !== true) return false;
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.(SCOPE, "narrativeDouble") === encounter) return false;
+  if ((await askPlayerChoice(actor, `${actor.name}: Legend Realized`,
+    [{ value: "double", label: "Double it (Narrative Transformation, 1/Encounter)" }, { value: "keep", label: "As it is" }])) !== "double") return false;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.narrativeDouble`]: encounter });
+  return true;
+}
+
+/**
+ * A Stress Test failed: "you suffer from Stress Exhaustion" - and what you were in, left (the user's): every Form and Enhancement but one
+ * with the Natural Aspect ("Do not leave this Transformation if you are suffering from Stress Exhaustion"), and the Form an Evolved Stage
+ * that fails into it was on (Golden Beast (1), `failsInto: original`). What was left, by name.
+ */
+async function stressTestFailed(actor, failed = null) {
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "stress-exhaustion", 1);
+  const T = await import("./transformations.mjs");
+  const into = (each => each && (T.kindOf(T.fileOf(each)) === "evolved") && (String(T.fileOf(each)?.failsInto ?? "") === "original"));
+  const falling = [failed, ...T.transformationsInUse(actor)].find(into);
+  const keepForm = falling ? T.originalFormOf(actor.items.filter(each => each.id !== falling.id)) : null;
+  const lost = T.transformationsInUse(actor).filter(item => (T.kindOf(T.fileOf(item)) !== "awakening")
+    && !T.aspectsOf(item, actor.items).some(aspect => aspect.id === "natural") && (item.id !== keepForm?.id));
+  if (lost.length) await T.leaveTransformations(actor, lost.map(item => item.id));
+  return lost.map(item => item.name);
+}
+
+/**
+ * A Stress Test to remain in what you are in: "If you are knocked through a Health Threshold while in a Form or Enhancement and fail the
+ * Steadfast Check, you must immediately make a Stress Test"; Straining's "at the start of each of your turns". Against the Requirement of
+ * those in use together (transformations.mjs stressRequirementInUse); none where all of them are Natural. Rolled and said; failed, Stress
+ * Exhaustion and what is left. Whether it was passed (true where there was nothing to roll).
+ */
+export async function forcedStressTest(actor, reason = "Stress Test") {
+  if (!actor) return true;
+  const T = await import("./transformations.mjs");
+  const worked = T.stressRequirementInUse(actor);
+  if (!Number.isFinite(worked.requirement) || worked.natural) return true;
+  const names = T.transformationsInUse(actor).filter(item => T.kindOf(T.fileOf(item)) !== "awakening").map(item => item.name).join(" + ");
+  const bonus = Number(actor.system.stressBonus) || 0;
+  const roll = await new Roll(`${DBUCharacterData.BASE_DIE} ${(bonus < 0) ? "-" : "+"} ${Math.abs(bonus)}`).evaluate();
+  const automatic = actor.system.effects?.slots?.["stress.autoSucceed"] === true;
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
+    flavor: `${reason}: Stress Test to remain in ${names} - ${roll.total} against ${worked.requirement}${automatic ? " - passed automatically" : ""}` });
+  if (automatic || (roll.total >= worked.requirement)) return true;
+  if (await stressRescue(actor, names)) return true;
+  const lifted = T.transformationsInUse(actor).find(item => ["form", "evolved"].includes(T.kindOf(T.fileOf(item))));
+  if ((roll.total + 2 >= worked.requirement) && lifted && await stressLifeForTwo(actor, { itemId: lifted.id, name: names })) return true;
+  const lost = await stressTestFailed(actor);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `${reason}: ${actor.name} fails the Stress Test to remain in ${names} - Stress Exhaustion${lost.length ? `, and ${lost.join(", ")} left` : ""}.`)}</div>` });
+  return false;
+}
+
+/**
+ * "If your Ki Points are reduced to 0, you leave any Transformation you are in and suffer from Stress Exhaustion until the end of your next
+ * turn" - "if this occurred due to a Maneuver or its cost, after concluding that Maneuver". Said in a window to whoever plays them (the
+ * user's: nothing in the chat, nothing done by itself); leaving, if they choose it there.
+ */
+export async function kiEmptied(actor) {
+  if (!actor) return;
+  const T = await import("./transformations.mjs");
+  const using = T.transformationsInUse(actor).filter(item => T.kindOf(T.fileOf(item)) !== "awakening");
+  if (!using.length) return;
+  const answer = await askPlayerChoice(actor, `${actor.name}: 0 Ki Points`,
+    [{ value: "leave", label: `Leave ${using.map(item => item.name).join(" + ")} - Stress Exhaustion` }, { value: "later", label: "Not now" }],
+    { text: "With 0 Ki Points you leave any Transformation you are in and suffer from Stress Exhaustion until the end of your next turn - after "
+      + "the Maneuver that did it is concluded." });
+  if (answer !== "leave") return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "stress-exhaustion", 1);
+  await T.leaveTransformations(actor, using.map(item => item.id));
+}
+
 /** Divine Fusion Method (5): a Stress Test failed, passed instead - asked, once a Combat Encounter. Whether it was. */
 async function stressRescue(actor, name) {
   if (actor?.system?.effects?.slots?.["stress.rescue"] !== true) return false;
@@ -39895,7 +39988,8 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
     const T = await import("./transformations.mjs");
     const item = into.itemId ? actor.items.get(into.itemId) : null;
     if (item) await T.enterTransformation(actor, item, into);
-    if (into.form) await legendRealizedByForm(actor, into.name, item);
+    // New Level of Power, a Form's: "double the amount of Life and Ki Points regained through Legend Realized upon entering it".
+    if (into.form) await legendRealizedByForm(actor, into.name, item, { double: Boolean(item?.system?.newLevel) });
     // Triggered/Transform: what answers entering one through the Transformation Maneuver - its Burst Limit among them.
     if (item) {
       await offerTriggers(actor, "transform");
@@ -39917,22 +40011,11 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
   // Unstoppable Legend (2): "after seeing the result, reduce your Life Points by 1/10th of your Maximum Life Points to increase the Dice
   // Score of that Stress Test by 2" - into one with the Super Saiyan Form Aspect; asked where 2 would make it.
   if ((roll.total + 2 >= into.requirement) && await stressLifeForTwo(actor, into)) return entered();
-  const { setCondition } = await import("./conditions.mjs");
-  await setCondition(actor, "stress-exhaustion", 1);
-  // "If you fail ... while transformed, Stress Exhaustion - and the Transformation you had is lost" (the user's): every Form and
-  // Enhancement in use left, but one with the Natural Aspect ("Do not leave this Transformation if you are suffering from Stress Exhaustion").
-  const T = await import("./transformations.mjs");
-  // Golden Beast (1) [Constant] (`failsInto: original` in an Evolved Stage's file): failing to enter it, the Form it would go on is kept -
-  // "enter the Oozaru Alternate Form".
-  const failed = into.itemId ? actor.items.get(into.itemId) : null;
-  const keepForm = failed && (T.kindOf(T.fileOf(failed)) === "evolved") && (String(T.fileOf(failed)?.failsInto ?? "") === "original")
-    ? T.originalFormOf(actor.items.filter(each => each.id !== failed.id)) : null;
-  const lost = T.transformationsInUse(actor).filter(item => (T.kindOf(T.fileOf(item)) !== "awakening")
-    && !T.aspectsOf(item, actor.items).some(aspect => aspect.id === "natural") && (item.id !== keepForm?.id));
-  if (lost.length) await T.leaveTransformations(actor, lost.map(item => item.id));
+  // "If you fail ... while transformed, Stress Exhaustion - and the Transformation you had is lost" (the user's): stressTestFailed.
+  const lost = await stressTestFailed(actor, into.itemId ? actor.items.get(into.itemId) : null);
   return ChatMessage.create({ speaker, content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
     `${maneuver.name}: ${actor.name} fails the Stress Test for ${into.name} - Stress Exhaustion${lost.length
-      ? `, and ${lost.map(item => item.name).join(", ")} left` : ""}.`)}</div>` });
+      ? `, and ${lost.join(", ")} left` : ""}.`)}</div>` });
 }
 
 /**

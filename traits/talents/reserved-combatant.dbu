@@ -17,8 +17,9 @@ text: >
 ---
 
 # (1) Automatic by default, its Triggered/Automatic button.
+# Conserving Strength (3): without Holding Back too, in no Transformation of a Tier of Power Requirement 4+.
 [triggered/start-of-round, effect 1]
-requires hasResource("holdingback");
+requires hasResource("holdingback") || (hasTalent("conserving-strength") && !transformedTierAtLeast(4));
 patience.stacks += 1;
 
 # (2) The last stack of Holding Back gone in a Combat (the `holding-back-lost` Moment), with Patience held. With Conserving

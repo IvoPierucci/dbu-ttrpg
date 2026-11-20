@@ -16,4 +16,5 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# Entering one with it enters the Enhancement in brackets, leaving another; leaving that Enhancement leaves this one too
+# (transformations.mjs enterTransformation, leaveTransformations).

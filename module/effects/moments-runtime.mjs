@@ -706,6 +706,14 @@ async function runVerb(actor, call, context) {
       const { impairKnocked } = await import("../chat.mjs");
       return impairKnocked(actor, context?.knockedUuid);
     }
+    case "stressTest": {
+      const { forcedStressTest } = await import("../chat.mjs");
+      return forcedStressTest(actor, "Straining");
+    }
+    case "transformationOutOfSequence": {
+      const { allOutTransform } = await import("../chat.mjs");
+      return allOutTransform(actor);
+    }
     case "markKnocked": {
       const { markKnocked } = await import("../chat.mjs");
       return markKnocked(actor, context?.knockedUuid, String(args[0] ?? ""), Number(args[1]) || 1, String(args[2] ?? "end"));

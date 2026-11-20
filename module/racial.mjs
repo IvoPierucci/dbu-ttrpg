@@ -1165,6 +1165,16 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   if (trait.grantsRacialOf) await grantRacialOf(actor, item, trait);
   // Were-Beast (2): "the Secondary Racial Trait you exchanged for this Factor Trait becomes known as your 'Normal Trait'" - which, asked.
   if (trait.asksNormalTrait) await askNormalTrait(actor, item);
+  // "Gain access to the Evil Saiyan Enhancement" (`grantsTransformation:` - Heart of Evil's, Emperor's every Stage of Metamorphosis): each
+  // added where it is not had, gone with the Trait (`grantedBy`).
+  if (trait.grantsTransformation) {
+    const T = await import("./transformations.mjs");
+    for (const id of listOf(trait.grantsTransformation)) {
+      if (T.transformationItems(actor).some(each => each.system?.transformationId === id)) continue;
+      const given = await T.addTransformation(actor, id);
+      if (given) await given.setFlag("dbu-ttrpg", "grantedBy", item.id);
+    }
+  }
   return item;
 }
 

@@ -15,6 +15,7 @@
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { useTransformationGate, useTransformationQuestion } from "./aside.mjs";
+import { FUSION_AWAKENINGS, FUSION_MAX_BASE_TIER } from "./fusion.mjs";
 
 export const TRANSFORMATION_TYPE = "transformation";
 
@@ -725,7 +726,9 @@ export function awakeningCount(actor) {
     count[type] += Math.max(0, (Number(item.system?.stacks) || 0) - (Number(item.system?.temporaryStacks) || 0));
   }
   const base = Math.min(7, Math.max(1, Number(actor?.system?.baseTierOfPower) || 1));
-  const [lesser, greater] = AWAKENING_LIMIT[base];
+  // An Adversary "ignores the Awakening Limit"; a Fusion has its own ("Fusion Awakenings": "up to its own limit by base Tier of Power").
+  if (actor?.type === "adversary") return { lesser: count.lesser, greater: count.greater, lesserMax: null, greaterMax: null, none: true };
+  const [lesser, greater] = (actor?.type === "fusion") ? FUSION_AWAKENINGS[Math.min(FUSION_MAX_BASE_TIER, base)] : AWAKENING_LIMIT[base];
   return { lesser: count.lesser, greater: count.greater, lesserMax: lesser, greaterMax: greater };
 }
 
@@ -919,7 +922,8 @@ export function stressRequirementFor(actor, item, options = {}) {
   if (kind === "form") {
     const from = formOf(nowIn);
     if (from && (tierRequirementOf(item, file, items) > tierRequirementOf(from, fileOf(from), items))) {
-      const sameLine = file.line && (String(fileOf(from)?.line ?? "") === String(file.line));
+      const line = lineOf(file, items);
+      const sameLine = Boolean(line) && (lineOf(fileOf(from), items) === line);
       requirement -= sameLine ? 2 : 1;
       parts.push(`Step-by-Step -${sameLine ? 2 : 1}`);
     }
@@ -1011,6 +1015,17 @@ export async function enterTransformation(actor, item, { grade, scales, prelude,
   if (scales !== undefined) own["system.scales"] = Math.max(0, Number(scales) || 0);
   if (prelude !== undefined) own["system.prelude"] = Boolean(prelude);
   if (transcended !== undefined) own["system.transcended"] = Boolean(transcended);
+  // Linked: "Upon entering this Form, you also enter the listed Enhancement in brackets ... If you were already using an Enhancement, you
+  // leave that Enhancement to enter the listed Enhancement" - the one had of that name.
+  const linked = aspectsOf(item, actor.items).filter(aspect => aspect.id === "linked").flatMap(aspect => aspect.params)
+    .map(name => transformationItems(actor).find(each => (each.system?.transformationId === aspectId(name)) || (aspectId(each.name) === aspectId(name))))
+    .filter(each => each && (each.id !== item.id) && (kindOf(fileOf(each)) === "enhancement"));
+  for (const enhancement of linked) {
+    if (enhancement.system?.active) continue;
+    changes.push({ _id: enhancement.id, "system.active": true });
+    for (const other of transformationItems(actor).filter(each => each.system?.active && (each.id !== enhancement.id)
+      && (kindOf(fileOf(each)) === "enhancement") && !each.system?.transcended)) changes.push({ _id: other.id, "system.active": false });
+  }
   const leaving = changes.filter(change => change["system.active"] === false).map(change => actor.items.get(change._id)).filter(Boolean);
   await actor.updateEmbeddedDocuments("Item", [own, ...changes]);
   // What leaving those does - Exhausting, Fading - but into a higher Tier of Power Requirement, Exhausting's exception.
@@ -1040,6 +1055,14 @@ export async function leftTransformation(actor, item, { into = null } = {}) {
 
 /** Leave Transformations - the Revert Maneuver's, a failed Stress Test's: put by, and what leaving each does. */
 export async function leaveTransformations(actor, ids) {
+  // Linked: "If you have to leave the Linked Enhancement due to any effects, also leave this Transformation."
+  const leavingIds = new Set(ids);
+  for (const each of transformationsInUse(actor).filter(one => !leavingIds.has(one.id))) {
+    const links = aspectsOf(each, actor.items).filter(aspect => aspect.id === "linked").flatMap(aspect => aspect.params).map(aspectId);
+    if (links.some(link => ids.some(id => { const left = actor.items.get(id); return left && ((left.system?.transformationId === link)
+      || (aspectId(left.name) === link)); }))) leavingIds.add(each.id);
+  }
+  ids = [...leavingIds];
   const items = ids.map(id => actor.items.get(id)).filter(Boolean);
   if (!items.length) return;
   const extra = items.flatMap(item => inUseChanges(Array.from(actor.items), item, false) ?? []);
@@ -1167,7 +1190,66 @@ export function inTransformationOf(actor, wanted) {
     || ((kinds(item) === "form") && (String(fileOf(item)?.stage ?? "") !== "0")));
   if (String(wanted).startsWith("line:")) {
     const line = String(wanted).slice(5);
-    return using.some(item => (kinds(item) === "form") && (String(fileOf(item)?.line ?? "") === line));
+    return using.some(item => (kinds(item) === "form") && (lineOf(fileOf(item), actor?.items) === line));
   }
   return using.some(item => (item.system?.transformationId === wanted) || (String(fileOf(item)?.variantOf ?? "") === wanted));
 }
+
+/**
+ * The Transformation Line a Form is part of "for your effects": its own, or the one a Trait had puts it in - Emperor (2)'s "All of your
+ * Forms with a Racial Requirement of Arcosian are considered to be a part of the Metamorphosis Transformation Line" (`formsOfRaceInLine:
+ * <race> <line>`).
+ */
+export function lineOf(file, items = []) {
+  const own = String(file?.line ?? "");
+  if (own || (kindOf(file) !== "form")) return own;
+  const race = aspectId(racialRequirementOf(file));
+  for (const each of Array.from(items ?? [])) {
+    if (!["racial", "talent"].includes(each.type)) continue;
+    const [forRace, line] = String(getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.formsOfRaceInLine ?? "").split(/\s+/);
+    if (forRace && line && (aspectId(forRace) === race)) return line;
+  }
+  return "";
+}
+
+/** The highest Tier of Power Requirement among those in use - 0 in none (Conserving Strength's "a Transformation with ... 4+"). */
+export function topTierInUse(actor) {
+  return Math.max(0, ...transformationsInUse(actor).filter(item => kindOf(fileOf(item)) !== "awakening")
+    .map(item => tierRequirementOf(item, fileOf(item), actor?.items)));
+}
+
+/**
+ * A Transformation deleted any way at all - its Traits with it, and what they gave: kept on no Item it no longer belongs to (a Factor
+ * Trait's `grantsTransformation` going, the sidebar).
+ */
+export function registerTransformationHooks() {
+  // Ki at 0 in a Form or Enhancement: said to whoever plays them, from the client that brought it there (chat.mjs kiEmptied).
+  Hooks.on("updateActor", async (actor, changes, options, userId) => {
+    if ((userId !== game.user.id) || !foundry.utils.hasProperty(changes, "system.ki.value")) return;
+    if ((Number(foundry.utils.getProperty(changes, "system.ki.value")) || 0) > 0) return;
+    (await import("./chat.mjs")).kiEmptied(actor);
+  });
+  Hooks.on("deleteItem", async (item, options, userId) => {
+    if ((item.type !== TRANSFORMATION_TYPE) || !item.parent || (userId !== game.user.id)) return;
+    const actor = item.parent;
+    const traits = Array.from(actor.items).filter(each => each.system?.transformation === item.id).map(each => each.id);
+    const given = Array.from(actor.items).filter(each => traits.includes(each.flags?.["dbu-ttrpg"]?.grantedBy)).map(each => each.id);
+    const ids = [...traits, ...given].filter(id => actor.items.has(id));
+    if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids);
+  });
+}
+
+// More of what the effects language asks (conditions.mjs):
+// - inTransformation(id): that one in use - a Variant of it counting (Tail Proficiency's "While in the Oozaru Transformation");
+// - inFormOrTranscended: a Form - not a Null Stage - an Evolved Stage, or a Transcended Enhancement (Transformation Training's);
+// - inEnhancement: an Enhancement not Transcended (Enhanced Fusion's "a non-Transcended Enhancement");
+// - enhancementsAtLeast(n): that many Enhancements in use together (Enhanced Fusion's "2+ Enhancements");
+// - transformedTierAtLeast(n): in one asking that Tier of Power or more (Conserving Strength's).
+useTransformationQuestion("inTransformation", (actor, id) => inTransformationOf(actor, String(id ?? "")));
+useTransformationQuestion("inFormOrTranscended", actor => inTransformationOf(actor, "form")
+  || transformationsInUse(actor).some(item => (kindOf(fileOf(item)) === "enhancement") && item.system?.transcended));
+useTransformationQuestion("inEnhancement", actor => transformationsInUse(actor)
+  .some(item => (kindOf(fileOf(item)) === "enhancement") && !item.system?.transcended));
+useTransformationQuestion("enhancementsAtLeast", (actor, n) => transformationsInUse(actor)
+  .filter(item => kindOf(fileOf(item)) === "enhancement").length >= (Number(n) || 0));
+useTransformationQuestion("transformedTierAtLeast", (actor, n) => topTierInUse(actor) >= (Number(n) || 0));

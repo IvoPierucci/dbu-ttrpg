@@ -3,6 +3,8 @@ name: Discarded Divinity
 order: 1
 category: body
 importance: primary
+# (1) True Angel given.
+grantsTransformation: true-angel
 description: >
   Stepping down from the realm of the gods, you blend in among mortalkind.
 text: >
@@ -17,7 +19,7 @@ text: >
 
 ---
 
-# (1) Waits on Transformations - Enhancements - not built yet: the table's.
+# (1) Its header.
 
 [passive]
 # (2) Read where God Ki is sensed (chat.mjs).

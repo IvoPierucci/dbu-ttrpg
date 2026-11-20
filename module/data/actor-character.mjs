@@ -221,6 +221,13 @@ function recordWorkings(data, key, { slot: slotKey = key, base, parts, raw, valu
 }
 
 /** Steady Momentum (2): the Actions it gave this Combat Round - kept on the character's flag with the Round they are of. */
+/** Power Advantage's Action, for the Combat Round it was gained in. */
+function powerAdvantageNow(data) {
+  const held = data.parent?.flags?.["dbu-ttrpg"]?.powerAdvantage;
+  const combat = globalThis.game?.combat;
+  return (held && combat?.started && (held === `${combat.id}:${combat.round ?? 0}`)) ? 1 : 0;
+}
+
 function steadyActionsNow(data) {
   const held = data.parent?.flags?.["dbu-ttrpg"]?.steadyActions;
   const combat = globalThis.game?.combat;
@@ -2851,7 +2858,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // Brawler (1): "Gain an additional Action each Combat Round while Pinned" - past Pinned's one.
         + ((((Number(this.conditions?.pinned) || 0) > 0) && (this.effects.slots["brawler.pinnedAction"] === true)) ? 1 : 0)
         // Steady Momentum (2): this Combat Round's.
-        + steadyActionsNow(this)),
+        + steadyActionsNow(this)
+        // Power Advantage (combat.mjs powerAdvantages): this Combat Round's.
+        + powerAdvantageNow(this)),
       // "You cannot gain more than 6 Counter Actions in a single Combat Round."
       // One-Man Army: "Instead of 1 Counter Action, Elite and Villain Adversaries gain PCC Adversary Actions at the start of
       // each Combat Round. Adversary Actions can be spent as if they were Counter Actions" - this pool, begun at the PCC, and

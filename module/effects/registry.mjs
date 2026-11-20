@@ -564,6 +564,14 @@ function transformationPrograms(actor, report) {
     if (!errors.length) entries.push({ program, priority: PRIORITY.transformation, sourceId: "transformation:ki-multiplier", sourceUuid: null,
       sourceName: "Ki Multiplier (in a Form)", level: 0, stacks: 1 });
   }
+  // New Level of Power: "while you are in that Transformation, until the end of the Combat Encounter: your Tier of Power increases by 1
+  // (Breakthrough) and your Stress Bonus by 1(bT)" - ticked on its row (the user's: the table's to tick), one at a time.
+  const lifted = transformationsInUse(actor).find(item => item.system?.newLevel);
+  if (lifted) {
+    const { program, errors } = compile("transformation:new-level", { script: "[passive]\ntierOfPower += 1;\nstressBonus += 1(bT);" }, report);
+    if (!errors.length) entries.push({ program, priority: PRIORITY.transformation, sourceId: "transformation:new-level", sourceUuid: null,
+      sourceName: `New Level of Power (${lifted.name})`, level: 0, stacks: 1 });
+  }
   for (const item of transformationsInUse(actor)) {
     const script = bonusScript(item);
     if (!script) continue;

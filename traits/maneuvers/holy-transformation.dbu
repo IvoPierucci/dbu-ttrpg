@@ -9,7 +9,7 @@ usageLimit: 1/encounter
 # A God Maneuver: open where an effect grants it, only in God Ki, its 2(T) paid in Divine Ki Points (maneuvers.mjs
 # whyNotGod, spendManeuverCost). "Enter a Transformation with the God Ki Aspect ... considered the Transformation
 # Maneuver for any effects" - the Transformation Maneuver's door with no Stress Test (noStressTest): which one is asked,
-# and entered. Its God Ki Aspect is the table's: Transformations are not built yet.
+# and entered.
 godManeuver: true
 transforms: true
 noStressTest: true
@@ -17,6 +17,8 @@ tags: transformation
 says: >
   A Transformation with the God Ki Aspect - no Stress Test for entering it, later ones as usual.
 source: Core Rule
+# The Transformation it enters has the God Ki Aspect - one that has not, said as it is chosen (chat.mjs askTransformation).
+entersAspect: god-ki
 description: >
   A God Maneuver: enter a Transformation with the God Ki Aspect, no Stress Test for entering it.
 text: >
@@ -27,3 +29,5 @@ text: >
   –Effect: Enter a Transformation with the God Ki Aspect. You do not roll a Stress Test for entering the Transformation,
   but any subsequent Stress Tests are rolled as usual. This Maneuver is considered the Transformation Maneuver for any
   effects.
+
+---

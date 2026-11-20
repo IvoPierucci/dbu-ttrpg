@@ -155,8 +155,10 @@ async function startRound(combat) {
     }
   }
 
+  // Power Advantage, said on the Round's card.
+  const advantaged = await powerAdvantages(combat);
   // Recovery Periods, for the Round that ended - said on the Round's card; and Minion Mark's loss as this one starts.
-  const recovered = [...(((combat.round ?? 0) > 1) ? await recoveryPeriods(combat) : []), ...await markedMinionsBleed(combat)];
+  const recovered = [...(((combat.round ?? 0) > 1) ? await recoveryPeriods(combat) : []), ...await markedMinionsBleed(combat), ...advantaged];
   const roundCard = await announce("start-of-round", {
     title: `Start of Combat Round ${combat.round}`,
     subjects: combatants(combat).map(actor => actor.uuid),
@@ -169,6 +171,28 @@ async function startRound(combat) {
       await experiencedRoundStart(actor, roundCard, lastAttacks.get(actor.uuid), `${combat.id}:${(combat.round ?? 0) - 1}`);
     }
   }
+}
+
+/**
+ * Power Advantage: "At the start of each Combat Round, if your base Tier of Power is higher than the base Tier of Power of all of your
+ * Opponents, gain an additional Action to spend during this Combat Round" - an Opponent in the Combat Encounter, one at least; a New
+ * Level of Power in use "increases your base Tier of Power by 1 for the effects of Power Advantage". Kept for this Round on them
+ * (`powerAdvantage`, actor-character.mjs); what happened, for the Round's card.
+ */
+async function powerAdvantages(combat) {
+  const { areOpponents } = await import("./allies.mjs");
+  const { transformationsInUse } = await import("./transformations.mjs");
+  const round = `${combat.id}:${combat.round ?? 0}`;
+  const everyone = combatants(combat);
+  const baseOf = actor => (Number(actor.system?.baseTierOfPower) || 1) + (transformationsInUse(actor).some(item => item.system?.newLevel) ? 1 : 0);
+  const said = [];
+  for (const actor of everyone) {
+    const opponents = everyone.filter(other => (other !== actor) && !other.system?.defeated && areOpponents(actor, other));
+    if (!opponents.length || !opponents.every(other => baseOf(actor) > baseOf(other))) continue;
+    await actor.setFlag("dbu-ttrpg", "powerAdvantage", round);
+    said.push(`${actor.name}: Power Advantage - an Action more this Round.`);
+  }
+  return said;
 }
 
 /**

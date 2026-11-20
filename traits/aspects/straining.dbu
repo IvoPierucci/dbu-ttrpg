@@ -14,4 +14,7 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# "Make a Stress Test at the start of each of your turns" - to remain in what you are in, against their Requirement together (chat.mjs
+# forcedStressTest).
+[automatic/start-of-turn]
+stressTest();

@@ -7,8 +7,11 @@ group: domain-traits
 groupLabel: Domain Traits
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 2, 3
-# (2)(3) Time Power: added from the Transformations tab; Linked (Time Power).
+# (3) Linked (Time Power).
 aspects: +Linked (Time Power)
+# (2) Time Power given as it is chosen; (4) its Stress Test Requirement 4 lower while this applies - in Divinity Unleashed.
+grantsTransformation: time-power
+stressFor: time-power 4
 description: >
   The flow of time bends to your will, acting in accordance with your deepest desires.
 text: >
@@ -27,4 +30,4 @@ text: >
 if (frozenTurn) {
     combatRolls += 1(T);
 }
-# (4)(6)(7): the table's.
+# (2), (4) Its header. (6), (7) the Freeze Attack's: the table's.

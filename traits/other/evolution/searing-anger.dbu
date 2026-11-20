@@ -1,6 +1,9 @@
 id: searing-anger
 name: Searing Anger
 order: 16
+# (1), (2) Seething Fury given, its Stress Test Requirement 2 lower.
+grantsTransformation: seething-fury
+stressFor: seething-fury 2
 description: >
   The gall of these lesser beings who dare to stand before you boils your blood. You will triumph over all, for none can withstand the wrath of the imperious Arcosian race.
 text: >
@@ -12,8 +15,7 @@ text: >
 
 ---
 
-# (1), (2) Wait on the Transformations: Forms and Enhancements are not built yet - the Stress Test Requirement is the
-# player's to give the Transformation Maneuver.
+# (1), (2) Its header.
 
 # (3) An Attacking Maneuver of yours that hit an Opponent, Raging: the Overwhelm stacks' 1(T) once more on its Wound Roll, a
 # part of its own; once it is made, Overwhelm down to 1 (chat.mjs rollAttackWound).

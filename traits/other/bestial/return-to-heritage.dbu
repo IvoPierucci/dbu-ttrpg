@@ -1,6 +1,9 @@
 id: return-to-heritage
 name: Return to Heritage
 order: 16
+# (2), (3) Feral Fist given, its Stress Test Requirement 2 lower.
+grantsTransformation: feral-fist
+stressFor: feral-fist 2
 description: >
   You have the inherent ability to push away your conscious mind and act on instinct alone.
 text: >
@@ -16,4 +19,4 @@ text: >
 if (inState("feral")) {
     combatRolls += 1(bT);
 }
-# Not built: (2), (3) - the Feral Fist Enhancement Power waits on Transformations.
+# (2), (3) Its header.

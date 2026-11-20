@@ -20,7 +20,10 @@ text: >
 [passive]
 # (1)
 wound += 1(T);
-# (2) Waits on Transformations - the Oozaru is not built yet.
+# (2) In the Oozaru Transformation.
+if (inTransformation("oozaru")) {
+    strike += 1(T);
+}
 # (3) The Tail Attack opened while the tail is had; through this alone, once an Encounter and the Simple Profile only - no
 # variant asked (use-maneuver.mjs, maneuvers.mjs tailProficiencyOnly).
 if (tailed) {

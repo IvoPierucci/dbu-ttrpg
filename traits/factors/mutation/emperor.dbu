@@ -6,6 +6,9 @@ category: body
 importance: secondary
 # Under the "Arcosian Factor Trait" header: a Arcosian's alone - shown, never enforced.
 race: arcosian
+# (1) Every Stage of Metamorphosis given with it; (2) Arcosian Forms part of that Line for your effects (transformations.mjs lineOf).
+grantsTransformation: full-suppression, heavy-suppression, partial-suppression, true-form
+formsOfRaceInLine: arcosian metamorphosis
 description: >
   Your power is so immense it must be held back lest it destroy all those around you.
 text: >
@@ -18,7 +21,7 @@ text: >
 
 ---
 
-# (1), (2) Wait on Transformations - Forms and Transformation Lines - not built yet: the table's.
+# (1), (2) Its header: the four Stages given; Arcosian Forms in the Metamorphosis Line (Step-by-Step's 2, a Restricted - Transformation's).
 [passive]
 # (3) The Transformation Maneuver's window: the Overwhelm spent, 1 on its Stress Test for every 2 (chat.mjs askTransformation).
 allow emperor.stress;
@@ -28,5 +31,8 @@ allow emperor.stress;
 [triggered/legend-realized, 1/round, effect 4]
 fillResource(overwhelm);
 
-# (5) Not built: the Transformation out of sequence between your turn's end and Overwhelming Fighter's (2) is the table's - Transformations
-# are not built either.
+# (5) At the end of your turn, below the Injured Health Threshold, once an Encounter: the Transformation Maneuver out of sequence, offered
+# on your latest card - before Overwhelming Fighter's (2), the order the table's.
+[triggered/end-of-turn, 1/encounter, outOfSequence, effect 5]
+requires belowThreshold("injured");
+transformationOutOfSequence();

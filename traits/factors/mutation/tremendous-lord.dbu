@@ -6,6 +6,10 @@ category: body
 importance: secondary
 # Under the "Namekian Factor Trait" header: a Namekian's alone - shown, never enforced.
 race: namekian
+# (2) Great Namekian given, with Natural (LV1) - by its own id alone: "not ... any other Transformation that would be treated as Great
+# Namekian".
+grantsTransformation: great-namekian
+grantsAspectTo: great-namekian Natural (LV1)
 description: >
   Your body grows to titanic heights, allowing you to literally tower over your enemies.
 text: >
@@ -20,7 +24,7 @@ text: >
 [passive]
 # (1) Read where the Size's Defense Value is (actor-character.mjs), and where an Opponent's Punching Up is (chat.mjs punchingUp).
 allow tremendous.size;
-# (2) Waits on Transformations - the Great Namekian Enhancement - not built yet: the table's.
+# (2) Its header: Great Namekian given, Natural (LV1).
 # (3) Hit by a smaller Character: a button on the attack's card before its Wound Roll, once a Round (chat.mjs tremendousLordButtons).
 allow tremendous.soak;
 # (4) Namekian Biology (3) used: the Transformation offered on its card, once an Encounter (chat.mjs tremendousOffer).

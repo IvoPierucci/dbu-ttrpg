@@ -974,6 +974,16 @@ export const VERBS = Object.freeze({
     doc: "A stack of Impaired on whoever this Moment says was knocked through, till the start of your next turn, on your clock "
        + "(chat.mjs impairKnocked) - Draconic Physique's Elemental Dragon."
   },
+  stressTest: {
+    args: [0, 0],
+    doc: "A Stress Test to remain in the Transformations you are in, against their Requirement together (chat.mjs forcedStressTest) - "
+       + "the Straining Aspect's \"at the start of each of your turns\"."
+  },
+  transformationOutOfSequence: {
+    args: [0, 0],
+    doc: "The Transformation Maneuver offered out of sequence on your latest card (chat.mjs allOutTransform) - Emperor (5)'s, Second "
+       + "Phase (2)'s, Enhanced Fusion (4)'s."
+  },
   markKnocked: {
     args: [2, 3],
     names: [0, 2],

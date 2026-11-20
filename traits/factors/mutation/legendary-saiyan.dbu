@@ -6,6 +6,9 @@ category: body
 importance: secondary
 # Under the "Saiyan Factor Trait" header: a Saiyan's alone - shown, never enforced.
 race: saiyan
+# (1) The Legendary Evolved Stage, given with it - one for every Form it goes on (transformations.mjs: an Evolved Stage is on the Form
+# you are in); its Prerequisite said as it is entered.
+grantsTransformation: legendary-evolved
 description: >
   Your power is constantly growing, overflowing beyond even your maximum potential.
 text: >
@@ -17,7 +20,7 @@ text: >
 
 ---
 
-# (1) Waits on Transformations - Forms, their Aspects and Evolved Stages - not built yet: the table's.
+# (1) Its header: the Legendary Evolved Stage given.
 
 # (2) Born for Battle's "up to 2 stacks of Battle Born on a single Combat Roll" - 4 on the Wound Roll.
 [passive]
