@@ -129,8 +129,6 @@
             {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
           </button>
           {{/each}}
-          <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
-                  data-tooltip="Edit this Trait - its Effect is what it does on this character">&#9998;</button>
         </div>
         <div class="trait-body">
           {{#each entry.lines as |line|}}{{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}<div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}{{/each}}

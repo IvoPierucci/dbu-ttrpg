@@ -473,6 +473,34 @@ export function transformationTraitProgram(item, program, items = item?.parent?.
   return { ...program, blocks: (program.blocks ?? []).filter(block => kept.has(Number(block.modifiers?.effect) || 0)) };
 }
 
+/**
+ * A Transformation Trait Item's script: its file's, read every time (the plan - a file put right reaches every character that has
+ * it), with what was chosen for it as it was gained written in ($choice, $choice2, $choice3; each Option chosen, as its own
+ * `#@ option` part) and its Transformation's G, Z, S and M ($G, $Z, $S, $M). An Item whose file is gone keeps its own.
+ */
+export function transformationTraitScript(item, items = item?.parent?.items) {
+  const trait = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  if (!trait) return String(item?.system?.script ?? "");
+  const chosen = Array.from(item.system?.chosen ?? []);
+  const pick = key => chosen.find(entry => entry?.key === key)?.value;
+  const written = (source, script) => {
+    let text = String(script ?? "");
+    for (const [token, key] of [["$choice3", `${source.id}#3`], ["$choice2", `${source.id}#2`], ["$choice", source.id]]) {
+      const value = pick(key);
+      if (value !== undefined) text = text.replaceAll(token, value);
+    }
+    return text.trim();
+  };
+  const parts = [written(trait, trait.script)];
+  for (const entry of chosen.filter(each => each?.key === "option")) {
+    const option = getTrait(entry.value);
+    if (option) parts.push(`#@ option ${option.id} | ${option.name}\n${written(option, option.script)}\n#@ end`);
+  }
+  const owner = Array.from(items ?? []).find(each => each.id === item.system?.transformation);
+  const letters = lettersOf(owner, fileOf(owner));
+  return parts.filter(Boolean).join("\n\n").replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0));
+}
+
 useTransformationGate((item, items) => transformationTraitAside(item, items));
 
 /**

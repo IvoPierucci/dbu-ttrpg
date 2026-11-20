@@ -19,7 +19,8 @@ import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { shelteredBy } from "../vehicle-crew.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { attributeShareScript } from "../fusion-of-ki.mjs";
-import { aspectScript, bonusScript, combineAspects, transformationsInUse, transformationTraitProgram } from "../transformations.mjs";
+import { aspectScript, bonusScript, combineAspects, transformationsInUse, transformationTraitProgram, transformationTraitScript }
+  from "../transformations.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, categoryApplies, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
   topLayerPiece, wieldedWeapons, formScript, activeForm, buddiesOf, buddyScript,
@@ -169,8 +170,9 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     if ((item.type === "racial") && traitAside(item, actor.items, actor)) continue;
 
     // A Unique Ability's script is its own and each Advancement bought and Restriction applied.
+    // A Transformation Trait's from its file, every time (transformations.mjs transformationTraitScript).
     const script = (item.type === "maneuver") && (item.system?.tags ?? []).includes("uniqueAbility")
-      ? uniqueScriptOf(item.system) : item.system?.script;
+      ? uniqueScriptOf(item.system) : item.system?.transformation ? transformationTraitScript(item, actor.items) : item.system?.script;
     const { program: whole, errors } = compile(
       item.uuid,
       { script, rows: item.system?.effects },

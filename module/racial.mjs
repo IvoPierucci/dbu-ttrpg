@@ -1580,6 +1580,13 @@ async function giveGrants(actor, item, grants, name) {
   }
 }
 
+/** The script a Racial Trait Item acts by: its own - a Transformation Trait's, its file's (transformations.mjs). */
+async function traitItemScript(item) {
+  if (!item?.system?.transformation) return item?.system?.script ?? "";
+  const { transformationTraitScript } = await import("./transformations.mjs");
+  return transformationTraitScript(item);
+}
+
 /**
  * The Triggered effects of a Racial Trait Item that the Traits tab toggles between Triggered and Automatic - not those a
  * window offers as they happen, nor those that cost Actions (a moment's card takes and pays for them) - as block ids.
@@ -1587,7 +1594,7 @@ async function giveGrants(actor, item, grants, name) {
 export async function toggledBlocks(item) {
   const { compile } = await import("./effects/parser.mjs");
   const { chosenAsItHappens } = await import("./effects/registry.mjs");
-  return (compile(item?.system?.script ?? "").program?.blocks ?? [])
+  return (compile(await traitItemScript(item)).program?.blocks ?? [])
     .filter(block => (block.mode === "triggered") && !block.budget?.actions && !chosenAsItHappens(block))
     .map(block => `${item.id}#${block.index}`);
 }
@@ -1596,7 +1603,7 @@ export async function toggledBlocks(item) {
 export async function automateAll(actor, item) {
   // But one marked to start Triggered (`startsTriggered`).
   const { compile } = await import("./effects/parser.mjs");
-  const later = new Set((compile(item?.system?.script ?? "").program?.blocks ?? [])
+  const later = new Set((compile(await traitItemScript(item)).program?.blocks ?? [])
     .filter(block => block.modifiers?.startsTriggered).map(block => `${item.id}#${block.index}`));
   const ids = (await toggledBlocks(item)).filter(id => !later.has(id));
   if (!actor || !ids.length) return;
