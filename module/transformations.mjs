@@ -594,3 +594,68 @@ export async function removeTransformation(actor, itemId) {
   const ids = [itemId, ...traits, ...given].filter(id => actor.items.has(id));
   if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids);
 }
+
+// --- Awakenings ---------------------------------------------------------------------------------------------------------------
+
+/** The Awakening Limit by base Tier of Power (Lesser, Greater): "1 -> 2/1, 2 -> 3/1, 3 -> 4/2, 4 -> 5/2, 5 -> 6/3, 6 -> 7/3, 7 -> 7/4". */
+export const AWAKENING_LIMIT = Object.freeze({ 1: [2, 1], 2: [3, 1], 3: [4, 2], 4: [5, 2], 5: [6, 3], 6: [7, 3], 7: [7, 4] });
+
+/**
+ * How many Lesser and Greater Awakenings count toward the Awakening Limit, and the Limit - said, never refused (the user's). Each
+ * Stack one; a Temporary Awakening's not ("does not count towards your Awakening Limit"); nor one whose file says it is free of
+ * it beside another the character has (`limitFreeWith:` - Class Up beside Class Avatar).
+ */
+export function awakeningCount(actor) {
+  const items = transformationItems(actor);
+  const had = new Set(items.map(item => item.system?.transformationId));
+  const count = { lesser: 0, greater: 0 };
+  for (const item of items) {
+    const file = fileOf(item);
+    if (kindOf(file) !== "awakening") continue;
+    if (listOf(file.limitFreeWith).some(id => had.has(id))) continue;
+    const type = String(file.subtype ?? "").toLowerCase();
+    if (!(type in count)) continue;
+    count[type] += Math.max(0, (Number(item.system?.stacks) || 0) - (Number(item.system?.temporaryStacks) || 0));
+  }
+  const base = Math.min(7, Math.max(1, Number(actor?.system?.baseTierOfPower) || 1));
+  const [lesser, greater] = AWAKENING_LIMIT[base];
+  return { lesser: count.lesser, greater: count.greater, lesserMax: lesser, greaterMax: greater };
+}
+
+/** A stack of an Awakening as a Temporary Awakening of a level (Born for Battle (4)'s Zenkai), or the Awakening itself so. */
+export async function gainTemporaryAwakening(actor, id, level = 1) {
+  const file = transformationFile(id);
+  if (!actor || !file || (kindOf(file) !== "awakening")) return null;
+  const had = transformationItems(actor).find(item => item.system?.transformationId === file.id);
+  if (!had) {
+    const item = await addTransformation(actor, file.id);
+    return item?.update({ "system.temporaryStacks": 1, "system.temporary": Math.max(1, level) });
+  }
+  return had.update({ "system.stacks": (Number(had.system.stacks) || 0) + 1,
+    "system.temporaryStacks": (Number(had.system.temporaryStacks) || 0) + 1,
+    "system.temporary": Math.max(Number(had.system.temporary) || 0, level) });
+}
+
+/**
+ * "Temporary Awakenings last until the end of the Combat Encounter": a Level 2's Stacks go "without discussion"; a Level 1's the ARC
+ * may let stay - kept, said on its row with Keep and End (keepTemporary, endTemporary).
+ */
+export async function endTemporaryAwakenings(actor) {
+  for (const item of transformationItems(actor).filter(each => (Number(each.system?.temporaryStacks) || 0) > 0)) {
+    if ((Number(item.system.temporary) || 0) >= 2) await endTemporary(actor, item.id);
+  }
+}
+
+/** A Temporary Awakening's Stacks kept: no longer temporary. */
+export async function keepTemporary(actor, itemId) {
+  return actor?.items.get(itemId)?.update({ "system.temporaryStacks": 0, "system.temporary": 0 });
+}
+
+/** A Temporary Awakening's Stacks ended - the Awakening with them where they were all it had. */
+export async function endTemporary(actor, itemId) {
+  const item = actor?.items.get(itemId);
+  if (!item) return;
+  const left = (Number(item.system.stacks) || 0) - (Number(item.system.temporaryStacks) || 0);
+  if (left <= 0) return removeTransformation(actor, item.id);
+  return item.update({ "system.stacks": left, "system.temporaryStacks": 0, "system.temporary": 0 });
+}

@@ -1,0 +1,24 @@
+id: spiritual-healing
+name: Spiritual Healing
+uaType: both
+prerequisite: Spirit Control
+tpCost: 10
+type: standard
+actionCost: 1
+kiCostPerTier: 10
+# "That Character regains 2d10(bT) Life and Ki Points. Increase the Dice Score of this roll by your Might." Rolled on its card;
+# who regains it the table's.
+source: Spirit Control
+description: >
+  A Character within your Melee Range regains 2d10(bT) + your Might Life and Ki Points.
+text: >
+  Spiritual Healing: You have the ability to restore someone's energy and vitality.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Spirit Control
+  –TP Cost: 10
+  –KP Cost: 10(T)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Target a Character within your Melee Range. That Character regains 2d10(bT) Life and Ki Points. Increase the Dice Score of this roll by your Might.

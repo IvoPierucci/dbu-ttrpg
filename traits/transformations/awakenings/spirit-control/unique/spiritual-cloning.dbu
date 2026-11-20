@@ -1,0 +1,26 @@
+id: spiritual-cloning
+name: Spiritual Cloning
+uaType: both
+prerequisite: Spirit Control
+tpCost: 15
+type: standard
+actionCost: 3
+kiCostPerTier: 10
+# Up to 4 Duplicate Minions, outside your maximum - made as any Duplicate is, from the Settings tab - and the Tier of Power 1 lower
+# for you and them while they stand: the table's.
+source: Spirit Control
+description: >
+  Up to 4 Duplicate Minions; you and they a Tier of Power lower (Combat Rolls -2 at Tier 1).
+text: >
+  Spiritual Cloning: You split into several copies of yourself created from your own energy.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Spirit Control
+  –TP Cost: 15
+  –KP Cost: 10(T)
+  –Maneuver Type: Standard
+  –Action Cost: 3 Actions
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Create up to 4 Duplicate Minions (these Minions do not count towards your maximum number of Minions). Reduce the Tier of Power of you and any Duplicate Minions created through Spiritual Cloning by 1 (if already Tier of Power 1, reduce your/their Combat Rolls by 2 instead).
+  If you fail a Steadfast Check while you have Duplicate Minion(s) created by Spiritual Cloning, those Minions are Defeated.
+  As an Instant Maneuver during your turn, you can erase all of your Duplicate Minions created by this Unique Ability.

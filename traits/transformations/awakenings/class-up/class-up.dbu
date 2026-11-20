@@ -9,6 +9,8 @@ tier: 2+
 maxStacks: 1
 aspects: 
 bonuses: AG +1, FO +1, TE +1, MA +1
+# Class Avatar (3): "The Class Up Awakening does not count towards your Awakening Limit" - beside it (transformations.mjs awakeningCount).
+limitFreeWith: class-avatar
 description: >
   There's more than one way to get strong, and you've capitalized on it. Whether by pushing your limits or by being granted extra power, you've specialized into a single aspect of fighting. However you achieve it, by increasing your prowess in your unique fighting style, you've become a Hero, an Elite, or a Berserker.
 text: >

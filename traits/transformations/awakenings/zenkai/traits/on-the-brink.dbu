@@ -13,4 +13,13 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Below the Injured Health Threshold with 6+ stacks of Battle Born: Strike and Dodge Rolls 1(T).
+[passive, effect 1]
+if (belowThreshold("injured") && stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    strike += 1(T);
+    dodge += 1(T);
+}
+
+# (2) A Healing Surge as an Instant Maneuver once an Encounter: the table's.
+# (3) Born for Battle (4) at 3 Stacks: the Surging State till the end of your next turn instead, its 2nd effect ignored - the
+# table's (Born for Battle gives the stack; take it off and enter Surging by hand).

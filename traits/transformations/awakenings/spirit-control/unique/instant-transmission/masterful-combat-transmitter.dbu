@@ -1,0 +1,13 @@
+id: masterful-combat-transmitter
+name: Masterful Combat Transmitter
+advancement: true
+prerequisite: Combat Transmitter
+tpCost: 5
+source: Spirit Control
+description: >
+  Combat Transmitter's attack may be the Signature Technique Maneuver.
+text: >
+  Masterful Combat Transmitter: You are extremely adept at fighting while teleporting around the battlefield.
+  –Prerequisites: Combat Transmitter
+  –TP Cost: 5
+  –Effect: If you use the effects of Combat Transmitter, you may use the Signature Technique Maneuver instead.

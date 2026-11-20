@@ -7,7 +7,7 @@ import { fusionContext, racesOf } from "../fusion.mjs";
 import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransformation, aspectFile, aspectsOf, bonusesOf, bonusWritten,
   combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
-  lettersOf } from "../transformations.mjs";
+  lettersOf, awakeningCount, keepTemporary, endTemporary } from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
@@ -463,6 +463,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       addTransformation: DBUCharacterSheet._onAddTransformation,
       removeTransformation: DBUCharacterSheet._onRemoveTransformation,
       transformationSection: DBUCharacterSheet._onTransformationSection,
+      keepTemporaryAwakening: DBUCharacterSheet._onKeepTemporaryAwakening,
+      endTemporaryAwakening: DBUCharacterSheet._onEndTemporaryAwakening,
       toggleTransformation: DBUCharacterSheet._onToggleTransformation,
       addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
       addOtherTrait: DBUCharacterSheet._onAddOtherTrait,
@@ -7206,6 +7208,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         masteryMax: peaked ? 0 : max,
         overMastery: (Number(item.system.mastery) || 0) > max,
         temporary: Number(item.system.temporary) || 0,
+        temporaryStacks: Number(item.system.temporaryStacks) || 0,
         newLevel: Boolean(item.system.newLevel),
         bonuses: Object.entries(BONUS_ATTRIBUTES).map(([label, attribute]) => ({ label,
           value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
@@ -7247,6 +7250,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       aspects: combineAspects(this.actor).filter(aspect => aspect.file?.bar !== false).map(aspect => ({ label: aspectLabel(aspect), from: aspect.from.join(", "),
         summary: aspect.file?.summary ?? "" })),
       stressBonus: Number(this.actor.system.stressBonus) || 0,
+      // On the Awakenings' section: the Awakening Limit, said and never refused.
+      awakeningLimit: (this.#transformationSection === "awakening") ? (limit => ({ ...limit, lesserOver: limit.lesser > limit.lesserMax,
+        greaterOver: limit.greater > limit.greaterMax }))(awakeningCount(this.actor)) : null,
       sections,
       rows,
       // By type of the Transformation each belongs to (the user's): an Evolved Stage's among the Forms.
@@ -7279,6 +7285,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const number = Math.max(0, Math.floor(Number(input.value) || 0));
     if (field === "grade") return item.update({ "system.grade": Math.max(1, number) });
     if (["stacks", "mastery"].includes(field)) return item.update({ [`system.${field}`]: number });
+  }
+
+  /** A Temporary Awakening the ARC lets stay. */
+  static async _onKeepTemporaryAwakening(event, target) {
+    if (!this.isEditable) return;
+    return keepTemporary(this.actor, target.closest("[data-tf-id]")?.dataset.tfId);
+  }
+
+  /** A Temporary Awakening's Stacks ended. */
+  static async _onEndTemporaryAwakening(event, target) {
+    if (!this.isEditable) return;
+    return endTemporary(this.actor, target.closest("[data-tf-id]")?.dataset.tfId);
   }
 
   /** The Transformations tab's section. */

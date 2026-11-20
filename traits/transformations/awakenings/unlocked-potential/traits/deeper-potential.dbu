@@ -13,4 +13,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) In the Surging State: Wound Rolls 2(T).
+[passive, effect 1]
+if (inState("surging")) {
+    wound += 2(T);
+}
+
+# (2) The Power Up as an Instant Maneuver once an Encounter, and (3) a Combat Roll's Natural Result set to 10 once an Encounter: the
+# table's.

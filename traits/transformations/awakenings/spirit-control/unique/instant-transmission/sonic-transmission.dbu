@@ -1,0 +1,13 @@
+id: sonic-transmission
+name: Sonic Transmission
+advancement: true
+prerequisite: 3+ Skill Ranks in Clairvoyance
+tpCost: 8
+source: Spirit Control
+description: >
+  Instant Transmission's Sphere becomes Destructive.
+text: >
+  Sonic Transmission: Your control over your teleportation allows you more space in which to appear.
+  –Prerequisites: 3+ Skill Ranks in Clairvoyance
+  –TP Cost: 8
+  –Effect: Increase the Magnitude of the Sphere AoE for the effects of Instant Transmission to Destructive.

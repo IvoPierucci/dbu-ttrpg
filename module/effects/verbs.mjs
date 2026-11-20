@@ -62,6 +62,12 @@ export const VERBS = Object.freeze({
     doc: "Gain a stack of one of these Resources, the character's player choosing which - Born for Battle's \"apply it "
        + "to either Strike, Dodge, or Wound (you decide)\". One already at its ceiling is not offered."
   },
+  temporaryAwakening: {
+    args: [1, 2],
+    names: [0],
+    doc: "Gain a stack of the named Awakening (its file's id) as a Temporary Awakening of the level after it (1 by default) - Born "
+       + "for Battle (4)'s Zenkai: till the end of the Combat Encounter, outside the Awakening Limit (transformations.mjs)."
+  },
   gainGear: {
     args: [1, 1],
     names: [0],

@@ -13,4 +13,24 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) 6+ stacks of Battle Born: Combat Rolls 1(T).
+[passive, effect 1]
+if (stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    combatRolls += 1(T);
+}
+
+# (2) Steadfast Checks 1 higher for each Health Threshold you are below, at most Z.
+[passive, effect 2]
+steadfast.dice += min(threshold.depth, $Z);
+
+# (3) In the Undying State - entered through Saiyan Heritage (2), which is the only way a Saiyan has: Soak Value and Wound Z(bT).
+[passive, effect 3]
+if (inState("undying")) {
+    soakValue += $Z * 1(bT);
+    wound += $Z * 1(bT);
+}
+
+# (4) A Steadfast Check passed: a stack of Battle Born, put where you say - Z times an Encounter. At your most of them, the Power Up or
+# the Transformation Maneuver out of sequence instead: the table's.
+[triggered/steadfast-passed, $Z/encounter, effect 4]
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);

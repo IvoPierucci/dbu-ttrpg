@@ -949,6 +949,8 @@ function followerSkips(actor) {
 export async function endEncounterFor(actor) {
   // "Adversaries lose all remaining Karma Points at the end of each Combat Encounter" - and what was its Rounds' with them.
   if (isAdversary(actor)) await actor.update(adversaryEncounterEnd());
+  // Temporary Awakenings (transformations.mjs): a Level 2's Stacks gone; a Level 1's the ARC's to keep or end on its row.
+  await (await import("./transformations.mjs")).endTemporaryAwakenings(actor);
   // A False Moon stands no longer than the Combat Encounter it was made in - Lasting Moon's included.
   const { falseMoonGone } = await import("./chat.mjs");
   for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.fakeMoon)) {

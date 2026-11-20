@@ -12,4 +12,10 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) 4+ stacks of Battle Born: Surgency Z(T).
+[passive, effect 1]
+if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    surgency += $Z * 1(T);
+}
+
+# (2) Z Energy Charges on an Ultimate Signature Technique used in the Undying State, once an Encounter: the table's.

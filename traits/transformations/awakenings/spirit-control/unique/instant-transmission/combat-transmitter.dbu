@@ -1,0 +1,13 @@
+id: combat-transmitter
+name: Combat Transmitter
+advancement: true
+prerequisite: Insight Score 8+
+tpCost: 10
+source: Spirit Control
+description: >
+  Placed beside an Opponent by Instant Transmission: the Basic Attack out of sequence at them.
+text: >
+  Combat Transmitter: You are able to attack as you teleport around the battlefield.
+  –Prerequisites: Insight Score 8+
+  –TP Cost: 10
+  –Effect: If you are placed on a Square adjacent to an Opponent through the effects of Instant Transmission, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target that Opponent with that Attacking Maneuver.

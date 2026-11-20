@@ -49,4 +49,11 @@ gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
 [triggered/heritage, 1/encounter, effect 3]
 raiseTo(3, battlebornstrike, battleborndodge, battlebornwound);
 
-# (4) Waits on Awakenings - Zenkai - not built yet: the table gives it.
+# (4) Knocked through the Critical Health Threshold, or a Triggered/Defeated effect used: a stack of Zenkai as a Level 1
+# Temporary Awakening (transformations.mjs gainTemporaryAwakening) - once an Encounter between the two (one printed effect).
+[triggered/threshold, 1/encounter, effect 4]
+requires knockedThrough("critical");
+temporaryAwakening(zenkai, 1);
+
+[triggered/defeated, 1/encounter, effect 4]
+temporaryAwakening(zenkai, 1);

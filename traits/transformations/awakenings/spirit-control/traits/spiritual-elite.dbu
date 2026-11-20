@@ -13,4 +13,10 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Spiritual Unique Abilities' Ki Point Cost 2(T) lower: on their own rows' Cost - the table's (nothing here tells them
+# apart from any other Unique Ability).
+# (2) Wound 1/4 of the Attacking Maneuver's Ki Point Cost before reductions: the table's.
+
+# (3) At the start of your turn, Z(bT) Ki Points.
+[triggered/start-of-turn, effect 3]
+ki.value += $Z * 1(bT);

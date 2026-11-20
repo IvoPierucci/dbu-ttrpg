@@ -1,0 +1,38 @@
+id: forced-spirit-fission
+name: Forced Spirit Fission
+uaType: both
+prerequisite: 2+ stacks of Spirit Control
+tpCost: 30
+type: instant
+actionCost: 0
+kiCostPerTier: 6
+# Its five Clashes - a Fusion split, the Fused Ki State, Absorption, Overtaken, Unified - and the Lifeforce taken: said on its card,
+# the table's.
+source: Spirit Control
+description: >
+  Till the end of your turn your Attacking Maneuvers take Ki, Lifeforce, and may split Fusions and free the Absorbed, Merged and
+  Possessed. Passive: Cognitive Saving Throw and Wound Rolls 1(bT).
+text: >
+  Forced Spirit Fission: You excise unnatural influences from a target's spirit.
+  –Ability Type: Technical/Magical
+  –Prerequisites: 2+ stacks of Spirit Control
+  –TP Cost: 30
+  –KP Cost: 6(T)
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: Increase your Cognitive Saving Throw and Wound Rolls by 1(bT).
+  –Effect: Until the end of your turn, your Attacking Maneuvers benefit from the following effects:
+  • Reduce the Ki Points of any Character hit by your Attacking Maneuvers by 1/4 (rounded up) of your Might.
+  • If a Character hit by your Attacking Maneuver possesses stacks of Lifeforce or Consumed Lifeforce, remove 1 stack of Lifeforce or Consumed Lifeforce from that Character. If that Attacking Maneuver knocked them through a Health Threshold, then 2 stacks of Lifeforce or Consumed Lifeforce instead.
+  • If you deal Damage to a Fusion, make a Clash (Cognitive) against that Character. If you win, that Fusion is split into its Fused Characters (see — Defusing in a Combat Encounter).
+  • If you deal Damage to a Character in the Fused Ki State, make a Clash (Cognitive) against that Character. If you win, both they and their partner exit that Special State.
+  • If you deal Damage to a Character with a stack of the Absorption Awakening, make a Clash (Cognitive) against that Character. If you win, select a stack of that Awakening, eject the Absorbed Character and remove that stack of Absorption from that Character.
+  • If you deal Damage to a Character with the Overtaken Awakening, make a Clash (Cognitive) against that Character. If you win, eject the Possessing Character and remove the Overtaken Awakening from that Character.
+  • If you deal Damage to a Character with a stack of the Unified Awakening, make a Clash (Cognitive) against that Character. If you win, select a stack of the Unified Awakening, eject the Merged Character, and remove that stack of the Unified Awakening from that Character.
+
+---
+
+[passive]
+save.cognitive += 1(bT);
+wound += 1(bT);

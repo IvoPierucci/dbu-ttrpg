@@ -1,0 +1,31 @@
+id: instant-transmission
+name: Instant Transmission
+uaType: both
+prerequisite: Spirit Control
+tpCost: 15
+type: instant
+actionCost: 0
+kiCostPerTier: 4
+# The teleport, its Clashes and whoever comes along: said on its card - where everyone stands is the table's.
+source: Spirit Control
+description: >
+  Teleport to a Character you can sense (Clairvoyance vs Concealment), bringing those who lose a Clash with you. Passive: the
+  Teleport Adventuring Maneuver and Impulsive Saving Throw 1(T).
+text: >
+  Instant Transmission: By sensing the life energy of others, you are able to teleport yourself directly to their location, ignoring all the time and distance you would have needed to reach them normally.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Spirit Control
+  –TP Cost: 15
+  –KP Cost: 4(T)
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: You gain access to the Teleport Adventuring Maneuver and increase your Impulsive Saving Throw by 1(T)
+  –Effect: Target one Character you can sense through the Clairvoyance Skill. Make a Skill Clash (Clairvoyance vs Concealment) against them. If you win, you can instantly place yourself on a Square within a Sphere AoE (centered on them).
+  When you use this Unique Ability, you can make a Clash (Physical Strike vs Strike/Dodge) against any number of Characters within your Melee Range. If you win, they are immediately brought with you to your chosen location, instantly being placed on a Square within your Melee Range after you have arrived at your Square (they decide in order of Initiative). If you use Instant Transmission within a Grapple, you must target the other Character within the Grapple, and if the other Character wins the Clash, the Grapple immediately ends and the Grappled Character is freed.
+
+---
+
+# The Teleport Adventuring Maneuver: its text not given yet - the table's.
+[passive]
+save.impulsive += 1(T);

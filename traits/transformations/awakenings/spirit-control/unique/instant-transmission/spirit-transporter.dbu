@@ -1,0 +1,13 @@
+id: spirit-transporter
+name: Spirit Transporter
+advancement: true
+prerequisite: 4+ Skill Ranks in Clairvoyance, Insight Score 12+
+tpCost: 8
+source: Spirit Control
+description: >
+  Teleport your targeted Character beside you instead (Cognitive vs Impulsive).
+text: >
+  Spirit Transporter: Rather than teleport yourself, you possess the ability necessary to teleport others.
+  –Prerequisites: 4+ Skill Ranks in Clairvoyance, Insight Score 12+
+  –TP Cost: 8
+  –Effect: Make a Clash (Cognitive vs Impulsive) against your targeted Character. If you win, instead of moving yourself, move your targeted Character to an adjacent Square next to you.

@@ -1,0 +1,23 @@
+id: instant-transmission-saviour
+name: Instant Transmission: Saviour
+uaType: both
+prerequisite: Instant Transmission
+tpCost: 15
+type: counter
+actionCost: 1
+kiCostPerTier: 8
+minions: Non-Minion
+source: Spirit Control
+description: >
+  An Ally about to be hit: Clash (Impulsive vs Impulsive/Cognitive) with the attacker; won, the Ally evades and both of you move.
+text: >
+  Instant Transmission: Saviour: You teleport in to grab a comrade and teleport them out of danger.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Instant Transmission
+  –TP Cost: 15
+  –KP Cost: 8(T)
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: When an Ally is about to be hit by an Attacking Maneuver, select that Ally and then make a Clash (Impulsive vs Impulsive/Cognitive) against the attacking Character. If you win, the selected Ally automatically evades that Attacking Maneuver and then you and the selected Ally are moved to a Square and an adjacent Square of your choice respectively within a Large Sphere AoE (centered on the attacking Character).

@@ -15,4 +15,26 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) With a stack of Power: Combat Rolls and Soak Value Z(bT).
+[passive, effect 1]
+if (power.stacks >= 1) {
+    combatRolls += $Z * 1(bT);
+    soakValue += $Z * 1(bT);
+}
+
+# (2) A Botch's penalty Z(bT) lower on Combat Rolls: the table's (the penalty is one number for every roll).
+
+# (3) Z Maximum Life and Ki Points a Power Level.
+[passive, effect 3]
+life.perLevel += $Z;
+ki.perLevel += $Z;
+
+# (4) The Critical Result's Extra Die Z Categories higher.
+[passive, effect 4]
+dice.critical.category += $Z;
+
+# (5) A Combat Roll's Natural Result 1 higher after seeing it, Z times a Round: the table's.
+
+# (6) Using the Power Up, once an Encounter: the Surging State till the end of your turn.
+[triggered/power, 1/encounter, effect 6]
+enterState(surging, 1, turn);

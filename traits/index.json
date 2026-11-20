@@ -1980,6 +1980,17 @@
     "transformations/evolved/full-power-evolved/traits/power-to-the-limit.dbu",
     "transformations/evolved/legendary-evolved/legendary-evolved.dbu",
     "transformations/evolved/legendary-evolved/traits/unlimited-power.dbu",
-    "transformations/evolved/legendary-evolved/traits/unstoppable-legend.dbu"
+    "transformations/evolved/legendary-evolved/traits/unstoppable-legend.dbu",
+    "transformations/awakenings/spirit-control/unique/forced-spirit-fission.dbu",
+    "transformations/awakenings/spirit-control/unique/gigantification.dbu",
+    "transformations/awakenings/spirit-control/unique/instant-transmission-assault.dbu",
+    "transformations/awakenings/spirit-control/unique/instant-transmission-saviour.dbu",
+    "transformations/awakenings/spirit-control/unique/instant-transmission.dbu",
+    "transformations/awakenings/spirit-control/unique/instant-transmission/combat-transmitter.dbu",
+    "transformations/awakenings/spirit-control/unique/instant-transmission/masterful-combat-transmitter.dbu",
+    "transformations/awakenings/spirit-control/unique/instant-transmission/sonic-transmission.dbu",
+    "transformations/awakenings/spirit-control/unique/instant-transmission/spirit-transporter.dbu",
+    "transformations/awakenings/spirit-control/unique/spiritual-cloning.dbu",
+    "transformations/awakenings/spirit-control/unique/spiritual-healing.dbu"
   ]
 }

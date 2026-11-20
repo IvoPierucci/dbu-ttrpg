@@ -33,6 +33,14 @@
 
     {{#if tf.sections.length}}
 
+    {{#if tf.awakeningLimit}}
+    {{! The Awakening Limit by base Tier of Power - said, never refused. }}
+    <div class="dbu-tf-on dbu-tf-limit">
+      <span class="dbu-tf-dim">Awakening Limit:</span>
+      <span class="dbu-tf-chip{{#if tf.awakeningLimit.lesserOver}} warn{{/if}}">Lesser {{tf.awakeningLimit.lesser}} of {{tf.awakeningLimit.lesserMax}}</span>
+      <span class="dbu-tf-chip{{#if tf.awakeningLimit.greaterOver}} warn{{/if}}">Greater {{tf.awakeningLimit.greater}} of {{tf.awakeningLimit.greaterMax}}</span>
+    </div>
+    {{/if}}
     <ul class="dbu-tf-list">
       {{#each tf.rows as |row|}}
       {{#if row.line}}
@@ -73,7 +81,16 @@
             {{/if}}
           </span>
         </div>
-        {{#if row.temporary}}<div class="dbu-tf-on"><span class="dbu-tf-chip ext">Temporary Awakening, level {{row.temporary}}</span></div>{{/if}}
+        {{#if row.temporaryStacks}}
+        {{! A Temporary Awakening: till the end of the Combat Encounter - a Level 1's the ARC may let stay. }}
+        <div class="dbu-tf-on">
+          <span class="dbu-tf-chip ext">Temporary Awakening, Level {{row.temporary}}: {{row.temporaryStacks}} of its Stacks</span>
+          {{#if @root.editable}}
+          <button type="button" class="dbu-tf-small" data-action="keepTemporaryAwakening" data-tooltip="The ARC lets it stay: no longer temporary">Keep</button>
+          <button type="button" class="dbu-tf-small" data-action="endTemporaryAwakening" data-tooltip="Its temporary Stacks gone">End</button>
+          {{/if}}
+        </div>
+        {{/if}}
         <div class="dbu-tf-bonuses">
           {{#each row.bonuses as |bonus|}}<span class="dbu-tf-bonus{{#if bonus.up}} up{{/if}}">{{bonus.label}} {{bonus.value}}</span>{{/each}}
         </div>
