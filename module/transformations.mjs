@@ -1729,3 +1729,33 @@ export function registerAspectHooks() {
     ui.notifications.info(`${actor.name}: the tail lost - ${tailed.map(item => item.name).join(", ")} left (Blutz Wave), Stress Exhaustion.`);
   });
 }
+
+/**
+ * What Heartbeat offers a character now, for a roll window's choice (the user's: on the first roll of a Maneuver's card - the Strike, the
+ * answer to an attack, a Clash's side): each Transformation it may enter (its value its id), and a Graded one already in use at each higher
+ * Grade ("id:grade").
+ */
+export function heartbeatOptions(actor) {
+  const out = [];
+  for (const item of transformationItems(actor)) {
+    if (!aspectsOf(item, actor.items).some(aspect => aspect.id === "heartbeat") || heartbeatOf(item)) continue;
+    const grades = gradesOf(fileOf(item));
+    if (inUse(item) && grades) {
+      for (let grade = (Number(item.system.grade) || 1) + 1; grade <= grades; grade++) {
+        // A Grade a Mastery opens: offered, what it needs said (the user's: never refused).
+        const needs = gradeRow(fileOf(item), grade).values.needs;
+        if (!heartbeatRefused(actor, item, grade)) out.push({ value: `${item.id}:${grade}`, label: `${item.name}, Grade ${grade}${needs ? ` (needs ${needs})` : ""}` });
+      }
+    }
+    else if (!heartbeatRefused(actor, item)) out.push({ value: item.id, label: item.name });
+  }
+  return out;
+}
+
+/** The one chosen in a roll window ("id" or "id:grade") entered through Heartbeat. */
+export async function takeHeartbeat(actor, value) {
+  const [id, grade] = String(value ?? "").split(":");
+  const item = id ? actor?.items?.get(id) : null;
+  if (!item) return;
+  return heartbeatEnter(actor, item, grade ? Number(grade) : undefined);
+}

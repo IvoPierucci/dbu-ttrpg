@@ -30,6 +30,7 @@ import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANK
 import { environmentOf } from "./breath.mjs";
 import { highTraitOf, isAirborne, qualitiesOf } from "./environments.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
+import { heartbeatOptions, takeHeartbeat } from "./transformations.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { customBuffBasicIsSignature, customBuffMarked, customBuffOn } from "./custom-buffs.mjs";
 import { armorPiercing, damageAttributeOf, namedDamageAttribute, karmicSteps, linkedPick, skyAssaultWaives,
@@ -9287,7 +9288,10 @@ export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
                                     difficulties = false, senses = [], formula = null, offerWilling = true,
-                                    pick = null, boxes = [], slot = null, top = "", confirmLabel = null, spend = "" } = {}) {
+                                    pick = null, boxes = [], slot = null, top = "", confirmLabel = null, spend = "",
+                                    heartbeat = false } = {}) {
+  // Heartbeat: the first roll of a Maneuver's card - its Strike, a Clash's side (the user's).
+  const heartbeatPart = heartbeat ? heartbeatSection(actor) : "";
   // What each offered effect would do to this roll, worked out before it is ticked - so the box shows it the moment it is
   // (the user's). Only for a Combat Roll with its own Slot: what answers it is read at `combat-roll`.
   const previews = (formula && slot && combatRoll)
@@ -9403,7 +9407,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
         `<span data-roll-formula>${formulaHtml({ ...formula, parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll)] })}</span>`) : ""}`,
       // What is spent on the roll (the Wound's), then the Effects - Willing failure, the Triggered ones never folded, the
       // Traits' and the Karmic ones - each section titled, as Respond's are (the user's).
-      body: `${difficultyRows}${pickRow}${boxRows}${senseRows}${spend ? rollSection("Spend on this roll", spend) : ""}${
+      body: `${heartbeatPart}${difficultyRows}${pickRow}${boxRows}${senseRows}${spend ? rollSection("Spend on this roll", spend) : ""}${
         (willing || rows || traitGroup || karmicGroup) ? rollSection("Effects", `${willing}${rows
           ? `<div class="dbu-respond-group dbu-respond-fixed"><div class="dbu-respond-fixed-title">Triggered Effects</div>${rows}</div>` : ""}${traitGroup}${karmicGroup}`) : ""}`
     }),
@@ -9435,7 +9439,8 @@ export async function prepareRoll(actor, effects, title, hint = "",
           picked: dialog.element.querySelector('select[name="pick"]')?.value ?? "",
           boxes: [...dialog.element.querySelectorAll('input[name="box"]:checked')].map(input => input.value),
           senses: [...dialog.element.querySelectorAll('input[name="sense"]:checked')]
-            .map(input => input.value)
+            .map(input => input.value),
+          heartbeat: dialog.element.querySelector('select[name="heartbeat"]')?.value ?? ""
         })
       },
       { action: "cancel", label: "Close" }
@@ -9444,6 +9449,9 @@ export async function prepareRoll(actor, effects, title, hint = "",
   });
 
   if (!chosen || (typeof chosen !== "object")) return false;
+
+  // Heartbeat taken: in it before anything is rolled.
+  if (chosen.heartbeat) await takeHeartbeat(actor, chosen.heartbeat);
 
   const changes = {};
   if (chosen.triggers.length) {
@@ -9900,7 +9908,7 @@ async function respondDialog(message, respondable, { initials = new Map(), check
       actor, isTarget: answersAttack, usable, why, triggers,
       top: `${resourceLine(actor)}${rollBoxHtml("", "")}${convertLine}`,
       // Two sections, as the user drew them: the Maneuvers - Dodge, the Counters, the Instants - and the Effects.
-      body: `${rollSection("Maneuvers", `${dodge}${counterGroup}`)}${
+      body: `${rollSection("Maneuvers", `${dodge}${counterGroup}`)}${heartbeatSection(actor, `heartbeat-${actor.id}`)}${
         (willing || balanced || fixedTriggers || karmaGroup) ? rollSection("Effects", `${willing}${balanced}${fixedTriggers}${karmaGroup}`) : ""}`,
       roll: answersAttack ? respondRollData(actor, attack) : null,
       previews: answersAttack ? Object.fromEntries(["dodge", "strike", "wound"].map(slot => [slot,
@@ -9943,6 +9951,9 @@ async function respondDialog(message, respondable, { initials = new Map(), check
   }
 
   if (!Array.isArray(chosen)) return;
+
+  // Heartbeat taken in it - the Maneuver answering the attack its duration: in it now, before any roll (the user's).
+  for (const choice of chosen) if (choice?.heartbeat) await takeHeartbeat(choice.actor, choice.heartbeat);
 
   // An attack not yet rolled (the user's): nothing is paid or played on confirming - each answer is written on the card, its
   // character ready, and carried out once every side is (runPendingAnswers). Until then it can be changed.
@@ -10075,6 +10086,7 @@ async function respondActorWindow(message, entry, { fromPicker = false, initial 
       flareFoundation: element.querySelector(`select[name="flareFoundation-${id}"]`)?.value || "energy",
       willing: element.querySelector(`input[name="willing-${id}"]`)?.checked ?? null,
       karma, triggers: triggers.map(input => input.value), balanced,
+      heartbeat: element.querySelector(`select[name="heartbeat-${id}"]`)?.value ?? "",
       convert: Math.max(0, Math.min(Number(element.querySelector(`input[name="convert-${id}"]`)?.max) || 0,
         Number(element.querySelector(`input[name="convert-${id}"]`)?.value) || 0)),
       summary: summary || "Nothing"
@@ -10282,6 +10294,20 @@ function hitEntries(message, attack) {
     entry.why = entry.usable ? "" : "nothing here answers this hit";
     return entry;
   });
+}
+
+/**
+ * Heartbeat, offered in a roll window - the first roll of a Maneuver's card (the user's): which Transformation to enter for its duration, or
+ * none. "" where nothing may be entered now.
+ */
+function heartbeatSection(actor, name = "heartbeat") {
+  const options = heartbeatOptions(actor);
+  if (!options.length) return "";
+  const escape = Handlebars.escapeExpression;
+  return rollSection("Heartbeat", `<label class="dbu-respond-option" data-tooltip="Enter it for the duration of this Maneuver - no Stress Test, Legend
+    Realized or Burst Limit; left again from its row on the Transformations tab (End Heartbeat)."><span class="dbu-respond-name">Enter</span>
+    <select name="${escape(name)}"><option value="">None</option>${options.map(option =>
+      `<option value="${escape(option.value)}">${escape(option.label)}</option>`).join("")}</select></label>`);
 }
 
 /** The Apply effects button's: one character's window, or the picker for several (the user's). */
@@ -13635,6 +13661,7 @@ async function clashStage(message, actor) {
   const ogre = ogreLendOpen(actor, opened, picked);
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
     { urgent: Boolean(opened.urgent), senses,
+      heartbeat: true,
       boxes: [...(thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
         tip: "Once a Round. Won, the Basic Attack or a Signature Technique out of sequence at them." }] : []),
         ...(fairy ? [{ name: "fairy", label: `Fairy: +${fairy}`, tip: "Once a Round." }] : []),
@@ -34197,7 +34224,7 @@ async function attackerStage(message, attack, attacker) {
   // Their own Attacking Maneuver, so Compelled's Urgency reaches this one. Respond's shape (the user's): what they have, the
   // attack, the Strike in its box, the Effects - and "Ready", since it is rolled once every side is.
   const ready = await prepareRoll(attacker, triggers, `Strike Roll - ${attacker.name}`,
-    "", { combatRoll: true, attackingManeuver: true, urgent: Boolean(attack.urgentRolls), slot: "strike", confirmLabel: "Ready",
+    "", { combatRoll: true, heartbeat: true, attackingManeuver: true, urgent: Boolean(attack.urgentRolls), slot: "strike", confirmLabel: "Ready",
       top: `${resourceLine(attacker)}${rollAttackLine(attack, "Attacking")}`,
       formula: { what: "Strike Roll", base: DBUCharacterData.BASE_DIE,
         dice: combatDiceGroups(attacker, null, "strike", effectSignature(attacker, attack)),
