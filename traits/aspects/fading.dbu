@@ -9,9 +9,14 @@ solo: true
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Level 1: having left it you cannot enter it again this Encounter. Level 2: leaving it you lose access to it.
+text: >
+  Fading [Solo, LV~2]: This Transformation is only available for a limited time.
+  –Effect: Depending on the level, apply the following effects:
+  • LV1: Upon leaving this Transformation, you cannot enter this Transformation again for the remainder of the Combat Encounter.
+  • LV2: Upon leaving this Transformation, you lose access to this Transformation.
 
 ---
 

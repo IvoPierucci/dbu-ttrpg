@@ -6,9 +6,12 @@ levels: true
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   At the start of each of your turns, Ki Points -3(T) for each level; T the highest ToP Requirement of the Transformations you are in.
+text: >
+  Draining [LV]: This Transformation drains your energy over time.
+  –Effect: At the start of each of your turns, reduce your Ki Points by 3(T) for each level of this Aspect. When calculating the Tier of Power for Draining, use the highest Tier of Power Requirement for any Transformation(s) you are currently in, instead of your current Tier of Power.
 
 ---
 

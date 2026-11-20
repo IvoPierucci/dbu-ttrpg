@@ -1,0 +1,15 @@
+id: class-avatar-elite
+name: Elite
+order: 2
+optionOf: class-avatar-path-of-the-avatar
+optionEffect: 2
+description: >
+  Increase your Strike Rolls and Surgency by 1(T).
+text: >
+  Elite [Passive]: Increase your Strike Rolls and Surgency by 1(T).
+
+---
+
+[passive, effect 2]
+strike += 1(T);
+surgency += 1(T);

@@ -1,0 +1,14 @@
+id: martial-defensive-style
+name: Defensive Style
+order: 2
+optionOf: martial-skill-martial-arts-practitioner
+optionEffect: 3
+description: >
+  Increase your Dodge Rolls by 1(T).
+text: >
+  Defensive Style [Passive]: Increase your Dodge Rolls by 1(T).
+
+---
+
+[passive, effect 3]
+dodge += 1(T);

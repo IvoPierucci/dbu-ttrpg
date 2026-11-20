@@ -11,9 +11,14 @@ solo: true
 group: rule
 # Its Transformation's own: it does nothing to the character in general - shown on its row, not among the Active Aspects (the user's).
 bar: false
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   One more Mastery for each level; the Mastery Trait is split in several, numbered.
+text: >
+  Difficult [Solo, LV~3]: This Transformation is hard to fully master.
+  –Effect: For each level of this Aspect, you must master this Transformation an additional time. The Mastery Trait is separated into multiple Traits, ordered by a number in brackets after the name of the Trait showing how many times that Transformation needed to be mastered to gain that Trait.
+
+  A denotation of ‘M’ refers to the number of times a Transformation has been Mastered (see — Mastery for more information).
 
 ---
 

@@ -9,6 +9,8 @@ tier: 1+
 maxStacks: 2
 aspects: 
 bonuses: AG +1, FO +1, TE +1, IN +1, MA +1
+# One Perfect Trait a Stack (A Semi-Perfect Step Forward (2)).
+groupPicks: perfect-traits Z
 description: >
   Genes from countless warriors build up your bio mass and yet it's so hard to draw out the power of each one. If you could, however, wouldn't you be the perfect warrior? Of course, this Manifested Power agrees. Each time you gain this Manifested Power, your body warps into a new stage of evolution as you draw out more and more of the latent power hidden within your genes! The appearance of each form differs from Bio-Android to Bio-Android and it's up to you and your ARC to decide how big the change each time is…!
 text: >

@@ -11,9 +11,14 @@ solo: true
 group: rule
 # Its Transformation's own: it does nothing to the character in general - shown on its row, not among the Active Aspects (the user's).
 bar: false
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   This Evolved Stage stacks on another Evolved Stage of the same Original Form. Level 2: you choose whether to apply it as you enter.
+text: >
+  Pinnacle [Solo, LV~2]: This Transformation can continue to evolve.
+  –Effect: This Evolved Stage can be stacked atop another Evolved Stage with the same Original Transformation (for more information, see — Evolved Stages).
+
+  If a Transformation has the 2nd level of the Pinnacle Aspect, you can choose whether to apply the Pinnacle Aspect or not when using the Transformation Maneuver to enter it.
 
 ---
 

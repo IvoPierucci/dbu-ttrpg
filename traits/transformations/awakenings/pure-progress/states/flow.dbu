@@ -1,0 +1,36 @@
+id: flow
+name: Flow
+kind: states
+# A Special State of Pure Progress's, entered through Combat Imprinting (6).
+source: Pure Progress
+description: >
+  Attacking Maneuvers at half their Ki Point Cost; no Health Threshold Penalties; Progress past 2 on a Combat Roll, onto the one
+  that has the fewest. Left on a failed Steadfast Check, Life at 0, or Ki below 1/4.
+text: >
+  FLOW STATE
+  (1)-[Passive]: Halve the Ki Point Cost of all your Attacking Maneuvers (after all modifications).
+  (2)-[Passive]: Ignore all Health Threshold Penalties, but your effects cannot increase the Dice Score of your Steadfast Checks.
+  (3)-[Passive]: Remove the limit on your number of Progress Stacks for each Combat Roll, but you can only apply a Progress stack to a Combat Roll if it has the lowest number of Progress stacks amongst your Combat Rolls.
+  (4)-[Automatic]: If you fail a Steadfast Check, you have your Life Points reduced to 0 (or a negative value), or your number of Ki Points fall below 1/4 of your Maximum Ki Points, leave the Flow State. Upon leaving the Flow State, set your number of Progress Stacks on each Combat Roll to 2 (this cannot increase your number of Progress stacks).
+
+---
+
+# (1) Half, after all else.
+[passive, effect 1]
+attack.kiCost *= 0.5;
+
+# (2) No Health Threshold Penalties; that Steadfast is not raised by your effects: the table's.
+[passive, effect 2]
+allow threshold.ignore.bruised;
+allow threshold.ignore.injured;
+allow threshold.ignore.critical;
+
+# (3) Past 2 on a Combat Roll - onto the lowest one alone, the table's.
+[passive, effect 3]
+progressstrike.max += 20;
+progressdodge.max += 20;
+progresswound.max += 20;
+
+# (4) A Steadfast Check failed: left. Life at 0, Ki below 1/4 and the stacks set back to 2: the table's.
+[automatic/steadfast-failed, effect 4]
+leaveState(flow);

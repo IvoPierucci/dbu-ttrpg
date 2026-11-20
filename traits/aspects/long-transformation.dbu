@@ -7,9 +7,14 @@ max: 2
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: rule
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   +1 Action for each level to enter it; Heartbeat ignored; the Maneuver triggers the Exploit of adjacent Opponents (level 2: of all not at Long Range). Knocked through a Health Threshold by that Exploit, you fail the Stress Test.
+text: >
+  Long Transformation [LV~2]: This Transformation takes longer to enter than others.
+  –Effect: Increase the amount of Actions required to enter this Transformation through the Transformation Maneuver by 1 for each level of this Aspect. Ignore the effects of the Heartbeat Aspect for a Transformation with this Aspect, and the Transformation Maneuver when used to try and enter this Transformation triggers the Exploit Maneuver from any adjacent Opponents. If you have 2 levels of this Aspect, then it triggers the Exploit Maneuver from any Opponents who are not at Long Range.
+
+  If you are knocked through a Health Threshold when using the Transformation Maneuver to enter this Transformation with this Aspect from an Attacking Maneuver used through the Exploit Maneuver, you automatically fail the Stress Test to enter this Transformation.
 
 ---
 

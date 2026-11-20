@@ -2,6 +2,7 @@ id: martial-skill-martial-arts-practitioner
 name: Martial Arts Practitioner
 order: 1
 slot: trait
+optionEffect: 3
 description: >
   With the foundations of combat and mental discipline, you are on the road to becoming a true warrior.
 text: >
@@ -20,4 +21,19 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Stance Special Maneuver (this Transformation's maneuvers/stance.dbu): open while it is had.
+[passive, effect 1]
+allow maneuver.stance;
+
+# (2) Below the Bruised Health Threshold: Surgency 1(T).
+[passive, effect 2]
+if (belowThreshold("bruised")) {
+    surgency += 1(T);
+}
+
+# (3) Offensive or Defensive Style - its Options, asked as it is gained.
+# (4) Once an Encounter, upon entering a Stance, that Stance's own out-of-sequence effect: the table's.
+
+# (5) At the start of a Combat Encounter, the Stance Maneuver out of sequence.
+[triggered/start-of-encounter, outOfSequence, effect 5]
+maneuverOutOfSequence(stance);

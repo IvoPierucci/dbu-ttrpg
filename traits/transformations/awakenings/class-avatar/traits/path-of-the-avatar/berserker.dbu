@@ -1,0 +1,15 @@
+id: class-avatar-berserker
+name: Berserker
+order: 3
+optionOf: class-avatar-path-of-the-avatar
+optionEffect: 2
+description: >
+  Increase your Wound Rolls and Might by 1(T).
+text: >
+  Berserker [Passive]: Increase your Wound Rolls and Might by 1(T).
+
+---
+
+[passive, effect 2]
+wound += 1(T);
+might += 1(T);

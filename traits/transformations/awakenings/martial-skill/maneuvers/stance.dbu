@@ -1,0 +1,31 @@
+id: stance
+name: Stance
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Special Maneuver, open while Martial Skill is had (`allow maneuver.stance`). Used: one of the four Stances taken - or none -
+# in place of the one held (conditions.mjs takeOneCondition); each a mark of its own beside it (conditions/).
+special: true
+source: Martial Skill
+description: >
+  Enter a Stance - Flame, Wind, Wave or Stone - or leave the one you are in. One at a time.
+text: >
+  Stance Maneuver [1/Round]: You shift your footing and center your body to take a combat stance.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Upon using this effect, enter a Stance. If you use this Maneuver while already in a Stance, you may leave a Stance or enter another Stance of your choice. Your maximum number of concurrent Stances is 1; to enter a Stance when at your maximum number of concurrent Stances you must replace one of those Stances with the new Stance you intend to enter. There are 4 Stances:
+  • Flame Stance. Increase your Wound Rolls and Might by 1(T), but reduce your Awareness by 1(T).
+  • Wind Stance. Increase your Defense Value and Speeds by 1(T), but reduce your Soak Value by 1(T).
+  • Wave Stance. Increase your Awareness and Impulsive/Corporeal Saves by 1(T), but reduce your Wound Rolls by 2(T).
+  • Stone Stance. Increase your Soak Value and Surgency by 1(T), but reduce your Defense Value by 1(T).
+
+---
+
+[on used]
+takeOneCondition(flame-stance, wind-stance, wave-stance, stone-stance);

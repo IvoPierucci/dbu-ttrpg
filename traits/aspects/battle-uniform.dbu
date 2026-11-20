@@ -5,9 +5,14 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   On entering you lose access to your Apparel until you leave; you wear the Apparel described with the Transformation instead, with Stretching and the Special Qualities of the Apparel you wore.
+text: >
+  Battle Uniform: This Transformation includes a unique outfit.
+  –Effect: When you enter this Transformation, you lose access to your current Apparel until you leave the Transformation. While within the Transformation, you are equipped with the Apparel described at the bottom of the Transformation’s description. Apparel given through Battle Uniform has the Stretching Quality, and any Special Qualities possessed by the Apparel you were previously wearing. All Qualities unique to Battle Uniforms are Special Qualities. If you’re benefiting from the Battle Uniform Aspect from a Form (or Transcended Enhancement) and an Enhancement concurrently, apply the Grade and Category from the non-Transcended Enhancement’s Battle Uniform.
+
+  Any Accessories granted by Battle Uniforms are gained and equipped in addition to any worn currently while in that Transformation, as long as you have the ability to do so. Otherwise, you choose for each Accessory whether it is replaced by the Battle Uniform’s Accessory (unless that Accessory is already equipped, ignore any possible duplications). If an Accessory is replaced by Battle Uniform, it is regained and equipped upon leaving that Transformation.
 
 ---
 

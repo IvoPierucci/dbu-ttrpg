@@ -1,0 +1,18 @@
+id: stone-stance
+name: Stone Stance
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the Stance Maneuver's mark, held till another Stance takes its place or it is left.
+combatCondition: no
+source: Martial Skill
+description: >
+  Increase your Soak Value and Surgency by 1(T), but reduce your Defense Value by 1(T).
+text: >
+  Stone Stance. Increase your Soak Value and Surgency by 1(T), but reduce your Defense Value by 1(T).
+
+---
+
+[passive]
+soakValue += 1(T);
+surgency += 1(T);
+defenseValue -= 1(T);

@@ -14,4 +14,10 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Below the Injured Health Threshold: Wound and Soak 1(T).
+[passive, effect 1]
+if (belowThreshold("injured")) {
+    wound += 1(T);
+    soakValue += 1(T);
+}
+# (2) Breakthrough after a Triggered/Defeated effect: the table's.

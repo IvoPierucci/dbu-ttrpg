@@ -5,9 +5,12 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   While in it you lose all equipped Apparel (it returns and is equipped on leaving); Combat Rolls and Soak Value +1/2 (rounded up) of the Apparel Bonus of the highest piece you had (max. 2(T)).
+text: >
+  Absorbed Apparel: This Transformation leaves you without external defenses.
+  –Effect: You lose all of your equipped Apparel while in this Transformation (regain and equip it when you leave this Transformation), but increase your Combat Rolls and Soak Value by 1/2 (rounded up) of the Apparel Bonus of the highest piece of Apparel that you had equipped (max. 2(T)).
 
 ---
 

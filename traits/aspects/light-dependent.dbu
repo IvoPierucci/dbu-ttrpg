@@ -5,9 +5,12 @@ polarity: negative
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: rule
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   A classification only.
+text: >
+  Light Dependent: This Transformation is fundamentally tied to the aura of light that it projects.
+  –Effect: N/A. This Aspect exists entirely for classification.
 
 ---
 

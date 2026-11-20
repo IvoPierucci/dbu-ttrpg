@@ -11,9 +11,16 @@ solo: true
 group: rule
 # Its Transformation's own: it does nothing to the character in general - shown on its row, not among the Active Aspects (the user's).
 bar: false
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   If your Stress Bonus is at least its Stress Test Requirement - 4 you may enter it for the duration of any Maneuver you use or that targets you; uses per Round equal its level.
+text: >
+  Heartbeat [Solo, LV~3]: This Transformation can be entered in the span of a single heartbeat.
+  –Effect: If your Stress Bonus is equal to or higher than 4 less than the Stress Test Requirement (or combined Stress Test Requirement if used alongside another Transformation) of this Transformation, you may enter this Transformation for the duration of any Maneuver you use or any Maneuver that targets you. You cannot leave a Transformation to enter this Transformation, unless that Transformation is a lower Stage (see — Forms) of this Transformation, and if you do, you return to the lower Stage after concluding the Maneuver.
+
+  If this Transformation has the Graded Aspect, and you are already in this Transformation, you may instead enter a higher Grade for the duration of a Maneuver through the effects of this Aspect (as long as you meet the requirement in regards to the Stress Test Requirement of that Grade).
+
+  You can only use this effect to enter a Transformation through the effects of this Aspect a number of times per Combat Round equal to its levels in this Aspect.
 
 ---
 

@@ -7,9 +7,12 @@ polarity: positive
 group: rule
 # Its Transformation's own: it does nothing to the character in general - shown on its row, not among the Active Aspects (the user's).
 bar: false
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   It has Grades; the Transformation Maneuver enters it in another Grade, with that Grade's Stress Test.
+text: >
+  Graded: You can draw additional power out of this Transformation.
+  –Effect: This Transformation has Grades (see — Stages and Grades). While in a Transformation with the Graded Aspect, you may use the Transformation Maneuver to attempt to enter that same Transformation (but at a different Grade). If you do, you must still make the Stress Test for that Transformation at that Grade and if you fail, you will suffer the typical consequences.
 
 ---
 

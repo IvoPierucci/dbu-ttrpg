@@ -7,9 +7,12 @@ param: transformation
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   On entering you also enter the Enhancement in brackets (leaving the one you had); leaving the Linked one, you leave this one too.
+text: >
+  Linked: This Transformation requires the use of a specific technique.
+  –Effect: Upon entering this Form, you also enter the listed Enhancement in brackets after this Aspect. If you were already using an Enhancement, you leave that Enhancement to enter the listed Enhancement. If you have to leave the Linked Enhancement due to any effects, also leave this Transformation.
 
 ---
 

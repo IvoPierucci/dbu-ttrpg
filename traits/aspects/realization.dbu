@@ -5,9 +5,12 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: rule
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Each Higher Scale counts as a different Transformation for Legend Realized.
+text: >
+  Realization: You can restore your energy and vitality more easily in this Transformation.
+  –Effect: You may treat each Higher Scale on this Transformation as if it was a different Transformation for the sake of Legend Realized.
 
 ---
 

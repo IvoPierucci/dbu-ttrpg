@@ -891,6 +891,11 @@ async function runVerb(actor, call, context) {
         extraDie: Number(args[2]) || 0, lifePerThresholdBT: Number(args[3]) || 0 });
     }
 
+    case "takeOneCondition": {
+      const { takeOneCondition } = await import("../conditions.mjs");
+      return takeOneCondition(actor, args.map(String));
+    }
+
     case "temporaryAwakening": {
       const { gainTemporaryAwakening } = await import("../transformations.mjs");
       return gainTemporaryAwakening(actor, String(args[0] ?? ""), Number(args[1]) || 1);

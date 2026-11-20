@@ -14,4 +14,7 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) A Maximum Ki Point a Power Level.
+[passive, effect 1]
+ki.perLevel += 1;
+# (2) Duplicate Minions for Actions and Ki: made from the Settings tab - the table's.

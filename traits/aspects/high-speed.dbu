@@ -5,9 +5,12 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: number
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Speeds + the Transformation's Attribute Modifier Bonus (AG); with several, only the highest AG.
+text: >
+  High Speed: This Transformation dramatically increases your speed.
+  –Effect: Increase your Speeds by the Attribute Modifier Bonus (AG) of this Transformation. If you are using multiple Transformations in conjunction with another that possesses this Aspect, only increase your Speeds by the highest Attribute Modifier Bonus (AG).
 
 ---
 

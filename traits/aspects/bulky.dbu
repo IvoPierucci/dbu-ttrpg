@@ -5,9 +5,12 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: number
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   1 Super Stack while in it. Mastered (or, in an Evolved Stage, its Original Form Mastered): you may ignore it on entering.
+text: >
+  Bulky: This Transformation causes your muscles to bulge with strength.
+  –Effect: Gain 1 Super Stack while in this Transformation. If this Transformation is Mastered (or in the case of an Evolved Stage, if the Original Form is Mastered), you may choose to ignore this effect upon entering a Transformation with this Aspect.
 
 ---
 

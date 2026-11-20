@@ -2,6 +2,8 @@ id: class-avatar-path-of-the-avatar
 name: Path of the Avatar
 order: 1
 slot: trait
+# (1) The 'Destined Class' - Hero, Elite or Berserker - asked as it is gained, as an Option; (2) its effect.
+optionEffect: 2
 description: >
   Your destiny is decided; the path you walk will follow one of the chosen roads, leading you to specialize in your destined combat role.
 text: >
@@ -16,4 +18,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1)(2) The Destined Class and what it gives: its Options. With Class Up, "the Destined Class that matches the Class you selected
+# for the Option effect of Class Up" - choose the same: said, never forced.
+# (3) Class Up does not count towards the Awakening Limit (class-up's limitFreeWith).
+# (4) An hour to put the Class Mark Apparel Quality on a piece of Apparel with a Quality Slot free: from its sheet (this
+# Transformation's crafting/apparel-qualities/class-mark.dbu).

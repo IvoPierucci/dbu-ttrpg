@@ -1,0 +1,19 @@
+id: wave-stance
+name: Wave Stance
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the Stance Maneuver's mark, held till another Stance takes its place or it is left.
+combatCondition: no
+source: Martial Skill
+description: >
+  Increase your Awareness and Impulsive/Corporeal Saves by 1(T), but reduce your Wound Rolls by 2(T).
+text: >
+  Wave Stance. Increase your Awareness and Impulsive/Corporeal Saves by 1(T), but reduce your Wound Rolls by 2(T).
+
+---
+
+[passive]
+awareness += 1(T);
+save.impulsive += 1(T);
+save.corporeal += 1(T);
+wound -= 2(T);

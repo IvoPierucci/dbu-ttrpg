@@ -2,6 +2,7 @@ id: class-up-class-selection
 name: Class Selection
 order: 1
 slot: trait
+optionEffect: 2
 description: >
   You've chosen a mantle for yourself, an identity to adhere to.
 text: >
@@ -17,4 +18,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Stress Bonus 1.
+[passive, effect 1]
+stressBonus += 1;
+
+# (2) Hero, Elite or Berserker - its Options, asked as it is gained; (3) each Option's Choice effect in its own file.

@@ -2,6 +2,8 @@ id: dark-evolution-monstrous-evolution
 name: Monstrous Evolution
 order: 1
 slot: trait
+# (4) A Bestial Trait and a Monstrous Trait, chosen as it is gained, had while it is (gone with it).
+grantsOther: bestial, monstrous
 description: >
   You have been transformed, growing into a true monster.
 text: >
@@ -15,4 +17,19 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Racial Life Modifier 3 lower.
+[passive, effect 1]
+racialLifeModifier -= 3;
+
+# (2) Wound Rolls, Soak Value and Damage Reduction 1(T).
+[passive, effect 2]
+wound += 1(T);
+soakValue += 1(T);
+damageReduction += 1(T);
+
+# (3) A Size Category larger, after all else.
+[passive, effect 3]
+size.steps += 1;
+
+# (5) Damage under 1/4 of your Maximum Life Points not received, and (6) the Damage Attribute again on one Opponent hit, once an
+# Encounter each: the table's.

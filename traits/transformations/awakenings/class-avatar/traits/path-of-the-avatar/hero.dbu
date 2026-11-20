@@ -1,0 +1,15 @@
+id: class-avatar-hero
+name: Hero
+order: 1
+optionOf: class-avatar-path-of-the-avatar
+optionEffect: 2
+description: >
+  Increase your Dodge Rolls and Soak Value by 1(T).
+text: >
+  Hero [Passive]: Increase your Dodge Rolls and Soak Value by 1(T).
+
+---
+
+[passive, effect 2]
+dodge += 1(T);
+soakValue += 1(T);

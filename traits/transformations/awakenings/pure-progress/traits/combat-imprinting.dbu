@@ -2,6 +2,9 @@ id: pure-progress-combat-imprinting
 name: Combat Imprinting
 order: 1
 slot: trait
+resource: progressstrike, progressdodge, progresswound
+resourceLabel: Progress (Strike), Progress (Dodge), Progress (Wound)
+resourceMax: 2
 description: >
   Adapting instantly as you study your opponents, you learn to grasp the principles of greater power and soar to greater heights even as you continue to fight.
 text: >
@@ -15,4 +18,41 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Each stack 1(T) on the Combat Roll it was put on.
+[passive, effect 1]
+strike += progressstrike.stacks * 1(T);
+dodge += progressdodge.stacks * 1(T);
+wound += progresswound.stacks * 1(T);
+
+# (1) At the start of your turn - with an Opponent who used an Attacking Maneuver last Round, of your Power Level or higher (the
+# table's to say: Triggered) - a stack of Progress, put where you say.
+[triggered/start-of-turn, effect 1]
+gainOneOf(progressstrike, progressdodge, progresswound);
+
+# (2) 2+ stacks: Soak Value 1(T). (3) 3+: Clashes an Opponent starts on your Might or a Saving Throw 1(T). (4) 4+: Stress Bonus 1.
+[passive, effect 2]
+if (stacksAtLeast(2, "progressstrike", "progressdodge", "progresswound")) {
+    soakValue += 1(T);
+}
+
+[passive, effect 3]
+if (stacksAtLeast(3, "progressstrike", "progressdodge", "progresswound")) {
+    clash.defendingMightOrSave += 1(T);
+}
+
+[passive, effect 4]
+if (stacksAtLeast(4, "progressstrike", "progressdodge", "progresswound")) {
+    stressBonus += 1;
+}
+
+# (5) Knocked through a Health Threshold by an Opponent's attack, or knocking one through, once a Round: a stack of Progress.
+[triggered/threshold, 1/round, effect 5]
+gainOneOf(progressstrike, progressdodge, progresswound);
+
+[triggered/knock-through, 1/round, effect 5]
+gainOneOf(progressstrike, progressdodge, progresswound);
+
+# (6) At the start of your turn with 6 stacks, once an Encounter: an Action spent, the Flow State till the Encounter ends.
+[triggered/start-of-turn, 1/encounter, costs 1 action, effect 6]
+requires stacksAtLeast(6, "progressstrike", "progressdodge", "progresswound");
+enterState(flow, 1, encounter);

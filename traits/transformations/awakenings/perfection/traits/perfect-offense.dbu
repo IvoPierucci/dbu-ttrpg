@@ -14,4 +14,7 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Wound Rolls 1(T).
+[passive, effect 1]
+wound += 1(T);
+# (2) An Energy Charge on an Ultimate Signature Technique: the table's.

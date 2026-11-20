@@ -22,4 +22,33 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Adaptation Points' most Z higher.
+[passive, effect 1]
+adaptation.max += $Z;
+
+# (2) A Perfect Trait a Stack: chosen on this Transformation's row.
+
+# (3)(4) By Artificial Warrior (4)'s Option.
+[passive, effect 3]
+if (optionChosen("genetic-survivor") && !belowThreshold("bruised")) {
+    combatRolls += $Z * 1(T);
+    soakValue += $Z * 1(T);
+}
+if (optionChosen("genetic-aggressor")) {
+    strike += $Z * 1(T);
+    wound += $Z * 1(T);
+}
+if (optionChosen("genetic-agility")) {
+    dodge += $Z * 1(T);
+    wound += $Z * 1(T);
+}
+if (optionChosen("pursuit-of-perfection") && (absorption.stacks >= 1)) {
+    combatRolls += $Z * 1(T);
+    surgency += $Z * 1(T);
+}
+
+[passive, effect 4]
+if (optionChosen("genetic-survivor") && belowThreshold("bruised")) {
+    surgency += $Z * 1(T);
+}
+# Genetic Aggressor's and Genetic Agility's out-of-sequence Maneuvers, and Pursuit of Perfection's Cognitive Saves: the table's.

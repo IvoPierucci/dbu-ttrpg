@@ -1,0 +1,18 @@
+id: class-up-hero
+name: Hero
+order: 1
+optionOf: class-up-class-selection
+optionEffect: 2
+description: >
+  Increase your Dodge Rolls and Soak Value by 1(T).
+text: >
+  Hero [Passive]: Increase your Dodge Rolls and Soak Value by 1(T).
+  • Hero [1/Encounter]: Use the Power Up Maneuver as an Instant Maneuver. If you do, gain an additional stack of Power from this use of the Power Up Maneuver.
+
+---
+
+[passive, effect 2]
+dodge += 1(T);
+soakValue += 1(T);
+
+# (3) Its Choice effect - an Instant Maneuver once an Encounter: the table's.

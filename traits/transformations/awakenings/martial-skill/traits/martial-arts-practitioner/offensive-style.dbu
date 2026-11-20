@@ -1,0 +1,14 @@
+id: martial-offensive-style
+name: Offensive Style
+order: 1
+optionOf: martial-skill-martial-arts-practitioner
+optionEffect: 3
+description: >
+  Increase your Strike Rolls by 1(T).
+text: >
+  Offensive Style [Passive]: Increase your Strike Rolls by 1(T).
+
+---
+
+[passive, effect 3]
+strike += 1(T);

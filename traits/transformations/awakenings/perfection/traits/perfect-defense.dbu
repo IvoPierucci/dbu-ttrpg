@@ -14,4 +14,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Strike and Dodge Critical Targets 1 lower.
+[passive, effect 1]
+criticalTarget.strike -= 1;
+criticalTarget.dodge -= 1;
+# (2) A Basic Attack dodged with all your Adaptation Points: the table's.

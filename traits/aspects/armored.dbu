@@ -5,9 +5,12 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: number
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   The Damage Category of every attack that hits you is 1 lower for your Damage Calculation.
+text: >
+  Armored: This Transformation provides a defensive boost.
+  –Effect: Reduce the Damage Category of all Attacking Maneuvers that hit you by 1 Category for the sake of your Damage Calculation.
 
 ---
 

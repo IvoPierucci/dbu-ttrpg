@@ -5,9 +5,16 @@ polarity: negative
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: rule
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Only with the Tailed Option of Saiyan Heritage; losing your tail you leave it and suffer Stress Exhaustion. A Called Shot at the tail: Damage Category -1. Counts as the Great Ape Transformation Line for your Traits.
+text: >
+  Blutz Wave: This Transformation can only be used while you possess a Saiyan tail.
+  –Effect: A Character can only enter this Transformation if they have the Tailed Option effect for the Saiyan Heritage Racial Trait. If they would lose their Tail (or this Option effect) through any means, they immediately leave this Transformation and suffer from Stress Exhaustion until the end of their next turn.
+
+  A Called Shot made against the Tail of a Character with this Aspect has its Damage Category reduced by 1 Category.
+
+  A Transformation with this Aspect is considered to be in the Great Ape Transformation Line for the effects of your Traits.
 
 ---
 

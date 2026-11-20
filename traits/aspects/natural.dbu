@@ -9,9 +9,14 @@ solo: true
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: rule
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Entering it, and while alone in it (or only with other Natural ones), no Stress Tests; you do not leave it through Stress Exhaustion and may enter it while suffering from it. Level 2: on leaving a Transformation you may enter this one instead of your Normal State.
+text: >
+  Natural [Solo, LV~2]: This Transformation is as easy to maintain as not transforming at all.
+  –Effect: When entering this Transformation and while you are only in this Transformation (unless you are using it in conjunction solely with other Transformations with the Natural Aspect), you are not required to roll Stress Tests. Do not leave this Transformation if you are suffering from Stress Exhaustion and you can enter this Transformation while in Stress Exhaustion.
+
+  At the second level, if you would leave a Transformation, you may enter this Transformation instead of your Normal State. You still suffer from the effects of Stress Exhaustion.
 
 ---
 

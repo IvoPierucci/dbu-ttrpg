@@ -14,4 +14,19 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) 2 Maximum Life and Ki Points a Power Level.
+[passive, effect 1]
+life.perLevel += 2;
+ki.perLevel += 2;
+
+# (2) The Critical Target of your Combat Rolls 1 lower.
+[passive, effect 2]
+criticalTarget.strike -= 1;
+criticalTarget.dodge -= 1;
+criticalTarget.wound -= 1;
+
+# (3) At the start of your turn, an Adaptation Point.
+[triggered/start-of-turn, effect 3]
+adaptation.stacks += 1;
+
+# (4) 3 Adaptation Points for an Action, once an Encounter: the table's.

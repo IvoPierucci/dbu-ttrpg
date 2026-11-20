@@ -9,9 +9,12 @@ solo: true
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Entered through the Maneuver, you leave it after its level in Rounds; no Stress Exhaustion (unless Exhausting), but you cannot enter it again until the end of your next turn.
+text: >
+  Limited [Solo, LV~5]: The power of this Transformation wanes as you fight.
+  –Effect: After using the Transformation Maneuver to enter this Transformation, you will be forced to leave this Transformation in a number of Combat Rounds equal to the level of this Aspect. When you do, you do not suffer from Stress Exhaustion but you cannot enter the Transformation you left through Limited again until the end of your next turn. You still suffer Stress Exhaustion if this Transformation has the Exhausting Aspect.
 
 ---
 

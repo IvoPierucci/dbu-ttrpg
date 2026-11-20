@@ -483,6 +483,7 @@ class Parser {
 
 /** Questions the engine answers, as opposed to arithmetic it works out. */
 const PREDICATE_NAMES = new Set([
+  "bonded",
   "benefiting", "hasResource", "inState", "hasCondition", "targets", "aoeHits", "attacking",
   // The Foundation of the attack whose roll answered the Moment - Archetype Focus's; the Focused Foundation (Archetype
   // Defense's).
@@ -526,6 +527,8 @@ const PREDICATE_NAMES = new Set([
 
 /** The ones written without brackets, because they take nothing. */
 const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
+  // Bonded to an Ally - Power of the Weak (4)'s (Battle Yardrat's "While you are not Bonded").
+  "bonded",
   "intendedForYou", "wieldingWeapon", "adventuring",
   // A Signature Technique being declared (God of Judgment's); your own Frozen Turn (God of Time's).
   "signatureTechnique", "frozenTurn",

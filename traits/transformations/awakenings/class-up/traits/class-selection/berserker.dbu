@@ -1,0 +1,18 @@
+id: class-up-berserker
+name: Berserker
+order: 3
+optionOf: class-up-class-selection
+optionEffect: 2
+description: >
+  Increase your Wound Rolls and Might by 1(T).
+text: >
+  Berserker [Passive]: Increase your Wound Rolls and Might by 1(T).
+  • Berserker [1/Encounter]: Use the Basic Attack Maneuver or Signature Technique Maneuver as an Instant Maneuver. If you do, apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+[passive, effect 2]
+wound += 1(T);
+might += 1(T);
+
+# (3) Its Choice effect - an Instant Maneuver once an Encounter: the table's.

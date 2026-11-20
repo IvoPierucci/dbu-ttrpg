@@ -14,4 +14,7 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Soak Value 1(T).
+[passive, effect 1]
+soakValue += 1(T);
+# (2) Damage Reduction on Direct Hit or Guard: the table's.

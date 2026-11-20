@@ -309,6 +309,32 @@ function heldInPlace(actor, key, wanted = 0) {
   return "";
 }
 
+/**
+ * One of several marks chosen - or none - the others taken off (the Stance Maneuver's four Stances, "Your maximum number of
+ * concurrent Stances is 1"). Asked of whoever plays the character; the one held is preselected.
+ */
+export async function takeOneCondition(actor, keys) {
+  const { getTrait } = await import("./effects/traits.mjs");
+  const options = keys.filter(key => allConditions().some(each => each.key === key));
+  if (!actor || !options.length) return;
+  const held = options.find(key => (Number(actor.system.conditions?.[key]) || 0) > 0) ?? "";
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - which one?` },
+    content: `<div class="dbu-respond-option"><select name="pick">${options.map(key => `<option value="${escape(key)}"
+      ${key === held ? "selected" : ""}>${escape(getTrait(key)?.name ?? key)}</option>`).join("")}<option value="">None</option></select></div>`,
+    buttons: [{ action: "take", label: "Take", default: true, callback: (event, button, dialog) => dialog.element.querySelector('[name="pick"]')?.value ?? "" },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if ((picked === null) || (picked === undefined) || (picked === "cancel")) return;
+  for (const key of options) {
+    const want = (key === picked) ? 1 : 0;
+    if ((Number(actor.system.conditions?.[key]) || 0) !== want) await setCondition(actor, key, want);
+  }
+}
+
 export async function setCondition(actor, key, stacks) {
   const definition = allConditions().find(c => c.key === key);
   if (!definition) {

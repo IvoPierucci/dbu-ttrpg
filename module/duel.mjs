@@ -184,6 +184,9 @@ export function woundResources() {
   for (const [name, definition] of Object.entries(definitions)) {
     const trait = getTrait(definition.id);
     if (!trait?.script) continue;
+    // Its stacks named by its own effects - not a Trait that raises the Wound some other way beside a Resource it only spends
+    // (Super Weapon's Reserved Energy).
+    if (!trait.script.includes(name)) continue;
     // One of several from one file - Born for Battle's Battle Born, one for each Combat Roll: only the one its passive
     // puts on the Wound.
     const shared = Object.values(definitions).filter(each => each.id === definition.id).length > 1;

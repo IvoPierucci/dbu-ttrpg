@@ -5,9 +5,12 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: number
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   The Ki Point Cost of your Attacking Maneuvers -1(T); minimum 2(T) (cannot raise a minimum).
+text: >
+  Perfect Ki Control: Being in this Transformation makes it easier to spend your ki.
+  –Effect: Reduce the Ki Point Cost of all Attacking Maneuvers by 1(T). Your Minimum Ki Point Cost for your Attacking Maneuvers is 2(T), this cannot increase the Minimum Ki Point Cost for an Attacking Maneuver.
 
 ---
 

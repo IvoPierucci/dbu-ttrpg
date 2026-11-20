@@ -2,6 +2,9 @@ id: super-android-super-weapon
 name: Super Weapon
 order: 1
 slot: trait
+resource: reservedenergy
+resourceLabel: Reserved Energy
+resourceMax: 6
 description: >
   Your upgrades have transformed you into a walking weapon of mass destruction.
 text: >
@@ -17,4 +20,19 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) In the Healthy Health Threshold: Combat Rolls and Damage Reduction 1(T).
+[passive, effect 1]
+if (!belowThreshold("bruised")) {
+    combatRolls += 1(T);
+    damageReduction += 1(T);
+}
+
+# (2) Ki Points below 1/4 of the Maximum: Surgency 2(T).
+[passive, effect 2]
+if (ki.value < ki.max / 4) {
+    surgency += 2(T);
+}
+
+# (3) Another of Technological Being (3)'s effects: added from the Traits tab - the table's.
+# (4) A stack of Reserved Energy with the Energy Charge Maneuver, and (5)-(8) spent on a Signature Technique's Wound, on Ki with the
+# Power Up, for Energy Charges and a Healing Surge: stepped on the Combat tab - the table's.

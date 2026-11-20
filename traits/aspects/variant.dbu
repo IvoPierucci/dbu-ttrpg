@@ -9,9 +9,12 @@ param: transformation
 group: rule
 # Its Transformation's own: it does nothing to the character in general - shown on its row, not among the Active Aspects (the user's).
 bar: false
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   An alternate version of the Transformation in brackets: its name counts as that one's; it inherits all its Traits but those it replaces; not used with it nor with another Variant of it.
+text: >
+  Variant:
+  –Effect: This Transformation is a Variant Transformation for the Transformation listed in brackets.
 
 ---
 

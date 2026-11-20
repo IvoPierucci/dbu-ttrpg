@@ -5,9 +5,12 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: number
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   In the Mindful State, Dodge Rolls and the Strike Roll of a Parry +1(T).
+text: >
+  Mindful: This Transformation lends itself well to a calm, serene state of mind.
+  –Effect: While in the Mindful State, increase your Dodge Rolls and your Strike Rolls for the Parry effect of the Defend Maneuver by 1(T).
 
 ---
 

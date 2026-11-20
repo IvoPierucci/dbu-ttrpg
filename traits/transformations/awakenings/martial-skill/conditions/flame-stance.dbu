@@ -1,0 +1,18 @@
+id: flame-stance
+name: Flame Stance
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the Stance Maneuver's mark, held till another Stance takes its place or it is left.
+combatCondition: no
+source: Martial Skill
+description: >
+  Increase your Wound Rolls and Might by 1(T), but reduce your Awareness by 1(T).
+text: >
+  Flame Stance. Increase your Wound Rolls and Might by 1(T), but reduce your Awareness by 1(T).
+
+---
+
+[passive]
+wound += 1(T);
+might += 1(T);
+awareness -= 1(T);

@@ -2,6 +2,11 @@ id: divine-candidate-divine-training
 name: Divine Training
 order: 1
 slot: trait
+# (1) Every Transformation with the God Ki Aspect gains the Perfect Ki Control Aspect (transformations.mjs aspectsOf).
+grantsAspect: Perfect Ki Control
+grantsAspectIf: God Ki
+# (2) A God Maneuver of your choice, asked as it is gained.
+choose: godManeuver
 description: >
   You have been given a role as an apprentice to a divine being of some variety, allowing you to train in earnest to take that position.
 text: >
@@ -15,4 +20,26 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) The God Maneuver chosen, open while it is had.
+[passive, effect 2]
+allow maneuver.$choice;
+
+# (3)(4) In the God Ki State: Attacking Maneuvers 1(T) cheaper and Surgency 2(T).
+[passive, effect 3]
+if (inState("god-ki")) {
+    attack.kiCost -= 1(T);
+}
+
+[passive, effect 4]
+if (inState("god-ki")) {
+    surgency += 2(T);
+}
+
+# (5) Using the Power Up, once a Round: the God Ki State till the end of your turn.
+[triggered/power, 1/round, effect 5]
+enterState(god-ki, 1, turn);
+
+# (6) Entering the God Ki State, once an Encounter: a Ki Surge, and Divine Ki Points equal to your Surgency.
+[triggered/state/god-ki, 1/encounter, effect 6]
+surge(ki);
+divineKi.value += surgency;

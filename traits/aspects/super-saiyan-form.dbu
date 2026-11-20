@@ -5,9 +5,14 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: number
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Tier of Power Extra Dice once more; Max Ki Points and Max Capacity +1/4. Counts as the Super Saiyan Transformation Line for your Traits.
+text: >
+  Super Saiyan Form: This Transformation possesses the power of a Super Saiyan.
+  –Effect: Apply your Tier of Power Extra Dice an additional time and increase your Maximum Ki Points and Max Capacity by 1/4 of their maximums.
+
+  A Transformation with this Aspect is considered to be in the Super Saiyan Transformation Line for the effects of your Traits.
 
 ---
 

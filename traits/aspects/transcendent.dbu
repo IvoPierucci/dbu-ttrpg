@@ -7,9 +7,12 @@ polarity: positive
 group: rule
 # Its Transformation's own: it does nothing to the character in general - shown on its row, not among the Active Aspects (the user's).
 bar: false
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   It can become a Transcended Enhancement.
+text: >
+  Transcendent: This Transformation reaches great heights of power, allowing it to take the place of transforming your body.
+  –Effect: This Transformation can become a Transcended Enhancement (see — Transcendent).
 
 ---
 

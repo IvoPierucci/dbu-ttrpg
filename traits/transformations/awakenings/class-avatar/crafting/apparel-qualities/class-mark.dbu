@@ -1,0 +1,32 @@
+id: class-mark
+name: Class Mark
+kind: crafting
+# A Special Apparel Quality of the Class Avatar's: its Prerequisite said, never enforced.
+special: true
+slots: 1
+source: Class Avatar
+description: >
+  Its Destined Class's: Hero, Apparel Bonus 1(bT) with 2+ stacks of Power; Elite, Surgency half the Apparel Bonus; Berserker,
+  Signature Techniques' Wound the Apparel Bonus.
+summary: >
+  [Passive]: Depending on your Destined Class, apply the following effects:
+text: >
+  Class Mark: This piece of Apparel has the mark of your destiny emblazoned on it.
+  –Apparel Category: All
+  –Prerequisites: The wearer possesses the Class Avatar Awakening
+  –Quality Slots: 1
+  –Effects: Depending on your Destined Class, apply the following effects:
+  • Hero [Passive]: While you have 2+ stacks of Power, increase this piece of Apparel's Apparel Bonus by 1(bT).
+  • Elite [Passive]: Increase your Surgency by 1/2 (rounded up) of the Apparel Bonus.
+  • Berserker [Passive]: Increase the Wound Rolls of your Signature Techniques by the Apparel Bonus.
+
+---
+
+# The Destined Class read off the Class Avatar's Option. Hero's raise of the piece's own Apparel Bonus: the table's.
+[passive]
+if (optionChosen("class-avatar-elite")) {
+    surgency += ceil($apparelBonus(bT) / 2);
+}
+if (optionChosen("class-avatar-berserker")) {
+    wound.signature += $apparelBonus(bT);
+}

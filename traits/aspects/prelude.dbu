@@ -5,9 +5,12 @@ polarity: positive
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: rule
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Chosen for the Maneuver: ToP Requirement -1 and Stress Test Requirement -3 until you leave; Attribute Bonuses -1(T) (min. 1(T)) and without its last Transformation Trait ([Permanent] effects remain).
+text: >
+  Prelude: This Transformation is easier to enter than normal.
+  –Effect: If you would select this Transformation for the Transformation Maneuver, you may reduce this Transformation’s Tier of Power Requirement by 1 and its Stress Test Requirement by 3 until you leave this Transformation. If you do, you also reduce the Attribute Modifier Bonuses by 1(T) (this cannot reduce those Attribute Modifier Bonuses below 1(T)) and you do not benefit from the last Transformation Trait of this Transformation while in this Transformation (any Permanent effects are still in effect). If a rule or effect would increase your Tier of Power while a Transformation is benefiting from the effects of the Prelude Aspect, you may choose to remove the effects of the Prelude Aspect for the duration of that effect (this also includes losing any Holding Back stacks, in which case it lasts until you leave the Transformation or gain another Holding Back stack).
 
 ---
 

@@ -7,9 +7,12 @@ param: state
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   On entering you enter the State in brackets until you leave; leaving that State, at the start of your next turn you leave the Transformation and suffer Stress Exhaustion until the end of your next turn.
+text: >
+  Innate State: While in this Transformation, you remain in a specific state of mind.
+  –Effect: Upon entering this Form, you enter the State listed in brackets after this Aspect until you leave this Transformation. If you would leave this State for any reason, at the start of your next turn, leave this Transformation and gain Stress Exhaustion until the end of your next turn.
 
 ---
 

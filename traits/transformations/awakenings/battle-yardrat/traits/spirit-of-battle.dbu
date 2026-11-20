@@ -18,4 +18,21 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Power of the Weak (1) ignored: the table's.
+
+# (2) Not Bonded: Combat Rolls, Surgency and Soak Value 1(T).
+[passive, effect 2]
+if (!bonded) {
+    combatRolls += 1(T);
+    surgency += 1(T);
+    soakValue += 1(T);
+}
+
+# (3) Not Bonded, half the Ki Point Cost paid for an Attacking Maneuver (the cost itself unchanged): the table's.
+# (4) Your Subrace's - Tall or Bulbous Yardrat: the table's.
+
+# (5) At the start of your turn: the Power Up out of sequence - the Empower Maneuver not till the start of your next (the table's).
+[triggered/start-of-turn, outOfSequence, effect 5]
+maneuverOutOfSequence(power-up);
+
+# (6) An Energy Charge on a Signature Technique in that turn, and (7) an Ally's Actions on becoming Bonded: the table's.

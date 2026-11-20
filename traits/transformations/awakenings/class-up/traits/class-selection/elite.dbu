@@ -1,0 +1,18 @@
+id: class-up-elite
+name: Elite
+order: 2
+optionOf: class-up-class-selection
+optionEffect: 2
+description: >
+  Increase your Strike Rolls and Surgency by 1(T).
+text: >
+  Elite [Passive]: Increase your Strike Rolls and Surgency by 1(T).
+  • Elite [1/Encounter]: Use the Surge Maneuver as an Instant Maneuver. If you do, it does not count towards the [1/Encounter] Keyword for the Surge Maneuver.
+
+---
+
+[passive, effect 2]
+strike += 1(T);
+surgency += 1(T);
+
+# (3) Its Choice effect - an Instant Maneuver once an Encounter: the table's.

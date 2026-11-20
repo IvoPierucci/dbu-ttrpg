@@ -1,0 +1,18 @@
+id: wind-stance
+name: Wind Stance
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the Stance Maneuver's mark, held till another Stance takes its place or it is left.
+combatCondition: no
+source: Martial Skill
+description: >
+  Increase your Defense Value and Speeds by 1(T), but reduce your Soak Value by 1(T).
+text: >
+  Wind Stance. Increase your Defense Value and Speeds by 1(T), but reduce your Soak Value by 1(T).
+
+---
+
+[passive]
+defenseValue += 1(T);
+speed.all += 1(T);
+soakValue -= 1(T);

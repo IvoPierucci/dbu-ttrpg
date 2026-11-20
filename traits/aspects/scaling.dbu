@@ -9,9 +9,16 @@ solo: true
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: rule
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   A Higher Scale for each Tier of Power above its original ToP Requirement (up to its level), chosen as you enter; each: Attribute Bonuses (but SC/IN/PE) +1(T), Stress Test Requirement +2, ToP Requirement +1.
+text: >
+  Scaling [Solo, LV~4]: This Transformation’s power grows with you.
+  –Effect: For each Tier of Power you exceed the original (before any modifications) Tier of Power Requirement of this Transformation, it gains a Higher Scale. A Transformation can possess a number of Higher Scales up to their level of the Scaling Aspect.
+
+  When attempting to enter a Transformation, you may select how many Higher Scales (if any) the Transformation has applied. While in the Transformation, you can spend 1 Action to make a Stress Test for this Transformation with a different number of Higher Scales (if any) applied. If you succeed, the number of Higher Scales applied to this Transformation changes to the different amount you selected.
+
+  For each Higher Scale, increase the Attribute Modifier Bonuses (except SC/IN/PE) of the Transformation by 1(T), the Stress Test Requirement by 2, and the Tier of Power Requirement by 1.
 
 ---
 

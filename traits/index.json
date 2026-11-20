@@ -1991,6 +1991,21 @@
     "transformations/awakenings/spirit-control/unique/instant-transmission/sonic-transmission.dbu",
     "transformations/awakenings/spirit-control/unique/instant-transmission/spirit-transporter.dbu",
     "transformations/awakenings/spirit-control/unique/spiritual-cloning.dbu",
-    "transformations/awakenings/spirit-control/unique/spiritual-healing.dbu"
+    "transformations/awakenings/spirit-control/unique/spiritual-healing.dbu",
+    "transformations/awakenings/class-avatar/crafting/apparel-qualities/class-mark.dbu",
+    "transformations/awakenings/class-avatar/traits/path-of-the-avatar/berserker.dbu",
+    "transformations/awakenings/class-avatar/traits/path-of-the-avatar/elite.dbu",
+    "transformations/awakenings/class-avatar/traits/path-of-the-avatar/hero.dbu",
+    "transformations/awakenings/class-up/traits/class-selection/berserker.dbu",
+    "transformations/awakenings/class-up/traits/class-selection/elite.dbu",
+    "transformations/awakenings/class-up/traits/class-selection/hero.dbu",
+    "transformations/awakenings/martial-skill/conditions/flame-stance.dbu",
+    "transformations/awakenings/martial-skill/conditions/stone-stance.dbu",
+    "transformations/awakenings/martial-skill/conditions/wave-stance.dbu",
+    "transformations/awakenings/martial-skill/conditions/wind-stance.dbu",
+    "transformations/awakenings/martial-skill/maneuvers/stance.dbu",
+    "transformations/awakenings/martial-skill/traits/martial-arts-practitioner/defensive-style.dbu",
+    "transformations/awakenings/martial-skill/traits/martial-arts-practitioner/offensive-style.dbu",
+    "transformations/awakenings/pure-progress/states/flow.dbu"
   ]
 }

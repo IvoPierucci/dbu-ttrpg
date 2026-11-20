@@ -7,9 +7,12 @@ max: 3
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   Level 1: Size Category Large; one Size Category more for each level after; it never makes you smaller.
+text: >
+  Growth [LV~3]: This Transformation increases the size of your body.
+  –Effect: The first level of this Aspect sets your Size Category to Large while in this Transformation. For every level after the first, increase the Size Category you are set to by 1. This Aspect cannot cause your Size Category to be lower than it would be prior to applying its effects.
 
 ---
 

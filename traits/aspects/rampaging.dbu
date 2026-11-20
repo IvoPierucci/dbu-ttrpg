@@ -7,9 +7,16 @@ max: 2
 # number: its script is the whole of it. moment: entering, leaving, the start of a turn (stages 4-5).
 # rule: how a Transformation is entered, left or Mastered - asked by transformations.mjs aspectLevel.
 group: moment
-# The rule as read on 2026-11-12, in short; its own words (`text:`) to come from the user.
+# The rule in short, for its hovers; its own words below (the page the user gave, 2026-11-20).
 summary: >
   On entering and at the start of each turn, Compelled against the closest Opponent (level 2: closest Character) until your next turn; 1 Karma to ignore it until your next turn.
+text: >
+  Rampaging [LV~2]: This Transformation overwhelms your mind and causes you to act uncontrollably.
+  –Effect: Upon entering this Transformation, and at the start of each of your turns while in this Transformation, gain the Compelled Combat Condition against the nearest Opponent until the start of your next turn. If you have 2 levels of Rampaging, instead gain the Compelled Combat Condition against the nearest Character.
+
+  While you are suffering from the Compelled Combat Condition, you cannot leave this Transformation through the Transformation Maneuver, effects of the Heartbeat Aspect, or Revert Maneuver. Additionally, your Stress Tests become Urgent.
+
+  Upon entering this Transformation, or at the start of your turn, you can spend 1 Karma Point to ignore the effects of the Rampaging Aspect until the start of your next turn.
 
 ---
 

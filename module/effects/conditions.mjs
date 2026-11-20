@@ -386,6 +386,9 @@ const PREDICATES = {
   },
 
   /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
+  /** Bonded to an Ally - Power of the Weak (4)'s, or Twinned Spirits' Partner (bondOf). */
+  bonded: scope => Boolean(bondOf(scope.data?.parent)),
+
   trulyHealthy: scope => (scope.data?.effects?.slots?.["threshold.asHealthy"] === true)
     || (customBuffThresholdFor(scope.data, scope.data?.threshold?.key ?? "healthy") === "healthy"),
 
