@@ -14,4 +14,8 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# Its Apparel set aside as it is entered and worn again as it is left (transformations.mjs setApparelAside, restoreApparel); "increase your
+# Combat Rolls and Soak Value by 1/2 (rounded up) of the Apparel Bonus of the highest piece" you had on (max. 2(T)).
+[passive]
+combatRolls += min(ceil($absorbedBonus / 2), 2(T));
+soakValue += min(ceil($absorbedBonus / 2), 2(T));

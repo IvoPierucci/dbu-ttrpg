@@ -330,6 +330,9 @@ export function aspectScript(aspect) {
   const owner = aspect.items?.[0]?.parent;
   const topReq = Math.max(1, ...transformationsInUse(owner).map(item => tierRequirementOf(item, fileOf(item), owner?.items)));
   script = script.replaceAll("$topReq", String(topReq));
+  // Absorbed Apparel: "the Apparel Bonus of the highest piece of Apparel you had equipped" as it was entered (its row's `absorbedBonus`).
+  const absorbed = Math.max(0, ...(aspect.items ?? []).map(item => Number(rowChoice(item, "absorbedBonus")) || 0));
+  script = script.replaceAll("$absorbedBonus", String(absorbed));
   return script.replaceAll("$level", String(aspect.level ?? 1));
 }
 
@@ -397,7 +400,9 @@ export function bonusesOf(item, file = fileOf(item)) {
   // Weakening: "If your current Ki Point Pool is below 1/4 of your Maximum ... reduce this Transformation's Attribute Modifier Bonuses
   // (after all calculations) by 1/2" (rounded down).
   const ki = item?.parent?.system?.ki;
-  if (ki && (Number(ki.value) < (Number(ki.max) || 0) / 4) && aspectsOf(item, item.parent?.items).some(aspect => aspect.id === "weakening")) {
+  // "This does not apply if you entered this Transformation through the Heartbeat Aspect."
+  if (ki && !heartbeatOf(item) && (Number(ki.value) < (Number(ki.max) || 0) / 4)
+    && aspectsOf(item, item.parent?.items).some(aspect => aspect.id === "weakening")) {
     for (const bonus of Object.values(bonuses)) bonus.coefficient = Math.floor(bonus.coefficient / 2);
   }
   // Fused Transformation (4): "Increase the Attribute Modifier Bonus (AG/FO/TE/MA) of your Fused Form ... Alternate Form: 1(T), Legendary
@@ -1150,6 +1155,9 @@ export async function enterTransformation(actor, item, { grade, scales, prelude,
   await actor.updateEmbeddedDocuments("Item", [own, ...changes]);
   // What leaving those does - Exhausting, Fading - but into a higher Tier of Power Requirement, Exhausting's exception.
   for (const left of leaving) await leftTransformation(actor, left, { into: item });
+  // Bursting: "Upon entering this Transformation, destroy your Top Layer of Apparel" - as the Transformation Maneuver enters it (a tick on its
+  // row destroys nothing). Its Apparel Bonus kept on its row (Style of Super Saiyan (4)'s).
+  if (aspectsOf(actor.items.get(item.id), actor.items).some(aspect => aspect.id === "bursting")) await burstTopLayer(actor, actor.items.get(item.id));
   return actor.items.get(item.id);
 }
 
@@ -1476,7 +1484,7 @@ function rowWritten(item, file, text) {
   return String(text)
     .replace(/\$is\.([\w]+)\.([\w-]+)/g, (all, key, value) => (rowChoice(item, key) === value) ? "1" : "0")
     .replace(/\$label\.([\w]+)/g, (all, key) => (choice => choice?.options.find(option => option.value === choice.chosen)?.label ?? "")(of(key)))
-    .replace(/\$row\.([\w]+)/g, (all, key) => rowChoice(item, key));
+    .replace(/\$row\.([\w]+)/g, (all, key) => rowChoice(item, key) || "0");
 }
 
 /**
@@ -1503,3 +1511,221 @@ useTransformationQuestion("ignoresAspect", (actor, id) => Array.from(actor?.item
 // A Trait given by a Transformation Trait "while you are in this Transformation" (Monstrous Ascension's Monstrous and Bestial Traits):
 // whether that one applies wholly now.
 useTransformationQuestion("traitApplies", (giver, items) => traitStanding(giver, items) === "in");
+
+// --- Aspects about Apparel: Bursting, Absorbed Apparel, Battle Uniform ---------------------------------------------------------
+
+/** Whether a piece of Apparel has the Free Flowing Quality: "not destroyed by the effects of the Bursting Aspect ... nor replaced by a Battle Uniform". */
+function freeFlowing(piece) {
+  return (piece?.system?.crafted?.qualities ?? []).some(quality => quality?.id === "free-flowing");
+}
+
+/** A piece's Apparel Bonus now. */
+async function apparelBonusOfPiece(piece, actor) {
+  const { craftedReading } = await import("./gear.mjs");
+  return Number(craftedReading(piece?.system?.crafted, { getTrait, difficulties: {}, baseTier: actor?.system?.baseTierOfPower ?? 1 })?.bonus) || 0;
+}
+
+/** Bursting: the Top Layer destroyed - not Free Flowing - its Apparel Bonus kept on the row. Said. */
+async function burstTopLayer(actor, item) {
+  const { topLayerPiece, brokenChanges } = await import("./gear.mjs");
+  const top = topLayerPiece(Array.from(actor.items ?? []));
+  if (!top || freeFlowing(top)) return;
+  const bonus = await apparelBonusOfPiece(top, actor);
+  await actor.updateEmbeddedDocuments("Item", [{ _id: top.id, ...brokenChanges(top, getTrait), "system.equipped": false, "system.layer": "" }]);
+  await setRowChoice(item, "burstBonus", bonus);
+  ui.notifications.info(`${item.name}: Bursting - ${top.name} destroyed (Apparel Bonus ${bonus}).`);
+}
+
+/** The Apparel worn that a Transformation sets aside: equipped, not Integrated, not Natural Armor - and for a Battle Uniform, not Free Flowing. */
+function wornApparel(actor, { uniform = false } = {}) {
+  return Array.from(actor.items ?? []).filter(piece => (piece.type === "gear") && (piece.system?.itemType === "apparel") && piece.system?.equipped
+    && !piece.system?.integrated && !piece.flags?.["dbu-ttrpg"]?.battleUniformOf && !piece.flags?.["dbu-ttrpg"]?.naturalArmor
+    && !(uniform && freeFlowing(piece)));
+}
+
+/**
+ * Entered: Absorbed Apparel's "You lose all of your equipped Apparel while in this Transformation (it is returned and equipped upon leaving)",
+ * the highest Apparel Bonus of it kept; Battle Uniform's "you lose access to your Apparel ... you are equipped with the Apparel described"
+ * (`battleUniform:` - "Name | Category | Grade | Qualities", Stretching besides) - a Free Flowing piece kept on. Each piece remembers its Layer
+ * and what set it aside.
+ */
+async function setApparelAside(actor, item) {
+  const aspects = aspectsOf(item, actor.items).map(aspect => aspect.id);
+  const absorbed = aspects.includes("absorbed-apparel");
+  const uniformLine = aspects.includes("battle-uniform") ? String(fileOf(item)?.battleUniform ?? "") : "";
+  if (!absorbed && !uniformLine) return;
+  const pieces = wornApparel(actor, { uniform: !absorbed });
+  if (absorbed && pieces.length) {
+    const bonuses = await Promise.all(pieces.map(piece => apparelBonusOfPiece(piece, actor)));
+    await setRowChoice(item, "absorbedBonus", Math.max(0, ...bonuses));
+  }
+  if (pieces.length) await actor.updateEmbeddedDocuments("Item", pieces.map(piece => ({ _id: piece.id, "system.equipped": false, "system.layer": "",
+    "flags.dbu-ttrpg.asideFor": { item: item.id, layer: String(piece.system.layer || "top") } })));
+  if (uniformLine) {
+    const [name, category = "combat-clothing", grade = "1", qualities = ""] = uniformLine.split("|").map(part => part.trim());
+    const { craftedItemFrom, composeEffects } = await import("./gear.mjs");
+    const data = craftedItemFrom("apparel", actor, getTrait);
+    if (!data) return;
+    data.name = name || "Battle Uniform";
+    const ids = [...new Set([...qualities.split(";").map(each => each.trim()).filter(Boolean), "stretching"])];
+    Object.assign(data.system.crafted, { category, grade: Math.max(1, Number(grade) || 1),
+      qualities: ids.map(id => ({ id, slots: 0, choice: "", on: false, name: "", free: true, granted: true })) });
+    data.system.crafted.effects = composeEffects(data.system.crafted, "", { getTrait });
+    data.system.equipped = true;
+    data.system.layer = "top";
+    data.flags = { "dbu-ttrpg": { battleUniformOf: item.id } };
+    await actor.createEmbeddedDocuments("Item", [data]);
+  }
+}
+
+/** Left: its Battle Uniform gone, and what it set aside worn again on its Layer. */
+async function restoreApparel(actor, item) {
+  const uniform = Array.from(actor.items ?? []).filter(piece => piece.flags?.["dbu-ttrpg"]?.battleUniformOf === item.id).map(piece => piece.id);
+  if (uniform.length) await actor.deleteEmbeddedDocuments("Item", uniform);
+  const aside = Array.from(actor.items ?? []).filter(piece => piece.flags?.["dbu-ttrpg"]?.asideFor?.item === item.id);
+  if (aside.length) await actor.updateEmbeddedDocuments("Item", aside.map(piece => ({ _id: piece.id,
+    "system.equipped": !piece.system?.crafted?.destroyed, "system.layer": piece.flags["dbu-ttrpg"].asideFor.layer, "flags.dbu-ttrpg.asideFor": null })));
+  if (rowChoice(item, "absorbedBonus")) await setRowChoice(item, "absorbedBonus", "");
+}
+
+// --- Limited --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Limited: "After entering this Transformation through the Transformation Maneuver, you are forced to leave it after N Combat Rounds (N being
+ * the level) ... cannot enter it again until the end of your next turn" - the N counted from the Round it was entered (the user's), and said
+ * on the card of the Round it runs out at (the user's: a notice). Each line, for that card.
+ */
+export function limitedNotices(combat) {
+  const said = [];
+  for (const actor of (combat?.combatants?.contents ?? []).map(each => each.actor).filter(Boolean)) {
+    for (const item of transformationsInUse(actor)) {
+      const level = aspectsOf(item, actor.items).find(aspect => aspect.id === "limited")?.level ?? 0;
+      const [combatId, round] = String(rowChoice(item, "enteredRound")).split(":");
+      if (!level || (combatId !== combat.id)) continue;
+      if ((Number(combat.round) || 0) - (Number(round) || 0) >= level) {
+        said.push(`${actor.name}: ${item.name} is Limited (${level}) - left now; no Stress Exhaustion (but Exhausting's), not entered again till the end of their next turn.`);
+      }
+    }
+  }
+  return said;
+}
+
+// --- Heartbeat -------------------------------------------------------------------------------------------------------------------
+
+/** What Heartbeat put it in with, where it did: { by: ids put by, grade: the Grade it had } - or null. */
+export function heartbeatOf(item) {
+  const raw = rowChoice(item, "heartbeat");
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+/**
+ * Heartbeat: "If your Stress Bonus is equal to or higher than the Stress Test Requirement - 4 ... you may enter this Transformation for the
+ * duration of any Maneuver you use or that targets you" - no Stress Test, no Legend Realized, no Burst Limit (the user's); "you cannot leave
+ * a Transformation to enter one through Heartbeat, unless it's a lower Stage of the same Transformation"; a Graded one already in use, a
+ * higher Grade; "you may use Heartbeat a number of times per Combat Round equal to its level". Long Transformation "ignores Heartbeat".
+ * Why it may not be, or "".
+ */
+export function heartbeatRefused(actor, item, grade = undefined) {
+  const aspects = aspectsOf(item, actor?.items);
+  const level = aspects.find(aspect => aspect.id === "heartbeat")?.level ?? 0;
+  if (!level) return "it has no Heartbeat";
+  if (aspects.some(aspect => aspect.id === "long-transformation")) return "Long Transformation ignores Heartbeat";
+  const round = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+  const used = actor.getFlag?.("dbu-ttrpg", "heartbeatRound");
+  if (((used?.round === round) ? Number(used.n) || 0 : 0) >= level) return `Heartbeat used ${level} time${(level === 1) ? "" : "s"} this Combat Round`;
+  const items = Array.from(actor.items ?? []);
+  const graded = inUse(item) && gradesOf(fileOf(item));
+  if (inUse(item) && !graded) return "it is in use already";
+  const changes = graded ? [] : (inUseChanges(items, item, true) ?? null);
+  if (!changes) return "an Evolved Stage goes on the Form you are in";
+  const file = fileOf(item);
+  const line = lineOf(file, items);
+  const leaving = changes.filter(change => change["system.active"] === false).map(change => actor.items.get(change._id)).filter(Boolean);
+  if (leaving.some(each => !line || (lineOf(fileOf(each), items) !== line) || (stageOf(fileOf(each), items) >= stageOf(file, items)))) {
+    return "Heartbeat leaves no Transformation but a lower Stage of the same";
+  }
+  const requirement = stressRequirementFor(actor, item, (grade !== undefined) ? { grade } : {}).requirement;
+  if (Number.isFinite(requirement) && ((Number(actor.system?.stressBonus) || 0) < requirement - 4)) {
+    return `its Stress Test Requirement is ${requirement}: the Stress Bonus must be ${requirement - 4} or more`;
+  }
+  return "";
+}
+
+/** Entered through Heartbeat - for a Maneuver's duration, its use this Round counted; what it put by and its Grade kept to give back. */
+export async function heartbeatEnter(actor, item, grade = undefined) {
+  const why = heartbeatRefused(actor, item, grade);
+  if (why) return void ui.notifications.warn(`${item.name}: ${why}.`);
+  const items = Array.from(actor.items ?? []);
+  const graded = inUse(item) && gradesOf(fileOf(item));
+  const changes = graded ? [] : (inUseChanges(items, item, true) ?? []);
+  const by = changes.filter(change => change["system.active"] === false).map(change => change._id);
+  const round = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+  const used = actor.getFlag?.("dbu-ttrpg", "heartbeatRound");
+  await actor.setFlag("dbu-ttrpg", "heartbeatRound", { round, n: ((used?.round === round) ? Number(used.n) || 0 : 0) + 1 });
+  await setRowChoice(item, "heartbeat", JSON.stringify({ by, grade: Number(item.system.grade) || 1, wasIn: inUse(item) }));
+  await actor.updateEmbeddedDocuments("Item", [{ _id: item.id, "system.active": true,
+    ...((grade !== undefined) ? { "system.grade": Math.max(1, Number(grade) || 1) } : {}) }, ...changes]);
+}
+
+/** Its Maneuver over: left again - its Grade as it was, the lower Stage it was entered from back in use. */
+export async function heartbeatEnd(actor, item) {
+  const held = heartbeatOf(item);
+  if (!held) return;
+  await setRowChoice(item, "heartbeat", "");
+  const updates = held.wasIn ? [{ _id: item.id, "system.grade": held.grade }]
+    : [{ _id: item.id, "system.active": false }, ...(held.by ?? []).filter(id => actor.items.has(id)).map(id => ({ _id: id, "system.active": true }))];
+  await actor.updateEmbeddedDocuments("Item", updates);
+}
+
+// --- Beyond, Blutz Wave: said as one is entered ------------------------------------------------------------------------------
+
+/**
+ * Beyond: "cannot be used while you have any stacks of Holding Back, unless it is Fully Mastered"; Blutz Wave: "only ... while you possess the
+ * Tailed option of Saiyan Heritage" - said, never refused (the user's). "" where neither applies.
+ */
+export function aspectWarnings(actor, item) {
+  const aspects = aspectsOf(item, actor?.items).map(aspect => aspect.id);
+  const said = [];
+  if (aspects.includes("beyond") && ((Number(actor?.system?.resources?.holdingback?.stacks) || 0) > 0) && !isFullyMastered(item)) {
+    said.push("Beyond: not with Holding Back stacks unless Fully Mastered");
+  }
+  if (aspects.includes("blutz-wave") && actor?.getFlag?.("dbu-ttrpg", "tailLost")) said.push("Blutz Wave: you have no tail");
+  return said.join("; ");
+}
+
+/** Long Transformation's level of one - the Actions more and the Exploit it brings. */
+export function longTransformationLevel(actor, item) {
+  return aspectsOf(item, actor?.items).find(aspect => aspect.id === "long-transformation")?.level ?? 0;
+}
+
+/**
+ * The hooks Aspects need beyond a Trait's script: a Transformation put in use or by - Absorbed Apparel's and Battle Uniform's Apparel, the
+ * Round it was entered (Limited's); the tail lost in one with Blutz Wave - "If your tail is removed, you leave this Transformation and suffer
+ * from Stress Exhaustion".
+ */
+export function registerAspectHooks() {
+  Hooks.on("updateItem", async (item, changes, options, userId) => {
+    if ((item.type !== TRANSFORMATION_TYPE) || !item.parent || (userId !== game.user.id)) return;
+    if (!foundry.utils.hasProperty(changes, "system.active")) return;
+    const actor = item.parent;
+    if (item.system.active) {
+      if (game.combat?.started) await setRowChoice(item, "enteredRound", `${game.combat.id}:${game.combat.round ?? 0}`);
+      await setApparelAside(actor, item);
+    }
+    else {
+      await restoreApparel(actor, item);
+      if (rowChoice(item, "enteredRound")) await setRowChoice(item, "enteredRound", "");
+      if (rowChoice(item, "burstBonus")) await setRowChoice(item, "burstBonus", "");
+    }
+  });
+  Hooks.on("updateActor", async (actor, changes, options, userId) => {
+    if ((userId !== game.user.id) || !foundry.utils.getProperty(changes, "flags.dbu-ttrpg.tailLost")) return;
+    const tailed = transformationsInUse(actor).filter(item => aspectsOf(item, actor.items).some(aspect => aspect.id === "blutz-wave"));
+    if (!tailed.length) return;
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "stress-exhaustion", 1);
+    await leaveTransformations(actor, tailed.map(item => item.id));
+    ui.notifications.info(`${actor.name}: the tail lost - ${tailed.map(item => item.name).join(", ")} left (Blutz Wave), Stress Exhaustion.`);
+  });
+}

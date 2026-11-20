@@ -10,6 +10,8 @@ tier: 4+
 stress: 25
 aspects: Enhanced Save (All), God Ki, Battle Uniform, Difficult (LV1)
 bonuses: AG +4(T), FO +4(T), TE +4(T), IN +2(T), MA +4(T)
+# Its Battle Uniform (the Battle Uniform Aspect): Name | Category | Craftsmanship Grade | Qualities - Stretching besides.
+battleUniform: Battle Uniform | combat-clothing | 5 | combat-ready; divine-apparel; enchanted; rejuvenating-light
 description: >
   Empowered by the divine energies of the heavens, and emboldened by the purpose given them by their positions, some Kaio ascend to divinity and tap into the true essence of creation. With this vision manifested in their form, they attain a state of holy perfection as they unleash their divinity.
 text: >

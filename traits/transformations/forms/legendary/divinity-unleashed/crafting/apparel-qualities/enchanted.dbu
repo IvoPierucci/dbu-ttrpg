@@ -1,0 +1,22 @@
+id: enchanted
+name: Enchanted
+kind: crafting
+special: true
+categoriesExcept: weights
+slots: 1
+source: Divinity Unleashed
+description: >
+  Soak Value higher by the Apparel Bonus.
+summary: >
+  [Passive]: Increase your Soak Value by the Apparel Bonus.
+text: >
+  Enchanted: Protected by magic, this item offers you greater defense.
+  –Apparel Category: All (except Weights)
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase your Soak Value by the Apparel Bonus.
+
+---
+
+[passive]
+soakValue += $apparelBonus(bT);

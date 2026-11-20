@@ -88,6 +88,18 @@
             {{/if}}
           </span>
         </div>
+        {{#if row.heartbeat}}{{#if @root.editable}}
+        {{! Heartbeat: in it for a Maneuver's duration - entered and left from here. }}
+        <div class="dbu-tf-on">
+          {{#if row.heartbeat.on}}
+          <span class="dbu-tf-chip ext">In it through Heartbeat</span>
+          <button type="button" class="dbu-tf-small" data-action="endHeartbeat" data-tooltip="The Maneuver is over: leave it, back as you were">End Heartbeat</button>
+          {{else}}
+          <button type="button" class="dbu-tf-small" data-action="heartbeatTransformation" {{#if row.heartbeat.why}}disabled{{/if}}
+            data-tooltip="{{#if row.heartbeat.why}}{{row.heartbeat.why}}{{else}}Enter it for the duration of a Maneuver you use or that targets you - no Stress Test, Legend Realized or Burst Limit{{/if}}">Heartbeat</button>
+          {{/if}}
+        </div>
+        {{/if}}{{/if}}
         {{#if row.temporaryStacks}}
         {{! A Temporary Awakening: till the end of the Combat Encounter - a Level 1's the ARC may let stay. }}
         <div class="dbu-tf-on">

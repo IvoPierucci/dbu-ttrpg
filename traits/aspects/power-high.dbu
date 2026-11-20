@@ -16,4 +16,6 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# "Increase the Ki Point Cost of the Guard option of the Defend Maneuver by 1(T) for each level of this Aspect."
+[passive]
+defend.guard.kiCost += $level * 1(T);

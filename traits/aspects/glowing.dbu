@@ -14,4 +14,6 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# A Light Source: your Square's Light Level 1 higher, never past Normal (light.mjs lightLevelOf); the Minor Sphere around you, the table's.
+[passive]
+allow light.glowing;

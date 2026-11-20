@@ -2023,6 +2023,20 @@ export async function ragingOrSuperior(actor) {
     : enterState(actor, "raging", 1, "turn", "Raging");
 }
 
+/**
+ * Long Transformation: "Using the Transformation Maneuver to enter this Transformation triggers the Exploit Maneuver of any adjacent Opponents
+ * (at level 2, of every Opponent not at Long Range). If you are knocked through a Health Threshold by that Exploit Maneuver, you fail the
+ * Stress Test" - each offered on its card; the failing, said there.
+ */
+export async function longTransformationExploits(card, actor, level) {
+  if (!card || !actor || !level) return;
+  const { opponentsWithin } = await import("./guidance.mjs");
+  const { LONG_RANGE_SQUARES } = await import("./maneuvers.mjs");
+  const near = opponentsWithin(actor, (level >= 2) ? (LONG_RANGE_SQUARES - 1) : 0);
+  for (const opponent of near) offerExploitTo(card, opponent, actor, `Long Transformation (${level}) - knocked through a Health Threshold by it, the Stress Test fails`,
+    "transformation");
+}
+
 /** The mark that holds a Chaos Die's result till the end of its Combat Round: its stacks the result (Pure Form's own file). */
 const CHAOS_DIE = "chaos-die";
 
@@ -40003,12 +40017,17 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
   const unfit = item && (T.kindOf(T.fileOf(item)) === "evolved") && T.originalFormOf(actor.items.filter(each => each.id !== item.id))
     ? T.evolvedUnmet(item, actor.items.filter(each => each.id !== item.id).concat([item])) : "";
   if (unfit) ui.notifications.warn(`${item.name}: ${unfit} (said, not refused).`);
+  // Beyond, Blutz Wave: said, never refused.
+  const aspectSaid = item ? T.aspectWarnings(actor, item) : "";
+  if (aspectSaid) ui.notifications.warn(`${item.name}: ${aspectSaid} (said, not refused).`);
   // An Evolved Stage is entered on the Form you are in (the user's): in none, it may not be.
   if (item && (T.kindOf(T.fileOf(item)) === "evolved") && !T.originalFormOf(actor.items.filter(each => each.id !== item.id))) {
     ui.notifications.warn(`${item.name}: an Evolved Stage is entered on the Form you are in, and you are in none.`);
     return null;
   }
-  const entering = item ? { itemId: item.id, grade: row?.grades ? asked.grade : undefined, scales: row?.scales ? asked.scales : undefined,
+  // Long Transformation: "requires an additional Action per level to enter".
+  const longLevel = item ? T.longTransformationLevel(actor, item) : 0;
+  const entering = item ? { itemId: item.id, longLevel, grade: row?.grades ? asked.grade : undefined, scales: row?.scales ? asked.scales : undefined,
     prelude: row?.prelude ? asked.prelude : undefined, transcended: row?.transcendent ? asked.transcended : undefined,
     form: ["form", "evolved"].includes(T.kindOf(T.fileOf(item))) } : { form: asked.form };
   const natural = item ? T.stressRequirementFor(actor, item, { grade: asked.grade, scales: asked.scales, prelude: asked.prelude }).natural : false;

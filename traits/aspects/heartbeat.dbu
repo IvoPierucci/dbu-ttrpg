@@ -24,4 +24,5 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: the Transformation Maneuver and Mastery read it.
+# Entered for a Maneuver's duration from its row, left from there again (transformations.mjs heartbeatEnter, heartbeatEnd): its Stress Bonus at
+# least the Requirement - 4, its level a Round, a higher Grade where Graded and in it.

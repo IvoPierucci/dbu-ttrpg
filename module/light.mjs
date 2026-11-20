@@ -41,5 +41,8 @@ export function lightLevelOf(system, getTrait = null, { treated = true } = {}) {
     && !traitAside(item, items, system?.parent))
     .reduce((sum, item) => sum + towardOf(item.flags?.["dbu-ttrpg"]?.sourceId)
       + (item.system?.chosen ?? []).filter(entry => entry.key === "option").reduce((more, entry) => more + towardOf(entry.value), 0), 0) : 0;
-  return (level > 0) ? Math.max(0, level - toward) : Math.min(0, level + toward);
+  const treatedLevel = (level > 0) ? Math.max(0, level - toward) : Math.min(0, level + toward);
+  // Glowing: "you become a Light Source, increasing the Light Level by 1 Level within a Minor Sphere AoE (centered on you). This cannot increase
+  // the Light Level beyond Normal" - its own Square here; everyone else's in it, the table's (as a Torch's).
+  return ((system?.effects?.slots?.["light.glowing"] === true) && (treatedLevel < 0)) ? treatedLevel + 1 : treatedLevel;
 }

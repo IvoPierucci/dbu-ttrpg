@@ -8,7 +8,7 @@ import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransfo
   combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
   lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait, ownersOf, releaseOwner, stacksOf, evolvedUnmet,
-  rowChoicesOf, setRowChoice }
+  rowChoicesOf, setRowChoice, heartbeatOf, heartbeatRefused, heartbeatEnter, heartbeatEnd, aspectWarnings }
   from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
@@ -466,6 +466,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       removeTransformation: DBUCharacterSheet._onRemoveTransformation,
       transformationSection: DBUCharacterSheet._onTransformationSection,
       keepTemporaryAwakening: DBUCharacterSheet._onKeepTemporaryAwakening,
+      heartbeatTransformation: DBUCharacterSheet._onHeartbeatTransformation,
+      endHeartbeat: DBUCharacterSheet._onEndHeartbeat,
       releaseTransformationOwner: DBUCharacterSheet._onReleaseTransformationOwner,
       endTemporaryAwakening: DBUCharacterSheet._onEndTemporaryAwakening,
       toggleTransformation: DBUCharacterSheet._onToggleTransformation,
@@ -7261,6 +7263,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         newLevel: Boolean(item.system.newLevel),
         // What it asks to be chosen as it is gained (its file's `choice1:`...) - Monster Form's.
         choices: rowChoicesOf(item, file),
+        // Heartbeat: entered for a Maneuver's duration from its row, and left again there.
+        heartbeat: aspectsOf(item, all).some(aspect => aspect.id === "heartbeat") ? { on: Boolean(heartbeatOf(item)),
+          why: heartbeatRefused(this.actor, item) } : null,
         bonuses: Object.entries(BONUS_ATTRIBUTES).map(([label, attribute]) => ({ label,
           value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
         aspects: file ? aspectsOf(item, all).map(aspect => ({ label: aspectLabel(aspect), summary: aspectFile(aspect.id)?.summary ?? "" })) : [],
@@ -7350,7 +7355,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       }
       await this.actor.updateEmbeddedDocuments("Item", updates);
       // An Evolved Stage on a Form it does not fit - Unique to another, its Original not Mastered: said, never refused (the user's).
-      const unmet = (field === "active") && on ? evolvedUnmet(this.actor.items.get(item.id)) : "";
+      const unmet = (field === "active") && on ? [evolvedUnmet(this.actor.items.get(item.id)), aspectWarnings(this.actor, item)].filter(Boolean).join("; ") : "";
       if (unmet) ui.notifications.warn(`${item.name}: ${unmet} (said, not refused).`);
       return;
     }
@@ -7363,6 +7368,34 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onReleaseTransformationOwner(event, target) {
     if (!this.isEditable) return;
     return releaseOwner(this.actor, target.closest("[data-tf-id]")?.dataset.tfId, target.dataset.uuid);
+  }
+
+  /**
+   * Heartbeat, from its row: entered for the duration of a Maneuver (no Stress Test, no Legend Realized, no Burst Limit) - a Graded one in use,
+   * which higher Grade asked.
+   */
+  static async _onHeartbeatTransformation(event, target) {
+    if (!this.isEditable) return;
+    const item = this.actor.items.get(target.closest("[data-tf-id]")?.dataset.tfId ?? "");
+    if (!item) return;
+    const grades = gradesOf(fileOf(item));
+    let grade;
+    if (item.system.active && grades) {
+      const now = Number(item.system.grade) || 1;
+      const higher = Array.from({ length: Math.max(0, grades - now) }, (each, index) => now + index + 1);
+      if (!higher.length) return ui.notifications.warn(`${item.name} is at its highest Grade.`);
+      const { askPlayerChoice } = await import("../chat.mjs");
+      grade = Number(await askPlayerChoice(this.actor, `${item.name}: Heartbeat - which Grade`, higher.map(each => ({ value: String(each), label: `Grade ${each}` }))));
+      if (!grade) return;
+    }
+    return heartbeatEnter(this.actor, item, grade);
+  }
+
+  /** Heartbeat's Maneuver over: left again, as it was before. */
+  static async _onEndHeartbeat(event, target) {
+    if (!this.isEditable) return;
+    const item = this.actor.items.get(target.closest("[data-tf-id]")?.dataset.tfId ?? "");
+    if (item) return heartbeatEnd(this.actor, item);
   }
 
   /** A Temporary Awakening the ARC lets stay. */

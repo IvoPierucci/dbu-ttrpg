@@ -1,0 +1,28 @@
+id: rejuvenating-light
+name: Rejuvenating Light
+kind: crafting
+special: true
+categoriesExcept: weights
+slots: 1
+source: Divinity Unleashed
+description: >
+  Using a Surge Maneuver: 3(bT) Divine Ki Points back.
+summary: >
+  [Triggered]: If you use a Surge Maneuver, regain 3(bT) Divine Ki Points.
+text: >
+  Rejuvenating Light: The power that flows through you restores your divine energy.
+  –Apparel Category: All (except Weights)
+  –Prerequisites: Divinity Unleashed
+  –Quality Slots: 1
+  –Effects: If you use a Surge Maneuver, regain 3(bT) Divine Ki Points.
+
+---
+
+# The Surge Maneuver used - a Healing or a Ki Surge through it.
+[automatic/healing-surge]
+requires bySurgeManeuver;
+divineKi.value += 3(bT);
+
+[automatic/ki-surge]
+requires bySurgeManeuver;
+divineKi.value += 3(bT);

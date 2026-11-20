@@ -8,7 +8,7 @@ import { registerVehicleHooks } from "./vehicles.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
 import DBURacialData from "./data/item-racial.mjs";
 import { registerRacialHooks } from "./racial.mjs";
-import { registerTransformationHooks } from "./transformations.mjs";
+import { registerAspectHooks, registerTransformationHooks } from "./transformations.mjs";
 import { registerIntegratedHooks } from "./integrated.mjs";
 import { registerNaturalArmorHooks } from "./natural-armor.mjs";
 import { registerAssimilationHooks } from "./assimilation.mjs";
@@ -173,6 +173,7 @@ Hooks.once("init", () => {
   registerRacialLifeHooks();
   registerRacialHooks();
   registerTransformationHooks();
+  registerAspectHooks();
   registerIntegratedHooks();
   registerNaturalArmorHooks();
   registerAssimilationHooks();

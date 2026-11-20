@@ -22,7 +22,11 @@ text: >
 [passive, effect 2]
 soakValue += power.stacks * 1(T);
 
-# (3) A stack more of Power with the Power Up, (4) Combat Rolls by the Apparel burst: the table's.
+# (3) A stack more of Power with the Power Up: the table's.
+
+# (4) Combat Rolls by half (rounded up) the Apparel Bonus of the piece Bursting destroyed as it was entered (its row's burstBonus).
+[passive, effect 4]
+combatRolls += ceil($row.burstBonus / 2);
 
 # (5) With the Power Up, once an Encounter: a stack of Battle Born.
 [triggered/power, 1/encounter, effect 5]

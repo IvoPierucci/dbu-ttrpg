@@ -570,6 +570,8 @@ const TABLE = [
     doc: "More Wound for each Health Threshold the target is below, on the Technique a Trait chose as its own (Violent Monster (4))." },
   { key: "chosenTechnique.ascend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Ascended Signature Advantage offered on the Technique a Trait chose, once a Combat Encounter (Violent Monster (7))." },
+  { key: "light.glowing", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "A Light Source: your Square's Light Level 1 higher, not past Normal (the Glowing Aspect's; the Minor Sphere around you the table's)." },
   { key: "legend.extra", phase: PHASES.LATE, kind: N, ops: ["add"],
     doc: "Life and Ki Points more from Legend Realized (Monstrous Ascension (2): half the chosen Attribute's Modifier)." },
   { key: "legend.narrativeDouble", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],

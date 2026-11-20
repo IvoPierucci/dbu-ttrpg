@@ -18,4 +18,6 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: the Transformation Maneuver and Mastery read it.
+# An Action more for each level to enter it, its Exploits offered on the Transformation Maneuver's card (adjacent; level 2, every Opponent not at
+# Long Range), no Heartbeat (use-maneuver.mjs, chat.mjs longTransformationExploits). Knocked through a Threshold by one: the Stress Test fails -
+# said there.

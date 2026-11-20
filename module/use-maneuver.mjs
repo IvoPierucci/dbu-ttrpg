@@ -5508,12 +5508,24 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const price = maneuverKiCost(maneuver, null, actor)
       + (maneuver.kiPerAction ? (Math.max(1, Number(actionsSpent) || 1) - 1) * maneuverKiCost(maneuver, null, actor) : 0);
     if ((price > 0) && !await spendManeuverCost(actor, maneuver, price)) return false;
+    // Long Transformation: an Action more for each level - refused where they are not there to spend.
+    const longLevel = Number(into.longLevel) || 0;
+    if (longLevel && game.combat?.started) {
+      const left = Math.max(0, (Number(actor.system.actions?.standard) || 0) - (Number(actor.system.actionsSpent?.standard) || 0));
+      if (left < (Math.max(1, Number(actionsSpent) || 1) + longLevel)) {
+        ui.notifications.warn(`${into.name}: Long Transformation (${longLevel}) - ${longLevel} Action${(longLevel === 1) ? "" : "s"} more to enter it, and ${left} left.`);
+        return false;
+      }
+    }
     await payActions(actor, maneuver, actionsSpent);
+    if (longLevel && game.combat?.started) await (await import("./combat.mjs")).spendActions(actor, longLevel);
     await recordManeuverUse(actor, maneuver);
     const transformed = await postTransformation(actor, maneuver, into, actionsSpent);
     await recordManeuverType(actor, maneuver.type, { messageId: transformed?.id });
     // Master of Openings (2): an Opponent's Exploit, offered on the Transformation's card.
     if (transformed) await (await import("./chat.mjs")).openingsOffers(transformed, actor);
+    // Long Transformation: the Exploits it brings.
+    if (transformed && longLevel) await (await import("./chat.mjs")).longTransformationExploits(transformed, actor, longLevel);
     return true;
   }
 

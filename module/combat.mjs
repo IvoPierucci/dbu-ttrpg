@@ -155,8 +155,8 @@ async function startRound(combat) {
     }
   }
 
-  // Power Advantage, said on the Round's card.
-  const advantaged = await powerAdvantages(combat);
+  // Power Advantage, said on the Round's card; and a Limited Transformation run out.
+  const advantaged = [...await powerAdvantages(combat), ...(await import("./transformations.mjs")).limitedNotices(combat)];
   // Recovery Periods, for the Round that ended - said on the Round's card; and Minion Mark's loss as this one starts.
   const recovered = [...(((combat.round ?? 0) > 1) ? await recoveryPeriods(combat) : []), ...await markedMinionsBleed(combat), ...advantaged];
   const roundCard = await announce("start-of-round", {

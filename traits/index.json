@@ -2019,6 +2019,8 @@
     "maneuvers/possess.dbu",
     "transformations/forms/alternate/pure-form/conditions/chaos-die.dbu",
     "transformations/forms/alternate/pure-form/conditions/chaos-free-mark.dbu",
-    "transformations/forms/alternate/pure-form/conditions/chaos-twice-mark.dbu"
+    "transformations/forms/alternate/pure-form/conditions/chaos-twice-mark.dbu",
+    "transformations/forms/legendary/divinity-unleashed/crafting/apparel-qualities/enchanted.dbu",
+    "transformations/forms/legendary/divinity-unleashed/crafting/apparel-qualities/rejuvenating-light.dbu"
   ]
 }
