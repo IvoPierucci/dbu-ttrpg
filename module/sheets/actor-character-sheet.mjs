@@ -7242,8 +7242,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const numbers = String(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.constant ?? "").split(",").map(Number).filter(Boolean);
       return racialTraitLines(item).filter(line => numbers.some(n => String(line.html ?? "").includes(`(${n})-`))).map(line => line.html);
     };
-    const traits = this.#racialTraitChoices(triggered, traitItems.filter(item => ["in", "permanent"].includes(standing.get(item.id))))
-      .map(entry => ({ ...entry, from: fromOf(entry.item) + ((standing.get(entry.item.id) === "permanent") ? ", its [Permanent] effects" : "") }));
+    // Not one whose Transformation is not in use and holds only by its [Permanent] effects (the user's: not shown).
+    const traits = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "in"))
+      .map(entry => ({ ...entry, from: fromOf(entry.item) }));
     const constant = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "constant"))
       .map(entry => ({ ...entry, from: fromOf(entry.item), constantLines: constantLines(entry.item) }));
     return {
