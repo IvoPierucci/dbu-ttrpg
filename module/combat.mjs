@@ -348,6 +348,9 @@ export function newRoundFor(actor) {
     "system.basicAttackProfiles": [],
     "system.usedManeuvers": (actor.system.usedManeuvers ?? [])
       .filter(entry => !entry.startsWith("round:")),
+    // Heartbeat's uses this Combat Round (transformations.mjs heartbeatEnter) - out of a Combat Encounter, the Settings' New Round is all that
+    // turns them over.
+    ...(actor.getFlag?.("dbu-ttrpg", "heartbeatRound") ? { "flags.dbu-ttrpg.-=heartbeatRound": null } : {}),
     // Narrative Stamina: "At the start of each Combat Round, gain Narrative Stamina equal to the amount listed ... You lose all
     // Narrative Stamina at the end of each Combat Round" - last Round's gone and this Round's given, in one.
     ...(isAdversary(actor) ? { "system.narrativeStamina.value": Number(actor.system.narrativeStamina?.max) || 0 } : {})
