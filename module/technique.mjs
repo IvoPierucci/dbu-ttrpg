@@ -45,16 +45,31 @@ export function isUltimate(level) {
   return Boolean(LEVELS[level]?.ultimate);
 }
 
+/** The free Technique Points a Trait that chose this Technique as its own gives it (`chosenTechniqueFreeTP:`), or 0. */
+function chosenTechniqueFree(item) {
+  if (!item?.id) return 0;
+  for (const each of Array.from(item.parent?.items ?? [])) {
+    if (each.type !== "racial") continue;
+    const trait = getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    if (!trait?.chosenTechniqueFreeTP) continue;
+    if ((each.system?.chosen ?? []).some(entry => (entry.key === trait.id) && (entry.value === item.id))) return Math.max(0, Number(trait.chosenTechniqueFreeTP) || 0);
+  }
+  return 0;
+}
+
 /** A Technique's build, with every list present, whatever the Item had stored. */
 export function signatureOf(item) {
   const sig = item?.system?.signature ?? {};
+  // A Technique a Trait chose as its own, free - Violent Monster's Vile Technique, "a Super Signature Technique with a TP Cost of up to 25"
+  // (the user's: free): its `chosenTechniqueFreeTP:` none of the character's, and "gained from a Transformation Trait" for the Ultimates' count.
+  const chosenFree = chosenTechniqueFree(item);
   return {
     level: LEVELS[sig.level] ? sig.level : "super",
     foundation: sig.foundation ?? "",
     profile: sig.profile ?? "",
     secondProfile: sig.secondProfile ?? "",
     superProfile: sig.superProfile ?? "",
-    fromTransformation: Boolean(sig.fromTransformation),
+    fromTransformation: Boolean(sig.fromTransformation) || (chosenFree > 0),
     godFinisher: Boolean(sig.godFinisher),
     // Nameless Horde (4)'s 'Full Power' Techniques: given, no Technique Points (full-power.mjs) - and one's Ki Point Cost as listed.
     fullPower: Boolean(sig.fullPower),
@@ -63,7 +78,7 @@ export function signatureOf(item) {
     kiPerTierOff: Math.max(0, Number(sig.kiPerTierOff) || 0),
     // Inherited Creativity's: made for the Combat Encounter alone - no Technique Points, no Disadvantages.
     encounterOnly: Boolean(item?.flags?.["dbu-ttrpg"]?.encounterTechnique),
-    freeTP: Math.max(0, Math.floor(Number(sig.freeTP) || 0)),
+    freeTP: Math.max(0, Math.floor(Number(sig.freeTP) || 0), chosenFree),
     // Powerful Technique (3)'s Advantage, given - bought already, its TP refunded (techniqueTP).
     powerfulFree: powerfulFreeOf(item),
     features: Array.from(sig.features ?? []).map(entry => ({
