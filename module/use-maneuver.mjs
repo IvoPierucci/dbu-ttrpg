@@ -2713,8 +2713,20 @@ async function payActions(actor, maneuver, spent = null) {
     await spendActions(actor, amount, "counter");
     return;
   }
+  // True Divinity (2): "You may spend your Counter Actions as if they were Actions for Combat Recovery" - how many, asked.
+  const owed = Math.max(0, amount - (Number(maneuver.actionDiscount) || 0));
+  if ((kind === "standard") && (maneuver.id === "combat-recovery") && owed && game.combat?.started
+    && (actor.system.effects?.slots?.["combatRecovery.counterActions"] === true) && (actionsWithin(actor, "counter") > 0)) {
+    const { askPlayerAmount } = await import("./chat.mjs");
+    const counters = Math.min(owed, actionsWithin(actor, "counter"),
+      Number(await askPlayerAmount(actor, `${actor.name}: Combat Recovery`, Math.min(owed, actionsWithin(actor, "counter")),
+        "Counter Actions spent as Actions (True Divinity)")) || 0);
+    if (counters) await spendActions(actor, counters, "counter");
+    await spendActions(actor, owed - counters, kind);
+    return;
+  }
   // Quick Sleep's: "reduce the Action Cost by 1" - the Actions chosen still what the Maneuver does with (the user's).
-  await spendActions(actor, Math.max(0, amount - (Number(maneuver.actionDiscount) || 0)), kind);
+  await spendActions(actor, owed, kind);
 }
 
 /**
@@ -5108,6 +5120,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return false;
   }
 
+  // Divine Role (5): "If you use this effect, you cannot use Combat Recovery during this Combat Round."
+  if ((maneuver.id === "combat-recovery") && game.combat?.started
+    && (actor.getFlag?.("dbu-ttrpg", "noRecoveryRound") === `${game.combat.id}:${game.combat.round ?? 0}`)) {
+    ui.notifications.warn(`${actor.name} used Divine Role's Basic Attack this Round: no Combat Recovery till the next.`);
+    return false;
+  }
   // Debilitated: "cannot use the Combat Recovery Maneuver".
   if ((maneuver.id === "combat-recovery") && actor.getFlag?.("dbu-ttrpg", "debilitatedBy")) {
     ui.notifications.warn(`${actor.name} is Debilitated and cannot use ${maneuver.name}.`);

@@ -1781,6 +1781,11 @@ export async function spendActions(actor, amount, kind = "standard") {
   await actor.update({
     [`system.actionsSpent.${kind}`]: (actor.system.actionsSpent?.[kind] ?? 0) + amount
   });
+  // Counter Actions spent - counter-spent, how many and this Round's (Divine Entity (3), True Divinity (3)).
+  if (kind === "counter") {
+    const { answerFor } = await import("./chat.mjs");
+    await answerFor(actor, "counter-spent", { spent: amount, counterTotal: Number(actor.system.actionsSpent?.counter) || amount });
+  }
   return true;
 }
 

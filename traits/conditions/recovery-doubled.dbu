@@ -1,0 +1,14 @@
+id: recovery-doubled
+name: Recovery Doubled
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Cosmic Flow (6)'s - the Combat Recovery being used gives twice its Life and Ki Points, and twice Cosmic Flow (5)'s
+# Divine Ki Points; spent by it (maneuvers/combat-recovery.dbu).
+combatCondition: no
+source: Core Rule
+description: >
+  Cosmic Flow (6): this use of Combat Recovery gives twice its Life and Ki Points, and twice Cosmic Flow (5)'s Divine Ki Points.
+text: >
+  Cosmic Flow (6)-[Triggered, 1/Encounter]: If you use Combat Recovery while below the Injured Health Threshold, double the amount of Life and Ki Points you regain from that use of Combat Recovery. Additionally, double the amount of Divine Ki Points regained from the 5th effect of Cosmic Flow for this use of Combat Recovery.
+
+---

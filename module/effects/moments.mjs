@@ -261,6 +261,9 @@ const TABLE = [
   { key: "power-gained", label: "You gain a stack of Power", provides: [],
     doc: "Fired as Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Greed of the Hera's. "
        + "What is the player's is asked in a window first." },
+  { key: "counter-spent", label: "You spend Counter Actions", provides: [],
+    doc: "Fired as Counter Actions are spent, with how many as `spent` and this Combat Round's as `counterTotal` (combat.mjs spendActions) - "
+       + "Divine Entity (3)'s, True Divinity (3)'s. What is the player's is asked in a window first." },
   { key: "overwhelm-spent", label: "You spend stacks of Overwhelm", provides: [],
     doc: "Fired as Overwhelm is spent - not lost, as Overwhelming Fighter (2) loses it - by an effect's script, a Maneuver's price or a "
        + "spending asked, with how many as `spent` (chat.mjs setResource, moments-runtime.mjs writeStateful) - Suppression of Power (6)'s. "

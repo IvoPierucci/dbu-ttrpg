@@ -857,6 +857,9 @@ async function runVerb(actor, call, context) {
     case "casteKnightStrike": return (await import("../chat.mjs")).casteKnightStrike(actor);
     case "castePawnStrike": return (await import("../chat.mjs")).castePawnStrike(actor);
     case "basicStrike": return (await import("../chat.mjs")).basicStrike(actor);
+    // Divine Role (4): Ki to the Allies within so many Squares; (5): the Basic Attack, no Combat Recovery this Round after it.
+    case "kiToAlliesNear": return (await import("../chat.mjs")).kiToAlliesNear(actor, Number(args[0]) || 0);
+    case "basicStrikeNoRecovery": return (await import("../chat.mjs")).basicStrikeNoRecovery(actor);
     // The Basic Attack out of sequence, made through the Maneuver whose `[on used]` this is - Coup de Grace (2)'s (Unending Pressure (3)).
     case "basicStrikeThrough": return (await import("../chat.mjs")).basicStrike(actor, String(context?.maneuver?.id ?? ""));
     // Suppression of Power (6): Life Points for the Overwhelm just spent, so many (bT) a stack, no more than so many (bT) a Combat Round.

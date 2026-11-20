@@ -2719,6 +2719,20 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
     ui.notifications.warn(`${actor.name} needs ${cost} Divine Ki Points for ${maneuver.name} and has ${Number(divine?.value) || 0}.`);
     return false;
   }
+  // Cosmic Flow (3): "If you would use Divine Ki Points to pay the Ki Point Cost of an Attacking Maneuver, reduce the Ki Point Cost by 2(T)".
+  const divineOff = (maneuver?.attacking && divine?.active && (divine.use || maneuver?.godManeuver))
+    ? Math.max(0, -(Number(actor.system.effects?.slots?.["attack.divineKiCost"]?.add) || 0)) : 0;
+  if (divineOff && ((Number(divine.value) || 0) >= Math.max(0, cost - divineOff))) {
+    const paid = Math.max(0, cost - divineOff);
+    const halved = Math.ceil(Math.min(fromCapacity, paid) / 2);
+    if (halved > capacity.remaining) {
+      ui.notifications.warn(`${actor.name} has ${capacity.remaining} Capacity left this round and ${maneuver.name} costs ${halved} in Divine Ki.`);
+      return false;
+    }
+    await actor.update({ "system.divineKi.value": divine.value - paid, "system.capacity.spent": capacity.spent + halved });
+    DIVINE_PAID.set(`${actor.uuid}:${maneuver.id ?? maneuver.name}`, { cost: paid, capacity: halved });
+    return true;
+  }
   if (divine?.active && (divine.use || maneuver?.godManeuver) && ((Number(divine.value) || 0) >= cost)) {
     const halved = Math.ceil(fromCapacity / 2);
     if (halved > capacity.remaining) {

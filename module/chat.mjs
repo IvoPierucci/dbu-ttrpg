@@ -970,6 +970,26 @@ async function expertOffers(message, attacker) {
 }
 
 /**
+ * Cosmic Flow (1): "Attacking Maneuvers that target Allies within a Huge Sphere AoE (centered on you) trigger your Exploit Maneuver." For each
+ * who has it and the Exploit - the attacker their Opponent, a target of it an Ally of theirs within a Huge Sphere's reach of them - the Exploit at the
+ * attacker, out of sequence, on the attack's card.
+ */
+async function guardianOffers(message, attacker, targets) {
+  if (!message || !attacker || !canvas?.tokens) return;
+  const aimed = (targets ?? []).map(each => ((typeof each === "string") ? fromUuidSync(each) : (each?.actor ?? each))).filter(Boolean);
+  if (!aimed.length) return;
+  const on = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()].filter(Boolean);
+  for (const watcher of on) {
+    if ((watcher.uuid === attacker.uuid) || watcher.system?.defeated || (watcher.system?.effects?.slots?.["exploit.alliesTargeted"] !== true)
+      || !areOpponents(watcher, attacker) || !watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    const ally = aimed.find(each => (each.uuid !== watcher.uuid) && areAllies(each, watcher) && withinGuidance(watcher, each, 4));
+    if (!ally) continue;
+    requestEdit(message, { type: "offer", offer: { actorUuid: watcher.uuid, actorName: watcher.name, maneuverId: "exploit",
+      maneuverName: "Exploit", targetUuid: attacker.uuid, reason: `Cosmic Flow - ${attacker.name} targets ${ally.name}`, grants: { guardian: true } } });
+  }
+}
+
+/**
  * Master of Openings (2): "If an Opponent uses the Power Up Maneuver or Transformation Maneuver while not at Long Range, this
  * triggers your Exploit Maneuver." For each who has it and the Exploit - `user` their Opponent, not at Long Range - the Exploit
  * at them, out of sequence, on its card. Taken, once a Round (takeOutOfSequence).
@@ -12398,7 +12418,17 @@ function clashParts(kind, actor, clash, uuid) {
     ...bagClashBonus(actor, clash, uuid),
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
     ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid),
+    ...vsOpponentClashBonus(actor, clash, uuid),
     ...fairyClashBonus(actor, clash, uuid), ...ogreClashBonus(actor, clash, uuid)];
+}
+
+/** Ascended Divine Magic (3): "Increase your Might and Saving Throws by 1(T) for the duration of any Clash initiated by an Opponent." */
+function vsOpponentClashBonus(actor, clash, uuid) {
+  const value = Number(actor?.system?.effects?.slots?.["clash.vsOpponent"]?.add) || 0;
+  if (!value || (uuid !== clash?.defenderUuid) || !["save", "might"].includes(clash.category)) return [];
+  const challenger = fromUuidSync(clash.challengerUuid ?? "");
+  if (!challenger || !areOpponents(challenger, actor)) return [];
+  return [{ label: "Ascended Divine Magic", value }];
 }
 
 /**
@@ -30617,7 +30647,7 @@ async function takeOutOfSequence(message, actor, offer) {
  * other's result in advance.
  */
 export async function postAttack(actor, target, maneuver,
-                                 { profile, foundation, kiWager = 0, wagerFromLife = false,
+                                 { profile, foundation, kiWager = 0, wagerFromLife = false, wagerFromDivine = false,
                                    charges = 0, damageAttribute = null, autoHit = false,
                                    advantages = [], squaresCharged = 0, thrown = null,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
@@ -31206,6 +31236,8 @@ export async function postAttack(actor, target, maneuver,
           // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it
           // is a Ki Wager either way - and only the card's note says the difference.
           wagerFromLife: Boolean(wagerFromLife && kiWager),
+          // In Divine Ki Points - Cosmic Flow (4) reads it.
+          ...((wagerFromDivine && kiWager) ? { wagerFromDivine: true } : {}),
           // What stands in for the Damage Attribute, where something other than the
           // attacker's own does - a Bomb's recorded Scholarship Modifier, the Hologram
           // Projector's Personality. Null for every attack made with the Foundation's own.
@@ -31404,6 +31436,7 @@ export async function postAttack(actor, target, maneuver,
     "Opponents on a Square adjacent to the attacker (Burrowed Strike)"].filter(Boolean).join("; ") } : maneuver);
   // Exploit Expert (2): made within the Melee Range of 2 or more of an Opponent's side.
   if (card && !reflecting) await expertOffers(card, actor);
+  if (card && !reflecting) await guardianOffers(card, actor, [target, ...(extraTargets ?? [])]);
   return card;
 }
 
@@ -32961,7 +32994,10 @@ function halfWagerParts(attacker, attack) {
   if (!half) return [];
   const own = slots["wound.halfWager"] === true;
   const signature = (slots["wound.halfWagerSignature"] === true) && effectSignature(attacker, attack);
-  return (own || signature) ? [{ label: "Half the Ki Wager", value: half }] : [];
+  // Cosmic Flow (4): "If you would use Divine Ki Points for a Ki Wager, increase the Wound Roll ... by 1/2 of the amount of Divine Ki Points".
+  const divine = attack?.wagerFromDivine && (slots["wound.halfDivineWager"] === true);
+  return [...((own || signature) ? [{ label: "Half the Ki Wager", value: half }] : []),
+    ...(divine ? [{ label: "Half the Divine Ki wagered (Cosmic Flow)", value: half }] : [])];
 }
 
 function strikeParts(attacker, attack) {
@@ -41977,4 +42013,25 @@ async function rollCriticalDie(message, button, criticalDice) {
   // Author or GM only; for anyone else the button just stays disabled locally.
   if (message.isAuthor || game.user.isGM) await message.delete();
   await resettleCheck(check?.settles, total, check?.against ?? null);
+}
+
+/** Divine Role (4): "all Allies within a Large Sphere AoE (centered on you) regain Ki Points equal to 1/2 of your Surgency". */
+export async function kiToAlliesNear(actor, gap) {
+  const { alliesNear } = await import("./guidance.mjs");
+  const amount = Math.floor((Number(actor?.system?.surgency) || 0) / 2);
+  const allies = alliesNear(actor, gap);
+  if (!amount || !allies.length) return;
+  for (const ally of allies) {
+    const ki = ally.system?.ki ?? {};
+    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + amount) });
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `Divine Role: ${allies.map(ally => ally.name).join(", ")} regain ${amount} Ki Points.`)}</div>` });
+}
+
+/** Divine Role (5): the Basic Attack out of sequence - and no Combat Recovery this Combat Round once it is made. */
+export async function basicStrikeNoRecovery(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!await ownOutOfSequence(actor, "basic-attack")) return UNSPENT;
+  if (game.combat?.started) await requestActorUpdate(actor, { [`flags.${SCOPE}.noRecoveryRound`]: `${game.combat.id}:${game.combat.round ?? 0}` });
 }

@@ -12,4 +12,8 @@ text: >
 
 ---
 
-# (1)-(3) The Domain, Divine Ki half again, the Domain Maneuver: the table's.
+# (1) The Domain: Divine Magic (3)'s Option. (3) The Domain Maneuver it names: the table's.
+
+# (2) Maximum Divine Ki Points half again.
+[passive, effect 2]
+allow divineKi.halfMore;

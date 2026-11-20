@@ -2023,6 +2023,7 @@
     "transformations/forms/legendary/divinity-unleashed/crafting/apparel-qualities/enchanted.dbu",
     "transformations/forms/legendary/divinity-unleashed/crafting/apparel-qualities/rejuvenating-light.dbu",
     "transformations/forms/alternate/partial-suppression/maneuvers/coup-de-grace-strike.dbu",
-    "transformations/forms/alternate/partial-suppression/maneuvers/mutants-resilience-counter.dbu"
+    "transformations/forms/alternate/partial-suppression/maneuvers/mutants-resilience-counter.dbu",
+    "conditions/recovery-doubled.dbu"
   ]
 }

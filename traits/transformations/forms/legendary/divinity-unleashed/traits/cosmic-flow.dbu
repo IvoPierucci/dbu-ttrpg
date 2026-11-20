@@ -15,4 +15,33 @@ text: >
 
 ---
 
-# (1)-(6) The Exploit for Allies, the Sphere, Divine Ki, Combat Recovery: the table's.
+# (1) An Opponent's Attacking Maneuver at an Ally within a Huge Sphere AoE centered on you: your Exploit Maneuver, offered on its card
+# (chat.mjs guardianOffers).
+[passive, effect 1]
+allow exploit.alliesTargeted;
+
+# (2) Divine Role (3)'s Sphere Huge: its Allies (actor-character.mjs allyRolls), and its "no Allies within" here.
+[passive, effect 2]
+allow divineRole.huge;
+if (!alliesNear(4)) {
+    wound += 1(T);
+    soakValue += 1(T);
+}
+
+# (3) An Attacking Maneuver's Ki Point Cost paid in Divine Ki Points: 2(T) lower (maneuvers.mjs spendManeuverCost).
+[passive, effect 3]
+attack.divineKiCost -= 2(T);
+
+# (4) A Ki Wager in Divine Ki Points: half of it on the Wound Roll (chat.mjs halfWagerParts).
+[passive, effect 4]
+allow wound.halfDivineWager;
+
+# (5) Combat Recovery: Divine Ki Points, 1/2 of your Surgency - written in Combat Recovery's own script, after what it gives back.
+[passive, effect 5]
+allow cosmicFlow.recovery;
+
+# (6) Combat Recovery below the Injured Health Threshold, once an Encounter: its Life and Ki Points, and (5)'s Divine Ki, doubled - a mark
+# its own script reads and spends.
+[triggered/declare-maneuver, 1/encounter, effect 6]
+requires using("combat-recovery") && belowThreshold("injured");
+gain(recovery-doubled);

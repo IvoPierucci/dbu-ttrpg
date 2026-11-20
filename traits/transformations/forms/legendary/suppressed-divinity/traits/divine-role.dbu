@@ -25,4 +25,22 @@ text: >
 allow maneuver.$choice;
 allow maneuver.$choice2;
 
-# (3)-(5) Allies within a Large Sphere, Combat Recovery: the table's.
+# (3) Allies within a Large Sphere AoE centered on you: Combat Rolls 1(T) (actor-character.mjs allyRolls) - Huge in Divinity Unleashed
+# (Cosmic Flow (2), which writes this effect's other half there). None within it: your Wound Rolls and Soak 1(T).
+[passive, effect 3]
+allow divineRole.aura;
+if (!alliesNear(3) && !inTransformation("divinity-unleashed")) {
+    wound += 1(T);
+    soakValue += 1(T);
+}
+
+# (4) Combat Recovery used: every Ally within a Large Sphere AoE, Ki Points 1/2 of your Surgency (chat.mjs kiToAlliesNear).
+[triggered/declare-maneuver, effect 4]
+requires using("combat-recovery");
+kiToAlliesNear(3);
+
+# (5) The Power Up, once a Round, no Ally within a Large Sphere AoE and no Combat Recovery this Round: the Basic Attack out of sequence -
+# no Combat Recovery this Round once it is made.
+[triggered/power, 1/round, outOfSequence, effect 5]
+requires !alliesNear(3) && !usedThisRound("combat-recovery");
+basicStrikeNoRecovery();

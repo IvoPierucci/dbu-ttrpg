@@ -9,7 +9,7 @@
  */
 
 import { areAllies, areOpponents, besideAnAlly, masterOf } from "../allies.mjs";
-import { withinAreaOfRule } from "../guidance.mjs";
+import { alliesNear, withinAreaOfRule } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { traitAside, transformationQuestion, useTransformationQuestion } from "../aside.mjs";
@@ -338,6 +338,18 @@ const PREDICATES = {
 
   /** Is the Maneuver being declared that one, by its id - Cosmic Efficiency's Combat Recovery. */
   using: (scope, id) => (scope.context?.maneuver?.id ?? "") === String(id).trim(),
+  /** An Ally within so many Squares - Divine Role's "Allies within a Large Sphere AoE (centered on you)" (3 Squares; Huge, 4). */
+  alliesNear: (scope, gap) => alliesNear(scope.data?.parent, Number(gap?.value ?? gap) || 0).length > 0,
+  /** That Maneuver used this Combat Round - Divine Role (5)'s "you have not used Combat Recovery this Combat Round". */
+  /** A flag Slot of theirs on - Cosmic Flow (5)'s and Divine Entity (2)'s, read by Combat Recovery's own script. */
+  flagged: (scope, key) => scope.data?.effects?.slots?.[String(key?.value ?? key ?? "")] === true,
+  usedThisRound: (scope, id) => Array.from(scope.data?.usedManeuvers ?? []).includes(`round:${String(id?.value ?? id ?? "").trim()}`),
+  /** The Counter Actions just spent brought this Round's to that many - True Divinity (3)'s "3 Counter Actions in a Combat Round". */
+  counterReached: (scope, n) => {
+    const total = Number(scope.context?.counterTotal) || 0;
+    const wanted = Number(n?.value ?? n) || 0;
+    return (total >= wanted) && ((total - (Number(scope.context?.spent) || 0)) < wanted);
+  },
 
   /** The one this Moment says was Defeated, your Lock On Target (Lock On's 2nd). */
   defeatedLockOn: scope => Boolean(scope.context?.defeatedUuid)

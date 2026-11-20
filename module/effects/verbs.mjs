@@ -629,6 +629,14 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "The Basic Attack out of sequence - Pieces of the Hive (1)'s (chat.mjs basicStrike)."
   },
+  kiToAlliesNear: {
+    args: [1, 1],
+    doc: "Ki Points to every Ally within that many Squares, 1/2 of your Surgency each (Divine Role (4); chat.mjs kiToAlliesNear)."
+  },
+  basicStrikeNoRecovery: {
+    args: [0, 0],
+    doc: "The Basic Attack out of sequence - and no Combat Recovery for you this Combat Round once it is made (Divine Role (5))."
+  },
   basicStrikeThrough: {
     args: [0, 0],
     doc: "The Basic Attack out of sequence, made through the Maneuver whose `[on used]` this is - Coup de Grace (2)'s, read by Unending "

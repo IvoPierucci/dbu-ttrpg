@@ -17,4 +17,12 @@ text: >
 
 ---
 
-# (2)(3) Cosmic Flow (5) whole, Divine Ki for Counter Actions: the table's.
+# (1) Its header.
+
+# (2) Cosmic Flow (5) your whole Surgency (combat-recovery.dbu).
+[passive, effect 2]
+allow cosmicFlow.whole;
+
+# (3) Counter Actions spent: 1(bT) Divine Ki Points each.
+[triggered/counter-spent, effect 3]
+divineKi.value += spent * 1(bT);

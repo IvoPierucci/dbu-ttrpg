@@ -83,25 +83,34 @@ recovery.stacks += actionsSpent;
 # at a table - but a stack with no clock of its own is a stack that leaves when
 # somebody else's does.
 if (actionsSpent >= 1) {
-    life.value += 1d10(bT);
+    life.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     if (!kiLocked) {
-        ki.value += 1d10(bT);
+        ki.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     }
     expires(recovery, start-of-next-turn);
 }
 if (actionsSpent >= 2) {
-    life.value += 1d10(bT);
+    life.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     if (!kiLocked) {
-        ki.value += 1d10(bT);
+        ki.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     }
     expires(recovery, start-of-next-turn);
 }
 if (actionsSpent >= 3) {
-    life.value += 1d10(bT);
+    life.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     if (!kiLocked) {
-        ki.value += 1d10(bT);
+        ki.value += 1d10(bT) * (hasCondition("recovery-doubled") ? 2 : 1);
     }
     expires(recovery, start-of-next-turn);
+}
+
+# Cosmic Flow (5): Divine Ki Points, 1/2 of your Surgency - all of it with Divine Entity (2); (6) doubled, its mark spent here (the doubling
+# above too: "double the amount of Life and Ki Points you regain from that use").
+if (flagged("cosmicFlow.recovery")) {
+    divineKi.value += (flagged("cosmicFlow.whole") ? surgency : floor(surgency / 2)) * (hasCondition("recovery-doubled") ? 2 : 1);
+}
+if (hasCondition("recovery-doubled")) {
+    remove(recovery-doubled);
 }
 
 # "Reduce your Defense Value by 1(T) until the start of your next turn" - for each

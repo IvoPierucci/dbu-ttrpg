@@ -22,7 +22,9 @@ text: >
 [passive, effect 2]
 allow size.base.$choice;
 
-# (3) Might and Saves for an Opponent's Clash: the table's.
+# (3) A Clash an Opponent opened at you: your Might and Saving Throws 1(T) (chat.mjs vsOpponentClashBonus).
+[passive, effect 3]
+clash.vsOpponent += 1(T);
 
 # (4) Knowledge, Creature Handling, Clairvoyance, Perception, Use Magic and Investigation 2 higher.
 [passive, effect 4]

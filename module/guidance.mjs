@@ -149,3 +149,12 @@ export function alliesRuling(actor, slot) {
 export function alliesInMelee(actor, slot) {
   return alliesWithin(actor, slot, Infinity).filter(holder => withinGuidance(holder, actor, Math.max(0, Number(holder.system?.meleeRange) || 0)));
 }
+
+/** The Allies of `actor` on the scene, not Defeated, within `gap` Squares of them (Divine Role's "Allies within a Large Sphere AoE"). */
+export function alliesNear(actor, gap) {
+  if (!actor) return [];
+  return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && areAllies(token.actor, actor))
+    .map(token => [token.actor.uuid, token.actor])).values()]
+    .filter(other => !other.system?.defeated && withinGuidance(actor, other, gap));
+}

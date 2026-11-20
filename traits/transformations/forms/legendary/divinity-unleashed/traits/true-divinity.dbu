@@ -17,4 +17,13 @@ text: >
 
 ---
 
-# (2)(3) Counter Actions for Combat Recovery, Divine Ki: the table's.
+# (1) Its header.
+
+# (2) Counter Actions spent as Actions for Combat Recovery - how many, asked as it is paid (use-maneuver.mjs payActions).
+[passive, effect 2]
+allow combatRecovery.counterActions;
+
+# (3) The third Counter Action spent in a Combat Round, once an Encounter: Divine Ki Points equal to your Surgency.
+[triggered/counter-spent, 1/encounter, effect 3]
+requires counterReached(3);
+divineKi.value += surgency;

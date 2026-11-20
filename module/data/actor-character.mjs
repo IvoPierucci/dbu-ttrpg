@@ -2,7 +2,7 @@ import { traitAside } from "../aside.mjs";
 import { minionGifts } from "../allies.mjs";
 const { fields } = foundry.data;
 
-import { alliesHolding, alliesInMelee, alliesRuling, alliesWithin, bestTier, guidingAllies, spectatingAllies } from "../guidance.mjs";
+import { alliesHolding, alliesInMelee, alliesRuling, alliesWithin, bestTier, guidingAllies, spectatingAllies, withinGuidance } from "../guidance.mjs";
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
@@ -2361,7 +2361,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         const pinks = this.parent ? alliesWithin(this.parent, "recolored.pink", 0) : [];
         const reliance = (this.parent ? alliesWithin(this.parent, "teamReliance.aura", 0) : []).reduce((top, holder) => Math.max(top,
           Math.ceil(Math.max(0, ...["insight", "personality", "scholarship"].map(key => Number(holder.system?.attributes?.[key]?.mod) || 0)) / 4)), 0);
-        return (friends.length ? Math.max(1, bestTier(friends)) : 0) + (pinks.length ? Math.max(1, bestTier(pinks)) : 0) + reliance;
+        // Divine Role (3): "Increase the Combat Rolls of all Allies within a Large Sphere AoE (centered on you) by 1(T)" - Huge with Cosmic
+        // Flow (2); the best Tier of those.
+        const divine = (this.parent ? alliesWithin(this.parent, "divineRole.aura", 4) : [])
+          .filter(holder => (holder.system?.effects?.slots?.["divineRole.huge"] === true) || withinGuidance(holder, this.parent, 3));
+        return (friends.length ? Math.max(1, bestTier(friends)) : 0) + (pinks.length ? Math.max(1, bestTier(pinks)) : 0) + reliance
+          + (divine.length ? Math.max(1, bestTier(divine)) : 0);
       })(),
       // More than a Minion's Oni: "While you have a stack of Power, increase the Strike and Dodge Rolls of all Allies within your Area of Rule
       // by 1(T)" - an Ally ruling them with Power; the best Tier of those.
@@ -2795,6 +2800,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Multiplier)" - read before the Multiplier below.
     if (this.divineKi) {
       this.divineKi.max = Math.floor(this.ki.max / 2);
+      // God of a Domain (2): "Increase your maximum number of Divine Ki Points by 1/2."
+      if (this.effects?.slots?.["divineKi.halfMore"] === true) this.divineKi.max = Math.floor(this.divineKi.max * 3 / 2);
       this.divineKi.active = (Number(this.states?.["god-ki"]) || 0) > 0;
       // A way into it, though not in it yet (the user's, 2026-11-15): an effect that enters it says so (`allow godKi.access;` -
       // Golden Fruit's); a Transformation with the God Ki Aspect will. Its Divine Ki on the header then; paying with it, in it alone.
