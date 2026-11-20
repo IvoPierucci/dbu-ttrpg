@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
+# (2) Realization and M levels of Scaling.
+aspects: +Realization, +Scaling (LV M)
 description: >
   With your mastery of your monstrous form, you have managed to rein in its vicious nature and take full control of your mind and body.
 text: >
@@ -16,4 +18,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1)(3)(4) Rampaging at 2 and ignored, Combat Rolls while every Opponent is below Bruised: the table's.

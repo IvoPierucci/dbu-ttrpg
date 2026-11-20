@@ -15,4 +15,6 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# At the start of each of your turns, 3(T) Ki Points a level - T the highest Tier of Power Requirement of those you are in ($topReq).
+[automatic/start-of-turn]
+ki.value -= 3 * $level * $topReq;

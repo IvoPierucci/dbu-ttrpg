@@ -12,4 +12,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The most stacks of Power 1 higher.
+[passive, effect 1]
+power.max += 1;
+
+# (2)(3) A Power stack more, the Energy Charge: the table's.

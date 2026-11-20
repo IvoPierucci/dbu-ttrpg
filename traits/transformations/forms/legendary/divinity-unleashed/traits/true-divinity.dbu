@@ -5,6 +5,8 @@ slot: mastery
 mastery: 2
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Perfect Ki Control.
+aspects: +Perfect Ki Control
 description: >
   Your divine might surpasses even the greatest of godly beings and transcends all known limits of power.
 text: >
@@ -15,4 +17,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2)(3) Counter Actions for Combat Recovery, Divine Ki: the table's.

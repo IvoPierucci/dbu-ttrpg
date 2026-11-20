@@ -1,0 +1,16 @@
+id: s-cells-super-sturdy
+name: Super Sturdy
+order: 3
+optionOf: super-saiyan-1-s-cells
+optionEffect: 3
+description: >
+  While you have 2+ stacks of Battle Born applied to your Wound Rolls, increase your Soak Value by 2(T).
+text: >
+  Super Sturdy [Passive]: While you have 2+ stacks of Battle Born applied to your Wound Rolls, increase your Soak Value by 2(T).
+
+---
+
+[passive, effect 3]
+if (battlebornwound.stacks >= 2) {
+    soakValue += 2(T);
+}

@@ -13,4 +13,12 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Duel Clashes 1(T), (2) the Damage Category below Bruised: the table's.
+
+# (3) Entering it: Raging till the end of your turn.
+[triggered/transform, effect 3]
+enterState(raging, 1, turn);
+
+# (4) Entering it, once an Encounter: a Ki Surge.
+[triggered/transform, 1/encounter, effect 4]
+surge(ki);

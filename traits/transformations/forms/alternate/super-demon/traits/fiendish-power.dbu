@@ -17,4 +17,22 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) A Demonic Trait: chosen on this Transformation's row.
+
+# (2) Strike and Dodge 1(T) a stack of Demonic Power. (3) The Tier of Power Extra Dice a Category a stack.
+[passive, effect 2]
+strike += demonicpower.stacks * 1(T);
+dodge += demonicpower.stacks * 1(T);
+
+[passive, effect 3]
+dice.extra.category += demonicpower.stacks;
+
+# (4) Attacking Maneuvers 1(T) dearer a stack of Demonic Fatigue.
+[passive, effect 4]
+attack.kiCost += demonicfatigue.stacks * 1(T);
+
+# (5) With Legend Realized, once a Round: a Pressure Check.
+[triggered/legend-realized, 1/round, effect 5]
+pressureCheck();
+
+# (6) The Huge Sphere's Might: the table's.

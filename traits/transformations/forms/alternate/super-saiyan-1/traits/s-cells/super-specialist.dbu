@@ -1,0 +1,20 @@
+id: s-cells-super-specialist
+name: Super Specialist
+order: 4
+optionOf: super-saiyan-1-s-cells
+optionEffect: 3
+choose: foundation
+description: >
+  Upon gaining this effect, select a Foundation. Increase your Strike Rolls and Wound Rolls for that Foundation by 1(T) and 2(T) respectively while you have a Battle Born stack in their respective Combat Rolls.
+text: >
+  Super Specialist [Permanent, Passive]: Upon gaining this effect, select a Foundation. Increase your Strike Rolls and Wound Rolls for that Foundation by 1(T) and 2(T) respectively while you have a Battle Born stack in their respective Combat Rolls.
+
+---
+
+[passive, effect 3]
+if (battlebornstrike.stacks >= 1) {
+    strike.$choice += 1(T);
+}
+if (battlebornwound.stacks >= 1) {
+    wound.$choice += 2(T);
+}

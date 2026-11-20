@@ -13,4 +13,17 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Above the Injured Health Threshold: Strike and Dodge 1(T).
+[passive, effect 1]
+if (!belowThreshold("injured")) {
+    strike += 1(T);
+    dodge += 1(T);
+}
+
+# (2) In the Superior State, Healthy for all your effects.
+[passive, effect 2]
+if (inState("superior")) {
+    allow threshold.asHealthy;
+}
+
+# (3)(4) Overwhelm, Superior or Surging: the table's.

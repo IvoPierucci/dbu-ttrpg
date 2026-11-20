@@ -4,6 +4,10 @@ order: 1
 slot: trait
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Two God Maneuvers, asked as it is gained; (2) its Unique Abilities, given with it.
+choose: godManeuver
+choose2: godManeuver
+grantsUnique: injury-transfer, space-time-connection
 description: >
   Granted dominion over an aspect of reality, you now stand tall as a true deity in your own right.
 text: >
@@ -16,4 +20,9 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The two God Maneuvers chosen, open while it is had.
+[passive, effect 1]
+allow maneuver.$choice;
+allow maneuver.$choice2;
+
+# (3)-(5) Allies within a Large Sphere, Combat Recovery: the table's.

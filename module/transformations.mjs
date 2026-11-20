@@ -314,6 +314,10 @@ export function aspectScript(aspect) {
   const agility = (aspect.items ?? []).map(item => bonusesOf(item).agility).filter(Boolean)
     .sort((a, b) => b.coefficient - a.coefficient)[0];
   script = script.replaceAll("$agBonus", agility ? bonusWritten(agility) : "0");
+  // Draining's T: "the highest Tier of Power Requirement for any Transformation(s) you are currently in".
+  const owner = aspect.items?.[0]?.parent;
+  const topReq = Math.max(1, ...transformationsInUse(owner).map(item => tierRequirementOf(item, fileOf(item), owner?.items)));
+  script = script.replaceAll("$topReq", String(topReq));
   return script.replaceAll("$level", String(aspect.level ?? 1));
 }
 
@@ -363,6 +367,12 @@ export function bonusesOf(item, file = fileOf(item)) {
       if (item?.system?.prelude) bonus.coefficient = Math.max(1, bonus.coefficient - 1);
     }
     if (bonus.coefficient) bonuses[attribute] = bonus;
+  }
+  // Weakening: "If your current Ki Point Pool is below 1/4 of your Maximum ... reduce this Transformation's Attribute Modifier Bonuses
+  // (after all calculations) by 1/2" (rounded down).
+  const ki = item?.parent?.system?.ki;
+  if (ki && (Number(ki.value) < (Number(ki.max) || 0) / 4) && aspectsOf(item, item.parent?.items).some(aspect => aspect.id === "weakening")) {
+    for (const bonus of Object.values(bonuses)) bonus.coefficient = Math.floor(bonus.coefficient / 2);
   }
   // "+N in the three Attributes with the highest Attribute Scores" of each of its Characters (`bonusesPerOwner: top3 N` - an
   // Absorbed Character's +1 a stack, the Possessing Character's or the Past Life's +2). A tie: the first of them.
@@ -901,4 +911,13 @@ export async function leaveTransformations(actor, ids) {
 export function fadedOut(item) {
   const faded = (item?.system?.choices ?? []).find(entry => entry.key === "fadedIn")?.value;
   return Boolean(faded) && (faded === String(globalThis.game?.combat?.id ?? "none"));
+}
+
+/** In a Form for Ki Multiplier: a Form or an Evolved Stage in use - not a Null Stage, which has none of a Form's rules but its Traits. */
+export function inAForm(actor) {
+  return transformationsInUse(actor).some(item => {
+    const file = fileOf(item);
+    const kind = kindOf(file);
+    return (kind === "evolved") || ((kind === "form") && (String(file?.stage ?? "") !== "0"));
+  });
 }

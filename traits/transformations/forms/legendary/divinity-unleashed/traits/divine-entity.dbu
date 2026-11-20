@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) M levels of Scaling.
+aspects: +Scaling (LV M)
 description: >
   You have gained full control over your godly might, allowing you to reach an even greater height.
 text: >
@@ -15,4 +17,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2)(3) Cosmic Flow (5) whole, Divine Ki for Counter Actions: the table's.

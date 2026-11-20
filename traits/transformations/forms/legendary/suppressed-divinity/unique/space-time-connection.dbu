@@ -1,0 +1,25 @@
+id: space-time-connection
+name: Space-Time Connection
+uaType: magical
+prerequisite: N/A
+tpCost: 0
+type: standard
+actionCost: 3
+kiCostPerTier: 10
+minions: Non-Minion
+# The Energy Synchronize Maneuver opened for the two Allies till the end of your next turn: Debug's Maneuver Access on their sheets - the
+# table's, said on its card.
+source: Appointed God
+description: >
+  Two willing Allies gain access to the Energy Synchronize Maneuver until the end of your next turn.
+text: >
+  Space-Time Connection: You possess the ability to link two people together in such a way that their life energy becomes one.
+  –Ability Type: Magical
+  –Prerequisites: N/A
+  –TP Cost: N/A
+  –KP Cost: 10(T)
+  –Maneuver Type: Standard
+  –Action Cost: 3 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target 2 willing Allies. Those Allies gain access to the Energy Synchronize Maneuver (see — Fusion of Ki) until the end of your next turn.

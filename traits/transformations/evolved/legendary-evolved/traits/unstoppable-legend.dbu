@@ -12,4 +12,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1)(2) In a Transformation with the Super Saiyan Form Aspect: the table's.
+
+# (3) Entering one, once an Encounter: a stack of Battle Born on the Wound Rolls.
+[triggered/transform, 1/encounter, effect 3]
+battlebornwound.stacks += 1;

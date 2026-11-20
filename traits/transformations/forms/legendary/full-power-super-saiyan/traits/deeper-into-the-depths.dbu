@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) M levels of Scaling gained, M of Draining lost.
+aspects: +Scaling (LV M), -Draining (LV M)
 description: >
   You dig deep, pulling out even more power from the classic Super Saiyan Transformation, utilizing it in a superior manner.
 text: >
@@ -16,4 +18,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) The most stacks of Power M higher.
+[passive, effect 2]
+power.max += $M;
+
+# (3)(4) Superior as Raging: the table's.

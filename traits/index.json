@@ -2009,6 +2009,12 @@
     "transformations/awakenings/pure-progress/states/flow.dbu",
     "maneuvers/revert.dbu",
     "transformations/enhancements/evil-saiyan/maneuvers/aura-tail.dbu",
-    "transformations/enhancements/evil-saiyan/states/berserk.dbu"
+    "transformations/enhancements/evil-saiyan/states/berserk.dbu",
+    "transformations/forms/alternate/super-saiyan-1/traits/s-cells/super-specialist.dbu",
+    "transformations/forms/alternate/super-saiyan-1/traits/s-cells/super-speed.dbu",
+    "transformations/forms/alternate/super-saiyan-1/traits/s-cells/super-sturdy.dbu",
+    "transformations/forms/alternate/super-saiyan-1/traits/s-cells/super-surger.dbu",
+    "transformations/forms/legendary/suppressed-divinity/unique/injury-transfer.dbu",
+    "transformations/forms/legendary/suppressed-divinity/unique/space-time-connection.dbu"
   ]
 }

@@ -18,4 +18,13 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+[passive, effect 2]
+force.mod += 1(T);
+magic.mod += 1(T);
+
+[passive, effect 3]
+charges.category += 1;
+
+[passive, effect 4]
+combatRolls += threshold.depth * 1(T);
+# (5)(6): the table's.

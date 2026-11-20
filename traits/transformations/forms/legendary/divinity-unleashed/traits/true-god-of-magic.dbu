@@ -18,4 +18,10 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+[passive, effect 2]
+insight.mod += 1(T);
+magic.mod += 1(T);
+
+[passive, effect 3]
+combatRolls += 2(T);
+# (4)-(6): the table's.

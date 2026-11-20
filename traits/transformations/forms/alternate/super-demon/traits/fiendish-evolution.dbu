@@ -12,4 +12,9 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) 2+ stacks of Demonic Power: Armored - an attack's Damage Category 1 lower against you.
+[automatic/being-hit, effect 1]
+requires demonicpower.stacks >= 2;
+incoming.damage.category.shift -= 1;
+
+# (2) Demonic Pressure (3) ignored once an Encounter: the table's.

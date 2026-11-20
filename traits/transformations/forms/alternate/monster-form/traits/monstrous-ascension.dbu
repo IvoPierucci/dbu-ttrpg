@@ -4,6 +4,8 @@ order: 1
 slot: trait
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) A Monstrous Trait and a Bestial Trait, chosen as it is gained, had while it is.
+grantsOther: monstrous, bestial
 description: >
   Your transformation into your monstrous persona has many benefits, allowing your strength to grow in many unexpected ways.
 text: >
@@ -25,4 +27,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Attribute, the Aspect, the Saves, Growth and Rampaging chosen, (2)-(4): the table's.

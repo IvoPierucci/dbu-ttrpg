@@ -20,4 +20,12 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# Entering it and at the start of each turn: Compelled till the start of your next turn - against the nearest Opponent (Character at
+# level 2), the table's to name; 1 Karma Point to ignore it, the table's.
+[automatic/transform]
+gain(compelled);
+expires(compelled, start-of-next-turn);
+
+[automatic/start-of-turn]
+gain(compelled);
+expires(compelled, start-of-next-turn);

@@ -16,4 +16,7 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# Entering it: the State in brackets, till the Encounter ends (leaving it as the Transformation is left, and leaving the Transformation as
+# the State is: the table's).
+[automatic/transform]
+enterState($param, 1, encounter);

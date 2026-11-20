@@ -17,4 +17,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Surgency 1(T) for every 4 stacks of Battle Born (max. 3(T)).
+[passive, effect 2]
+surgency += min(3, floor((battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) / 4)) * 1(T);
+
+# (3)(4): the table's.

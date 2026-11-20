@@ -7,6 +7,9 @@ group: demonic-traits
 groupLabel: Demonic Traits
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 2
+# (2) Up to 2 Bestial Traits, chosen as it is chosen, had while it is.
+grantsOther: bestial
+grantsOtherCount: 2
 description: >
   Unbreakable and unfathomable, your monstrous intensity shatters the battlefield and distorts the mind.
 text: >
@@ -19,4 +22,12 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (3) The Pressure Check's Dice Score: the table's.
+
+# (4) 2+ stacks of Demonic Power: Combat Rolls 1(T).
+[passive, effect 4]
+if (demonicpower.stacks >= 2) {
+    combatRolls += 1(T);
+}
+
+# (5) Superior: the table's.

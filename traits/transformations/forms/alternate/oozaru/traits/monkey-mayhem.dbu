@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) M levels of Rampaging lost.
+aspects: -Rampaging (LV M)
 description: >
   Your conscious mind melds with that of the beast within, giving you some measure of control over your actions.
 text: >
@@ -14,4 +16,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Insight Attribute Modifier Bonus 1(T).
+[passive, effect 1]
+insight.mod += 1(T);
+
+# (2) Furious Beast (4) and Rampaging Assault (1)(2) ignored: the table's.

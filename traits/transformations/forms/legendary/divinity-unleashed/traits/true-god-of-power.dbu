@@ -7,6 +7,8 @@ group: domain-traits
 groupLabel: Domain Traits
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 2
+# (2) Bulky and Armored.
+aspects: +Bulky, +Armored
 description: >
   Possessing physical might that dwarfs mortal comprehension, you represent the aspirations of all who seek to grow strong.
 text: >
@@ -19,4 +21,10 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+[passive, effect 3]
+superStack.musclePenalty -= 1(bT);
+
+[passive, effect 4]
+force.mod += superStacks * 1(T);
+tenacity.mod += superStacks * 1(T);
+# (5) Divine Muscle: the table's.

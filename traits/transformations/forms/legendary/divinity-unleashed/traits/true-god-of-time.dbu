@@ -7,6 +7,8 @@ group: domain-traits
 groupLabel: Domain Traits
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 2, 3
+# (2)(3) Time Power: added from the Transformations tab; Linked (Time Power).
+aspects: +Linked (Time Power)
 description: >
   The flow of time bends to your will, acting in accordance with your deepest desires.
 text: >
@@ -21,4 +23,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+[passive, effect 5]
+if (frozenTurn) {
+    combatRolls += 1(T);
+}
+# (4)(6)(7): the table's.

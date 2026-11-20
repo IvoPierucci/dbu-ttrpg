@@ -1,0 +1,17 @@
+id: s-cells-super-surger
+name: Super Surger
+order: 1
+optionOf: super-saiyan-1-s-cells
+optionEffect: 3
+description: >
+  While you have 2+ stacks of Power, increase your Combat Rolls and Surgency by 1(T) and 2(T) respectively.
+text: >
+  Super Surger [Passive]: While you have 2+ stacks of Power, increase your Combat Rolls and Surgency by 1(T) and 2(T) respectively.
+
+---
+
+[passive, effect 3]
+if (power.stacks >= 2) {
+    combatRolls += 1(T);
+    surgency += 2(T);
+}

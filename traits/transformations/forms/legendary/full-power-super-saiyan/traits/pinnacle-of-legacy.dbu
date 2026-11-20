@@ -16,4 +16,15 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) In the Undying State: Soak and Wound 2(T) (Armored: the table's).
+[passive, effect 2]
+if (inState("undying")) {
+    soakValue += 2(T);
+    wound += 2(T);
+}
+
+# (3) Battle Born for the Power Up: the table's.
+
+# (4) With the Power Up, once an Encounter: Undying till the start of your next turn.
+[triggered/power, 1/encounter, effect 4]
+enterState(undying, 1, start-of-next-turn);

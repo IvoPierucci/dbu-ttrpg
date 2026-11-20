@@ -17,4 +17,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+[passive, effect 2]
+if (wieldingWeapon) {
+    combatRolls += 2(T);
+}
+# (3)-(5) Divine Armament, Magical Materialization, Divine Weapon: the table's.

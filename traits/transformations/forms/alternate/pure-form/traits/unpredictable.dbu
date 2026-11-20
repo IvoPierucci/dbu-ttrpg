@@ -2,6 +2,9 @@ id: pure-form-unpredictable
 name: Unpredictable
 order: 2
 slot: trait
+resource: channeledchaos
+resourceLabel: Channeled Chaos
+resourceMax: 99
 description: >
   Your wild and unstable power is chaos incarnate, and even you don't know what will happen next!
 text: >
@@ -16,4 +19,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1)-(7) What the Chaos Die rolls: the table's.

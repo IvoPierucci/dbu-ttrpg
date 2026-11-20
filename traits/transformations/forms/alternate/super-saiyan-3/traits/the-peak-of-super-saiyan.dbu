@@ -5,6 +5,8 @@ slot: mastery
 mastery: 2
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Draining lost.
+aspects: -Draining
 description: >
   You have managed, somehow, to rein in your massive pool of energy, allowing you to fight at full strength.
 text: >

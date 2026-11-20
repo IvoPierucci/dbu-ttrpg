@@ -18,4 +18,17 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Constant: into Oozaru on failing it, (2) Colossal in Raging or Superior: the table's.
+
+# (3) 4+ stacks of Battle Born: the Tier of Power Extra Dice a Category higher and Soak 1(T).
+[passive, effect 3]
+if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    dice.extra.category += 1;
+    soakValue += 1(T);
+}
+
+# (4) The Fire Breath Signature Technique (its words in its file), (5) the Wound against the smaller, (6) Broken: the table's.
+
+# (7) Entering it, once an Encounter: a Ki Surge.
+[triggered/transform, 1/encounter, effect 7]
+surge(ki);

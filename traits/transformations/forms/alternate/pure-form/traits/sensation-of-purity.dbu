@@ -12,4 +12,10 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Erratic Majin (7) and Unpredictable (3)(4) outside it, (3): the table's.
+
+# (2) In the Superior State: Surgency 2(T).
+[passive, effect 2]
+if (inState("superior")) {
+    surgency += 2(T);
+}

@@ -5,6 +5,8 @@ slot: mastery
 mastery: 2
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Draining lost. (2) Full Force Super Saiyan 2: added from the Transformations tab.
+aspects: -Draining
 description: >
   Your fine control of this form allows you to access its full power without restraint.
 text: >

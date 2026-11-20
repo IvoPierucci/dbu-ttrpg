@@ -18,4 +18,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Vile Technique (designed on the Signature Techniques tab), (2) Strike against the lower, (4)-(7): the table's.
+
+# (3) Wound Rolls 1(T) for each Health Threshold the target is below.
+[passive, effect 3]
+wound.perTargetThreshold += 1(T);

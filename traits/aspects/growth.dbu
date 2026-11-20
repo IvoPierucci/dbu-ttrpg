@@ -16,4 +16,14 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# Level 1 Large, one larger a level (never smaller than you would be: the table's where you are larger already).
+[passive]
+if ($level == 1) {
+    allow size.base.large;
+}
+if ($level == 2) {
+    allow size.base.enormous;
+}
+if ($level >= 3) {
+    allow size.base.gigantic;
+}

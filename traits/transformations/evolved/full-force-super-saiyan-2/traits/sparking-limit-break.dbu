@@ -14,4 +14,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1)(2) With a Ki Wager of 1/4 of your Max Capacity: the table's.
+
+# (3) With the Power Up, once a Round: 4(bT) Ki Points for Surging till the end of your turn.
+[triggered/power, 1/round, effect 3]
+ki.value -= 4(bT);
+enterState(surging, 1, turn);
+
+# (4)(5) Fatigued for Ki, Superior first in a Round: the table's.

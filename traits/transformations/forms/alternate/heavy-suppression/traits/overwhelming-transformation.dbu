@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Draining and Power High lost; Natural (LV2).
+aspects: -Draining, -Power High, +Natural (LV2)
 description: >
   Even shedding a single layer of your suppression is enough to overwhelm most enemies.
 text: >
@@ -15,4 +17,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Plating's Apparel Bonus: the table's.
+
+# (3) Entering it and at the start of your turn: a stack of Overwhelm.
+[triggered/transform, effect 3]
+overwhelm.stacks += 1;
+
+[triggered/start-of-turn, effect 3]
+overwhelm.stacks += 1;

@@ -14,4 +14,15 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Tier of Power Extra Dice S-1 Categories higher.
+[passive, effect 1]
+dice.extra.category += $S - 1;
+
+# (2) In the Raging or Superior State: Strike and Dodge 1(T).
+[passive, effect 2]
+if (inState("raging") || inState("superior")) {
+    strike += 1(T);
+    dodge += 1(T);
+}
+
+# (3)-(5) The Damage Category with a Ki Wager, Broken, turn first: the table's.

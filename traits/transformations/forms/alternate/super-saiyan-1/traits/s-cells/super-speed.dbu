@@ -1,0 +1,17 @@
+id: s-cells-super-speed
+name: Super Speed
+order: 2
+optionOf: super-saiyan-1-s-cells
+optionEffect: 3
+description: >
+  While you have 2+ stacks of Battle Born applied to your Dodge Rolls, increase your Speeds and Defense Value by 1(T).
+text: >
+  Super Speed [Passive]: While you have 2+ stacks of Battle Born applied to your Dodge Rolls, increase your Speeds and Defense Value by 1(T).
+
+---
+
+[passive, effect 3]
+if (battleborndodge.stacks >= 2) {
+    speed.all += 1(T);
+    defenseValue += 1(T);
+}

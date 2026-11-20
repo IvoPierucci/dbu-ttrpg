@@ -13,4 +13,10 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Power stacks as Battle Born on the Wound: the table's.
+
+# (2) Wound Rolls 1(T) a stack of Power.
+[passive, effect 2]
+wound += power.stacks * 1(T);
+
+# (3)(4): the table's.

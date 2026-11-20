@@ -19,7 +19,7 @@ import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { shelteredBy } from "../vehicle-crew.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { attributeShareScript } from "../fusion-of-ki.mjs";
-import { aspectScript, bonusScript, combineAspects, transformationsInUse, transformationTraitProgram, transformationTraitScript }
+import { aspectScript, bonusScript, combineAspects, inAForm, transformationsInUse, transformationTraitProgram, transformationTraitScript }
   from "../transformations.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, categoryApplies, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
@@ -557,6 +557,13 @@ function kiFusionPrograms(actor, report) {
  */
 function transformationPrograms(actor, report) {
   const entries = [];
+  // Ki Multiplier: "While you are in a Form, your Maximum Ki Points are doubled and your Max Capacity increased by 1/2" - a Null Stage is
+  // not one for this (transformations.mjs). The same as Power Battery's "always benefit from Ki Multiplier".
+  if (inAForm(actor)) {
+    const { program, errors } = compile("transformation:ki-multiplier", { script: "[passive]\nallow kiMultiplier.always;" }, report);
+    if (!errors.length) entries.push({ program, priority: PRIORITY.transformation, sourceId: "transformation:ki-multiplier", sourceUuid: null,
+      sourceName: "Ki Multiplier (in a Form)", level: 0, stacks: 1 });
+  }
   for (const item of transformationsInUse(actor)) {
     const script = bonusScript(item);
     if (!script) continue;

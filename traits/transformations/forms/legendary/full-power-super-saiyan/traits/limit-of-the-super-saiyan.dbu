@@ -5,6 +5,8 @@ slot: mastery
 mastery: 2
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Perfect Ki Control.
+aspects: +Perfect Ki Control
 description: >
   You aren't just a living legend anymore, you've transformed your power into one that surpasses even the original legend themself.
 text: >
@@ -15,4 +17,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2)(3) Battle Born spent: the table's.

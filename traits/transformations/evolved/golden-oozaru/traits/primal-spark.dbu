@@ -12,4 +12,15 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) 2+ stacks of Battle Born on the Wound Rolls: Surgency 1(T).
+[passive, effect 1]
+if (battlebornwound.stacks >= 2) {
+    surgency += 1(T);
+}
+
+# (2) Superior for a turn of a Surge: the table's.
+
+# (3) With the Power Up and 2+ on the Wound, once an Encounter: a Ki Surge out of sequence.
+[triggered/power, 1/encounter, outOfSequence, effect 3]
+requires battlebornwound.stacks >= 2;
+surge(ki);

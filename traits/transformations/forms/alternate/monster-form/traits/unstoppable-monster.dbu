@@ -5,6 +5,8 @@ slot: mastery
 mastery: 2
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
+# (1) Armored.
+aspects: +Armored
 description: >
   Thanks to your total mastery over your monstrous self, you've become impossible to defeat.
 text: >
@@ -15,4 +17,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) A Monstrous Trait more, (3) Legend Realized: the table's.

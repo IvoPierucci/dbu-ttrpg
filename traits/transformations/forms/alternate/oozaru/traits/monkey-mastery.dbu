@@ -5,6 +5,8 @@ slot: mastery
 mastery: 2
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) The Innate State (Feral/Raging) lost.
+aspects: -Innate State
 description: >
   You have gained the ability to contain your inner beast, allowing you true control over your beast form.
 text: >
@@ -16,4 +18,19 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Agility Attribute Modifier Bonus 1(T).
+[passive, effect 1]
+agility.mod += 1(T);
+
+# (2) Large for the Defense Value's Size and Punching Up: the table's.
+
+# (3) The Muscle Penalty 1(bT) lower.
+[passive, effect 3]
+superStack.musclePenalty -= 1(bT);
+
+# (4) Entering it and at the start of your turn: Raging (and/or Feral - the table's) till the end of your turn.
+[triggered/transform, effect 4]
+enterState(raging, 1, turn);
+
+[triggered/start-of-turn, effect 4]
+enterState(raging, 1, turn);

@@ -17,4 +17,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Legendary's Stress 3 lower: the table's.
+
+# (3) Might 1(T).
+[passive, effect 3]
+might += 1(T);

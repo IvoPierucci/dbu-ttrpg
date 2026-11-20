@@ -1,0 +1,25 @@
+id: injury-transfer
+name: Injury Transfer
+uaType: magical
+prerequisite: N/A
+tpCost: 0
+type: standard
+actionCost: 3
+kiCostPerTier: 10
+minions: Non-Minion
+# The two Life Points swapped and the Steadfast Checks failed: said on its card, the table's.
+source: Appointed God
+description: >
+  Swap your Life Points with a willing Ally's in your Melee Range - theirs higher than yours never; Thresholds fallen through failed.
+text: >
+  Injury Transfer: You take the wounds of others upon yourself in order to heal them.
+  –Ability Type: Magical
+  –Prerequisites: N/A
+  –TP Cost: N/A
+  –KP Cost: 10(T)
+  –Maneuver Type: Standard
+  –Action Cost: 3 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target a willing Ally within your Melee Range. If your Life Points are higher than that of the targeted Ally, you may swap your current Life Points values. Any Health Thresholds you fall under due to this Unique Ability have their Steadfast Check automatically failed.
+  This cannot allow your targeted Ally's Life Points to exceed their Maximum Life Points.

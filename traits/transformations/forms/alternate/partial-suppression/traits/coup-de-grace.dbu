@@ -13,4 +13,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Above the Injured Health Threshold: Wound and Speeds 1(T).
+[passive, effect 1]
+if (!belowThreshold("injured")) {
+    wound += 1(T);
+    speed.all += 1(T);
+}
+
+# (2)-(4): the table's.

@@ -14,4 +14,10 @@ text: >
 
 ---
 
-# Nothing it does by itself yet: its stage builds it.
+# "While you are in this Transformation, you are in the God Ki State": the way in open, and it entered as the Transformation is (left with
+# it: the table's).
+[passive]
+allow godKi.access;
+
+[automatic/transform]
+enterState(god-ki, 1, encounter);

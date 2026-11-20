@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Power High, Long Transformation, Exhausting and 2 levels of Draining lost.
+aspects: -Power High, -Long Transformation, -Exhausting, -Draining (LV2)
 description: >
   You have pushed past the limits of your power, becoming even stronger.
 text: >
@@ -14,4 +16,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Limitless (3) ignored: the table's.

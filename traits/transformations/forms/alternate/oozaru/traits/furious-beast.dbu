@@ -15,4 +15,14 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Only by a full moon or a False Moon, and Saiyan Heritage (5): said, never refused.
+
+# (2) Damage Reduction 1(T) for each Health Threshold you are below.
+[passive, effect 2]
+damageReduction += threshold.depth * 1(T);
+
+# (3) Any number of Battle Born stacks on the Wound Rolls.
+[passive, effect 3]
+battlebornwound.max += 20;
+
+# (4) Every Battle Born stack gained put on the Wound Rolls: the table's.

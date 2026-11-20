@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
+# (1)(2) M levels of Power High lost; Realization and M levels of Scaling.
+aspects: -Power High (LV M), +Realization, +Scaling (LV M)
 description: >
   Your demonic nature awakens further, unleashing deeper reserves of power.
 text: >
@@ -17,4 +19,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (3)-(5) Fiendish Power (6)'s Keywords, M(bT) Life and Ki, the Pressure Check: the table's.

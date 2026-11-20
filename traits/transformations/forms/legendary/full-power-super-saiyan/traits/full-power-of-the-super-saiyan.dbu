@@ -14,4 +14,14 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Duel Clashes: the table's.
+
+# (2) The Tier of Power Extra Dice a Category for every 4 stacks of Battle Born (max. 3).
+[passive, effect 2]
+dice.extra.category += min(3, floor((battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) / 4));
+
+# (3)(4) Damage Reduction and Wound by Battle Born spent: the table's.
+
+# (5) Entering it, once an Encounter: Raging till the end of your turn.
+[triggered/transform, 1/encounter, effect 5]
+enterState(raging, 1, turn);

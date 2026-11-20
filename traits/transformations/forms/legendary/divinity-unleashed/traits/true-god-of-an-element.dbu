@@ -22,4 +22,7 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+[passive, effect 2]
+force.mod += 1(T);
+magic.mod += 1(T);
+# (3)-(6) Favored Element, Divine Element: the table's.

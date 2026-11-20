@@ -4,6 +4,9 @@ order: 2
 slot: trait
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
+# (1) A Domain Trait: chosen on this Transformation's row. (2) Its Size, asked as it is gained.
+choose: list
+choices: Small, Medium, Large
 description: >
   Your holy magic grows in strength, empowered by divine energy.
 text: >
@@ -15,4 +18,17 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) The Size chosen.
+[passive, effect 2]
+allow size.base.$choice;
+
+# (3) Might and Saves for an Opponent's Clash: the table's.
+
+# (4) Knowledge, Creature Handling, Clairvoyance, Perception, Use Magic and Investigation 2 higher.
+[passive, effect 4]
+skills.family.knowledge += 2;
+skill.creatureHandling += 2;
+skill.clairvoyance += 2;
+skill.perception += 2;
+skill.useMagic += 2;
+skill.investigation += 2;

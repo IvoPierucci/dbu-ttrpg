@@ -5,6 +5,8 @@ slot: mastery
 mastery: 4
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) 2 levels of Scaling more.
+aspects: +Scaling (LV2)
 description: >
   The unbridled chaos within you swallows order in its entirety, destabilizing reality itself in your presence.
 text: >
@@ -14,4 +16,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) The Ki Surge and the Chaos Die: the table's.

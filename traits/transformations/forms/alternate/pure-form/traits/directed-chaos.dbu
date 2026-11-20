@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Rampaging and Power High lost; M levels of Scaling (max. 2) and Realization.
+aspects: -Rampaging, -Power High, +Scaling (LV M), +Realization
 description: >
   You've mastered the ability to manipulate the chaotic nature of your Transformation.
 text: >
@@ -16,4 +18,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) In the Superior State: Wound and Soak 1(T).
+[passive, effect 2]
+if (inState("superior")) {
+    wound += 1(T);
+    soakValue += 1(T);
+}
+
+# (3)(4) The Chaos Die: the table's.

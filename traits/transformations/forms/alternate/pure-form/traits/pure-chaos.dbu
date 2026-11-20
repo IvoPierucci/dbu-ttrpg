@@ -5,6 +5,8 @@ slot: mastery
 mastery: 3
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
+# (2) Perfect Ki Control. (1) Legendary and Stress 9 more: the table's.
+aspects: +Perfect Ki Control
 description: >
   The destructive energy gathering inside you boils to the surface, making you an extremely deadly foe.
 text: >
@@ -17,4 +19,12 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Its Attribute Modifier Bonuses 1(T) more.
+[passive, effect 1]
+agility.mod += 1(T);
+force.mod += 1(T);
+tenacity.mod += 1(T);
+insight.mod += 1(T);
+magic.mod += 1(T);
+
+# (3)-(5) The Energy Charge in Superior, the Chaos Die doubled, Damage halved: the table's.

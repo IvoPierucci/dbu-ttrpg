@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Power High and a level of Draining lost.
+aspects: -Power High, -Draining (LV1)
 description: >
   You have reined in the rampant power of this form, making it your own.
 text: >
@@ -15,4 +17,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Steadfast Checks 1 higher.
+[passive, effect 2]
+steadfast.dice += 1;
+
+# (3) Ki Points with a Steadfast Check passed: the table's.

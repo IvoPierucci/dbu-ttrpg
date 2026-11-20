@@ -4,6 +4,7 @@ order: 1
 slot: trait
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 3
+optionEffect: 3
 description: >
   The latent power in your blood awakens, granting you increased might.
 text: >
@@ -18,4 +19,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) 4+ stacks of Battle Born: the Tier of Power Extra Dice a Category higher and Damage Reduction 1(T).
+[passive, effect 1]
+if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    dice.extra.category += 1;
+    damageReduction += 1(T);
+}
+
+# (2) The Power Up as an Instant at 6+: the table's. (3) Its Option, chosen as it is gained (its own files).

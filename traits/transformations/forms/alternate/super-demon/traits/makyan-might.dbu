@@ -5,6 +5,8 @@ slot: trait
 # One of these is chosen (the Transformation's row asks).
 group: demonic-traits
 groupLabel: Demonic Traits
+# (2) Growth (LV1) and Bulky.
+aspects: +Growth (LV1), +Bulky
 description: >
   Empowered by the might of the Makyo Star, you grow to massive proportions.
 text: >
@@ -17,4 +19,18 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (3) With a stack of Demonic Power: the Muscle Penalty 1(bT) lower.
+[passive, effect 3]
+if (demonicpower.stacks >= 1) {
+    superStack.musclePenalty -= 1(bT);
+}
+
+# (4) 3+ stacks: Wound, Soak and Might 1(T).
+[passive, effect 4]
+if (demonicpower.stacks >= 3) {
+    wound += 1(T);
+    soakValue += 1(T);
+    might += 1(T);
+}
+
+# (5) The Pressure Check's Dice Score, and an Action: the table's.

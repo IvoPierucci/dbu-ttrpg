@@ -12,4 +12,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1)(2) The Damage Category and Wound by it: the table's.
+
+# (3) Entering it, once a Round: Superior till the start of your next turn.
+[triggered/transform, 1/round, effect 3]
+enterState(superior, 1, start-of-next-turn);

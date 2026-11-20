@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
+# (1) Draining and Power High lost; Natural (LV1) and Heartbeat (LV1).
+aspects: -Draining, -Power High, +Natural (LV1), +Heartbeat (LV1)
 description: >
   Your comfort in this form allows you to draw out even greater power, overwhelming your enemies.
 text: >
@@ -16,4 +18,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Full Power (added from the Transformations tab), (3)(4) Superior as Raging: the table's.

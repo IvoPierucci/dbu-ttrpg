@@ -7,6 +7,8 @@ group: domain-traits
 groupLabel: Domain Traits
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 2
+# (2) Innate State (Mindful) and Mindful.
+aspects: +Innate State (Mindful), +Mindful
 description: >
   Guided by wisdom and seeking prosperity, you avoid conflict and attempt amicable resolutions.
 text: >
@@ -22,4 +24,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (3)-(8) L, the Mindful State's levels: the table's.
