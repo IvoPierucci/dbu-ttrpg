@@ -3,6 +3,8 @@ name: Fiendish Evolution
 order: 7
 slot: mastery
 mastery: 2
+# (1) "While you possess 2+ stacks of Demonic Power, Super Demon gains the Armored Aspect."
+grantsAspectTo: This = Armored if demonicpower.stacks >= 2
 description: >
   Pushing your power to its functional limit, you evolve into something even greater than a mere demon.
 text: >
@@ -12,9 +14,6 @@ text: >
 
 ---
 
-# (1) 2+ stacks of Demonic Power: Armored - an attack's Damage Category 1 lower against you.
-[automatic/being-hit, effect 1]
-requires demonicpower.stacks >= 2;
-incoming.damage.category.shift -= 1;
+# (1) 2+ stacks of Demonic Power: the Armored Aspect - its header (the Aspect's own file does what it does).
 
 # (2) Demonic Pressure (3) ignored once an Encounter: the table's.

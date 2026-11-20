@@ -14,7 +14,7 @@
  */
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
-import { useTransformationGate, useTransformationQuestion } from "./aside.mjs";
+import { transformationQuestion, useTransformationGate, useTransformationQuestion } from "./aside.mjs";
 import { FUSION_AWAKENINGS, FUSION_MAX_BASE_TIER } from "./fusion.mjs";
 
 export const TRANSFORMATION_TYPE = "transformation";
@@ -918,7 +918,7 @@ export function stressTakenOff(item, items = item?.parent?.items) {
  * `grantsAspectTo: evil-saiyan Natural (LV2)` - the rest of each entry naming that one. A Transformation Trait set aside, or a Racial Trait
  * set aside, says nothing.
  */
-function grantsFor(items, key, file, only = null) {
+function grantsFor(items, key, file, only = null, item = null) {
   const out = [];
   for (const each of Array.from(items ?? [])) {
     if (!["racial", "talent"].includes(each.type) || (only && !only(each))) continue;
@@ -927,7 +927,11 @@ function grantsFor(items, key, file, only = null) {
     if (each.system?.transformation && transformationTraitAside(each, items)) continue;
     for (const entry of headerEntries(trait[key])) {
       const named = namedEntry(entry);
-      if (named && namesTransformation(named.target, file, items)) out.push(named.rest);
+      if (!named) continue;
+      // "This": the Transformation the Trait is of - a Variant's inherited Trait its own ("This Transformation gains the Armored Aspect").
+      const own = /^this$/i.test(named.target) ? Boolean(item && each.system?.transformation && (each.system.transformation === item.id))
+        : namesTransformation(named.target, file, items);
+      if (own) out.push(named.rest);
     }
   }
   return out;
@@ -969,14 +973,23 @@ export function namesTransformation(target, file, items = []) {
  * this Aspect by 1 if it is Fully Mastered". The older "<id> <Aspect>" too (Heart of Evil's).
  */
 function aspectsGivenTo(item, file, items) {
-  const own = new Set([...parseAspects(file.aspects), ...gradeRow(file, lettersOf(item, file).G).aspects].map(aspect => aspect.id));
+  const letters = lettersOf(item, file);
+  const own = new Set([...parseAspects(file.aspects), ...gradeRow(file, letters.G).aspects].map(aspect => aspect.id));
   const out = [];
-  for (const rest of grantsFor(items, "grantsAspectTo", file)) {
+  for (const rest of grantsFor(items, "grantsAspectTo", file, null, item)) {
     const [aspects, when = ""] = rest.split(/\s+if\s+/i);
-    const condition = when.trim().toLowerCase();
-    if ((condition === "mastered") && !isMastered(item)) continue;
-    if ((condition === "fully mastered") && !isFullyMastered(item)) continue;
-    if (condition.startsWith("has ") && !own.has(aspectId(condition.slice(4)))) continue;
+    const condition = when.trim();
+    const lower = condition.toLowerCase();
+    if (lower === "mastered") { if (!isMastered(item)) continue; }
+    else if (lower === "fully mastered") { if (!isFullyMastered(item)) continue; }
+    else if (lower.startsWith("has ")) { if (!own.has(aspectId(condition.slice(4)))) continue; }
+    // Anything else, as the effects language reads it - "inState(\"undying\")", "demonicpower.stacks >= 2", "$G >= 3" (its Grade,
+    // Stacks, Stage or Mastery written in). Read as the character's Items are gathered: what is worked out later in the same preparing
+    // - the Size - is not there yet; a State, a Resource, a Condition is.
+    else if (condition) {
+      const written = condition.replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0));
+      if (transformationQuestion("scriptCondition", item?.parent, written) !== true) continue;
+    }
     out.push(...parseAspects(aspects));
   }
   return out;
@@ -1395,3 +1408,4 @@ export function fusedFormIds(actor) {
   const [first, ...rest] = fused.map(formsOf);
   return [...first].filter(id => rest.every(set => set.has(id)));
 }
+useTransformationQuestion("normalState", actor => inNormalState(actor));

@@ -5,6 +5,8 @@ slot: trait
 # One of these is chosen (the Transformation's row asks).
 group: super-saiyan-style-traits
 groupLabel: Super Saiyan Style Traits
+# (2) "Additionally, this Transformation gains the Armored Aspect" - while in the Undying State.
+grantsAspectTo: This = Armored if inState("undying")
 description: >
   You represent the very beginnings of a proud line of warriors that spans all of known history, and the power you've awakened proves it.
 text: >
@@ -16,7 +18,7 @@ text: >
 
 ---
 
-# (2) In the Undying State: Soak and Wound 2(T) (Armored: the table's).
+# (2) In the Undying State: Soak and Wound 2(T), and the Armored Aspect (its header).
 [passive, effect 2]
 if (inState("undying")) {
     soakValue += 2(T);

@@ -12,7 +12,8 @@ import { areAllies, areOpponents, besideAnAlly, masterOf } from "../allies.mjs";
 import { withinAreaOfRule } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { traitAside, transformationQuestion } from "../aside.mjs";
+import { traitAside, transformationQuestion, useTransformationQuestion } from "../aside.mjs";
+import { compile } from "./parser.mjs";
 import { customBuffBasicIsSignature, customBuffMarked, customBuffThresholdFor } from "../custom-buffs.mjs";
 
 /** Whether a key is a published Combat Condition - set by traits.mjs at load, to keep the import one way. */
@@ -892,7 +893,8 @@ const PREDICATES = {
 
   /** Is this an even-numbered Combat Round - Born for Battle's. */
   // "While in your Normal State" - no Form, no Enhancement: always, while Transformations are not in this system (Disguised Shadow's).
-  normalState: () => true,
+  /** The Normal State: "not using an Enhancement or a Form" - a Null Stage is it (transformations.mjs inNormalState). */
+  normalState: scope => transformationQuestion("normalState", scope.data?.parent) === true,
   // Natural Dragon: "you may increase your Size Category to Gigantic while you possess that stack of Absorption" - chosen as it was
   // gained (chat.mjs absorbCharacter), a stack still held.
   absorbedGigantic: scope => (scope.data?.parent?.flags?.["dbu-ttrpg"]?.absorbedGigantic === true)
@@ -995,3 +997,18 @@ function literal(arg, scope) {
 useConditionEvaluator(evaluate);
 
 export { PREDICATES };
+
+/**
+ * A condition written as text, as a `requires` line reads it - a header's "if ..." (transformations.mjs aspectsGivenTo's) - answered of a
+ * character. Each text compiled once; one that does not compile is never met.
+ */
+const writtenConditions = new Map();
+useTransformationQuestion("scriptCondition", (actor, text) => {
+  const key = String(text ?? "");
+  if (!writtenConditions.has(key)) {
+    const { program, errors } = compile(`[passive]\nrequires ${key};`);
+    writtenConditions.set(key, errors.length ? null : (program?.blocks?.[0]?.requires ?? null));
+  }
+  const requires = writtenConditions.get(key);
+  return Boolean(requires) && (evaluate(requires, { data: actor?.system, context: {}, errors: [] }) === true);
+});

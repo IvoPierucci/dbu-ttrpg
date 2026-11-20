@@ -5,8 +5,7 @@
  * - The Bestial Limit's (racial.mjs bestialLimit): set aside while the Bestial Trait it gave way to is held.
  * - Were-Beast's (Beast-Man): the Were-Traits apply only in a Combat Round they were chosen for (4); the Normal Trait not in one.
  * - Wild Child's: a Pseudo-Bestial Trait applies only while you have access to it - (4), (5) - till the start of your next turn.
- * - Disguised Shadow's (2): Personified Dragon Ball's Bestial Trait, not in the Normal State - every moment, while Transformations are not
- *   in this system.
+ * - Disguised Shadow's (2): Personified Dragon Ball's Bestial Trait, not in the Normal State (transformations.mjs inNormalState).
  *
  * The reason, or "".
  */
@@ -53,7 +52,8 @@ export function traitAside(item, items, actor = item?.parent) {
   }
   if ((item?.system?.other === "bestial") && flags.grantedBy
     && (list.find(other => other.id === flags.grantedBy)?.flags?.["dbu-ttrpg"]?.sourceId === "personified-dragon-ball")
-    && list.some(other => (other.type === "racial") && (other.flags?.["dbu-ttrpg"]?.sourceId === "disguised-shadow"))) return "disguised";
+    && list.some(other => (other.type === "racial") && (other.flags?.["dbu-ttrpg"]?.sourceId === "disguised-shadow"))
+    && (transformationQuestion("normalState", actor ?? item?.parent) === true)) return "disguised";
   if (item?.system?.other === "pseudo-bestial") {
     const access = actor?.getFlag?.("dbu-ttrpg", "pseudoAccess");
     if (!access?.all && !(access?.ids ?? []).includes(item.id)) return "pseudo";

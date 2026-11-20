@@ -2,6 +2,9 @@ id: giant-form-accelerated-growth
 name: Accelerated Growth
 order: 1
 slot: trait
+# (2) "This Transformation gains the Armored Aspect if your Size Category is Gigantic or higher" - read as its 3rd Grade or higher
+# (Growth 3, Gigantic); one Gigantic without it: the table's. Great Namekian, its Variant, the same (This).
+grantsAspectTo: This = Armored if $G >= 3
 description: >
   You have the ability to increase in size at will, or return to your original size.
 text: >
@@ -16,5 +19,4 @@ text: >
 
 ---
 
-# (1) Punching Down's Extra Dice a Category higher, (2) Armored at Gigantic or larger, (3) Sudden Stop without a Counter Action: the
-# table's. (4) Its Grades: Growth G (its Aspect), its Attribute Modifier Bonuses G(T).
+# (1) Punching Down's Extra Dice a Category higher, (3) Sudden Stop without a Counter Action: the table's. (2) Armored: its header. (4) Its Grades: Growth G (its Aspect), its Attribute Modifier Bonuses G(T).

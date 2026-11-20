@@ -4,6 +4,9 @@ order: 1
 category: body
 # "[Draconic Physique]": it replaces that Secondary Racial Trait - which, the table's.
 importance: secondary
+# (1) Monster Form given, with the Absorbed Apparel Aspect (racial.mjs grantsTransformation; transformations.mjs aspectsGivenTo).
+grantsTransformation: monster-form
+grantsAspectTo: Monster Form = Absorbed Apparel
 description: >
   You take on a seemingly ordinary form until it's time to unleash your true draconic nature.
 text: >
@@ -24,7 +27,7 @@ text: >
 
 ---
 
-# (1) The table's: Transformations are not in this system yet. The Normal State - (2), (3) - is every moment until they are.
+# (1) Its header. (2), (3) The Normal State: no Enhancement or Form in use, a Null Stage counting (the predicate normalState).
 # (2) Read where Traits are set aside (aside.mjs traitAside): Personified Dragon Ball's Bestial Trait, while in the Normal State.
 # (3) Read on Negative Ki's own file: its 4th effect's Ki once more, while in the Normal State.
 [passive]
