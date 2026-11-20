@@ -629,6 +629,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "The Basic Attack out of sequence - Pieces of the Hive (1)'s (chat.mjs basicStrike)."
   },
+  injuryTransfer: {
+    args: [0, 0],
+    doc: "Injury Transfer: your Life Points and the targeted Ally's swapped, yours higher; your Thresholds fallen under failed (chat.mjs)."
+  },
   divineSummoning: {
     args: [0, 0],
     doc: "Divine Summoning: which of your Minions, ticked - 2(bT) Divine Ki each past the first; True God of Many (6)'s Power Up offered."

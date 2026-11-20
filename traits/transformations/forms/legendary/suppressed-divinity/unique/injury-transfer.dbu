@@ -7,7 +7,8 @@ type: standard
 actionCost: 3
 kiCostPerTier: 10
 minions: Non-Minion
-# The two Life Points swapped and the Steadfast Checks failed: said on its card, the table's.
+# The targeted Ally's Life Points and yours swapped, your Threshold fallen under failed (chat.mjs injuryTransfer); their Melee Range and
+# their willing, the table's.
 source: Appointed God
 description: >
   Swap your Life Points with a willing Ally's in your Melee Range - theirs higher than yours never; Thresholds fallen through failed.
@@ -23,3 +24,8 @@ text: >
   –Passive Bonus: N/A
   –Effect: Target a willing Ally within your Melee Range. If your Life Points are higher than that of the targeted Ally, you may swap your current Life Points values. Any Health Thresholds you fall under due to this Unique Ability have their Steadfast Check automatically failed.
   This cannot allow your targeted Ally's Life Points to exceed their Maximum Life Points.
+
+---
+
+[on used]
+injuryTransfer();

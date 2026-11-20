@@ -8,7 +8,7 @@ requiresTarget: false
 usageLimit: 1/round
 # A Domain Maneuver (God of a Domain (3)), a God Maneuver: open while the Domain in brackets is yours, only in God Ki, paid in Divine Ki Points.
 godManeuver: true
-# Where the Minions are placed: the table's (its Squares). Its 2(bT) for one Minion; more, the rest paid by hand - said on its card.
+# Which Minions, ticked; 2(bT) Divine Ki each past the first (chat.mjs divineSummoning). Where they are placed: the table's (its Squares).
 source: Core Rule
 description: >
   Calling your subordinates into battle, you lead with heavenly insight and strategic might.

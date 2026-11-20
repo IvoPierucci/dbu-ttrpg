@@ -42390,3 +42390,33 @@ export async function borrowMagicalUnique(actor) {
   data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), grantedBy: form.id, whileIn: form.id } };
   await actor.createEmbeddedDocuments("Item", [data]);
 }
+
+/**
+ * Injury Transfer: "Target a willing Ally within your Melee Range. If your Life Points are higher than that of the targeted Ally, you may swap
+ * your current Life Points values. Any Health Thresholds you fall under due to this Unique Ability have their Steadfast Check automatically
+ * failed. This cannot allow your targeted Ally's Life Points to exceed their Maximum Life Points." The Ally targeted; their Melee Range and their
+ * willing, the table's.
+ */
+export async function injuryTransfer(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const ally = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid) && areAllies(other, actor));
+  if (!ally) {
+    ui.notifications.warn(`${actor.name}: Injury Transfer targets a willing Ally - target one first.`);
+    return UNSPENT;
+  }
+  const mine = Number(actor.system.life?.value) || 0;
+  const theirs = Number(ally.system.life?.value) || 0;
+  if (mine <= theirs) {
+    ui.notifications.warn(`${actor.name}'s Life Points are not higher than ${ally.name}'s: nothing to swap.`);
+    return UNSPENT;
+  }
+  const allyMax = Number(ally.system.life?.ceiling ?? ally.system.life?.max) || mine;
+  const { default: Data } = await import("./data/actor-character.mjs");
+  const before = Data.thresholdKey(mine, Number(actor.system.life?.max) || 1, actor.system.typicalMinion);
+  const after = Data.thresholdKey(theirs, Number(actor.system.life?.max) || 1, actor.system.typicalMinion);
+  if (after !== before) await actor.setFlag(SCOPE, "steadfastAutoFail", { threshold: after, by: "Injury Transfer" });
+  await actor.update({ "system.life.value": theirs });
+  await requestActorUpdate(ally, { "system.life.value": Math.min(allyMax, mine) });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `Injury Transfer: ${actor.name} and ${ally.name} swap their Life Points.`)}</div>` });
+}

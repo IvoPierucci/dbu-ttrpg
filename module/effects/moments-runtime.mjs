@@ -860,6 +860,7 @@ async function runVerb(actor, call, context) {
     // The Domain Maneuvers (Divinity Unleashed's God of a Domain (3)).
     case "divineHealing": return (await import("../chat.mjs")).divineHealing(actor, context?.maneuver ?? null);
     case "divineSummoning": return (await import("../chat.mjs")).divineSummoning(actor);
+    case "injuryTransfer": return (await import("../chat.mjs")).injuryTransfer(actor);
     case "cleanseNear": return (await import("../chat.mjs")).cleanseNear(actor);
     case "borrowMagicalUnique": return (await import("../chat.mjs")).borrowMagicalUnique(actor);
     // A State's level set, where it is in it at a higher one - True God of Peace (7)'s "set your level of the Mindful State to Calm".
