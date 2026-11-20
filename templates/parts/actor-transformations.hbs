@@ -20,16 +20,18 @@
       {{else}}
       <span class="dbu-tf-dim">none</span>
       {{/each}}
-      <span class="dbu-tf-chip dbu-tf-push" data-tooltip="Power Level + Determination">Stress Bonus {{tf.stressBonus}}</span>
     </div>
 
-    {{#if tf.sections.length}}
+    {{! The sections, and the Stress Bonus at the right of their row (the user's). }}
     <nav class="dbu-tf-sections">
       {{#each tf.sections as |section|}}
       <button type="button" class="dbu-tf-section{{#if section.active}} active{{/if}}" data-action="transformationSection"
               data-key="{{section.key}}">{{section.label}}<b>{{section.count}}</b></button>
       {{/each}}
+      <span class="dbu-tf-chip dbu-tf-push" data-tooltip="Power Level + Determination">Stress Bonus {{tf.stressBonus}}</span>
     </nav>
+
+    {{#if tf.sections.length}}
 
     <ul class="dbu-tf-list">
       {{#each tf.rows as |row|}}

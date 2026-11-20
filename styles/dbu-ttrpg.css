@@ -6425,7 +6425,7 @@
 .dbu-ttrpg .dbu-tf-chip.ext { border-style: dashed; }
 .dbu-ttrpg .dbu-tf-chip.warn, .dbu-tf-add .dbu-tf-chip.warn { border-color: #e0b04a; color: #e0b04a; }
 .dbu-ttrpg .dbu-tf-push, .dbu-tf-add .dbu-tf-push { margin-left: auto; }
-.dbu-ttrpg .dbu-tf-sections, .dbu-tf-add .dbu-tf-sections { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+.dbu-ttrpg .dbu-tf-sections, .dbu-tf-add .dbu-tf-sections { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 8px 0; }
 .dbu-ttrpg .dbu-tf-section, .dbu-tf-add .dbu-tf-section { flex: 0 0 auto; width: auto; height: 24px; line-height: 22px; padding: 0 10px;
   font-size: 12px; border: 1px solid var(--dbu-border); border-radius: 4px; background: transparent; color: var(--dbu-text-dim); }
 .dbu-ttrpg .dbu-tf-section b { margin-left: 5px; font-weight: 600; color: var(--dbu-text); }
