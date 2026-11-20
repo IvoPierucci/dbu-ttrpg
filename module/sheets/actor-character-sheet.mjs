@@ -464,7 +464,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       removeTransformation: DBUCharacterSheet._onRemoveTransformation,
       transformationSection: DBUCharacterSheet._onTransformationSection,
       toggleTransformation: DBUCharacterSheet._onToggleTransformation,
-      transformationOriginals: DBUCharacterSheet._onTransformationOriginals,
       addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
       addOtherTrait: DBUCharacterSheet._onAddOtherTrait,
       addVillainousTrait: DBUCharacterSheet._onAddVillainousTrait,
@@ -7208,10 +7207,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         overMastery: (Number(item.system.mastery) || 0) > max,
         temporary: Number(item.system.temporary) || 0,
         newLevel: Boolean(item.system.newLevel),
-        on: (kind === "evolved") ? (item.system.originals ?? []).map(id => this.actor.items.get(id)).filter(Boolean)
-          .map(form => ({ name: form.name, active: item.system.original === form.id })) : null,
-        evolved: (kind === "form") ? items.filter(each => (each.system.originals ?? []).includes(item.id))
-          .map(each => ({ name: each.name, active: inUse(each) && (each.system.original === item.id) })) : [],
         bonuses: Object.entries(BONUS_ATTRIBUTES).map(([label, attribute]) => ({ label,
           value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
         aspects: file ? aspectsOf(item, all).map(aspect => ({ label: aspectLabel(aspect), summary: aspectFile(aspect.id)?.summary ?? "" })) : [],
@@ -7269,7 +7264,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (["active", "transcended", "newLevel"].includes(field)) {
       const on = Boolean(input.checked);
       const updates = [{ _id: item.id, [`system.${field}`]: on }];
-      if (field === "active") updates.push(...inUseChanges(transformationItems(this.actor), item, on, updates[0]));
+      if (field === "active") {
+        const changes = inUseChanges(transformationItems(this.actor), item, on);
+        // An Evolved Stage is on the Form you are in (the user's): in none, it may not be entered - a Null Stage is one.
+        if (!changes) {
+          input.checked = false;
+          return ui.notifications.warn(`${item.name}: an Evolved Stage is entered on the Form you are in, and you are in none.`);
+        }
+        updates.push(...changes);
+      }
       return this.actor.updateEmbeddedDocuments("Item", updates);
     }
     const number = Math.max(0, Math.floor(Number(input.value) || 0));
@@ -7297,11 +7300,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!this.isEditable) return;
     const id = target.closest("[data-tf-id]")?.dataset.tfId;
     if (!id) return;
-    // An Evolved Stage on it loses that Original.
-    const updates = transformationItems(this.actor).filter(each => (each.system.originals ?? []).includes(id))
-      .map(each => ({ _id: each.id, "system.originals": each.system.originals.filter(other => other !== id),
-        ...(each.system.original === id ? { "system.original": "", "system.active": false } : {}) }));
-    if (updates.length) await this.actor.updateEmbeddedDocuments("Item", updates);
     return removeTransformation(this.actor, id);
   }
 
@@ -7395,35 +7393,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const item = await addTransformation(this.actor, picked);
     if (item) this.#transformationSection = kindOf(fileOf(item));
     return this.render();
-  }
-
-  /**
-   * An Evolved Stage's Original Forms (the user's): "which Forms?" - every Form this character has, ticked or not; it may be on
-   * several, each "a different Transformation". Its Prerequisites the table's.
-   */
-  static async _onTransformationOriginals(event, target) {
-    if (!this.isEditable) return;
-    const item = this.actor.items.get(target.closest("[data-tf-id]")?.dataset.tfId ?? "");
-    if (!item) return;
-    const forms = transformationItems(this.actor).filter(each => kindOf(fileOf(each)) === "form");
-    if (!forms.length) return ui.notifications.info("There is no Form to put it on yet.");
-    const escape = Handlebars.escapeExpression;
-    const chosen = new Set(item.system.originals ?? []);
-    const picked = await foundry.applications.api.DialogV2.wait({
-      classes: ["dbu-dialog", "dbu-tf-add"],
-      window: { title: `${item.name}: on which Forms?` },
-      content: `<div class="dbu-tf-originals">${forms.map(form => `<label class="dbu-tf-in"><input type="checkbox" name="${escape(form.id)}"
-        ${chosen.has(form.id) ? "checked" : ""}/>${escape(form.name)}<span class="dbu-tf-dim">Stress ${escape(stressOf(form))}</span></label>`).join("")}</div>`,
-      buttons: [
-        { action: "save", label: "Save", default: true, callback: (event, button, dialog) =>
-          forms.filter(form => dialog.element.querySelector(`[name="${form.id}"]`)?.checked).map(form => form.id) },
-        { action: "cancel", label: "Cancel" }
-      ],
-      rejectClose: false
-    });
-    if (!Array.isArray(picked)) return;
-    return item.update({ "system.originals": picked,
-      ...(picked.includes(item.system.original) ? {} : { "system.original": picked[0] ?? "" }) });
   }
 
   /** A Racial Trait taken off - and the Unique Abilities it gave with it (racial.mjs removeRacialTrait). */

@@ -71,19 +71,6 @@
             {{/if}}
           </span>
         </div>
-        {{#if row.on}}
-        <div class="dbu-tf-on">
-          <span class="dbu-tf-dim">On:</span>
-          {{#each row.on as |original|}}<span class="dbu-tf-chip{{#if original.active}} active{{/if}}">{{original.name}}</span>{{else}}<span class="dbu-tf-dim">no Form yet</span>{{/each}}
-          {{#if @root.editable}}<button type="button" class="dbu-tf-small" data-action="transformationOriginals">Change</button>{{/if}}
-        </div>
-        {{/if}}
-        {{#if row.evolved.length}}
-        <div class="dbu-tf-on">
-          <span class="dbu-tf-dim">Evolved Stages:</span>
-          {{#each row.evolved as |stage|}}<span class="dbu-tf-chip{{#if stage.active}} active{{/if}}">{{stage.name}}</span>{{/each}}
-        </div>
-        {{/if}}
         {{#if row.temporary}}<div class="dbu-tf-on"><span class="dbu-tf-chip ext">Temporary Awakening, level {{row.temporary}}</span></div>{{/if}}
         <div class="dbu-tf-bonuses">
           {{#each row.bonuses as |bonus|}}<span class="dbu-tf-bonus{{#if bonus.up}} up{{/if}}">{{bonus.label}} {{bonus.value}}</span>{{/each}}

@@ -35,10 +35,6 @@ export default class DBUTransformationData extends foundry.abstract.TypeDataMode
       newLevel: new fields.BooleanField({ required: true, initial: false }),
       /** A Temporary Awakening's level (1 or 2); 0 for one that is not. */
       temporary: count(0),
-      /** An Evolved Stage's Original Forms - the ids of their Transformation Items ("On:"). */
-      originals: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }),
-      /** An Evolved Stage in use: the Original Form it is on (its Item's id). */
-      original: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** What was chosen for it - an Option, a Trait of a group, an Attribute, a Save - by what was asked. */
       choices: new fields.ArrayField(new fields.SchemaField({
         key: new fields.StringField({ required: true, blank: true, initial: "" }),

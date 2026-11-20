@@ -6475,4 +6475,3 @@
 .dbu-tf-add .dbu-tf-pick.unfit .dbu-tf-name { opacity: 0.6; }
 .dbu-tf-add .dbu-tf-pick.blocked { cursor: default; opacity: 0.6; }
 .dbu-tf-add .dbu-tf-name { color: #dfe288; }
-.dbu-tf-originals { display: grid; gap: 6px; }
