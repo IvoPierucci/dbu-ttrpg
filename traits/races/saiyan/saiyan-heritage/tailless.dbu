@@ -9,4 +9,9 @@ text: >
 
 ---
 
-# "While in a Form and/or Enhancement" - Forms and Enhancements are not built yet: the table adds it while in one.
+# "While in a Form and/or Enhancement" - a Null Stage is the Normal State, not a Form.
+[passive]
+if (inFormOrTranscended || inEnhancement) {
+    wound += 1(T);
+    soakValue += 1(T);
+}

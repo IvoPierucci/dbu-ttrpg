@@ -1175,9 +1175,11 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   if (trait.asksNormalTrait) await askNormalTrait(actor, item);
   // "Gain access to the Evil Saiyan Enhancement" (`grantsTransformation:` - Heart of Evil's, Emperor's every Stage of Metamorphosis): each
   // added where it is not had, gone with the Trait (`grantedBy`).
-  if (trait.grantsTransformation) {
+  // An Option's too - Saiyan Heritage's Tailed: "you have access to the Oozaru Alternate Form".
+  const transformationsGiven = [...listOf(trait.grantsTransformation), ...chosenOptions(item).flatMap(option => listOf(option.grantsTransformation))];
+  if (transformationsGiven.length) {
     const T = await import("./transformations.mjs");
-    for (const id of listOf(trait.grantsTransformation)) {
+    for (const id of transformationsGiven) {
       if (T.transformationItems(actor).some(each => each.system?.transformationId === id)) continue;
       const given = await T.addTransformation(actor, id);
       if (given) await given.setFlag("dbu-ttrpg", "grantedBy", item.id);
