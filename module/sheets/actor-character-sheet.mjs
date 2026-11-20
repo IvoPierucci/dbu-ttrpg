@@ -19,7 +19,7 @@ import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
 import { addCustomVillainousTrait, ownedVillainousTraits, villainousTraitFiles } from "../racial.mjs";
-import { factorName, addRacialTrait, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { factorName, addRacialTrait, optionGroupsOf, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stateTriggerBlocks } from "../effects/registry.mjs";
@@ -7295,10 +7295,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return racialTraitLines(item).filter(line => numbers.some(n => String(line.html ?? "").includes(`(${n})-`))).map(line => line.html);
     };
     // Not one whose Transformation is not in use and holds only by its [Permanent] effects (the user's: not shown).
+    // One with an Option or a choice of its own (S-Cells'): its pencil, to change it on its Item's sheet, as a Racial Trait's.
+    const changeable = item => (trait => Boolean(trait && (optionGroupsOf(trait).length || trait.choose)))(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? ""));
     const traits = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "in"))
-      .map(entry => ({ ...entry, from: fromOf(entry.item) }));
+      .map(entry => ({ ...entry, from: fromOf(entry.item), changeable: changeable(entry.item) }));
     const constant = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "constant"))
-      .map(entry => ({ ...entry, from: fromOf(entry.item), constantLines: constantLines(entry.item) }));
+      .map(entry => ({ ...entry, from: fromOf(entry.item), constantLines: constantLines(entry.item), changeable: changeable(entry.item) }));
     return {
       // Not those that are only their Transformation's own (`bar: false` - Peaked, Pinnacle, Graded, Heartbeat...): the user's.
       aspects: combineAspects(this.actor).filter(aspect => aspect.file?.bar !== false).map(aspect => ({ label: aspectLabel(aspect), from: aspect.from.join(", "),
