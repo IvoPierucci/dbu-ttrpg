@@ -16,4 +16,17 @@ text: >
 
 ---
 
-# (1)(2) No Enhancement with it (said), (3) the Beam Profile 2(T) cheaper, (4) the Throw after a Terrain Lift, (5) the Powered Tail Attack: the table's.
+# (1)(2) No Enhancement with it: said, never refused.
+
+# (3) The Beam Profile 2(T) cheaper.
+[passive, effect 3]
+profileKiCost.beam -= 2(T);
+
+# (4) The Terrain Lift used, once a Round: the Throw out of sequence - the Feature thrown.
+[triggered/declare-maneuver, 1/round, outOfSequence, effect 4]
+requires using("terrain-lift");
+maneuverOutOfSequence(throw);
+
+# (5) Once an Encounter: the Tail Attack Maneuver, its Profile Powered - an Instant of its own (maneuvers/).
+[passive, effect 5]
+allow maneuver.rampaging-tail;

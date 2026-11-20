@@ -42554,3 +42554,19 @@ export async function berserkerStrike(actor, source = "Class Up - Berserker") {
     { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique", maneuverName: "Signature Technique", reason: `${source} - an Energy Charge`,
       technique: { via: "", any: true }, grants: { charges: 1 } }] } } });
 }
+
+/** Monkey Mastery (4): "Enter the Raging and/or Feral State(s) until the end of your turn" - which, asked. */
+export async function ragingAndOrFeral(actor) {
+  const { UNSPENT, enterState } = await import("./effects/moments-runtime.mjs");
+  const chosen = await askPlayerChoice(actor, `${actor.name}: Monkey Mastery`, [{ value: "raging", label: "Raging" }, { value: "feral", label: "Feral" },
+    { value: "both", label: "Raging and Feral" }]);
+  if (!chosen) return UNSPENT;
+  if (["raging", "both"].includes(chosen)) await enterState(actor, "raging", 1, "turn", "Monkey Mastery");
+  if (["feral", "both"].includes(chosen)) await enterState(actor, "feral", 1, "turn", "Monkey Mastery");
+}
+
+/** Rampaging Assault (5): "You may use the Tail Attack Maneuver, but your Profile for that Attacking Maneuver is Powered" - offered on a card. */
+export async function offerTail(actor, profile = "powered") {
+  return offerOutOfSequence(actor, { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "tail-attack", maneuverName: "Tail Attack",
+    reason: `Rampaging Assault - the ${PROFILES[profile]?.label ?? profile} Profile`, grants: { profileChoices: [profile] } });
+}

@@ -615,6 +615,11 @@ const TABLE = [
     doc: "Divine Summoning, once an Encounter: each Minion moved by it, the Power Up out of sequence (True God of Many (6))." },
   { key: "freezeAttack.lend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Freeze Attack on an Ally, once an Encounter: your Damage Attribute on their attacks in that Frozen Turn (True God of Time (7))." },
+  // Oozaru's Traits.
+  { key: "battleBorn.woundOnly", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Every stack of Battle Born gained put on the Wound Rolls, not asked (Furious Beast (4)) - not with battleBorn.free." },
+  { key: "battleBorn.free", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Furious Beast (4) ignored (Monkey Mayhem (2))." },
   // Super Saiyan's Traits.
   { key: "attack.fullWager", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Every Attacking Maneuver of yours with the Full Wager Advantage - its Ki Wager limited by your remaining Capacity alone (Limitless (1))." },

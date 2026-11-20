@@ -863,6 +863,8 @@ async function runVerb(actor, call, context) {
     // Full Power Super Saiyan's Battle Born spent; Class Up's Choice effects.
     case "spendBattleBorn": return (await import("../chat.mjs")).spendBattleBorn(actor, String(args[0] ?? ""));
     case "freeSurge": return (await import("../chat.mjs")).freeSurge(actor);
+    case "ragingAndOrFeral": return (await import("../chat.mjs")).ragingAndOrFeral(actor);
+    case "offerTail": return (await import("../chat.mjs")).offerTail(actor, String(args[0] ?? "powered"));
     case "extraBonusMomentum": return (await import("../chat.mjs")).extraBonusMomentum(actor);
     case "oweBattleBorn": return (await import("../chat.mjs")).oweBattleBorn(actor, Number(args[0]) || 1);
     case "classUpChoice": return (await import("../chat.mjs")).classUpChoice(actor);
@@ -927,7 +929,10 @@ async function runVerb(actor, call, context) {
         .filter(name => definitions[name] && ((Number(held[name]?.stacks) || 0) < ceiling(name)));
       if (!open.length) return;
       const { askPlayerChoice } = await import("../chat.mjs");
-      const chosen = (open.length === 1) ? open[0] : await askPlayerChoice(actor,
+      // Furious Beast (4): "If you would gain a stack of Battle Born, you must apply it to your Wound Rolls" - not with Monkey Mayhem (2).
+      const woundOnly = (actor.system.effects?.slots?.["battleBorn.woundOnly"] === true) && (actor.system.effects?.slots?.["battleBorn.free"] !== true)
+        && open.includes("battlebornwound");
+      const chosen = woundOnly ? "battlebornwound" : (open.length === 1) ? open[0] : await askPlayerChoice(actor,
         `${actor.name}: ${definitions[open[0]].source || "a stack"}`,
         open.map(name => ({ value: name, label: definitions[name].label })));
       // Not answered - closed, or its two minutes run out on the player's client: the stack left unplaced, said in the chat with a

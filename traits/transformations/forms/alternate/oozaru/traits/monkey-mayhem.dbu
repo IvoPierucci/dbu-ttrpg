@@ -20,4 +20,6 @@ text: >
 [passive, effect 1]
 insight.mod += 1(T);
 
-# (2) Furious Beast (4) and Rampaging Assault (1)(2) ignored: the table's.
+# (2) Furious Beast (4) ignored; Rampaging Assault (1)(2) - no Enhancement with it - only said, so nothing to ignore.
+[passive, effect 2]
+allow battleBorn.free;

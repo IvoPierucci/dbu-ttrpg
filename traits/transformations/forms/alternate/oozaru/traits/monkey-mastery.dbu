@@ -22,15 +22,17 @@ text: >
 [passive, effect 1]
 agility.mod += 1(T);
 
-# (2) Large for the Defense Value's Size and Punching Up: the table's.
+# (2) Large for the Defense Value's Size and for Punching Up (as Giant Gene's, Enormous or larger).
+[passive, effect 2]
+allow employed.sizeAsLarge;
 
 # (3) The Muscle Penalty 1(bT) lower.
 [passive, effect 3]
 superStack.musclePenalty -= 1(bT);
 
-# (4) Entering it and at the start of your turn: Raging (and/or Feral - the table's) till the end of your turn.
+# (4) Entering it and at the start of your turn: Raging and/or Feral till the end of your turn - which, asked.
 [triggered/transform, effect 4]
-enterState(raging, 1, turn);
+ragingAndOrFeral();
 
 [triggered/start-of-turn, effect 4]
-enterState(raging, 1, turn);
+ragingAndOrFeral();

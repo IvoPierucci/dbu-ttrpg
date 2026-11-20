@@ -25,4 +25,6 @@ damageReduction += threshold.depth * 1(T);
 [passive, effect 3]
 battlebornwound.max += 20;
 
-# (4) Every Battle Born stack gained put on the Wound Rolls: the table's.
+# (4) Every Battle Born stack gained put on the Wound Rolls, not asked (moments-runtime.mjs gainOneOf).
+[passive, effect 4]
+allow battleBorn.woundOnly;

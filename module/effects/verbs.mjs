@@ -651,6 +651,15 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "An Action more from Bonus Momentum this Combat Round (Sparking Momentum (4))."
   },
+  offerTail: {
+    args: [0, 1],
+    names: [0],
+    doc: "The Tail Attack offered out of sequence on a card, its Profile the one named (Rampaging Assault (5): powered)."
+  },
+  ragingAndOrFeral: {
+    args: [0, 0],
+    doc: "The Raging and/or the Feral State till the end of your turn - which, asked (Monkey Mastery (4))."
+  },
   freeSurge: {
     args: [0, 0],
     doc: "A Surge, its kind asked, counting toward no Surge Maneuver's limit (Class Up's Elite (3))."

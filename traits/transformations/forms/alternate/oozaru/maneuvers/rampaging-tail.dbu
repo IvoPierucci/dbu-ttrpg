@@ -1,0 +1,24 @@
+id: rampaging-tail
+name: Rampaging Assault: Tail Attack
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# Rampaging Assault (5)'s, open while it applies: the Tail Attack offered, the Powered Profile its only one (chat.mjs offers).
+special: true
+source: Core Rule
+description: >
+  You may use the Tail Attack Maneuver, but your Profile for that Attacking Maneuver is Powered.
+text: >
+  (5)-[1/Encounter]: You may use the Tail Attack Maneuver, but your Profile for that Attacking Maneuver is Powered.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A (the Tail Attack's)
+  –Effect: The Tail Attack Maneuver, of the Powered Profile.
+
+---
+
+[on used]
+offerTail(powered);
