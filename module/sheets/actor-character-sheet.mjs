@@ -5677,6 +5677,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
 
     const { getTrait } = await import("../effects/traits.mjs");
+    // An Awakening it gives as a Temporary Awakening - the Ensenji's Unlocked Potential (`consumeAwakening: <id> <level>`).
+    const [awakening, level] = String(getTrait(item.system.gearId ?? "")?.consumeAwakening ?? "").split(/\s+/);
+    if (awakening) await (await import("../transformations.mjs")).gainTemporaryAwakening(this.actor, awakening, Number(level) || 1);
     const names = held.map(key => getTrait(key)?.name ?? key);
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),

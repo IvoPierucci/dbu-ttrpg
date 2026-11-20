@@ -14,6 +14,8 @@ usageLimit: 1/encounter
 # Awakening said on the card: Awakenings are not in the system yet (chat.mjs postWarpedEvolution).
 warpedEvolution: true
 source: Core Rule
+# The Awakening it gives as a Temporary Awakening, and its Level (chat.mjs requestTemporaryAwakening).
+temporaryAwakening: dark-evolution 2
 description: >
   Once an Encounter, a Clash (Cognitive) against an Ally: won, their Life Points halved and the Dark Evolution Awakening
   theirs as a Level 2 Temporary Awakening.

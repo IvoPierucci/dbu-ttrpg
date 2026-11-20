@@ -12,6 +12,8 @@ gambleDC: 10
 gamblePerTier: 2
 # Made: "have your Life and Ki Points set to their respective maximums". The Awakening is not
 # here yet: the card says it.
+# The Awakening given, as a Level 1 Temporary Awakening (transformations.mjs gainTemporaryAwakening).
+consumeAwakening: unlocked-potential 1
 consumeNote: gains a stack of the Unlocked Potential Awakening as a Level 1 Temporary Awakening
 source: Core Rule
 description: >

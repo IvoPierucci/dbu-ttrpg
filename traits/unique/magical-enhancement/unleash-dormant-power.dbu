@@ -9,6 +9,8 @@ tpCost: 20
 # Awakenings, the Transformation Maneuver, Enhancements and Forms are not in this system yet - the table's.
 enhanceUnleash: true
 source: Core Rule
+# The Awakening it gives as a Temporary Awakening, and its Level (chat.mjs requestTemporaryAwakening).
+temporaryAwakening: unlocked-potential 2
 description: >
   2 Actions and half your Maximum Ki more: an Awakening, an Out-of-Sequence Transformation, an Enhancement or a Form for
   the Ally - twice an Encounter, once an Ally.

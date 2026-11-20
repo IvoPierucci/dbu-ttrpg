@@ -269,6 +269,7 @@ function applyRequest(request) {
       ? game.messages.get(request.messageId)?.setFlag(SCOPE, request.flag, request.value) : null;
     // The Fusion of Ki entered or left: both Characters changed, which only the GM may (fusion-of-ki.mjs).
     case "kiFusion": return runKiFusion(request.op, request.a, request.b);
+    case "temporaryAwakening": return giveTemporaryAwakening(request.actorUuid, request.id, request.level);
     case "answerFor": return answerFor(fromUuidSync(request.actorUuid ?? ""), request.moment, request.context ?? {});
     case "uniqueClashWon": {
       const message = game.messages.get(request.messageId);
@@ -522,6 +523,20 @@ export function requestKiFusion(op, aUuid, bUuid = "") {
   if (game.user.isGM) return runKiFusion(op, aUuid, bUuid);
   if (!game.users.activeGM) return void ui.notifications.warn("The Fusion of Ki needs a GM connected: both Characters change.");
   game.socket.emit(CHANNEL, { type: "kiFusion", op, a: aUuid, b: bUuid });
+}
+
+/** A Temporary Awakening given to a Character (transformations.mjs) - by the GM where this client is not theirs. */
+async function giveTemporaryAwakening(actorUuid, id, level) {
+  const actor = fromUuidSync(actorUuid ?? "");
+  if (!actor) return null;
+  return (await import("./transformations.mjs")).gainTemporaryAwakening(actor, id, Number(level) || 1);
+}
+
+export function requestTemporaryAwakening(actor, id, level = 1) {
+  if (!actor) return null;
+  if (actor.isOwner) return giveTemporaryAwakening(actor.uuid, id, level);
+  if (!game.users.activeGM) return void ui.notifications.warn(`${actor.name}'s Awakening needs a GM connected.`);
+  game.socket.emit(CHANNEL, { type: "temporaryAwakening", actorUuid: actor.uuid, id, level });
 }
 
 export function requestActorUpdate(actor, changes) {
@@ -5033,7 +5048,9 @@ export async function postGamble(actor, item) {
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${escape(item.name)}: ${escape(save)}, DC ${dc}</p>`,
     flags: { [SCOPE]: { [GAMBLE_FLAG]: {
-      actorUuid: actor.uuid, itemName: item.name, save, dc, note: item.system.consumeNote ?? "", applied: false
+      actorUuid: actor.uuid, itemName: item.name, save, dc, note: item.system.consumeNote ?? "", applied: false,
+      // An Awakening it gives, made (`consumeAwakening: <id> <level>` - the Ultra Divine Water's Unlocked Potential).
+      awakening: String((await import("./effects/traits.mjs")).getTrait(item.system.gearId ?? "")?.consumeAwakening ?? "")
     } } }
   });
   await cardRoll(message, { actorUuid: actor.uuid, type: "save", key: gamble.save, against: dc,
@@ -5057,6 +5074,11 @@ async function settleGamble(message, gamble, made) {
   const say = async text => { const note = await settledNote(message, text); if (note) done.notes.push(note.id); };
   if (made) {
     await actor.update({ "system.life.value": actor.system.life.max, "system.ki.value": actor.system.ki.max });
+    const [awakening, level] = String(gamble.awakening ?? "").split(/\s+/);
+    if (awakening && !gamble.awakeningGiven) {
+      await (await import("./transformations.mjs")).gainTemporaryAwakening(actor, awakening, Number(level) || 1);
+      done.awakeningGiven = true;
+    }
     await say(`Life and Ki Points to their maximums${gamble.note ? `, and ${actor.name} ${gamble.note}` : ""}.`);
   } else {
     await reduceLifePoints(actor, Math.max(0, Number(actor.system.life.value) || 0),
@@ -15027,6 +15049,11 @@ export async function postEnhance(actor, maneuver, plan) {
     await lasting(ally, { kind: KINDS.CONDITION, key, edge: EDGES.END, source: maneuver.name });
   }
   const notes = [];
+  // Unleash Dormant Power's Unlocked Potential: given, as a Level 2 Temporary Awakening.
+  if (plan.unleash === "awakening") {
+    const [id, level] = String(getTrait("unleash-dormant-power")?.temporaryAwakening ?? "").split(/\s+/);
+    if (id) await requestTemporaryAwakening(ally, id, Number(level) || 2);
+  }
   if (plan.unleash) {
     await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), "encounter:unleash",
       `encounter:unleash.${ally.uuid}`] });
@@ -20380,8 +20407,11 @@ async function settleWarped(message, clash) {
   if (!target || (whoWonClash(clash.result) !== "challenger")) return;
   const now = Math.max(0, Number(target.system.life?.value) || 0);
   await reduceLifePoints(target, now - Math.floor(now / 2), { reason: clash.maneuverName });
+  // The Awakening its file names (`temporaryAwakening: <id> <level>`) - Dark Evolution, Level 2.
+  const [warpedTo, warpedLevel] = String(getTrait("warped-evolution")?.temporaryAwakening ?? "").split(/\s+/);
+  if (warpedTo) await requestTemporaryAwakening(target, warpedTo, Number(warpedLevel) || 2);
   await settledNote(message, `${target.name} warps: Life Points halved, and the Dark Evolution Awakening theirs as a Level 2 `
-    + "Temporary Awakening (Awakenings are the table's for now).");
+    + "Temporary Awakening.");
 }
 
 /** Weather Summoning's card, after a Power Up: its button. */
