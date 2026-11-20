@@ -262,7 +262,8 @@ export function racialTraitFiles() {
 
 /** A Racial Trait's Options - or a Talent's - in the order its text lists them (their `order:`), not by name (the user's). */
 export function racialOptionsOf(id) {
-  return [...traitsOfKind("races"), ...traitsOfKind("factors"), ...traitsOfKind("talents"), ...traitsOfKind("other")]
+  return [...traitsOfKind("races"), ...traitsOfKind("factors"), ...traitsOfKind("talents"), ...traitsOfKind("other"),
+    ...traitsOfKind("transformations")]
     .filter(trait => trait.optionOf === id)
     .sort((a, b) => (orderOf(a) - orderOf(b)) || a.name.localeCompare(b.name));
 }
@@ -664,6 +665,13 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     return Object.entries(PROFILES).filter(([, profile]) => profile.label && Array.isArray(profile.foundations)
       && (!foundation || profile.foundations.includes(foundation))).map(([key, profile]) => [key, profile.label]);
   }
+  // Divine Candidate's "select and gain access to a God Maneuver of your choice".
+  if (kind === "godManeuver") {
+    const { traitsOfKind } = await import("./effects/traits.mjs");
+    return traitsOfKind("maneuvers").filter(each => each.godManeuver).sort((a, b) => a.name.localeCompare(b.name)).map(each => [each.id, each.name]);
+  }
+  // A Foundation - Super Specialist's "select a Foundation".
+  if (kind === "foundation") return [["physical", "Physical"], ["energy", "Energy"], ["magic", "Magic"]];
   // Category Specialist's "Select a Weapon Category" - not the Shield, which is no attack's.
   if (kind === "weaponCategory") {
     const { traitsOfKind } = await import("./effects/traits.mjs");

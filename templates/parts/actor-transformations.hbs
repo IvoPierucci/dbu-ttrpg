@@ -99,6 +99,20 @@
           <div class="dbu-tf-part"><div class="dbu-tf-heading">Grade {{row.grade}}</div>
             <div class="dbu-tf-kv">{{#each row.gradeValues as |value|}}<span class="dbu-tf-dim">{{value}}</span>{{/each}}</div></div>
           {{/if}}
+          {{#each row.groups as |group|}}
+          {{! Traits of which some are chosen (the Trait's group): those chosen, taken away by their trash; one more picked from the list. }}
+          <div class="dbu-tf-part"><div class="dbu-tf-heading">{{group.label}}: {{group.chosen.length}} of {{group.picks}}</div>
+            <div class="dbu-tf-chips">
+              {{#each group.chosen as |chosen|}}<span class="dbu-tf-chip active">{{chosen.name}}{{#if @root.editable}}
+                <a class="dbu-tf-delete" data-action="toggleRacialTrait" data-item-id="{{chosen.itemId}}" data-tooltip="Remove {{chosen.name}}"><i class="fa-solid fa-trash"></i></a>{{/if}}</span>{{/each}}
+              {{#if group.open}}{{#if @root.editable}}
+              <select data-tf-group="{{group.group}}">
+                <option value="">Choose one</option>
+                {{#each group.offered as |offer|}}<option value="{{offer.id}}">{{offer.name}}{{#if offer.prerequisite}} ({{offer.prerequisite}}){{/if}}</option>{{/each}}
+              </select>
+              {{/if}}{{/if}}
+            </div></div>
+          {{/each}}
           {{#if row.aspects.length}}
           <div class="dbu-tf-part"><div class="dbu-tf-heading">Aspects</div>
             <div class="dbu-tf-chips">{{#each row.aspects as |aspect|}}<span class="dbu-tf-chip"{{#if aspect.summary}} data-tooltip="{{aspect.summary}}"{{/if}}>{{aspect.label}}</span>{{/each}}</div></div>

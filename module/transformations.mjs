@@ -80,7 +80,8 @@ export function formTypeOf(file) {
 /** Its Transformation Traits' files, in their order: those in its folder's `traits/`. */
 export function traitFilesOf(file) {
   if (!file) return [];
-  return traitsOfKind("transformations").filter(each => each.owner === file.transformation)
+  // Not an Option of one of them (`optionOf`), which is chosen as that one is gained.
+  return traitsOfKind("transformations").filter(each => (each.owner === file.transformation) && !each.optionOf)
     .sort((a, b) => ((Number(a.order) || 0) - (Number(b.order) || 0)) || String(a.name).localeCompare(String(b.name)));
 }
 
@@ -219,8 +220,16 @@ export function aspectsOf(item, items = item?.parent?.items) {
   const changes = Array.from(items ?? []).filter(each => (each.type === "racial") && (each.system?.transformation === item.id)
     && !transformationTraitAside(each, items))
     .flatMap(each => parseAspects(getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.aspects));
+  // Given by a Trait of another of them in use - Divine Candidate (1): "All of your Transformations with the God Ki Aspect gain the
+  // Perfect Ki Control Aspect" (`grantsAspect: Perfect Ki Control`, `grantsAspectIf: God Ki` - what the one given it must have).
+  const ownIds = new Set(own.map(aspect => aspect.id));
+  const given = Array.from(items ?? []).filter(each => (each.type === "racial") && each.system?.transformation
+    && (each.system.transformation !== item.id) && !transformationTraitAside(each, items))
+    .map(each => getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")).filter(trait => trait?.grantsAspect)
+    .filter(trait => !trait.grantsAspectIf || ownIds.has(aspectId(trait.grantsAspectIf)))
+    .flatMap(trait => parseAspects(trait.grantsAspect).map(aspect => ({ ...aspect, sign: 1 })));
   const held = new Map();
-  for (const aspect of [...own.map(each => ({ ...each, sign: 1 })), ...changes]) {
+  for (const aspect of [...own.map(each => ({ ...each, sign: 1 })), ...changes, ...given]) {
     const level = levelOf(aspect.level, letters);
     const had = held.get(aspect.id);
     if (aspect.sign < 0) {
@@ -658,4 +667,39 @@ export async function endTemporary(actor, itemId) {
   const left = (Number(item.system.stacks) || 0) - (Number(item.system.temporaryStacks) || 0);
   if (left <= 0) return removeTransformation(actor, item.id);
   return item.update({ "system.stacks": left, "system.temporaryStacks": 0, "system.temporary": 0 });
+}
+
+// --- Traits of which some are chosen ---------------------------------------------------------------------------------------------
+
+/**
+ * The groups of Traits of which some are chosen on a Transformation (`group:` - Demonic Traits, Super Saiyan Style, Perfect Traits,
+ * Domain Traits): how many (its file's `groupPicks: <group> Z` - Perfection's one a Stack - else one), those chosen (its Trait Items)
+ * and those that may be.
+ */
+export function groupsOf(item, items = item?.parent?.items) {
+  const file = fileOf(item);
+  if (!file) return [];
+  const letters = lettersOf(item, file);
+  const counts = Object.fromEntries(listOf(file.groupPicks).map(entry => entry.split(/\s+/))
+    .map(([group, count]) => [group, /^\d+$/.test(count ?? "") ? Number(count) : (letters[String(count ?? "").toUpperCase()] ?? 1)]));
+  const all = traitFilesFor(file).filter(trait => trait.group);
+  const groups = [...new Set(all.map(trait => trait.group))];
+  const owned = Array.from(items ?? []).filter(each => (each.type === "racial") && (each.system?.transformation === item.id));
+  return groups.map(group => {
+    const members = all.filter(trait => trait.group === group);
+    const chosen = owned.filter(each => members.some(trait => trait.id === each.flags?.["dbu-ttrpg"]?.sourceId));
+    const had = new Set(chosen.map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
+    return { group, label: String(members[0]?.groupLabel ?? group), picks: counts[group] ?? 1,
+      chosen: chosen.map(each => ({ itemId: each.id, name: each.name })),
+      offered: members.filter(trait => !had.has(trait.id)).map(trait => ({ id: trait.id, name: trait.name,
+        prerequisite: (/\(\d+\)-\[Prerequisite\]:\s*([^\n]*)/.exec(String(trait.text ?? "")) ?? [])[1] ?? "" })) };
+  });
+}
+
+/** One of a group's Traits chosen: made as its Transformation's Traits are. */
+export async function chooseGroupTrait(actor, itemId, traitId) {
+  const trait = getTrait(traitId);
+  if (!actor || !trait?.group || !actor.items.has(itemId)) return null;
+  const { addRacialTrait } = await import("./racial.mjs");
+  return addRacialTrait(actor, trait, { transformation: itemId });
 }

@@ -7,7 +7,7 @@ import { fusionContext, racesOf } from "../fusion.mjs";
 import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransformation, aspectFile, aspectsOf, bonusesOf, bonusWritten,
   combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
-  lettersOf, awakeningCount, keepTemporary, endTemporary } from "../transformations.mjs";
+  lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait } from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
@@ -3948,6 +3948,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       });
     }
 
+    // A Trait of a group chosen on a Transformation's row: made as its Traits are (transformations.mjs chooseGroupTrait).
+    for (const select of this.element.querySelectorAll("[data-tf-group]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        if (!select.value || !this.isEditable) return;
+        await chooseGroupTrait(this.actor, select.closest("[data-tf-id]")?.dataset.tfId, select.value);
+      });
+    }
+
     // A Transformation's fields - in use, Grade, Stacks, Mastery, Transcended, New Level of Power: written onto its Item.
     for (const input of this.element.querySelectorAll("[data-tf-field]")) {
       input.addEventListener("change", event => {
@@ -7209,6 +7218,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         overMastery: (Number(item.system.mastery) || 0) > max,
         temporary: Number(item.system.temporary) || 0,
         temporaryStacks: Number(item.system.temporaryStacks) || 0,
+        // Traits of which some are chosen - Super Saiyan Style, Demonic Traits (transformations.mjs groupsOf).
+        groups: file ? groupsOf(item, all).map(group => ({ ...group, open: group.chosen.length < group.picks,
+          over: group.chosen.length > group.picks })) : [],
         newLevel: Boolean(item.system.newLevel),
         bonuses: Object.entries(BONUS_ATTRIBUTES).map(([label, attribute]) => ({ label,
           value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
