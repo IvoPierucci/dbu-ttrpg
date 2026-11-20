@@ -3,6 +3,8 @@ name: Controlled Darkness
 order: 4
 slot: mastery
 mastery: 1
+# (1) A level of Rampaging less.
+aspects: -Rampaging (LV1)
 description: >
   The evil urges within you now answer to your beck and call.
 text: >
@@ -13,4 +15,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Agility Attribute Modifier Bonus 1(T).
+[passive, effect 2]
+agility.mod += 1(T);
+
+# (3) 5(bT) Evil Points for another stack of Power: the table's.

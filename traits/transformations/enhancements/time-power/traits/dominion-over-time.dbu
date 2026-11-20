@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Exhausting and Draining lost.
+aspects: -Exhausting, -Draining
 description: >
   Your mastery over the flow of time is so great that you can command it with merely a thought.
 text: >
@@ -16,4 +18,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Unique Abilities named Time 2(T) cheaper, (3) Time Control (3)'s Keywords, (4) Time Control (4) ignored: the table's.

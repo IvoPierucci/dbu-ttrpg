@@ -770,3 +770,135 @@ export async function chooseGroupTrait(actor, itemId, traitId) {
   const { addRacialTrait } = await import("./racial.mjs");
   return addRacialTrait(actor, trait, { transformation: itemId });
 }
+
+// --- Entering and leaving (stage 4) ----------------------------------------------------------------------------------------------
+
+/** The Transformations the Transformation Maneuver can enter: Enhancements, Forms and Evolved Stages had. */
+export function enterableItems(actor) {
+  return transformationItems(actor).filter(item => ["enhancement", "form", "evolved"].includes(kindOf(fileOf(item))));
+}
+
+/** A Tier of Power Requirement as a number: "2+" is 2; an Evolved Stage's "+1"/"Same as Original" read off its Original. */
+export function tierRequirementOf(item, file = fileOf(item), items = item?.parent?.items) {
+  const row = gradeRow(file, lettersOf(item, file).G);
+  const written = String(row.values.tier ?? file?.tier ?? "").trim();
+  const own = /^(\d+)/.exec(written);
+  let tier = own ? Number(own[1]) : 0;
+  if (kindOf(file) === "evolved") {
+    const original = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
+    const base = original ? tierRequirementOf(original, fileOf(original), items) : 0;
+    const plus = /\+\s*(\d+)/.exec(written);
+    if (plus) tier = base + Number(plus[1]);
+    else if (/same/i.test(written)) tier = base;
+  }
+  const scales = Math.max(0, Number(item?.system?.scales) || 0);
+  return Math.max(0, tier + scales - (item?.system?.prelude ? 1 : 0));
+}
+
+/**
+ * One Transformation's own Stress Test Requirement at a Grade, with Higher Scales and Prelude: its Grade's line or its file's; Scaling
+ * "+2 a Higher Scale", Prelude "-3"; an Evolved Stage's "+N" over its Original Form's (the Form you are in). NaN where none is written.
+ */
+export function ownStressRequirement(item, { grade, scales, prelude } = {}, items = item?.parent?.items) {
+  const file = fileOf(item);
+  const g = Math.max(1, Number(grade ?? item?.system?.grade) || 1);
+  const written = String(gradeRow(file, g).values.stress ?? file?.stress ?? "").trim();
+  let base = Number(/^-?\d+/.exec(written)?.[0]);
+  if ((kindOf(file) === "evolved") || /^\+/.test(written)) {
+    const original = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
+    const add = Number(/\+\s*(\d+)/.exec(written)?.[1]) || 0;
+    base = original ? ownStressRequirement(original, {}, items) + add : NaN;
+  }
+  const s = Math.max(0, Number(scales ?? item?.system?.scales) || 0);
+  return base + (2 * s) - ((prelude ?? item?.system?.prelude) ? 3 : 0);
+}
+
+/**
+ * The Stress Test Requirement to enter one, as the rules put it together: "the Requirement of the Transformation with the highest Stress
+ * Test Requirement is increased by 1/2 (rounded down) of the Requirement of the others used with it" - those still in use once it is
+ * entered; Step-by-Step - from a Form into another of a higher Tier of Power Requirement, 1 lower (2 within its Line); none to roll
+ * where it and every other in use have the Natural Aspect. Each part said, for its window.
+ */
+export function stressRequirementFor(actor, item, options = {}) {
+  const items = Array.from(actor?.items ?? []);
+  const file = fileOf(item);
+  const own = ownStressRequirement(item, options, items);
+  const leaving = new Set((inUseChanges(items, item, true) ?? []).filter(change => change["system.active"] === false).map(change => change._id));
+  const others = transformationItems(actor).filter(each => (each.id !== item.id) && inUse(each) && !leaving.has(each.id)
+    && (kindOf(fileOf(each)) !== "awakening"));
+  const all = [{ name: item.name, value: own }, ...others.map(each => ({ name: each.name, value: ownStressRequirement(each, {}, items) }))]
+    .filter(entry => Number.isFinite(entry.value)).sort((a, b) => b.value - a.value);
+  const parts = [];
+  let requirement = all[0]?.value ?? NaN;
+  if (all.length) parts.push(`${all[0].name} ${all[0].value}`);
+  for (const other of all.slice(1)) {
+    requirement += Math.floor(other.value / 2);
+    parts.push(`half of ${other.name}'s ${other.value}`);
+  }
+  // Step-by-Step: in a Form, into another Form of a higher Tier of Power Requirement.
+  if (kindOf(file) === "form") {
+    const from = transformationItems(actor).find(each => (each.id !== item.id) && inUse(each) && (kindOf(fileOf(each)) === "form"));
+    if (from && (tierRequirementOf(item, file, items) > tierRequirementOf(from, fileOf(from), items))) {
+      const sameLine = file.line && (String(fileOf(from)?.line ?? "") === String(file.line));
+      requirement -= sameLine ? 2 : 1;
+      parts.push(`Step-by-Step -${sameLine ? 2 : 1}`);
+    }
+  }
+  const natural = [item, ...others].every(each => aspectsOf(each, items).some(aspect => aspect.id === "natural"));
+  return { requirement, parts, natural };
+}
+
+/**
+ * Entered: in use with what was chosen - Grade, Higher Scales, Prelude, Transcended - and what that puts by (inUseChanges). Null where
+ * it may not be (an Evolved Stage in no Form).
+ */
+export async function enterTransformation(actor, item, { grade, scales, prelude, transcended } = {}) {
+  const changes = inUseChanges(Array.from(actor.items), item, true);
+  if (!changes) return null;
+  const own = { _id: item.id, "system.active": true };
+  if (grade !== undefined) own["system.grade"] = Math.max(1, Number(grade) || 1);
+  if (scales !== undefined) own["system.scales"] = Math.max(0, Number(scales) || 0);
+  if (prelude !== undefined) own["system.prelude"] = Boolean(prelude);
+  if (transcended !== undefined) own["system.transcended"] = Boolean(transcended);
+  const leaving = changes.filter(change => change["system.active"] === false).map(change => actor.items.get(change._id)).filter(Boolean);
+  await actor.updateEmbeddedDocuments("Item", [own, ...changes]);
+  // What leaving those does - Exhausting, Fading - but into a higher Tier of Power Requirement, Exhausting's exception.
+  for (const left of leaving) await leftTransformation(actor, left, { into: item });
+  return actor.items.get(item.id);
+}
+
+/**
+ * Left - by the Revert Maneuver, a failed Stress Test, or another taking its place: what its Aspects do as it is left. Exhausting:
+ * "Stress Exhaustion and Impediment until the end of your next turn" - not into one of a higher Tier of Power Requirement through the
+ * Transformation Maneuver. Fading 1: not again this Encounter (said); Fading 2: access lost.
+ */
+export async function leftTransformation(actor, item, { into = null } = {}) {
+  const items = Array.from(actor.items);
+  const aspects = aspectsOf(item, items);
+  const level = id => aspects.find(aspect => aspect.id === id)?.level ?? (aspects.some(aspect => aspect.id === id) ? 1 : 0);
+  const higher = into && (tierRequirementOf(into, fileOf(into), items) > tierRequirementOf(item, fileOf(item), items));
+  if (level("exhausting") && !higher) {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "stress-exhaustion", 1);
+    await setCondition(actor, "impediment", 1);
+  }
+  if (level("fading") >= 2) return removeTransformation(actor, item.id);
+  if (level("fading") === 1) await item.update({ "system.choices": [...(item.system.choices ?? []).filter(entry => entry.key !== "fadedIn"),
+    { key: "fadedIn", value: String(globalThis.game?.combat?.id ?? "none") }] });
+}
+
+/** Leave Transformations - the Revert Maneuver's, a failed Stress Test's: put by, and what leaving each does. */
+export async function leaveTransformations(actor, ids) {
+  const items = ids.map(id => actor.items.get(id)).filter(Boolean);
+  if (!items.length) return;
+  const extra = items.flatMap(item => inUseChanges(Array.from(actor.items), item, false) ?? []);
+  await actor.updateEmbeddedDocuments("Item", [...items.map(item => ({ _id: item.id, "system.active": false, "system.prelude": false })),
+    ...extra]);
+  for (const item of items) await leftTransformation(actor, actor.items.get(item.id) ?? item);
+}
+
+/** Whether Fading 1 shut it for this Combat Encounter. */
+export function fadedOut(item) {
+  const faded = (item?.system?.choices ?? []).find(entry => entry.key === "fadedIn")?.value;
+  return Boolean(faded) && (faded === String(globalThis.game?.combat?.id ?? "none"));
+}

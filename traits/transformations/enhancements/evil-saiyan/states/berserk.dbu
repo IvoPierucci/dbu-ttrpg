@@ -1,0 +1,33 @@
+id: berserk
+name: Berserk
+kind: states
+# A Special State of Evil Saiyan's, entered through Dark Saiya Power (4).
+source: Evil Saiyan
+description: >
+  Compelled at the closest Character, Strike and Dodge 1(bT) lower, no Signature Technique Maneuver, Wound and Soak 2(T) higher; left by
+  passing a Threshold's Steadfast Check.
+text: >
+  Berserk
+  (1)-[Automatic/Start of Turn, Automatic/Berserk]: Target the closest Character who is not in the Berserk State. You gain the Compelled Combat Condition with that Character as the target until the start of your next turn.
+  (2)-[Passive]: Reduce your Strike Rolls and Dodge Rolls by 1(bT).
+  (3)-[Passive]: You cannot use the Signature Technique Maneuver.
+  (4)-[Passive]: Increase your Wound Rolls and Soak Value by 2(T).
+  (5)-[Triggered, 1/Round]: If you use an Attacking Maneuver, you may spend 2(bT) Ki Points to apply an Energy Charge to that Attacking Maneuver.
+  (6)-[Triggered/Threshold]: If you succeed at the Steadfast Check for this Health Threshold, leave the Berserk State.
+
+---
+
+# (1) Compelled at the closest: the table's. (5) the Energy Charge: the table's.
+[passive, effect 2]
+strike -= 1(bT);
+dodge -= 1(bT);
+
+[passive, effect 3]
+forbid signatureTechniques;
+
+[passive, effect 4]
+wound += 2(T);
+soakValue += 2(T);
+
+[automatic/steadfast-passed, effect 6]
+leaveState(berserk);

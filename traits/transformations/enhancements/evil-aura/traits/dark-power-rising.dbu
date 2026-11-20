@@ -10,4 +10,7 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: the Power Up out of sequence, and the Evil Points at their most.
+[triggered/transform, 1/encounter, outOfSequence, effect 1]
+maneuverOutOfSequence(power-up);
+evilpoints.stacks += 99;

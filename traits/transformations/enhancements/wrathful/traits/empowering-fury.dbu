@@ -13,4 +13,14 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Below the Injured Health Threshold: the Tier of Power Extra Dice G Categories higher.
+[passive, effect 1]
+if (belowThreshold("injured")) {
+    dice.extra.category += $G;
+}
+
+# (2) Damage Reduction 1(T) for each Health Threshold you are below.
+[passive, effect 2]
+damageReduction += threshold.depth * 1(T);
+
+# (3) Surgency twice for Born for Battle (2)'s Ki Surge, (4) a Battle Born stack entering its 2nd Grade: the table's.

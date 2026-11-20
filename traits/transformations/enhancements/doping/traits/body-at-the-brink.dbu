@@ -13,4 +13,20 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Muscle Penalty 1(bT) lower.
+[passive, effect 1]
+superStack.musclePenalty -= 1(bT);
+
+# (2) Wound Rolls 1(T) for each Health Threshold you are below.
+[passive, effect 2]
+wound += threshold.depth * 1(T);
+
+# (3) Below the Injured Health Threshold: Strike, Dodge and Soak 1(T).
+[passive, effect 3]
+if (belowThreshold("injured")) {
+    strike += 1(T);
+    dodge += 1(T);
+    soakValue += 1(T);
+}
+
+# (4) An Action with the Power Up once an Encounter: the table's.

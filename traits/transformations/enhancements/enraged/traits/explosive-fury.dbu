@@ -15,4 +15,16 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Entering it and at the start of your turn: Guard Down till your next, and the next level of the Raging State (till it is left -
+# the table's to lower it then).
+[triggered/transform, effect 1]
+gain(guard-down);
+expires(guard-down, start-of-next-turn);
+enterState(raging, 1, encounter);
+
+[triggered/start-of-turn, effect 1]
+gain(guard-down);
+expires(guard-down, start-of-next-turn);
+enterState(raging, 1, encounter);
+
+# (2) No Health Threshold Penalties in Furious, (3) Soak and Wound 1(T) without any, (4)(5) back to Angry, (6) Determined: the table's.

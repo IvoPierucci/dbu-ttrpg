@@ -13,4 +13,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Surgency halved.
+[passive, effect 1]
+surgency *= 0.5;
+
+# (2)-(4) Life Points spent on the Wound, on the Power Up as an Instant, and the Energy Charge: the table's.

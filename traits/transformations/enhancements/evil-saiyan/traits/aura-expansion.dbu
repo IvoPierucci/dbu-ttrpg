@@ -12,4 +12,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Aura Tail Special Maneuver (this folder's maneuvers/aura-tail.dbu).
+[passive, effect 1]
+allow maneuver.aura-tail;
+
+# (2) The Tail Attack with an Aura Tail, (3) Evil Points for an AoE or a Size larger: the table's.

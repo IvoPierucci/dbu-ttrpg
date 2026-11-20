@@ -17,4 +17,25 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Movement Maneuver as an Instant Maneuver once a Round: the table's.
+
+# (2) Wound Rolls 1/2 (rounded up) of G(T).
+[passive, effect 2]
+wound += ceil($G / 2) * 1(T);
+
+# (3) The Kaioken Dice on every Combat Roll, by its Grade (its table): none at 1, 1d4 at 2-3, 1d6 at 4, 1d8 at 5, 1d10 at 6.
+[passive, effect 3]
+if (($G == 2) || ($G == 3)) {
+    combatRolls.dice += 1d4;
+}
+if ($G == 4) {
+    combatRolls.dice += 1d6;
+}
+if ($G == 5) {
+    combatRolls.dice += 1d8;
+}
+if ($G == 6) {
+    combatRolls.dice += 1d10;
+}
+
+# (4) Its Grades: its Stress Test, Attribute Modifier Bonuses (its file's grade lines) and Life Point Cost (Crimson Sacrifice).

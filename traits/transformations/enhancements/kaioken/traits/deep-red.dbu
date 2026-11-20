@@ -19,4 +19,14 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1)(2) Its 4th and 5th Grades, the 6th in the Entrusted State: said on its Grade box. (4) The Life Point Cost 1(bT) lower: in
+# Crimson Sacrifice's.
+
+# (3) In its 4th Grade or higher: Insight Attribute Modifier Bonus 1(T).
+[passive, effect 3]
+if ($G >= 4) {
+    insight.mod += 1(T);
+}
+
+# (5) The 6th Grade left at the end of your turn, (6) entered as you enter Entrusted, (7) Threshold effects from its own Life Point
+# Cost: the table's.

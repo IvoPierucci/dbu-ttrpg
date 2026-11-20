@@ -1,0 +1,23 @@
+id: aura-tail
+name: Aura Tail
+type: standard
+actionCost: 1
+kiCostPerTier: 4
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A Special Maneuver, open while Evil Saiyan's Aura Expansion is had. What an Aura Tail does by Saiyan Heritage's Option: the table's.
+special: true
+source: Core Rule
+description: >
+  You gain an Aura Tail - its effects by your Saiyan Heritage Option.
+text: >
+  Aura Tail [1/Round]: Either by coating your tail in energy or creating a phantom tail, you gain the strengths of having a tail with none of the weaknesses.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: 4(T)
+  –Exploitable: N/A
+  –Effect: You gain an Aura Tail. While you have an Aura Tail, depending on your choice for the Option effect of Saiyan Heritage, apply the following effects:
+  • Tailed. Your Tail cannot be lost, is temporarily regrown if it was lost, and you ignore the 4th effect of Saiyan Heritage. Additionally, increase your Damage Reduction by 1(T).
+  • Tailless. You benefit from both the effects of the Tailless and Tailed options of Saiyan Heritage.

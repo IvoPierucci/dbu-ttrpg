@@ -10,4 +10,6 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: entering it, the Movement out of sequence - Speeds and Combat Rolls G(T) till the start of your next turn, the table's.
+[triggered/transform, 1/encounter, outOfSequence, effect 1]
+maneuverOutOfSequence(movement);

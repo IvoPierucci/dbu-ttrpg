@@ -10,4 +10,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: Apoplectic till the end of your next turn, the Basic Attack out of sequence, Determined for it.
+[triggered/transform, 1/encounter, outOfSequence, effect 1]
+enterState(raging, 3, next-turn);
+enterState(determined, 1, turn);
+maneuverOutOfSequence(basic-attack);

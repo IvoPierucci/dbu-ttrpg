@@ -10,4 +10,6 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: 2 stacks of Battle Born on the Wound Rolls - Soak 1(T) a stack till the start of your next turn, the table's.
+[triggered/transform, 1/encounter, effect 1]
+battlebornwound.stacks += 2;

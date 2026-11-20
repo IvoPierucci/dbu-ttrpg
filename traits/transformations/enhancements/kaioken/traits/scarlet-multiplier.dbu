@@ -10,4 +10,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: entering it, the Power Up, Movement or Basic Attack out of sequence (the table's, which) - and Life and Ki Points 5 times
+# its Grade's Life Point Cost (before reductions).
+[triggered/transform, 1/encounter, outOfSequence, effect 1]
+life.value += 5 * ($G + 1) * 1(bT);
+ki.value += 5 * ($G + 1) * 1(bT);

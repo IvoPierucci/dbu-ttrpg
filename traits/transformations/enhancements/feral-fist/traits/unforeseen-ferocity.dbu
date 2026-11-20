@@ -10,4 +10,6 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: 3 stacks of Ferocity; Unhinged till the end of your next turn (the table's - the Feral State's Level).
+[triggered/transform, 1/encounter, effect 1]
+ferocity.stacks = 3;

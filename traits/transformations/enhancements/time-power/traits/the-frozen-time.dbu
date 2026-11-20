@@ -13,4 +13,12 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Combat Rolls 1(T) against the Slowed: the table's.
+
+# (2) During a Frozen Turn: Wound Rolls 2(T).
+[passive, effect 2]
+if (frozenTurn) {
+    wound += 2(T);
+}
+
+# (3) An Action more for Time Freeze's Frozen Turn, (4) a Steadfast Check failed in it: the table's.

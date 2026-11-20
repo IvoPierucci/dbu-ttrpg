@@ -17,4 +17,10 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1)(2) Its 4th Grade and Growth 4: said on its Grade box.
+
+# (3) Damage Reduction 1/2 (rounded up) of G(T).
+[passive, effect 3]
+damageReduction += ceil($G / 2) * 1(T);
+
+# (4)(5) Accelerated Growth (1) doubled, Battlefield Titan (1) unlimited: the table's.

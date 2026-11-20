@@ -15,4 +15,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Evil Point Maximum 15(bT): 5(bT) more on Dark Saiya Power's.
+[passive, effect 1]
+evilpoints.max += 5(bT);
+
+# (2) Surging's 2nd effect ignored, (3) Steadfast 1 beside a Saiyan Transformation, (4)(5): the table's.

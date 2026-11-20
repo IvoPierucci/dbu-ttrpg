@@ -17,4 +17,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Evil Techniques (their words in its file), (2) the Darkness Mixer Modifier Maneuver, (3) Evil Points for half an Evil
+# Technique's Ki Point Cost, (4) G(T) Wound with a Ki Wager of 1/10 of your Max Capacity: the table's.
+
+# (5) Its Grade's Evil Point Maximum: 10(bT) Villainous (Power of Evil's own), 15(bT) Supervillain.
+[passive, effect 5]
+if ($G >= 2) {
+    evilpoints.max += 5(bT);
+}

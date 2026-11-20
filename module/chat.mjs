@@ -39624,39 +39624,113 @@ export async function takeDivineMovement(actor, maneuver) {
 }
 
 /**
- * The Transformation Maneuver, asked: which Transformation and its Stress Test Requirement (Forms and Enhancements are
- * not built yet - the user's ruling), then its Stress Test from the roll window - 1d10 plus the Stress Bonus, less
+ * The Transformation Maneuver, asked (stage 4 of the plan): which of the Transformations had - an Enhancement, a Form, an Evolved Stage -
+ * with its Grade, Higher Scales, Prelude and Transcended where it has them, and its Stress Test Requirement worked out (transformations.mjs
+ * stressRequirementFor: the others still in use, Step-by-Step) and left to put right; one not on the sheet typed in by name as before.
+ * Natural - it and every other in use - none to roll. Then its Stress Test from the roll window - 1d10 plus the Stress Bonus, less
  * Divine Pulse's 1 for each Action spent. Holy Transformation rolls none. Closed anywhere, nothing is used.
  */
 export async function askTransformation(actor, maneuver, actionsSpent = 1) {
+  const T = await import("./transformations.mjs");
   const rolls = !maneuver.noStressTest;
+  // "you cannot enter a Transformation with 0 Ki Points".
+  if ((Number(actor.system.ki?.value) || 0) <= 0) {
+    ui.notifications.warn(`${actor.name} has no Ki Points: no Transformation can be entered.`);
+    return null;
+  }
   // Emperor (3): "spend any amount of Overwhelm Stacks to increase your Stress Bonus by 1 for every 2 stacks of Overwhelm spent".
   const overwhelm = (rolls && (actor.system.effects?.slots?.["emperor.stress"] === true))
     ? (Number(actor.system.resources?.overwhelm?.stacks) || 0) : 0;
+  const escape = Handlebars.escapeExpression;
+  const had = T.enterableItems(actor);
+  const optionsOf = item => {
+    const file = T.fileOf(item);
+    const aspects = T.aspectsOf(item, actor.items);
+    const level = id => aspects.find(aspect => aspect.id === id)?.level ?? (aspects.some(aspect => aspect.id === id) ? 1 : 0);
+    const room = Math.max(0, (Number(actor.system.tierOfPower) || 1) - T.tierRequirementOf(item, file, actor.items) + (Number(item.system.scales) || 0));
+    return { grades: T.gradesOf(file), scales: Math.min(level("scaling"), room), prelude: Boolean(level("prelude")), transcendent: Boolean(level("transcendent")) };
+  };
+  const rows = had.map(item => ({ item, ...optionsOf(item) }));
   const asked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - ${maneuver.name}` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Transformation</span>
-        <input type="text" name="name" autofocus/></label>
+        <select name="pick">${rows.map(row => `<option value="${escape(row.item.id)}">${escape(row.item.name)}${T.inUse(row.item) ? " (in use)" : ""}</option>`).join("")}
+          <option value="">Another, by name</option></select></label>
+      <label class="dbu-respond-option" data-tf-typed hidden><span class="dbu-respond-name">Name</span><input type="text" name="name"/></label>
+      <label class="dbu-respond-option" data-tf-grade hidden><span class="dbu-respond-name">Grade</span>
+        <input type="number" name="grade" min="1" step="1" value="1"/></label>
+      <label class="dbu-respond-option" data-tf-scales hidden data-tooltip="Scaling: +1(T) to its Attribute Modifier Bonuses (but SC/IN/PE), +2 Stress, +1 Tier of Power Requirement each">
+        <span class="dbu-respond-name">Higher Scales</span><input type="number" name="scales" min="0" step="1" value="0"/></label>
+      <label class="dbu-respond-option" data-tf-prelude hidden data-tooltip="Prelude: Tier of Power Requirement -1, Stress -3; its Attribute Modifier Bonuses -1(T) and its last Trait not had">
+        <span class="dbu-respond-name">Prelude</span><input type="checkbox" name="prelude"/></label>
+      <label class="dbu-respond-option" data-tf-transcended hidden><span class="dbu-respond-name">Transcended</span><input type="checkbox" name="transcended"/></label>
       ${rolls ? `<label class="dbu-respond-option"><span class="dbu-respond-name">Stress Test Requirement</span>
-        <input type="number" name="requirement" min="0" step="1"/></label>` : ""}
+        <input type="number" name="requirement" min="0" step="1"/></label><p class="dbu-respond-hint" data-tf-parts></p>` : ""}
       ${(overwhelm >= 2) ? `<label class="dbu-respond-option" data-tooltip="Emperor: 1 on the Stress Bonus for every 2 spent">
         <span class="dbu-respond-name">Overwhelm spent</span>
         <input type="number" name="overwhelm" min="0" max="${overwhelm}" step="2" value="0"/></label>` : ""}
-      <label class="dbu-respond-option" data-tooltip="${Handlebars.escapeExpression(LEGEND_TIP)}">
+      <label class="dbu-respond-option" data-tf-form data-tooltip="${escape(LEGEND_TIP)}">
         <span class="dbu-respond-name">Form</span><input type="checkbox" name="form"/></label>`,
+    render: (event, dialog) => {
+      const root = dialog.element;
+      const field = name => root.querySelector(`[name="${name}"]`);
+      const show = (selector, on) => { const node = root.querySelector(selector); if (node) node.hidden = !on; };
+      const update = () => {
+        const row = rows.find(each => each.item.id === field("pick").value);
+        show("[data-tf-typed]", !row);
+        show("[data-tf-form]", !row);
+        show("[data-tf-grade]", Boolean(row?.grades));
+        show("[data-tf-scales]", Boolean(row?.scales));
+        show("[data-tf-prelude]", Boolean(row?.prelude));
+        show("[data-tf-transcended]", Boolean(row?.transcendent));
+        if (row?.grades) field("grade").max = row.grades;
+        if (row?.scales) field("scales").max = row.scales;
+        if (!row || !field("requirement")) return;
+        const worked = T.stressRequirementFor(actor, row.item, { grade: Number(field("grade").value) || 1,
+          scales: row.scales ? (Number(field("scales").value) || 0) : 0, prelude: row.prelude && field("prelude").checked });
+        field("requirement").value = Number.isFinite(worked.requirement) ? worked.requirement : "";
+        const hint = root.querySelector("[data-tf-parts]");
+        if (hint) hint.textContent = worked.natural ? "Natural: no Stress Test." : worked.parts.join(", ");
+      };
+      for (const name of ["pick", "grade", "scales", "prelude"]) field(name)?.addEventListener("change", update);
+      if (rows[0]) {
+        field("grade").value = Math.max(1, Number(rows[0].item.system.grade) || 1);
+      }
+      update();
+    },
     buttons: [
-      { action: "confirm", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
-        name: String(dialog.element.querySelector('input[name="name"]')?.value ?? "").trim(),
-        requirement: Number(dialog.element.querySelector('input[name="requirement"]')?.value),
-        overwhelm: Number(dialog.element.querySelector('input[name="overwhelm"]')?.value) || 0,
-        form: Boolean(dialog.element.querySelector('input[name="form"]')?.checked) }) },
+      { action: "confirm", label: maneuver.name, default: true, callback: (event, button, dialog) => {
+        const element = dialog.element;
+        const value = name => element.querySelector(`[name="${name}"]`);
+        return { itemId: String(value("pick")?.value ?? ""), name: String(value("name")?.value ?? "").trim(),
+          grade: Number(value("grade")?.value) || 1, scales: Number(value("scales")?.value) || 0,
+          prelude: Boolean(value("prelude")?.checked), transcended: Boolean(value("transcended")?.checked),
+          requirement: Number(value("requirement")?.value), overwhelm: Number(value("overwhelm")?.value) || 0,
+          form: Boolean(value("form")?.checked) };
+      } },
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
-  if (!asked || (typeof asked !== "object") || !asked.name) return null;
-  if (!rolls) return { name: asked.name, roll: false, form: asked.form };
+  if (!asked || (typeof asked !== "object")) return null;
+  const item = asked.itemId ? actor.items.get(asked.itemId) : null;
+  const row = rows.find(each => each.item.id === item?.id);
+  const name = item?.name ?? asked.name;
+  if (!name) return null;
+  if (item && T.fadedOut(item)) ui.notifications.warn(`${item.name}: Fading - not again this Combat Encounter (said, not refused).`);
+  // An Evolved Stage is entered on the Form you are in (the user's): in none, it may not be.
+  if (item && (T.kindOf(T.fileOf(item)) === "evolved") && !T.originalFormOf(actor.items.filter(each => each.id !== item.id))) {
+    ui.notifications.warn(`${item.name}: an Evolved Stage is entered on the Form you are in, and you are in none.`);
+    return null;
+  }
+  const entering = item ? { itemId: item.id, grade: row?.grades ? asked.grade : undefined, scales: row?.scales ? asked.scales : undefined,
+    prelude: row?.prelude ? asked.prelude : undefined, transcended: row?.transcendent ? asked.transcended : undefined,
+    form: ["form", "evolved"].includes(T.kindOf(T.fileOf(item))) } : { form: asked.form };
+  const natural = item ? T.stressRequirementFor(actor, item, { grade: asked.grade, scales: asked.scales, prelude: asked.prelude }).natural : false;
+  // New Level of Power: "automatically succeed on Stress Tests for this Transformation" (not used with another - the table's).
+  const automatic = Boolean(item?.system?.newLevel);
+  if (!rolls || natural) return { name, roll: false, ...entering, natural };
   if (!Number.isFinite(asked.requirement)) {
     ui.notifications.warn(`${maneuver.name}: its Stress Test Requirement is a number.`);
     return null;
@@ -39666,14 +39740,14 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
   const parts = [{ label: "Stress Bonus", value: Number(actor.system.stressBonus) || 0, workingsKey: "stressBonus" },
     ...(minus ? [{ label: maneuver.name, value: -minus }] : []),
     ...(spentOverwhelm ? [{ label: `Emperor (${spentOverwhelm} Overwhelm)`, value: spentOverwhelm / 2 }] : [])];
-  const ready = await prepareRoll(actor, [], `${asked.name}: Stress Test`, "", {
+  const ready = await prepareRoll(actor, [], `${name}: Stress Test`, "", {
     offerWilling: false, formula: { base: DBUCharacterData.BASE_DIE, parts: windowParts(actor, parts) } });
   if (!ready) return null;
   if (spentOverwhelm) await setResource(actor, "overwhelm", overwhelm - spentOverwhelm);
   // Heart of Evil (2): what an Opponent near spent on it.
   const evil = await heartOfEvilAgainst(actor, "Stress Test");
   if (evil) parts.push({ label: "Heart of Evil", value: -evil });
-  return { name: asked.name, roll: true, requirement: asked.requirement, parts, form: asked.form };
+  return { name, roll: true, requirement: asked.requirement, parts, automatic, ...entering };
 }
 
 /** What the Transformation window's Form box means, on hover. */
@@ -39687,13 +39761,21 @@ const LEGEND_TIP = "Into a Form: the first time this Combat Encounter, Legend Re
  * Encounter" - by the Transformation's name, kept for the Encounter. "Not ... from a Transformation of the same Form Type
  * and Tier of Power Requirement as another" is the table's: Forms are not built.
  */
-async function legendRealizedByForm(actor, name) {
+async function legendRealizedByForm(actor, name, item = null) {
   const encounter = game.combat?.id ?? "";
   const held = actor.getFlag?.(SCOPE, "legendRealized") ?? {};
   const names = (encounter && (held.encounter === encounter)) ? (held.names ?? []) : [];
-  const key = String(name).trim().toLowerCase();
+  const kinds = (encounter && (held.encounter === encounter)) ? (held.kinds ?? []) : [];
+  // Realization: "each Higher Scale ... as if it was a different Transformation for the sake of Legend Realized".
+  const T = item ? await import("./transformations.mjs") : null;
+  const realization = item && T.aspectsOf(item, actor.items).some(aspect => aspect.id === "realization");
+  const key = `${String(name).trim().toLowerCase()}${realization ? `#${Number(item.system.scales) || 0}` : ""}`;
   if (names.includes(key)) return;
-  if (encounter) await requestActorUpdate(actor, { [`flags.${SCOPE}.legendRealized`]: { encounter, names: [...names, key] } });
+  // "You cannot gain Legend Realized from a Transformation with the same Form Type and Tier of Power Requirement as another".
+  const kind = item ? `${T.formTypeOf(T.fileOf(item)) || "form"}:${T.tierRequirementOf(item, T.fileOf(item), actor.items)}` : "";
+  if (kind && kinds.includes(kind)) return;
+  if (encounter) await requestActorUpdate(actor, { [`flags.${SCOPE}.legendRealized`]: { encounter, names: [...names, key],
+    kinds: kind ? [...kinds, kind] : kinds } });
   return legendRealized(actor);
 }
 
@@ -39741,32 +39823,43 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
   const speaker = ChatMessage.getSpeaker({ actor });
   const said = String(maneuver.says ?? "").trim()
     .replace("1(T) higher for each Action spent", `${Math.max(1, Number(actionsSpent) || 1)}(T) higher`);
-  const enters = `${maneuver.name}: ${actor.name} enters ${into.name}.${said ? ` ${said}` : ""}`;
-  if (!into.roll) {
+  const enters = `${maneuver.name}: ${actor.name} enters ${into.name}${into.natural ? " (Natural: no Stress Test)" : ""}.${said ? ` ${said}` : ""}`;
+  const entered = async () => {
     const card = await ChatMessage.create({ speaker,
       content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(enters)}</div>` });
-    if (into.form) await legendRealizedByForm(actor, into.name);
+    const T = await import("./transformations.mjs");
+    const item = into.itemId ? actor.items.get(into.itemId) : null;
+    if (item) await T.enterTransformation(actor, item, into);
+    if (into.form) await legendRealizedByForm(actor, into.name, item);
+    // Triggered/Transform: what answers entering one through the Transformation Maneuver - its Burst Limit among them.
+    if (item) {
+      await offerTriggers(actor, "transform");
+      await (await import("./effects/moments-runtime.mjs")).fireMoment(actor, "transform");
+    }
     return card;
-  }
+  };
+  if (!into.roll) return entered();
   const formula = [DBUCharacterData.BASE_DIE, ...into.parts.map(part => `${part.value < 0 ? "-" : "+"} ${Math.abs(part.value)}`)]
     .join(" ");
   const roll = await new Roll(formula).evaluate();
-  // Maximum Metamorese (3): "You automatically succeed on any and all Stress Tests."
-  const automatic = actor.system.effects?.slots?.["stress.autoSucceed"] === true;
+  // Maximum Metamorese (3): "You automatically succeed on any and all Stress Tests." New Level of Power: on its own.
+  const automatic = (actor.system.effects?.slots?.["stress.autoSucceed"] === true) || into.automatic;
   await roll.toMessage({ speaker, whisper: whisperTo(actor),
-    flavor: `${into.name}: Stress Test - ${roll.total} against ${into.requirement}${automatic ? " - passed automatically (Maximum Metamorese)" : ""}` });
+    flavor: `${into.name}: Stress Test - ${roll.total} against ${into.requirement}${automatic ? " - passed automatically" : ""}` });
   // Divine Fusion Method (5): "If you fail a Stress Test, you may choose to instead have succeeded at that Stress Test" - once an Encounter.
   const rescued = !automatic && (roll.total < into.requirement) && await stressRescue(actor, into.name);
-  if (automatic || rescued || (roll.total >= into.requirement)) {
-    const card = await ChatMessage.create({ speaker,
-      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(enters)}</div>` });
-    if (into.form) await legendRealizedByForm(actor, into.name);
-    return card;
-  }
+  if (automatic || rescued || (roll.total >= into.requirement)) return entered();
   const { setCondition } = await import("./conditions.mjs");
   await setCondition(actor, "stress-exhaustion", 1);
+  // "If you fail ... while transformed, Stress Exhaustion - and the Transformation you had is lost" (the user's): every Form and
+  // Enhancement in use left, but one with the Natural Aspect ("Do not leave this Transformation if you are suffering from Stress Exhaustion").
+  const T = await import("./transformations.mjs");
+  const lost = T.transformationsInUse(actor).filter(item => (T.kindOf(T.fileOf(item)) !== "awakening")
+    && !T.aspectsOf(item, actor.items).some(aspect => aspect.id === "natural"));
+  if (lost.length) await T.leaveTransformations(actor, lost.map(item => item.id));
   return ChatMessage.create({ speaker, content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
-    `${maneuver.name}: ${actor.name} fails the Stress Test for ${into.name} - Stress Exhaustion.`)}</div>` });
+    `${maneuver.name}: ${actor.name} fails the Stress Test for ${into.name} - Stress Exhaustion${lost.length
+      ? `, and ${lost.map(item => item.name).join(", ")} left` : ""}.`)}</div>` });
 }
 
 /**

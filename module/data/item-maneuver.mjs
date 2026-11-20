@@ -130,6 +130,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * each Action spent (Divine Pulse), or none to roll (Holy Transformation).
        */
       transforms: new fields.BooleanField({ required: true, initial: false }),
+      /** The Revert Maneuver: "Exit any number of Forms or Enhancements of your choice" - which, asked (transformations.mjs). */
+      reverts: new fields.BooleanField({ required: true, initial: false }),
       stressPerAction: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       noStressTest: new fields.BooleanField({ required: true, initial: false }),
       /** A second limit over the usage limit - Divine Movement's "[1/Round, 3/Encounter]". 0 is none. */

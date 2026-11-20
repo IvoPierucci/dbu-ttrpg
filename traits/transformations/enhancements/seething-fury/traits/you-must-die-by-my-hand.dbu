@@ -10,4 +10,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: Overwhelm at its most, and the Basic Attack or a Signature Technique out of sequence - Overwhelm's Wound again on it, the
+# table's.
+[triggered/transform, 1/encounter, outOfSequence, effect 1]
+overwhelm.stacks = 4;
+maneuverOutOfSequence(basic-attack);

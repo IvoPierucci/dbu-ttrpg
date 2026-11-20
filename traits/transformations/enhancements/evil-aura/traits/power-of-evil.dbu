@@ -2,6 +2,11 @@ id: evil-aura-power-of-evil
 name: Power of Evil
 order: 2
 slot: trait
+resource: evilpoints
+resourceLabel: Evil Points
+# 10(bT) - its base Tier of Power times 10 - raised by a Grade or another Trait.
+resourceMaxFrom: baseTierOfPower
+resourceMaxTimes: 10
 description: >
   The evil energy welling up inside you empowers your attacks and protects you from harm.
 text: >
@@ -13,4 +18,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) At the start of every Combat Round, 5(bT) Evil Points.
+[triggered/start-of-round, effect 1]
+evilpoints.stacks += 5(bT);
+
+# (2)(3) Spent on the Wound or as Damage Reduction, (4) Ki Points for those spent: stepped on the Combat tab - the table's.

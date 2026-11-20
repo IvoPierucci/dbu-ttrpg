@@ -9,7 +9,8 @@ usageLimit: 1/round
 # A Special Maneuver, open while Martial Skill is had (`allow maneuver.stance`). Used: one of the four Stances taken - or none -
 # in place of the one held (conditions.mjs takeOneCondition); each a mark of its own beside it (conditions/).
 special: true
-source: Martial Skill
+# Core Rule, so every character has its Item, shut until Martial Skill opens it - as every Special Maneuver an effect grants.
+source: Core Rule
 description: >
   Enter a Stance - Flame, Wind, Wave or Stone - or leave the one you are in. One at a time.
 text: >

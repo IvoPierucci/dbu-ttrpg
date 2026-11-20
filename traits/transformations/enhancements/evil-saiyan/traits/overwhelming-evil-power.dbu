@@ -10,4 +10,7 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: the Surging State till the end of your turn, and the Evil Points at their most.
+[triggered/transform, 1/encounter, effect 1]
+enterState(surging, 1, turn);
+evilpoints.stacks += 99;

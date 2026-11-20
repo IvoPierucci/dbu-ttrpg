@@ -13,4 +13,12 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) In the Determined State: Force and Magic Attribute Modifier Bonus 1(T).
+[passive, effect 1]
+if (inState("determined")) {
+    force.mod += 1(T);
+    magic.mod += 1(T);
+}
+
+# (2) Clashes on Cognitive or Morale won at Raging 3+, (3) the Damage Category at Raging 2+, (4) the Cross Counter without a Counter
+# Action: the table's.

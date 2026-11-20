@@ -17,4 +17,23 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Initiative Value G(T).
+[passive, effect 1]
+initiative += $G * 1(T);
+
+# (2) The Tier of Power Extra Dice of Strike and Dodge Rolls G Categories higher: the table's (one Category for every roll here).
+
+# (3) Its Grade's extra Damage, from Collision and Attacking Maneuvers alike (its table), 2(bT) less with FTL (3).
+[automatic/being-hit, effect 3]
+if ($G == 1) {
+    incoming.damage += 2(bT) - min($M, 1) * 2(bT);
+}
+if ($G == 2) {
+    incoming.damage += 5(bT) - min($M, 1) * 2(bT);
+}
+if ($G == 3) {
+    incoming.damage += 6(bT) - min($M, 1) * 2(bT);
+}
+if ($G == 4) {
+    incoming.damage += 8(bT) - min($M, 1) * 2(bT);
+}

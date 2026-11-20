@@ -4,6 +4,9 @@ order: 1
 slot: trait
 # Its [Constant] effects: a [Triggered] one that may be used outside the Transformation (the user's).
 constant: 1
+resource: toppling
+resourceLabel: Toppling
+resourceMax: 3
 description: >
   Whether through imitation or through actually imbibing, your movement is like that of a drunkard, but with combat skills woven in.
 text: >
@@ -15,4 +18,11 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Constant: from a Sake Bottle, this instead of the Drunk State - the Transformation Maneuver out of sequence, the table's to offer.
+# (2) Tipsy's 1st effect raising instead: the table's.
+
+# (3) An Opponent's Attacking Maneuver dodged: a stack of Toppling (max. 3).
+[triggered/dodged-attack, effect 3]
+toppling.stacks += 1;
+
+# (4) Spent on an attack - Strike and Wound 1(T) a stack: the table's.

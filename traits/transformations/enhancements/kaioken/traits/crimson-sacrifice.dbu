@@ -14,4 +14,14 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) No Life Points regained, (2) no Reduced Momentum from paying it, and (3) 2(bT) more beside a Form or Transcended Enhancement
+# without Perfect Ki Control: the table's.
+
+# Its Grade's Life Point Cost, paid as any Attacking Maneuver is declared (the user's: charged by itself) - G+1 (bT), 1(bT) less once
+# Mastered (Deep Red (4)) - and (4) G(bT) Ki Points for it.
+[automatic/declare-maneuver, effect 4]
+requires attackingManeuver;
+life.value -= ($G + 1 - min($M, 1)) * 1(bT);
+ki.value += $G * 1(bT);
+
+# (5) The Kaioken Dice again and G(T) Wound on an Ultimate Signature Technique, once an Encounter: the table's.

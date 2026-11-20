@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Its second and higher Grades gain Heartbeat (LV2) - had at every Grade here.
+aspects: +Heartbeat (LV2)
 description: >
   You rocket forward faster than light itself, streaking past friend and foe alike to strike at your desired target.
 text: >
@@ -17,4 +19,13 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Signature Techniques' Wound 1/2 (rounded up) of G(T).
+[passive, effect 2]
+wound.signature += ceil($G / 2) * 1(T);
+
+# (3) The extra Damage 2(bT) lower: in Gear Shift's. (4) No Exploit at its second Grade or higher: the table's.
+
+# (5) In its first Grade, at the start of your turn: 3(bT) Ki Points.
+[triggered/start-of-turn, effect 5]
+requires $G == 1;
+ki.value += 3(bT);

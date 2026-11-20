@@ -5,6 +5,8 @@ slot: mastery
 mastery: 2
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Natural (LV1) gained.
+aspects: +Natural (LV1)
 description: >
   Your body moves without an ounce of input from your conscious mind, reacting to your surroundings.
 text: >
@@ -14,4 +16,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) 2(bT) Ki Points when not hit: the table's.

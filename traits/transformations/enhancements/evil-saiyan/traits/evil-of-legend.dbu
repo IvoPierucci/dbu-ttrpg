@@ -2,6 +2,8 @@ id: evil-saiyan-evil-of-legend
 name: Evil of Legend
 order: 5
 slot: transcendent
+# (1) Armored and Scaling (LV2) while Transcended.
+aspects: +Armored, +Scaling (LV2)
 description: >
   You have unleashed the ultimate potential of your battle-hungry Saiyan blood.
 text: >
@@ -14,4 +16,12 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Insight Attribute Modifier Bonus 1(T).
+[passive, effect 2]
+insight.mod += 1(T);
+
+# (3) The Evil Point Maximum 20(bT): 5(bT) more.
+[passive, effect 3]
+evilpoints.max += 5(bT);
+
+# (4) No longer Transcended at the start of your turn, (5) a Battle Born stack with its Burst Limit: the table's.

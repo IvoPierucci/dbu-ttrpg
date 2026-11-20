@@ -5,6 +5,9 @@ slot: trait
 replaces: Power of the Bottle
 # Its [Constant] effects: a [Triggered] one that may be used outside the Transformation (the user's).
 constant: 1
+resource: ferocity
+resourceLabel: Ferocity
+resourceMax: 3
 description: >
   As the line between instinct and conscious thought fades into obscurity, you launch yourself into battle like a wild animal.
 text: >
@@ -20,4 +23,9 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Constant: an effect into the Feral State, this instead - the table's to offer. (2) Counter and Out-of-Sequence Unique Abilities
+# while Feral, (3) Unhinged's Critical Target, (4) the Movement as an Instant, (6)-(8) Ferocity spent: the table's.
+
+# (5) The Movement Maneuver used, or a Critical on a Wound Roll: a stack of Ferocity (max. 3).
+[triggered/critical, effect 5]
+ferocity.stacks += 1;

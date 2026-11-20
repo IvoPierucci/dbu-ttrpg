@@ -17,4 +17,19 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) Wound Rolls 1(T) for each Health Threshold you are below.
+[passive, effect 1]
+wound += threshold.depth * 1(T);
+
+# (2) Life Points below 0: Force and Magic Attribute Modifier Bonus 1(T).
+[passive, effect 2]
+if (life.value < 0) {
+    force.mod += 1(T);
+    magic.mod += 1(T);
+}
+
+# (3) The Damage Category at Raging 2+, (4) All Out or Complete Annihilation below Critical: the table's.
+
+# (5) Constant: knocked through a Health Threshold, once an Encounter - the Transformation Maneuver out of sequence, into it.
+[triggered/threshold, 1/encounter, outOfSequence, effect 5]
+maneuverOutOfSequence(transformation);

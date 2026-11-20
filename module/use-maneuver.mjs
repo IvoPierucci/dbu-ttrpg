@@ -2901,6 +2901,7 @@ function makeDefinition(item) {
       copiedFromName: (item.getFlag("dbu-ttrpg", "copied") ?? item.getFlag("dbu-ttrpg", "keptCopy"))?.from ?? "" } : {}),
     ...(item.getFlag?.("dbu-ttrpg", "fromQuickLearner") ? { fromQuickLearner: true } : {}),
     transforms: item.system.transforms,
+    reverts: Boolean(item.system.reverts),
     stressPerAction: Number(item.system.stressPerAction) || 0,
     noStressTest: item.system.noStressTest,
     ...(item.system.godStrikeProfile ? { appliedProfiles: [item.system.godStrikeProfile] } : {}),
@@ -5489,6 +5490,35 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // The Revert Maneuver: which Forms and Enhancements to leave, asked before anything is paid; left, and what leaving each does.
+  if (maneuver.reverts) {
+    const T = await import("./transformations.mjs");
+    const inUse = T.transformationsInUse(actor).filter(item => T.kindOf(T.fileOf(item)) !== "awakening");
+    if (!inUse.length) {
+      ui.notifications.info(`${actor.name} is in no Form or Enhancement.`);
+      return false;
+    }
+    const escape = Handlebars.escapeExpression;
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${actor.name} - ${maneuver.name}` },
+      content: `<div class="dbu-ally-pick">${inUse.map(item => `<label class="dbu-respond-option"><input type="checkbox" name="${escape(item.id)}" checked/>
+        <span class="dbu-respond-name">${escape(item.name)}</span></label>`).join("")}</div>`,
+      buttons: [{ action: "leave", label: maneuver.name, default: true, callback: (event, button, dialog) =>
+        inUse.filter(item => dialog.element.querySelector(`[name="${item.id}"]`)?.checked).map(item => item.id) },
+      { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if (!Array.isArray(picked) || !picked.length) return false;
+    await payActions(actor, maneuver, actionsSpent);
+    await recordManeuverUse(actor, maneuver);
+    const names = picked.map(id => actor.items.get(id)?.name).filter(Boolean);
+    await T.leaveTransformations(actor, picked);
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${escape(
+      `${maneuver.name}: ${actor.name} leaves ${names.join(", ")}.`)}</div>` });
+    await recordManeuverType(actor, maneuver.type);
+    return true;
+  }
+
   // Divine Movement: its move announced, no Exploit, the Movement Maneuver for one's own effects.
   if (maneuver.divineMovement) {
     const { takeDivineMovement } = await import("./chat.mjs");
@@ -8047,6 +8077,7 @@ export function maneuverItemFrom(definition) {
       godStrike: Boolean(definition.godStrike),
       godFinisher: Boolean(definition.godFinisher),
       transforms: Boolean(definition.transforms),
+      reverts: Boolean(definition.reverts),
       stressPerAction: Number(definition.stressPerAction) || 0,
       noStressTest: Boolean(definition.noStressTest),
       encounterLimit: Number(definition.encounterLimit) || 0,

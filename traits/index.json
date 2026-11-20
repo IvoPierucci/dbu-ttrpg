@@ -2006,6 +2006,9 @@
     "transformations/awakenings/martial-skill/maneuvers/stance.dbu",
     "transformations/awakenings/martial-skill/traits/martial-arts-practitioner/defensive-style.dbu",
     "transformations/awakenings/martial-skill/traits/martial-arts-practitioner/offensive-style.dbu",
-    "transformations/awakenings/pure-progress/states/flow.dbu"
+    "transformations/awakenings/pure-progress/states/flow.dbu",
+    "maneuvers/revert.dbu",
+    "transformations/enhancements/evil-saiyan/maneuvers/aura-tail.dbu",
+    "transformations/enhancements/evil-saiyan/states/berserk.dbu"
   ]
 }

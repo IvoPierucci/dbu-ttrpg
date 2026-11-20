@@ -12,4 +12,8 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) No Exploit but Guard Down or Impediment, (2) Divine Ki to shed a Combat Condition: the table's.
+
+# (3) With the Power Up, once a Round: the Mindful State's Zen level till the start of your next turn (its level the table's).
+[triggered/power, 1/round, effect 3]
+enterState(mindful, 1, start-of-next-turn);

@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (1) Straining lost.
+aspects: -Straining
 description: >
   You learn to rely more on your instincts, honing them to a perfect edge.
 text: >
@@ -15,4 +17,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (2) Tranquil instead of Zen, (3) the least Natural Result 1 higher: the table's.

@@ -1,0 +1,21 @@
+id: revert
+name: Revert
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# The Forms and Enhancements in use ticked to leave (use-maneuver.mjs), what leaving each does with them (transformations.mjs
+# leaveTransformations: Exhausting, Fading). Rampaging's Compelled forbidding it: the table's.
+reverts: true
+source: Core Rule
+description: >
+  Exit any number of Forms or Enhancements of your choice.
+text: >
+  Revert Maneuver [1/Round]: Release a transformed state and return to your base form.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Exit any number of Forms or Enhancements of your choice.

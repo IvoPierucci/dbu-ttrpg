@@ -5,6 +5,8 @@ slot: mastery
 mastery: 1
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1, 2
+# (1) A level of Rampaging less; (2) the Innate State (Feral) lost - the table's (the Raging one stays).
+aspects: -Rampaging (LV1)
 description: >
   Your conscious mind emerges over the beast inside, taking control to direct your wrath.
 text: >
@@ -16,4 +18,4 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (3)(4) The Direct Hit without a Counter Action, its Soak doubled: the table's.

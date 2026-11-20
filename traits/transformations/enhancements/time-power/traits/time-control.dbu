@@ -15,4 +15,9 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# (1) The Time Profile, (2) Time Seal and Time Reversion (their words in its file), (3) Multi-Profile with the Time Profile: the table's.
+
+# (4) At the start of your turn, not in the God Ki State: 1/10th of your Maximum Life Points lost.
+[automatic/start-of-turn, effect 4]
+requires !inState("god-ki");
+life.value -= floor(life.max / 10);

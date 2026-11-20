@@ -10,4 +10,6 @@ text: >
 
 ---
 
-# Written, not applied yet: its effects arrive with its stage (the plan).
+# Burst Limit: Plastered till the end of your next turn (the table's - the Drunk State's Level), and 3 stacks of Toppling.
+[triggered/transform, 1/encounter, effect 1]
+toppling.stacks = 3;
