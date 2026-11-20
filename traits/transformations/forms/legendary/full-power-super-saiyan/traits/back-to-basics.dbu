@@ -17,4 +17,11 @@ text: >
 
 ---
 
-# (2)-(4): the table's.
+# (2) The Option chosen for S-Cells (3): the table's. (3) The Power Up as an Instant with 4+ Battle Born: the table's.
+
+# (4) 2+ stacks of Power: up to 2 Energy Charges for Battle Born, the table's. 4+: a Signature Technique with a Ki Wager - half the Ki
+# Points wagered on its Wound Roll.
+[passive, effect 4]
+if (power.stacks >= 4) {
+    allow wound.halfWagerSignature;
+}

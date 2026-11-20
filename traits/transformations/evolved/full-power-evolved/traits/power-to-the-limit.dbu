@@ -16,4 +16,14 @@ text: >
 [passive, effect 1]
 power.max += 1;
 
-# (2)(3) A Power stack more, the Energy Charge: the table's.
+# (2) The Power Up with 1+ stacks of Power already, once a Round: a stack more (2+ now, the one it gave counted - my reading). "Not if
+# used during the last Combat Round": the table's.
+[triggered/power, 1/round, effect 2]
+requires power.stacks >= 2;
+power.stacks += 1;
+
+# (3) An Attacking Maneuver with a Ki Wager of 1/4 of your Max Capacity or more, once an Encounter: an Energy Charge - offered as it is
+# declared (chat.mjs answerDeclare), not as it hits.
+[triggered/declare-maneuver, 1/encounter, effect 3]
+requires attackingManeuver && heavyWager;
+attack.energyCharges += 1;

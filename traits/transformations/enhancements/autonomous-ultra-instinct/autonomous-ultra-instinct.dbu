@@ -7,6 +7,10 @@ tier: 6+
 stress: 12
 aspects: Enhanced Save (All), God Ki, Mindful, Innate State (Mindful), Straining, Beyond, Difficult (LV1)
 bonuses: AG +2(T), FO +1(T), MA +1(T)
+# Angelic Technique (1) [Permanent]: "this Transformation's Stress Test Requirement is added completely onto any Transformation used in
+# conjunction with it, rather than being halved", less "double the Tier of Power Requirement" of the highest of them (transformations.mjs).
+stressWhole: true
+stressLessPerTier: 2
 description: >
   Your mind is too slow. The body can react before the mind can process what's happening, but you have to learn to let go first. Few can achieve this level of prowess, but you have. Your body moves without waiting for your mind, thus making you untouchable. Through pure instinct alone, your body can dodge blows and strike first.
 text: >

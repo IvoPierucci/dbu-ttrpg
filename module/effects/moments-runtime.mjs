@@ -708,7 +708,7 @@ async function runVerb(actor, call, context) {
     }
     case "markKnocked": {
       const { markKnocked } = await import("../chat.mjs");
-      return markKnocked(actor, context?.knockedUuid, String(args[0] ?? ""), Number(args[1]) || 1);
+      return markKnocked(actor, context?.knockedUuid, String(args[0] ?? ""), Number(args[1]) || 1, String(args[2] ?? "end"));
     }
 
     case "followAlly": {

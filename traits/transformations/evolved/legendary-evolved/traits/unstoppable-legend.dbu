@@ -12,8 +12,19 @@ text: >
 
 ---
 
-# (1)(2) In a Transformation with the Super Saiyan Form Aspect: the table's.
+# (1) In a Transformation with the Super Saiyan Form Aspect - an Evolved Stage on one counts: Wound and Soak 1(T).
+[passive, effect 1]
+if (aspectInUse("super-saiyan-form")) {
+    wound += 1(T);
+    soakValue += 1(T);
+}
+
+# (2) A Stress Test into one with the Super Saiyan Form Aspect failed by 2 or less: 1/10th of your Maximum Life Points for +2, asked after
+# the roll (chat.mjs stressLifeForTwo). Remaining in one (a forced Stress Test): the same window.
+[passive, effect 2]
+allow stress.lifeForTwo;
 
 # (3) Entering one, once an Encounter: a stack of Battle Born on the Wound Rolls.
 [triggered/transform, 1/encounter, effect 3]
+requires aspectInUse("super-saiyan-form");
 battlebornwound.stacks += 1;

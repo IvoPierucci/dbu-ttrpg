@@ -5,7 +5,7 @@ side: disadvantages
 tpCost: -6
 requirement: You possess a Form, this Attacking Maneuver does not possess the Restricted – Transformation Disadvantage.
 requires: !has:restricted-transformation
-summary: Only in your Normal State - not enforced until Transformations exist.
+summary: Only in your Normal State.
 description: >
   This technique can only be used while not in a Transformation.
 text: >
@@ -16,5 +16,4 @@ text: >
 
 ---
 
-# No script: what this does is read where the Technique is built or the attack is rolled
-# (module/technique.mjs, module/signature.mjs). See the plan's feature table.
+# No script: asked as it is used (technique-use.mjs whyNotTechnique) - a Null Stage is the Normal State.

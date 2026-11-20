@@ -522,7 +522,9 @@ const PREDICATE_NAMES = new Set([
   // One Weapon wielded, of that Size (Light Weapons Specialist's).
   "singleWeaponOf",
   // That many Weapons wielded or more (Dual Wielding Specialist's).
-  "weaponsWieldedAtLeast", "grantedOthersAtLeast"
+  "weaponsWieldedAtLeast", "grantedOthersAtLeast",
+  // One with that Aspect in use (Unstoppable Legend's Super Saiyan Form).
+  "aspectInUse"
 ]);
 
 /** The ones written without brackets, because they take nothing. */
@@ -543,6 +545,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "strikeOrWound", "dodgeRolled", "evenRound", "bioBondOpen", "attackStrikeRolled", "bySignatureTechnique", "attackWoundRolled", "glassForcedCharge",
   // 2+ Adaptation Points gained this Combat Round (Biological Weapon's).
   "adaptationTwiceThisRound",
+  // [Acclimated]: the Original Form Mastered, Fully Mastered; the declared attack's Ki Wager 1/4 of the Max Capacity or more.
+  "originalMastered", "originalFullyMastered", "heavyWager",
   // The Maneuver declared an Attacking Maneuver or a Unique Ability (Reserved Combatant's); a Surge through the Surge Maneuver
   // itself (Never Surrender's).
   "attackOrUnique", "bySurgeManeuver",

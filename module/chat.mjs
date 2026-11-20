@@ -28298,10 +28298,11 @@ export async function wrathSteadfast(actor, knockedUuid) {
   return requestActorUpdate(knocked, { [`flags.${SCOPE}.wrathSteadfast`]: (Number(knocked.getFlag?.(SCOPE, "wrathSteadfast")) || 0) + 2 });
 }
 
-export async function markKnocked(actor, knockedUuid, key, stacks) {
+export async function markKnocked(actor, knockedUuid, key, stacks, when = "end") {
   const knocked = fromUuidSync(knockedUuid ?? "");
   if (!actor || !knocked || !key) return;
-  return markUntilNextTurn(actor, knocked, key, stacks, "end", "Scarlet Spotter");
+  // "Until the start of your next turn" (Golden Beast's, Sparking Momentum's Broken) where it says `start`.
+  return markUntilNextTurn(actor, knocked, key, stacks, (when === "start") ? "start" : "end", "Scarlet Spotter");
 }
 
 /**
@@ -30802,7 +30803,11 @@ export async function postAttack(actor, target, maneuver,
             // Warrior (4)'s "increase the Damage Category of that Attacking Maneuver by 1 Category".
             + ((warriorTension && !reflecting) ? 1 : 0)
             // Blaster Master (3)'s.
-            + blaster.category,
+            + blaster.category
+            // Sparking Momentum (3)'s: "Your Attacking Maneuvers that possess a Ki Wager equal to or exceeding 1/4 of your Max Capacity
+            // have their Damage Category increased by 1 Category".
+            + ((!reflecting && heavyWager(actor, { kiWager }))
+              ? (Number(actor.system.effects?.slots?.["attack.damageCategory.heavyWager"]?.add) || 0) : 0),
           // Genki's is added here: gathered from Empower, and neither paid again nor counted.
           kiWager: kiWager + (Number(freeWager) || 0),
           // What making it took from its maker's pools - Divine Counter's cancelling gives it back.
@@ -32540,6 +32545,36 @@ function primedCritical(attacker, strike) {
   strike.breakdown = breakdownText(strike.lines, strike.total);
 }
 
+/**
+ * "A Ki Wager equal to or exceeding 1/4 of your Max Capacity" (rounded down) - in Ki or in Life, as Jolt Counter's reads it.
+ */
+function heavyWager(actor, attack) {
+  const wager = Number(attack?.kiWager) || 0;
+  return (wager > 0) && (wager >= Math.max(1, Math.floor((Number(actor?.system?.capacity?.max) || 0) / 4)));
+}
+
+/** A numeric Slot's own part of a roll where `when` holds, named by the effect it came from. */
+function slotPart(actor, key, when, fallback) {
+  const slot = actor?.system?.effects?.slots?.[key];
+  const value = Number(slot?.add) || 0;
+  if (!when || !value) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? fallback, value }];
+}
+
+/**
+ * Limitless (2): "Increase the Wound Roll of any Attacking Maneuver you make with a Ki Wager by 1/2 of the amount of Ki Points spent on the
+ * Ki Wager" (rounded down; Ki Points - not a wager made in Life); Back to Basics (4+ Power) the same on a Signature Technique.
+ */
+function halfWagerParts(attacker, attack) {
+  const slots = attacker?.system?.effects?.slots ?? {};
+  const wager = attack?.wagerFromLife ? 0 : (Number(attack?.kiWager) || 0);
+  const half = Math.floor(wager / 2);
+  if (!half) return [];
+  const own = slots["wound.halfWager"] === true;
+  const signature = (slots["wound.halfWagerSignature"] === true) && effectSignature(attacker, attack);
+  return (own || signature) ? [{ label: "Half the Ki Wager", value: half }] : [];
+}
+
 function strikeParts(attacker, attack) {
   return [
     // Critical Point (2): the declared Attacking Maneuver, primed this Round - 2(T).
@@ -32594,6 +32629,8 @@ function strikeParts(attacker, attack) {
     ...((customBuffBasicIsSignature(attacker.system, attack.maneuverId) && (Number(attacker.system.effects?.slots?.["strike.signature"]?.add) || 0))
       ? [{ label: `${(attacker.system.effects.slots["strike.signature"].parts ?? []).map(part => part.source).find(Boolean) ?? "Effects"} (Signature Technique)`,
           value: Number(attacker.system.effects.slots["strike.signature"].add) }] : []),
+    // Full Force Super Saiyan 2's: a Ki Wager of 1/4 of the Max Capacity or more (`strike.heavyWager`).
+    ...slotPart(attacker, "strike.heavyWager", heavyWager(attacker, attack), "Ki Wager 1/4+"),
     // Master of Openings (1): made through the Exploit Maneuver.
     ...((attack.viaExploit && (Number(attacker.system.effects?.slots?.["strike.viaExploit"]?.add) || 0))
       ? [{ label: (attacker.system.effects.slots["strike.viaExploit"].parts ?? []).map(part => part.source).find(Boolean) ?? "Exploit",
@@ -34292,6 +34329,10 @@ function woundParts(attacker, attack) {
     // Integrated Weapon (2).
     ...integratedWeaponWound(attacker, attack),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
+    // Full Force Super Saiyan 2's: a Ki Wager of 1/4 of the Max Capacity or more (`wound.heavyWager`).
+    ...slotPart(attacker, "wound.heavyWager", heavyWager(attacker, attack), "Ki Wager 1/4+"),
+    // Limitless (2): half the Ki Points wagered; Back to Basics' on a Signature Technique alone.
+    ...halfWagerParts(attacker, attack),
     // Power of the Weak (5): the Ki of whoever is Bonded to them.
     ...(attack.bondWound ?? []).map(entry => ({ label: `Power of the Weak (${entry.name})`, value: Number(entry.value) || 0 })),
     ...twoWorldsWoundParts(attacker, attack),
@@ -39719,6 +39760,10 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
   const name = item?.name ?? asked.name;
   if (!name) return null;
   if (item && T.fadedOut(item)) ui.notifications.warn(`${item.name}: Fading - not again this Combat Encounter (said, not refused).`);
+  // An Evolved Stage on a Form it does not fit - Unique to another, its Original not Mastered: said, never refused (the user's).
+  const unfit = item && (T.kindOf(T.fileOf(item)) === "evolved") && T.originalFormOf(actor.items.filter(each => each.id !== item.id))
+    ? T.evolvedUnmet(item, actor.items.filter(each => each.id !== item.id).concat([item])) : "";
+  if (unfit) ui.notifications.warn(`${item.name}: ${unfit} (said, not refused).`);
   // An Evolved Stage is entered on the Form you are in (the user's): in none, it may not be.
   if (item && (T.kindOf(T.fileOf(item)) === "evolved") && !T.originalFormOf(actor.items.filter(each => each.id !== item.id))) {
     ui.notifications.warn(`${item.name}: an Evolved Stage is entered on the Form you are in, and you are in none.`);
@@ -39772,7 +39817,7 @@ async function legendRealizedByForm(actor, name, item = null) {
   const key = `${String(name).trim().toLowerCase()}${realization ? `#${Number(item.system.scales) || 0}` : ""}`;
   if (names.includes(key)) return;
   // "You cannot gain Legend Realized from a Transformation with the same Form Type and Tier of Power Requirement as another".
-  const kind = item ? `${T.formTypeOf(T.fileOf(item)) || "form"}:${T.tierRequirementOf(item, T.fileOf(item), actor.items)}` : "";
+  const kind = item ? `${T.formTypeFor(item, actor.items) || "form"}:${T.tierRequirementOf(item, T.fileOf(item), actor.items)}` : "";
   if (kind && kinds.includes(kind)) return;
   if (encounter) await requestActorUpdate(actor, { [`flags.${SCOPE}.legendRealized`]: { encounter, names: [...names, key],
     kinds: kind ? [...kinds, kind] : kinds } });
@@ -39808,6 +39853,26 @@ export async function legendRealized(actor) {
  * Transformation ... If you fail, you suffer from Stress Exhaustion." Entering - and what entering does - is the
  * table's until Transformations exist; Stress Exhaustion is applied. The roll itself only to who may see it.
  */
+/**
+ * Unstoppable Legend (2) (`stress.lifeForTwo`): a Stress Test into a Transformation with the Super Saiyan Form Aspect - an Evolved Stage
+ * with its Original's - 2 higher for 1/10th of the Maximum Life Points (rounded down), asked after the roll. Whether it was taken.
+ */
+async function stressLifeForTwo(actor, into) {
+  if (actor?.system?.effects?.slots?.["stress.lifeForTwo"] !== true) return false;
+  const T = await import("./transformations.mjs");
+  const item = into.itemId ? actor.items.get(into.itemId) : null;
+  if (!item) return false;
+  const others = actor.items.filter(each => each.id !== item.id);
+  const original = (T.kindOf(T.fileOf(item)) === "evolved") ? T.originalFormOf(others) : null;
+  const golden = [item, original].filter(Boolean).some(each => T.aspectsOf(each, actor.items).some(aspect => aspect.id === "super-saiyan-form"));
+  if (!golden) return false;
+  const cost = Math.floor((Number(actor.system.life?.max) || 0) / 10);
+  if ((await askPlayerChoice(actor, `${actor.name}: the Stress Test for ${into.name} failed by 2 or less`,
+    [{ value: "pay", label: `${cost} Life Points for +2 (Unstoppable Legend)` }, { value: "keep", label: "Keep the failure" }])) !== "pay") return false;
+  await requestActorUpdate(actor, { "system.life.value": (Number(actor.system.life?.value) || 0) - cost });
+  return true;
+}
+
 /** Divine Fusion Method (5): a Stress Test failed, passed instead - asked, once a Combat Encounter. Whether it was. */
 async function stressRescue(actor, name) {
   if (actor?.system?.effects?.slots?.["stress.rescue"] !== true) return false;
@@ -39849,13 +39914,21 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
   // Divine Fusion Method (5): "If you fail a Stress Test, you may choose to instead have succeeded at that Stress Test" - once an Encounter.
   const rescued = !automatic && (roll.total < into.requirement) && await stressRescue(actor, into.name);
   if (automatic || rescued || (roll.total >= into.requirement)) return entered();
+  // Unstoppable Legend (2): "after seeing the result, reduce your Life Points by 1/10th of your Maximum Life Points to increase the Dice
+  // Score of that Stress Test by 2" - into one with the Super Saiyan Form Aspect; asked where 2 would make it.
+  if ((roll.total + 2 >= into.requirement) && await stressLifeForTwo(actor, into)) return entered();
   const { setCondition } = await import("./conditions.mjs");
   await setCondition(actor, "stress-exhaustion", 1);
   // "If you fail ... while transformed, Stress Exhaustion - and the Transformation you had is lost" (the user's): every Form and
   // Enhancement in use left, but one with the Natural Aspect ("Do not leave this Transformation if you are suffering from Stress Exhaustion").
   const T = await import("./transformations.mjs");
+  // Golden Beast (1) [Constant] (`failsInto: original` in an Evolved Stage's file): failing to enter it, the Form it would go on is kept -
+  // "enter the Oozaru Alternate Form".
+  const failed = into.itemId ? actor.items.get(into.itemId) : null;
+  const keepForm = failed && (T.kindOf(T.fileOf(failed)) === "evolved") && (String(T.fileOf(failed)?.failsInto ?? "") === "original")
+    ? T.originalFormOf(actor.items.filter(each => each.id !== failed.id)) : null;
   const lost = T.transformationsInUse(actor).filter(item => (T.kindOf(T.fileOf(item)) !== "awakening")
-    && !T.aspectsOf(item, actor.items).some(aspect => aspect.id === "natural"));
+    && !T.aspectsOf(item, actor.items).some(aspect => aspect.id === "natural") && (item.id !== keepForm?.id));
   if (lost.length) await T.leaveTransformations(actor, lost.map(item => item.id));
   return ChatMessage.create({ speaker, content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
     `${maneuver.name}: ${actor.name} fails the Stress Test for ${into.name} - Stress Exhaustion${lost.length

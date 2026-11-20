@@ -4,6 +4,9 @@ order: 1
 slot: trait
 # Its [Constant] effects: a [Triggered] one that may be used outside the Transformation (the user's).
 constant: 1
+# Golden Beast (4): the Fire Breath Signature Technique, on the Techniques list while it is had (full-power.mjs techniqueItemsFrom):
+# Name | level | Foundation | Profile | Ki Point Cost per Tier | Advantages and Disadvantages, each "id ranks choice".
+grantsTechnique: Fire Breath | super | magic | elementalFire | 13 | terrain-destruction 2; widespread-assault 1 cone; concentrated-strike 1; restricted-transformation 2 golden-oozaru
 description: >
   Wielding the golden power of your Super Saiyan Transformation, your inner beast awakens, becoming a shining beacon of power and fury.
 text: >
@@ -18,7 +21,10 @@ text: >
 
 ---
 
-# (1) Constant: into Oozaru on failing it, (2) Colossal in Raging or Superior: the table's.
+# (1) [Constant]: failing to enter it, or leaving it on a failed Stress Test - the Oozaru Form it is on kept in use (its file's
+# `failsInto: original`, chat.mjs postTransformation). In no Form at all, "enter the Oozaru Alternate Form": the table's.
+
+# (2) Colossal for your effects and Punching Down in the Raging or Superior State: the table's.
 
 # (3) 4+ stacks of Battle Born: the Tier of Power Extra Dice a Category higher and Soak 1(T).
 [passive, effect 3]
@@ -27,7 +33,17 @@ if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) 
     soakValue += 1(T);
 }
 
-# (4) The Fire Breath Signature Technique (its words in its file), (5) the Wound against the smaller, (6) Broken: the table's.
+# (4) The Fire Breath Signature Technique (its header), and the Elemental (Fire) Profile a Favored Element - for every Technique of it
+# while in Golden Oozaru, not Fire Breath's alone (my simplification).
+[passive, effect 4]
+allow favored.elementalFire;
+
+# (5) The Wound against the smaller with 6+ Battle Born: the table's.
+
+# (6) Knocking an Opponent through a Health Threshold, once a Round: a stack of Broken till the start of your next turn.
+[triggered/knock-through, 1/round, effect 6]
+requires knockedOpponent;
+markKnocked(broken, 1, start);
 
 # (7) Entering it, once an Encounter: a Ki Surge.
 [triggered/transform, 1/encounter, effect 7]

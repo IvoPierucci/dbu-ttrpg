@@ -651,6 +651,16 @@ export function featureChoiceOptions(def, { ranks = 1, sig = null, actor = null 
         ...byTrait(traitsOfKind("battlefields").filter(t => (t.environment === true) && (t.id !== "standard-environment")))];
     case "state":
       return byTrait(traitsOfKind("states"));
+    // Restricted - Transformation: "Choose a type of Transformation (Enhancement or Form) ... If you have two ranks, instead choose a single
+    // Transformation (Enhancement or Form) or a Transformation Line" - those had, and their Lines.
+    case "transformation": {
+      if (ranks < 2) return [["enhancement", "Enhancements"], ["form", "Forms"]];
+      const had = Array.from(actor?.items ?? []).filter(item => item.type === "transformation")
+        .map(item => getTrait(item.system?.transformationId)).filter(file => file && ["enhancements", "forms/alternate", "forms/legendary"]
+          .includes(file.transformationFolder));
+      const lines = [...new Set(had.map(file => String(file.line ?? "")).filter(Boolean))];
+      return [...had.map(file => [file.id, file.name]), ...lines.map(line => [`line:${line}`, `${choiceLabel({}, line)} Line`])];
+    }
     case "weather":
       return byTrait(traitsOfKind("battlefields").filter(t => t.weather === true));
     case "profile":
@@ -678,5 +688,11 @@ export function choiceLabel(def, choice) {
   if (kind === "profile") return PROFILES[choice]?.label ?? choice;
   if (["condition", "state", "weather", "environment"].includes(kind)) return getTrait(choice)?.name ?? choice;
   if (kind === "weapon") return choice;
+  if (kind === "transformation") {
+    if (choice === "enhancement") return "Enhancements";
+    if (choice === "form") return "Forms";
+    if (choice.startsWith("line:")) return `${choiceLabel({}, choice.slice(5))} Line`;
+    return getTrait(choice)?.name ?? choice;
+  }
   return choice.replace(/(^|[\s-])\w/g, c => c.toUpperCase()).replace(/-/g, " ");
 }

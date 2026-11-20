@@ -15,5 +15,6 @@ text: >
 
 ---
 
-# (1) Its Stress Test with another, (2) Combat Rolls by the other's Tier of Power Requirement, (3) the least Natural Result 2, (4) the
-# Basic Attack after a dodge: the table's.
+# (1) Its Stress Test with another: added whole, less 2 for each Tier of Power the highest of the others asks (its Transformation's file,
+# transformations.mjs combinedRequirement).
+# (2) Combat Rolls by the other's Tier of Power Requirement, (3) the least Natural Result 2, (4) the Basic Attack after a dodge: the table's.

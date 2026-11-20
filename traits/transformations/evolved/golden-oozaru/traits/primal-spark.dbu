@@ -18,7 +18,14 @@ if (battlebornwound.stacks >= 2) {
     surgency += 1(T);
 }
 
-# (2) Superior for a turn of a Surge: the table's.
+# (2) A Surge used during your turn, once an Encounter: the Superior State till the end of that turn.
+[triggered/healing-surge, 1/encounter, effect 2]
+requires ownTurn;
+enterState(superior, 1, turn);
+
+[triggered/ki-surge, 1/encounter, effect 2]
+requires ownTurn;
+enterState(superior, 1, turn);
 
 # (3) With the Power Up and 2+ on the Wound, once an Encounter: a Ki Surge out of sequence.
 [triggered/power, 1/encounter, outOfSequence, effect 3]

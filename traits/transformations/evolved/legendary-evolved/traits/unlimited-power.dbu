@@ -2,6 +2,8 @@ id: legendary-evolved-unlimited-power
 name: Unlimited Power
 order: 1
 slot: trait
+# (1) [Acclimated]: "If the Original Form is Mastered: Remove the Rampaging Aspect from this Evolved Stage" (transformations.mjs aspectsOf).
+aspectsAcclimated: -Rampaging
 description: >
   Your power grows stronger and stronger, the longer you fight for.
 text: >
@@ -19,7 +21,12 @@ text: >
 
 ---
 
-# (1) Acclimated - its Original Form Mastered: the table's.
+# (1) [Acclimated] - the Form it is on Mastered: Rampaging gone (its header), the Muscle Penalty 1(bT) lower, (5) ignored, (6) Triggered
+# instead of Automatic.
+[passive, effect 1]
+if (originalMastered) {
+    superStack.musclePenalty -= 1(bT);
+}
 
 # (2) 4+ stacks of Battle Born on the Wound: Force, Tenacity and Magic Attribute Modifier Bonus 1(T).
 [passive, effect 2]
@@ -39,11 +46,21 @@ if (stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound")) 
 
 # (4) Ki Points past the Maximum: the table's.
 
-# (5) At the end of your turn: 1/10th (rounded up) of your Ki Points off your Life Points.
+# (5) At the end of your turn: 1/10th (rounded up) of your Ki Points off your Life Points - not where (1) holds.
 [automatic/end-of-turn, effect 5]
-life.value -= ceil(ki.value / 10);
+if (!originalMastered) {
+    life.value -= ceil(ki.value / 10);
+}
 
-# (6) At the start of your turn: 1/10th of your Maximum Life Points for a Ki Surge.
+# (6) At the start of your turn: 1/10th of your Maximum Life Points for a Ki Surge out of sequence - Automatic; with (1), offered on the
+# turn's card instead.
 [automatic/start-of-turn, effect 6]
+if (!originalMastered) {
+    life.value -= floor(life.max / 10);
+    surge(ki);
+}
+
+[triggered/start-of-turn, outOfSequence, effect 6]
+requires originalMastered;
 life.value -= floor(life.max / 10);
 surge(ki);

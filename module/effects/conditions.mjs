@@ -12,7 +12,7 @@ import { areAllies, areOpponents, besideAnAlly, masterOf } from "../allies.mjs";
 import { withinAreaOfRule } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { traitAside } from "../aside.mjs";
+import { traitAside, transformationQuestion } from "../aside.mjs";
 import { customBuffBasicIsSignature, customBuffMarked, customBuffThresholdFor } from "../custom-buffs.mjs";
 
 /** Whether a key is a published Combat Condition - set by traits.mjs at load, to keep the import one way. */
@@ -388,6 +388,20 @@ const PREDICATES = {
   /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
   /** Bonded to an Ally - Power of the Weak (4)'s, or Twinned Spirits' Partner (bondOf). */
   bonded: scope => Boolean(bondOf(scope.data?.parent)),
+
+  /** [Acclimated] (an Evolved Stage's): the Form it is on - the one in use - Mastered, or Fully Mastered (transformations.mjs). */
+  originalMastered: scope => transformationQuestion("originalMastered", scope.data?.parent) === true,
+  originalFullyMastered: scope => transformationQuestion("originalFullyMastered", scope.data?.parent) === true,
+  /** "While in a Transformation with the Super Saiyan Form Aspect" - one in use with it, an Evolved Stage with its Original's. */
+  aspectInUse: (scope, name) => transformationQuestion("aspectInUse", scope.data?.parent, String(name?.value ?? name ?? "")) === true,
+  /**
+   * The Attacking Maneuver declared has "a Ki Wager equal to or exceeding 1/4 of your Max Capacity" (rounded down) - the declaration's
+   * `kiWager` (Limitless's, Full Power's Energy Charge).
+   */
+  heavyWager: scope => {
+    const wager = Number(scope.context?.kiWager) || 0;
+    return (wager > 0) && (wager >= Math.max(1, Math.floor((Number(scope.data?.capacity?.max) || 0) / 4)));
+  },
 
   trulyHealthy: scope => (scope.data?.effects?.slots?.["threshold.asHealthy"] === true)
     || (customBuffThresholdFor(scope.data, scope.data?.threshold?.key ?? "healthy") === "healthy"),

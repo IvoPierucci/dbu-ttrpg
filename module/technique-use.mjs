@@ -12,6 +12,7 @@
  */
 
 import { environmentIdOf } from "./environments.mjs";
+import { inNormalState, inTransformationOf } from "./transformations.mjs";
 import { featureRanks } from "./signature.mjs";
 import { ULTIMATES_PER_ENCOUNTER } from "./technique.mjs";
 
@@ -134,6 +135,16 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
     if (wanted && (actor.system?.battlefield?.weather?.id !== wanted)) {
       return `${name} is only used in its chosen Battle Weather.`;
     }
+  }
+
+  // Restricted - Transformation: in the chosen kind of Transformation, the chosen one, or one of the chosen Line.
+  if (!unrestricted && has(technique, "restricted-transformation")) {
+    const wanted = choice(technique, "restricted-transformation");
+    if (wanted && !inTransformationOf(actor, wanted)) return `${name} is only used in its chosen Transformation.`;
+  }
+  // Restricted - Untransformed: "You cannot use this Signature Technique unless you are in your Normal State".
+  if (!unrestricted && has(technique, "restricted-untransformed") && !inNormalState(actor)) {
+    return `${name} is only used in your Normal State.`;
   }
 
   // Mandatory Charge: "use the Energy Charge Maneuver on this Technique two times for each rank".

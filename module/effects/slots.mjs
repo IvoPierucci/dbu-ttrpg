@@ -510,6 +510,20 @@ const TABLE = [
        + "KP Cost by default, and read off that alone - anything that raises the price "
        + "leaves the floor where it was. Perfect Ki Control lowers it with "
        + "`max= 2(T)`, which is how \"this cannot increase the Minimum\" is written." },
+  // "Your Attacking Maneuvers that possess a Ki Wager equal to or exceeding 1/4 of your Max Capacity" (rounded down) - Full Force Super
+  // Saiyan 2's Strike and Wound, Sparking Momentum's Damage Category; read where the attack is declared and rolled (chat.mjs heavyWager).
+  { key: "strike.heavyWager", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Strike Rolls of your Attacking Maneuvers with a Ki Wager of 1/4 of your Max Capacity or more." },
+  { key: "wound.heavyWager", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Wound Rolls of your Attacking Maneuvers with a Ki Wager of 1/4 of your Max Capacity or more." },
+  { key: "attack.damageCategory.heavyWager", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Damage Categories up for your Attacking Maneuvers with a Ki Wager of 1/4 of your Max Capacity or more." },
+  // Limitless (2): "Increase the Wound Roll of any Attacking Maneuver you make with a Ki Wager by 1/2 of the amount of Ki Points spent on the
+  // Ki Wager"; Back to Basics' for a Signature Technique alone.
+  { key: "wound.halfWager", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Half the Ki Points wagered on an Attacking Maneuver added to its Wound Roll." },
+  { key: "wound.halfWagerSignature", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Half the Ki Points wagered on a Signature Technique added to its Wound Roll." },
   { key: "attack.kiWager.min", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "The least you may Ki Wager on an Attacking Maneuver. Compelled forces one." },
   { key: "actions.standard", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Standard Actions." },
@@ -534,6 +548,9 @@ const TABLE = [
   // Fusion Methods & Modifiers (traits/other/fusion-method/, fusion-modifier/).
   { key: "stress.autoSucceed", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Every Stress Test passed, whatever it rolls (Maximum Metamorese (3); chat.mjs postTransformation)." },
+  { key: "stress.lifeForTwo", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "A Stress Test into a Transformation with the Super Saiyan Form Aspect failed by 2 or less: 1/10th of your Maximum Life Points "
+       + "for +2, asked after the roll (Unstoppable Legend's)." },
   { key: "stress.rescue", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "A Stress Test failed may be passed instead, once a Combat Encounter (Divine Fusion Method (5); chat.mjs postTransformation)." },
   { key: "wound.fusedTechnique", phase: PHASES.CORE, kind: N, ops: ["add"],

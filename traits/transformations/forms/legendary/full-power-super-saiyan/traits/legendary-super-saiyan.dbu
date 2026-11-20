@@ -7,6 +7,8 @@ group: super-saiyan-style-traits
 groupLabel: Super Saiyan Style Traits
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 2
+# (2): the Legendary Evolved Stage on this Form, its Stress Test Requirement 3 lower (transformations.mjs stressTakenOff).
+stressForOn: legendary-evolved 3
 description: >
   Clad in a blaze of legendary power, you represent the pinnacle of evolution for the Super Saiyan Transformation.
 text: >
@@ -17,7 +19,7 @@ text: >
 
 ---
 
-# (2) Legendary's Stress 3 lower: the table's.
+# (2) Legendary's Stress Test Requirement 3 lower on this Form - its header.
 
 # (3) Might 1(T).
 [passive, effect 3]

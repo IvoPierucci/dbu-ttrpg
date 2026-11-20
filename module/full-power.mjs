@@ -91,6 +91,28 @@ export function grantedTechniqueItems(set, grantedBy = "") {
   });
 }
 
+/**
+ * The Signature Techniques a Trait gives as data of its own (`grantsTechnique:`, `grantsTechnique2:` ...) - a Transformation's, Golden
+ * Oozaru's Fire Breath, Evil Aura's Evil Techniques: "Name | level | Foundation | Profile | Ki Point Cost per Tier | features", each
+ * feature "id ranks choice", parted by ";". Built as listed - no Technique Points of the character's taken (`freeTP`), the Ki Point Cost
+ * the one written - and gone with the Trait (`grantedBy`).
+ */
+export function techniqueItemsFrom(trait, grantedBy = "") {
+  const keys = Object.keys(trait ?? {}).filter(key => /^grantsTechnique\d*$/.test(key)).sort();
+  return keys.map(key => String(trait[key] ?? "").split("|").map(part => part.trim())).filter(parts => parts[0])
+    .map(([name, level = "super", foundation = "energy", profile = "simple", ki = "", list = ""]) => {
+      const features = list.split(";").map(part => part.trim()).filter(Boolean).map(part => {
+        const [id, ranks = "1", ...choice] = part.split(/\s+/);
+        return { id, ranks: Math.max(1, Number(ranks) || 1), choice: choice.join(" ") };
+      });
+      const signature = { level, foundation, profile, freeTP: 999, fixedKiPerTier: Number(ki) || 0, features };
+      return { name, type: "maneuver", img: "icons/magic/lightning/bolt-strike-blue.webp",
+        flags: { [SCOPE]: { ...(grantedBy ? { grantedBy } : {}), givenTechnique: true } },
+        system: { type: "standard", attacking: true, requiresTarget: true, tags: ["signature"], signature,
+          script: composeTechniqueEffects(signature, "") } };
+    });
+}
+
 /** Whether an Item is one of them. */
 export function isFullPower(item) {
   return Boolean(item?.system?.signature?.fullPower);

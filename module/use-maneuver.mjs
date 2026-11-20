@@ -7044,13 +7044,16 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Whether it is of the Glass Profile, its own or applied (askGlassApply) - Glass Genes' (`glassAttack`).
   const glassDeclared = Boolean(declared) && [declared.profile, declared.secondProfile, maneuver.secondProfile,
     ...(declared.appliedProfiles ?? [])].includes("glass");
-  await (await import("./chat.mjs")).answerDeclare(actor, { maneuver, targets: targetActor ? [targetActor] : [],
+  // An attack's Ki Wager, and that it is one (Limitless's, Full Power's "an Attacking Maneuver that has a Ki Wager ...").
+  const wagerContext = declared ? { attackingManeuver: true, kiWager: Number(declared.kiWager) || 0 } : {};
+  await (await import("./chat.mjs")).answerDeclare(actor, { maneuver, targets: targetActor ? [targetActor] : [], ...wagerContext,
     ...(glassDeclared ? { glass: true } : {}), ...(declared?.glassForced ? { glassForced: true } : {}) });
   // What its effects give back is said on its own card, each source on hover (chat.mjs gainsHtml) - not on cards of their own.
   const poolsBefore = { life: Number(actor.system.life?.value) || 0, ki: Number(actor.system.ki?.value) || 0 };
   const declaring = await fireMoment(actor, "declare-maneuver", {
     maneuver,
     targets: targetActor ? [targetActor] : [],
+    ...wagerContext,
     ...(glassDeclared ? { glass: true } : {}), ...(declared?.glassForced ? { glassForced: true } : {})
   }, { quiet: true });
   // What answering it put on the attack - God of Judgment's Energy Charge - within the Profile's ceiling, as any Charge.

@@ -69,7 +69,7 @@ import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { isCharacter, isMinion } from "./actor-types.mjs";
 import { getRace, isMinionRace, subraceName } from "./races.mjs";
 import { racesOf } from "./fusion.mjs";
-import { grantedTechniqueItems, isTechniqueData, whyNoNewTechnique } from "./full-power.mjs";
+import { grantedTechniqueItems, isTechniqueData, techniqueItemsFrom, whyNoNewTechnique } from "./full-power.mjs";
 import { traitAside } from "./aside.mjs";
 
 /** The Item type a Racial Trait is. */
@@ -1134,7 +1134,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   if (trait.grantsWeapon) await grantWeapon(actor, item, trait);
   // Nameless Horde (4): "You have access to the 'Full Power' Signature Techniques" - on the Techniques list, gone with it.
   // Seedling Biology (1): the Saibamen's Signature Techniques, the same way.
-  const techniques = grantedTechniqueItems(String(trait.grantsTechniques ?? ""), item.id);
+  // A Transformation Trait's own, written in its header (Golden Oozaru's Fire Breath, Evil Aura's Evil Techniques).
+  const techniques = [...grantedTechniqueItems(String(trait.grantsTechniques ?? ""), item.id), ...techniqueItemsFrom(trait, item.id)];
   if (techniques.length) await actor.createEmbeddedDocuments("Item", techniques);
   // Biological Weapon (1): a Signature Technique made as it is gained.
   if (trait.grantsSignature) await grantSignature(actor, item, String(trait.grantsSignature));

@@ -14,11 +14,22 @@ text: >
 
 ---
 
-# (1)(2) With a Ki Wager of 1/4 of your Max Capacity: the table's.
+# (1), (2) A Ki Wager of 1/4 of your Max Capacity or more: Strike 1(T), Wound 4(T) (chat.mjs strikeParts, woundParts).
+[passive, effect 1]
+strike.heavyWager += 1(T);
+
+[passive, effect 2]
+wound.heavyWager += 4(T);
 
 # (3) With the Power Up, once a Round: 4(bT) Ki Points for Surging till the end of your turn.
 [triggered/power, 1/round, effect 3]
+requires ki.value >= 4(bT);
 ki.value -= 4(bT);
 enterState(surging, 1, turn);
 
-# (4)(5) Fatigued for Ki, Superior first in a Round: the table's.
+# (4) Fatigued gained for Ki instead: the table's.
+
+# (5) At the start of your turn, no other Character having taken theirs this Round, once an Encounter: the Superior State for it - "no
+# other first" the table's to say.
+[triggered/start-of-turn, 1/encounter, effect 5]
+enterState(superior, 1, turn);

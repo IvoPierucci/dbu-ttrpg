@@ -10,6 +10,9 @@ tier: 3+
 stress: +12
 aspects: Armored, Super Saiyan Form, Peaked
 bonuses: FO +3(T), TE +3(T), IN +1(T)
+# Golden Beast (1) [Constant]: failing to enter it, or leaving it on a failed Stress Test - the Form it is on (Oozaru) kept in use, as
+# "enter the Oozaru Alternate Form" (chat.mjs postTransformation).
+failsInto: original
 description: >
   The raging beast within, now with the golden power of a Super Saiyan. The two most terrifying aspects of your being have merged into one, creating the ultimate, unstoppable, rampaging beast.
 text: >

@@ -975,10 +975,11 @@ export const VERBS = Object.freeze({
        + "(chat.mjs impairKnocked) - Draconic Physique's Elemental Dragon."
   },
   markKnocked: {
-    args: [2, 2],
-    names: [0],
+    args: [2, 3],
+    names: [0, 2],
     doc: "A Combat Condition's stacks on whoever this Moment says was knocked through - till the end of your next turn, "
-       + "on your clock (chat.mjs markKnocked) - Scarlet Spotter's 2 Broken."
+       + "on your clock (chat.mjs markKnocked) - Scarlet Spotter's 2 Broken; a third word `start`, till the start of it instead "
+       + "(Golden Beast's Broken)."
   },
   followAlly: {
     args: [0, 0],

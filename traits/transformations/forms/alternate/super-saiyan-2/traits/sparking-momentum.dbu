@@ -25,4 +25,14 @@ if (inState("raging") || inState("superior")) {
     dodge += 1(T);
 }
 
-# (3)-(5) The Damage Category with a Ki Wager, Broken, turn first: the table's.
+# (3) A Ki Wager of 1/4 of your Max Capacity or more: the Damage Category 1 higher (chat.mjs, as the attack is declared).
+[passive, effect 3]
+attack.damageCategory.heavyWager += 1;
+
+# (4) Knocking an Opponent through a Health Threshold, once an Encounter: a stack of Broken till the start of your next turn; the Action
+# from Bonus Momentum more: the table's.
+[triggered/knock-through, 1/encounter, effect 4]
+requires knockedOpponent;
+markKnocked(broken, 1, start);
+
+# (5) Your turn first in the Combat Round: the table's.

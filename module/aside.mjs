@@ -15,6 +15,20 @@
  * transformations.mjs, which registers it (useTransformationGate) so that this file still imports nothing.
  */
 let transformationGate = null;
+
+/**
+ * What the effects language asks of Transformations (effects/conditions.mjs), answered by transformations.mjs, which registers each - so
+ * that neither this file nor conditions.mjs imports it.
+ */
+const transformationQuestions = new Map();
+export function useTransformationQuestion(name, answer) {
+  transformationQuestions.set(name, answer);
+}
+export function transformationQuestion(name, ...args) {
+  const answer = transformationQuestions.get(name);
+  return answer ? answer(...args) : false;
+}
+
 export function useTransformationGate(gate) {
   transformationGate = gate;
 }

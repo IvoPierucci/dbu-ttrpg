@@ -7,7 +7,8 @@ import { fusionContext, racesOf } from "../fusion.mjs";
 import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransformation, aspectFile, aspectsOf, bonusesOf, bonusWritten,
   combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
-  lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait, ownersOf, releaseOwner, stacksOf } from "../transformations.mjs";
+  lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait, ownersOf, releaseOwner, stacksOf, evolvedUnmet }
+  from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
 import { ADVERSARY_CATEGORIES, adversaryExtra, adversaryExtraUsed, quickplayScores, quickplayTalentCount, thresholdLines, weakpointOutcome } from "../adversary.mjs";
@@ -7314,7 +7315,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         }
         updates.push(...changes);
       }
-      return this.actor.updateEmbeddedDocuments("Item", updates);
+      await this.actor.updateEmbeddedDocuments("Item", updates);
+      // An Evolved Stage on a Form it does not fit - Unique to another, its Original not Mastered: said, never refused (the user's).
+      const unmet = (field === "active") && on ? evolvedUnmet(this.actor.items.get(item.id)) : "";
+      if (unmet) ui.notifications.warn(`${item.name}: ${unmet} (said, not refused).`);
+      return;
     }
     const number = Math.max(0, Math.floor(Number(input.value) || 0));
     if (field === "grade") return item.update({ "system.grade": Math.max(1, number) });

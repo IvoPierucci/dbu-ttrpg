@@ -14,7 +14,7 @@
  */
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
-import { useTransformationGate } from "./aside.mjs";
+import { useTransformationGate, useTransformationQuestion } from "./aside.mjs";
 
 export const TRANSFORMATION_TYPE = "transformation";
 
@@ -228,7 +228,14 @@ export function aspectsOf(item, items = item?.parent?.items) {
   const own = [...parseAspects(file.aspects), ...gradeRow(file, letters.G).aspects];
   const changes = Array.from(items ?? []).filter(each => (each.type === "racial") && (each.system?.transformation === item.id)
     && !transformationTraitAside(each, items))
-    .flatMap(each => parseAspects(getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.aspects));
+    .flatMap(each => {
+      const trait = getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+      // [Acclimated] (an Evolved Stage's, the user's 2026-11-16): "If the Original Form is Mastered: Remove the Rampaging Aspect from this
+      // Evolved Stage" - `aspectsAcclimated:`, read only while the Form it is on is Mastered.
+      const acclimated = (kindOf(file) === "evolved") && isMastered(originalFormOf(Array.from(items ?? []).filter(other => other.id !== item.id)))
+        ? parseAspects(trait?.aspectsAcclimated) : [];
+      return [...parseAspects(trait?.aspects), ...acclimated];
+    });
   // Given by a Trait of another of them in use - Divine Candidate (1): "All of your Transformations with the God Ki Aspect gain the
   // Perfect Ki Control Aspect" (`grantsAspect: Perfect Ki Control`, `grantsAspectIf: God Ki` - what the one given it must have).
   const ownIds = new Set(own.map(aspect => aspect.id));
@@ -237,6 +244,10 @@ export function aspectsOf(item, items = item?.parent?.items) {
     .map(each => getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")).filter(trait => trait?.grantsAspect)
     .filter(trait => !trait.grantsAspectIf || ownIds.has(aspectId(trait.grantsAspectIf)))
     .flatMap(trait => parseAspects(trait.grantsAspect).map(aspect => ({ ...aspect, sign: 1 })));
+  // Given to this one by name, by any Trait or Talent had (`grantsAspectTo: <transformation id> <Aspect>`, a list) - Heart of Evil's "Evil
+  // Saiyan ... gains the Natural (LV2) Aspect", Tremendous Lord's for Great Namekian ("not to any other Transformation that would be treated
+  // as Great Namekian": by its own id alone).
+  given.push(...grantsFor(items, "grantsAspectTo", file.id).flatMap(rest => parseAspects(rest).map(aspect => ({ ...aspect, sign: 1 }))));
   const held = new Map();
   for (const aspect of [...own.map(each => ({ ...each, sign: 1 })), ...changes, ...given]) {
     const level = levelOf(aspect.level, letters);
@@ -478,11 +489,21 @@ export function inUseChanges(items, item, on) {
   const kind = kindOf(fileOf(item));
   const all = Array.from(items ?? []).filter(each => (each.type === TRANSFORMATION_TYPE) && (each.id !== item.id));
   const kindOfEach = each => kindOf(fileOf(each));
-  const pinnacle = each => parseAspects(fileOf(each)?.aspects).some(aspect => aspect.id === "pinnacle");
+  // Pinnacle: "this Evolved Stage may be applied on top of another Evolved Stage of the same Original Form ... it cannot be applied on top
+  // of another Evolved Stage with the Pinnacle Aspect"; at level 2 "you may choose whether to apply it" - so two with it go together
+  // where one of them is at level 2, its own left aside (my reading).
+  const pinnacle = each => {
+    const found = parseAspects(fileOf(each)?.aspects).find(aspect => aspect.id === "pinnacle");
+    return found ? (Number(found.level) || 1) : 0;
+  };
+  const together = (a, b) => {
+    const [pa, pb] = [pinnacle(a), pinnacle(b)];
+    return Boolean(pa || pb) && !(pa && pb && (pa < 2) && (pb < 2));
+  };
   const putBy = list => list.map(each => ({ _id: each.id, "system.active": false }));
   if (on && (kind === "evolved")) {
     if (!originalFormOf(all)) return null;
-    return putBy(all.filter(each => each.system?.active && (kindOfEach(each) === "evolved") && !pinnacle(item) && !pinnacle(each)));
+    return putBy(all.filter(each => each.system?.active && (kindOfEach(each) === "evolved") && !together(item, each)));
   }
   if (on && ((kind === "form") || (kind === "enhancement"))) {
     return putBy(all.filter(each => each.system?.active && (kindOfEach(each) === kind)));
@@ -789,16 +810,17 @@ export function enterableItems(actor) {
 }
 
 /** A Tier of Power Requirement as a number: "2+" is 2; an Evolved Stage's "+1"/"Same as Original" read off its Original. */
-export function tierRequirementOf(item, file = fileOf(item), items = item?.parent?.items) {
-  const row = gradeRow(file, lettersOf(item, file).G);
-  const written = String(row.values.tier ?? file?.tier ?? "").trim();
+export function tierRequirementOf(item, file = fileOf(item), items = item?.parent?.items, original = undefined) {
+  const written = writtenTier(item, file);
   const own = /^(\d+)/.exec(written);
   let tier = own ? Number(own[1]) : 0;
   if (kindOf(file) === "evolved") {
-    const original = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
-    const base = original ? tierRequirementOf(original, fileOf(original), items) : 0;
+    // "Relative to the Original Form's Tier of Power Requirement - before what changes it, its Higher Scales" (the user's, 2026-11-12):
+    // "+1 higher than that of Original Form", "Same as Original Form"; a number of its own (Golden Oozaru's 3+) is that number.
+    const on = (original !== undefined) ? original : originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
+    const base = on ? (Number(/^(\d+)/.exec(writtenTier(on))?.[1]) || 0) : 0;
     const plus = /\+\s*(\d+)/.exec(written);
-    if (plus) tier = base + Number(plus[1]);
+    if (plus && !own) tier = base + Number(plus[1]);
     else if (/same/i.test(written)) tier = base;
   }
   const scales = Math.max(0, Number(item?.system?.scales) || 0);
@@ -809,18 +831,68 @@ export function tierRequirementOf(item, file = fileOf(item), items = item?.paren
  * One Transformation's own Stress Test Requirement at a Grade, with Higher Scales and Prelude: its Grade's line or its file's; Scaling
  * "+2 a Higher Scale", Prelude "-3"; an Evolved Stage's "+N" over its Original Form's (the Form you are in). NaN where none is written.
  */
-export function ownStressRequirement(item, { grade, scales, prelude } = {}, items = item?.parent?.items) {
+export function ownStressRequirement(item, { grade, scales, prelude } = {}, items = item?.parent?.items, original = undefined) {
+  const file = fileOf(item);
+  if (kindOf(file) === "evolved") {
+    const on = (original !== undefined) ? original : originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
+    return on ? ownStressRequirement(on, {}, items) + evolvedAdd(item, { grade, scales, prelude }, items) : NaN;
+  }
+  const g = Math.max(1, Number(grade ?? item?.system?.grade) || 1);
+  const written = String(gradeRow(file, g).values.stress ?? file?.stress ?? "").trim();
+  const base = Number(/^-?\d+/.exec(written)?.[0]);
+  const s = Math.max(0, Number(scales ?? item?.system?.scales) || 0);
+  return base + (2 * s) - ((prelude ?? item?.system?.prelude) ? 3 : 0) - stressTakenOff(item, items);
+}
+
+/**
+ * An Evolved Stage's own part of a Stress Test Requirement: "Its Stress Test Requirement is a sum over the Original Form's" - its "+N",
+ * with its own Higher Scales and Prelude, less what others take off it.
+ */
+export function evolvedAdd(item, { grade, scales, prelude } = {}, items = item?.parent?.items) {
   const file = fileOf(item);
   const g = Math.max(1, Number(grade ?? item?.system?.grade) || 1);
   const written = String(gradeRow(file, g).values.stress ?? file?.stress ?? "").trim();
-  let base = Number(/^-?\d+/.exec(written)?.[0]);
-  if ((kindOf(file) === "evolved") || /^\+/.test(written)) {
-    const original = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
-    const add = Number(/\+\s*(\d+)/.exec(written)?.[1]) || 0;
-    base = original ? ownStressRequirement(original, {}, items) + add : NaN;
-  }
+  const add = Number(/\+\s*(\d+)/.exec(written)?.[1]) || 0;
   const s = Math.max(0, Number(scales ?? item?.system?.scales) || 0);
-  return base + (2 * s) - ((prelude ?? item?.system?.prelude) ? 3 : 0);
+  return add + (2 * s) - ((prelude ?? item?.system?.prelude) ? 3 : 0) - stressTakenOff(item, items);
+}
+
+/**
+ * What a Trait or Talent had takes off one Transformation's Stress Test Requirement (`stressFor: <transformation id> N`, a list) -
+ * Searing Anger's "Reduce the Stress Test Requirement for Seething Fury by 2"; a Transformation Trait's while it applies (True God of
+ * Time's 4 off Time Power, in Divinity Unleashed). An Evolved Stage's from a Trait of the Form it is on (`stressForOn:` - Legendary
+ * Super Saiyan's "the Legendary Evolved Stage with this Transformation as its Original Form").
+ */
+export function stressTakenOff(item, items = item?.parent?.items) {
+  const id = item?.system?.transformationId;
+  if (!id) return 0;
+  const sum = list => list.reduce((total, rest) => total + (Number(/-?\d+/.exec(rest)?.[0]) || 0), 0);
+  let off = sum(grantsFor(items, "stressFor", id));
+  if (kindOf(fileOf(item)) === "evolved") {
+    const on = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item.id));
+    if (on) off += sum(grantsFor(items, "stressForOn", id, each => each.system?.transformation === on.id));
+  }
+  return Math.abs(off);
+}
+
+/**
+ * What the Traits and Talents a character has say of one Transformation in a header that names it first - `stressFor: seething-fury 2`,
+ * `grantsAspectTo: evil-saiyan Natural (LV2)` - the rest of each entry naming that one. A Transformation Trait set aside, or a Racial Trait
+ * set aside, says nothing.
+ */
+function grantsFor(items, key, id, only = null) {
+  const out = [];
+  for (const each of Array.from(items ?? [])) {
+    if (!["racial", "talent"].includes(each.type) || (only && !only(each))) continue;
+    const trait = getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    if (!trait?.[key]) continue;
+    if (each.system?.transformation && transformationTraitAside(each, items)) continue;
+    for (const entry of String(trait[key]).split(";").map(part => part.trim()).filter(Boolean)) {
+      const [first, ...rest] = entry.split(/\s+/);
+      if (first === id) out.push(rest.join(" "));
+    }
+  }
+  return out;
 }
 
 /**
@@ -832,30 +904,99 @@ export function ownStressRequirement(item, { grade, scales, prelude } = {}, item
 export function stressRequirementFor(actor, item, options = {}) {
   const items = Array.from(actor?.items ?? []);
   const file = fileOf(item);
-  const own = ownStressRequirement(item, options, items);
+  const kind = kindOf(file);
   const leaving = new Set((inUseChanges(items, item, true) ?? []).filter(change => change["system.active"] === false).map(change => change._id));
   const others = transformationItems(actor).filter(each => (each.id !== item.id) && inUse(each) && !leaving.has(each.id)
     && (kindOf(fileOf(each)) !== "awakening"));
-  const all = [{ name: item.name, value: own }, ...others.map(each => ({ name: each.name, value: ownStressRequirement(each, {}, items) }))]
-    .filter(entry => Number.isFinite(entry.value)).sort((a, b) => b.value - a.value);
-  const parts = [];
-  let requirement = all[0]?.value ?? NaN;
-  if (all.length) parts.push(`${all[0].name} ${all[0].value}`);
-  for (const other of all.slice(1)) {
-    requirement += Math.floor(other.value / 2);
-    parts.push(`half of ${other.name}'s ${other.value}`);
-  }
-  // Step-by-Step: in a Form, into another Form of a higher Tier of Power Requirement.
-  if (kindOf(file) === "form") {
-    const from = transformationItems(actor).find(each => (each.id !== item.id) && inUse(each) && (kindOf(fileOf(each)) === "form"));
+  const worked = combinedRequirement([item, ...others], items, item, options);
+  let { requirement } = worked;
+  const parts = [...worked.parts];
+  // Step-by-Step: in a Form, into another Form of a higher Tier of Power Requirement - 2 lower within its Line. An Evolved Stage is "always
+  // 1 Stage higher than its Original Form" and "a part of its Line": from the Form it is on, 2 lower where it asks a higher Tier of Power
+  // than all of what it goes on (my reading).
+  const formOf = list => list.find(each => kindOf(fileOf(each)) === "form") ?? null;
+  const nowIn = transformationItems(actor).filter(each => (each.id !== item.id) && inUse(each));
+  if (kind === "form") {
+    const from = formOf(nowIn);
     if (from && (tierRequirementOf(item, file, items) > tierRequirementOf(from, fileOf(from), items))) {
       const sameLine = file.line && (String(fileOf(from)?.line ?? "") === String(file.line));
       requirement -= sameLine ? 2 : 1;
       parts.push(`Step-by-Step -${sameLine ? 2 : 1}`);
     }
   }
+  if (kind === "evolved") {
+    const under = nowIn.filter(each => ["form", "evolved"].includes(kindOf(fileOf(each))));
+    const top = Math.max(0, ...under.map(each => tierRequirementOf(each, fileOf(each), items)));
+    if (under.length && (tierRequirementOf(item, file, items, formOf(under)) > top)) {
+      requirement -= 2;
+      parts.push("Step-by-Step -2");
+    }
+  }
+  // Natural: every one of them; "an Evolved Stage does not gain ... Natural" from its Original.
   const natural = [item, ...others].every(each => aspectsOf(each, items).some(aspect => aspect.id === "natural"));
   return { requirement, parts, natural };
+}
+
+/**
+ * The Stress Test Requirement of those in use now - for a Stress Test to remain in them (one forced on failing a Steadfast Check, Straining's).
+ */
+export function stressRequirementInUse(actor) {
+  const items = Array.from(actor?.items ?? []);
+  const using = transformationsInUse(actor).filter(each => kindOf(fileOf(each)) !== "awakening");
+  if (!using.length) return { requirement: NaN, parts: [], natural: true };
+  const worked = combinedRequirement(using, items, null, {});
+  const natural = using.every(each => aspectsOf(each, items).some(aspect => aspect.id === "natural"));
+  return { ...worked, natural };
+}
+
+/**
+ * Those used together as one Requirement: "the Requirement of the Transformation with the highest Stress Test Requirement is increased by
+ * 1/2 (rounded down) of the Requirement of the others used with it". A Form and the Evolved Stages on it are one ("counts as its Original
+ * Form for all effects") - the Form's and each Evolved Stage's sum on it (Pinnacle: "the two sums", the user's). One whose file says it
+ * is added whole (`stressWhole:` - Autonomous Ultra Instinct's "added completely onto any Transformation used in conjunction with it,
+ * rather than being halved, even when it has the lower") is added whole, less `stressLessPerTier:` times the highest Tier of Power
+ * Requirement of the others.
+ */
+function combinedRequirement(list, items, entered, options) {
+  const optionsFor = each => ((entered && (each.id === entered.id)) ? options : {});
+  const form = list.find(each => kindOf(fileOf(each)) === "form") ?? null;
+  const evolved = list.filter(each => kindOf(fileOf(each)) === "evolved");
+  const entries = [];
+  if (form) {
+    const value = ownStressRequirement(form, optionsFor(form), items)
+      + evolved.reduce((sum, each) => sum + evolvedAdd(each, optionsFor(each), items), 0);
+    entries.push({ name: [form, ...evolved].map(each => each.name).join(" + "), value, whole: false, item: form });
+  }
+  for (const each of list.filter(one => !["form", "evolved"].includes(kindOf(fileOf(one))))) {
+    entries.push({ name: each.name, value: ownStressRequirement(each, optionsFor(each), items), whole: Boolean(fileOf(each)?.stressWhole),
+      item: each });
+  }
+  const valid = entries.filter(entry => Number.isFinite(entry.value));
+  for (const entry of valid.filter(one => one.whole)) {
+    const per = Number(fileOf(entry.item)?.stressLessPerTier) || 0;
+    const rest = valid.filter(one => one !== entry);
+    if (per && rest.length) {
+      const top = Math.max(0, ...rest.flatMap(one => (one.item === form) ? [form, ...evolved] : [one.item])
+        .map(each => tierRequirementOf(each, fileOf(each), items, form)));
+      entry.value -= per * top;
+      entry.less = per * top;
+    }
+  }
+  const halved = valid.filter(entry => !entry.whole || (valid.length === 1)).sort((a, b) => b.value - a.value);
+  const whole = valid.filter(entry => entry.whole && (valid.length > 1));
+  const parts = [];
+  let requirement = halved[0]?.value ?? 0;
+  if (halved.length) parts.push(`${halved[0].name} ${halved[0].value}`);
+  for (const other of halved.slice(1)) {
+    requirement += Math.floor(other.value / 2);
+    parts.push(`half of ${other.name}'s ${other.value}`);
+  }
+  for (const other of whole) {
+    requirement += other.value;
+    parts.push(`${other.name}'s ${other.value} whole${other.less ? ` (less ${other.less})` : ""}`);
+  }
+  if (!valid.length) requirement = NaN;
+  return { requirement, parts };
 }
 
 /**
@@ -920,4 +1061,113 @@ export function inAForm(actor) {
     const kind = kindOf(file);
     return (kind === "evolved") || ((kind === "form") && (String(file?.stage ?? "") !== "0"));
   });
+}
+
+/** Its Tier of Power Requirement as its file writes it for its Grade - before Higher Scales, Prelude or an Original. */
+function writtenTier(item, file = fileOf(item)) {
+  return String(gradeRow(file, lettersOf(item, file).G).values.tier ?? file?.tier ?? "").trim();
+}
+
+/** Mastered - once or more, or Peaked ("cannot be Mastered, but counts as Mastered"). */
+export function isMastered(item) {
+  const file = fileOf(item);
+  if (!file) return false;
+  return parseAspects(file.aspects).some(aspect => aspect.id === "peaked") || ((Number(item.system?.mastery) || 0) >= 1);
+}
+
+/** Fully Mastered: "each level of Difficult is an extra Mastery ... all of them is Fully Mastered" - or Peaked. Not the Transcendent Trait's. */
+export function isFullyMastered(item) {
+  const file = fileOf(item);
+  if (!file) return false;
+  const aspects = parseAspects(file.aspects);
+  if (aspects.some(aspect => aspect.id === "peaked")) return true;
+  const difficult = Number(aspects.find(aspect => aspect.id === "difficult")?.level) || 0;
+  return (Number(item.system?.mastery) || 0) >= 1 + difficult;
+}
+
+/**
+ * A Form's Form Type for one in use: its own - an Evolved Stage's "Transformation Type: Same as Original Form" (`subtype: same`) read off
+ * the Form it is on.
+ */
+export function formTypeFor(item, items = item?.parent?.items) {
+  const file = fileOf(item);
+  const own = formTypeOf(file);
+  if (own || (kindOf(file) !== "evolved")) return own;
+  const on = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
+  return on ? formTypeFor(on, items) : "";
+}
+
+/**
+ * Its Aspects with its Original Form's, for an Evolved Stage ("it gains the Aspects of the Original Form ... except Prelude, Natural and
+ * Scaling") - what asks whether "a Transformation with the Super Saiyan Form Aspect" is the one in use.
+ */
+export function aspectsWithOriginal(item, items = item?.parent?.items) {
+  const own = aspectsOf(item, items);
+  if (kindOf(fileOf(item)) !== "evolved") return own;
+  const on = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
+  const ids = new Set(own.map(aspect => aspect.id));
+  const theirs = on ? aspectsOf(on, items).filter(aspect => !["prelude", "natural", "scaling"].includes(aspect.id) && !ids.has(aspect.id)) : [];
+  return [...own, ...theirs];
+}
+
+/**
+ * Why an Evolved Stage does not fit the Form it would go on - said, never refused (the user's): Unique to another Form ("only on the Form
+ * listed in brackets, and its Variants"), "Original Form is Mastered", "Fully Mastered <Form>". "" where nothing is amiss.
+ */
+export function evolvedUnmet(item, items = item?.parent?.items) {
+  const file = fileOf(item);
+  if (kindOf(file) !== "evolved") return "";
+  const on = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item?.id));
+  if (!on) return "it goes on the Form you are in, and you are in none";
+  const onFile = fileOf(on);
+  const said = [];
+  const unique = /unique\s*\(([^)]+)\)/i.exec(String(file.evolvedType ?? ""));
+  if (unique) {
+    const wanted = aspectId(unique[1]);
+    const names = [onFile?.id, aspectId(onFile?.name), String(onFile?.variantOf ?? "")].map(each => aspectId(each));
+    if (!names.includes(wanted)) said.push(`Unique to ${unique[1].trim()}`);
+  }
+  const prerequisites = String(file.prerequisites ?? "");
+  if (/original form is mastered/i.test(prerequisites) && !isMastered(on)) said.push(`${on.name} is not Mastered`);
+  const fully = /fully mastered\s+([^,]+)/i.exec(prerequisites);
+  if (fully && !isFullyMastered(on)) said.push(`${on.name} is not Fully Mastered`);
+  return said.join("; ");
+}
+
+// What the effects language asks of Transformations (conditions.mjs), through aside.mjs so that it imports nothing of them:
+// - originalMastered / originalFullyMastered: [Acclimated] - "If the Original Form is Mastered (or Fully Mastered)" - the Form in use;
+// - aspectInUse: one with that Aspect in use - an Evolved Stage with its Original's ("While in a Transformation with the Super Saiyan Form
+//   Aspect").
+useTransformationQuestion("originalMastered", actor => isMastered(originalFormOf(actor?.items)));
+useTransformationQuestion("originalFullyMastered", actor => isFullyMastered(originalFormOf(actor?.items)));
+useTransformationQuestion("aspectInUse", (actor, name) => transformationsInUse(actor)
+  .some(item => aspectsWithOriginal(item, actor.items).some(aspect => aspect.id === aspectId(name))));
+
+/**
+ * The Normal State: "not using an Enhancement or a Form" - a Null Stage "counts as your Normal State" (Restricted - Untransformed's).
+ */
+export function inNormalState(actor) {
+  return !transformationsInUse(actor).some(item => {
+    const file = fileOf(item);
+    const kind = kindOf(file);
+    return (kind === "enhancement") || (kind === "evolved") || ((kind === "form") && (String(file?.stage ?? "") !== "0"));
+  });
+}
+
+/**
+ * In the Transformation a Restricted - Transformation chose: "enhancement" or "form" (a Form not a Null Stage, which is the Normal State;
+ * an Evolved Stage, which counts as its Original); "line:<line>", a Form of that Line; or one by its id - a Variant of it counting as it
+ * ("its name counts as the listed one's").
+ */
+export function inTransformationOf(actor, wanted) {
+  const using = transformationsInUse(actor);
+  const kinds = item => kindOf(fileOf(item));
+  if (wanted === "enhancement") return using.some(item => kinds(item) === "enhancement");
+  if (wanted === "form") return using.some(item => (kinds(item) === "evolved")
+    || ((kinds(item) === "form") && (String(fileOf(item)?.stage ?? "") !== "0")));
+  if (String(wanted).startsWith("line:")) {
+    const line = String(wanted).slice(5);
+    return using.some(item => (kinds(item) === "form") && (String(fileOf(item)?.line ?? "") === line));
+  }
+  return using.some(item => (item.system?.transformationId === wanted) || (String(fileOf(item)?.variantOf ?? "") === wanted));
 }
