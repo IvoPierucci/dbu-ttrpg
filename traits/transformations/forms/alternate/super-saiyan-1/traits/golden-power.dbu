@@ -15,9 +15,10 @@ text: >
 
 # (1) Duel Clashes 1(T), (2) the Damage Category below Bruised: the table's.
 
-# (3) Entering it: Raging till the end of your turn.
+# (3) Entering it: Raging till the end of your turn - or Superior till the start of your next, where This is a Super Saiyan (4) offers it (its
+# button: Automatic, Superior; Triggered, asked which - chat.mjs ragingOrSuperior).
 [triggered/transform, effect 3]
-enterState(raging, 1, turn);
+ragingOrSuperior();
 
 # (4) Entering it, once an Encounter: a Ki Surge.
 [triggered/transform, 1/encounter, effect 4]

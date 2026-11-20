@@ -7251,8 +7251,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         bonuses: Object.entries(BONUS_ATTRIBUTES).map(([label, attribute]) => ({ label,
           value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
         aspects: file ? aspectsOf(item, all).map(aspect => ({ label: aspectLabel(aspect), summary: aspectFile(aspect.id)?.summary ?? "" })) : [],
+        // Each Trait's text as its own Item has it - an Option effect showing only what was chosen (S-Cells') - or as written, where none is had.
         traits: own.map(trait => ({ name: trait.name, note: noteOf(trait), off: Boolean(offOf(trait)),
-          lines: racialTraitLines({ system: { text: trait.text ?? "", chosen: [] }, flags: { "dbu-ttrpg": { sourceId: trait.id } } }) }))
+          lines: racialTraitLines(all.find(each => (each.type === "racial") && (each.system?.transformation === item.id)
+            && (each.flags?.["dbu-ttrpg"]?.sourceId === trait.id))
+            ?? { system: { text: trait.text ?? "", chosen: [] }, flags: { "dbu-ttrpg": { sourceId: trait.id } } }) }))
       };
     };
     const current = items.filter(item => kindOfItem(item) === this.#transformationSection);

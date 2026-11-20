@@ -100,6 +100,10 @@ const TABLE = [
   { key: "unflinching-weapon", label: "Hit by an Armed Attack with a Physical Weapon for no Damage", provides: [],
     doc: "Never fired: Unflinching Resilience (2)'s block is its Triggered/Automatic button, read where the hit is settled "
        + "(chat.mjs unflinchingWeapon)." },
+  { key: "superior-instead", label: "An effect would put you in the Raging State", provides: [],
+    doc: "Never fired: This is a Super Saiyan (4)'s and Deeper into the Depths (4)'s block is its Triggered/Automatic button - \"you may enter "
+       + "the Superior State instead of the Raging State\" - read where Golden Power (3) or Full Power of the Super Saiyan (5) is used "
+       + "(chat.mjs ragingOrSuperior): Automatic, Superior; Triggered, asked which." },
   { key: "swagger-ended", label: "The effects chosen through Swaggering Wager end", provides: [],
     doc: "Never fired: Swaggering Wager (2)'s block is its Triggered/Automatic button, read as they end (chat.mjs swaggerEnds)." },
   { key: "concentrated-flare", label: "The Power Flare option of the Defend Maneuver is rolled", provides: [],

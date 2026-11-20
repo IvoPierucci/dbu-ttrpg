@@ -1409,3 +1409,7 @@ export function fusedFormIds(actor) {
   return [...first].filter(id => rest.every(set => set.has(id)));
 }
 useTransformationQuestion("normalState", actor => inNormalState(actor));
+// This is a Super Saiyan (3), Deeper into the Depths (3): a Trait of one in use, wholly in use (not by its [Permanent] effects alone), whose
+// file says `superiorAsRaging: true`.
+useTransformationQuestion("superiorAsRaging", actor => Array.from(actor?.items ?? []).some(each => (each.type === "racial") && each.system?.transformation
+  && getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.superiorAsRaging && (traitStanding(each, actor.items) === "in")));

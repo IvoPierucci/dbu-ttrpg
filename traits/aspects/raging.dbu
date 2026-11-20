@@ -14,7 +14,8 @@ text: >
 
 ---
 
+# In the Raging State: Wound 2(T) - the Superior State too where a Trait says to treat it as Raging for this Aspect (superiorAsRaging).
 [passive]
-if (inState("raging")) {
+if (inState("raging") || (inState("superior") && superiorAsRaging)) {
     wound += 2(T);
 }

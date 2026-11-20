@@ -895,6 +895,8 @@ const PREDICATES = {
   // "While in your Normal State" - no Form, no Enhancement: always, while Transformations are not in this system (Disguised Shadow's).
   /** The Normal State: "not using an Enhancement or a Form" - a Null Stage is it (transformations.mjs inNormalState). */
   normalState: scope => transformationQuestion("normalState", scope.data?.parent) === true,
+  /** "Treat the Superior State as the Raging State for the effects of the Raging Aspect" - a Trait of one in use (This is a Super Saiyan (3)). */
+  superiorAsRaging: scope => transformationQuestion("superiorAsRaging", scope.data?.parent) === true,
   // Natural Dragon: "you may increase your Size Category to Gigantic while you possess that stack of Absorption" - chosen as it was
   // gained (chat.mjs absorbCharacter), a stack still held.
   absorbedGigantic: scope => (scope.data?.parent?.flags?.["dbu-ttrpg"]?.absorbedGigantic === true)

@@ -974,6 +974,13 @@ export const VERBS = Object.freeze({
     doc: "A stack of Impaired on whoever this Moment says was knocked through, till the start of your next turn, on your clock "
        + "(chat.mjs impairKnocked) - Draconic Physique's Elemental Dragon."
   },
+  ragingOrSuperior: {
+    args: [0, 1],
+    names: [0],
+    doc: "The Raging State till the end of your turn - or, where an effect offers the Superior State instead (the `superior-instead` "
+       + "Moment's button: Automatic, it; Triggered, asked which), Superior till the start of your next turn (chat.mjs ragingOrSuperior). "
+       + "Golden Power (3)'s, Full Power of the Super Saiyan (5)'s."
+  },
   chaosDie: {
     args: [0, 1],
     names: [0],

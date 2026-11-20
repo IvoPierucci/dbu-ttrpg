@@ -548,6 +548,9 @@ const TABLE = [
   // Fusion Methods & Modifiers (traits/other/fusion-method/, fusion-modifier/).
   { key: "stress.autoSucceed", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Every Stress Test passed, whatever it rolls (Maximum Metamorese (3); chat.mjs postTransformation)." },
+  // This is a Super Saiyan (4)'s button carries this, nothing reads it: what it says is its Moment's (chat.mjs ragingOrSuperior).
+  { key: "raging.superiorInstead", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "The Superior State offered in place of the Raging State an effect gives (This is a Super Saiyan (4)). Its block is a button." },
   // The Chaos Die's (chat.mjs rollChaosDie).
   { key: "chaos.die", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Chaos Die rolled at the start of each Combat Round (Erratic Majin (7); Internalized Chaos's and Sensation of Purity's outside it)." },

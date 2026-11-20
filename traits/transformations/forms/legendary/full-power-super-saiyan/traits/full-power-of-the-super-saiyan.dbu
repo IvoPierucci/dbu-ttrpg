@@ -22,6 +22,6 @@ dice.extra.category += min(3, floor((battlebornstrike.stacks + battleborndodge.s
 
 # (3)(4) Damage Reduction and Wound by Battle Born spent: the table's.
 
-# (5) Entering it, once an Encounter: Raging till the end of your turn.
+# (5) Entering it, once an Encounter: Raging till the end of your turn - or Superior, where Deeper into the Depths (4) offers it.
 [triggered/transform, 1/encounter, effect 5]
-enterState(raging, 1, turn);
+ragingOrSuperior();

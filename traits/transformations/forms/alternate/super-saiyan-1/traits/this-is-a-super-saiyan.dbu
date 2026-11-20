@@ -7,6 +7,8 @@ mastery: 1
 permanent: 1, 2
 # (1) Draining and Power High lost; Natural (LV1) and Heartbeat (LV1).
 aspects: -Draining, -Power High, +Natural (LV1), +Heartbeat (LV1)
+# (3) The Superior State as the Raging State for the Raging Aspect (its file reads superiorAsRaging).
+superiorAsRaging: true
 description: >
   Your comfort in this form allows you to draw out even greater power, overwhelming your enemies.
 text: >
@@ -18,4 +20,11 @@ text: >
 
 ---
 
-# (2) Full Power (added from the Transformations tab), (3)(4) Superior as Raging: the table's.
+# (2) Full Power: added from the Transformations tab, its Prerequisite said as it is entered.
+
+# (3) Superior as Raging for the Raging Aspect: its header.
+
+# (4) Superior in place of Golden Power (3)'s Raging - this block is its Triggered/Automatic button, its Moment never fired: Automatic,
+# Superior; Triggered, asked which (chat.mjs ragingOrSuperior).
+[triggered/superior-instead, effect 4]
+allow raging.superiorInstead;

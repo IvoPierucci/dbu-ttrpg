@@ -83,8 +83,11 @@ export function plainText(text) {
   return String(text ?? "").replace(LINK, "$1");
 }
 
-/** An Option effect's line: "(2)-[Option]:" - choose one - or "(3)-[Multi-Option/2]:" - choose two. */
-const OPTION_LINE = /^(\(\d+\)-\[(?:Option|Multi-Option\/\d+)\]):/;
+/**
+ * An Option effect's line: "(2)-[Option]:" - choose one - or "(3)-[Multi-Option/2]:" - choose two; with other Keywords beside it too,
+ * S-Cells' "(3)-[Permanent, Option]:".
+ */
+const OPTION_LINE = /^(\(\d+\)-\[(?:[^\]]*?,\s*)?(?:Option|Multi-Option\/\d+)(?:\s*,[^\]]*)?\]):/;
 
 /** Which Option effect an Option is of: its own `optionEffect:`, or its Trait's. */
 function optionEffectOf(option, trait = null) {
@@ -104,7 +107,7 @@ function optionBelongs(option, item, effect) {
 export function optionGroupsOf(trait) {
   const options = racialOptionsOf(trait?.id);
   if (!options.length) return [];
-  const groups = printedLines(trait.text || "").map(line => /^\((\d+)\)-\[(Option|Multi-Option\/(\d+))\]:/.exec(line))
+  const groups = printedLines(trait.text || "").map(line => /^\((\d+)\)-\[(?:[^\]]*?,\s*)?(Option|Multi-Option\/(\d+))(?:\s*,[^\]]*)?\]:/.exec(line))
     .filter(Boolean).map(match => ({ effect: Number(match[1]), count: Number(match[3]) || 1 }));
   if (!groups.length) groups.push({ effect: Number(trait.optionEffect) || 0, count: Math.max(1, Number(trait.options) || 1) });
   return groups.map(group => ({ ...group, options: options.filter(option => (groups.length === 1)
@@ -221,7 +224,7 @@ export function effectLineOf(item, n) {
   const at = lines.findIndex(line => line.startsWith(`(${number})-`));
   if (at < 0) return "";
   const line = lines[at];
-  const kind = /^(\(\d+\)-\[(Option|Multi-Option\/\d+|Choice)\]):/.exec(line);
+  const kind = /^(\(\d+\)-\[(?:[^\]]*?,\s*)?(Option|Multi-Option\/\d+|Choice)(?:\s*,[^\]]*)?\]):/.exec(line);
   const picked = (kind?.[2] === "Choice") ? choicePicked(item)
     : (item.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value)).filter(Boolean);
   if (!kind || !picked.length) return plainText(line);

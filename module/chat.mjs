@@ -2002,6 +2002,27 @@ export async function absorbCharacter(actor, target) {
   }
 }
 
+/**
+ * Golden Power (3): "Enter the Raging State until the end of your turn" - and This is a Super Saiyan (4): "When you use the 3rd effect of
+ * Golden Power, you may enter the Superior State instead of the Raging State. If you do, the effect lasts until the start of your next
+ * turn." The second's button (the `superior-instead` Moment), as the user laid it out: Automatic, Superior; Triggered, asked which. Not had
+ * (no Mastery yet, not in it), Raging. Whether the first is used at all is its own button's - Triggered, ticked as you transform.
+ */
+export async function ragingOrSuperior(actor) {
+  if (!actor) return;
+  const offered = triggersFor(actor, ["superior-instead"]);
+  let superior = false;
+  if (offered.length) {
+    superior = offered.some(entry => automaticIds(actor).has(entry.blockId))
+      || ((await askPlayerChoice(actor, `${actor.name}: which State`, [
+        { value: "raging", label: "Raging, till the end of your turn" },
+        { value: "superior", label: "Superior, till the start of your next turn" }])) === "superior");
+  }
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  return superior ? enterState(actor, "superior", 1, "start-of-next-turn", "Superior instead of Raging")
+    : enterState(actor, "raging", 1, "turn", "Raging");
+}
+
 /** The mark that holds a Chaos Die's result till the end of its Combat Round: its stacks the result (Pure Form's own file). */
 const CHAOS_DIE = "chaos-die";
 
