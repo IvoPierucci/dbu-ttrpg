@@ -20,7 +20,13 @@ if (inState("determined")) {
     magic.mod += 1(T);
 }
 
-# (2) Clashes on Cognitive or Morale won at Raging 3+, (4) the Cross Counter without a Counter Action: the table's.
+# (2) Clashes on Cognitive or Morale won at Raging 3+: the table's.
+
+# (4) Targeted by an Attacking Maneuver, once a Round: the Defend Maneuver without a Counter Action - its Cross Counter Option alone
+# (chat.mjs payCounter).
+[triggered/counter-maneuver, 1/round, effect 4]
+requires counterManeuver("defend") && defendingWith("crossCounter");
+allow counter.free;
 
 # (3) In the Raging State's 2nd Level or higher: your Attacking Maneuvers' Damage Category 1 higher (its once a Round not counted).
 [passive, effect 3]

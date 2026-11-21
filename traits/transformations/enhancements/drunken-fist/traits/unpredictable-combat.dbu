@@ -15,7 +15,13 @@ text: >
 
 ---
 
-# (1) The Cross Counter's Defense Value kept, (5) the Cross Counter without a Counter Action: the table's.
+# (1) The Cross Counter's Defense Value kept: the table's.
+
+# (5) Targeted by an Attacking Maneuver, once a Round: the Cross Counter Option of the Defend Maneuver without a Counter Action
+# (chat.mjs payCounter).
+[triggered/counter-maneuver, 1/round, effect 5]
+requires counterManeuver("defend") && defendingWith("crossCounter");
+allow counter.free;
 
 # (2) A Combat Roll's Critical Result: its Dice Score 1(T) higher.
 [passive, effect 2]

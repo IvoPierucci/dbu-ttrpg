@@ -326,6 +326,13 @@ const PREDICATES = {
   signatureTechnique: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique)
     || customBuffBasicIsSignature(scope.data, scope.context?.maneuver?.id),
 
+  /** The Counter Maneuver being paid for, by its id - counter-maneuver's (chat.mjs payCounter). */
+  counterManeuver: (scope, id) => String(scope.context?.maneuverId ?? "") === String(id?.value ?? id ?? ""),
+  /** The Defend's Option chosen - "Cross Counter", "crossCounter" or "cross-counter" alike (counter-maneuver, defending). */
+  defendingWith: (scope, option) => {
+    const key = value => String(value ?? "").toLowerCase().replace(/[^a-z]/g, "");
+    return Boolean(scope.context?.defence) && (key(scope.context.defence) === key(option?.value ?? option));
+  },
   /** A Signature Technique being declared - Spirit of Battle (6)'s. */
   usingSignature: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique),
   /** An Ultimate Signature Technique being declared - Questing Wisdom's. */

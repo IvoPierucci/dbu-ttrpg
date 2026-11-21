@@ -2708,6 +2708,11 @@ const TARGET_SIDE = Object.freeze({
 /** Take the Actions, once the Maneuver has actually committed. */
 async function payActions(actor, maneuver, spent = null) {
   const { kind, amount } = actionCostOf(maneuver, spent);
+  // Any Counter Maneuver an effect makes free (chat.mjs payCounter).
+  if ((kind === "counter") && amount) {
+    await (await import("./chat.mjs")).payCounter(actor, maneuver, Math.max(0, amount - (Number(maneuver.actionDiscount) || 0)));
+    return;
+  }
   // "For Villainous Maneuvers, you may use your Adversary Actions as if they were Actions for their Action Cost."
   if ((kind === "standard") && await adversaryActionsFor(actor, maneuver, amount, actionsWithin(actor, "standard"))) {
     await spendActions(actor, amount, "counter");

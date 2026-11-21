@@ -19,9 +19,14 @@ text: >
 
 ---
 
-# (2) Armored: its header. (3) Sudden Stop without a Counter Action: the table's. (4) Its Grades: Growth G (its Aspect), its Attribute Modifier
+# (2) Armored: its header. (3) Below. (4) Its Grades: Growth G (its Aspect), its Attribute Modifier
 # Bonuses G(T).
 
 # (1) Punching Down's Extra Dice a Category higher.
 [passive, effect 1]
 punchingDown.category += 1;
+
+# (3) Enormous or larger, once a Round: the Sudden Stop Maneuver without spending a Counter Action (chat.mjs payCounter).
+[triggered/counter-maneuver, 1/round, effect 3]
+requires counterManeuver("sudden-stop") && size.steps >= 2;
+allow counter.free;

@@ -18,4 +18,9 @@ text: >
 
 ---
 
-# (3)(4) The Direct Hit without a Counter Action, its Soak doubled: the table's.
+# (4) The Direct Hit's Soak doubled instead of 1/2 more, once an Encounter: the table's.
+
+# (3) Once a Round: the Direct Hit Option of the Defend Maneuver without a Counter Action (chat.mjs payCounter).
+[triggered/counter-maneuver, 1/round, effect 3]
+requires counterManeuver("defend") && defendingWith("directHit");
+allow counter.free;

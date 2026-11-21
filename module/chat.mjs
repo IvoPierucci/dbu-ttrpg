@@ -11621,7 +11621,7 @@ async function playEvasion(message, actor, itemId) {
     return;
   }
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -11657,7 +11657,7 @@ async function playBlockade(message, actor, maneuver) {
   // Ki first, then the Counter Action, so a character who cannot pay for it has spent
   // neither. "KP Cost: 2(T)", which is what the Maneuver's own price comes to.
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -11734,7 +11734,7 @@ async function playSuddenStop(message, actor, maneuver) {
 
   // Paid once the number is in, so backing out of the question costs nothing. No Ki -
   // "KP Cost: N/A" - so the Counter Action is the whole price.
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) return;
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
   await recordManeuverType(actor, "counter");
@@ -15084,7 +15084,7 @@ async function playJudo(message, actor, itemId) {
     return;
   }
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -15141,7 +15141,7 @@ async function playTechniqueBlock(message, actor, itemId) {
   }
   const ki = techniqueBlockKi(attack, item) ?? 0;
   if (ki && !await spendManeuverCost(actor, maneuver, ki)) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     if (ki) await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -15170,7 +15170,7 @@ async function playDivineCounter(message, actor, maneuver) {
   if (why) return ui.notifications.warn(why);
   if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Round.`);
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -15228,7 +15228,7 @@ async function playDivineFlex(message, actor, maneuver) {
   if (why) return ui.notifications.warn(why);
   if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Round.`);
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -15306,7 +15306,7 @@ async function playStardust(message, actor, itemId) {
     { action: "physical", label: `Physical Strike ${by.physical}` }, { action: "energy", label: `Energy Strike ${by.energy}` }]);
   if (!foundation) return;
   if (!await spendManeuverCost(actor, maneuver, stardustKi(actor, item, attack))) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -16139,7 +16139,7 @@ async function sacrificePlay(message, actor, item) {
   if (!target) return;
   const maneuver = uniqueDefinitionOf(item);
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, 1, "counter")) {
+  if (!await payCounter(actor, maneuver, 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -21426,7 +21426,7 @@ async function playRetreat(message, actor, item) {
     return;
   }
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -28522,7 +28522,7 @@ async function takeFloatMirror(message, actor, item) {
   if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${actor.name}: Float Mirror is once a Combat Encounter.`);
   const ki = 8 * kiCostTier(actor);
   if ((Number(actor.system.ki?.value) || 0) < ki) return ui.notifications.warn(`${actor.name} needs ${ki} Ki for Float Mirror.`);
-  if (!await spendActions(actor, 1, "counter")) return;
+  if (!await payCounter(actor, maneuver, 1)) return;
   if (!await spendManeuverCost(actor, { name: "Float Mirror" }, ki)) return;
   await recordManeuverType(actor, "counter");
   await recordManeuverUse(actor, maneuver);
@@ -29539,7 +29539,7 @@ async function playGodBindCounter(message, actor) {
   if (why) return ui.notifications.warn(why);
   if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Encounter.`);
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, 1, "counter")) {
+  if (!await payCounter(actor, maneuver, 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -30261,7 +30261,7 @@ async function takeOutOfSequence(message, actor, offer) {
       }
     }
     // Pinpoint Combat (3): "Your Ally may allow you to spend their Counter Action instead of your own" - paid already.
-    if (!offer.counterPaid && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+    if (!offer.counterPaid && !await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) return;
     // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
     await recordManeuverType(actor, "counter");
 
@@ -31953,7 +31953,7 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
   if (!protector && !refinedFree && !pacifistFree && !syncFree && !furyFree && !markWall && !shinjinFree
-    && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+    && !await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
   // Battle Goo (3): "if a Goop uses the Intervene Maneuver, they are destroyed after using the Maneuver" (combat.mjs).
   if (actor.getFlag?.(SCOPE, "minionKind") === "goop") await requestActorUpdate(actor, { [`flags.${SCOPE}.goopIntervened`]: true });
@@ -37256,7 +37256,7 @@ async function barrierStage(message, attack, { user, item, covers, massive }) {
   const maneuver = uniqueDefinitionOf(item);
   const cost = maneuverKiCost(maneuver, null, user) + (chosen.all ? massiveKi : 0);
   if (!await spendManeuverCost(user, maneuver, cost)) return;
-  if (!await spendActions(user, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(user, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(user, { ...maneuver, kiCost: cost });
     return;
   }
@@ -37336,7 +37336,7 @@ async function blockStage(message, attack, target, shields) {
     { combatRoll: true, formula: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(target, null, "strike"),
       parts: windowParts(target, parts) } });
   if (!ready) return;
-  if (!await spendActions(target, 1, "counter")) return;
+  if (!await payCounter(target, getManeuver("block") ?? { id: "block", name: "Block" }, 1)) return;
   await recordManeuverType(target, "counter");
 
   const roll = await rollSide(target, parts, {
@@ -38049,7 +38049,7 @@ async function enterDuel(message, actor) {
   const initiating = await askInitiatingAttack(actor, attack);
   if (!initiating) return;
 
-  if (!await spendActions(actor, 1, "counter")) return;
+  if (!await payCounter(actor, getManeuver("duel") ?? { id: "duel", name: "Duel" }, 1)) return;
   if (initiating.cost && !await spendManeuverCost(actor, { name: initiating.name }, initiating.cost)) {
     await refundActions(actor, 1, "counter");
     return;
@@ -38184,7 +38184,7 @@ async function playMirror(message, actor, itemId) {
   }
   const cost = maneuverKiCost(maneuver, null, actor);
   if (!await spendManeuverCost(actor, maneuver, cost)) return;
-  if (!await spendActions(actor, 1, "counter")) {
+  if (!await payCounter(actor, maneuver, 1)) {
     await refundManeuverCost(actor, { ...maneuver, kiCost: cost });
     return;
   }
@@ -38335,7 +38335,7 @@ async function askInitiatingAttack(actor, attack) {
  * Capacity". The user's ruling: they spend 1 Counter Action and meet the requirement themselves.
  */
 async function joinDuel(message, attack, actor) {
-  if (!await spendActions(actor, 1, "counter")) return;
+  if (!await payCounter(actor, getManeuver("duel") ?? { id: "duel", name: "Duel" }, 1)) return;
   await recordManeuverType(actor, "counter");
   await actor.update({ "system.diminishingDefense": (Number(actor.system.diminishingDefense) || 0)
     + (Number(actor.system.diminishing?.defense?.perAttack) || 0) });
@@ -41163,8 +41163,11 @@ async function defendAgainst(message, target, attack, then = chooseDefence, pres
   // spent here, because this path does not go through useManeuver. Karmic Desperation
   // is the one thing that waives it, and it would have had nothing to waive.
   const answered = atMoment(target, "defending", { attack: true, attacker: true, attackerUuid: attack?.attackerUuid ?? "",
-    charges: Number(attack?.energyCharges) || 0 });
+    charges: Number(attack?.energyCharges) || 0, defence: chosen.defence });
   const free = answered.slots?.["defend.free"] === true;
+  // A Counter Maneuver made free by an effect - by its Option where it names one (Frenzied Assault (4)'s Cross Counter, Mind over Monkey
+  // (3)'s Direct Hit): counter-maneuver, asked or Automatic as each says (payCounter).
+  const freed = !free && await counterFree(target, defend0(), 1, { defence: chosen.defence });
   // Legacy of the Scholars (3): the Guard's Ki not raised by the attack's Energy Charges.
   const noSurcharge = answered.slots?.["defend.noSurcharge"] === true;
   // Martial Artist (3): a stack of Tension for it - "the Guard Option of the Defend Maneuver has its Ki Point Cost (before
@@ -41180,7 +41183,7 @@ async function defendAgainst(message, target, attack, then = chooseDefence, pres
   // Ki Points to use the Defend Maneuver without spending a Counter Action" - asked before anything is paid, once a Round; its Ki
   // paid with the Defend's.
   const angelCost = 3 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
-  const angel = !free && (target.system?.effects?.slots?.["angelRaised.defend"] === true)
+  const angel = !free && !freed && (target.system?.effects?.slots?.["angelRaised.defend"] === true)
     && ((Number(target.system.actions?.counterLeft) || 0) <= 0) && (target.getFlag?.(SCOPE, "angelDefendRound") !== roundKey())
     && !alliesOnScene(target).some(ally => ally.uuid === attack?.attackerUuid)
     && ((Number(target.system.ki?.value) || 0) >= (cost + angelCost))
@@ -41200,18 +41203,20 @@ async function defendAgainst(message, target, attack, then = chooseDefence, pres
   const parryWith = dueling ? [...parryWeapon, dueling] : parryWeapon;
 
   // Perfect Counter (2): "use the Parry option of the Defend Maneuver without spending a Counter Action" - asked, once a Round.
-  const perfect = !free && !angel && (chosen.defence === "parry") && (target.system?.effects?.slots?.["counter.perfectParry"] === true)
+  const perfect = !free && !freed && !angel && (chosen.defence === "parry") && (target.system?.effects?.slots?.["counter.perfectParry"] === true)
     && (target.getFlag?.(SCOPE, "perfectParryRound") !== roundKey())
     && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Perfect Counter` },
       content: "<p data-tooltip=\"Once a Round\">This Parry without a Counter Action?</p>", rejectClose: false });
   if (perfect) await target.setFlag(SCOPE, "perfectParryRound", roundKey());
   // Dual Wielding Specialist (2): "Use the Parry effect of the Defend Maneuver without spending a Counter Action" - 2+ Weapons
   // wielded, asked, once a Round (one or the other of its two).
-  const dual = !free && !perfect && !angel && (chosen.defence === "parry") && await (await import("./maneuvers.mjs")).askDualParry(target);
+  const dual = !free && !freed && !perfect && !angel && (chosen.defence === "parry") && await (await import("./maneuvers.mjs")).askDualParry(target);
   // Shinjin Genes (6): 2 Adaptation Points for its Counter Action, asked, once a Round. Defensive Design (5)'s, once an Encounter.
-  const shinjin = !free && !perfect && !dual && !angel && await shinjinFreeCounter(target, "the Defend Maneuver");
+  // Made free by an effect (payCounter) counts as Shinjin Genes' would: nothing after it asked.
+  let shinjin = freed;
+  if (!shinjin && !free && !perfect && !dual && !angel) shinjin = await shinjinFreeCounter(target, "the Defend Maneuver");
   const designed = !free && !perfect && !dual && !angel && !shinjin && await defensiveFreeDefend(target);
-  if (!free && !perfect && !dual && !angel && !shinjin && !designed && !await spendActions(target, 1, "counter")) {
+  if (!free && !freed && !perfect && !dual && !angel && !shinjin && !designed && !await spendActions(target, 1, "counter")) {
     // No Counter Action to pay with after all: its Ki back - Angel-Raised's too.
     await refundManeuverCost(target, { name: "Defend", kiCost: cost + (angel ? angelCost : 0) });
     return;
@@ -42321,7 +42326,7 @@ async function playDivinePeace(message, actor, maneuver) {
   const off = Number(actor.system.effects?.slots?.["divinePeace.costOff"]?.add) || 0;
   const cost = Math.max(0, (Number(paid.ki) || 0) + (Number(paid.divine) || 0) + charges - off);
   if (cost && !await spendManeuverCost(actor, maneuver, cost)) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 2, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 2)) {
     if (cost) await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -42344,7 +42349,7 @@ async function playDivineMuscle(message, actor, maneuver) {
   if (why) return ui.notifications.warn(why);
   if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Round.`);
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+  if (!await payCounter(actor, maneuver, maneuver.actionCost ?? 1)) {
     await refundManeuverCost(actor, maneuver);
     return;
   }
@@ -43224,4 +43229,27 @@ async function stacksOnRoll(actor, slot, attackingManeuver) {
     labels.push(`${entry.label} (${n})`);
   }
   return { spent, value: total * tier, label: labels.join(", ") };
+}
+
+/** The Defend Maneuver's definition, for counter-maneuver's `maneuverId`. */
+function defend0() {
+  return getManeuver("defend") ?? { id: "defend", name: "Defend" };
+}
+
+/**
+ * Whether an effect makes this Counter Maneuver free: counter-maneuver answered - Automatic, or asked as its button says - with
+ * `counter.free`, its `requires` naming the Maneuver (counterManeuver) and, for the Defend, the Option (defendingWith). Said.
+ */
+async function counterFree(actor, maneuver, amount = 1, extra = {}) {
+  if (!actor || !game.combat?.started) return false;
+  const answered = await answerFor(actor, "counter-maneuver", { maneuverId: String(maneuver?.id ?? ""), ...extra });
+  if (answered?.slots?.["counter.free"] !== true) return false;
+  ui.notifications.info(`${actor.name}: ${maneuver?.name ?? "the Counter Maneuver"} without its Counter Action${(amount === 1) ? "" : "s"}.`);
+  return true;
+}
+
+/** A Counter Maneuver's Counter Actions paid - or not, where an effect makes it free (counterFree). True where it may go ahead. */
+export async function payCounter(actor, maneuver, amount = 1) {
+  if (await counterFree(actor, maneuver, amount)) return true;
+  return spendActions(actor, amount, "counter");
 }

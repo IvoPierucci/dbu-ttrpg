@@ -226,6 +226,10 @@ const TABLE = [
   { key: "hit-not-knocked", label: "You are hit by an Attacking Maneuver and not knocked through a Health Threshold by it", provides: [],
     doc: "Fired for whoever an Attacking Maneuver hit, once its Damage (if any) is applied, where it knocked them through no Health Threshold "
        + "(chat.mjs applyAttackDamage) - Genetic Survivor's." },
+  { key: "counter-maneuver", label: "You are about to pay for a Counter Maneuver", provides: [],
+    doc: "Fired as a Counter Maneuver's Counter Action(s) would be spent - its id as `maneuverId`, a Defend's Option as `defence` (chat.mjs "
+       + "payCounter): what answers it with `counter.free` waives them (Mind over Monkey (3), Frenzied Assault (4)...). Answered only where "
+       + "its requires hold, so its once a Round is counted only for the one it made free." },
   { key: "evil-points-spent", label: "You spend Evil Points", provides: [],
     doc: "Fired with how many as `spent` - set by hand (chat.mjs setResource) or taken off by a script (moments-runtime.mjs writeStateful) - "
        + "Power of Evil (4)'s." },
