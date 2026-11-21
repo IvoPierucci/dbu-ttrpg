@@ -620,6 +620,18 @@ const TABLE = [
     doc: "Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost - its Ki Wager still paid - asked (Spiritual Apprentice (7))." },
   { key: "wound.quarterKiCost", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
+  // Perfection's Perfect Traits.
+  { key: "critical.rollBonus", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "A Combat Roll's Dice Score where it scores a Critical Result (chat.mjs rollSide) - Critical Perfection (1)'s 1(T)." },
+  { key: "combatRoll.naturalUp", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "How many times a Round a Combat Roll's Natural Result may go 1 higher after seeing it, offered on the attack's card (chat.mjs "
+       + "NUDGERS) - Critical Perfection (2)'s once." },
+  { key: "basicAttack.adaptationDodge", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Hit by a Basic Attack of one not Determined, once an Encounter: your maximum number of Adaptation Points spent to dodge it "
+       + "instead, offered on its card - an Absolute Attack's Wound Roll not applied either (Perfect Defense (2))." },
+  { key: "adaptation.ultimateCharge", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "3+ Adaptation Points spent on an Ultimate Signature Technique's Wound Roll, once an Encounter: an Energy Charge's dice on it, "
+       + "asked (chat.mjs rollSide) - Perfect Offense (2)." },
   // Monster Form's Traits.
   { key: "monster.highSpeedWound", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "An Opponent hit after moving your Boosted Speed this Combat Round, once a Round: the Wound 1/2 of your Boosted Speed, asked "

@@ -192,7 +192,9 @@ export function woundResources() {
     const shared = Object.values(definitions).filter(each => each.id === definition.id).length > 1;
     if (shared && !new RegExp(`wound\\s*\\+=\\s*${name}\\.stacks`).test(trait.script)) continue;
     const { program } = compile(trait.script);
-    if ((program?.blocks ?? []).some(block => (block.mode === "passive") && raisesWound(block.statements))) {
+    // And that passive its own: one naming it - not a Trait's other passive beside a Resource kept only to count a duration (Genetic
+    // Zenkai's Tier of Power held till the next turn).
+    if ((program?.blocks ?? []).some(block => (block.mode === "passive") && raisesWound(block.statements) && JSON.stringify(block).includes(`"${name}`))) {
       found.push(name);
     }
   }

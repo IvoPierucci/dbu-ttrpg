@@ -14,4 +14,10 @@ text: >
 
 ---
 
-# (1) A Combat Roll's Critical 1(T) higher, and (2) its Natural Result 1 higher once a Round: the table's.
+# (1) A Combat Roll that scores a Critical Result: its Dice Score 1(T) higher (chat.mjs rollSide).
+[passive, effect 1]
+critical.rollBonus += 1(T);
+
+# (2) Once a Round, a Combat Roll's Natural Result 1 higher after seeing it - offered on the attack's card (chat.mjs NUDGERS).
+[passive, effect 2]
+combatRoll.naturalUp += 1;

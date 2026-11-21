@@ -17,4 +17,7 @@ text: >
 # (1) Soak Value 1(T).
 [passive, effect 1]
 soakValue += 1(T);
-# (2) Damage Reduction on Direct Hit or Guard: the table's.
+# (2) Direct Hit or Guard, once an Encounter: Damage Reduction 1/2 of your Soak Value (as it was before the Defend changed it), rounded
+# down, for that attack - ticked in Respond as you Defend.
+[triggered/guard-or-direct-hit, 1/encounter, chosen, effect 2]
+damageReduction += floor(soakValue / 2);

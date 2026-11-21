@@ -18,4 +18,7 @@ text: >
 [passive, effect 1]
 criticalTarget.strike -= 1;
 criticalTarget.dodge -= 1;
-# (2) A Basic Attack dodged with all your Adaptation Points: the table's.
+# (2) Hit by a Basic Attack of one not Determined, once an Encounter: your maximum of Adaptation Points spent to dodge it instead,
+# offered on its card - an Absolute Attack's Wound Roll not applied either (chat.mjs adaptationDodge).
+[passive, effect 2]
+allow basicAttack.adaptationDodge;

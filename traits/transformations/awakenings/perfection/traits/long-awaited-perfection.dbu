@@ -29,4 +29,8 @@ criticalTarget.wound -= 1;
 [triggered/start-of-turn, effect 3]
 adaptation.stacks += 1;
 
-# (4) 3 Adaptation Points for an Action, once an Encounter: the table's.
+# (4) At the start of your turn, once an Encounter: 3 Adaptation Points for an Action.
+[triggered/start-of-turn, 1/encounter, effect 4]
+requires stacksAtLeast(3, "adaptation");
+adaptation.stacks -= 3;
+actions.remaining += 1;

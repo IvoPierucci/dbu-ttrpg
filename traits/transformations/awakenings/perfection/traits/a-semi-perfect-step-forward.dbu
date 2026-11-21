@@ -51,4 +51,16 @@ if (optionChosen("pursuit-of-perfection") && hasCondition("absorption-awakening"
 if (optionChosen("genetic-survivor") && belowThreshold("bruised")) {
     surgency += $Z * 1(T);
 }
-# Genetic Aggressor's and Genetic Agility's out-of-sequence Maneuvers, and Pursuit of Perfection's Cognitive Saves: the table's.
+# Genetic Aggressor: an Opponent dealt Damage by your Attacking Maneuver, once a Round - the Basic Attack out of sequence at them, offered
+# on the attack's card, its 2 Adaptation Points paid as it is taken (chat.mjs adaptationOffer).
+[triggered/damaged-opponent, 1/round, outOfSequence, effect 4]
+requires optionChosen("genetic-aggressor") && stacksAtLeast(2, "adaptation");
+adaptationOffer(basic-attack, 2, atTarget);
+
+# Genetic Agility: an Opponent's Attacking Maneuver dodged, once a Round - the Movement out of sequence, no Exploit from it, its
+# Adaptation Point paid as it is taken.
+[triggered/dodged-attack, 1/round, outOfSequence, effect 4]
+requires optionChosen("genetic-agility") && dodgedOpponent && stacksAtLeast(1, "adaptation");
+adaptationOffer(movement, 1, noExploit);
+
+# Pursuit of Perfection: the Cognitive Saves for Assimilated Power (5) 1(T) higher - the table's while that Clash is (Absorption).

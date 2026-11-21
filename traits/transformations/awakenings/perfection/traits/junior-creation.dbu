@@ -17,4 +17,6 @@ text: >
 # (1) A Maximum Ki Point a Power Level.
 [passive, effect 1]
 ki.perLevel += 1;
-# (2) Duplicate Minions for Actions and Ki: made from the Settings tab - the table's.
+# (2) Its Maneuver: 1-3 Actions, 4(bT) Ki each, a Duplicate Minion beside you for each (maneuvers/junior-creation.dbu).
+[passive, effect 2]
+allow maneuver.junior-creation;

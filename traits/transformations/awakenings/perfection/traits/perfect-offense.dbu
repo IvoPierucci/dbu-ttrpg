@@ -17,4 +17,7 @@ text: >
 # (1) Wound Rolls 1(T).
 [passive, effect 1]
 wound += 1(T);
-# (2) An Energy Charge on an Ultimate Signature Technique: the table's.
+# (2) 3+ Adaptation Points spent on an Ultimate Signature Technique's Wound Roll, once an Encounter: an Energy Charge's dice on it, asked
+# (chat.mjs rollSide).
+[passive, effect 2]
+allow adaptation.ultimateCharge;

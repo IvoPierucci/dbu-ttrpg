@@ -865,6 +865,10 @@ async function runVerb(actor, call, context) {
     case "casteKnightStrike": return (await import("../chat.mjs")).casteKnightStrike(actor);
     case "castePawnStrike": return (await import("../chat.mjs")).castePawnStrike(actor);
     case "basicStrike": return (await import("../chat.mjs")).basicStrike(actor);
+    case "adaptationOffer": return (await import("../chat.mjs")).adaptationOffer(actor, String(args[0] ?? ""), Number(args[1]) || 0,
+      String(args[2] ?? ""), context);
+    case "surgeRevive": return (await import("../chat.mjs")).surgeRevive(actor);
+    case "smallDuplicates": return (await import("../chat.mjs")).smallDuplicates(actor, Number(context?.actionsSpent) || 1);
     // The Domain Maneuvers (Divinity Unleashed's God of a Domain (3)).
     case "divineHealing": return (await import("../chat.mjs")).divineHealing(actor, context?.maneuver ?? null);
     case "divineSummoning": return (await import("../chat.mjs")).divineSummoning(actor);

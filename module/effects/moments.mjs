@@ -226,6 +226,9 @@ const TABLE = [
   { key: "hit-not-knocked", label: "You are hit by an Attacking Maneuver and not knocked through a Health Threshold by it", provides: [],
     doc: "Fired for whoever an Attacking Maneuver hit, once its Damage (if any) is applied, where it knocked them through no Health Threshold "
        + "(chat.mjs applyAttackDamage) - Genetic Survivor's." },
+  { key: "defeat-escaped", label: "A Triggered/Defeated effect of yours used, and you are not Defeated after it", provides: [],
+    doc: "Fired once an effect answering your Defeat left you standing (combat.mjs beginDefeat, chat.mjs on the Defeated card) - "
+       + "Genetic Zenkai's." },
   { key: "damaged-opponent", label: "Your Attacking Maneuver deals an Opponent Damage", provides: [],
     doc: "Fired for whoever made the Attacking Maneuver, once it dealt an Opponent of theirs Damage (chat.mjs applyAttackDamage), with them as "
        + "`targetUuid` - Genetic Aggressor's." },

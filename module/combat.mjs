@@ -517,6 +517,17 @@ async function beginTurn(actor) {
         { dbuForceUp: true });
     }
   }
+  // Karyon Core (2): "At the start of your next turn, instead of skipping your turn, use a Healing Surge as an Out-of-Sequence Maneuver,
+  // stop being Defeated, and take your turn as normal" - before the turn is judged skipped.
+  const risen = actor.getFlag?.("dbu-ttrpg", "surgeRevive");
+  if (risen) {
+    await actor.unsetFlag("dbu-ttrpg", "surgeRevive");
+    if (actor.system.defeated && (risen.combat === (game.combat?.id ?? ""))) {
+      const { value, min } = actor.system.life;
+      if ((Number(value) || 0) < (Number(min) || 0)) await actor.update({ "system.life.value": Number(min) || 0 }, { dbuForceUp: true });
+      await (await import("./chat.mjs")).takeSurge(actor, { source: "Karyon Core", kind: "healing", forceUp: true });
+    }
+  }
   // Wild Child (4), (5): the Pseudo-Bestial Traits' access "until the start of your next turn" - this one.
   if (actor.getFlag?.("dbu-ttrpg", "pseudoAccess")) await actor.unsetFlag("dbu-ttrpg", "pseudoAccess");
   // Kindhearted Saiyan (2): "until the start of your next turn" - this one.
@@ -1515,6 +1526,8 @@ export async function beginDefeat(actor, { silenced = false, knockedBy = "" } = 
     if (!actor.system.defeated) {
       // The rescue counts against the one allowed per Encounter.
       await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });
+      // Genetic Zenkai (2): a Triggered/Defeated effect used, and not Defeated after it.
+      if (!silenced) await answerFor(actor, "defeat-escaped", {});
       return;
     }
 

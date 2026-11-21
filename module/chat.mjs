@@ -7107,18 +7107,25 @@ const NUDGERS = Object.freeze([
   { id: "experienced-drunk", name: "Experienced Drunk", slot: "drunk.dodgeNudge", state: "drunk", roll: "Dodge Roll",
     applies: situation => (situation.stage === "strike") && situation.answering && (situation.defense === "dodge") },
   { id: "ferocious-fighter", name: "Ferocious Fighter", slot: "feral.woundNudge", state: "feral", roll: "Wound Roll",
-    applies: situation => situation.stage === "wound" }
+    applies: situation => situation.stage === "wound" },
+  // Critical Perfection (2): "If you roll a Combat Roll, you may increase the Natural Result of that Combat Roll by 1 after seeing the
+  // Natural Result" - up only, as many times a Round as the Slot's sum.
+  { id: "natural-up", name: "Natural Result +1", slot: "combatRoll.naturalUp", roll: "Combat Roll", steps: [1],
+    times: actor => Number(actor.system?.effects?.slots?.["combatRoll.naturalUp"]?.add) || 0, applies: () => true }
 ]);
 
 function nudgeOptions(situation) {
   const actor = situation?.actor;
   if (!actor || (situation.kind !== "attack") || !Number.isFinite(situation.side?.natural)) return [];
   const slots = actor.system?.effects?.slots ?? {};
-  return NUDGERS.filter(nudger => (slots[nudger.slot] === true) && ((Number(actor.system?.states?.[nudger.state]) || 0) > 0)
+  return NUDGERS.filter(nudger => (nudger.times ? (nudger.times(actor) > 0) : (slots[nudger.slot] === true))
+    && (!nudger.state || ((Number(actor.system?.states?.[nudger.state]) || 0) > 0))
     && nudger.applies(situation)).flatMap(nudger => {
     const used = actor.getFlag?.(SCOPE, "nudge")?.[nudger.id] ?? {};
-    const blocked = ((used.round === roundKey()) && ((Number(used.count) || 0) >= 2)) ? "Twice a Combat Round" : "";
-    return [1, -1].map(step => ({ key: `${NUDGE}:${nudger.id}:${step}`, trait: true, when: "after", name: nudger.name,
+    const most = nudger.times ? nudger.times(actor) : 2;
+    const blocked = ((used.round === roundKey()) && ((Number(used.count) || 0) >= most))
+      ? ((most === 2) ? "Twice a Combat Round" : (most === 1) ? "Once a Combat Round" : `${most} times a Combat Round`) : "";
+    return (nudger.steps ?? [1, -1]).map(step => ({ key: `${NUDGE}:${nudger.id}:${step}`, trait: true, when: "after", name: nudger.name,
       text: `Your ${nudger.roll}'s Natural Result ${step > 0 ? "1 higher" : "1 lower"} - a Critical or a Botch, if it comes to one.`,
       costLabel: `Natural Result ${step > 0 ? "+1" : "-1"}`, available: !blocked, ...(blocked ? { blocked } : {}) }));
   });
@@ -11927,7 +11934,7 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
  */
 async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
                                            slot = null, collect = true, strikeAdapted = 0, oneCharge = "", signatureRoll = false,
-                                           tailRoll = false,
+                                           tailRoll = false, ultimateRoll = false,
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
@@ -11960,7 +11967,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
     const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted, oneCharge, signatureRoll,
-      tailRoll,
+      tailRoll, ultimateRoll,
       // And which Foundation's it is: what is a Wound Roll's by its Foundation is the second roll's too.
       criticalTarget, botchUnlessCritical, naturalAdd, foundation };
     const clone = () => ((typeof modifiers === "number") ? modifiers : modifiers.map(part => ({ ...part })));
@@ -12084,6 +12091,15 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       { value: "yes", label: `An Energy Charge on this Signature Technique (${oneCharge}, 1/Encounter)` }, { value: "no", label: "No" }])) === "yes")) {
     await requestActorUpdate(actor, { [`flags.${SCOPE}.cyberChargeEncounter`]: game.combat?.id ?? "none" });
     extraDice = [...asDiceGroups(extraDice), { label: "Energy Charge (Android Cybernetics)", formula: oneCharge }];
+  }
+  // Perfect Offense (2): "If you use an Ultimate Signature Technique and spend 3+ Adaptation Points on the Wound Roll of that Attacking
+  // Maneuver, apply an Energy Charge to that Attacking Maneuver" - asked, once an Encounter: its dice on this Wound Roll.
+  if (oneCharge && ultimateRoll && (slot === "wound") && (adapted >= 3) && (actor.system.effects?.slots?.["adaptation.ultimateCharge"] === true)
+    && (actor.getFlag?.(SCOPE, "ultimateChargeEncounter") !== (game.combat?.id ?? "none"))
+    && ((await askPlayerChoice(actor, `${actor.name}: Perfect Offense`, [
+      { value: "yes", label: `An Energy Charge on this Ultimate Signature Technique (${oneCharge}, 1/Encounter)` }, { value: "no", label: "No" }])) === "yes")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.ultimateChargeEncounter`]: game.combat?.id ?? "none" });
+    extraDice = [...asDiceGroups(extraDice), { label: "Energy Charge (Perfect Offense)", formula: oneCharge }];
   }
   // Namekian Genes' Genes of a Warrior Clan: 2+ spent on an attack's Wound Roll - "increase the Wound Roll by 1/2 of your Surgency", asked,
   // once a Round.
@@ -12337,6 +12353,12 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     if (turned) {
       total += turned;
       lines.push(partLine({ label: "Critical, more", value: turned }));
+    }
+    // Critical Perfection (1): "Increase the Dice Score of any Combat Roll that you score a Critical Result on by 1(T)."
+    const onCritical = combatRoll ? (Number(actor.system.effects?.slots?.["critical.rollBonus"]?.add) || 0) : 0;
+    if (onCritical) {
+      total += onCritical;
+      lines.push(partLine({ label: "On a Critical Result", value: onCritical }));
     }
   }
 
@@ -33590,6 +33612,8 @@ async function resolveAttackWork(message, attack) {
       angelic: (hit && !automatic && (defense === "dodge") && answer && angelicOpen(target, attacker)) ? "offered" : null,
       // Alternative Warrior Race (4): hit, and the roll is theirs to make - the Wound Roll waits on it.
       altWarrior: (hit && !automatic && altWarriorOpen(target, attacker, attack)) ? "offered" : null,
+      // Perfect Defense (2): hit by a Basic Attack, the Adaptation Points held - the Wound Roll waits on it.
+      perfectDefense: (hit && !automatic && adaptationDodgeOpen(target, attacker, attack)) ? "offered" : null,
       applied: false
     });
   }
@@ -35599,6 +35623,8 @@ async function rollAttackWoundWork(message, attack) {
     // Earthling Genes (3): a Signature Technique's. Genetic Focus: Arcosian (3): the Tail Attack's.
     signatureRoll: effectSignature(attacker, attack),
     tailRoll: attack.maneuverId === "tail-attack",
+    // Perfect Offense (2): an Ultimate Signature Technique's.
+    ultimateRoll: Boolean(attack.technique?.ultimate || (attack.technique?.level === "ultimate")),
     extraDice: woundDice(attacker, attack),
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
@@ -38864,6 +38890,8 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     "system.life.value": floor,
     // An attack's, not their own doing (Revenge Bomber's).
     [`flags.${SCOPE}.ownDefeat`]: false,
+    // What it dealt, and when - Karyon Core (2)'s "dealt Damage exceeding 1/3 of your Maximum Life Points".
+    [`flags.${SCOPE}.lastAttackDamage`]: { damage: Number(damage) || 0, round: roundKey() },
     ...(doubled
       ? {
         "system.diminishingDefense":
@@ -39802,6 +39830,8 @@ async function answerMoment(message, card, actor) {
     const answered = { ...card, applied: [...new Set([...(card.applied ?? []), actor.uuid])] };
     if (!actor.system.defeated) {
       if (keyword.length) await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });
+      // Genetic Zenkai (2): a Triggered/Defeated effect used, and not Defeated after it.
+      if (keyword.length) await answerFor(actor, "defeat-escaped", {});
       requestEdit(message, { type: "moment",
         moment: { ...answered, pending: false, title: `${actor.name} is back on their feet` } });
     }
@@ -40706,7 +40736,8 @@ export async function pokoMinion(actor) {
 }
 
 export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0, lifeMultiplier = 1,
-                                          extraDie = 0, viaManeuver = "", surgencyShare = 1, lifePerThresholdBT = 0 } = {}) {
+                                          extraDie = 0, viaManeuver = "", surgencyShare = 1, lifePerThresholdBT = 0,
+                                          forceUp = false } = {}) {
   // An effect that names a Surge is not offering a choice between the two: "use a Ki
   // Surge as an Instant Maneuver" is one Surge, and asking which would be wrong.
   const kind = forced ?? await foundry.applications.api.DialogV2.wait({
@@ -40835,7 +40866,9 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     const { value, max, ceiling } = actor.system.life;
     const restored = Math.max(0, Math.min(ceiling ?? max, value + total) - value);
     // Through a Surge - what Vampire (5) leaves alone.
-    await actor.update({ "system.life.value": value + restored }, { dbuSurge: true });
+    // Karyon Core (2)'s "stop being Defeated": not held by Will to Survive (forceUp).
+    if (forceUp) await actor.update({ "system.life.value": value + restored }, { dbuSurge: true, dbuForceUp: true });
+    else await actor.update({ "system.life.value": value + restored }, { dbuSurge: true });
     // Above a Health Threshold you were under: what answers it - Lightning Surge (3)'s.
     const keys = Object.keys(DBUCharacterData.THRESHOLDS);
     const crossedUp = Boolean(restored) && (keys.indexOf(DBUCharacterData.thresholdKey(value + restored, max, typicalMinion(actor)))
@@ -41926,6 +41959,8 @@ function renderAttack(message, html) {
   if (!result.wound && angelicButtons(message, container, attack)) return;
   // Alternative Warrior Race (4): the same, for its Strike or Dodge Roll.
   if (!result.wound && altWarriorButtons(message, container, attack)) return;
+  // Perfect Defense (2): the same, for the Adaptation Points spent or not.
+  if (!result.wound && adaptationDodgeButtons(message, container, attack)) return;
 
   // Whoever owes the Wound Roll, which is the attacker on everything but a reflected
   // attack - there it is the Character whose attack was thrown back, and the button
@@ -42774,4 +42809,124 @@ export async function freeUniqueOfTransformation(actor, transformationId) {
   const data = uniqueItemFrom(definition, traitsOfKind("unique", definition.id), { chosenType: "", applied: [], choices: {} });
   data.system.unique.free = true;
   await actor.createEmbeddedDocuments("Item", [data]);
+}
+
+/**
+ * Genetic Aggressor's and Genetic Agility's: a Maneuver of yours offered out of sequence on the attack's card it answers - the
+ * `cost` Adaptation Points paid as it is taken (takeOutOfSequence, `adaptationCost`); `atTarget` at the Opponent the Moment names,
+ * `noExploit` with no Exploit from it. Unspent with too few Adaptation Points.
+ */
+export async function adaptationOffer(actor, id, cost = 0, how = "", context = {}) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!actor || !id) return UNSPENT;
+  if ((Number(actor.system.resources?.adaptation?.stacks) || 0) < cost) {
+    ui.notifications.info(`${actor.name}: not the ${cost} Adaptation Point${(cost === 1) ? "" : "s"} for it.`);
+    return UNSPENT;
+  }
+  const maneuver = getManeuver(id);
+  const at = (how === "atTarget") ? String(context?.targetUuid ?? "") : "";
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: id, maneuverName: maneuver?.name ?? id,
+    ...(at ? { targetUuid: at } : {}), ...((how === "noExploit") ? { noExploit: true } : {}),
+    reason: `${cost} Adaptation Point${(cost === 1) ? "" : "s"}${(how === "noExploit") ? "; no Exploit from it" : ""}`,
+    grants: { ...(cost ? { adaptationCost: cost } : {}) } };
+  // The card of the attack it answers: theirs, or one that targeted them.
+  const card = (game.messages?.contents ?? []).findLast(message => {
+    const attack = message.getFlag?.(SCOPE, ATTACK_FLAG);
+    return attack && ((attack.attackerUuid === actor.uuid) || attackTargets(attack).some(entry => entry.uuid === actor.uuid));
+  });
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
+/**
+ * Karyon Core (2): "[Triggered/Defeated]: At the start of your next turn, instead of skipping your turn, use a Healing Surge as an
+ * Out-of-Sequence Maneuver, stop being Defeated, and take your turn as normal. This effect cannot be triggered if the Attacking Maneuver
+ * that Defeated you dealt Damage exceeding 1/3 of your Maximum Life Points." Marked now; the turn's start does it (combat.mjs).
+ */
+export async function surgeRevive(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!actor) return UNSPENT;
+  const last = actor.getFlag?.(SCOPE, "lastAttackDamage");
+  const max = Number(actor.system.life?.max) || 0;
+  if (last && (last.round === roundKey()) && ((Number(last.damage) || 0) > (max / 3))) {
+    ui.notifications.warn(`${actor.name}: the attack that Defeated them dealt ${Number(last.damage) || 0} Damage, more than 1/3 of their `
+      + `Maximum Life Points - not this.`);
+    return UNSPENT;
+  }
+  await actor.setFlag(SCOPE, "surgeRevive", { combat: game.combat?.id ?? "" });
+  ui.notifications.info(`${actor.name}: a Healing Surge and up again as their next turn starts.`);
+}
+
+/**
+ * Junior Creation (2): "create a Duplicate Minion on a square adjacent to you for each Action spent on this Maneuver. This Minion's base
+ * Size Category is Small, or, if your base Size Category is Small or less - then that Minion's Size Category is 1 Size Category smaller
+ * than yours." The Ki is the Maneuver's, 4(bT) an Action (kiPerAction).
+ */
+export async function smallDuplicates(actor, actions = 1) {
+  if (!actor) return;
+  const count = Math.max(1, Math.min(3, Number(actions) || 1));
+  const sizes = Object.keys(DBUCharacterData.SIZES);
+  const own = sizes.indexOf(String(actor._source?.system?.size ?? actor.system.size?.trueKey ?? actor.system.size?.key ?? ""));
+  const small = sizes.indexOf("small");
+  const steps = ((own >= 0) && (small >= 0) && (own > small)) ? (own - small) : 1;
+  const label = DBUCharacterData.SIZES[sizes[Math.max(0, ((own < 0) ? small : own) - steps)]]?.label ?? "Small";
+  await requestMakeMinion(actor, { name: `${actor.name} Jr.`, count, duplicate: true, sizeSteps: steps, kind: "junior" });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="Duplicate Minions of ${Handlebars.escapeExpression(actor.name)}, beside them, base Size ${Handlebars.escapeExpression(String(label))}.">
+    ${count} Duplicate Minion${(count === 1) ? "" : "s"}, ${Handlebars.escapeExpression(String(label))}.</div>` });
+}
+
+/**
+ * Perfect Defense (2) open to the one hit: "If you are hit by an Attacking Maneuver made through the Basic Attack Maneuver, you may spend your
+ * maximum number of Adaptation Points to instead dodge that Attacking Maneuver ... You cannot trigger this effect in response to an
+ * Attacking Maneuver made by a Character in the Determined State." Once an Encounter, the maximum held.
+ */
+function adaptationDodgeOpen(target, attacker, attack) {
+  if (!target || !attacker || (target.uuid === attacker.uuid) || target.system?.defeated) return false;
+  if (target.system?.effects?.slots?.["basicAttack.adaptationDodge"] !== true) return false;
+  if (attack?.maneuverId !== "basic-attack") return false;
+  if ((Number(attacker.system?.states?.determined) || 0) > 0) return false;
+  if (target.getFlag?.(SCOPE, "adaptationDodgeEncounter") === (game.combat?.id ?? "none")) return false;
+  const most = Number(resourceLimits(target).adaptation) || 0;
+  return (most > 0) && ((Number(target.system?.resources?.adaptation?.stacks) || 0) >= most);
+}
+
+/** Perfect Defense (2), taken: the maximum spent, and dodged - "If that Attacking Maneuver was an Absolute Attack, do not still apply the Wound Roll". */
+async function adaptationDodge(message, target) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const branch = attack?.result?.targets?.find(entry => entry.uuid === target.uuid);
+  if (!branch || (branch.perfectDefense !== "offered")) return;
+  const most = Number(resourceLimits(target).adaptation) || 0;
+  const held = Number(target.system?.resources?.adaptation?.stacks) || 0;
+  if (!most || (held < most)) return ui.notifications.warn(`${target.name}: not their maximum of Adaptation Points held.`);
+  await requestActorUpdate(target, { [`flags.${SCOPE}.adaptationDodgeEncounter`]: game.combat?.id ?? "none" });
+  await setResource(target, "adaptation", held - most);
+  await rewriteBranch(message, target.uuid, () => ({ hit: false, absolute: false, perfectDefense: "done" }));
+  await answerFor(target, "dodged-attack", { attackerUuid: attack?.attackerUuid ?? "" });
+}
+
+/** Perfect Defense (2)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
+function adaptationDodgeButtons(message, container, attack) {
+  const waiting = (attack.result?.targets ?? []).filter(branch => branch.perfectDefense === "offered");
+  for (const branch of waiting) {
+    const target = fromUuidSync(branch.uuid);
+    if (!target?.isOwner) continue;
+    const most = Number(resourceLimits(target).adaptation) || 0;
+    for (const [label, tooltip, act] of [
+      [`Perfect Defense - ${target.name}`, `Spend ${most} Adaptation Points (your maximum): dodge this Basic Attack instead (1/Encounter)`,
+        () => adaptationDodge(message, target)],
+      [`Take the hit - ${target.name}`, "", () => rewriteBranch(message, target.uuid, () => ({ perfectDefense: "declined" }))]]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = label;
+      if (tooltip) button.dataset.tooltip = tooltip;
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        return act();
+      });
+      container.append(button);
+    }
+  }
+  return waiting.length > 0;
 }

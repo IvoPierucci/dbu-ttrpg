@@ -5,6 +5,11 @@ slot: trait
 # One of these is chosen (the Transformation's row asks).
 group: perfect-traits
 groupLabel: Perfect Traits
+# The 2nd effect's Tier of Power +1 till the end of your next turn - bookkeeping, kept off the Resources list.
+resource: geneticzenkai
+resourceInternal: true
+resourceLabel: Genetic Zenkai
+resourceMax: 1
 description: >
   Brought back from the brink of death, your power grows beyond measure.
 text: >
@@ -20,4 +25,13 @@ if (belowThreshold("injured")) {
     wound += 1(T);
     soakValue += 1(T);
 }
-# (2) Breakthrough after a Triggered/Defeated effect: the table's.
+# (2) A Triggered/Defeated effect used and not Defeated after it (defeat-escaped), once an Encounter: Tier of Power +1 (Breakthrough,
+# its cap still over it) until the end of your next turn.
+[passive]
+if (hasResource("geneticzenkai")) {
+    tierOfPower += 1;
+}
+
+[triggered/defeat-escaped, 1/encounter, effect 2]
+geneticzenkai.stacks += 1;
+expires(geneticzenkai, next-turn);

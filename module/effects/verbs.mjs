@@ -625,6 +625,23 @@ export const VERBS = Object.freeze({
     doc: "Caste Combat's Pawn: the Basic Attack offered on the Defeated card - Full Wager, and Power Shot (2) but for a Minion "
        + "(chat.mjs castePawnStrike)."
   },
+  adaptationOffer: {
+    args: [2, 3],
+    names: [0, 2],
+    doc: "A Maneuver of yours offered out of sequence on the attack's card, by its id, so many Adaptation Points paid as it is taken; "
+       + "`atTarget` at the Opponent of the Moment, `noExploit` with no Exploit from it (chat.mjs adaptationOffer) - Genetic Aggressor's "
+       + "and Genetic Agility's."
+  },
+  surgeRevive: {
+    args: [0, 0],
+    doc: "Chosen on the Defeated card: at the start of your next turn a Healing Surge out of sequence and up again - not where the "
+       + "attack that Defeated you dealt more than 1/3 of your Maximum Life Points (chat.mjs surgeRevive, combat.mjs) - Karyon Core's."
+  },
+  smallDuplicates: {
+    args: [0, 0],
+    doc: "A Duplicate Minion for each Action spent on the Maneuver, base Size Small - or one smaller than yours, yours Small or less "
+       + "(chat.mjs smallDuplicates) - Junior Creation's."
+  },
   basicStrike: {
     args: [0, 0],
     doc: "The Basic Attack out of sequence - Pieces of the Hive (1)'s (chat.mjs basicStrike)."

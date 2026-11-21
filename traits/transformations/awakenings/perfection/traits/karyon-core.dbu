@@ -17,4 +17,7 @@ text: >
 # (1) Surgency 1(T).
 [passive, effect 1]
 surgency += 1(T);
-# (2) Rising from Defeat with a Healing Surge: the table's.
+# (2) Chosen on the Defeated card - not where the attack that Defeated you dealt more than 1/3 of your Maximum Life Points: at the start
+# of your next turn a Healing Surge out of sequence, up again, the turn taken (chat.mjs surgeRevive, combat.mjs).
+[triggered/defeated, effect 2]
+surgeRevive();
