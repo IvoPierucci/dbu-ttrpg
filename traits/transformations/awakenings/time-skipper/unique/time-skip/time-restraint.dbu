@@ -1,0 +1,13 @@
+id: time-restraint
+name: Time Restraint
+advancement: true
+prerequisite: N/A
+tpCost: 15
+source: Time-Skipper
+description: >
+  Gain access to the Time Prison Special Maneuver.
+text: >
+  Time Restraint: Stopping the flow of time around your enemy, you trap them outside of time.
+  –Prerequisites: N/A
+  –TP Cost: 15
+  –Effect: Gain access to the Time Prison Special Maneuver.

@@ -873,6 +873,8 @@ async function runVerb(actor, call, context) {
     case "adaptationOffer": return (await import("../chat.mjs")).adaptationOffer(actor, String(args[0] ?? ""), Number(args[1]) || 0,
       String(args[2] ?? ""), context);
     case "surgeRevive": return (await import("../chat.mjs")).surgeRevive(actor);
+    case "timeSkip": return (await import("../chat.mjs")).timeSkip(actor, context);
+    case "timeLag": return (await import("../chat.mjs")).timeLag(actor);
     case "thresholdForKi": return (await import("../chat.mjs")).thresholdForKi(actor, Number(args[0]) || 0);
     case "timeSeal": return (await import("../chat.mjs")).timeSeal(actor);
     case "timeReversion": return (await import("../chat.mjs")).timeReversion(actor);

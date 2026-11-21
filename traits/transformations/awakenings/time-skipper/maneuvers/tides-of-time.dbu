@@ -1,0 +1,20 @@
+id: tides-of-time
+name: Tides of Time
+type: counter
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+# Walk Through Time's: offered on the attack's card to the one it hit who answered with no Counter Maneuver - its Counter Action paid, its
+# Damage taken from the Ki Points (chat.mjs tidesButtons, applyAttackDamage). As it is played the Damage is still dealt for what reads it.
+special: true
+source: Time-Skipper
+description: >
+  Hit, no Counter Maneuver in answer: the Damage taken from your Ki Points instead, the rest from your Life Points.
+text: >
+  Tides of Time: By forcing your way outside of time, you can avoid all but the most grievous injuries.
+  –Maneuver Type: Counter Maneuver
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Effect: If you are hit by an Attacking Maneuver that you did not use a Counter Maneuver in response to, you can use this Counter Maneuver to not receive any Damage. Any Damage you would have received is instead taken from your Ki Points. If this Damage would reduce your Ki Points to 0, the remaining excess is removed from your Life Points.

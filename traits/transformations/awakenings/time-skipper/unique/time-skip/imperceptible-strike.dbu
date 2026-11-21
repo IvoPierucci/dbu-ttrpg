@@ -1,0 +1,13 @@
+id: imperceptible-strike
+name: Imperceptible Strike
+advancement: true
+prerequisite: N/A
+tpCost: 10
+source: Time-Skipper
+description: >
+  Your Attacking Maneuvers made through the Time-Skip Unique Ability do not suffer from, or count towards, the penalty from Diminishing Offense.
+text: >
+  Imperceptible Strike: You can attack more swiftly and powerfully while you skip through time.
+  –Prerequisites: N/A
+  –TP Cost: 10
+  –Effect: Your Attacking Maneuvers made through the Time-Skip Unique Ability do not suffer from, or count towards, the penalty from Diminishing Offense.

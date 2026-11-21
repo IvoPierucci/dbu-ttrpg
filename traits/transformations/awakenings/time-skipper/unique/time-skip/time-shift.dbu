@@ -1,0 +1,13 @@
+id: time-shift
+name: Time Shift
+advancement: true
+prerequisite: N/A
+tpCost: 15
+source: Time-Skipper
+description: >
+  Gain access to the Time Lag Special Maneuver.
+text: >
+  Time Shift: You can push someone temporarily out of time, making them slower to react.
+  –Prerequisites: N/A
+  –TP Cost: 15
+  –Effect: Gain access to the Time Lag Special Maneuver.

@@ -2062,6 +2062,19 @@
     "transformations/enhancements/time-power/unique/time-seal.dbu",
     "transformations/forms/alternate/superior-super-saiyan/superior-super-saiyan.dbu",
     "transformations/forms/alternate/superior-super-saiyan/traits/crazed-battle-lust.dbu",
-    "transformations/forms/alternate/superior-super-saiyan/traits/realized-superiority.dbu"
+    "transformations/forms/alternate/superior-super-saiyan/traits/realized-superiority.dbu",
+    "transformations/awakenings/time-skipper/conditions/lagged.dbu",
+    "transformations/awakenings/time-skipper/maneuvers/tides-of-time.dbu",
+    "transformations/awakenings/time-skipper/maneuvers/time-lag.dbu",
+    "transformations/awakenings/time-skipper/maneuvers/time-prison.dbu",
+    "transformations/awakenings/time-skipper/time-skipper.dbu",
+    "transformations/awakenings/time-skipper/traits/beyond-the-time.dbu",
+    "transformations/awakenings/time-skipper/unique/time-skip.dbu",
+    "transformations/awakenings/time-skipper/unique/time-skip/barrage-from-time.dbu",
+    "transformations/awakenings/time-skipper/unique/time-skip/imperceptible-strike.dbu",
+    "transformations/awakenings/time-skipper/unique/time-skip/time-restraint.dbu",
+    "transformations/awakenings/time-skipper/unique/time-skip/time-shift.dbu",
+    "transformations/awakenings/time-skipper/unique/time-skip/time-to-make-the-donuts.dbu",
+    "transformations/awakenings/time-skipper/unique/time-skip/walk-through-time.dbu"
   ]
 }

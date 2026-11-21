@@ -326,6 +326,21 @@ const PREDICATES = {
   signatureTechnique: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique)
     || customBuffBasicIsSignature(scope.data, scope.context?.maneuver?.id),
 
+  /** A bought Advancement of a Unique Ability of yours, by its id - Time-Skip's Walk Through Time's. */
+  hasAdvancement: (scope, id) => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "maneuver")
+    && (item.system?.unique?.advancements ?? []).some(entry => entry?.bought && (entry.key === String(id?.value ?? id ?? "")))),
+  /** In a Combat Encounter, an Opponent's turn - Beyond the Time (1)'s "During your Opponents' turns". */
+  opponentsTurn: scope => {
+    const self = scope.data?.parent;
+    const now = game.combat?.started ? game.combat?.combatant?.actor : null;
+    return Boolean(self && now && (now.uuid !== self.uuid) && areOpponents(now, self));
+  },
+  /** In a Combat Encounter, your turn or an Ally's - Beyond the Time (2)'s. */
+  ownOrAllyTurn: scope => {
+    const self = scope.data?.parent;
+    const now = game.combat?.started ? game.combat?.combatant?.actor : null;
+    return Boolean(self && now && ((now.uuid === self.uuid) || !areOpponents(now, self)));
+  },
   /** The Counter Maneuver being paid for, by its id - counter-maneuver's (chat.mjs payCounter). */
   counterManeuver: (scope, id) => String(scope.context?.maneuverId ?? "") === String(id?.value ?? id ?? ""),
   /** The Defend's Option chosen - "Cross Counter", "crossCounter" or "cross-counter" alike (counter-maneuver, defending). */

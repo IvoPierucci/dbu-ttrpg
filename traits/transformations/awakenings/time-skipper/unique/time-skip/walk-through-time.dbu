@@ -1,0 +1,13 @@
+id: walk-through-time
+name: Walk Through Time
+advancement: true
+prerequisite: N/A
+tpCost: 15
+source: Time-Skipper
+description: >
+  Gain access to the Tides of Time Special Maneuver.
+text: >
+  Walk Through Time: You can shift yourself out of the flow of time to avoid damage.
+  –Prerequisites: N/A
+  –TP Cost: 15
+  –Effect: Gain access to the Tides of Time Special Maneuver.

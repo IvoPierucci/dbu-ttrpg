@@ -1,0 +1,13 @@
+id: time-to-make-the-donuts
+name: Time to Make the Donuts
+advancement: true
+prerequisite: N/A
+tpCost: 5
+source: Time-Skipper
+description: >
+  You can use the Signature Technique Maneuver through the effects of Time-Skip instead of the Basic Attack Maneuver. That Signature Technique Maneuver must have the Time-Skipped Disadvantage.
+text: >
+  Time to Make the Donuts: You are able to create techniques that can be used outside of time.
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –Effect: You can use the Signature Technique Maneuver through the effects of Time-Skip instead of the Basic Attack Maneuver. That Signature Technique Maneuver must have the Time-Skipped Disadvantage.

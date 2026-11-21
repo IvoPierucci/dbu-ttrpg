@@ -31310,9 +31310,11 @@ export async function postAttack(actor, target, maneuver,
           profileLabel: PROFILES[profile].label,
           // Carried on the attack rather than looked up later: a Profile's Damage
           // Category is part of what was declared.
-          damageCategory: profileFor({ profile, technique,
+          damageCategory: (maneuver.forcedCategory && !reflecting) ? maneuver.forcedCategory : profileFor({ profile, technique,
             secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
             appliedProfiles: reflecting ? [] : (appliedProfiles ?? []) }).damageCategory,
+          // Beyond the Time (6): "The Damage Category of this Attacking Maneuver cannot be reduced by any means."
+          ...((maneuver.forcedCategory && !reflecting) ? { categoryLocked: true } : {}),
           // Steps applied by the attacker's own effects, summed with the defender's
           // before anything is clamped. Mega Flare is the first thing to write here:
           // "if the number of Energy Charges applied is 7+, increase the Damage
@@ -33687,8 +33689,15 @@ async function resolveAttackWork(message, attack) {
       perfectDefense: (hit && !automatic && adaptationDodgeOpen(target, attacker, attack)) ? "offered" : null,
       // Law-Defying Battle (4): hit, and not being hit instead is theirs to take - the Wound Roll waits on it.
       notHit: (hit && notHitOpen(target, attacker)) ? "offered" : null,
+      // Tides of Time: hit, no Counter Maneuver used in answer - its Damage from the Ki Points instead, theirs to take.
+      tides: (hit && !automatic && (defense === "dodge") && tidesOpen(target)) ? "offered" : null,
       applied: false
     });
+    // Beyond the Time (6): "The Damage Category of this Attacking Maneuver cannot be reduced by any means" - nothing taken off it here.
+    if (attack.categoryLocked) {
+      const own = branches[branches.length - 1];
+      own.damageCategory = resolveDamageCategory(attack.damageCategory, Math.max(0, Number(own.categoryShift) || 0));
+    }
   }
 
   // Hostile Chase: "If you score a Botch Result on any Strike Roll made for this Attacking Maneuver, or
@@ -38965,6 +38974,10 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
   // State being the one thing in the rules that grants it.
   // An Adversary's Narrative Stamina spent on it (`absorbed`): "reduce how many Life Points you lose by an equal amount" - off
   // the Life Points alone. The Damage is as it was for whatever asks whether, or how much, was dealt.
+  // Tides of Time: "Any Damage you would have received is instead taken from your Ki Points. If this Damage would reduce your Ki Points to 0,
+  // the remaining excess is removed from your Life Points."
+  const tidesKi = own?.damageToKi ? Math.min(Math.max(0, Number(target.system.ki?.value) || 0), Math.max(0, damage - Math.max(0, Number(absorbed) || 0))) : 0;
+  if (tidesKi) absorbed = (Number(absorbed) || 0) + tidesKi;
   const settled = target.system.life.value - Math.max(0, damage - Math.max(0, Number(absorbed) || 0));
   const floor = target.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled);
   const wasDefeated = Boolean(target.system.defeated);
@@ -38998,7 +39011,9 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
         "system.diminishingDefense":
           target.system.diminishingDefense + target.system.diminishing.defense.perAttack
       }
-      : {})
+      : {}),
+    // Tides of Time: the Damage taken from the Ki Points.
+    ...(tidesKi ? { "system.ki.value": Math.max(0, (Number(target.system.ki?.value) || 0) - tidesKi) } : {})
   }, {
     ...(((attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)) ? { dbuSilenced: true } : {}),
     // Who knocked them through, if it does - for what answers having done it (Inherited Aggression's).
@@ -39166,6 +39181,8 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     if (areOpponents(armsUser, target)) await focusHeranStrike(message, armsUser, target);
     // Neo-Tuffle Genes (2): the Basic Attack back at them, offered on this card.
     if (areOpponents(target, armsUser)) offerNeoTuffleStrike(message, target, armsUser);
+    // Time Prison: a Time-Skipped Signature Technique's hit - its Clash, asked.
+    await timePrisonOffer(armsUser, target, attack);
     // Dark Saiya Power (4): a Saiyan's Physical Attack - the Clash into Berserk, asked.
     await berserkClash(target, armsUser, attack);
     // Ruler (2): "If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm" - for its Master.
@@ -40267,6 +40284,8 @@ async function heartOfGlassFail(actor) {
  * whose Checks these were, where known.
  */
 async function steadfastFailed(actor, failed = []) {
+  // Time Lag: "If you fail a Steadfast Check or are Defeated, that Lagged Opponent stops being Lagged."
+  await releaseTimeHolds(actor, { onFail: true });
   // "If you are knocked through a Health Threshold while in a Form or Enhancement and fail the Steadfast Check, you must immediately make
   // a Stress Test" - a Health Threshold's.
   if (failed.length) await forcedStressTest(actor, "A Steadfast Check failed");
@@ -42079,6 +42098,8 @@ function renderAttack(message, html) {
   if (!result.wound && adaptationDodgeButtons(message, container, attack)) return;
   // Law-Defying Battle (4): the same.
   if (!result.wound && notHitButtons(message, container, attack)) return;
+  // Tides of Time: the same.
+  if (!result.wound && tidesButtons(message, container, attack)) return;
 
   // Whoever owes the Wound Roll, which is the attacker on everything but a reflected
   // attack - there it is the Character whose attack was thrown back, and the button
@@ -43109,8 +43130,17 @@ async function settleWinEffects(message, clash) {
     await reduceLifePoints(target, lifeLoss, { reason: clash.maneuverName ?? "" });
     said.push(`loses ${lifeLoss} Life Points`);
   }
-  for (const key of conditions) await markUntilNextTurn(challenger, target, key, 1, (until === "end") ? "end" : "start", source || clash.maneuverName);
-  if (conditions.length) said.push(`is ${conditions.map(key => getTrait(key)?.name ?? key).join(" and ")} until the ${until} of ${challenger.name}'s next turn`);
+  for (const key of conditions) {
+    await markUntilNextTurn(challenger, target, key, 1, (until === "none") ? null : (until === "end") ? "end" : "start", source || clash.maneuverName);
+  }
+  if (conditions.length) said.push(`is ${conditions.map(key => getTrait(key)?.name ?? key).join(" and ")}${(until === "none") ? ""
+    : ` until the ${until} of ${challenger.name}'s next turn`}`);
+  // Kept while its maker pays for it each turn (Time Lag, Time Prison): timeHoldsUpkeep.
+  if (clash.winEffects.hold) {
+    await requestActorUpdate(challenger, { [`flags.${SCOPE}.timeHolds`]: [...(challenger.getFlag?.(SCOPE, "timeHolds") ?? []),
+      { ...clash.winEffects.hold, uuid: target.uuid, conditions }] });
+    said.push(`while ${challenger.name} pays for it each turn`);
+  }
   if (state) {
     await (await import("./effects/moments-runtime.mjs")).enterState(target, state, 1, null, source || clash.maneuverName);
     said.push(`enters the ${getTrait(state)?.name ?? state} State`);
@@ -43455,4 +43485,181 @@ export async function thresholdForKi(actor, perBaseTier = 7) {
     (Number(actor.system.ki?.value) || 0) + gain) });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
     `Realized Superiority: ${actor.name} drops ${reduction} Life Points, to 1 below the next Health Threshold - ${gain} Ki Points regained.`)}</div>` });
+}
+
+/**
+ * Time-Skip: "You may either: Use the Movement Maneuver as an Out-of-Sequence Maneuver. Use the Basic Attack Maneuver as an Out-of-Sequence
+ * Maneuver." With Time to Make the Donuts, a Signature Technique with the Time-Skipped Disadvantage instead of the Basic Attack. Its
+ * Advancements: Imperceptible Strike (no Diminishing Offense). Beyond the Time (4)-(6) asked or given as each says.
+ */
+export async function timeSkip(actor, context = {}) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!actor) return UNSPENT;
+  const item = actor.items?.get(context?.maneuver?.itemId ?? "") ?? Array.from(actor.items ?? []).find(each => (each.type === "maneuver")
+    && each.system?.unique && ((each.flags?.[SCOPE]?.sourceId === "time-skip") || (uniqueDefinitionOf(each)?.id === "time-skip")));
+  const bought = new Set(boughtTraits(item?.system?.unique, getTrait).map(trait => trait.id));
+  const slots = actor.system.effects?.slots ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const techniques = bought.has("time-to-make-the-donuts") ? Array.from(actor.items ?? []).filter(each => (each.type === "maneuver")
+    && (each.system?.signature?.features ?? []).some(feature => feature?.id === "time-skipped")) : [];
+  const pick = await askPlayerChoice(actor, `${actor.name}: Time-Skip`, [{ value: "movement", label: "The Movement Maneuver" },
+    { value: "basic-attack", label: "The Basic Attack Maneuver" }, ...techniques.map(each => ({ value: `technique:${each.id}`, label: each.name }))]);
+  if (!pick) return UNSPENT;
+  const { useManeuver, definitionOf, useTechnique } = await import("./use-maneuver.mjs");
+  const ownDefinition = id => {
+    const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === id));
+    return own ? definitionOf(own) : getManeuver(id);
+  };
+  const extras = { madeThrough: "time-skip", ...(bought.has("imperceptible-strike") ? { outsideDiminishing: true } : {}) };
+  if (pick === "movement") {
+    const moved = await useManeuver(actor, { ...ownDefinition("movement"), madeThrough: "time-skip" }, { outOfSequence: true });
+    // Beyond the Time (5): anywhere on the Battlefield - beside an Opponent, the Basic Attack at them: Simple, no Ki Wager, hitting.
+    if (moved && (slots["timeSkip.anySquare"] === true) && (actor.getFlag?.(SCOPE, "timeSkipAnywhere") !== encounter)
+      && ((await askPlayerChoice(actor, `${actor.name}: Beyond the Time`, [{ value: "yes", label: "Moved anywhere, beside an Opponent: the Basic "
+        + "Attack at them - Simple, no Ki Wager, it hits, no Defend against it (1/Encounter)" }, { value: "no", label: "No" }])) === "yes")) {
+      await actor.setFlag(SCOPE, "timeSkipAnywhere", encounter);
+      await useManeuver(actor, { ...ownDefinition("basic-attack"), ...extras, profile: "simple", noWager: true, forcedHit: true }, { outOfSequence: true });
+    }
+    return moved ? undefined : UNSPENT;
+  }
+  // Beyond the Time (6): Lethal, never reduced - asked, once an Encounter.
+  if ((slots["timeSkip.lethal"] === true) && (actor.getFlag?.(SCOPE, "timeSkipLethal") !== encounter)
+    && ((await askPlayerChoice(actor, `${actor.name}: Beyond the Time`, [{ value: "yes", label: "Its Damage Category Lethal, not to be reduced "
+      + "(1/Encounter)" }, { value: "no", label: "No" }])) === "yes")) {
+    await actor.setFlag(SCOPE, "timeSkipLethal", encounter);
+    extras.forcedCategory = "lethal";
+  }
+  // Beyond the Time (4): at an Opponent of an equal or lower Power Level - Time-Skip's Ki Point Cost not paid.
+  const target = game.user.targets?.first?.()?.actor ?? null;
+  const cheap = (slots["timeSkip.freeVsLower"] === true) && target && areOpponents(target, actor)
+    && ((Number(target.system?.powerLevel) || 0) <= (Number(actor.system.powerLevel) || 0));
+  const made = pick.startsWith("technique:")
+    ? await useTechnique(actor, pick.slice(10), { via: "time-skip", outOfSequence: true })
+    : await useManeuver(actor, { ...ownDefinition("basic-attack"), ...extras }, { outOfSequence: true });
+  if (!made) return UNSPENT;
+  if (cheap && item) {
+    const back = maneuverKiCost(uniqueDefinitionOf(item), null, actor);
+    await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0,
+      (Number(actor.system.ki?.value) || 0) + back), "system.capacity.spent": Math.max(0, (Number(actor.system.capacity?.spent) || 0) - back) });
+  }
+}
+
+/**
+ * Time Lag: "Target an Opponent. Make a Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal). If you win, that Opponent becomes Lagged"
+ * - the Lagged Condition (Strike and Dodge 2(T) lower) and a stack of Slowed, kept while you pay 1 Action and its Ki Point Cost at the start of
+ * each of your turns (timeHoldsUpkeep); gone if you fail a Steadfast Check or are Defeated.
+ */
+export async function timeLag(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const target = game.user.targets?.first?.()?.actor ?? null;
+  if (!actor || !target || (target.uuid === actor.uuid)) {
+    ui.notifications.warn("Time Lag: target the Opponent first.");
+    return UNSPENT;
+  }
+  return postSaveClash(actor, target, { maneuverName: "Time Lag", clashLabel: "Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal)",
+    reason: `Win and ${target.name} becomes Lagged - Strike and Dodge 2(T) lower, a stack of Slowed - while ${actor.name} pays for it each turn.`,
+    saves: ["cognitive", "impulsive"], defenderSaves: ["impulsive", "cognitive", "corporeal"],
+    winEffects: { applied: false, conditions: ["lagged", "slowed"], until: "none", source: "Time Lag",
+      hold: { name: "Time Lag", actions: 1, kiPerBaseTier: 10, releaseOnFail: true } } });
+}
+
+/**
+ * Time Prison: "If you hit an Opponent with a Signature Technique that possesses the Time-Skipped Disadvantage, you may use this Maneuver. Make a
+ * Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal). If you win, that Opponent becomes trapped in a Cage of Time" - Pinned and Guard
+ * Down, kept while you pay 2 Actions and its Ki Point Cost at the start of each of your turns. Asked, once an Encounter, its Ki paid.
+ */
+async function timePrisonOffer(attacker, target, attack) {
+  if (!attacker || !target || (attacker.uuid === target.uuid) || !areOpponents(attacker, target)) return;
+  if (!(attack?.technique?.features ?? []).includes("time-skipped")) return;
+  const prison = getManeuver("time-prison");
+  if (!prison || whyNotSpecial(attacker, prison)) return;
+  if (attacker.getFlag?.(SCOPE, "timePrisonEncounter") === (game.combat?.id ?? "none")) return;
+  const ki = 10 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  if ((await askPlayerChoice(attacker, `${attacker.name}: Time Prison`, [{ value: "yes", label: `${ki} Ki: the Clash to trap ${target.name} in a `
+    + "Cage of Time (1/Encounter)" }, { value: "no", label: "No" }])) !== "yes") return;
+  if (!await spendManeuverCost(attacker, prison, ki)) return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.timePrisonEncounter`]: game.combat?.id ?? "none" });
+  return postSaveClash(attacker, target, { maneuverName: "Time Prison", clashLabel: "Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal)",
+    reason: `Win and ${target.name} is trapped in a Cage of Time - Pinned and Guard Down - while ${attacker.name} pays for it each turn.`,
+    saves: ["cognitive", "impulsive"], defenderSaves: ["impulsive", "cognitive", "corporeal"],
+    winEffects: { applied: false, conditions: ["pinned", "guard-down"], until: "none", source: "Time Prison",
+      hold: { name: "Time Prison", actions: 2, kiPerBaseTier: 10 } } });
+}
+
+/**
+ * Time Lag's and Time Prison's: "At the start of each of your turns ... you must spend 1 Action (2 Actions) and the Ki Point Cost of this
+ * Maneuver or that Opponent stops being Lagged (is freed)" - each asked; not paid, what it gave taken off.
+ */
+export async function timeHoldsUpkeep(actor) {
+  const holds = Array.from(actor?.getFlag?.(SCOPE, "timeHolds") ?? []);
+  if (!holds.length) return;
+  const kept = [];
+  for (const hold of holds) {
+    const target = fromUuidSync(hold.uuid ?? "");
+    if (!target) continue;
+    const ki = (Number(hold.kiPerBaseTier) || 0) * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+    const actions = Number(hold.actions) || 1;
+    const keep = (await askPlayerChoice(actor, `${actor.name}: ${hold.name} on ${target.name}`, [
+      { value: "pay", label: `Keep it: ${actions} Action${(actions === 1) ? "" : "s"} and ${ki} Ki` }, { value: "free", label: "Let it end" }])) === "pay"
+      && await spendActions(actor, actions, "standard") && await spendManeuverCost(actor, { name: hold.name }, ki);
+    if (keep) kept.push(hold);
+    else await endTimeHold(actor, hold, target);
+  }
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.timeHolds`]: kept });
+}
+
+/** Time Lag's hold let go - its maker failing a Steadfast Check, or Defeated. */
+export async function releaseTimeHolds(actor, { onFail = false } = {}) {
+  const holds = Array.from(actor?.getFlag?.(SCOPE, "timeHolds") ?? []);
+  const going = holds.filter(hold => !onFail || hold.releaseOnFail);
+  if (!going.length) return;
+  for (const hold of going) await endTimeHold(actor, hold, fromUuidSync(hold.uuid ?? ""));
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.timeHolds`]: holds.filter(hold => !going.includes(hold)) });
+}
+
+/** What a hold gave, taken off - a stack of each - and said. */
+async function endTimeHold(actor, hold, target) {
+  if (!target) return;
+  const { setCondition } = await import("./conditions.mjs");
+  for (const key of hold.conditions ?? []) {
+    const now = Number(target.system?.conditions?.[key]) || 0;
+    if (now > 0) await setCondition(target, key, now - 1);
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `${hold.name}: ${target.name} is free of it.`)}</div>` });
+}
+
+/** Tides of Time open to the one hit: the Special Maneuver theirs, a Counter Action to pay with. */
+function tidesOpen(target) {
+  const tides = getManeuver("tides-of-time");
+  return Boolean(target && tides && !target.system?.defeated && !whyNotSpecial(target, tides)
+    && (!game.combat?.started || (actionsWithin(target, "counter") >= 1)));
+}
+
+/** Tides of Time's buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
+function tidesButtons(message, container, attack) {
+  const waiting = (attack.result?.targets ?? []).filter(branch => branch.tides === "offered");
+  for (const branch of waiting) {
+    const target = fromUuidSync(branch.uuid);
+    if (!target?.isOwner) continue;
+    for (const [label, tooltip, act] of [
+      [`Tides of Time - ${target.name}`, "A Counter Action: no Damage received - taken from your Ki Points instead, the rest from your Life Points",
+        async () => {
+          if (!await payCounter(target, getManeuver("tides-of-time"), 1)) return;
+          return rewriteBranch(message, target.uuid, () => ({ tides: "done", damageToKi: true }));
+        }],
+      [`Take the hit - ${target.name}`, "", () => rewriteBranch(message, target.uuid, () => ({ tides: "declined" }))]]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = label;
+      if (tooltip) button.dataset.tooltip = tooltip;
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        return act();
+      });
+      container.append(button);
+    }
+  }
+  return waiting.length > 0;
 }

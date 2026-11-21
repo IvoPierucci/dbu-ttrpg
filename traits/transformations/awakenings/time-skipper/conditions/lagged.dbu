@@ -1,0 +1,16 @@
+id: lagged
+name: Lagged
+kind: condition
+maxStacks: 1
+# Not one of the published Combat Conditions: a status of its own (Time Lag's "becomes Lagged").
+combatCondition: no
+description: >
+  Thrust outside the flow of time by Time Lag: Strike and Dodge Rolls 2(T) lower (its Slowed a stack of its own).
+text: >
+  A Lagged Opponent has their Strike and Dodge Rolls reduced by 2(T) and suffers from a stack of the Slowed Combat Condition.
+
+---
+
+[passive]
+strike -= 2(T);
+dodge -= 2(T);

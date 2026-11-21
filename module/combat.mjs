@@ -528,6 +528,8 @@ async function beginTurn(actor) {
       await (await import("./chat.mjs")).takeSurge(actor, { source: "Karyon Core", kind: "healing", forceUp: true });
     }
   }
+  // Time Lag and Time Prison: paid for, or let go.
+  await (await import("./chat.mjs")).timeHoldsUpkeep(actor);
   // Wild Child (4), (5): the Pseudo-Bestial Traits' access "until the start of your next turn" - this one.
   if (actor.getFlag?.("dbu-ttrpg", "pseudoAccess")) await actor.unsetFlag("dbu-ttrpg", "pseudoAccess");
   // Kindhearted Saiyan (2): "until the start of your next turn" - this one.
@@ -1533,6 +1535,8 @@ export async function beginDefeat(actor, { silenced = false, knockedBy = "" } = 
     // Something may still catch them. Whatever answers this writes Life Points, and
     // the character is re-derived before the second Moment is even considered.
     if (!silenced) await fireMoment(actor, "defeated", { damage: 0 });
+    // Time Lag: "If you ... are Defeated, that Lagged Opponent stops being Lagged."
+    if (actor.system.defeated) await (await import("./chat.mjs")).releaseTimeHolds(actor, { onFail: true });
     if (!actor.system.defeated) {
       // The rescue counts against the one allowed per Encounter.
       await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });

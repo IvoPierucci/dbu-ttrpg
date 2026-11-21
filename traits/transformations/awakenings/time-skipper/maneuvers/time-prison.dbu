@@ -1,0 +1,24 @@
+id: time-prison
+name: Time Prison
+type: outOfSequence
+actionCost: 0
+kiCostPerBaseTier: 10
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+minions: Non-Minion
+# Time Restraint's: offered as a Time-Skipped Signature Technique hits - its Ki paid, its Clash; won, Pinned and Guard Down, kept while paid
+# for each turn (chat.mjs timePrisonOffer, timeHoldsUpkeep). Breaking free of Pinned ending its Guard Down too: the table's.
+special: true
+source: Time-Skipper
+description: >
+  A Time-Skipped Signature Technique's hit: a Clash - won, the Opponent Pinned and Guard Down while you pay for it each turn.
+text: >
+  Time Prison [1/Encounter]: Knocking your enemy out of the time stream, you imprison your enemies by preventing them from experiencing the flow of time.
+  –Maneuver Type: Out-of-Sequence Maneuver
+  –Action Cost: N/A
+  –Minions: Non-Minion
+  –KP Cost: 10(bT)
+  –Effect: If you hit an Opponent with a Signature Technique that possesses the Time-Skipped Disadvantage, you may use this Maneuver. Make a Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal). If you win, that Opponent becomes trapped in a Cage of Time. A Character trapped in the Cage of Time is Pinned and suffers from the Guard Down Combat Condition.
+  If a Character in the Cage of Time is able to break free from being Pinned, they escape the Cage of Time and thus stop suffering from the Guard Down Combat Condition too.
+  At the start of each of your turns, if a Character is trapped in the Cage of Time, you must spend 2 Actions and the Ki Point Cost of this Maneuver or the Character trapped in the Cage of Time is freed.

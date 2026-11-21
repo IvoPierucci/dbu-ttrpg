@@ -1,0 +1,70 @@
+id: time-skipper
+name: Time-Skipper
+type: awakening
+subtype: greater
+origin: mind
+racial: Any
+prerequisites: N/A
+maxStacks: 1
+tier: 3+
+bonuses: AG +2, FO +1, IN +2, MA +1
+description: >
+  With the unique capability to step outside of the flow of time for a brief moment, you make it appear as though you aren't even taking any action at all. The actions you choose to use in battle are 'skipped', but their effects are nevertheless felt by your foes.
+text: >
+  With the unique capability to step outside of the flow of time for a brief moment, you make it appear as though you aren't even taking any action at all. The actions you choose to use in battle are 'skipped', but their effects are nevertheless felt by your foes.
+
+  **Time-Skipper** — Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Mind / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 3+
+  AG +2 · FO +1 · TE – · SC – · IN +2 · MA +1 · PE –
+
+  Beyond the Time: You've trained in esoteric skills which allow you to exist beyond the normal bounds of time itself; able to skip ahead through it and take your enemies by surprise.
+  (1)-[Passive]: During your Opponents' turns, increase your Dodge Rolls and Strike Rolls made through the effects of the Defend Maneuver by 1(bT).
+  (2)-[Passive]: During your or an Ally's turn, increase your Strike Rolls by 1(bT).
+  (3)-[Passive]: You gain access to the Time-Skip Unique Ability.
+  (4)-[Triggered]: If you target an Opponent with an Attacking Maneuver through the Time-Skip Unique Ability, and that Opponent has an equal or lower Power Level than you, do not pay the Ki Point Cost for the Time-Skip Unique Ability.
+  (5)-[Triggered, 1/Encounter]: When you use the Movement Maneuver through the Time-Skip Unique Ability, you may move to any Square on the Battlefield. If this Square is adjacent to an Opponent, use the Basic Attack Maneuver as an Out-of-Sequence Maneuver but you must target that Opponent and you must use the Simple Profile for that Attacking Maneuver. You cannot Ki Wager on this Attacking Maneuver, but it automatically hits that Opponent and your Opponent cannot use the Defend Maneuver against this Attacking Maneuver.
+  (6)-[Triggered, 1/Encounter]: When you use an Attacking Maneuver through the Time-Skip Unique Ability, you may set the Damage Category to Lethal. The Damage Category of this Attacking Maneuver cannot be reduced by any means.
+
+  Time-Skip — You can force your way past a point in time, effectively acting outside of that point in time to perform your task immediately.
+  –Ability Type: Technical –Prerequisites: Time Skipper Awakening –TP Cost: N/A –KP Cost: 4(T) –Maneuver Type: Instant –Action Cost: N/A –Minions: N/A –Passive Bonus: N/A
+  –Effect: You may either:
+  • Use the Movement Maneuver as an Out-of-Sequence Maneuver.
+  • Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+
+  Time-Skip Advancements
+  IMPERCEPTIBLE STRIKE — You can attack more swiftly and powerfully while you skip through time. –Prerequisites: N/A –TP Cost: 10 –Effect: Your Attacking Maneuvers made through the Time-Skip Unique Ability do not suffer from, or count towards, the penalty from Diminishing Offense.
+  BARRAGE FROM TIME — You can Time-Skip repeatedly. –Prerequisites: N/A –TP Cost: 5 –Effect: You can use the Time-Skip Unique Ability an additional time per Combat Round.
+  TIME TO MAKE THE DONUTS — You are able to create techniques that can be used outside of time. –Prerequisites: N/A –TP Cost: 5 –Effect: You can use the Signature Technique Maneuver through the effects of Time-Skip instead of the Basic Attack Maneuver. That Signature Technique Maneuver must have the Time-Skipped Disadvantage.
+  WALK THROUGH TIME — You can shift yourself out of the flow of time to avoid damage. –Prerequisites: N/A –TP Cost: 15 –Effect: Gain access to the Tides of Time Special Maneuver.
+  TIME SHIFT — You can push someone temporarily out of time, making them slower to react. –Prerequisites: N/A –TP Cost: 15 –Effect: Gain access to the Time Lag Special Maneuver.
+  TIME RESTRAINT — Stopping the flow of time around your enemy, you trap them outside of time. –Prerequisites: N/A –TP Cost: 15 –Effect: Gain access to the Time Prison Special Maneuver.
+
+  Time-Skip-related Special Maneuvers
+  Tides of Time: By forcing your way outside of time, you can avoid all but the most grievous injuries.
+  –Maneuver Type: Counter Maneuver
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Effect: If you are hit by an Attacking Maneuver that you did not use a Counter Maneuver in response to, you can use this Counter Maneuver to not receive any Damage. Any Damage you would have received is instead taken from your Ki Points. If this Damage would reduce your Ki Points to 0, the remaining excess is removed from your Life Points.
+
+  Time Lag [1/Encounter]: You thrust an enemy outside of the flow of time, leaving them unable to perceive your movements.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –KP Cost: 10(bT)
+  –Exploitable: If you fail the Clash for the effects of Time Lag, that Opponent's Exploit Maneuver is triggered.
+  –Effect: Target an Opponent. Make a Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal). If you win, that Opponent becomes Lagged. A Lagged Opponent has their Strike and Dodge Rolls reduced by 2(T) and suffers from a stack of the Slowed Combat Condition.
+  If you fail a Steadfast Check or are Defeated, that Lagged Opponent stops being Lagged.
+  At the start of each of your turns, if an Opponent is Lagged, you must spend 1 Action and the Ki Point Cost of this Maneuver or that Opponent stops being Lagged.
+
+  Time Prison [1/Encounter]: Knocking your enemy out of the time stream, you imprison your enemies by preventing them from experiencing the flow of time.
+  –Maneuver Type: Out-of-Sequence Maneuver
+  –Action Cost: N/A
+  –Minions: Non-Minion
+  –KP Cost: 10(bT)
+  –Effect: If you hit an Opponent with a Signature Technique that possesses the Time-Skipped Disadvantage, you may use this Maneuver. Make a Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal). If you win, that Opponent becomes trapped in a Cage of Time. A Character trapped in the Cage of Time is Pinned and suffers from the Guard Down Combat Condition.
+  If a Character in the Cage of Time is able to break free from being Pinned, they escape the Cage of Time and thus stop suffering from the Guard Down Combat Condition too.
+  At the start of each of your turns, if a Character is trapped in the Cage of Time, you must spend 2 Actions and the Ki Point Cost of this Maneuver or the Character trapped in the Cage of Time is freed.
+
+---
+
+# Its own effects are its Trait's (traits/), its Unique Ability's and Special Maneuvers' (unique/, maneuvers/), and Lagged (conditions/).

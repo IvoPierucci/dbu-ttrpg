@@ -145,6 +145,8 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
     return `${name} is ${getTrait(keeper.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.chosenTechnique || "this Trait's"} - only used while ${keeper.name} applies.`;
   }
 
+  // Time-Skipped: "This Attacking Maneuver can only be used through the effects of the Time-Skip Unique Ability."
+  if (has(technique, "time-skipped") && (via !== "time-skip")) return `${name} is only used through Time-Skip.`;
   // Restricted - Transformation: in the chosen kind of Transformation, the chosen one, or one of the chosen Line.
   if (!unrestricted && has(technique, "restricted-transformation")) {
     const wanted = choice(technique, "restricted-transformation");

@@ -1,0 +1,14 @@
+id: barrage-from-time
+name: Barrage From Time
+advancement: true
+prerequisite: N/A
+tpCost: 5
+extraUses: 1
+source: Time-Skipper
+description: >
+  You can use the Time-Skip Unique Ability an additional time per Combat Round.
+text: >
+  Barrage From Time: You can Time-Skip repeatedly.
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –Effect: You can use the Time-Skip Unique Ability an additional time per Combat Round.

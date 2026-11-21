@@ -1,0 +1,46 @@
+id: time-skipper-beyond-the-time
+name: Beyond the Time
+order: 1
+slot: trait
+# (3) "You gain access to the Time-Skip Unique Ability."
+grantsUnique: time-skip
+description: >
+  You've trained in esoteric skills which allow you to exist beyond the normal bounds of time itself; able to skip ahead through it and take your enemies by surprise.
+text: >
+  Beyond the Time: You've trained in esoteric skills which allow you to exist beyond the normal bounds of time itself; able to skip ahead through it and take your enemies by surprise.
+  (1)-[Passive]: During your Opponents' turns, increase your Dodge Rolls and Strike Rolls made through the effects of the Defend Maneuver by 1(bT).
+  (2)-[Passive]: During your or an Ally's turn, increase your Strike Rolls by 1(bT).
+  (3)-[Passive]: You gain access to the Time-Skip Unique Ability.
+  (4)-[Triggered]: If you target an Opponent with an Attacking Maneuver through the Time-Skip Unique Ability, and that Opponent has an equal or lower Power Level than you, do not pay the Ki Point Cost for the Time-Skip Unique Ability.
+  (5)-[Triggered, 1/Encounter]: When you use the Movement Maneuver through the Time-Skip Unique Ability, you may move to any Square on the Battlefield. If this Square is adjacent to an Opponent, use the Basic Attack Maneuver as an Out-of-Sequence Maneuver but you must target that Opponent and you must use the Simple Profile for that Attacking Maneuver. You cannot Ki Wager on this Attacking Maneuver, but it automatically hits that Opponent and your Opponent cannot use the Defend Maneuver against this Attacking Maneuver.
+  (6)-[Triggered, 1/Encounter]: When you use an Attacking Maneuver through the Time-Skip Unique Ability, you may set the Damage Category to Lethal. The Damage Category of this Attacking Maneuver cannot be reduced by any means.
+
+---
+
+# (1) During an Opponent's turn: Dodge Rolls, and the Strike of the Defend's Parry, 1(bT).
+[passive, effect 1]
+if (opponentsTurn) {
+    dodge += 1(bT);
+    parry += 1(bT);
+}
+
+# (2) During your turn or an Ally's: Strike Rolls 1(bT).
+[passive, effect 2]
+if (ownOrAllyTurn) {
+    strike += 1(bT);
+}
+
+# (3) Time-Skip: given by its header (this folder's unique/).
+
+# (4) An attack through Time-Skip at an Opponent of an equal or lower Power Level: Time-Skip's Ki given back; (5) the Movement through it,
+# once an Encounter: anywhere, then the Basic Attack - Simple, no Ki Wager, hitting - asked; (6) an attack through it, once an Encounter:
+# Lethal, never reduced - asked (chat.mjs timeSkip). Where the Movement lands, and that no Defend Maneuver answers (5)'s attack, the table's
+# (it hits without a defence rolled).
+[passive, effect 4]
+allow timeSkip.freeVsLower;
+
+[passive, effect 5]
+allow timeSkip.anySquare;
+
+[passive, effect 6]
+allow timeSkip.lethal;

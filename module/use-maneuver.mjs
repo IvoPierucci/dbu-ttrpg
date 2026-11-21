@@ -6151,6 +6151,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // mind, whose attack may come from anywhere around its wielder: which Square, the table's.
     // A Favored Element's Force Modifier as its Damage Attribute, where it is the higher.
     declared = favoredDamage(actor, declared);
+    // Beyond the Time (5): "You cannot Ki Wager on this Attacking Maneuver, but it automatically hits".
+    if (declared && maneuver.noWager) declared = { ...declared, kiWager: 0 };
+    if (declared && maneuver.forcedHit) declared = { ...declared, autoHit: true };
     // Villainous Form (1): an Evil Technique's Force or Magic.
     declared = (await import("./maneuvers.mjs")).givenTechniqueAttribute(actor, declared, maneuver);
     // A Frozen Turn: "cannot Ki Wager".

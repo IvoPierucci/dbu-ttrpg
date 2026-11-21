@@ -625,6 +625,15 @@ export const VERBS = Object.freeze({
     doc: "Caste Combat's Pawn: the Basic Attack offered on the Defeated card - Full Wager, and Power Shot (2) but for a Minion "
        + "(chat.mjs castePawnStrike)."
   },
+  timeSkip: {
+    args: [0, 0],
+    doc: "Time-Skip: the Movement or the Basic Attack out of sequence - or, with Time to Make the Donuts, a Time-Skipped Signature Technique - "
+       + "with what Beyond the Time and the Advancements bought add (chat.mjs timeSkip)."
+  },
+  timeLag: {
+    args: [0, 0],
+    doc: "Time Lag: a Clash at the Opponent targeted - won, Lagged and Slowed, kept while you pay for it each turn (chat.mjs timeLag)."
+  },
   thresholdForKi: {
     args: [1, 1],
     doc: "Your Life Points brought to 1 below your next Health Threshold, as many Ki Points regained - at most so many (bT) (chat.mjs "

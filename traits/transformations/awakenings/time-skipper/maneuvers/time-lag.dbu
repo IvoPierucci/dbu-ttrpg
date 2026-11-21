@@ -1,0 +1,30 @@
+id: time-lag
+name: Time Lag
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 10
+attacking: false
+requiresTarget: true
+usageLimit: 1/encounter
+minions: Non-Minion
+# Time Shift's. Its Clash at the Opponent targeted - won, Lagged and a stack of Slowed, kept while paid for each turn (chat.mjs timeLag,
+# timeHoldsUpkeep). The Exploit on a lost Clash: the table's.
+special: true
+source: Time-Skipper
+description: >
+  A Clash: won, the Opponent is Lagged - Strike and Dodge 2(T) lower, Slowed - while you pay for it each turn.
+text: >
+  Time Lag [1/Encounter]: You thrust an enemy outside of the flow of time, leaving them unable to perceive your movements.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –KP Cost: 10(bT)
+  –Exploitable: If you fail the Clash for the effects of Time Lag, that Opponent's Exploit Maneuver is triggered.
+  –Effect: Target an Opponent. Make a Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal). If you win, that Opponent becomes Lagged. A Lagged Opponent has their Strike and Dodge Rolls reduced by 2(T) and suffers from a stack of the Slowed Combat Condition.
+  If you fail a Steadfast Check or are Defeated, that Lagged Opponent stops being Lagged.
+  At the start of each of your turns, if an Opponent is Lagged, you must spend 1 Action and the Ki Point Cost of this Maneuver or that Opponent stops being Lagged.
+
+---
+
+[on used]
+timeLag();

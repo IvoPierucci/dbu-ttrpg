@@ -622,6 +622,13 @@ const TABLE = [
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
   { key: "timeControl.noDrain", phase: PHASES.CORE, kind: F, ops: ["allow"],
     doc: "Time Control (4)'s Life Points at the start of the turn not lost - Dominion Over Time (4)." },
+  // Time-Skipper's Beyond the Time.
+  { key: "timeSkip.freeVsLower", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "An Attacking Maneuver through Time-Skip at an Opponent of an equal or lower Power Level: Time-Skip's Ki given back (chat.mjs timeSkip) - (4)." },
+  { key: "timeSkip.anySquare", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "The Movement through Time-Skip, once an Encounter: anywhere, then the Basic Attack - Simple, no Ki Wager, hitting - asked (chat.mjs timeSkip) - (5)." },
+  { key: "timeSkip.lethal", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "An Attacking Maneuver through Time-Skip, once an Encounter: its Damage Category Lethal, never reduced, asked (chat.mjs timeSkip) - (6)." },
   // Ki past the Maximum; dice and Wound put on one attack as it is declared; Golden Oozaru's Size.
   { key: "ki.overMax", phase: PHASES.CORE, kind: F, ops: ["allow"],
     doc: "Your Ki Points may exceed your Maximum: nothing regained is held to it (`ki.ceiling`) - Unlimited Power (4)." },
