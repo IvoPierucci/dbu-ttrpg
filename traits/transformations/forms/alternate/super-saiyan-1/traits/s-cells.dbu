@@ -2,8 +2,8 @@ id: super-saiyan-1-s-cells
 name: S-Cells
 order: 1
 slot: trait
-# Its [Permanent] effects: they hold outside the Transformation too.
-permanent: 3
+# (3) [Permanent, Option]: the Option chosen is kept - its effects, [Passive], only in it (the user's, 2026-11-21); Back to Basics (2)
+# keeps them outside it (`keepsEffect`).
 optionEffect: 3
 description: >
   The latent power in your blood awakens, granting you increased might.

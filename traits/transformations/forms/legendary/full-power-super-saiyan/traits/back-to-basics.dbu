@@ -5,6 +5,8 @@ slot: trait
 # One of these is chosen (the Transformation's row asks).
 group: super-saiyan-style-traits
 groupLabel: Super Saiyan Style Traits
+# (2) "You gain access to the Option effect you chose for the 3rd effect of S-Cells."
+keepsEffect: super-saiyan-1-s-cells 3
 description: >
   You have no need for those inefficient evolutions of the Super Saiyan form; when properly mastered, the basic Super Saiyan far outclasses them.
 text: >
@@ -17,7 +19,7 @@ text: >
 
 ---
 
-# (2) S-Cells (3)'s Option: [Permanent], so it holds outside Super Saiyan 1 already (the user's ruling on [Permanent]).
+# (2) S-Cells (3)'s Option chosen, its effects outside Super Saiyan 1 too: its header's keepsEffect (transformations.mjs effectsOutside).
 
 # (3) With 4+ stacks of Battle Born: the Power Up as an Instant, once a Round - its own Maneuver (maneuvers/).
 [passive, effect 3]

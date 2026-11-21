@@ -20,7 +20,10 @@ text: >
 
 # (1) Agility Attribute Modifier Bonus 1(T).
 [passive, effect 1]
-agility.mod += 1(T);
+# [Permanent]: kept outside it - what it gives, only while in it (the user's, 2026-11-21).
+if (inTransformation("oozaru")) {
+    agility.mod += 1(T);
+}
 
 # (2) Large for the Defense Value's Size and for Punching Up (as Giant Gene's, Enormous or larger).
 [passive, effect 2]

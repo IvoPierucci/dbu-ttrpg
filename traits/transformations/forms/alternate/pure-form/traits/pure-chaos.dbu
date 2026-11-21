@@ -25,11 +25,14 @@ text: >
 
 # (1) Legendary, Stress 9 higher (its header); its Attribute Modifier Bonuses 1(T) more.
 [passive, effect 1]
-agility.mod += 1(T);
-force.mod += 1(T);
-tenacity.mod += 1(T);
-insight.mod += 1(T);
-magic.mod += 1(T);
+# [Permanent]: kept outside it - what it gives, only while in it (the user's, 2026-11-21).
+if (inTransformation("pure-form")) {
+    agility.mod += 1(T);
+    force.mod += 1(T);
+    tenacity.mod += 1(T);
+    insight.mod += 1(T);
+    magic.mod += 1(T);
+}
 
 # (3) In the Superior State: an Energy Charge on every Attacking Maneuver.
 [automatic/declare-maneuver, effect 3]

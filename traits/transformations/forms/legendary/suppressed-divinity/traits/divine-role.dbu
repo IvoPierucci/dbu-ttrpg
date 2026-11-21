@@ -22,8 +22,11 @@ text: >
 
 # (1) The two God Maneuvers chosen, open while it is had.
 [passive, effect 1]
-allow maneuver.$choice;
-allow maneuver.$choice2;
+# [Permanent]: kept outside it - what it gives, only while in it (the user's, 2026-11-21).
+if (inTransformation("suppressed-divinity") || inTransformation("divinity-unleashed")) {
+    allow maneuver.$choice;
+    allow maneuver.$choice2;
+}
 
 # (3) Allies within a Large Sphere AoE centered on you: Combat Rolls 1(T) (actor-character.mjs allyRolls) - Huge in Divinity Unleashed
 # (Cosmic Flow (2), which writes this effect's other half there). None within it: your Wound Rolls and Soak 1(T).

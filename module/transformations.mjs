@@ -590,9 +590,9 @@ export function transformationTraitAside(item, items = item?.parent?.items) {
   if ((using === "inherited") && trait?.mastery) return "mastery";
   // Prelude: "you do not benefit from the last Transformation Trait of this Transformation while in this Transformation (any Permanent
   // effects are still in effect)".
-  if (using && preludeDrops(owner, ownerFile, trait)) return effectsOutside(trait).length ? "" : "prelude";
+  if (using && preludeDrops(owner, ownerFile, trait)) return effectsOutside(trait, item, list).length ? "" : "prelude";
   if (using && ((trait?.slot !== "transcendent") || owner.system?.transcended)) return "";
-  return effectsOutside(trait).length ? "" : "outside";
+  return effectsOutside(trait, item, list).length ? "" : "outside";
 }
 
 /**
@@ -605,9 +605,25 @@ export function preludeDrops(owner, file, trait) {
   return own.length > 0 && (own[own.length - 1].id === trait.id);
 }
 
-/** The effects of a Transformation Trait that hold outside its Transformation: its [Permanent] and its [Constant] ones, by number. */
-export function effectsOutside(trait) {
-  return [...numbersOf(trait?.permanent), ...numbersOf(trait?.constant)];
+/**
+ * The effects of a Transformation Trait that hold outside its Transformation: its [Permanent] and its [Constant] ones, by number - and those
+ * another Trait had, not set aside, keeps for it (`keepsEffect: <trait id> N` - Back to Basics (2)'s "You gain access to the Option effect you
+ * chose for the 3rd effect of S-Cells"). A [Permanent] Option keeps the choice, not its effects (the user's, 2026-11-21).
+ */
+export function effectsOutside(trait, item = null, items = item?.parent?.items) {
+  const own = [...numbersOf(trait?.permanent), ...numbersOf(trait?.constant)];
+  if (!trait || !items) return own;
+  const kept = [];
+  for (const each of Array.from(items)) {
+    if ((each.type !== "racial") || (item && (each.id === item.id))) continue;
+    const giver = getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    if (!giver?.keepsEffect || (giver.id === trait.id)) continue;
+    const [id, ...numbers] = String(giver.keepsEffect).trim().split(/\s+/);
+    if (id !== trait.id) continue;
+    if (each.system?.transformation && transformationTraitAside(each, items)) continue;
+    kept.push(...numbers.map(Number).filter(Boolean));
+  }
+  return [...own, ...kept];
 }
 
 /**
@@ -622,7 +638,7 @@ export function transformationTraitProgram(item, program, items = item?.parent?.
   if (trait?.slot === "legendary") return (formTypeFor(owner, items) === "legendary") ? program : { ...program, blocks: [] };
   const using = owner ? traitsInUse(owner, items) : false;
   if (using && !preludeDrops(owner, fileOf(owner), trait) && ((trait?.slot !== "transcendent") || owner.system?.transcended)) return program;
-  const kept = new Set(effectsOutside(trait));
+  const kept = new Set(effectsOutside(trait, item, items));
   return { ...program, blocks: (program.blocks ?? []).filter(block => kept.has(Number(block.modifiers?.effect) || 0)) };
 }
 

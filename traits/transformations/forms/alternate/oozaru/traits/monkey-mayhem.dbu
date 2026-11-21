@@ -18,7 +18,10 @@ text: >
 
 # (1) Insight Attribute Modifier Bonus 1(T).
 [passive, effect 1]
-insight.mod += 1(T);
+# [Permanent]: kept outside it - what it gives, only while in it (the user's, 2026-11-21).
+if (inTransformation("oozaru")) {
+    insight.mod += 1(T);
+}
 
 # (2) Furious Beast (4) ignored; Rampaging Assault (1)(2) - no Enhancement with it - only said, so nothing to ignore.
 [passive, effect 2]

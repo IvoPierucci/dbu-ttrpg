@@ -20,7 +20,10 @@ text: >
 
 # (2) The Size chosen.
 [passive, effect 2]
-allow size.base.$choice;
+# [Permanent]: kept outside it - what it gives, only while in it (the user's, 2026-11-21).
+if (inTransformation("divinity-unleashed")) {
+    allow size.base.$choice;
+}
 
 # (3) A Clash an Opponent opened at you: your Might and Saving Throws 1(T) (chat.mjs vsOpponentClashBonus).
 [passive, effect 3]
