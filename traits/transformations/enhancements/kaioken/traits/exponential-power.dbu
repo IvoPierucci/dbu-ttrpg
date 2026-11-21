@@ -23,7 +23,7 @@ allow maneuver.movement-instant;
 
 # (2) Wound Rolls 1/2 (rounded up) of G(T).
 [passive, effect 2]
-wound += ceil($G / 2) * 1(T);
+wound += ceil($G * 1(T) / 2);
 
 # (3) The Kaioken Dice on every Combat Roll, by its Grade (its table): none at 1, 1d4 at 2-3, 1d6 at 4, 1d8 at 5, 1d10 at 6.
 [passive, effect 3]

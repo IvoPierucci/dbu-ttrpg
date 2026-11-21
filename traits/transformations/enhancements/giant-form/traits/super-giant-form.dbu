@@ -21,7 +21,7 @@ text: >
 
 # (3) Damage Reduction 1/2 (rounded up) of G(T).
 [passive, effect 3]
-damageReduction += ceil($G / 2) * 1(T);
+damageReduction += ceil($G * 1(T) / 2);
 
 # (4) Accelerated Growth (1) doubled: Punching Down's Extra Dice another Category. (5) Battlefield Titan (1) unlimited: the table's,
 # as it is.

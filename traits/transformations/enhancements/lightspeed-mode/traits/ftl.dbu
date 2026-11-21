@@ -21,7 +21,7 @@ text: >
 
 # (2) Signature Techniques' Wound 1/2 (rounded up) of G(T).
 [passive, effect 2]
-wound.signature += ceil($G / 2) * 1(T);
+wound.signature += ceil($G * 1(T) / 2);
 
 # (3) The extra Damage 2(bT) lower: in Gear Shift's.
 

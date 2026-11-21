@@ -16,8 +16,8 @@ text: >
 # (1) 2+ stacks of Power: Wound and Soak 1/2 of S(T).
 [passive, effect 1]
 if (power.stacks >= 2) {
-    wound += floor($S / 2) * 1(T);
-    soakValue += floor($S / 2) * 1(T);
+    wound += floor($S * 1(T) / 2);
+    soakValue += floor($S * 1(T) / 2);
 }
 
 # (2) The Power Up used, 2 Overwhelm to spend and room for a stack: a stack more from it.

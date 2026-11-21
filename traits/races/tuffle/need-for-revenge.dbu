@@ -22,7 +22,7 @@ if (hasResource("spite")) {
     # (2)
     attack.kiCost -= spite.stacks * 1(T);
     # (3) Half of x, rounded down, (T).
-    defenseValue += floor(spite.stacks / 2) * 1(T);
+    defenseValue += floor(spite.stacks * 1(T) / 2);
 }
 
 # (1) Knocked through a Health Threshold. Automatic by default, its Triggered/Automatic button.
