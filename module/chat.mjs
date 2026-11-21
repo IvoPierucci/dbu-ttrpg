@@ -39629,7 +39629,7 @@ function renderMoment(message, html) {
     ${card.detail
       ? `<div class="dbu-moment-detail">${Handlebars.escapeExpression(card.detail)}</div>`
       : ""}`;
-  content.append(box);
+  if ((card.title && !card.quietTitle) || card.detail) content.append(box);
 
   const buttons = document.createElement("div");
   buttons.className = "dbu-clash-buttons";
@@ -39930,7 +39930,7 @@ async function answerMoment(message, card, actor) {
   // is: Saiyan Heritage's Steadfast Check for the Undying State.
   const threshold = (card.moment === "threshold") && (card.subjectUuid === actor.uuid);
   const defeated = (card.moment === "defeated") && (card.subjectUuid === actor.uuid);
-  if (!threshold && !defeated && !["start-of-round", "start-of-turn", "start-of-encounter", "end-of-turn"]
+  if (!threshold && !defeated && !["start-of-round", "start-of-turn", "start-of-encounter", "end-of-turn", "transform"]
     .includes(card.moment)) return;
   const chosen = triggers.filter(entry => !before.has(entry.blockId)
     && (actor.system.armedTalents ?? []).includes(entry.blockId));
@@ -39948,7 +39948,7 @@ async function answerMoment(message, card, actor) {
   // What was ticked alone: what is Automatic answered the Moment when it happened, and is not answered twice.
   if (keyword.length) {
     await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold, from: card.thresholdFrom ?? "", knockerUuid: card.knockedBy ?? "" }
-      : (defeated ? { damage: 0 } : {}),
+      : (defeated ? { damage: 0 } : ((card.moment === "transform") ? { ...(card.transformContext ?? {}), cardId: message.id } : {})),
       { blocks: keyword.map(entry => entry.blockId) });
   }
   if (lethal.length) await fireMoment(actor, "lethal-damage", { damage: 0 }, { blocks: lethal.map(entry => entry.blockId) });
@@ -40750,12 +40750,14 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
       const adversary = fromUuidSync(wasting.uuid);
       if (adversary) await legendRealized(adversary);
     }
-    // Triggered/Transform: what answers entering one through the Transformation Maneuver - its Burst Limit among them.
+    // Triggered/Transform: what answers entering one through the Transformation Maneuver - its Burst Limit among them - ticked
+    // with Apply effects on this card (the user's, 2026-11-21: no window), set once it is entered so the button finds them.
     if (item) {
       // Whether it was an Evolved Stage - Controlled Chaos (4)'s.
-      const transformContext = { evolvedEntered: T.kindOf(T.fileOf(item)) === "evolved", cardId: card?.id ?? "" };
-      await offerTriggers(actor, "transform");
-      await (await import("./effects/moments-runtime.mjs")).fireMoment(actor, "transform", transformContext);
+      const transformContext = { evolvedEntered: T.kindOf(T.fileOf(item)) === "evolved" };
+      await card.setFlag(SCOPE, MOMENT_FLAG, { moment: "transform", title: `${actor.name} enters ${into.name}`, quietTitle: true, subjectUuid: actor.uuid, subjectName: actor.name,
+        subjects: [actor.uuid], pending: false, detail: "", applied: [], weathered: [], transformContext });
+      await (await import("./effects/moments-runtime.mjs")).fireMoment(actor, "transform", { ...transformContext, cardId: card.id });
     }
     return card;
   };
