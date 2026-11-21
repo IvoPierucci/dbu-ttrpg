@@ -6077,6 +6077,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const glassed = await glassFocusMulti(actor, maneuver, declared);
     if (!glassed) return false;
     ({ maneuver, declared } = glassed);
+    // Law-Defying Battle (7): Complete Annihilation on a Signature Technique, once a Round.
+    const annihilating = await grantedSuperProfile(actor, maneuver, declared);
+    if (!annihilating) return false;
+    ({ maneuver, declared } = annihilating);
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.
@@ -7180,6 +7184,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Genetic Focus: Glass (4): Glass Genes (5)'s Energy Charge, its 2 Adaptation Points paid as it was applied.
   const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) + bioCharges
     + (declared.glassForced ? 1 : 0) : 0;
+  // Law-Defying Battle (5): "enter the Determined State for the duration of that Attacking Maneuver" - it hits automatically; no turn lost.
+  if (declared && (declaring?.slots?.["attack.determined"] === true)) declared = { ...declared, autoHit: true, determinedNow: true };
 
   // A Magical Unique Ability used: this Combat Round's, for True God of Magic (5).
   if (maneuver.unique && (maneuver.uniqueType === "magical") && game.combat?.started) {
@@ -8338,4 +8344,27 @@ export function coreManeuverItems({ adversary = false } = {}) {
     // And an Adversary's Villainous Maneuvers, "that all Adversaries have access to".
     .filter(m => (m.source === "Core Rule") || !m.source || (adversary && (m.source === "Villainous Maneuver")))
     .map(maneuverItemFrom);
+}
+
+/**
+ * Law-Defying Battle (7): "If you use a Signature Technique, you may apply the Absolute Annihilation Super Profile to that Attacking Maneuver"
+ * - Complete Annihilation (the user's), once a Round, asked; as Karmic Assault's: its KP paid, its Prerequisite still applying, none it
+ * has already replaced.
+ *
+ * @returns {Promise<?{maneuver: object, declared: object}>}
+ */
+export async function grantedSuperProfile(actor, maneuver, declared) {
+  const unchanged = { maneuver, declared };
+  if (!declared || !maneuver.signature || maneuver.signatureTechnique || maneuver.superProfile) return unchanged;
+  if (actor.system.effects?.slots?.["superProfileOffer.completeAnnihilation"] !== true) return unchanged;
+  if (actor.getFlag?.("dbu-ttrpg", "annihilationRound") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`) return unchanged;
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const ki = superProfileKiPerTier("complete-annihilation", "") * tier;
+  if ((await askPlayerChoice(actor, `${actor.name}: ${maneuver.name}`, [
+    { value: "yes", label: `Complete Annihilation on it (${ki} Ki, 3+ Energy Charges still needed; once a Round)` },
+    { value: "no", label: "No" }])) !== "yes") return unchanged;
+  await actor.setFlag("dbu-ttrpg", "annihilationRound", `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
+  return { maneuver: { ...maneuver, superProfile: "complete-annihilation" },
+    declared: { ...declared, superProfileKi: (Number(declared.superProfileKi) || 0) + ki } };
 }

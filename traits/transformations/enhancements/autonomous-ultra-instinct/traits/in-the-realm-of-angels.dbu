@@ -12,8 +12,23 @@ text: >
 
 ---
 
-# (1) No Exploit but Guard Down or Impediment, (2) Divine Ki to shed a Combat Condition: the table's.
+# (1) No Exploit Maneuver triggered unless you suffer from Guard Down or Impediment (chat.mjs offerExploits).
+[passive, effect 1]
+allow exploit.onlyGuardDown;
 
-# (3) With the Power Up, once a Round: the Mindful State's Zen level till the start of your next turn (its level the table's).
+# (2) At the start of your turn: 3(bT) Divine Ki Points to shed a Combat Condition but Pinned, Suffocating, Transfigured and Poisoned -
+# which, asked. Once each turn's start here; again by hand.
+[triggered/start-of-turn, effect 2]
+requires divineKi.value >= 3(bT) && conditionedBesides("pinned", "suffocating", "transfigured", "poisoned");
+shedCondition(pinned, suffocating, transfigured, poisoned);
+divineKi.value -= 3(bT);
+
+# (3) With the Power Up, once a Round: the Mindful State's Zen level till the start of your next turn - its Tranquil level with Sharpened
+# Instinct (2).
 [triggered/power, 1/round, effect 3]
-enterState(mindful, 1, start-of-next-turn);
+if (flagged("mindful.tranquilInstead")) {
+    enterState(mindful, 3, start-of-next-turn);
+}
+if (!flagged("mindful.tranquilInstead")) {
+    enterState(mindful, 2, start-of-next-turn);
+}

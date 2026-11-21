@@ -4,6 +4,8 @@ order: 1
 slot: trait
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (2) "Your base Tier of Power becomes 8" (actor-character.mjs).
+baseTierBecomes: 8
 description: >
   Even knowing that you are forbidden from using your full power against a mortal, you unleash it anyways, deciding the cost of erasure is worth it to sway the outcome of this battle.
 text: >
@@ -19,5 +21,23 @@ text: >
 
 ---
 
-# (1) A Form or an Enhancement for Stacking, (2) base Tier of Power 8, (3) no Counter Actions for your effects, (4)-(7), (8) erased as
-# you leave it: the table's.
+# (1) A Form or an Enhancement for Stacking, (3) no Counter Actions for your effects, (8) erased as you leave it: the table's.
+# (2) Your base Tier of Power 8 (its header's `baseTierBecomes`).
+
+# (4) Hit by an Attacking Maneuver, once a Round: not hit instead - offered on its card (chat.mjs notHitOpen).
+[passive, effect 4]
+allow hit.notHitOnce;
+
+# (5) An Attacking Maneuver, once a Round: made in the Determined State - it hits automatically, no turn lost (use-maneuver.mjs).
+[triggered/declare-maneuver, 1/round, effect 5]
+requires attackingManeuver;
+allow attack.determined;
+
+# (6) An Opponent knocked through a Health Threshold, once a Round: their Steadfast Check for it failed.
+[triggered/knock-through, 1/round, effect 6]
+requires knockedOpponent;
+failSteadfastKnocked();
+
+# (7) A Signature Technique, once a Round: Complete Annihilation on it, asked (use-maneuver.mjs grantedSuperProfile).
+[passive, effect 7]
+allow superProfileOffer.completeAnnihilation;

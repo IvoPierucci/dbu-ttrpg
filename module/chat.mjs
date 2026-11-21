@@ -8514,6 +8514,10 @@ async function offerExploits(card, actor, maneuver) {
   // triggers the Exploit Maneuver from the target" - one person, and only on a loss.
   if (maneuver.exploitOnLoss) return;
 
+  // In the Realm of Angels (1): "You do not trigger the Exploit Maneuver unless you are suffering from the Guard Down or Impediment Combat
+  // Conditions."
+  if ((actor.system.effects?.slots?.["exploit.onlyGuardDown"] === true) && !((Number(actor.system.conditions?.["guard-down"]) || 0) > 0)
+    && !((Number(actor.system.conditions?.impediment) || 0) > 0)) return;
   // Team Survivalist (1): "You do not trigger the Exploit Maneuver when you use the Brace Maneuver."
   if ((maneuver.id === "brace") && (actor.system.effects?.slots?.["brace.noExploit"] === true)) return;
 
@@ -11946,6 +11950,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
                                            botchUnlessCritical = false,
                                            naturalAdd = 0, linked = "", fixedTotal = null, urgent = false,
                                            foundation = "", forceCritical = false } = {}) {
+  // Angelic Technique (3): "The minimum Natural Result of your Strike and Dodge Rolls is 2" - and more beside another.
+  if (combatRoll && ["strike", "dodge"].includes(slot)) {
+    minimumNatural = Math.max(Number(minimumNatural) || 0, Number(actor?.system?.effects?.slots?.["strikeDodge.minimumNatural"]?.add) || 0);
+  }
   // A roll already made: Delayed's "keep a record of the Dice Score of your Wound Roll", applied
   // later "against their Soak Value" as it was.
   if (Number.isFinite(fixedTotal)) {
@@ -33354,6 +33362,10 @@ async function resolveAttackWork(message, attack) {
     // attacker's side, being Sleeping on the defender's. Settled before the defence is
     // rolled, because a roll whose result cannot matter should not be made - a Sleeping
     // character winning a Dodge and being hit anyway reads as the rule not working.
+    // Angelic Trumpets: "You successfully Dodge all Attacking Maneuvers that target you (except by characters in the Determined State)
+    // regardless of the Dice Score of your Dodge Roll" - nothing forces the hit then.
+    const evadesAll = (target.system.effects?.slots?.["incoming.evadeAll"] === true) && !((Number(attacker?.system?.states?.determined) || 0) > 0)
+      && !attack.determinedNow;
     const forced = attack.autoHit
       ? `${attack.maneuverName} hits automatically`
       : (attack.duelLosers ?? []).includes(uuid)
@@ -33375,7 +33387,7 @@ async function resolveAttackWork(message, attack) {
     // Without this the defender met three more Strikes with nothing at all, and every
     // one of them landed for free.
     const stillCounts = Boolean(profileFor(attack)?.followUps);
-    let answer = (forced && (!stillCounts || (roller.type === "vehicle")))
+    let answer = (forced && !evadesAll && (!stillCounts || (roller.type === "vehicle")))
       ? null
       : await defence.answer(roller, options, attack);
     // Jolt Counter (2): "reduce the Dice Score of your Dodge Roll against your opponents' Attacking Maneuver to 0".
@@ -33383,7 +33395,7 @@ async function resolveAttackWork(message, attack) {
       answer = { ...answer, total: 0, lines: [...(answer.lines ?? []), noteLine("Jolt Counter: its Dice Score 0")] };
     }
 
-    const automatic = Boolean(forced);
+    const automatic = Boolean(forced) && !evadesAll;
 
     // "Reduce your Strike Rolls against any Character at Long Range by 2(bT)." Against a
     // Character - so it is taken off here, where the Strike meets this defence, and not
@@ -33428,6 +33440,11 @@ async function resolveAttackWork(message, attack) {
     const against = attack.techniqueBlocked ? 0 : Math.max(0, (strike.total + analysis) - longRange);
 
     // The defender wins ties, as everywhere else: the attacker has to beat them.
+    // Angelic Trumpets: dodged whatever the roll - its Dice Score made to stand against the Strike (the defender wins ties).
+    if (evadesAll) {
+      answer = { ...(answer ?? {}), total: Math.max(Number(answer?.total) || 0, against),
+        lines: [...(answer?.lines ?? []), noteLine("Angelic Trumpets: dodged, whatever the roll")] };
+    }
     const hit = automatic || (answer ? (against > answer.total) : true);
 
     // What this defender's own effects do about being hit - Superior taking more
@@ -33626,6 +33643,8 @@ async function resolveAttackWork(message, attack) {
       altWarrior: (hit && !automatic && altWarriorOpen(target, attacker, attack)) ? "offered" : null,
       // Perfect Defense (2): hit by a Basic Attack, the Adaptation Points held - the Wound Roll waits on it.
       perfectDefense: (hit && !automatic && adaptationDodgeOpen(target, attacker, attack)) ? "offered" : null,
+      // Law-Defying Battle (4): hit, and not being hit instead is theirs to take - the Wound Roll waits on it.
+      notHit: (hit && notHitOpen(target, attacker)) ? "offered" : null,
       applied: false
     });
   }
@@ -41983,6 +42002,8 @@ function renderAttack(message, html) {
   if (!result.wound && altWarriorButtons(message, container, attack)) return;
   // Perfect Defense (2): the same, for the Adaptation Points spent or not.
   if (!result.wound && adaptationDodgeButtons(message, container, attack)) return;
+  // Law-Defying Battle (4): the same.
+  if (!result.wound && notHitButtons(message, container, attack)) return;
 
   // Whoever owes the Wound Roll, which is the attacker on everything but a reflected
   // attack - there it is the Character whose attack was thrown back, and the button
@@ -42853,8 +42874,9 @@ export async function adaptationOffer(actor, id, cost = 0, how = "", context = {
   const maneuver = getManeuver(id);
   const at = (how === "atTarget") ? String(context?.targetUuid ?? "") : "";
   const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: id, maneuverName: maneuver?.name ?? id,
-    ...(at ? { targetUuid: at } : {}), ...((how === "noExploit") ? { noExploit: true } : {}),
-    reason: `${cost} Adaptation Point${(cost === 1) ? "" : "s"}${(how === "noExploit") ? "; no Exploit from it" : ""}`,
+    ...(at ? { targetUuid: at } : {}), ...((how === "noExploit") ? { noExploit: true } : {}), ...((how === "free") ? { free: true } : {}),
+    reason: cost ? `${cost} Adaptation Point${(cost === 1) ? "" : "s"}${(how === "noExploit") ? "; no Exploit from it" : ""}`
+      : ((how === "free") ? "No Ki Points paid for it" : "Out of sequence"),
     grants: { ...(cost ? { adaptationCost: cost } : {}) } };
   // The card of the attack it answers: theirs, or one that targeted them.
   const card = (game.messages?.contents ?? []).findLast(message => {
@@ -43044,4 +43066,43 @@ export async function stopTranscended(actor, id) {
   if (!item) return UNSPENT;
   await item.update({ "system.transcended": false });
   ui.notifications.info(`${actor.name}: ${item.name} is no longer Transcended.`);
+}
+
+/** Law-Defying Battle (4) open to the one hit: "If you are hit by an Attacking Maneuver, you are instead not hit" - once a Round. */
+function notHitOpen(target, attacker) {
+  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated
+    && (target.system?.effects?.slots?.["hit.notHitOnce"] === true) && (target.getFlag?.(SCOPE, "notHitRound") !== roundKey()));
+}
+
+/** Taken: not hit - "If that Attacking Maneuver was an Absolute Attack, the usual effects of Absolute Attacks do not apply". */
+async function notHitTaken(message, target) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const branch = attack?.result?.targets?.find(entry => entry.uuid === target.uuid);
+  if (!branch || (branch.notHit !== "offered")) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.notHitRound`]: roundKey() });
+  await rewriteBranch(message, target.uuid, () => ({ hit: false, absolute: false, notHit: "done" }));
+}
+
+/** Law-Defying Battle (4)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
+function notHitButtons(message, container, attack) {
+  const waiting = (attack.result?.targets ?? []).filter(branch => branch.notHit === "offered");
+  for (const branch of waiting) {
+    const target = fromUuidSync(branch.uuid);
+    if (!target?.isOwner) continue;
+    for (const [label, tooltip, act] of [
+      [`Law-Defying Battle - ${target.name}`, "Not hit by it instead (once a Round)", () => notHitTaken(message, target)],
+      [`Take the hit - ${target.name}`, "", () => rewriteBranch(message, target.uuid, () => ({ notHit: "declined" }))]]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = label;
+      if (tooltip) button.dataset.tooltip = tooltip;
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        return act();
+      });
+      container.append(button);
+    }
+  }
+  return waiting.length > 0;
 }

@@ -17,4 +17,17 @@ text: >
 
 # (1) Its Stress Test with another: added whole, less 2 for each Tier of Power the highest of the others asks (its Transformation's file,
 # transformations.mjs combinedRequirement).
-# (2) Combat Rolls by the other's Tier of Power Requirement, (3) the least Natural Result 2, (4) the Basic Attack after a dodge: the table's.
+# (2) Beside another: Combat Rolls x(bT), x 1/2 of the highest Tier of Power Requirement among the others (rounded down, 1 at least).
+[passive, effect 2]
+if ($besideTier >= 1) {
+    combatRolls += max(1, floor($besideTier / 2)) * 1(bT);
+}
+
+# (3) The least Natural Result of your Strike and Dodge Rolls 2 - and 1/2 of the other's Tier of Power Requirement more beside it.
+[passive, effect 3]
+strikeDodge.minimumNatural += 2 + floor($besideTier / 2);
+
+# (4) An Attacking Maneuver dodged, once a Round: the Basic Attack out of sequence, no Ki Points paid for it - offered on its card.
+[triggered/dodged-attack, 1/round, outOfSequence, effect 4]
+requires dodgedOpponent;
+adaptationOffer(basic-attack, 0, free);

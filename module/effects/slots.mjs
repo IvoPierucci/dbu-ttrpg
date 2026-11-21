@@ -620,6 +620,25 @@ const TABLE = [
     doc: "Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost - its Ki Wager still paid - asked (Spiritual Apprentice (7))." },
   { key: "wound.quarterKiCost", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
+  // Autonomous Ultra Instinct's and True Angel's Traits.
+  { key: "strikeDodge.minimumNatural", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "The least Natural Result of your Strike and Dodge Rolls (chat.mjs rollSide) - Angelic Technique (3), Sharpened Instinct (3)." },
+  { key: "mindful.tranquilInstead", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "In the Realm of Angels (3)'s Tranquil level of the Mindful State instead of Zen - Sharpened Instinct (2)." },
+  { key: "exploit.onlyGuardDown", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "You trigger no Exploit Maneuver unless suffering from Guard Down or Impediment (chat.mjs offerExploits) - In the Realm of Angels (1)." },
+  { key: "incoming.evadeAll", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Every Attacking Maneuver that targets you dodged, whatever the Dodge Roll - not one of a Character in the Determined State "
+       + "(chat.mjs, as the hit is decided) - Angelic Trumpets'." },
+  { key: "hit.notHitOnce", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Hit by an Attacking Maneuver, once a Round: not hit instead, offered on its card - an Absolute Attack's usual effects not "
+       + "applied either - Law-Defying Battle (4)." },
+  { key: "attack.determined", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Answering its declaration: this Attacking Maneuver made in the Determined State - it hits automatically, no turn skipped "
+       + "(use-maneuver.mjs) - Law-Defying Battle (5)." },
+  { key: "superProfileOffer.completeAnnihilation", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "A Signature Technique, once a Round: the Complete Annihilation Super Profile offered on it - its KP paid, its Prerequisite "
+       + "still applying (use-maneuver.mjs grantedSuperProfile) - Law-Defying Battle (7)." },
   // Evil Aura's and Evil Saiyan's Traits.
   { key: "evilPoints.onWound", phase: PHASES.CORE, kind: F, ops: ["allow"],
     doc: "Hitting with an Attacking Maneuver: up to 5(bT) Evil Points asked, as much on its Wound Roll (chat.mjs evilPointsAsked) - Power of Evil (2)." },

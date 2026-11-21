@@ -2465,6 +2465,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       : DBUCharacterData.tierOfPowerFor(this.powerLevel);
     // A Fusion: "the Fusion's base Tier of Power does not exceed 7", whatever its Power Level.
     if (this.fusionMade) this.baseTierOfPower = Math.min(FUSION_MAX_BASE_TIER, this.baseTierOfPower);
+    // Law-Defying Battle (2): "Your base Tier of Power becomes 8" - a Trait had, not set aside (`baseTierBecomes:`).
+    for (const item of Array.from(this.parent?.items ?? [])) {
+      if (item.type !== "racial") continue;
+      const fixed = Number(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.baseTierBecomes) || 0;
+      if (fixed && !traitAside(item, this.parent.items, this.parent)) this.baseTierOfPower = fixed;
+    }
 
 
     // The ground's Hardness Rank as the Square's Qualities leave it. Derived rather than

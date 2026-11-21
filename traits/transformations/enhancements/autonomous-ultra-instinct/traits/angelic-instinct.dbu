@@ -16,4 +16,7 @@ text: >
 
 ---
 
-# (2) 2(bT) Ki Points when not hit: the table's.
+# (2) An Opponent's Attacking Maneuver at you dodged - not hit by it: 2(bT) Ki Points.
+[triggered/dodged-attack, effect 2]
+requires dodgedOpponent;
+ki.value += 2(bT);

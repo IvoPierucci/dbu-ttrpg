@@ -17,4 +17,10 @@ text: >
 
 ---
 
-# (2) Tranquil instead of Zen, (3) the least Natural Result 1 higher: the table's.
+# (2) In the Realm of Angels (3)'s Tranquil level instead of Zen.
+[passive, effect 2]
+allow mindful.tranquilInstead;
+
+# (3) Angelic Technique (3)'s least Natural Result 1 higher.
+[passive, effect 3]
+strikeDodge.minimumNatural += 1;

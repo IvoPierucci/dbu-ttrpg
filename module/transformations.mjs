@@ -658,6 +658,10 @@ export function transformationTraitScript(item, items = item?.parent?.items) {
     .replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0))
     // Its Higher Scales - True God of Wisdom (2)'s "the Transformation's Attribute Modifier Bonus (MA)".
     .replace(/\$scales/g, String(Number(owner?.system?.scales) || 0))
+    // The highest Tier of Power Requirement of the others in use beside it - Angelic Technique's "of any Transformation used in
+    // conjunction with this Transformation"; 0 alone.
+    .replace(/\$besideTier\b/g, String(Math.max(0, ...transformationItems({ items }).filter(inUse)
+      .filter(each => (each.id !== owner?.id) && (kindOf(fileOf(each)) !== "awakening")).map(each => tierRequirementOf(each, fileOf(each), items)))))
     // The Transformation the Trait is of - Dark Saiya Power's "this Transformation".
     .replace(/\$self\b/g, String(owner?.system?.transformationId ?? ""));
 }

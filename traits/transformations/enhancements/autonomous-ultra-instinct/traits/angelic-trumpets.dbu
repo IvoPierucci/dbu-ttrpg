@@ -2,6 +2,11 @@ id: autonomous-ultra-instinct-angelic-trumpets
 name: Angelic Trumpets
 order: 3
 slot: burst
+# Its dodging held till the start of your next turn - bookkeeping, kept off the Resources list.
+resource: angelictrumpets
+resourceInternal: true
+resourceLabel: Angelic Trumpets
+resourceMax: 1
 description: >
   You move with fluid grace and precision, exerting only the necessary energy to avoid attacks and land your own.
 text: >
@@ -10,4 +15,13 @@ text: >
 
 ---
 
-# Burst Limit: every attack dodged till the start of your next turn (but by the Determined): the table's.
+# Burst Limit: every Attacking Maneuver at you dodged, whatever the Dodge Roll, till the start of your next turn - but a Determined
+# Character's (chat.mjs, as the hit is decided).
+[passive]
+if (hasResource("angelictrumpets")) {
+    allow incoming.evadeAll;
+}
+
+[triggered/transform, 1/encounter, effect 1]
+angelictrumpets.stacks += 1;
+expires(angelictrumpets, start-of-next-turn);
