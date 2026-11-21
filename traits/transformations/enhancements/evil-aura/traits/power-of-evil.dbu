@@ -22,4 +22,14 @@ text: >
 [triggered/start-of-round, effect 1]
 evilpoints.stacks += 5(bT);
 
-# (2)(3) Spent on the Wound or as Damage Reduction, (4) Ki Points for those spent: stepped on the Combat tab - the table's.
+# (2) Hitting with an Attacking Maneuver: up to 5(bT) on its Wound Roll; (3) hit by one: up to 5(bT) as Damage Reduction against it -
+# how many asked (chat.mjs evilPointsAsked).
+[passive, effect 2]
+allow evilPoints.onWound;
+
+[passive, effect 3]
+allow evilPoints.onReduction;
+
+# (4) Evil Points spent, however: as many Ki Points back.
+[triggered/evil-points-spent, effect 4]
+ki.value += spent;

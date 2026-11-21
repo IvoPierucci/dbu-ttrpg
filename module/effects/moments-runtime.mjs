@@ -317,10 +317,15 @@ async function writeStateful(actor, slots) {
   const overwhelmParts = slots["overwhelm.stacks"]?.parts ?? [];
   const spentOverwhelm = (resources && overwhelmParts.length && !overwhelmParts.some(part => part.op === "set"))
     ? Math.max(0, (Number(actor.system.resources?.overwhelm?.stacks) || 0) - (Number(resources.overwhelm?.stacks) || 0)) : 0;
+  // And Evil Points taken off - Power of Evil (4)'s evil-points-spent.
+  const evilParts = slots["evilpoints.stacks"]?.parts ?? [];
+  const spentEvil = (resources && evilParts.length && !evilParts.some(part => part.op === "set"))
+    ? Math.max(0, (Number(actor.system.resources?.evilpoints?.stacks) || 0) - (Number(resources.evilpoints?.stacks) || 0)) : 0;
   if (!foundry.utils.isEmpty(updates)) await actor.update(updates);
   if (gained.length) await stacksGained(actor, gained, counts);
   if (spentAdaptation) await (await import("../chat.mjs")).answerFor(actor, "adaptation-spent", { spent: spentAdaptation });
   if (spentOverwhelm) await (await import("../chat.mjs")).answerFor(actor, "overwhelm-spent", { spent: spentOverwhelm });
+  if (spentEvil) await (await import("../chat.mjs")).answerFor(actor, "evil-points-spent", { spent: spentEvil });
   // Ki Points regained - ki-regained (Spiritual Master (2)).
   const kiAfter = updates["system.ki.value"];
   const kiBefore = kiHeldBefore;
@@ -868,6 +873,9 @@ async function runVerb(actor, call, context) {
     case "adaptationOffer": return (await import("../chat.mjs")).adaptationOffer(actor, String(args[0] ?? ""), Number(args[1]) || 0,
       String(args[2] ?? ""), context);
     case "surgeRevive": return (await import("../chat.mjs")).surgeRevive(actor);
+    case "areaClash": return (await import("../chat.mjs")).areaClash(actor, String(args[0] ?? ""), String(args[1] ?? "standard"),
+      args.slice(2).map(each => String(each ?? "")).filter(Boolean));
+    case "stopTranscended": return (await import("../chat.mjs")).stopTranscended(actor, String(args[0] ?? ""));
     case "smallDuplicates": return (await import("../chat.mjs")).smallDuplicates(actor, Number(context?.actionsSpent) || 1);
     // The Domain Maneuvers (Divinity Unleashed's God of a Domain (3)).
     case "divineHealing": return (await import("../chat.mjs")).divineHealing(actor, context?.maneuver ?? null);

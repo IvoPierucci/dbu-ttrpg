@@ -620,6 +620,20 @@ const TABLE = [
     doc: "Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost - its Ki Wager still paid - asked (Spiritual Apprentice (7))." },
   { key: "wound.quarterKiCost", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
+  // Evil Aura's and Evil Saiyan's Traits.
+  { key: "evilPoints.onWound", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Hitting with an Attacking Maneuver: up to 5(bT) Evil Points asked, as much on its Wound Roll (chat.mjs evilPointsAsked) - Power of Evil (2)." },
+  { key: "evilPoints.onReduction", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Hit by an Attacking Maneuver: up to 5(bT) Evil Points asked, as much Damage Reduction against it - Power of Evil (3)." },
+  { key: "wound.tenthWager", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "The Wound Roll of an Attacking Maneuver with a Ki Wager of 1/10th of the Max Capacity or more (chat.mjs) - Villainous Form (4)'s G(T)." },
+  { key: "surging.noFatigue", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "The Surging State's 2nd effect ignored: no Fatigued as it ends (its `surgingSpared`) - Focused Evil (2)." },
+  { key: "berserk.clash", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Hit with a Physical Attack with no AoE by a Saiyan not Mindful, once a Round: a Clash (Cognitive) asked - won, they enter the "
+       + "Berserk State (chat.mjs berserkClash) - Dark Saiya Power (4)." },
+  { key: "burst.battleBorn", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Its Burst Limit used: a stack of Battle Born too, read by the Burst Limit's own script - Evil of Legend (5)." },
   // Perfection's Perfect Traits.
   { key: "critical.rollBonus", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "A Combat Roll's Dice Score where it scores a Critical Result (chat.mjs rollSide) - Critical Perfection (1)'s 1(T)." },

@@ -1146,6 +1146,34 @@ export function favoredDamage(actor, declared) {
   return (force > own) ? { ...declared, damageAttribute: { label: "Force Modifier (Favored Element)", value: force } } : declared;
 }
 
+/** The Trait that gave this Technique (`grantedBy`, full-power.mjs techniqueItemsFrom), as its file - null for any other. */
+function giverTraitOf(actor, maneuver) {
+  const item = maneuver?.itemId ? actor?.items?.get?.(maneuver.itemId) : null;
+  const giver = item?.flags?.["dbu-ttrpg"]?.grantedBy ? actor.items.get(item.flags["dbu-ttrpg"].grantedBy) : null;
+  return giver ? getTrait(giver.flags?.["dbu-ttrpg"]?.sourceId ?? "") : null;
+}
+
+/**
+ * Villainous Form (1): "You may use either your Force or Magic Modifier for the Damage Attribute of your Evil Techniques" - the Trait that
+ * gave the Technique says which (`givenTechniqueAttribute: force/magic`), the higher taken where it is not the Foundation's own.
+ */
+export function givenTechniqueAttribute(actor, declared, maneuver) {
+  if (!declared || declared.damageAttribute) return declared;
+  const choices = String(giverTraitOf(actor, maneuver)?.givenTechniqueAttribute ?? "").split("/").map(part => part.trim().toLowerCase()).filter(Boolean);
+  if (!choices.length) return declared;
+  const best = choices.map(key => ({ key, value: Number(actor.system.attributes?.[key]?.mod) || 0 })).sort((a, b) => b.value - a.value)[0];
+  if (best.key === (FOUNDATION_ATTRIBUTE[declared.foundation] ?? "force")) return declared;
+  return { ...declared, damageAttribute: { label: `${best.key.charAt(0).toUpperCase()}${best.key.slice(1)} Modifier`, value: best.value } };
+}
+
+/**
+ * Villainous Form (3): "you may spend Evil Points equal to 1/2 of the Ki Point Cost for that Attacking Maneuver instead of paying the Ki Point
+ * Cost" - the Resource the giving Trait names (`givenTechniquePaidWith: evilpoints`), or "".
+ */
+export function givenTechniquePayment(actor, maneuver) {
+  return String(giverTraitOf(actor, maneuver)?.givenTechniquePaidWith ?? "").trim();
+}
+
 /** Which Attribute each Foundation's Damage is, for the one comparison above. */
 const FOUNDATION_ATTRIBUTE = Object.freeze({ physical: "force", energy: "force", magic: "magic" });
 

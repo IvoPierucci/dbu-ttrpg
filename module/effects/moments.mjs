@@ -226,6 +226,9 @@ const TABLE = [
   { key: "hit-not-knocked", label: "You are hit by an Attacking Maneuver and not knocked through a Health Threshold by it", provides: [],
     doc: "Fired for whoever an Attacking Maneuver hit, once its Damage (if any) is applied, where it knocked them through no Health Threshold "
        + "(chat.mjs applyAttackDamage) - Genetic Survivor's." },
+  { key: "evil-points-spent", label: "You spend Evil Points", provides: [],
+    doc: "Fired with how many as `spent` - set by hand (chat.mjs setResource) or taken off by a script (moments-runtime.mjs writeStateful) - "
+       + "Power of Evil (4)'s." },
   { key: "defeat-escaped", label: "A Triggered/Defeated effect of yours used, and you are not Defeated after it", provides: [],
     doc: "Fired once an effect answering your Defeat left you standing (combat.mjs beginDefeat, chat.mjs on the Defeated card) - "
        + "Genetic Zenkai's." },

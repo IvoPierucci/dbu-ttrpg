@@ -8,6 +8,9 @@ grantsTechnique2: Gigantic Ki Blast | ultimate | energy | megaFlare | 9 | widesp
 grantsTechnique3: Marbling Drop | super | energy | combination | 10 | widespread-assault 1 sphere; knockback 1; power-shot 2; restricted-transformation 2 evil-aura; self-explosion 1
 grantsTechnique4: Peeler Storm | super | physical | sweeping | 8 | hurricane-assault 1; terrain-destruction 3; staggering-attack 1; restricted-transformation 2 evil-aura; all-or-nothing 1
 grantsTechnique5: Rage Saucer | super | physical | combination | 8 | widespread-assault 1 sphere; alotta-lotta-attacks 3; restricted-transformation 2 evil-aura
+# (1)(3) The Evil Techniques' Force or Magic, and their Ki Point Cost in Evil Points (maneuvers.mjs).
+givenTechniqueAttribute: force/magic
+givenTechniquePaidWith: evilpoints
 description: >
   Whether it's something you chose for yourself or something placed upon you, this upgrade to your power compels you to act like the villain you've become.
 text: >
@@ -23,10 +26,17 @@ text: >
 
 ---
 
-# (1) The Evil Techniques - its header, Restricted to Evil Aura; Force or Magic for their Damage Attribute: the table's. (2) the Darkness
-# Mixer Modifier Maneuver, (3) Evil Points for half an Evil Technique's Ki Point Cost: the table's.
+# (1) The Evil Techniques - its header, Restricted to Evil Aura; the higher of Force and Magic their Damage Attribute
+# (`givenTechniqueAttribute`, maneuvers.mjs). (3) Half their Ki Point Cost in Evil Points instead, asked as it is paid
+# (`givenTechniquePaidWith`, use-maneuver.mjs).
 
-# (4) A Ki Wager of 1/10th of your Max Capacity or more: G(T) on the Wound - the table's (one of 1/4 is read; this one is not).
+# (2) The Darkness Mixer Modifier Maneuver (this folder's maneuvers/darkness-mixer.dbu), offered on the Power Up.
+[passive, effect 2]
+allow maneuver.darkness-mixer;
+
+# (4) A Ki Wager of 1/10th of your Max Capacity or more: G(T) on the Wound (chat.mjs tenthWager).
+[passive, effect 4]
+wound.tenthWager += $G * 1(T);
 
 # (5) Its Grade's Evil Point Maximum: 10(bT) Villainous (Power of Evil's own), 15(bT) Supervillain.
 [passive, effect 5]

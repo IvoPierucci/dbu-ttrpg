@@ -1,0 +1,27 @@
+id: darkness-mixer
+name: Darkness Mixer
+type: modifier
+actionCost: 1
+kiCost: 0
+usageLimit: 1/round
+baseManeuver: power-up
+# Villainous Form (2)'s, open while it applies, offered on the Power Up (use-maneuver.mjs modifiersFor).
+special: true
+source: Core Rule
+description: >
+  3(bT) Evil Points and Ki Points back, then a Might Clash at every Opponent within a Sphere AoE: won, they lose 1/2 of your Might.
+text: >
+  Darkness Mixer [1/Round]: A wash of dark power fills you with unimaginable strength.
+  –Maneuver Type: Modifier Maneuver
+  –Action Cost: 1 Action
+  –Base Maneuver: Power Up Maneuver
+  –KP Cost: N/A
+  –Effect: Regain 3(bT) Evil Points and Ki Points. Then, make a Might Clash against all Opponents within a Sphere AoE (centered on you). If you win against an Opponent, reduce the Life Points of that Opponent by 1/2 of your Might.
+
+---
+
+# The Evil Points and Ki, then a Might Clash at each Opponent within a Standard Sphere (chat.mjs areaClash).
+[on used]
+evilpoints.stacks += 3(bT);
+ki.value += 3(bT);
+areaClash(might, standard, halfMight);

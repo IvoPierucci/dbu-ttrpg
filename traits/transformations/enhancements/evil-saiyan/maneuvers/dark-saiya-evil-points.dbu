@@ -1,0 +1,24 @@
+id: dark-saiya-evil-points
+name: Dark Saiya Power
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Dark Saiya Power (3)'s, open while it applies.
+special: true
+source: Core Rule
+description: >
+  As an Instant Maneuver, a stack of Battle Born spent for 5(bT) Evil Points.
+text: >
+  (3)-[1/Round]: As an Instant Maneuver, spend a stack of Battle Born to regain 5(bT) Evil Points.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: A stack of Battle Born for 5(bT) Evil Points.
+
+---
+
+[on used]
+spendBattleBorn(evil-points);

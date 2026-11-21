@@ -24,4 +24,10 @@ insight.mod += 1(T);
 [passive, effect 3]
 evilpoints.max += 5(bT);
 
-# (4) No longer Transcended at the start of your turn, (5) a Battle Born stack with its Burst Limit: the table's.
+# (4) At the start of your turn: Evil Saiyan no longer Transcended - a button.
+[triggered/start-of-turn, effect 4]
+stopTranscended($self);
+
+# (5) Its Burst Limit used: a stack of Battle Born too - read by the Burst Limit's own script, its once an Encounter.
+[passive, effect 5]
+allow burst.battleBorn;

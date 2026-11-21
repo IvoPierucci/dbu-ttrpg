@@ -19,4 +19,22 @@ text: >
 [passive, effect 1]
 evilpoints.max += 5(bT);
 
-# (2) Surging's 2nd effect ignored, (3) Steadfast 1 beside a Saiyan Transformation, (4)(5): the table's.
+# (2) The Surging State's 2nd effect ignored: no Fatigued as it ends.
+[passive, effect 2]
+allow surging.noFatigue;
+
+# (3) Beside a Transformation of the 'Saiyan' Racial Requirement: Steadfast Checks 1 higher.
+[passive, effect 3]
+if (racialBeside("saiyan", "$self")) {
+    steadfast.dice += 1;
+}
+
+# (4) An Opponent suffering from a Combat Condition knocked through a Health Threshold, once a Round: 5(bT) Evil Points.
+[triggered/knock-through, 1/round, effect 4]
+requires knockedOpponent && knockedConditioned;
+evilpoints.stacks += 5(bT);
+
+# (5) Using the Power Up, once a Round: a Clash (Cognitive vs Cognitive/Morale) at every Opponent within a Sphere AoE - won, Shaken till
+# the start of your next turn (chat.mjs areaClash).
+[triggered/power, 1/round, effect 5]
+areaClash(cognitiveVsMorale, standard, shaken);

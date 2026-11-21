@@ -3,6 +3,8 @@ name: Dark Saiya Power
 order: 1
 slot: trait
 replaces: Villainous Form
+# (2) Its own Stress Test Requirement 3 lower beside a Transformation of the 'Saiyan' Racial Requirement.
+stressBeside: saiyan 3
 description: >
   Your bloodlust scorches your blackened heart, driving you to battle.
 text: >
@@ -19,4 +21,22 @@ text: >
 
 # (1) Its Evil Point Maximum 10(bT): Power of Evil's own (15 with Focused Evil, 20 with Evil of Legend - theirs added on).
 
-# (2) Beside a Saiyan Transformation, (3) Battle Born for Evil Points, (4) the Clash into Berserk (its State in this folder): the table's.
+# (2) Beside a Transformation of the 'Saiyan' Racial Requirement: Tier of Power Extra Dice a Category up; this one's Stress Test Requirement
+# 3 lower (`stressBeside`, transformations.mjs); 2(bT) more Evil Points as each Combat Round starts.
+[passive, effect 2]
+if (racialBeside("saiyan", "$self")) {
+    dice.extra.category += 1;
+}
+
+[triggered/start-of-round, effect 2]
+requires racialBeside("saiyan", "$self");
+evilpoints.stacks += 2(bT);
+
+# (3) Once a Round, as an Instant Maneuver: a stack of Battle Born for 5(bT) Evil Points (this folder's maneuvers/dark-saiya-evil-points.dbu).
+[passive, effect 3]
+allow maneuver.dark-saiya-evil-points;
+
+# (4) Hit by a Saiyan not Mindful with a Physical Attack with no AoE, once a Round: the Clash (Cognitive) into Berserk, asked (chat.mjs
+# berserkClash; the State in this folder).
+[passive, effect 4]
+allow berserk.clash;

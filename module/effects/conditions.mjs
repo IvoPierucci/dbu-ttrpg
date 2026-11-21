@@ -350,6 +350,11 @@ const PREDICATES = {
   /** An Opponent suffering a Combat Condition you inflicted (chat.mjs inflictedOnOpponent) - Demon Realm Elite (2). */
   targetConditioned: scope => (scope.context?.targets ?? []).some(target => transformationQuestion("conditioned", target) === true),
   conditionedOpponentAdjacent: scope => transformationQuestion("conditionedOpponentAdjacent", scope.data?.parent) === true,
+  /** Another Transformation in use beside this one ("$self") of that Racial Requirement - Dark Saiya Power's "in conjunction with ... 'Saiyan'". */
+  racialBeside: (scope, race, self) => transformationQuestion("racialBeside", scope.data?.parent, String(race?.value ?? race ?? ""),
+    String(self?.value ?? self ?? "")) === true,
+  /** Whoever the Moment knocked through suffers from a Combat Condition - Focused Evil (4). */
+  knockedConditioned: scope => transformationQuestion("conditioned", globalThis.fromUuidSync?.(scope.context?.knockedUuid ?? "")) === true,
   opponentsBelowBruised: scope => transformationQuestion("opponentsBelowBruised", scope.data?.parent) === true,
   inflictedOnOpponent: scope => transformationQuestion("inflictedOnOpponent", scope.data?.parent) === true,
   /** Demonic Power held before the Pressure Check just passed (pressure-passed's `powerBefore`) - Fiendish Power (6)'s "already having 2+". */
@@ -898,7 +903,9 @@ const PREDICATES = {
     && (scope.context.defeatedUuid === (scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingFocus") ?? "")),
 
   /** Surging's second effect ignored this time - its (5)'s, Hocus Pocus (9)'s. */
-  surgingSpared: scope => scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingSpared") === true,
+  surgingSpared: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingSpared") === true)
+    // Focused Evil (2): "Ignore the second effect of the Surging State."
+    || (scope.data?.effects?.slots?.["surging.noFatigue"] === true),
 
   /** Galaxy at the Brink (3): Greed of the Hera's 7th ignored at the start of this turn. */
   powerHeld: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "galaxyHold") ?? "")

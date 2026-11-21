@@ -14,3 +14,7 @@ text: >
 [triggered/transform, 1/encounter, effect 1]
 enterState(surging, 1, turn);
 evilpoints.stacks += 99;
+# Evil of Legend (5): "If you use the Burst Limit for this Transformation, gain a stack of Battle Born."
+if (flagged("burst.battleBorn")) {
+    gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
+}

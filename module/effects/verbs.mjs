@@ -625,6 +625,18 @@ export const VERBS = Object.freeze({
     doc: "Caste Combat's Pawn: the Basic Attack offered on the Defeated card - Full Wager, and Power Shot (2) but for a Minion "
        + "(chat.mjs castePawnStrike)."
   },
+  areaClash: {
+    args: [3, 4],
+    names: [0, 1, 2, 3],
+    doc: "A Clash at every Opponent within a Sphere AoE centered on you (`minor`, `standard` ...): `might`, `cognitive`, or "
+       + "`cognitiveVsMorale` (theirs Cognitive or Morale); won, each outcome - a Condition till the start of your next turn, or "
+       + "`halfMight` (their Life Points 1/2 of your Might lower) (chat.mjs areaClash) - Darkness Mixer's, Focused Evil (5)'s."
+  },
+  stopTranscended: {
+    args: [1, 1],
+    names: [0],
+    doc: "That Transformation of yours no longer Transcended - Evil of Legend (4)'s (chat.mjs stopTranscended)."
+  },
   adaptationOffer: {
     args: [2, 3],
     names: [0, 2],

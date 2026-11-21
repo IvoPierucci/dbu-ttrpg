@@ -19,4 +19,9 @@ text: >
 [passive, effect 2]
 agility.mod += 1(T);
 
-# (3) 5(bT) Evil Points for another stack of Power: the table's.
+# (3) Using the Power Up, once a Round: 5(bT) Evil Points for another stack of Power.
+[triggered/power, 1/round, effect 3]
+requires evilpoints.stacks >= 5(bT) && roomFor("power");
+evilpoints.stacks -= 5(bT);
+power.stacks += 1;
+expires(power, next-turn);

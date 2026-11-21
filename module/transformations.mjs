@@ -657,7 +657,9 @@ export function transformationTraitScript(item, items = item?.parent?.items) {
     .replace(/\$aspect\.([a-z0-9-]+)/g, (all, id) => String((found => found ? (found.level ?? 1) : 0)(levels.find(aspect => aspect.id === id))))
     .replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0))
     // Its Higher Scales - True God of Wisdom (2)'s "the Transformation's Attribute Modifier Bonus (MA)".
-    .replace(/\$scales/g, String(Number(owner?.system?.scales) || 0));
+    .replace(/\$scales/g, String(Number(owner?.system?.scales) || 0))
+    // The Transformation the Trait is of - Dark Saiya Power's "this Transformation".
+    .replace(/\$self\b/g, String(owner?.system?.transformationId ?? ""));
 }
 
 useTransformationGate((item, items) => transformationTraitAside(item, items));
@@ -936,6 +938,12 @@ export function stressTakenOff(item, items = item?.parent?.items) {
   if (kindOf(file) === "evolved") {
     const on = originalFormOf(Array.from(items ?? []).filter(each => each.id !== item.id));
     if (on) off += sum(grantsFor(items, "stressForOn", file, each => each.system?.transformation === on.id));
+  }
+  // Dark Saiya Power (2): its own Requirement lower beside another of a Racial Requirement (`stressBeside: saiyan 3`) - read off its own
+  // Traits whether they apply yet or not: the Requirement is asked before it is in use.
+  for (const each of Array.from(items ?? []).filter(other => (other.type === "racial") && (other.system?.transformation === item.id))) {
+    const [race, n] = String(getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.stressBeside ?? "").trim().split(/\s+/);
+    if (race && racialBeside(items, race, id)) off += Number(n) || 0;
   }
   return Math.abs(off);
 }
@@ -1414,6 +1422,19 @@ useTransformationQuestion("inEnhancement", actor => transformationsInUse(actor)
 useTransformationQuestion("enhancementsAtLeast", (actor, n) => transformationsInUse(actor)
   .filter(item => kindOf(fileOf(item)) === "enhancement").length >= (Number(n) || 0));
 useTransformationQuestion("transformedTierAtLeast", (actor, n) => topTierInUse(actor) >= (Number(n) || 0));
+// - racialBeside(race, self): another Form or Enhancement in use beside that one, of that Racial Requirement (Dark Saiya Power's).
+useTransformationQuestion("racialBeside", (actor, race, self) => racialBeside(actor?.items, String(race ?? ""), String(self ?? "")));
+
+/** Whether another Form, Enhancement or Evolved Stage in use than `self` has that Racial Requirement - an Evolved Stage its Original's. */
+function racialBeside(items, race, self) {
+  const wanted = aspectId(race);
+  return transformationItems({ items }).filter(inUse).some(item => {
+    const file = fileOf(item);
+    if (!file || (item.system?.transformationId === self) || (kindOf(file) === "awakening")) return false;
+    const own = (kindOf(file) === "evolved") ? fileOf(originalFormOf(items)) : file;
+    return aspectId(racialRequirementOf(own)) === wanted;
+  });
+}
 
 /** Whether a Trait had names this one, or its Line, as the one with no Stress Tests alone (`naturalForChosen:` - its choice). */
 function narrativeFor(item, items) {

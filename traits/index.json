@@ -2051,6 +2051,8 @@
     "transformations/forms/alternate/pure-form/maneuvers/legendary-chaos-surge.dbu",
     "transformations/forms/alternate/super-demon/maneuvers/demonic-battle-strike.dbu",
     "transformations/awakenings/spirit-control/maneuvers/spiritual-master-surge.dbu",
-    "transformations/awakenings/perfection/maneuvers/junior-creation.dbu"
+    "transformations/awakenings/perfection/maneuvers/junior-creation.dbu",
+    "transformations/enhancements/evil-aura/maneuvers/darkness-mixer.dbu",
+    "transformations/enhancements/evil-saiyan/maneuvers/dark-saiya-evil-points.dbu"
   ]
 }

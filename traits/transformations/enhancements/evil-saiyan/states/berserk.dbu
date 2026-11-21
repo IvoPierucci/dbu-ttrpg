@@ -17,7 +17,21 @@ text: >
 
 ---
 
-# (1) Compelled at the closest: the table's. (5) the Energy Charge: the table's.
+# (1) Entering it and at the start of each turn: Compelled till the start of your next turn - at the closest Character not Berserk, the
+# table's to name (as the Rampaging Aspect's).
+[on applied]
+gain(compelled);
+expires(compelled, start-of-next-turn);
+
+[automatic/start-of-turn, effect 1]
+gain(compelled);
+expires(compelled, start-of-next-turn);
+
+# (5) An Attacking Maneuver, once a Round: 2(bT) Ki Points for an Energy Charge on it - offered as it is declared.
+[triggered/declare-maneuver, 1/round, effect 5]
+requires attackingManeuver && ki.value >= 2(bT);
+ki.value -= 2(bT);
+attack.energyCharges += 1;
 [passive, effect 2]
 strike -= 1(bT);
 dodge -= 1(bT);

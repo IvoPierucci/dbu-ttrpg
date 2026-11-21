@@ -1185,6 +1185,10 @@ async function settleClashEffects(messageId, clash) {
     await settleGearClash(message, clash);
   }
 
+  if (clash.winEffects && clash.result && !clash.winEffects.applied) {
+    await settleWinEffects(message, clash);
+  }
+
   if (clash.snare && clash.result && !clash.snare.applied) {
     await settleSnare(message, clash);
   }
@@ -3969,6 +3973,8 @@ export async function setResource(actor, name, stacks, { lost = false } = {}) {
   if ((name === "adaptation") && !lost && (capped < before)) await answerFor(actor, "adaptation-spent", { spent: before - capped });
   // Overwhelm spent - Suppression of Power (6)'s overwhelm-spent.
   if ((name === "overwhelm") && !lost && (capped < before)) await answerFor(actor, "overwhelm-spent", { spent: before - capped });
+  // Evil Points spent - Power of Evil (4)'s evil-points-spent.
+  if ((name === "evilpoints") && !lost && (capped < before)) await answerFor(actor, "evil-points-spent", { spent: before - capped });
   return done;
 }
 
@@ -33061,6 +33067,12 @@ function primedCritical(attacker, strike) {
 /**
  * "A Ki Wager equal to or exceeding 1/4 of your Max Capacity" (rounded down) - in Ki or in Life, as Jolt Counter's reads it.
  */
+/** A Ki Wager of 1/10th of the Max Capacity or more - Villainous Form (4)'s "equal to (or exceeding)". */
+function tenthWager(actor, attack) {
+  const wager = Number(attack?.kiWager) || 0;
+  return (wager > 0) && (wager >= Math.max(1, Math.floor((Number(actor?.system?.capacity?.max) || 0) / 10)));
+}
+
 function heavyWager(actor, attack) {
   const wager = Number(attack?.kiWager) || 0;
   return (wager > 0) && (wager >= Math.max(1, Math.floor((Number(actor?.system?.capacity?.max) || 0) / 4)));
@@ -34648,6 +34660,9 @@ async function answerHit(message, attack, attacker, struck, script = null) {
   // Full Power of the Super Saiyan (4): Battle Born on the Wound, asked.
   const bornWound = await battleBornAsked(attacker, "battleBorn.wound", "your Wound Roll");
   if (bornWound) answer.marks.battleBornWound = bornWound;
+  // Power of Evil (2): Evil Points on the Wound, asked.
+  const evilWound = await evilPointsAsked(attacker, "evilPoints.onWound", "the Wound Roll");
+  if (evilWound) answer.marks.evilWound = evilWound;
   answer.pressure = answered?.slots?.["wound.pressure"] === true;
   answer.pressureMost = answered?.slots?.["wound.pressureMost"] === true;
   if (answered?.slots?.["wound.oblivious"] === true) {
@@ -34870,6 +34885,8 @@ function woundParts(attacker, attack) {
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     // Full Force Super Saiyan 2's: a Ki Wager of 1/4 of the Max Capacity or more (`wound.heavyWager`).
     ...slotPart(attacker, "wound.heavyWager", heavyWager(attacker, attack), "Ki Wager 1/4+"),
+    // Villainous Form (4): a Ki Wager of 1/10th of the Max Capacity or more.
+    ...slotPart(attacker, "wound.tenthWager", tenthWager(attacker, attack), "Ki Wager 1/10+"),
     // Limitless (2): half the Ki Points wagered; Back to Basics' on a Signature Technique alone.
     ...halfWagerParts(attacker, attack),
     // Power of the Weak (5): the Ki of whoever is Bonded to them.
@@ -34939,6 +34956,7 @@ function twoWorldsWoundParts(attacker, attack) {
   if (attack.monsterSpeedWound) parts.push({ label: "Monstrous Ascension (half the Boosted Speed)", value: Number(attack.monsterSpeedWound) || 0 });
   // Full Power of the Super Saiyan (4), taken as the hit landed.
   if (attack.battleBornWound) parts.push({ label: "Full Power of the Super Saiyan (Battle Born)", value: Number(attack.battleBornWound) || 0 });
+  if (attack.evilWound) parts.push({ label: "Power of Evil (Evil Points)", value: Number(attack.evilWound) || 0 });
   // Shared Heritage (4): "Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess."
   const fusedWound = Number(slots["wound.fusedTechnique"]?.add) || 0;
   const fusedCount = (attacker.system.fusion?.fused ?? []).length;
@@ -35935,8 +35953,10 @@ async function rollAttackWoundWork(message, attack) {
     if (wiseReduction) spendWriting(target, defending, "damageReduction");
     // Full Power of the Super Saiyan (3): Battle Born on the Damage Reduction, asked.
     const bornReduction = (own.hit && !isAbsoluteMiss(own)) ? await battleBornAsked(target, "battleBorn.reduction", "your Damage Reduction") : 0;
+    // Power of Evil (3): Evil Points as Damage Reduction against it, asked as it hit.
+    const evilReduction = (own.hit && !isAbsoluteMiss(own)) ? await evilPointsAsked(target, "evilPoints.onReduction", "your Damage Reduction") : 0;
     const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic + taunted
-      + bornReduction
+      + bornReduction + evilReduction
       + fullCounter + wiseReduction + (Number(own.taiChiReduction) || 0)
       + (Number(own.greedReduction) || 0) + (Number(own.adaptationReduction) || 0) + (Number(own.toughReduction) || 0)
       // Party Tactics (3): a stack of an Ally's Tension, for this attack.
@@ -39065,6 +39085,8 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     if (areOpponents(armsUser, target)) await focusHeranStrike(message, armsUser, target);
     // Neo-Tuffle Genes (2): the Basic Attack back at them, offered on this card.
     if (areOpponents(target, armsUser)) offerNeoTuffleStrike(message, target, armsUser);
+    // Dark Saiya Power (4): a Saiyan's Physical Attack - the Clash into Berserk, asked.
+    await berserkClash(target, armsUser, attack);
     // Ruler (2): "If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm" - for its Master.
     const ruler = isMinion(armsUser) ? game.actors?.get(masterOf(armsUser)) : null;
     if (ruler && areOpponents(armsUser, target)) await answerFor(ruler, "minion-damage", { minionUuid: armsUser.uuid });
@@ -42611,6 +42633,11 @@ export async function spendBattleBorn(actor, then = "") {
   if (!key) return UNSPENT;
   await setResource(actor, key, (Number(actor.system.resources?.[key]?.stacks) || 0) - 1);
   if (then === "power-up") return (await ownOutOfSequence(actor, "power-up")) ? undefined : UNSPENT;
+  // Dark Saiya Power (3): "regain 5(bT) Evil Points".
+  if (then === "evil-points") {
+    const gain = 5 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+    return setResource(actor, "evilpoints", (Number(actor.system.resources?.evilpoints?.stacks) || 0) + gain);
+  }
   if (then === "healing-surge") return takeSurge(actor, { source: "Limit of the Super Saiyan", kind: "healing" });
   if (then === "ki-capacity") {
     const quarter = Math.floor((Number(actor.system.capacity?.max) || 0) / 4);
@@ -42929,4 +42956,92 @@ function adaptationDodgeButtons(message, container, attack) {
     }
   }
   return waiting.length > 0;
+}
+
+/**
+ * Power of Evil (2)(3): "you may spend up to 5(bT) Evil Points to increase the Wound Roll of that Attacking Maneuver by an equal amount" /
+ * "to gain an equal amount of Damage Reduction for the duration of that Attacking Maneuver" - how many, asked; spent (evil-points-spent).
+ */
+async function evilPointsAsked(actor, slot, what) {
+  if (actor?.system?.effects?.slots?.[slot] !== true) return 0;
+  const held = Number(actor.system.resources?.evilpoints?.stacks) || 0;
+  const most = Math.min(held, 5 * Math.max(1, Number(actor.system.baseTierOfPower) || 1));
+  if (most <= 0) return 0;
+  const spent = Math.max(0, Math.min(most, Number(await askPlayerAmount(actor, `${actor.name}: Power of Evil`, most,
+    `Evil Points on ${what} (up to ${most})`)) || 0));
+  if (spent) await setResource(actor, "evilpoints", held - spent);
+  return spent;
+}
+
+/**
+ * A Clash at every Opponent within a Sphere AoE centered on you - Darkness Mixer's Might Clash ("If you win against an Opponent, reduce the
+ * Life Points of that Opponent by 1/2 of your Might"), Focused Evil (5)'s "Clash (Cognitive vs Cognitive/Morale) ... the Shaken Combat
+ * Condition until the start of your next turn". One card each; settled by settleWinEffects.
+ */
+export async function areaClash(actor, kind, size, outcomes = []) {
+  if (!actor) return;
+  const gap = (SPHERE_RADIUS[size] ?? SPHERE_RADIUS.standard) - 1;
+  const others = opponentsWithin(actor, gap);
+  if (!others.length) return ui.notifications.info(`${actor.name}: no Opponent within the Sphere.`);
+  const halfMight = Math.floor((Number(actor.system.might) || 0) / 2);
+  const conditions = outcomes.filter(each => each !== "halfMight");
+  const lifeLoss = outcomes.includes("halfMight") ? halfMight : 0;
+  const said = [...(lifeLoss ? [`loses ${lifeLoss} Life Points`] : []),
+    ...(conditions.length ? [`is ${conditions.map(key => getTrait(key)?.name ?? key).join(" and ")} until the start of ${actor.name}'s next turn`] : [])];
+  for (const other of others) {
+    const leaves = { maneuverName: "Clash", reason: `Win and ${other.name} ${said.join(", and ")}.`,
+      winEffects: { applied: false, conditions, until: "start", lifeLoss } };
+    if (kind === "might") await postMightClash(actor, other, { ...leaves, clashLabel: "Might Clash" });
+    else await postSaveClash(actor, other, { ...leaves, clashLabel: (kind === "cognitiveVsMorale") ? "Clash (Cognitive vs Cognitive/Morale)" : `Clash (${kind})`,
+      saves: [(kind === "cognitiveVsMorale") ? "cognitive" : kind], defenderSaves: (kind === "cognitiveVsMorale") ? ["cognitive", "morale"] : [] });
+  }
+}
+
+/** What a Clash won leaves (`winEffects`): Life Points lost, Conditions on the challenger's clock, a State entered. Said. */
+async function settleWinEffects(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, winEffects: { ...clash.winEffects, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} holds.`);
+  const { conditions = [], until = "start", lifeLoss = 0, state = "", source = "" } = clash.winEffects;
+  const said = [];
+  if (lifeLoss > 0) {
+    await reduceLifePoints(target, lifeLoss, { reason: clash.maneuverName ?? "" });
+    said.push(`loses ${lifeLoss} Life Points`);
+  }
+  for (const key of conditions) await markUntilNextTurn(challenger, target, key, 1, (until === "end") ? "end" : "start", source || clash.maneuverName);
+  if (conditions.length) said.push(`is ${conditions.map(key => getTrait(key)?.name ?? key).join(" and ")} until the ${until} of ${challenger.name}'s next turn`);
+  if (state) {
+    await (await import("./effects/moments-runtime.mjs")).enterState(target, state, 1, null, source || clash.maneuverName);
+    said.push(`enters the ${getTrait(state)?.name ?? state} State`);
+  }
+  return settledNote(message, `${target.name} ${said.join(", and ")}.`);
+}
+
+/**
+ * Dark Saiya Power (4): "If a Saiyan (that is not in the Mindful State) hits you with a Physical Attack that does not possess an AoE, make a
+ * Clash (Cognitive) against them. If you win, that Character enters the Berserk Special State." Asked, once a Round.
+ */
+async function berserkClash(target, attacker, attack) {
+  if (!target || !attacker || (target.system?.effects?.slots?.["berserk.clash"] !== true)) return;
+  if ((attack?.foundation !== "physical") || attackArea(attack) || !hasRace(attacker, "saiyan")) return;
+  if (((Number(attacker.system?.states?.mindful) || 0) > 0) || ((Number(attacker.system?.states?.berserk) || 0) > 0)) return;
+  if (target.getFlag?.(SCOPE, "berserkClashRound") === roundKey()) return;
+  if ((await askPlayerChoice(target, `${target.name}: Dark Saiya Power`, [
+    { value: "yes", label: `A Clash (Cognitive) at ${attacker.name}: won, they enter the Berserk State (1/Round)` }, { value: "no", label: "No" }])) !== "yes") return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.berserkClashRound`]: roundKey() });
+  return postSaveClash(target, attacker, { maneuverName: "Dark Saiya Power", clashLabel: "Clash (Cognitive)",
+    reason: `Win and ${attacker.name} enters the Berserk State.`, saves: ["cognitive"],
+    winEffects: { applied: false, state: "berserk", source: "Dark Saiya Power" } });
+}
+
+/** Evil of Legend (4): "[Triggered/Start of Turn]: Evil Saiyan stops being Transcended" - that one of theirs, by its id. */
+export async function stopTranscended(actor, id) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const item = Array.from(actor?.items ?? []).find(each => (each.type === "transformation") && (each.system?.transformationId === id)
+    && each.system?.transcended);
+  if (!item) return UNSPENT;
+  await item.update({ "system.transcended": false });
+  ui.notifications.info(`${actor.name}: ${item.name} is no longer Transcended.`);
 }

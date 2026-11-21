@@ -6138,6 +6138,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // mind, whose attack may come from anywhere around its wielder: which Square, the table's.
     // A Favored Element's Force Modifier as its Damage Attribute, where it is the higher.
     declared = favoredDamage(actor, declared);
+    // Villainous Form (1): an Evil Technique's Force or Magic.
+    declared = (await import("./maneuvers.mjs")).givenTechniqueAttribute(actor, declared, maneuver);
     // A Frozen Turn: "cannot Ki Wager".
     if (frozenTurnOf(actor) && ((Number(declared?.kiWager) || 0) > 0)) {
       ui.notifications.warn(`${actor.name}'s Frozen Turn: no Ki Wager.`);
@@ -6926,6 +6928,18 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       if ((await askPlayerChoice(actor, `${actor.name}: Spiritual Apprentice`, [{ value: "free", label: `No Ki Point Cost (${price - wagerPart}) - once an Encounter` },
         { value: "pay", label: "Pay it" }])) === "free") {
         await actor.setFlag("dbu-ttrpg", "freeAttackEncounter", encounterKey);
+        price = wagerPart;
+      }
+    }
+    // Villainous Form (3): an Evil Technique's Ki Point Cost paid with half as many Evil Points instead, asked - its Ki Wager still paid.
+    const paidWith = (declared && maneuver.attacking) ? (await import("./maneuvers.mjs")).givenTechniquePayment(actor, maneuver) : "";
+    if (paidWith && (price > wagerPart)) {
+      const half = Math.floor((price - wagerPart) / 2);
+      const held = Number(actor.system.resources?.[paidWith]?.stacks) || 0;
+      const { askPlayerChoice, setResource } = await import("./chat.mjs");
+      if ((held >= half) && ((await askPlayerChoice(actor, `${actor.name}: ${maneuver.name}`, [
+        { value: "points", label: `${half} Evil Points instead of its ${price - wagerPart} Ki Point Cost` }, { value: "ki", label: "Pay the Ki" }])) === "points")) {
+        await setResource(actor, paidWith, held - half);
         price = wagerPart;
       }
     }
