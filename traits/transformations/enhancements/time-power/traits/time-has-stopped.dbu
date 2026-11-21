@@ -10,4 +10,6 @@ text: >
 
 ---
 
-# Burst Limit: Time Freeze without its Ki Point Cost - the table's.
+# Burst Limit: the Time Freeze Unique Ability, without paying its Ki Point Cost (chat.mjs freeUnique).
+[triggered/transform, 1/encounter, outOfSequence, effect 1]
+freeUnique(time-freeze);

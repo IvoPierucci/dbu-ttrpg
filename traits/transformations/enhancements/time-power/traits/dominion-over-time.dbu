@@ -18,12 +18,16 @@ text: >
 
 ---
 
-# (3) Time Control (3)'s Keywords: the table's, as Time Control (3) is.
+# (3) Time Control (3) once a Round and twice an Encounter.
+[passive, effect 3]
+allow multiProfile.timeMore;
 
 # (4) Time Control (4) ignored.
 [passive, effect 4]
 allow timeControl.noDrain;
 
-# (2) The Unique Abilities with 'Time' in their name 2(T) cheaper - Time Freeze (Time Seal and Time Reversion not built).
+# (2) The Unique Abilities with 'Time' in their name 2(T) cheaper: Time Freeze, Time Seal, Time Reversion.
 [passive, effect 2]
 time-freeze.kiCost -= 2(T);
+time-seal.kiCost -= 2(T);
+time-reversion.kiCost -= 2(T);

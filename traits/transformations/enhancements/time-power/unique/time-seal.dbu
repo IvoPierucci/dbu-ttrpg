@@ -1,0 +1,24 @@
+id: time-seal
+name: Time Seal
+uaType: magical
+prerequisite: Access to the Time Power Enhancement Power
+tpCost: 0
+type: standard
+actionCost: 2
+kiCostPerTier: 12
+usageLimit: 1/encounter
+minions: Non-Minion
+# Three Clashes at the Opponent targeted within your Melee Range - their Slowed given once all three are settled (chat.mjs timeSeal).
+source: Time Power
+description: >
+  Three Clashes against an Opponent within your Melee Range: a stack of Slowed for each won - all three, till the Encounter ends.
+text: >
+  Time Seal — You alter the flow of time around your enemy, slowing their perception of reality.
+  –Ability Type: Magical –Prerequisites: Access to the Time Power Enhancement Power –TP Cost: N/A –KP Cost: 12(T) –Maneuver Type: Standard –Action Cost: 2 Actions –Minions: Non-Minion –Passive Bonus: N/A
+  –Effect: Target an Opponent within your Melee Range. Make 3 Clashes (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) against that Opponent. For each Clash you win, that Opponent gains a stack of the Slowed Combat Condition until the end of your next turn. If you win all three Clashes, your Opponent does not lose these stacks of the Slowed Combat Condition until the end of the Combat Encounter.
+  You can only use this Unique Ability once per Combat Encounter.
+
+---
+
+[on used]
+timeSeal();

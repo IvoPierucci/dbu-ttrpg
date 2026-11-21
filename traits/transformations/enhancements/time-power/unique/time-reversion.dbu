@@ -1,0 +1,25 @@
+id: time-reversion
+name: Time Reversion
+uaType: magical
+prerequisite: Access to the Time Power Enhancement Power
+tpCost: 0
+type: counter
+actionCost: 2
+kiCostPerTier: 12
+usageLimit: 1/encounter
+minions: Non-Minion
+# Used while an Attacking Maneuver of 1 Action, or made as an Instant, waits to be answered: the Clash at its maker - won, it is cancelled,
+# its Ki and Resources back, its Actions and its /Round use still counted (chat.mjs timeReversion). Against any other Maneuver: the table's.
+source: Time Power
+description: >
+  In response to an Instant or a 1-Action Standard Maneuver: a Clash - won, it is cancelled, what it cost in Ki and Resources given back.
+text: >
+  Time Reversion — You turn back the clock, preventing the actions of others from having ever occurred.
+  –Ability Type: Magical –Prerequisites: Access to the Time Power Enhancement Power –TP Cost: N/A –KP Cost: 12(T) –Maneuver Type: Counter –Action Cost: 2 Counter Actions –Minions: Non-Minion –Passive Bonus: N/A
+  –Effect: When a Character uses an Instant Maneuver or a Standard Maneuver with an Action Cost of 1 Action, you may use this Maneuver in response to it. Make a Clash (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) against that character. If you win, their Maneuver is cancelled. Any Ki Points, Divine Ki Points, or Resources spent on that Maneuver are regained, but the Action Cost is still spent and this use of that Maneuver counts to any limitations on how many times that Maneuver can be used in a Combat Round (but not any limitations on how many times it can be used in a Combat Encounter).
+  You can only use this Unique Ability once per Combat Encounter.
+
+---
+
+[on used]
+timeReversion();

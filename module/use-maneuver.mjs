@@ -6082,6 +6082,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const glassed = await glassFocusMulti(actor, maneuver, declared);
     if (!glassed) return false;
     ({ maneuver, declared } = glassed);
+    // Time Control (3): Multi-Profile with the Time Profile, once an Encounter (Dominion Over Time (3): a Round, twice an Encounter).
+    const timed = await timeProfileMulti(actor, maneuver, declared);
+    if (!timed) return false;
+    ({ maneuver, declared } = timed);
     // Law-Defying Battle (7): Complete Annihilation on a Signature Technique, once a Round.
     const annihilating = await grantedSuperProfile(actor, maneuver, declared);
     if (!annihilating) return false;
@@ -8385,4 +8389,35 @@ export async function grantedSuperProfile(actor, maneuver, declared) {
   const ki = superProfileKiPerTier(source.id, "") * tier;
   return { maneuver: { ...maneuver, superProfile: source.id },
     declared: { ...declared, superProfileKi: (Number(declared.superProfileKi) || 0) + ki } };
+}
+
+/**
+ * Time Control (3): "When using a Signature Technique, you may add the Multi-Profile Super Profile to that Attacking Maneuver, but you must
+ * select the Time Profile for the effects of Multi-Profile" - once an Encounter; Dominion Over Time (3): "[1/Round, 2/Encounter]". Asked, as
+ * Genetic Focus: Glass's: a Super Profile it has already replaced, Multi-Profile's KP paid.
+ */
+export async function timeProfileMulti(actor, maneuver, declared) {
+  const unchanged = { maneuver, declared };
+  const slots = actor.system.effects?.slots ?? {};
+  if (!declared || !maneuver.signature || maneuver.signatureTechnique || (slots["multiProfile.time"] !== true) || !PROFILES.time) return unchanged;
+  if ([declared.profile].includes("time") || ((maneuver.superProfile === "multi-profile") && (maneuver.secondProfile === "time"))) return unchanged;
+  const more = slots["multiProfile.timeMore"] === true;
+  const encounter = game.combat?.id ?? "none";
+  const round = `${encounter}:${game.combat?.round ?? 0}`;
+  const used = actor.getFlag?.("dbu-ttrpg", "timeMulti") ?? {};
+  const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  if (count >= (more ? 2 : 1) || (more && (used.round === round))) return unchanged;
+  const had = maneuver.superProfile ?? "";
+  const { askPlayerChoice } = await import("./chat.mjs");
+  if ((await askPlayerChoice(actor, `${actor.name}: ${maneuver.name}`, [
+    { value: "yes", label: `Multi-Profile with the Time Profile${had ? ` (in place of ${SUPER_PROFILES[had]?.label ?? had})` : ""} - `
+      + `${more ? "once a Round, twice an Encounter" : "once an Encounter"}` }, { value: "no", label: "No" }])) !== "yes") return unchanged;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const was = had ? superProfileKiPerTier(had, maneuver.secondProfile ?? "") : 0;
+  const next = { ...maneuver, superProfile: "multi-profile", secondProfile: "time" };
+  const out = { ...declared,
+    superProfileKi: (Number(declared.superProfileKi) || 0) + ((superProfileKiPerTier("multi-profile", "time") - was) * tier),
+    advantages: withGranted(declared.advantages ?? [], PROFILES.time.grantsAdvantage) };
+  await actor.setFlag("dbu-ttrpg", "timeMulti", { encounter, round, count: count + 1 });
+  return { maneuver: next, declared: await wagerAgain(actor, next, declared, out, "time") };
 }

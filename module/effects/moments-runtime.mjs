@@ -873,6 +873,9 @@ async function runVerb(actor, call, context) {
     case "adaptationOffer": return (await import("../chat.mjs")).adaptationOffer(actor, String(args[0] ?? ""), Number(args[1]) || 0,
       String(args[2] ?? ""), context);
     case "surgeRevive": return (await import("../chat.mjs")).surgeRevive(actor);
+    case "timeSeal": return (await import("../chat.mjs")).timeSeal(actor);
+    case "timeReversion": return (await import("../chat.mjs")).timeReversion(actor);
+    case "freeUnique": return (await import("../chat.mjs")).freeUnique(actor, String(args[0] ?? ""));
     case "regainAnyway": return (await import("../chat.mjs")).regainAnyway(actor, Number(args[0]) || 0, Number(args[1]) || 0);
     case "paymentOnLeave": return actor.setFlag("dbu-ttrpg", "paymentOnLeave", [...new Set([...(actor.getFlag?.("dbu-ttrpg", "paymentOnLeave") ?? []),
       String(args[0] ?? "")])]);

@@ -4,6 +4,8 @@ order: 1
 slot: trait
 # Its [Permanent] effects: they hold outside the Transformation too.
 permanent: 1
+# (2) "You gain access to the Time Seal and Time Reversion Unique Abilities."
+grantsUnique: time-seal, time-reversion
 description: >
   You possess true mastery over time, allowing you to manipulate the very flow of time around your enemies.
 text: >
@@ -15,7 +17,15 @@ text: >
 
 ---
 
-# (1) The Time Profile, (2) Time Seal and Time Reversion (their words in its file), (3) Multi-Profile with the Time Profile: the table's.
+# (1) The Time Profile.
+[passive, effect 1]
+allow profile.time;
+
+# (2) Time Seal and Time Reversion: given by its header (this folder's unique/).
+
+# (3) A Signature Technique, once an Encounter: Multi-Profile with the Time Profile, asked (use-maneuver.mjs timeProfileMulti).
+[passive, effect 3]
+allow multiProfile.time;
 
 # (4) At the start of your turn, not in the God Ki State: 1/10th of your Maximum Life Points lost.
 [automatic/start-of-turn, effect 4]

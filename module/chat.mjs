@@ -17309,10 +17309,12 @@ export async function postTimeFreeze(actor, maneuver) {
   const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
   const applied = unique ? appliedTraits(unique, getTrait) : [];
   const has = key => applied.some(trait => trait[key] === true);
+  // The Frozen Time (3): "Gain an additional Action for your Frozen Turn through the effects of the Time Freeze Unique Ability."
+  const actions = 2 + ((maneuver?.id === "time-freeze") ? Math.max(0, Number(actor.system.effects?.slots?.["timeFreeze.extraAction"]?.add) || 0) : 0);
   const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: a Frozen Turn - 2 Actions.</p>`,
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: a Frozen Turn - ${actions} Actions.</p>`,
     flags: { [SCOPE]: { [FREEZE_FLAG]: { actorUuid: actor.uuid, ended: false } } } });
-  await actor.update({ [`flags.${SCOPE}.frozenTurn`]: { left: 2, name: maneuver.name, messageId: card.id,
+  await actor.update({ [`flags.${SCOPE}.frozenTurn`]: { left: actions, name: maneuver.name, messageId: card.id,
     attacksAtStart: Number(actor.system.attacksThisRound) || 0,
     limited: has("freezeNoAttacks"), difficult: has("freezeOneAttack"), straining: has("freezeStraining"),
     pained: has("freezePained") } });
@@ -28730,10 +28732,17 @@ function conditioned(actor) {
  * (`combatRolls.vsConditioned`) - an Opponent, of another side than yours, with one on them.
  */
 function tacticianParts(actor, other) {
+  if (!other || (other.uuid === actor?.uuid) || !areOpponents(other, actor)) return [];
+  const parts = [];
   const slot = actor?.system?.effects?.slots?.["combatRolls.vsConditioned"];
   const add = Number(slot?.add) || 0;
-  if (!add || !other || (other.uuid === actor.uuid) || !areOpponents(other, actor) || !conditioned(other)) return [];
-  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: add }];
+  if (add && conditioned(other)) parts.push({ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: add });
+  // The Frozen Time (1): "Increase your Combat Rolls against Opponents with the Slowed Combat Condition by 1(T)."
+  const slowed = actor?.system?.effects?.slots?.["combatRolls.vsSlowed"];
+  if ((Number(slowed?.add) || 0) && ((Number(other.system?.conditions?.slowed) || 0) > 0)) {
+    parts.push({ label: (slowed.parts ?? []).map(part => part.source).find(Boolean) ?? "Against the Slowed", value: Number(slowed.add) || 0 });
+  }
+  return parts;
 }
 
 /** Heart of Courage (5)'s mark on them: no Combat Condition counted for an Opponent's effects. */
@@ -39316,6 +39325,12 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     }
     if (riders.squareQuality && !attackArea(attack)) await applySquareQuality(target, riders.squareQuality);
     for (const id of [...new Set([attack.profile, ...extraProfilesOf(attack)].filter(Boolean))]) {
+      // The Time Profile's: "If you deal Damage to an Opponent with this Attacking Maneuver".
+      if (areOpponents(attacker, target)) {
+        for (const rider of PROFILES[id]?.onDamage ?? []) {
+          await markUntilNextTurn(attacker, target, rider.condition, rider.stacks, rider.edge, PROFILES[id].label, !rider.thisTurn);
+        }
+      }
       const onThreshold = PROFILES[id]?.onThreshold;
       if (onThreshold && knockedThrough) {
         await markUntilNextTurn(attacker, target, onThreshold.condition,
@@ -41700,6 +41715,8 @@ function renderAttack(message, html) {
       : attack.disarmingSwap?.pending
       ? `${Handlebars.escapeExpression(attack.disarmingSwap.name ?? "")} answers with the Defend Maneuver - `
         + `${Handlebars.escapeExpression(attack.attackerName)} may cancel it for another (Disarming Demeanor).`
+      : (attack.icCancelled && attack.cancelledBy)
+      ? `Cancelled - ${Handlebars.escapeExpression(attack.cancelledBy)}.`
       : attack.icCancelled
       ? "Cancelled - Instantaneous Control: its Actions and Ki Points regained, its uses not counted."
       : attack.planetGone
@@ -43069,6 +43086,8 @@ async function settleWinEffects(message, clash) {
   const target = fromUuidSync(clash.defenderUuid);
   if (!challenger || !target) return;
   if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} holds.`);
+  if (clash.winEffects.tally) return settleTally(message, clash, challenger, target);
+  if (clash.winEffects.revert) return settleReversion(message, clash, challenger);
   const { conditions = [], until = "start", lifeLoss = 0, state = "", source = "" } = clash.winEffects;
   const said = [];
   if (lifeLoss > 0) {
@@ -43252,4 +43271,115 @@ async function counterFree(actor, maneuver, amount = 1, extra = {}) {
 export async function payCounter(actor, maneuver, amount = 1) {
   if (await counterFree(actor, maneuver, amount)) return true;
   return spendActions(actor, amount, "counter");
+}
+
+/**
+ * Time Seal: "Target an Opponent within your Melee Range. Make 3 Clashes (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) against that
+ * Opponent. For each Clash you win, that Opponent gains a stack of the Slowed Combat Condition until the end of your next turn. If you win
+ * all three Clashes, your Opponent does not lose these stacks ... until the end of the Combat Encounter." The three as one tally: what
+ * they give, once all three are settled (settleTally).
+ */
+export async function timeSeal(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const target = game.user.targets?.first?.()?.actor ?? null;
+  if (!actor || !target || (target.uuid === actor.uuid)) {
+    ui.notifications.warn("Time Seal: target the Opponent first.");
+    return UNSPENT;
+  }
+  const { whyNotWithinMelee } = await import("./maneuvers.mjs");
+  const far = whyNotWithinMelee(actor, target, "Time Seal");
+  if (far) {
+    ui.notifications.warn(far);
+    return UNSPENT;
+  }
+  const key = foundry.utils.randomID();
+  for (let n = 1; n <= 3; n++) {
+    await postSaveClash(actor, target, { maneuverName: `Time Seal (${n} of 3)`, clashLabel: "Clash (Cognitive vs Impulsive/Corporeal/Cognitive/Morale)",
+      reason: `Win: a stack of Slowed till the end of ${actor.name}'s next turn - all three won, till the Combat Encounter ends.`,
+      saves: ["cognitive"], defenderSaves: ["impulsive", "corporeal", "cognitive", "morale"],
+      winEffects: { applied: false, tally: { key, of: 3, condition: "slowed", source: "Time Seal" } } });
+  }
+}
+
+/** One of a tally's Clashes settled: kept with the others; the last of them gives what they won between them. */
+async function settleTally(message, clash, challenger, target) {
+  const { key, of, condition, source } = clash.winEffects.tally;
+  const won = whoWonClash(clash.result) === "challenger";
+  const all = { ...(challenger.getFlag?.(SCOPE, "clashTally") ?? {}) };
+  const results = [...(all[key] ?? []), won];
+  if (results.length < of) {
+    await requestActorUpdate(challenger, { [`flags.${SCOPE}.clashTally`]: { ...all, [key]: results } });
+    return settledNote(message, `${won ? "Won" : "Lost"} - ${results.length} of ${of} settled.`);
+  }
+  delete all[key];
+  await requestActorUpdate(challenger, { [`flags.${SCOPE}.clashTally`]: all });
+  const wins = results.filter(Boolean).length;
+  const name = getTrait(condition)?.name ?? condition;
+  if (!wins) return settledNote(message, `${target.name} shrugs off ${source}.`);
+  if (wins === of) {
+    await markUntilNextTurn(challenger, target, condition, wins, null, source);
+    return settledNote(message, `All ${of} won: ${target.name} gains ${wins} stacks of ${name} till the Combat Encounter ends.`);
+  }
+  await markUntilNextTurn(challenger, target, condition, wins, "end", source);
+  return settledNote(message, `${wins} of ${of} won: ${target.name} gains ${wins} stack${(wins === 1) ? "" : "s"} of ${name} till the end of `
+    + `${challenger.name}'s next turn.`);
+}
+
+/**
+ * Time Reversion: "When a Character uses an Instant Maneuver or a Standard Maneuver with an Action Cost of 1 Action, you may use this
+ * Maneuver in response to it. Make a Clash (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) against that character." The latest
+ * Attacking Maneuver not yet resolved - of another, made with 1 Action or as an Instant. Another kind of Maneuver: the table's.
+ */
+export async function timeReversion(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const card = (game.messages?.contents ?? []).findLast(message => {
+    const attack = message.getFlag?.(SCOPE, ATTACK_FLAG);
+    return attack && !attack.result && !attack.icCancelled && (attack.attackerUuid !== actor?.uuid)
+      && (((Number(attack.refund?.actions) || 0) === 1) || (attack.refund?.kind === "instant") || attack.instant);
+  });
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  const maker = attack ? fromUuidSync(attack.attackerUuid) : null;
+  if (!maker) {
+    ui.notifications.warn("Time Reversion: no Attacking Maneuver of 1 Action or an Instant waiting to be answered - another Maneuver is the table's.");
+    return UNSPENT;
+  }
+  return postSaveClash(actor, maker, { maneuverName: "Time Reversion", clashLabel: "Clash (Cognitive vs Impulsive/Corporeal/Cognitive/Morale)",
+    reason: `Win and ${attack.maneuverName} is cancelled - its Ki and Resources back, its Actions still spent.`,
+    saves: ["cognitive"], defenderSaves: ["impulsive", "corporeal", "cognitive", "morale"],
+    winEffects: { applied: false, revert: card.id } });
+}
+
+/**
+ * Time Reversion won: "their Maneuver is cancelled. Any Ki Points, Divine Ki Points, or Resources spent on that Maneuver are regained, but the
+ * Action Cost is still spent and this use of that Maneuver counts to any limitations on how many times that Maneuver can be used in a Combat
+ * Round (but not any limitations on how many times it can be used in a Combat Encounter)."
+ */
+async function settleReversion(message, clash, challenger) {
+  const card = game.messages.get(clash.winEffects.revert);
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${attack?.maneuverName ?? "It"} goes ahead.`);
+  if (!attack || attack.result || attack.icCancelled) return settledNote(message, "Too late - it has already been answered.");
+  const refund = attack.refund ?? attack.paid ?? {};
+  await regainRefund(fromUuidSync(attack.attackerUuid), { ki: refund.ki, capacity: refund.capacity, divine: refund.divine,
+    encounter: refund.encounter });
+  requestEdit(card, { type: "attack", attack: { ...attack, icCancelled: true, cancelledBy: `Time Reversion (${challenger.name}): its Ki back, `
+    + "its Actions still spent", pending: [] } });
+  return settledNote(message, `${attack.maneuverName} is cancelled.`);
+}
+
+/** Time Has Stopped: "Use the Time Freeze Unique Ability without paying the Ki Point Cost" - used, and what it cost given back. */
+export async function freeUnique(actor, id) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const item = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver") && each.system?.unique
+    && ((each.flags?.[SCOPE]?.sourceId === id) || (uniqueDefinitionOf(each)?.id === id)));
+  if (!item) {
+    ui.notifications.warn(`${actor?.name}: not that Unique Ability to use.`);
+    return UNSPENT;
+  }
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const maneuver = definitionOf(item);
+  const cost = maneuverKiCost(maneuver, null, actor);
+  if (!await useManeuver(actor, maneuver, { outOfSequence: true })) return UNSPENT;
+  await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + cost),
+    "system.capacity.spent": Math.max(0, (Number(actor.system.capacity?.spent) || 0) - cost) });
 }

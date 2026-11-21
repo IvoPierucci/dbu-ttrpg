@@ -625,6 +625,21 @@ export const VERBS = Object.freeze({
     doc: "Caste Combat's Pawn: the Basic Attack offered on the Defeated card - Full Wager, and Power Shot (2) but for a Minion "
        + "(chat.mjs castePawnStrike)."
   },
+  timeSeal: {
+    args: [0, 0],
+    doc: "Time Seal: 3 Clashes (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) at the Opponent targeted - a stack of Slowed till the end "
+       + "of your next turn for each won, all three won till the Combat Encounter ends (chat.mjs timeSeal)."
+  },
+  timeReversion: {
+    args: [0, 0],
+    doc: "Time Reversion: a Clash (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) at the maker of the latest Attacking Maneuver not yet "
+       + "resolved, made with 1 Action or as an Instant - won, it is cancelled, its Ki and Resources back (chat.mjs timeReversion)."
+  },
+  freeUnique: {
+    args: [1, 1],
+    names: [0],
+    doc: "A Unique Ability of yours by its id, used without paying its Ki Point Cost - Time Has Stopped's Time Freeze (chat.mjs freeUnique)."
+  },
   regainAnyway: {
     args: [2, 2],
     doc: "So many Life and Ki Points regained, whatever forbids regaining Life Points - Scarlet Multiplier's \"ignoring the first effect "

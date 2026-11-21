@@ -622,6 +622,17 @@ const TABLE = [
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
   { key: "timeControl.noDrain", phase: PHASES.CORE, kind: F, ops: ["allow"],
     doc: "Time Control (4)'s Life Points at the start of the turn not lost - Dominion Over Time (4)." },
+  // Time Power's Traits.
+  { key: "profile.time", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Access to the Time Profile - Time Control (1)." },
+  { key: "multiProfile.time", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "A Signature Technique, once an Encounter: Multi-Profile with the Time Profile, asked (use-maneuver.mjs timeProfileMulti) - Time Control (3)." },
+  { key: "multiProfile.timeMore", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "multiProfile.time once a Round and twice an Encounter instead - Dominion Over Time (3)." },
+  { key: "combatRolls.vsSlowed", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Combat Rolls against an Opponent suffering from the Slowed Combat Condition (chat.mjs tacticianParts) - The Frozen Time (1)." },
+  { key: "timeFreeze.extraAction", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Actions more for the Frozen Turn of the Time Freeze Unique Ability (chat.mjs postTimeFreeze) - The Frozen Time (3)." },
   // Any Counter Maneuver without its Counter Action (chat.mjs payCounter).
   { key: "counter.free", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Answering counter-maneuver: this Counter Maneuver used without spending its Counter Action(s) - which one, and the Defend's "

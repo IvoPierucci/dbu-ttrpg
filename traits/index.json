@@ -2057,6 +2057,8 @@
     "maneuvers/movement-instant.dbu",
     "maneuvers/movement-or-basic-instant.dbu",
     "transformations/enhancements/doping/maneuvers/amplified-power-up.dbu",
-    "maneuvers/healing-surge-instant.dbu"
+    "maneuvers/healing-surge-instant.dbu",
+    "transformations/enhancements/time-power/unique/time-reversion.dbu",
+    "transformations/enhancements/time-power/unique/time-seal.dbu"
   ]
 }

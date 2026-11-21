@@ -641,6 +641,24 @@ export const PROFILES = Object.freeze({
     perTwoCharges: { categoryMax: 2 }
   },
 
+  time: {
+    label: "Time",
+    foundations: ["physical", "energy", "magic"],
+    kiCostPerTier: 10,
+    damageCategory: "standard",
+    text: `
+      Time: You slow the flow of time around your opponent.
+      –Foundations: All
+      –Damage Category: Standard
+      –KP Cost: 10(T)
+      –Effect: If you deal Damage to an Opponent with this Attacking Maneuver, they gain a stack of the Slowed Combat Condition until the
+      end of your next turn and the Guard Down Combat Condition until the end of this turn.`,
+    // Given by an effect alone (Time Control (1)).
+    accessSlot: "profile.time",
+    // Damage dealt: each of these on the one dealt it, on the attacker's clock (chat.mjs) - `thisTurn` this turn's end, not the next's.
+    onDamage: [{ condition: "slowed", stacks: 1, edge: "end" }, { condition: "guard-down", stacks: 1, edge: "end", thisTurn: true }]
+  },
+
   elementalEarth: {
     label: "Elemental (Earth)",
     foundations: ["magic"],
