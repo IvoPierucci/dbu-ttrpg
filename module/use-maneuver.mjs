@@ -8356,15 +8356,28 @@ export function coreManeuverItems({ adversary = false } = {}) {
 export async function grantedSuperProfile(actor, maneuver, declared) {
   const unchanged = { maneuver, declared };
   if (!declared || !maneuver.signature || maneuver.signatureTechnique || maneuver.superProfile) return unchanged;
-  if (actor.system.effects?.slots?.["superProfileOffer.completeAnnihilation"] !== true) return unchanged;
-  if (actor.getFlag?.("dbu-ttrpg", "annihilationRound") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`) return unchanged;
+  const slots = actor.system.effects?.slots ?? {};
+  const roundNow = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const encounterNow = game.combat?.id ?? "none";
+  // Law-Defying Battle (7): Complete Annihilation, once a Round. That Actually Hurt! (4): "either the All Out or Complete Annihilation Super
+  // Profile", once an Encounter (its Trait says when).
+  const sources = [
+    ...((slots["superProfileOffer.completeAnnihilation"] === true) && (actor.getFlag?.("dbu-ttrpg", "annihilationRound") !== roundNow)
+      ? [{ id: "complete-annihilation", flag: "annihilationRound", when: roundNow, said: "once a Round" }] : []),
+    ...((slots["superProfileOffer.desperate"] === true) && (actor.getFlag?.("dbu-ttrpg", "desperateProfileEncounter") !== encounterNow)
+      ? [{ id: "all-out", flag: "desperateProfileEncounter", when: encounterNow, said: "once an Encounter" },
+        { id: "complete-annihilation", flag: "desperateProfileEncounter", when: encounterNow, said: "once an Encounter" }] : [])
+  ];
+  if (!sources.length) return unchanged;
   const { askPlayerChoice } = await import("./chat.mjs");
   const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
-  const ki = superProfileKiPerTier("complete-annihilation", "") * tier;
-  if ((await askPlayerChoice(actor, `${actor.name}: ${maneuver.name}`, [
-    { value: "yes", label: `Complete Annihilation on it (${ki} Ki, 3+ Energy Charges still needed; once a Round)` },
-    { value: "no", label: "No" }])) !== "yes") return unchanged;
-  await actor.setFlag("dbu-ttrpg", "annihilationRound", `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
-  return { maneuver: { ...maneuver, superProfile: "complete-annihilation" },
+  const picked = await askPlayerChoice(actor, `${actor.name}: ${maneuver.name}`, [...sources.map((source, at) => ({ value: String(at),
+    label: `${SUPER_PROFILES[source.id]?.label ?? source.id} on it (${superProfileKiPerTier(source.id, "") * tier} Ki, its Prerequisite still `
+      + `needed; ${source.said})` })), { value: "no", label: "No" }]);
+  const source = sources[Number(picked)];
+  if (!source || (picked === "no")) return unchanged;
+  await actor.setFlag("dbu-ttrpg", source.flag, source.when);
+  const ki = superProfileKiPerTier(source.id, "") * tier;
+  return { maneuver: { ...maneuver, superProfile: source.id },
     declared: { ...declared, superProfileKi: (Number(declared.superProfileKi) || 0) + ki } };
 }

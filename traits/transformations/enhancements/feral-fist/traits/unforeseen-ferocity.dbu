@@ -10,6 +10,7 @@ text: >
 
 ---
 
-# Burst Limit: 3 stacks of Ferocity; Unhinged till the end of your next turn (the table's - the Feral State's Level).
+# Burst Limit: 3 stacks of Ferocity; the Feral State's Unhinged Level till the end of your next turn.
 [triggered/transform, 1/encounter, effect 1]
 ferocity.stacks = 3;
+enterState(feral, 2, next-turn);

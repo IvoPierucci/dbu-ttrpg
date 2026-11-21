@@ -8514,6 +8514,13 @@ async function offerExploits(card, actor, maneuver) {
   // triggers the Exploit Maneuver from the target" - one person, and only on a loss.
   if (maneuver.exploitOnLoss) return;
 
+  // Unpredictable Combat (6): "If you would trigger the Exploit Maneuver, you can choose not to" - once a Round, asked.
+  if ((actor.system.effects?.slots?.["exploit.mayDecline"] === true) && (actor.getFlag?.(SCOPE, "exploitDeclinedRound") !== roundKey())
+    && ((await askPlayerChoice(actor, `${actor.name}: Unpredictable Combat`, [{ value: "no", label: `No Exploit from ${maneuver.name} (once a Round)` },
+      { value: "yes", label: "Trigger it" }])) === "no")) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.exploitDeclinedRound`]: roundKey() });
+    return;
+  }
   // In the Realm of Angels (1): "You do not trigger the Exploit Maneuver unless you are suffering from the Guard Down or Impediment Combat
   // Conditions."
   if ((actor.system.effects?.slots?.["exploit.onlyGuardDown"] === true) && !((Number(actor.system.conditions?.["guard-down"]) || 0) > 0)
@@ -11944,7 +11951,7 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
  */
 async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
                                            slot = null, collect = true, strikeAdapted = 0, oneCharge = "", signatureRoll = false,
-                                           tailRoll = false, ultimateRoll = false,
+                                           tailRoll = false, ultimateRoll = false, strikeToppled = 0,
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
@@ -11981,7 +11988,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
     const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural, strikeAdapted, oneCharge, signatureRoll,
-      tailRoll, ultimateRoll,
+      tailRoll, ultimateRoll, strikeToppled,
       // And which Foundation's it is: what is a Wound Roll's by its Foundation is the second roll's too.
       criticalTarget, botchUnlessCritical, naturalAdd, foundation };
     const clone = () => ((typeof modifiers === "number") ? modifiers : modifiers.map(part => ({ ...part })));
@@ -12017,6 +12024,13 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     && await spendActions(actor, 1, "counter");
   // Artificial Warrior (2): ticked in the window - how many Adaptation Points, asked; 1(T) on this Combat Roll's Dice Score each.
   const adapted = (answered?.slots?.["adaptationSpend.roll"] === true) ? await spendAdaptation(actor, "this Combat Roll") : 0;
+  // Power of the Bottle (4), Mad Dog Attack (6)(7): stacks spent on this roll, 1(T) each - how many, asked.
+  const stacked = (collect && combatRoll) ? await stacksOnRoll(actor, slot, attackingManeuver) : null;
+  if (stacked?.value) parts.push({ label: stacked.label, value: stacked.value });
+  // Power of the Bottle (4): what was spent on the Strike, on its Wound Roll as well.
+  if ((slot === "wound") && attackingManeuver && strikeToppled) {
+    parts.push({ label: `Toppling (${strikeToppled}, spent on the Strike)`, value: strikeToppled * Math.max(1, Number(actor.system.tierOfPower) || 1) });
+  }
   // Earthling Genes (3): "Double the bonus to the Wound Rolls of your Signature Techniques from your Adaptation Points."
   // And Genetic Focus: Arcosian (3)'s: "Double the bonus to your Wound Rolls of your Tail Attack from your Adaptation Points."
   const doubledBy = (slot !== "wound") ? ""
@@ -12324,6 +12338,13 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const answeredOutcome = (collect && ((combatRoll && (botch || critical)) || lucky))
     ? await outcomeTurn(actor, botch ? "botch" : "critical") : { add: 0, toCritical: false };
   const turned = answeredOutcome.add;
+  // Unpredictable Combat (3): "If you score a Botch Result on a Dodge Roll, it becomes a Critical Result instead (this does not change the
+  // Natural Result)."
+  if (botch && combatRoll && (slot === "dodge") && (actor.system.effects?.slots?.["dodge.botchCritical"] === true)) {
+    botch = false;
+    critical = true;
+    lines.push(noteLine("Unpredictable Combat: the Botch a Critical Result"));
+  }
   // Lucky (3): "If you score a Botch Result, score a Critical Result instead and increase the Natural Result by 3."
   if (botch && answeredOutcome.toCritical) {
     botch = false;
@@ -12409,6 +12430,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     ...(blueprintCharge ? { blueprintCharge: true } : {}),
     // Adaptation Points spent on it - Offensive Design (4) counts an attack's Strike and Wound together.
     ...(adapted ? { adapted } : {}),
+    ...(stacked?.spent?.toppling ? { toppled: stacked.spent.toppling } : {}),
     actorUuid: actor.uuid,
     actorName: actor.name,
     natural,
@@ -28696,7 +28718,10 @@ function conditioned(actor) {
   // Heart of Courage (5): "you are not considered to be suffering from any Combat Conditions for the effects of your
   // Opponents" - every reader of this is an Opponent's effect.
   if (courageous(actor)) return false;
-  return Object.entries(actor?.system?.conditions ?? {}).some(([key, stacks]) => ((Number(stacks) || 0) > 0)
+  // Directed Anger (1): "While you possess the Guard Down Combat Condition, it does not count as a Combat Condition for the effects of your
+  // Opponents."
+  const hidden = (actor?.system?.effects?.slots?.["conditions.guardDownHidden"] === true) ? "guard-down" : "";
+  return Object.entries(actor?.system?.conditions ?? {}).some(([key, stacks]) => ((Number(stacks) || 0) > 0) && (key !== hidden)
     && (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false));
 }
 
@@ -31322,6 +31347,8 @@ export async function postAttack(actor, target, maneuver,
             + ((!reflecting && heavyWager(actor, { kiWager }))
               ? (Number(actor.system.effects?.slots?.["attack.damageCategory.heavyWager"]?.add) || 0) : 0)
             // Overwhelming Strike (1): "increase the Damage Category of all of your Signature Techniques by 1 Category".
+            // Frenzied Assault (3), That Actually Hurt! (3): every one's, at the Raging State's 2nd Level.
+            + (!reflecting ? (Number(actor.system.effects?.slots?.["attack.damageCategory.all"]?.add) || 0) : 0)
             + ((!reflecting && technique) ? (Number(actor.system.effects?.slots?.["attack.damageCategory.signature"]?.add) || 0) : 0),
           // Made through another Maneuver - Coup de Grace (2)'s Basic Attack (Unending Pressure (3)).
           ...((maneuver.madeThrough && !reflecting) ? { madeThrough: maneuver.madeThrough } : {}),
@@ -35662,6 +35689,8 @@ async function rollAttackWoundWork(message, attack) {
   let wound = await rollSide(attacker, woundParts(attacker, attack), {
     // Arcosian Genes' Genetic Aggressor: what was spent on its Strike Roll.
     strikeAdapted: Number(attack.result?.strike?.adapted) || 0,
+    // Power of the Bottle (4): the Toppling spent on its Strike.
+    strikeToppled: Number(attack.result?.strike?.toppled) || 0,
     // Android Cybernetics (5): one Energy Charge's dice, for a Signature Technique's.
     oneCharge: effectSignature(attacker, attack) ? energyChargeDice(attacker, { ...attack, energyCharges: 1 }) : "",
     // Earthling Genes (3): a Signature Technique's. Genetic Focus: Arcosian (3): the Tail Attack's.
@@ -36032,6 +36061,8 @@ async function rollAttackWoundWork(message, attack) {
     // Erratic Majin (4): smaller than Medium, Medium for Punching Down.
     const gap = sizeDifference(attacker, target) + (((attacker.system?.effects?.slots?.["size.soakPunchAsMedium"] === true)
       && ((Number(attacker.system.size?.steps) || 0) < 0)) ? -(Number(attacker.system.size?.steps) || 0) : 0)
+      // Compressed Oozaru (2): "Treat your Size Category as if it was G Size Categories larger for the sake of Punching Down."
+      + (Number(attacker.system?.effects?.slots?.["punchingDown.sizeSteps"]?.add) || 0)
       + (((attacker.system?.effects?.slots?.["giantGene.size"] === true) && (attacker.system.size?.key === "enormous")) ? 1 : 0);
     // Troll (3): "You may apply Punching Down if a target is only 1 Size Category smaller than you."
     const punchingRoll = ((dealt > 0) && (gap >= ((attacker.system?.effects?.slots?.["troll.punchDown"] === true) ? 1 : 2)) && !own.noPunchingDown)
@@ -42879,7 +42910,7 @@ export async function adaptationOffer(actor, id, cost = 0, how = "", context = {
     return UNSPENT;
   }
   const maneuver = getManeuver(id);
-  const at = (how === "atTarget") ? String(context?.targetUuid ?? "") : "";
+  const at = (how === "atTarget") ? String(context?.targetUuid ?? "") : (how === "atAttacker") ? String(context?.attackerUuid ?? "") : "";
   const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: id, maneuverName: maneuver?.name ?? id,
     ...(at ? { targetUuid: at } : {}), ...((how === "noExploit") ? { noExploit: true } : {}), ...((how === "free") ? { free: true } : {}),
     reason: cost ? `${cost} Adaptation Point${(cost === 1) ? "" : "s"}${(how === "noExploit") ? "; no Exploit from it" : ""}`
@@ -43158,4 +43189,39 @@ export async function instantOneOf(actor, ids = []) {
     ids.map(each => ({ value: each, label: getManeuver(each)?.name ?? each })));
   if (!id) return UNSPENT;
   return (await ownOutOfSequence(actor, id)) ? undefined : UNSPENT;
+}
+
+/** Stacks spent on a roll, 1(T) each - which, by the roll it is (chat.mjs stacksOnRoll). */
+const STACKS_ON_ROLL = Object.freeze([
+  // Power of the Bottle (4): "If you target an Opponent with an Attacking Maneuver, you may spend any number of Toppling stacks to increase the
+  // Strike and Wound Rolls of that Attacking Maneuver by 1(T) for each Toppling stack spent" - asked at its Strike, its Wound carrying it.
+  { slot: "stacksOnRoll.toppling", resource: "toppling", label: "Toppling", roll: "strike", attack: true },
+  // Mad Dog Attack (6): "If you are targeted by an Opponent's Attacking Maneuver, you may spend any number of Ferocity stacks to increase your
+  // Dodge Rolls by 1(T) for each Ferocity stack spent."
+  { slot: "stacksOnRoll.ferocityDodge", resource: "ferocity", label: "Ferocity", roll: "dodge", attack: false },
+  // (7): "If you hit an Opponent with an Attacking Maneuver, you may spend any number of Ferocity stacks to increase your Wound Roll" - once a Round.
+  { slot: "stacksOnRoll.ferocityWound", resource: "ferocity", label: "Ferocity", roll: "wound", attack: true, perRound: true }
+]);
+
+/** What of those this roll spends - how many of each, asked; spent. */
+async function stacksOnRoll(actor, slot, attackingManeuver) {
+  const tier = Math.max(1, Number(actor?.system?.tierOfPower) || 1);
+  const spent = {};
+  let total = 0;
+  const labels = [];
+  for (const entry of STACKS_ON_ROLL) {
+    if ((entry.roll !== slot) || (entry.attack && !attackingManeuver) || (actor?.system?.effects?.slots?.[entry.slot] !== true)) continue;
+    if (entry.perRound && (actor.getFlag?.(SCOPE, `${entry.slot}Round`) === roundKey())) continue;
+    const held = Number(actor.system.resources?.[entry.resource]?.stacks) || 0;
+    if (!held) continue;
+    const n = Math.max(0, Math.min(held, Number(await askPlayerAmount(actor, `${actor.name}: ${entry.label}`, held,
+      `${entry.label} spent on this roll, 1(T) each`)) || 0));
+    if (!n) continue;
+    await setResource(actor, entry.resource, held - n);
+    if (entry.perRound) await requestActorUpdate(actor, { [`flags.${SCOPE}.${entry.slot}Round`]: roundKey() });
+    spent[entry.resource] = n;
+    total += n;
+    labels.push(`${entry.label} (${n})`);
+  }
+  return { spent, value: total * tier, label: labels.join(", ") };
 }

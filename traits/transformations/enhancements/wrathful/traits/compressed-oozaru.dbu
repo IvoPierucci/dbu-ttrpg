@@ -18,5 +18,9 @@ text: >
 
 ---
 
-# (1) Not with a Blutz Wave Transformation (said), (2) Punching Down G Sizes larger, (3) the Signature Technique Maneuver while Feral:
-# the table's. (4) Its Grades: its file's grade lines.
+# (1) Not with a Blutz Wave Transformation (said), (3) the Signature Technique Maneuver while Feral: the table's. (4) Its Grades: its file's
+# grade lines.
+
+# (2) Your Size Category G larger for Punching Down.
+[passive, effect 2]
+punchingDown.sizeSteps += $G;

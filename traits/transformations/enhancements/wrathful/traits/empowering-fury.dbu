@@ -23,4 +23,9 @@ if (belowThreshold("injured")) {
 [passive, effect 2]
 damageReduction += threshold.depth * 1(T);
 
-# (3) Surgency twice for Born for Battle (2)'s Ki Surge, (4) a Battle Born stack entering its 2nd Grade: the table's.
+# (3) Surgency twice for Born for Battle (2)'s Ki Surge: the table's.
+
+# (4) Entering its 2nd Grade, once an Encounter: a stack of Battle Born.
+[triggered/transform, 1/encounter, effect 4]
+requires $G == 2;
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);

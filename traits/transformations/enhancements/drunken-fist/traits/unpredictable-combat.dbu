@@ -15,5 +15,21 @@ text: >
 
 ---
 
-# (1)-(6) The Cross Counter's Defense Value kept, a Critical's 1(T), a Dodge Botch a Critical, the Basic Attack after a dodge, the
-# Cross Counter without a Counter Action, the Exploit declined: the table's.
+# (1) The Cross Counter's Defense Value kept, (5) the Cross Counter without a Counter Action: the table's.
+
+# (2) A Combat Roll's Critical Result: its Dice Score 1(T) higher.
+[passive, effect 2]
+critical.rollBonus += 1(T);
+
+# (3) A Botch on a Dodge Roll a Critical Result instead.
+[passive, effect 3]
+allow dodge.botchCritical;
+
+# (4) An Attacking Maneuver dodged, once a Round: the Basic Attack out of sequence at its maker, offered on its card.
+[triggered/dodged-attack, 1/round, outOfSequence, effect 4]
+requires dodgedOpponent;
+adaptationOffer(basic-attack, 0, atAttacker);
+
+# (6) Triggering an Exploit Maneuver, once a Round: not, asked (chat.mjs offerExploits).
+[passive, effect 6]
+allow exploit.mayDecline;

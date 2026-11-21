@@ -24,7 +24,29 @@ text: >
 ---
 
 # (1) Constant: an effect into the Feral State, this instead - the table's to offer. (2) Counter and Out-of-Sequence Unique Abilities
-# while Feral, (3) Unhinged's Critical Target, (4) the Movement as an Instant, (6)-(8) Ferocity spent: the table's.
+# while Feral, (8) the Basic Attack for 2 Ferocity ending the Movement beside an Opponent: the table's.
+
+# (3) In the Feral State's Unhinged Level: the Wound Roll's Critical Target 2 lower.
+[passive, effect 3]
+if (states.feral >= 2) {
+    criticalTarget.wound -= 2;
+}
+
+# (4) During your turn, once a Round: the Movement Maneuver as an Instant Maneuver (the core Movement (Instant)).
+[passive, effect 4]
+allow maneuver.movement-instant;
+
+# (6) Ferocity on a Dodge Roll, (7) on an attack's Wound Roll once a Round - asked (chat.mjs stacksOnRoll).
+[passive, effect 6]
+allow stacksOnRoll.ferocityDodge;
+
+[passive, effect 7]
+allow stacksOnRoll.ferocityWound;
+
+# (5) The Movement Maneuver used: a stack of Ferocity.
+[triggered/declare-maneuver, effect 5]
+requires using("movement");
+ferocity.stacks += 1;
 
 # (5) The Movement Maneuver used, or a Critical on a Wound Roll: a stack of Ferocity (max. 3).
 [triggered/critical, effect 5]

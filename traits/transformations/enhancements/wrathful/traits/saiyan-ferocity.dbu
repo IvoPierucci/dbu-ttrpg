@@ -2,6 +2,12 @@ id: wrathful-saiyan-ferocity
 name: Saiyan Ferocity
 order: 3
 slot: burst
+# Its Soak till the start of your next turn - bookkeeping, kept off the Resources list.
+resource: saiyanferocity
+resourceInternal: true
+resourceDuration: true
+resourceLabel: Saiyan Ferocity
+resourceMax: 1
 description: >
   Your fierce, bestial nature takes over completely, making you impossible to stop for a short time.
 text: >
@@ -10,6 +16,14 @@ text: >
 
 ---
 
-# Burst Limit: 2 stacks of Battle Born on the Wound Rolls - Soak 1(T) a stack till the start of your next turn, the table's.
+# Burst Limit: 2 stacks of Battle Born on the Wound Rolls - and Soak 1(T) for each stack of Battle Born you have till the start of your next
+# turn.
+[passive]
+if (hasResource("saiyanferocity")) {
+    soakValue += (battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) * 1(T);
+}
+
 [triggered/transform, 1/encounter, effect 1]
 battlebornwound.stacks += 2;
+saiyanferocity.stacks += 1;
+expires(saiyanferocity, start-of-next-turn);

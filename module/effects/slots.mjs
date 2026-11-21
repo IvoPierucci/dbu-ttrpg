@@ -620,6 +620,27 @@ const TABLE = [
     doc: "Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost - its Ki Wager still paid - asked (Spiritual Apprentice (7))." },
   { key: "wound.quarterKiCost", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
+  // Drunken Fist's, Feral Fist's, Wrathful's, Enraged's, Seething Fury's Traits.
+  { key: "dodge.botchCritical", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "A Botch on a Dodge Roll a Critical instead, its Natural Result as it is (chat.mjs rollSide) - Unpredictable Combat (3)." },
+  { key: "exploit.mayDecline", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Triggering an Exploit Maneuver, once a Round: not, asked (chat.mjs offerExploits) - Unpredictable Combat (6)." },
+  { key: "stacksOnRoll.toppling", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "An Attacking Maneuver's Strike Roll: Toppling spent on it, asked - 1(T) a stack on its Strike and Wound (chat.mjs stacksOnRoll) - "
+       + "Power of the Bottle (4)." },
+  { key: "stacksOnRoll.ferocityDodge", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "A Dodge Roll: Ferocity spent on it, asked - 1(T) a stack - Mad Dog Attack (6)." },
+  { key: "stacksOnRoll.ferocityWound", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "An Attacking Maneuver's Wound Roll, once a Round: Ferocity spent on it, asked - 1(T) a stack - Mad Dog Attack (7)." },
+  { key: "punchingDown.sizeSteps", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Your Size Category so many larger for Punching Down (chat.mjs) - Compressed Oozaru (2)'s G." },
+  { key: "conditions.guardDownHidden", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Your Guard Down no Combat Condition for your Opponents' effects (chat.mjs conditioned) - Directed Anger (1)." },
+  { key: "attack.damageCategory.all", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Every Attacking Maneuver's Damage Category so many higher (chat.mjs postAttack) - Frenzied Assault (3), That Actually Hurt! (3)." },
+  { key: "superProfileOffer.desperate", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "An Attacking Maneuver, once an Encounter: All Out or Complete Annihilation offered on it - its KP paid, its Prerequisite still "
+       + "applying (use-maneuver.mjs grantedSuperProfile) - That Actually Hurt! (4)." },
   // Kaioken's, Doping's Traits.
   { key: "life.noRegain", phase: PHASES.CORE, kind: F, ops: ["allow"],
     doc: "No Life Points regained: no write raises them (combat.mjs) but a Defeat stood up from by force, or what says it ignores this "

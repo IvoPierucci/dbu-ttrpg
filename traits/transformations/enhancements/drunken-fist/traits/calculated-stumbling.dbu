@@ -10,6 +10,8 @@ text: >
 
 ---
 
-# Burst Limit: Plastered till the end of your next turn (the table's - the Drunk State's Level), and 3 stacks of Toppling.
+# Burst Limit: the Drunk State's Plastered Level till the end of your next turn, and 3 stacks of Toppling. Unpredictable Combat (4)-(6)
+# without their [1/Round] meanwhile: the table's.
 [triggered/transform, 1/encounter, effect 1]
 toppling.stacks = 3;
+enterState(drunk, 2, next-turn);

@@ -19,10 +19,17 @@ text: >
 ---
 
 # (1) Constant: from a Sake Bottle, this instead of the Drunk State - the Transformation Maneuver out of sequence, the table's to offer.
-# (2) Tipsy's 1st effect raising instead: the table's.
+# (2) The Drunk State's 1st effect raising your Saving Throws and Combat Rolls instead of lowering them.
+[passive, effect 2]
+if (inState("drunk")) {
+    save.all += 2 * states.drunk * 1(T);
+    combatRolls += 2 * states.drunk * 1(T);
+}
 
 # (3) An Opponent's Attacking Maneuver dodged: a stack of Toppling (max. 3).
 [triggered/dodged-attack, effect 3]
 toppling.stacks += 1;
 
-# (4) Spent on an attack - Strike and Wound 1(T) a stack: the table's.
+# (4) Spent on an attack: Strike and Wound 1(T) a stack - asked at its Strike (chat.mjs stacksOnRoll).
+[passive, effect 4]
+allow stacksOnRoll.toppling;

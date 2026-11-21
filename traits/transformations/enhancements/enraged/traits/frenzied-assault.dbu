@@ -20,5 +20,10 @@ if (inState("determined")) {
     magic.mod += 1(T);
 }
 
-# (2) Clashes on Cognitive or Morale won at Raging 3+, (3) the Damage Category at Raging 2+, (4) the Cross Counter without a Counter
-# Action: the table's.
+# (2) Clashes on Cognitive or Morale won at Raging 3+, (4) the Cross Counter without a Counter Action: the table's.
+
+# (3) In the Raging State's 2nd Level or higher: your Attacking Maneuvers' Damage Category 1 higher (its once a Round not counted).
+[passive, effect 3]
+if (states.raging >= 2) {
+    attack.damageCategory.all += 1;
+}

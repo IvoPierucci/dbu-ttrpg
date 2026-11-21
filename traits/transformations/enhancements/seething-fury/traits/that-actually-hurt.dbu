@@ -28,7 +28,18 @@ if (life.value < 0) {
     magic.mod += 1(T);
 }
 
-# (3) The Damage Category at Raging 2+, (4) All Out or Complete Annihilation below Critical: the table's.
+# (3) In the Raging State's 2nd Level or higher: your Attacking Maneuvers' Damage Category 1 higher (its once a Round not counted).
+[passive, effect 3]
+if (states.raging >= 2) {
+    attack.damageCategory.all += 1;
+}
+
+# (4) Below the Critical Health Threshold, once an Encounter: All Out or Complete Annihilation offered on an attack (use-maneuver.mjs
+# grantedSuperProfile).
+[passive, effect 4]
+if (belowThreshold("critical")) {
+    allow superProfileOffer.desperate;
+}
 
 # (5) Constant: knocked through a Health Threshold, once an Encounter - the Transformation Maneuver out of sequence, into it.
 [triggered/threshold, 1/encounter, outOfSequence, effect 5]

@@ -27,4 +27,21 @@ gain(guard-down);
 expires(guard-down, start-of-next-turn);
 enterState(raging, 1, encounter);
 
-# (2) No Health Threshold Penalties in Furious, (3) Soak and Wound 1(T) without any, (4)(5) back to Angry, (6) Determined: the table's.
+# (3) Soak and Wound 1(T) without any Health Threshold Penalty, (5) back to Angry without (1): the table's.
+
+# (2) In the Furious Level of the Raging State (or higher): no Health Threshold Penalties.
+[passive, effect 2]
+if (states.raging >= 2) {
+    threshold.penalty = 0;
+}
+
+# (4) A Steadfast Check failed: back to the Angry Level of the Raging State.
+[automatic/steadfast-failed, effect 4]
+requires inState("raging");
+setStateLevel(raging, 1);
+
+# (6) Below the Injured Health Threshold, an Attacking Maneuver at one Character, once an Encounter: made in the Determined State - it
+# hits automatically, no turn lost.
+[triggered/declare-maneuver, 1/encounter, effect 6]
+requires attackingManeuver && belowThreshold("injured");
+allow attack.determined;

@@ -3,6 +3,8 @@ name: Directed Anger
 order: 4
 slot: mastery
 mastery: 1
+# (3) "While you are in the Apoplectic Level of the Raging State, this Transformation possesses the Armored Aspect."
+grantsAspectTo: This = Armored if states.raging >= 3
 description: >
   Channeling your titanic rage, you take control of your anger and use it as a weapon against your foes.
 text: >
@@ -14,5 +16,14 @@ text: >
 
 ---
 
-# (1)-(4) Guard Down not a Combat Condition for Opponents, Angry's 2nd effect ignored, Armored in Apoplectic, Determined for a Cross
-# Counter: the table's.
+# (4) Determined for a Cross Counter: the table's. (3) Armored in the Apoplectic Level: its header's grantsAspectTo.
+
+# (1) Your Guard Down no Combat Condition for your Opponents' effects.
+[passive, effect 1]
+allow conditions.guardDownHidden;
+
+# (2) The Raging State's Angry Level 2nd effect - the Botch Range - ignored.
+[passive, effect 2]
+if (inState("raging")) {
+    botchRange.notWound -= states.raging;
+}
