@@ -1,0 +1,25 @@
+id: movement-or-basic-instant
+name: Movement or Basic Attack (Instant)
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Opened by an effect that lets "the Movement Maneuver or Basic Attack Maneuver" be used as an Instant Maneuver once a Round (Speed Star
+# (1)); which, asked (chat.mjs instantOneOf).
+special: true
+source: Core Rule
+description: >
+  The Movement or the Basic Attack Maneuver as an Instant Maneuver, where an effect allows it.
+text: >
+  You may use the Movement Maneuver or Basic Attack Maneuver as an Instant Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: The Maneuver's
+  –Effect: The Movement or the Basic Attack Maneuver, out of sequence.
+
+---
+
+[on used]
+instantOneOf(movement, basic-attack);

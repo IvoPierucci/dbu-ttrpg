@@ -10,4 +10,7 @@ text: >
 
 ---
 
-# Burst Limit: 2 Actions - and Drained and 1/4 of your Maximum Life Points as you leave it: the table's.
+# Burst Limit: 2 Actions - and as you leave it, Drained and 1/4 (rounded up) of your Maximum Life Points lost (transformations.mjs).
+[triggered/transform, 1/encounter, effect 1]
+actions.remaining += 2;
+paymentOnLeave($self);

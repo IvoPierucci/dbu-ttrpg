@@ -1190,6 +1190,17 @@ export async function leftTransformation(actor, item, { into = null } = {}) {
     await setCondition(actor, "stress-exhaustion", 1);
     await setCondition(actor, "impediment", 1);
   }
+  // Power and Payment: "After leaving this Transformation, gain the Drained Combat Condition and reduce your Life Points by 1/4 (rounded up)
+  // of your Maximum Life Points" - owed by its Burst Limit (`paymentOnLeave`).
+  const owed = Array.from(actor.getFlag?.("dbu-ttrpg", "paymentOnLeave") ?? []);
+  if (owed.includes(item.system?.transformationId)) {
+    await actor.setFlag("dbu-ttrpg", "paymentOnLeave", owed.filter(id => id !== item.system?.transformationId));
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "drained", Math.max(1, Number(actor.system.conditions?.drained) || 0));
+    const lost = Math.ceil((Number(actor.system.life?.max) || 0) / 4);
+    await actor.update({ "system.life.value": (Number(actor.system.life?.value) || 0) - lost });
+    ui.notifications?.info(`${actor.name}: ${item.name} left - Drained, and ${lost} Life Points lost.`);
+  }
   if (level("fading") >= 2) return removeTransformation(actor, item.id);
   if (level("fading") === 1) await item.update({ "system.choices": [...(item.system.choices ?? []).filter(entry => entry.key !== "fadedIn"),
     { key: "fadedIn", value: String(globalThis.game?.combat?.id ?? "none") }] });

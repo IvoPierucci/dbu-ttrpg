@@ -34679,6 +34679,10 @@ async function answerHit(message, attack, attacker, struck, script = null) {
   // Full Power of the Super Saiyan (4): Battle Born on the Wound, asked.
   const bornWound = await battleBornAsked(attacker, "battleBorn.wound", "your Wound Roll");
   if (bornWound) answer.marks.battleBornWound = bornWound;
+  // Dangerous Amplification (2)(4): Life Points on the Wound, asked - and an Energy Charge for more than 8(bT), once an Encounter.
+  const lifeWound = await lifeOnWoundAsked(attacker, attack);
+  if (lifeWound.spent) answer.marks.lifeWound = lifeWound.spent;
+  if (lifeWound.charge) answer.marks.lifeCharge = true;
   // Power of Evil (2): Evil Points on the Wound, asked.
   const evilWound = await evilPointsAsked(attacker, "evilPoints.onWound", "the Wound Roll");
   if (evilWound) answer.marks.evilWound = evilWound;
@@ -34976,6 +34980,7 @@ function twoWorldsWoundParts(attacker, attack) {
   // Full Power of the Super Saiyan (4), taken as the hit landed.
   if (attack.battleBornWound) parts.push({ label: "Full Power of the Super Saiyan (Battle Born)", value: Number(attack.battleBornWound) || 0 });
   if (attack.evilWound) parts.push({ label: "Power of Evil (Evil Points)", value: Number(attack.evilWound) || 0 });
+  if (attack.lifeWound) parts.push({ label: "Dangerous Amplification (Life Points)", value: Number(attack.lifeWound) || 0 });
   // Shared Heritage (4): "Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess."
   const fusedWound = Number(slots["wound.fusedTechnique"]?.add) || 0;
   const fusedCount = (attacker.system.fusion?.fused ?? []).length;
@@ -35023,6 +35028,8 @@ function chosenTechniqueHeld(actor, techniqueId) {
  */
 function woundDice(attacker, attack) {
   return [
+    // Dangerous Amplification (4): an Energy Charge, its dice.
+    ...(attack.lifeCharge ? [{ label: "Energy Charge (Dangerous Amplification)", formula: energyChargeDice(attacker, { ...attack, energyCharges: 1 }) }] : []),
     // Neo-Tuffle-Raised (3)'s Greater Dice.
     ...neoGreaterDice(attacker, attack),
     // Synthetic Muscle (2)'s, and (3)'s again.
@@ -43105,4 +43112,50 @@ function notHitButtons(message, container, attack) {
     }
   }
   return waiting.length > 0;
+}
+
+/**
+ * Dangerous Amplification (2): "When you use an Attacking Maneuver, you may spend Life Points up to the Ki Point Cost of that Attacking Maneuver.
+ * If you do, increase the Wound Roll by an equal amount." (4): "If you spend more than 8(bT) Life Points through the 2nd effect ... you may
+ * apply an Energy Charge to that Attacking Maneuver" - once an Encounter. How many, asked as it hits.
+ */
+async function lifeOnWoundAsked(actor, attack) {
+  const none = { spent: 0, charge: false };
+  if (actor?.system?.effects?.slots?.["lifeOnWound.upToKiCost"] !== true) return none;
+  const most = Math.max(0, Math.min(Number(attack?.baseKiCost) || 0, Number(actor.system.life?.value) || 0));
+  if (!most) return none;
+  const spent = Math.max(0, Math.min(most, Number(await askPlayerAmount(actor, `${actor.name}: Dangerous Amplification`, most,
+    `Life Points on the Wound Roll (up to ${most})`)) || 0));
+  if (!spent) return none;
+  await requestActorUpdate(actor, { "system.life.value": (Number(actor.system.life?.value) || 0) - spent });
+  const base = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const encounter = game.combat?.id ?? "none";
+  const charge = (spent > 8 * base) && (actor.getFlag?.(SCOPE, "amplifiedChargeEncounter") !== encounter)
+    && ((await askPlayerChoice(actor, `${actor.name}: Dangerous Amplification`, [{ value: "yes", label: "An Energy Charge on it (1/Encounter)" },
+      { value: "no", label: "No" }])) === "yes");
+  if (charge) await requestActorUpdate(actor, { [`flags.${SCOPE}.amplifiedChargeEncounter`]: encounter });
+  return { spent, charge };
+}
+
+/** Scarlet Multiplier: Life and Ki Points regained "ignoring the first effect of Crimson Sacrifice". */
+export async function regainAnyway(actor, life = 0, ki = 0) {
+  if (!actor) return;
+  const pool = actor.system.life ?? {};
+  const gain = Math.max(0, Math.min(Number(life) || 0, (Number(pool.ceiling ?? pool.max) || 0) - (Number(pool.value) || 0)));
+  const kiGain = Math.max(0, Math.min(Number(ki) || 0, (Number(actor.system.ki?.max) || 0) - (Number(actor.system.ki?.value) || 0)));
+  await actor.update({ "system.life.value": (Number(pool.value) || 0) + gain, "system.ki.value": (Number(actor.system.ki?.value) || 0) + kiGain },
+    { dbuRegainAnyway: true });
+}
+
+/**
+ * A Maneuver of yours "as an Instant Maneuver": one of these, out of sequence - which, asked where there are several (Speed Star (1)'s
+ * "the Movement Maneuver or Basic Attack Maneuver"). Unspent where none is made.
+ */
+export async function instantOneOf(actor, ids = []) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!actor || !ids.length) return UNSPENT;
+  const id = (ids.length === 1) ? ids[0] : await askPlayerChoice(actor, `${actor.name}: as an Instant Maneuver`,
+    ids.map(each => ({ value: each, label: getManeuver(each)?.name ?? each })));
+  if (!id) return UNSPENT;
+  return (await ownOutOfSequence(actor, id)) ? undefined : UNSPENT;
 }

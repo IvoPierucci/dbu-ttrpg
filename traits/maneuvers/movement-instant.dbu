@@ -1,0 +1,25 @@
+id: movement-instant
+name: Movement (Instant)
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Opened by an effect that lets the Movement Maneuver be used "as an Instant Maneuver" once a Round (Exponential Power (1)); the
+# Movement itself out of sequence, its Ki paid (chat.mjs instantOneOf).
+special: true
+source: Core Rule
+description: >
+  The Movement Maneuver as an Instant Maneuver, where an effect allows it.
+text: >
+  During your turn, you may use the Movement Maneuver as an Instant Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: The Movement Maneuver's
+  –Effect: The Movement Maneuver, out of sequence.
+
+---
+
+[on used]
+instantOneOf(movement);

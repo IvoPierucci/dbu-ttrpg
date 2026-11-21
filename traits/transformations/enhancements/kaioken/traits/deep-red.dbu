@@ -28,5 +28,8 @@ if ($G >= 4) {
     insight.mod += 1(T);
 }
 
-# (5) The 6th Grade left at the end of your turn, (6) entered as you enter Entrusted, (7) Threshold effects from its own Life Point
-# Cost: the table's.
+# (5) The 6th Grade left at the end of your turn, (7) Threshold effects from its own Life Point Cost: the table's.
+
+# (6) Entering the Entrusted State: the Transformation Maneuver out of sequence - into its 6th Grade, offered on your latest card.
+[triggered/state/entrusted, outOfSequence, effect 6]
+transformationOutOfSequence();

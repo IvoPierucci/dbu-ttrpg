@@ -2,6 +2,12 @@ id: lightspeed-mode-lightspeed-assault
 name: Lightspeed Assault
 order: 3
 slot: burst
+# Its Speeds and Combat Rolls till the start of your next turn - bookkeeping, kept off the Resources list.
+resource: lightspeedassault
+resourceInternal: true
+resourceLabel: Lightspeed Assault
+resourceMax: 1
+resourceDuration: true
 description: >
   In a blur of motion, you close the distance between you and your target.
 text: >
@@ -10,6 +16,14 @@ text: >
 
 ---
 
-# Burst Limit: entering it, the Movement out of sequence - Speeds and Combat Rolls G(T) till the start of your next turn, the table's.
+# Burst Limit: entering it, the Movement out of sequence - and Speeds and Combat Rolls G(T) till the start of your next turn.
+[passive]
+if (hasResource("lightspeedassault")) {
+    speed.all += $G * 1(T);
+    combatRolls += $G * 1(T);
+}
+
 [triggered/transform, 1/encounter, outOfSequence, effect 1]
+lightspeedassault.stacks += 1;
+expires(lightspeedassault, start-of-next-turn);
 maneuverOutOfSequence(movement);

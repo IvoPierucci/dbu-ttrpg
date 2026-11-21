@@ -2,6 +2,12 @@ id: giant-form-giant-assault
 name: Giant Assault
 order: 3
 slot: burst
+# Its Wound and Soak till the start of your next turn - bookkeeping, kept off the Resources list.
+resource: giantassault
+resourceInternal: true
+resourceLabel: Giant Assault
+resourceMax: 1
+resourceDuration: true
 description: >
   Your massive bulk allows you to withstand blows and dish them out with great force.
 text: >
@@ -10,4 +16,14 @@ text: >
 
 ---
 
-# Burst Limit: Wound and Soak G(T) till the start of your next turn, Intense Blast on Signature Techniques this turn: the table's.
+# Burst Limit: Wound and Soak G(T) till the start of your next turn. Intense Blast on its qualifying Signature Techniques this turn: the
+# table's.
+[passive]
+if (hasResource("giantassault")) {
+    wound += $G * 1(T);
+    soakValue += $G * 1(T);
+}
+
+[triggered/transform, 1/encounter, effect 1]
+giantassault.stacks += 1;
+expires(giantassault, start-of-next-turn);

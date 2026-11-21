@@ -620,6 +620,13 @@ const TABLE = [
     doc: "Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost - its Ki Wager still paid - asked (Spiritual Apprentice (7))." },
   { key: "wound.quarterKiCost", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
+  // Kaioken's, Doping's Traits.
+  { key: "life.noRegain", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "No Life Points regained: no write raises them (combat.mjs) but a Defeat stood up from by force, or what says it ignores this "
+       + "(`regainAnyway`) - Crimson Sacrifice (1)." },
+  { key: "lifeOnWound.upToKiCost", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Hitting with an Attacking Maneuver: Life Points up to its Ki Point Cost asked, as much on its Wound Roll; more than 8(bT) of "
+       + "them once an Encounter, an Energy Charge too (chat.mjs lifeOnWoundAsked) - Dangerous Amplification (2)(4)." },
   // Autonomous Ultra Instinct's and True Angel's Traits.
   { key: "strikeDodge.minimumNatural", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "The least Natural Result of your Strike and Dodge Rolls (chat.mjs rollSide) - Angelic Technique (3), Sharpened Instinct (3)." },

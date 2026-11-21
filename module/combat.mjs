@@ -1352,6 +1352,16 @@ export function registerRacialLifeHooks() {
 }
 
 export function registerDefeatHooks() {
+  // Crimson Sacrifice (1): "You cannot regain Life Points" - no write raises them while it applies; a Defeat stood up from by force
+  // (dbuForceUp) and what ignores it (dbuRegainAnyway - Scarlet Multiplier's) aside.
+  Hooks.on("preUpdateActor", (actor, changes, options) => {
+    if (!isCharacter(actor) || options.dbuForceUp || options.dbuRegainAnyway) return;
+    if (actor.system.effects?.slots?.["life.noRegain"] !== true) return;
+    const written = foundry.utils.getProperty(changes, "system.life.value");
+    if (written === undefined) return;
+    const before = Number(actor.system.life?.value) || 0;
+    if (Number(written) > before) foundry.utils.setProperty(changes, "system.life.value", before);
+  });
   // Protector of the Dragon Ball (6): "While you have an Integrated Dragon Ball, increase the amount of Ki Points you regain from all sources
   // by 1/2" - half of what is regained more, rounded down, in the same write.
   Hooks.on("preUpdateActor", (actor, changes, options) => {

@@ -184,6 +184,8 @@ export function woundResources() {
   for (const [name, definition] of Object.entries(definitions)) {
     const trait = getTrait(definition.id);
     if (!trait?.script) continue;
+    // A duration's mark (`resourceDuration` - Giant Assault's, Lightspeed Assault's) is no stack the character possesses.
+    if (trait.resourceDuration === true) continue;
     // Its stacks named by its own effects - not a Trait that raises the Wound some other way beside a Resource it only spends
     // (Super Weapon's Reserved Energy).
     if (!trait.script.includes(name)) continue;

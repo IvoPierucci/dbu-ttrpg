@@ -14,8 +14,9 @@ text: >
 
 ---
 
-# (1) No Life Points regained, (2) no Reduced Momentum from paying it, and (3) 2(bT) more beside a Form or Transcended Enhancement
-# without Perfect Ki Control: the table's.
+# (1) No Life Points regained (combat.mjs). (2) No Reduced Momentum from paying it: the table's.
+[passive, effect 1]
+allow life.noRegain;
 
 # Its Grade's Life Point Cost, paid as any Attacking Maneuver is declared (the user's: charged by itself) - G+1 (bT), 1(bT) less once
 # Mastered (Deep Red (4)) - and (4) G(bT) Ki Points for it.
@@ -23,5 +24,9 @@ text: >
 requires attackingManeuver;
 life.value -= ($G + 1 - min($M, 1)) * 1(bT);
 ki.value += $G * 1(bT);
+# (3) Beside a Form or Transcended Enhancement without the Perfect Ki Control Aspect: 2(bT) more.
+if (inFormOrTranscended && !aspectInUse("perfect-ki-control")) {
+    life.value -= 2(bT);
+}
 
 # (5) The Kaioken Dice again and G(T) Wound on an Ultimate Signature Technique, once an Encounter: the table's.

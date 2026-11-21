@@ -1,0 +1,25 @@
+id: amplified-power-up
+name: Dangerous Amplification
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Dangerous Amplification (3)'s, open while it applies.
+special: true
+source: Core Rule
+description: >
+  4(bT) Life Points spent: the Power Up Maneuver as an Instant Maneuver.
+text: >
+  (3)-[1/Round]: You may spend 4(bT) Life Points to use the Power Up Maneuver as an Instant Maneuver.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: 4(bT) Life Points, then the Power Up Maneuver out of sequence.
+
+---
+
+[on used]
+life.value -= 4(bT);
+instantOneOf(power-up);

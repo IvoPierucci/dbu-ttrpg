@@ -14,5 +14,9 @@ text: >
 
 ---
 
-# (1) The Movement or Basic Attack as an Instant Maneuver once a Round, (2) Strike and Dodge 1/2 of G(T) unhit since your last turn,
-# (3) the Clash leaving a Melee Range, (4) the Agility Modifier as the Damage Attribute, (5) moving through Opponents: the table's.
+# (2) Strike and Dodge 1/2 of G(T) unhit since your last turn, (3) the Clash leaving a Melee Range, (4) the Agility Modifier as the
+# Damage Attribute, (5) moving through Opponents: the table's.
+
+# (1) Once a Round: the Movement or the Basic Attack Maneuver as an Instant Maneuver (the core Movement or Basic Attack (Instant)).
+[passive, effect 1]
+allow maneuver.movement-or-basic-instant;

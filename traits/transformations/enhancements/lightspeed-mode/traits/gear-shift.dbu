@@ -21,7 +21,10 @@ text: >
 [passive, effect 1]
 initiative += $G * 1(T);
 
-# (2) The Tier of Power Extra Dice of Strike and Dodge Rolls G Categories higher: the table's (one Category for every roll here).
+# (2) The Tier of Power Extra Dice of your Strike and Dodge Rolls G Categories higher.
+[passive, effect 2]
+dice.extra.strike.category += $G;
+dice.extra.dodge.category += $G;
 
 # (3) Its Grade's extra Damage, from Collision and Attacking Maneuvers alike (its table), 2(bT) less with FTL (3).
 [automatic/being-hit, effect 3]

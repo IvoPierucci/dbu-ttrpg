@@ -17,7 +17,9 @@ text: >
 
 ---
 
-# (1) The Movement Maneuver as an Instant Maneuver once a Round: the table's.
+# (1) During your turn, once a Round: the Movement Maneuver as an Instant Maneuver (the core Movement (Instant)).
+[passive, effect 1]
+allow maneuver.movement-instant;
 
 # (2) Wound Rolls 1/2 (rounded up) of G(T).
 [passive, effect 2]

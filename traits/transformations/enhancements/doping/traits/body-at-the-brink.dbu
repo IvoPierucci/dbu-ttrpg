@@ -29,4 +29,6 @@ if (belowThreshold("injured")) {
     soakValue += 1(T);
 }
 
-# (4) An Action with the Power Up once an Encounter: the table's.
+# (4) Using the Power Up, once an Encounter: an Action.
+[triggered/power, 1/encounter, effect 4]
+actions.remaining += 1;

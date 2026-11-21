@@ -17,4 +17,11 @@ text: >
 [passive, effect 1]
 surgency *= 0.5;
 
-# (2)-(4) Life Points spent on the Wound, on the Power Up as an Instant, and the Energy Charge: the table's.
+# (2) Hitting with an Attacking Maneuver: Life Points up to its Ki Point Cost on its Wound, asked; (4) more than 8(bT) of them, once an
+# Encounter, an Energy Charge too (chat.mjs lifeOnWoundAsked).
+[passive, effect 2]
+allow lifeOnWound.upToKiCost;
+
+# (3) Once a Round, 4(bT) Life Points: the Power Up as an Instant Maneuver (this folder's maneuvers/amplified-power-up.dbu).
+[passive, effect 3]
+allow maneuver.amplified-power-up;

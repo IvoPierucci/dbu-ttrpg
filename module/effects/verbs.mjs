@@ -625,6 +625,23 @@ export const VERBS = Object.freeze({
     doc: "Caste Combat's Pawn: the Basic Attack offered on the Defeated card - Full Wager, and Power Shot (2) but for a Minion "
        + "(chat.mjs castePawnStrike)."
   },
+  regainAnyway: {
+    args: [2, 2],
+    doc: "So many Life and Ki Points regained, whatever forbids regaining Life Points - Scarlet Multiplier's \"ignoring the first effect "
+       + "of Crimson Sacrifice\" (chat.mjs regainAnyway)."
+  },
+  paymentOnLeave: {
+    args: [1, 1],
+    names: [0],
+    doc: "As that Transformation of yours is left: the Drained Combat Condition and 1/4 (rounded up) of your Maximum Life Points lost - "
+       + "Power and Payment's (transformations.mjs leftTransformation)."
+  },
+  instantOneOf: {
+    args: [1, 3],
+    names: [0, 1, 2],
+    doc: "One of these Maneuvers of yours, out of sequence - which, asked where there are several (chat.mjs instantOneOf): a Maneuver "
+       + "used \"as an Instant Maneuver\" (Exponential Power (1), Speed Star (1))."
+  },
   areaClash: {
     args: [3, 4],
     names: [0, 1, 2, 3],

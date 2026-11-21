@@ -873,6 +873,10 @@ async function runVerb(actor, call, context) {
     case "adaptationOffer": return (await import("../chat.mjs")).adaptationOffer(actor, String(args[0] ?? ""), Number(args[1]) || 0,
       String(args[2] ?? ""), context);
     case "surgeRevive": return (await import("../chat.mjs")).surgeRevive(actor);
+    case "regainAnyway": return (await import("../chat.mjs")).regainAnyway(actor, Number(args[0]) || 0, Number(args[1]) || 0);
+    case "paymentOnLeave": return actor.setFlag("dbu-ttrpg", "paymentOnLeave", [...new Set([...(actor.getFlag?.("dbu-ttrpg", "paymentOnLeave") ?? []),
+      String(args[0] ?? "")])]);
+    case "instantOneOf": return (await import("../chat.mjs")).instantOneOf(actor, args.map(each => String(each ?? "")).filter(Boolean));
     case "areaClash": return (await import("../chat.mjs")).areaClash(actor, String(args[0] ?? ""), String(args[1] ?? "standard"),
       args.slice(2).map(each => String(each ?? "")).filter(Boolean));
     case "stopTranscended": return (await import("../chat.mjs")).stopTranscended(actor, String(args[0] ?? ""));

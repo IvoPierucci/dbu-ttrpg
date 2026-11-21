@@ -23,7 +23,13 @@ text: >
 [passive, effect 2]
 wound.signature += ceil($G / 2) * 1(T);
 
-# (3) The extra Damage 2(bT) lower: in Gear Shift's. (4) No Exploit at its second Grade or higher: the table's.
+# (3) The extra Damage 2(bT) lower: in Gear Shift's.
+
+# (4) In its second Grade or higher: your Movement Maneuver triggers no Exploit Maneuver.
+[passive, effect 4]
+if ($G >= 2) {
+    forbid movement.provokes;
+}
 
 # (5) In its first Grade, at the start of your turn: 3(bT) Ki Points.
 [triggered/start-of-turn, effect 5]

@@ -23,4 +23,7 @@ text: >
 [passive, effect 3]
 damageReduction += ceil($G / 2) * 1(T);
 
-# (4)(5) Accelerated Growth (1) doubled, Battlefield Titan (1) unlimited: the table's.
+# (4) Accelerated Growth (1) doubled: Punching Down's Extra Dice another Category. (5) Battlefield Titan (1) unlimited: the table's,
+# as it is.
+[passive, effect 4]
+punchingDown.category += 1;
