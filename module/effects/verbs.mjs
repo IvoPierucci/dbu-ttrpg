@@ -654,6 +654,14 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "A Unique Ability of yours by its id, used without paying its Ki Point Cost - Time Has Stopped's Time Freeze (chat.mjs freeUnique)."
   },
+  offerOneOf: {
+    args: [2, 6],
+    names: [1, 2, 3, 4, 5],
+    wantsUse: true,
+    doc: "Buttons on the card of the moment (the Transformation Maneuver's, entering): one of these Maneuvers of yours out of sequence - one "
+       + "taken, the others gone; with it, so many Life and Ki Points regained whatever forbids it (the first argument, 0 for none), and the "
+       + "effect's use counted only then (chat.mjs offerOneOf) - Scarlet Multiplier's."
+  },
   regainAnyway: {
     args: [2, 2],
     doc: "So many Life and Ki Points regained, whatever forbids regaining Life Points - Scarlet Multiplier's \"ignoring the first effect "

@@ -111,7 +111,7 @@ export function collectReactive(entries, moment, scope, { mode = null } = {}) {
       if (!entry.available) continue;
 
       const blockScope = { ...scope, level: entry.level ?? 0, stacks: entry.stacks ?? 1,
-        intended: Boolean(entry.intended) };
+        intended: Boolean(entry.intended), use: { sourceId: entry.sourceId, block: b.index, name: entry.sourceName ?? "" } };
       if (b.requires && !evaluate(b.requires, blockScope)) continue;
 
       // Repeated per stack, exactly as a passive is: Slowed taking an Action away for
@@ -222,7 +222,9 @@ function run(statements, scope) {
         // as 0 - which is what every duration written in a file was doing.
         scope.queue?.push({
           verb: s.verb,
-          args: (s.args ?? []).map((a, index) => verbArgument(s.verb, index, a, scope))
+          args: (s.args ?? []).map((a, index) => verbArgument(s.verb, index, a, scope)),
+          // Which effect called it, for a verb that says it wants to know (`wantsUse`: a use counted later, as a choice is taken).
+          ...((scope.use && VERBS[s.verb]?.wantsUse) ? { use: scope.use } : {})
         });
         break;
 

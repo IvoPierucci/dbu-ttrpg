@@ -883,6 +883,8 @@ async function runVerb(actor, call, context) {
     case "paymentOnLeave": return actor.setFlag("dbu-ttrpg", "paymentOnLeave", [...new Set([...(actor.getFlag?.("dbu-ttrpg", "paymentOnLeave") ?? []),
       String(args[0] ?? "")])]);
     case "instantOneOf": return (await import("../chat.mjs")).instantOneOf(actor, args.map(each => String(each ?? "")).filter(Boolean));
+    case "offerOneOf": return (await import("../chat.mjs")).offerOneOf(actor, Number(args[0]) || 0,
+      args.slice(1).map(each => String(each ?? "")).filter(Boolean), call?.use ?? null, context);
     case "areaClash": return (await import("../chat.mjs")).areaClash(actor, String(args[0] ?? ""), String(args[1] ?? "standard"),
       args.slice(2).map(each => String(each ?? "")).filter(Boolean));
     case "stopTranscended": return (await import("../chat.mjs")).stopTranscended(actor, String(args[0] ?? ""));
@@ -1251,6 +1253,15 @@ async function recordUses(actor, spent, definition, context, disarmed = spent) {
   });
 }
 
+/** Verbs that only put a choice on a card already there - Scarlet Multiplier's buttons. */
+const OFFER_VERBS = new Set(["offerOneOf"]);
+
+/** An effect whose every line only puts a choice on a card. */
+function onlyOffers(entry) {
+  const statements = entry?.program?.blocks?.[0]?.statements ?? [];
+  return statements.length > 0 && statements.every(s => (s.type === "call") && OFFER_VERBS.has(s.verb));
+}
+
 /** What a verb answers when the player chose nothing, so its use is not counted (runPass). */
 export const UNSPENT = "unspent";
 
@@ -1325,7 +1336,9 @@ async function announce(actor, entries, spent, moment, regained = []) {
 
   const fired = spent
     .map(use => byId.get(`${use.sourceId}#${use.block}`))
-    .filter(entry => entry?.program?.blocks?.[0]?.mode === "automatic");
+    .filter(entry => entry?.program?.blocks?.[0]?.mode === "automatic")
+    // What only puts buttons on the card that is there says nothing of its own (no extra chat cards).
+    .filter(entry => !onlyOffers(entry));
   if (!fired.length) {
     if (!regained.length) return;
     return ChatMessage.create({
