@@ -8,7 +8,7 @@ requiresTarget: false
 usageLimit: 1/encounter
 minions: Non-Minion
 # Time Restraint's: offered as a Time-Skipped Signature Technique hits - its Ki paid, its Clash; won, Pinned and Guard Down, kept while paid
-# for each turn (chat.mjs timePrisonOffer, timeHoldsUpkeep). Breaking free of Pinned ending its Guard Down too: the table's.
+# for each turn (chat.mjs timePrisonOffer, timeHoldsUpkeep); free of Pinned, its Guard Down gone and the hold let go (escapeTimeHolds).
 special: true
 source: Time-Skipper
 description: >

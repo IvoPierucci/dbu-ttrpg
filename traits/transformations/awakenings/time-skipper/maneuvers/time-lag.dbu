@@ -8,7 +8,7 @@ requiresTarget: true
 usageLimit: 1/encounter
 minions: Non-Minion
 # Time Shift's. Its Clash at the Opponent targeted - won, Lagged and a stack of Slowed, kept while paid for each turn (chat.mjs timeLag,
-# timeHoldsUpkeep). The Exploit on a lost Clash: the table's.
+# timeHoldsUpkeep); lost, the Opponent's Exploit offered on the Clash's card (offerExploitTo).
 special: true
 source: Time-Skipper
 description: >

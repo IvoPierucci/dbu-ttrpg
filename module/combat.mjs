@@ -1354,6 +1354,12 @@ export function registerRacialLifeHooks() {
 }
 
 export function registerDefeatHooks() {
+  // Time Prison: free of Pinned, out of the Cage of Time - its Guard Down with it (chat.mjs escapeTimeHolds). By the GM, who may change both.
+  Hooks.on("updateActor", async (actor, changes) => {
+    if (!isCharacter(actor) || !game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    if (!foundry.utils.hasProperty(changes, "system.conditions") || ((Number(actor.system.conditions?.pinned) || 0) > 0)) return;
+    await (await import("./chat.mjs")).escapeTimeHolds(actor);
+  });
   // Crimson Sacrifice (1): "You cannot regain Life Points" - no write raises them while it applies; a Defeat stood up from by force
   // (dbuForceUp) and what ignores it (dbuRegainAnyway - Scarlet Multiplier's) aside.
   Hooks.on("preUpdateActor", (actor, changes, options) => {

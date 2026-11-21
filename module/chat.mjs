@@ -43121,7 +43121,13 @@ async function settleWinEffects(message, clash) {
   const challenger = fromUuidSync(clash.challengerUuid);
   const target = fromUuidSync(clash.defenderUuid);
   if (!challenger || !target) return;
-  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} holds.`);
+  if (whoWonClash(clash.result) !== "challenger") {
+    // Time Lag's "Exploitable: If you fail the Clash for the effects of Time Lag, that Opponent's Exploit Maneuver is triggered."
+    if (clash.winEffects.exploitOnLoss) {
+      offerExploitTo(message, target, challenger, `${clash.maneuverName} - the Clash was lost`, String(clash.winEffects.exploitOnLoss));
+    }
+    return settledNote(message, `${target.name} holds.`);
+  }
   if (clash.winEffects.tally) return settleTally(message, clash, challenger, target);
   if (clash.winEffects.revert) return settleReversion(message, clash, challenger);
   const { conditions = [], until = "start", lifeLoss = 0, state = "", source = "" } = clash.winEffects;
@@ -43534,7 +43540,7 @@ export async function timeSkip(actor, context = {}) {
   const cheap = (slots["timeSkip.freeVsLower"] === true) && target && areOpponents(target, actor)
     && ((Number(target.system?.powerLevel) || 0) <= (Number(actor.system.powerLevel) || 0));
   const made = pick.startsWith("technique:")
-    ? await useTechnique(actor, pick.slice(10), { via: "time-skip", outOfSequence: true })
+    ? await useTechnique(actor, pick.slice(10), { via: "time-skip", outOfSequence: true, extras })
     : await useManeuver(actor, { ...ownDefinition("basic-attack"), ...extras }, { outOfSequence: true });
   if (!made) return UNSPENT;
   if (cheap && item) {
@@ -43559,7 +43565,7 @@ export async function timeLag(actor) {
   return postSaveClash(actor, target, { maneuverName: "Time Lag", clashLabel: "Clash (Cognitive/Impulsive vs Impulsive/Cognitive/Corporeal)",
     reason: `Win and ${target.name} becomes Lagged - Strike and Dodge 2(T) lower, a stack of Slowed - while ${actor.name} pays for it each turn.`,
     saves: ["cognitive", "impulsive"], defenderSaves: ["impulsive", "cognitive", "corporeal"],
-    winEffects: { applied: false, conditions: ["lagged", "slowed"], until: "none", source: "Time Lag",
+    winEffects: { applied: false, conditions: ["lagged", "slowed"], until: "none", source: "Time Lag", exploitOnLoss: "time-lag",
       hold: { name: "Time Lag", actions: 1, kiPerBaseTier: 10, releaseOnFail: true } } });
 }
 
@@ -43615,6 +43621,23 @@ export async function releaseTimeHolds(actor, { onFail = false } = {}) {
   if (!going.length) return;
   for (const hold of going) await endTimeHold(actor, hold, fromUuidSync(hold.uuid ?? ""));
   await requestActorUpdate(actor, { [`flags.${SCOPE}.timeHolds`]: holds.filter(hold => !going.includes(hold)) });
+}
+
+/**
+ * Time Prison: "If a Character in the Cage of Time is able to break free from being Pinned, they escape the Cage of Time and thus stop suffering
+ * from the Guard Down Combat Condition too" - Pinned gone from one a hold names: its other Conditions taken off, the hold let go (combat.mjs).
+ */
+export async function escapeTimeHolds(prisoner) {
+  if (!prisoner || ((Number(prisoner.system?.conditions?.pinned) || 0) > 0)) return;
+  for (const holder of game.actors ?? []) {
+    const holds = Array.from(holder.getFlag?.(SCOPE, "timeHolds") ?? []);
+    const escaped = holds.filter(hold => (hold.uuid === prisoner.uuid) && (hold.conditions ?? []).includes("pinned"));
+    if (!escaped.length) continue;
+    for (const hold of escaped) {
+      await endTimeHold(holder, { ...hold, conditions: (hold.conditions ?? []).filter(key => key !== "pinned") }, prisoner);
+    }
+    await requestActorUpdate(holder, { [`flags.${SCOPE}.timeHolds`]: holds.filter(hold => !escaped.includes(hold)) });
+  }
 }
 
 /** What a hold gave, taken off - a stack of each - and said. */

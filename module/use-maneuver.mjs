@@ -5007,7 +5007,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
                                                     presetThrown = null, volleyball = null, meteor = "",
                                                     portal = false, combo = false, spiritSword = null,
                                                     extraTargets = [], armedAs = "", extraCharges = 0,
-                                                    kiLinkTo = "" } = {}) {
+                                                    kiLinkTo = "", techniqueExtras = null } = {}) {
   if (!actor || !maneuver) return false;
   // Expert Pilot (4): "[1/Round]: Use the Ride Maneuver as an Instant Maneuver" - asked first, as it changes what it is (vehicles.mjs).
   if (maneuver.id === "ride") maneuver = await rideAsInstant(actor, maneuver);
@@ -5277,6 +5277,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Low Stakes: the door's use is neither needed nor spent.
     if (lowStakes) maneuver = { ...maneuver, usageLimit: null };
     if (via) maneuver = { ...maneuver, via };
+    // What the effect it is made through adds to it - Time-Skip's: outside Diminishing Offense, its Category Lethal and locked.
+    if (techniqueExtras) maneuver = { ...maneuver, ...techniqueExtras };
     if (presetThrown) maneuver = { ...maneuver, throws: true };
   }
 
@@ -8131,7 +8133,7 @@ export function outOfSequenceGranted(actions = 1) {
 export async function useTechnique(actor, itemId, { atFeature = false, via = "", outOfSequence = false,
                                                   targetUuid = "", presetThrown = null, volleyball = null,
                                                   meteor = "", spiritSword = null, extraTargets = [],
-                                                  armedAs = "", extraCharges = 0 } = {}) {
+                                                  armedAs = "", extraCharges = 0, extras = null } = {}) {
   const door = actor?.items?.find(item => (item.type === "maneuver") && item.system.signatureTechnique);
   if (!door) {
     ui.notifications.warn(`${actor?.name ?? "This character"} has no Signature Technique Maneuver. `
@@ -8139,7 +8141,7 @@ export async function useTechnique(actor, itemId, { atFeature = false, via = "",
     return false;
   }
   return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via, outOfSequence,
-    targetUuid, presetThrown, volleyball, meteor, spiritSword, extraTargets, armedAs, extraCharges });
+    targetUuid, presetThrown, volleyball, meteor, spiritSword, extraTargets, armedAs, extraCharges, techniqueExtras: extras });
 }
 
 /**
