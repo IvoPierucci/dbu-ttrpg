@@ -560,9 +560,43 @@ function traitsInUse(owner, items) {
   const file = fileOf(owner);
   const line = lineOf(file, items);
   const list = Array.from(items ?? []).filter(each => each.type === TRANSFORMATION_TYPE);
-  if (line && list.some(each => inUse(each) && (lineOf(fileOf(each), items) === line)
-    && (stageOf(fileOf(each), items) > stageOf(file, items)))) return "inherited";
-  return false;
+  const stage = stageOf(file, items);
+  const higher = line ? list.filter(each => inUse(each) && (lineOf(fileOf(each), items) === line) && (stageOf(fileOf(each), items) > stage)) : [];
+  if (!higher.length) return false;
+  // Multiple per Stage: "in a higher Stage you choose which of them you inherit from" - only the one chosen (inheritedOf).
+  return (inheritedOf(list, line, stage, higher, items)?.id === owner.id) ? "inherited" : false;
+}
+
+/**
+ * Multiple per Stage: of the Transformations had at one Stage of a Line (Super Saiyan 1, Superior Super Saiyan), the one a higher Stage in use
+ * inherits from - its row's choice (`inherit<Stage>`), asked as it is entered (askInheritance); the first had, where none was chosen.
+ */
+function inheritedOf(list, line, stage, higher, items) {
+  const same = list.filter(each => (lineOf(fileOf(each), items) === line) && (stageOf(fileOf(each), items) === stage)
+    && (kindOf(fileOf(each)) === "form"));
+  if (same.length < 2) return same[0] ?? null;
+  const chosen = higher.map(each => rowChoice(each, `inherit${stage}`)).find(Boolean);
+  return same.find(each => each.id === chosen) ?? same[0];
+}
+
+/** Entering a higher Stage with several had at a lower one: which it inherits from, asked - the last choice first - and kept on its row. */
+async function askInheritance(actor, item) {
+  const items = Array.from(actor?.items ?? []);
+  const file = fileOf(item);
+  const line = lineOf(file, items);
+  const top = stageOf(file, items);
+  if (!line || (kindOf(file) !== "form")) return;
+  const list = items.filter(each => each.type === TRANSFORMATION_TYPE);
+  for (let stage = 1; stage < top; stage++) {
+    const same = list.filter(each => (lineOf(fileOf(each), items) === line) && (stageOf(fileOf(each), items) === stage) && (kindOf(fileOf(each)) === "form"));
+    if (same.length < 2) continue;
+    const last = rowChoice(item, `inherit${stage}`);
+    const ordered = [...same].sort((a, b) => (a.id === last) ? -1 : (b.id === last) ? 1 : 0);
+    const { askPlayerChoice } = await import("./chat.mjs");
+    const picked = await askPlayerChoice(actor, `${item.name}: Stage ${stage} - which one's Traits it inherits`,
+      ordered.map(each => ({ value: each.id, label: each.name })));
+    if (picked) await setRowChoice(actor.items.get(item.id), `inherit${stage}`, picked);
+  }
 }
 
 /**
@@ -1183,6 +1217,8 @@ export async function enterTransformation(actor, item, { grade, scales, prelude,
   }
   const leaving = changes.filter(change => change["system.active"] === false).map(change => actor.items.get(change._id)).filter(Boolean);
   await actor.updateEmbeddedDocuments("Item", [own, ...changes]);
+  // Multiple per Stage: a lower Stage held twice - which one this inherits from, asked.
+  await askInheritance(actor, actor.items.get(item.id));
   // What leaving those does - Exhausting, Fading - but into a higher Tier of Power Requirement, Exhausting's exception.
   for (const left of leaving) await leftTransformation(actor, left, { into: item });
   // Bursting: "Upon entering this Transformation, destroy your Top Layer of Apparel" - as the Transformation Maneuver enters it (a tick on its

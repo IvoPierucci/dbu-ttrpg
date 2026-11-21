@@ -2059,6 +2059,9 @@
     "transformations/enhancements/doping/maneuvers/amplified-power-up.dbu",
     "maneuvers/healing-surge-instant.dbu",
     "transformations/enhancements/time-power/unique/time-reversion.dbu",
-    "transformations/enhancements/time-power/unique/time-seal.dbu"
+    "transformations/enhancements/time-power/unique/time-seal.dbu",
+    "transformations/forms/alternate/superior-super-saiyan/superior-super-saiyan.dbu",
+    "transformations/forms/alternate/superior-super-saiyan/traits/crazed-battle-lust.dbu",
+    "transformations/forms/alternate/superior-super-saiyan/traits/realized-superiority.dbu"
   ]
 }

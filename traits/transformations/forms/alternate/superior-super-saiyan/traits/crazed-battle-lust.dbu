@@ -1,0 +1,48 @@
+id: superior-super-saiyan-crazed-battle-lust
+name: Crazed Battle Lust
+order: 1
+slot: trait
+replaces: S-Cells
+description: >
+  Your warrior instincts turn up to 11, driving you nearly berserk with battle lust.
+text: >
+  Crazed Battle Lust (S-Cells): Your warrior instincts turn up to 11, driving you nearly berserk with battle lust.
+  (1)-[Passive]: While you have 4+ stacks of Battle Born, increase the Tier of Power Extra Dice for your Combat Rolls by 1 Category and increase your Damage Reduction by 1(T).
+  (2)-[Passive]: For every 3 stacks of Battle Born you possess, increase the Dice Score of your Steadfast Checks by 1 (max. +2).
+  (3)-[Passive]: For every 3 stacks of Battle Born you possess, increase your Surgency by 1(T) (max. 2(T)).
+  (4)-[Triggered]: If you are hit by an Attacking Maneuver, regain Ki Points equal to 1/4 (rounded up) of your Surgency.
+  (5)-[Triggered, 1/Round]: If you use a Signature Technique while in the Superior State, increase its Wound Roll by 1/2 of your Surgency.
+  (6)-[Triggered/Threshold]: If you succeed at the Steadfast Check, regain Life Points equal to your Surgency and then enter the Superior State until the end of your turn.
+
+---
+
+# (1) 4+ stacks of Battle Born: the Tier of Power Extra Dice a Category higher and Damage Reduction 1(T).
+[passive, effect 1]
+if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    dice.extra.category += 1;
+    damageReduction += 1(T);
+}
+
+# (2) Steadfast Checks 1 higher for every 3 stacks of Battle Born, 2 at most; (3) Surgency 1(T) for every 3, 2(T) at most.
+[passive, effect 2]
+steadfast.dice += min(2, floor(max(0, battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) / 3));
+
+[passive, effect 3]
+surgency += min(2, floor(max(0, battlebornstrike.stacks + battleborndodge.stacks + battlebornwound.stacks) / 3)) * 1(T);
+
+# (4) Hit by an Attacking Maneuver - Damage taken or not: Ki Points 1/4 of your Surgency, rounded up.
+[triggered/opponent-damage, effect 4]
+ki.value += ceil(surgency / 4);
+
+[triggered/hit-unharmed, effect 4]
+ki.value += ceil(surgency / 4);
+
+# (5) A Signature Technique in the Superior State, once a Round: 1/2 of your Surgency on its Wound - offered as it is declared.
+[triggered/declare-maneuver, 1/round, effect 5]
+requires usingSignature && inState("superior");
+attack.woundAdd += floor(surgency / 2);
+
+# (6) A Steadfast Check passed: Life Points as your Surgency, then the Superior State till the end of your turn.
+[triggered/steadfast-passed, effect 6]
+life.value += surgency;
+enterState(superior, 1, turn);

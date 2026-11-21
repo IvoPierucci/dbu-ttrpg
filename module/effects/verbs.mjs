@@ -625,6 +625,11 @@ export const VERBS = Object.freeze({
     doc: "Caste Combat's Pawn: the Basic Attack offered on the Defeated card - Full Wager, and Power Shot (2) but for a Minion "
        + "(chat.mjs castePawnStrike)."
   },
+  thresholdForKi: {
+    args: [1, 1],
+    doc: "Your Life Points brought to 1 below your next Health Threshold, as many Ki Points regained - at most so many (bT) (chat.mjs "
+       + "thresholdForKi) - Realized Superiority (4)."
+  },
   timeSeal: {
     args: [0, 0],
     doc: "Time Seal: 3 Clashes (Cognitive vs Impulsive/Corporeal/Cognitive/Morale) at the Opponent targeted - a stack of Slowed till the end "

@@ -1,0 +1,33 @@
+id: superior-super-saiyan-realized-superiority
+name: Realized Superiority
+order: 3
+slot: mastery
+mastery: 1
+# Its [Permanent] effect: it holds outside the Transformation too.
+permanent: 1
+# (1) Draining and Power High lost.
+aspects: -Draining, -Power High
+# (2) The Superior State as the Raging State for the Raging Aspect (its file reads superiorAsRaging).
+superiorAsRaging: true
+description: >
+  Through constant training and mastery over the self, you've eliminated the weaknesses inherent to the Super Saiyan form.
+text: >
+  MASTERY TRAIT — Realized Superiority: Through constant training and mastery over the self, you've eliminated the weaknesses inherent to the Super Saiyan form.
+  (1)-[Permanent]: Superior Super Saiyan loses the Draining and Power High Aspects.
+  (2)-[Passive]: Treat the Superior State as the Raging State for the effects of the Raging Aspect.
+  (3)-[Triggered]: When you use the 3rd effect of Golden Power, you may enter the Superior State instead of the Raging State. If you do, the effect lasts until the start of your next turn.
+  (4)-[Triggered/Power, 1/Encounter]: Reduce your Life Points until they are 1 below your next Health Threshold to regain Ki Points equal to the reduction (max. 7(bT)). You do not suffer from Reduced Momentum due to this effect.
+
+---
+
+# (2) Superior as Raging for the Raging Aspect: its header.
+
+# (3) Superior in place of Golden Power (3)'s Raging - this block is its Triggered/Automatic button, its Moment never fired: Automatic,
+# Superior; Triggered, asked which (chat.mjs ragingOrSuperior).
+[triggered/superior-instead, effect 3]
+allow raging.superiorInstead;
+
+# (4) Using the Power Up, once an Encounter: your Life Points to 1 below your next Health Threshold, as many Ki Points (7(bT) at most) - no
+# Reduced Momentum for it (chat.mjs thresholdForKi).
+[triggered/power, 1/encounter, effect 4]
+thresholdForKi(7);

@@ -1,0 +1,46 @@
+id: superior-super-saiyan
+name: Superior Super Saiyan
+type: form
+subtype: alternate
+racial: Saiyan
+prerequisites: You possess 2+ stacks of the Zenkai Awakening
+line: super-saiyan
+stage: 1
+tier: 2+
+stress: 12
+variantOf: super-saiyan-1
+aspects: Variant (Super Saiyan 1), Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Draining (LV1), Power High (LV3)
+bonuses: AG +1(T), FO +1(T), TE +1(T), IN +1(T), MA +1(T)
+description: >
+  By training and working hard, you've unlocked the true, hidden power of the Super Saiyan form. No longer are you merely cloaked in the golden flames of legend, but you've ascended to a hidden realm no other can hope to match; you are not just a Super Saiyan anymore. Now, you're a Superior Super Saiyan.
+text: >
+  By training and working hard, you've unlocked the true, hidden power of the Super Saiyan form. No longer are you merely cloaked in the golden flames of legend, but you've ascended to a hidden realm no other can hope to match; you are not just a Super Saiyan anymore. Now, you're a Superior Super Saiyan.
+
+  **Superior Super Saiyan** — Racial Requirement: Saiyan / Transformation Type: Form / Form Type: Alternate / Prerequisite(s): You possess 2+ stacks of the Zenkai Awakening / Transformation Line: Super Saiyan / Transformation Stage: 1 / Stress Test Requirement: 12 / Tier of Power Requirement. 2+
+  Aspects: Variant (Super Saiyan 1), Enhanced Save (Impulsive/Corporeal), Super Saiyan Form, Raging, Glowing, Light Dependent, Draining (LV1), Power High (LV3)
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN +1(T) · MA +1(T) · PE –
+
+  Crazed Battle Lust (S-Cells): Your warrior instincts turn up to 11, driving you nearly berserk with battle lust.
+  (1)-[Passive]: While you have 4+ stacks of Battle Born, increase the Tier of Power Extra Dice for your Combat Rolls by 1 Category and increase your Damage Reduction by 1(T).
+  (2)-[Passive]: For every 3 stacks of Battle Born you possess, increase the Dice Score of your Steadfast Checks by 1 (max. +2).
+  (3)-[Passive]: For every 3 stacks of Battle Born you possess, increase your Surgency by 1(T) (max. 2(T)).
+  (4)-[Triggered]: If you are hit by an Attacking Maneuver, regain Ki Points equal to 1/4 (rounded up) of your Surgency.
+  (5)-[Triggered, 1/Round]: If you use a Signature Technique while in the Superior State, increase its Wound Roll by 1/2 of your Surgency.
+  (6)-[Triggered/Threshold]: If you succeed at the Steadfast Check, regain Life Points equal to your Surgency and then enter the Superior State until the end of your turn.
+
+  Golden Power (from Super Saiyan 1, inherited as its Variant): Your energy spikes and flows off of you in waves, shining gold with power.
+  (1)-[Passive]: Increase the Dice Score for your Duel Clashes by 1(T).
+  (2)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver while below the Bruised Health Threshold, reduce the Damage Category of that Attacking Maneuver (for your Damage Calculation) by 1 Category.
+  (3)-[Triggered/Transform]: Enter the Raging State until the end of your turn.
+  (4)-[Triggered/Transform, 1/Encounter]: Use a Ki Surge.
+
+  MASTERY TRAIT — Realized Superiority: Through constant training and mastery over the self, you've eliminated the weaknesses inherent to the Super Saiyan form.
+  (1)-[Permanent]: Superior Super Saiyan loses the Draining and Power High Aspects.
+  (2)-[Passive]: Treat the Superior State as the Raging State for the effects of the Raging Aspect.
+  (3)-[Triggered]: When you use the 3rd effect of Golden Power, you may enter the Superior State instead of the Raging State. If you do, the effect lasts until the start of your next turn.
+  (4)-[Triggered/Power, 1/Encounter]: Reduce your Life Points until they are 1 below your next Health Threshold to regain Ki Points equal to the reduction (max. 7(bT)). You do not suffer from Reduced Momentum due to this effect.
+
+---
+
+# Its own effects are its Traits' (traits/); Golden Power is Super Saiyan 1's, inherited as its Variant (transformations.mjs traitFilesFor) -
+# written into its text above all the same (the user's, 2026-11-21: the page leaves it out as understood).

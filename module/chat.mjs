@@ -43433,3 +43433,26 @@ async function punchSizesAsked(attacker, attack) {
     { value: "yes", label: `+${value} on the Wound (${Math.min(...gaps)} Size Categories larger than the largest of them)` },
     { value: "no", label: "No" }])) === "yes") ? value : 0;
 }
+
+/**
+ * Realized Superiority (4): "Reduce your Life Points until they are 1 below your next Health Threshold to regain Ki Points equal to the reduction
+ * (max. 7(bT)). You do not suffer from Reduced Momentum due to this effect." Already below the last one: nothing.
+ */
+export async function thresholdForKi(actor, perBaseTier = 7) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const life = actor?.system?.life ?? {};
+  const value = Number(life.value) || 0;
+  const max = Number(life.max) || 0;
+  const keyOf = amount => DBUCharacterData.thresholdKey(amount, max, typicalMinion(actor));
+  const now = keyOf(value);
+  if (now === "critical") return UNSPENT;
+  let below = value;
+  while ((below > -max) && (keyOf(below) === now)) below -= 1;
+  const reduction = value - below;
+  if (reduction <= 0) return UNSPENT;
+  const gain = Math.min(reduction, perBaseTier * Math.max(1, Number(actor.system.baseTierOfPower) || 1));
+  await actor.update({ "system.life.value": below, "system.ki.value": Math.min(Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0,
+    (Number(actor.system.ki?.value) || 0) + gain) });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `Realized Superiority: ${actor.name} drops ${reduction} Life Points, to 1 below the next Health Threshold - ${gain} Ki Points regained.`)}</div>` });
+}
