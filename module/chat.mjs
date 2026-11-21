@@ -43248,20 +43248,16 @@ async function lifeOnWoundAsked(actor, attack) {
   return { spent, charge };
 }
 
-/** Scarlet Multiplier: Life and Ki Points regained "ignoring the first effect of Crimson Sacrifice". */
 /**
  * A choice of Maneuvers out of sequence put on the card of the moment - the Transformation Maneuver's on entering (`context.cardId`), else
- * your latest: one button each, one taken and the others gone (renderOutOfSequence). Taken, Life and Ki Points regained whatever forbids it
- * (`regain`), and the effect's use counted then, not before - Scarlet Multiplier's "You may use the Power Up Maneuver, Movement Maneuver,
- * or Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, regain Life and Ki Points ..." (the user's, 2026-11-21).
+ * your latest: one button each, one taken and the others gone (renderOutOfSequence). The effect is used as it is activated - what it gives
+ * comes with that (Scarlet Multiplier's Life and Ki, regainAnyway beside it: the user's, 2026-11-21), the button only the Maneuver.
  */
-export async function offerOneOf(actor, regain, ids, use, context = {}) {
+export async function offerOneOf(actor, ids, use, context = {}) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   if (!actor || !ids.length) return UNSPENT;
-  const amount = Math.max(0, Math.floor(Number(regain) || 0));
-  const reason = `${use?.name ?? ""}${amount ? ` - then ${amount} Life and Ki Points regained` : ""}`;
   const offers = ids.map(id => ({ actorUuid: actor.uuid, actorName: actor.name, maneuverId: id, maneuverName: getManeuver(id)?.name ?? id,
-    reason, oneOf: { id, regain: amount, use: use ? `${use.sourceId}#${use.block}` : "" } }));
+    reason: use?.name ?? "", oneOf: { id } }));
   const card = game.messages?.get(context?.cardId ?? "")
     ?? (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
   if (card) {
@@ -43269,24 +43265,16 @@ export async function offerOneOf(actor, regain, ids, use, context = {}) {
   } else {
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "", flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offers } } });
   }
-  // Counted as one is taken (takeOneOf): not taken, it is still there the next time.
-  return UNSPENT;
 }
 
-/** One of those taken: the Maneuver out of sequence; made, the rest go, the use is counted and what it gives back is given. */
+/** One of those taken: the Maneuver out of sequence; made, the rest go. */
 async function takeOneOf(message, actor, oneOf) {
-  if (oneOf.use && (actor.system.talentUses?.encounter ?? []).includes(oneOf.use)) {
-    ui.notifications.warn(`${actor.name}: already used this Combat Encounter.`);
-    return null;
-  }
   const used = await ownOutOfSequence(actor, oneOf.id);
-  if (!used) return null;
-  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
-  if (oneOf.use) await spendTriggeredEffect(actor, oneOf.use);
-  if ((Number(oneOf.regain) || 0) > 0) await regainAnyway(actor, Number(oneOf.regain), Number(oneOf.regain));
+  if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   return used;
 }
 
+/** Scarlet Multiplier: Life and Ki Points regained "ignoring the first effect of Crimson Sacrifice". */
 export async function regainAnyway(actor, life = 0, ki = 0) {
   if (!actor) return;
   const pool = actor.system.life ?? {};

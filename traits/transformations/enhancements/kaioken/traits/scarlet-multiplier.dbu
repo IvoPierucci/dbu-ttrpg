@@ -10,8 +10,9 @@ text: >
 
 ---
 
-# Burst Limit: entering it, ticked with Apply effects on the card that says so; then three buttons there - the Power Up, the Movement or
-# the Basic Attack out of sequence; one used, the others gone (the user's, 2026-11-21), and Life and Ki Points 5 times its Grade's Life
-# Point Cost (before reductions) - "ignoring the first effect of Crimson Sacrifice". Its once an Encounter counted only as one is used.
+# Burst Limit: entering it, ticked with Apply effects on the card that says so - then and there, Life and Ki Points 5 times its Grade's Life
+# Point Cost (before reductions), "ignoring the first effect of Crimson Sacrifice" (the user's, 2026-11-21: as it is activated, not as the
+# Maneuver is used), and three buttons on that card - the Power Up, the Movement or the Basic Attack out of sequence; one used, the others gone.
 [triggered/transform, 1/encounter, outOfSequence, effect 1]
-offerOneOf(5 * ($G + 1) * 1(bT), power-up, movement, basic-attack);
+regainAnyway(5 * ($G + 1) * 1(bT), 5 * ($G + 1) * 1(bT));
+offerOneOf(power-up, movement, basic-attack);
