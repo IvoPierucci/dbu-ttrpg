@@ -10,8 +10,9 @@ text: >
 
 ---
 
-# Burst Limit: Apoplectic till the end of your next turn, the Basic Attack out of sequence, Determined for it.
+# Burst Limit: ticked with Apply effects on the entering card - Apoplectic till the end of your next turn and Determined for it, then and
+# there; the Basic Attack out of sequence a button on that card (the user's, 2026-11-21).
 [triggered/transform, 1/encounter, outOfSequence, effect 1]
 enterState(raging, 3, next-turn);
 enterState(determined, 1, turn);
-maneuverOutOfSequence(basic-attack);
+offerOneOf(basic-attack);

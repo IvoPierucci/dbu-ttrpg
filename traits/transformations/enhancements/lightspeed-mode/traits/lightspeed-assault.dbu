@@ -23,7 +23,9 @@ if (hasResource("lightspeedassault")) {
     combatRolls += $G * 1(T);
 }
 
+# Ticked with Apply effects on the entering card: the Speeds and Combat Rolls then and there, the Movement out of sequence a button on that
+# card (the user's, 2026-11-21).
 [triggered/transform, 1/encounter, outOfSequence, effect 1]
 lightspeedassault.stacks += 1;
 expires(lightspeedassault, start-of-next-turn);
-maneuverOutOfSequence(movement);
+offerOneOf(movement);

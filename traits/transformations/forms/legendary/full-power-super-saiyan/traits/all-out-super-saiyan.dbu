@@ -46,8 +46,8 @@ holdingback.max -= 99;
 requires belowThreshold("injured");
 allout.stacks += 1;
 
-# (7) Entering it through Unleash your Power (1), once an Encounter - the player's to say: the Power Up out of sequence, and the Superior State
-# till the start of your next turn.
+# (7) Entering it through Unleash your Power (1), once an Encounter - ticked with Apply effects on the entering card: the Superior State till
+# the start of your next turn then and there, the Power Up out of sequence a button on that card (the user's, 2026-11-21).
 [triggered/transform, 1/encounter, outOfSequence, effect 7]
-maneuverOutOfSequence(power-up);
+offerOneOf(power-up);
 enterState(superior, 1, start-of-next-turn);

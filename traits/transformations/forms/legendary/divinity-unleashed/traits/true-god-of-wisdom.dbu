@@ -41,6 +41,7 @@ life.value += floor(max(personality.mod, scholarship.mod) / 2);
 requires using("hype") || using("analysis");
 cleanseNear();
 
-# (6) Entering it, once an Encounter: Divine Wisdom's effect - free, its 1/Round untouched.
+# (6) Entering it, once an Encounter: Divine Wisdom's effect - free, its 1/Round untouched - ticked with Apply effects on the entering card,
+# then a button there: a Special Maneuver of 1 Action out of sequence, which asked (the user's, 2026-11-21).
 [triggered/transform, 1/encounter, outOfSequence, effect 6]
-domainOutOfSequence(special);
+offerOneOf(any-special);

@@ -10,8 +10,8 @@ text: >
 
 ---
 
-# Burst Limit: Overwhelm at its most, and the Basic Attack or a Signature Technique out of sequence - Overwhelm's Wound again on it, the
-# table's.
+# Burst Limit: ticked with Apply effects on the entering card - Overwhelm at its most then and there; the Basic Attack or a Signature
+# Technique out of sequence, two buttons on that card (the user's, 2026-11-21) - Overwhelm's Wound again on it, the table's.
 [triggered/transform, 1/encounter, outOfSequence, effect 1]
 overwhelm.stacks = 4;
-maneuverOutOfSequence(basic-attack);
+offerOneOf(basic-attack, signature-technique);

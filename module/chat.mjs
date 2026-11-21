@@ -43256,8 +43256,12 @@ async function lifeOnWoundAsked(actor, attack) {
 export async function offerOneOf(actor, ids, use, context = {}) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   if (!actor || !ids.length) return UNSPENT;
-  const offers = ids.map(id => ({ actorUuid: actor.uuid, actorName: actor.name, maneuverId: id, maneuverName: getManeuver(id)?.name ?? id,
-    reason: use?.name ?? "", oneOf: { id } }));
+  // The Signature Technique Maneuver: which Technique, asked as it is taken (takeTechniqueOffer). `any-special` / `any-unique`: a Special
+  // Maneuver or Unique Ability of yours of 1 Action, asked (domainOutOfSequence) - True God of Wisdom (6)'s Divine Wisdom.
+  const ANY = { "any-special": "A Special Maneuver (1 Action)", "any-unique": "A Unique Ability (1 Action)" };
+  const offers = ids.map(id => ({ actorUuid: actor.uuid, actorName: actor.name, maneuverId: id,
+    maneuverName: ANY[id] ?? getManeuver(id)?.name ?? id, reason: use?.name ?? "", oneOf: { id },
+    ...((id === "signature-technique") ? { technique: { via: "", any: true } } : {}) }));
   const card = game.messages?.get(context?.cardId ?? "")
     ?? (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
   if (card) {
@@ -43269,7 +43273,8 @@ export async function offerOneOf(actor, ids, use, context = {}) {
 
 /** One of those taken: the Maneuver out of sequence; made, the rest go. */
 async function takeOneOf(message, actor, oneOf) {
-  const used = await ownOutOfSequence(actor, oneOf.id);
+  const kind = { "any-special": "special", "any-unique": "unique" }[oneOf.id];
+  const used = kind ? (((await domainOutOfSequence(actor, kind)) !== "unspent") || null) : await ownOutOfSequence(actor, oneOf.id);
   if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   return used;
 }

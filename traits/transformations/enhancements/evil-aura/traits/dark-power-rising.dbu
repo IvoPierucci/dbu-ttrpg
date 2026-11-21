@@ -10,7 +10,8 @@ text: >
 
 ---
 
-# Burst Limit: the Power Up out of sequence, and the Evil Points at their most.
+# Burst Limit: ticked with Apply effects on the entering card - the Evil Points at their most then and there; the Power Up out of sequence a
+# button on that card (the user's, 2026-11-21).
 [triggered/transform, 1/encounter, outOfSequence, effect 1]
-maneuverOutOfSequence(power-up);
+offerOneOf(power-up);
 evilpoints.stacks += 99;
