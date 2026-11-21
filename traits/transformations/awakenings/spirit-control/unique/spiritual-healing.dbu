@@ -6,8 +6,8 @@ tpCost: 10
 type: standard
 actionCost: 1
 kiCostPerTier: 10
-# "That Character regains 2d10(bT) Life and Ki Points. Increase the Dice Score of this roll by your Might." Rolled on its card;
-# who regains it the table's.
+# "That Character regains 2d10(bT) Life and Ki Points. Increase the Dice Score of this roll by your Might." The one targeted, or yourself
+# (chat.mjs spiritualHealing); their Melee Range, the table's.
 source: Spirit Control
 description: >
   A Character within your Melee Range regains 2d10(bT) + your Might Life and Ki Points.
@@ -22,3 +22,8 @@ text: >
   –Minions: N/A
   –Passive Bonus: N/A
   –Effect: Target a Character within your Melee Range. That Character regains 2d10(bT) Life and Ki Points. Increase the Dice Score of this roll by your Might.
+
+---
+
+[on used]
+spiritualHealing();

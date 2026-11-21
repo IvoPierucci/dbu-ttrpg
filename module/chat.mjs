@@ -31300,6 +31300,8 @@ export async function postAttack(actor, target, maneuver,
           wagerFromLife: Boolean(wagerFromLife && kiWager),
           // The Damage Attribute applied so many more times, for this attack alone (profileWoundParts).
           ...((damageAttributeAgain && !reflecting) ? { damageAttributeAgain } : {}),
+          // Its Ki Point Cost before any reductions - Spiritual Elite (2).
+          ...(reflecting ? {} : { baseKiCost: Math.max(0, maneuverKiCost(maneuver, { profile }, null)) }),
           // In Divine Ki Points - Cosmic Flow (4) reads it.
           ...((wagerFromDivine && kiWager) ? { wagerFromDivine: true } : {}),
           // What stands in for the Damage Attribute, where something other than the
@@ -34905,6 +34907,10 @@ function twoWorldsWoundParts(attacker, attack) {
   if (perCategory && attack.technique && !attack.technique.borrowed) {
     const x = DAMAGE_CATEGORIES[resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0)]?.value ?? 1;
     parts.push({ label: `${named("wound.signaturePerCategory")} (Damage Category ${x})`, value: perCategory * x });
+  }
+  // Spiritual Elite (2): "Increase the Wound Rolls of your Attacking Maneuvers by 1/4 of their Ki Point Cost (before any reductions are applied)".
+  if ((attacker.system.effects?.slots?.["wound.quarterKiCost"] === true) && Math.floor((Number(attack.baseKiCost) || 0) / 4)) {
+    parts.push({ label: "Spiritual Elite (1/4 of the Ki Point Cost)", value: Math.floor((Number(attack.baseKiCost) || 0) / 4) });
   }
   if (attack.monsterSpeedWound) parts.push({ label: "Monstrous Ascension (half the Boosted Speed)", value: Number(attack.monsterSpeedWound) || 0 });
   // Full Power of the Super Saiyan (4), taken as the hit landed.
@@ -40444,6 +40450,7 @@ export async function legendRealized(actor, { double = false } = {}) {
     flavor: (lifeGain !== kiGain) ? `Legend Realized${why} - ${lifeGain} Life Points (Shedding Transformation), ${kiGain} Ki Points`
       : `Legend Realized${why} - ${kiGain} Life and Ki Points` });
   await offerTriggers(actor, "legend-realized");
+  if (kiGain > 0) await answerFor(actor, "ki-regained", { regained: kiGain });
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(actor, "legend-realized");
   // Survivor: "your Plating regains 1 Break Value".
@@ -40888,6 +40895,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   });
   // What answers a Ki Surge - Never Surrender's, through the Surge Maneuver.
   await answerFor(actor, "ki-surge", { surgeManeuver: viaManeuver === "surge" });
+  if (kiRestored > 0) await answerFor(actor, "ki-regained", { regained: kiRestored });
   // Feline Rally (3).
   await felineRallySurge(actor);
   await emergencyPowerUp(actor);
@@ -42736,3 +42744,34 @@ useTransformationQuestion("opponentsBelowBruised", actor => {
   const others = (game.combat?.combatants ?? []).map(combatant => combatant.actor).filter(other => other && !other.system?.defeated && areOpponents(other, actor));
   return others.length > 0 && others.every(other => ["bruised", "injured", "critical"].includes(other.system?.threshold?.key ?? "healthy"));
 });
+
+/** Spiritual Healing: "Target a Character within your Melee Range. That Character regains 2d10(bT) Life and Ki Points. Increase the Dice Score of this
+ * roll by your Might" - the one targeted, or yourself. */
+export async function spiritualHealing(actor) {
+  const who = Array.from(game.user.targets ?? []).map(token => token.actor).find(Boolean) ?? actor;
+  const base = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const roll = await new Roll(`${2 * base}d10 + ${Math.max(0, Number(actor.system.might) || 0)}`).evaluate();
+  const life = who.system.life ?? {};
+  const ki = who.system.ki ?? {};
+  await requestActorUpdate(who, { "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + roll.total),
+    "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + roll.total) });
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Spiritual Healing - ${who.name} regains ${roll.total} Life and Ki Points` });
+}
+
+/**
+ * Spiritual Apprentice (2): "When you gain a stack of this Awakening, gain access to one of the Spiritual Unique Abilities ... without paying the TP
+ * Cost" - one of its Transformation's own Unique Abilities not had, asked, given free.
+ */
+export async function freeUniqueOfTransformation(actor, transformationId) {
+  const { uniqueItemFrom, isUniqueAbility } = await import("./unique.mjs");
+  const held = new Set(Array.from(actor.items).filter(isUniqueAbility).map(each => each.system.unique?.libraryId));
+  const offered = traitsOfKind("unique").filter(each => (each.transformation === transformationId) && !each.owner && !each.advancement && !held.has(each.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!offered.length) return;
+  const id = await askPlayerChoice(actor, `${actor.name}: a Unique Ability free`, offered.map(each => ({ value: each.id, label: each.name })));
+  const definition = offered.find(each => each.id === id);
+  if (!definition) return;
+  const data = uniqueItemFrom(definition, traitsOfKind("unique", definition.id), { chosenType: "", applied: [], choices: {} });
+  data.system.unique.free = true;
+  await actor.createEmbeddedDocuments("Item", [data]);
+}

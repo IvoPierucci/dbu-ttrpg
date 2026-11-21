@@ -668,6 +668,10 @@ export const VERBS = Object.freeze({
     args: [0, 1],
     doc: "Every Opponent within that many Squares - a Huge Sphere's 4 - their Life Points down by your Might (Fiendish Power (6))."
   },
+  spiritualHealing: {
+    args: [0, 0],
+    doc: "2d10(bT) + your Might Life and Ki Points to the Character targeted - yourself, none targeted (Spiritual Healing)."
+  },
   freeSurge: {
     args: [0, 0],
     doc: "A Surge, its kind asked, counting toward no Surge Maneuver's limit (Class Up's Elite (3))."

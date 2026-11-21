@@ -1861,6 +1861,11 @@ export function longTransformationLevel(actor, item) {
 export function registerAspectHooks() {
   Hooks.on("updateItem", async (item, changes, options, userId) => {
     if ((item.type !== TRANSFORMATION_TYPE) || !item.parent || (userId !== game.user.id)) return;
+    // A Stack gained of one whose file says `freeUniquePerStack: true` - Spiritual Apprentice (2): one of its Unique Abilities free, asked.
+    if (foundry.utils.hasProperty(changes, "system.stacks") && fileOf(item)?.freeUniquePerStack
+      && ((Number(changes.system.stacks) || 0) > (Number(options?.dbuStacksBefore) || 0))) {
+      await (await import("./chat.mjs")).freeUniqueOfTransformation(item.parent, fileOf(item).id);
+    }
     if (!foundry.utils.hasProperty(changes, "system.active")) return;
     const actor = item.parent;
     await syncWhileIn(actor);
@@ -1933,3 +1938,8 @@ export async function leaveOnCondition(actor, key) {
   await leaveTransformations(actor, leaving);
   ui.notifications.info(`${actor.name} leaves ${leaving.map(id => items.find(each => each.id === id)?.name).join(", ")}.`);
 }
+
+// The Stacks held before an update, for `freeUniquePerStack` (registerAspectHooks).
+globalThis.Hooks?.on?.("preUpdateItem", (item, changes, options) => {
+  if ((item?.type === TRANSFORMATION_TYPE) && foundry.utils.hasProperty(changes, "system.stacks")) options.dbuStacksBefore = Number(item.system?.stacks) || 0;
+});

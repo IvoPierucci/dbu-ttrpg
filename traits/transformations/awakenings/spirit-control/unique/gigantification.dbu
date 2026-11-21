@@ -7,8 +7,10 @@ type: standard
 actionCost: 1
 kiCostPerTier: 4
 # "You may increase your Size Category to any Size Category up to Gigantic. If you do, you must pay the Ki Point Cost of this
-# Unique Ability at the start of each of your turns" - the Size the table's; its upkeep as any Sustained one's.
+# Unique Ability at the start of each of your turns" - the Size asked as it is used, Shapeshift's way (any but Colossal); its upkeep as any
+# Sustained one's.
 sustained: true
+shapeshift: true
 source: Spirit Control
 description: >
   Grow to any Size Category up to Gigantic, paying its Ki Point Cost each turn. Passive: the Giant Form Enhancement; any Size

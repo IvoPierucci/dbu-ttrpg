@@ -6916,6 +6916,19 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (!crossing) {
     const control = await (await import("./chat.mjs")).energyControlAsk(actor, maneuver, declared, price);
     price = Math.max(0, price - control.discount);
+    // Spiritual Apprentice (7): "When using an Attacking Maneuver, you do not have to pay the Ki Point Cost" - once an Encounter, asked; its
+    // Ki Wager still paid.
+    const encounterKey = game.combat?.id ?? "none";
+    const wagerPart = (declared?.wagerFromLife || declared?.wagerFromDivine) ? 0 : (Number(declared?.kiWager) || 0);
+    if (declared && maneuver.attacking && (price > wagerPart) && (actor.system.effects?.slots?.["attack.freeOnce"] === true)
+      && (actor.getFlag?.("dbu-ttrpg", "freeAttackEncounter") !== encounterKey)) {
+      const { askPlayerChoice } = await import("./chat.mjs");
+      if ((await askPlayerChoice(actor, `${actor.name}: Spiritual Apprentice`, [{ value: "free", label: `No Ki Point Cost (${price - wagerPart}) - once an Encounter` },
+        { value: "pay", label: "Pay it" }])) === "free") {
+        await actor.setFlag("dbu-ttrpg", "freeAttackEncounter", encounterKey);
+        price = wagerPart;
+      }
+    }
     if (control.homing && declared) declared = { ...declared, energyHoming: true };
   }
 

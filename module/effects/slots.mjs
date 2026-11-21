@@ -615,6 +615,11 @@ const TABLE = [
     doc: "Divine Summoning, once an Encounter: each Minion moved by it, the Power Up out of sequence (True God of Many (6))." },
   { key: "freezeAttack.lend", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Freeze Attack on an Ally, once an Encounter: your Damage Attribute on their attacks in that Frozen Turn (True God of Time (7))." },
+  // Spirit Control's Traits.
+  { key: "attack.freeOnce", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost - its Ki Wager still paid - asked (Spiritual Apprentice (7))." },
+  { key: "wound.quarterKiCost", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
   // Monster Form's Traits.
   { key: "monster.highSpeedWound", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "An Opponent hit after moving your Boosted Speed this Combat Round, once a Round: the Wound 1/2 of your Boosted Speed, asked "

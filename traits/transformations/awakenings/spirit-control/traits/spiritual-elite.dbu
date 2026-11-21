@@ -13,9 +13,19 @@ text: >
 
 ---
 
-# (1) The Spiritual Unique Abilities' Ki Point Cost 2(T) lower: on their own rows' Cost - the table's (nothing here tells them
-# apart from any other Unique Ability).
-# (2) Wound 1/4 of the Attacking Maneuver's Ki Point Cost before reductions: the table's.
+# (1) The Spiritual Unique Abilities' Ki Point Cost 2(T) lower.
+[passive, effect 1]
+instant-transmission.kiCost -= 2(T);
+instant-transmission-saviour.kiCost -= 2(T);
+instant-transmission-assault.kiCost -= 2(T);
+gigantification.kiCost -= 2(T);
+spiritual-healing.kiCost -= 2(T);
+spiritual-cloning.kiCost -= 2(T);
+forced-spirit-fission.kiCost -= 2(T);
+
+# (2) Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (chat.mjs).
+[passive, effect 2]
+allow wound.quarterKiCost;
 
 # (3) At the start of your turn, Z(bT) Ki Points.
 [triggered/start-of-turn, effect 3]

@@ -261,6 +261,9 @@ const TABLE = [
   { key: "power-gained", label: "You gain a stack of Power", provides: [],
     doc: "Fired as Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Greed of the Hera's. "
        + "What is the player's is asked in a window first." },
+  { key: "ki-regained", label: "You regain Ki Points", provides: [],
+    doc: "Fired as Ki Points are regained - by an effect's script, a Ki Surge, Legend Realized - with how many as `regained` (moments-runtime.mjs "
+       + "writeStateful, chat.mjs takeSurge, legendRealized) - Spiritual Master (2)'s. What is the player's is asked in a window first." },
   { key: "pressure-passed", label: "You succeed at a Pressure Check", provides: [],
     doc: "Fired once a Pressure Check succeeds, with the Demonic Power held before it as `powerBefore` (chat.mjs pressureCheck) - Fiendish Power "
        + "(6)'s, Fiendish Mastery (4)'s. What is the player's is asked in a window first." },

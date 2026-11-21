@@ -18,7 +18,7 @@ text: >
 
 # (1) The Spiritual Unique Abilities are in this Transformation's folder (unique/) - bought with TP on the Unique Abilities tab,
 # their Prerequisite Spirit Control said there, never enforced.
-# (2) The one gained free with each Stack: ticked Free on its Unique Abilities row - the table's.
+# (2) The one gained free with each Stack: asked as the Stack is added (its Transformation's `freeUniquePerStack`).
 
 # (3) Clairvoyance Skill Checks 2 higher.
 [passive, effect 3]
@@ -36,4 +36,6 @@ attack.kiCost -= 1(T);
 [passive, effect 6]
 surgency += $Z * 1(bT);
 
-# (7) Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost: the table's - nothing here waives a price once.
+# (7) Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost - asked as it is paid (use-maneuver.mjs).
+[passive, effect 7]
+allow attack.freeOnce;

@@ -12,5 +12,10 @@ text: >
 
 ---
 
-# (1) A Ki Surge as an Instant Maneuver once an Encounter, and (2) 3(bT) Life Points each time Ki Points are regained, twice a
-# Round: the table's - neither is a moment this system marks.
+# (1) A Ki Surge as an Instant once an Encounter - its own Maneuver (maneuvers/).
+[passive, effect 1]
+allow maneuver.spiritual-master-surge;
+
+# (2) Each time Ki Points are regained, twice a Round: 3(bT) Life Points.
+[triggered/ki-regained, 2/round, effect 2]
+life.value += 3(bT);

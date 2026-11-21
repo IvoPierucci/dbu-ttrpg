@@ -9,6 +9,8 @@ tier: 1+
 maxStacks: 3
 aspects: 
 bonuses: AG +1, FO +1, IN +1, MA +1
+# Spiritual Apprentice (2): a Spiritual Unique Ability free with each Stack gained, asked (transformations.mjs).
+freeUniquePerStack: true
 description: >
   Mastery over your spiritual being does not come easily, but with it, you gain enlightenment and true control over your ki. Your hard training has paid off, giving you access to potent abilities you never could have dreamed possible before.
 text: >
