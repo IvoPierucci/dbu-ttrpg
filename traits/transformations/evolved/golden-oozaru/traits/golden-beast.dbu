@@ -24,7 +24,12 @@ text: >
 # (1) [Constant]: failing to enter it, or leaving it on a failed Stress Test - the Oozaru Form it is on kept in use (its file's
 # `failsInto: original`, chat.mjs postTransformation). In no Form at all, "enter the Oozaru Alternate Form": the table's.
 
-# (2) Colossal for your effects and Punching Down in the Raging or Superior State: the table's.
+# (2) In the Raging or Superior State: Colossal for Punching Down (chat.mjs colossalSteps). For your other effects that read your Size: the
+# table's.
+[passive, effect 2]
+if (inState("raging") || inState("superior")) {
+    allow punchingDown.asColossal;
+}
 
 # (3) 4+ stacks of Battle Born: the Tier of Power Extra Dice a Category higher and Soak 1(T).
 [passive, effect 3]
@@ -38,7 +43,12 @@ if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) 
 [passive, effect 4]
 allow favored.elementalFire;
 
-# (5) The Wound against the smaller with 6+ Battle Born: the table's.
+# (5) With 6+ stacks of Battle Born, an attack whose targets all qualify for Punching Down: 1(T) on its Wound for each Size Category you are
+# larger than the largest of them - asked as it hits (chat.mjs punchSizesAsked).
+[passive, effect 5]
+if (stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    allow wound.punchSizes;
+}
 
 # (6) Knocking an Opponent through a Health Threshold, once a Round: a stack of Broken till the start of your next turn.
 [triggered/knock-through, 1/round, effect 6]

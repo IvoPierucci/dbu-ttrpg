@@ -2841,6 +2841,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Ki Point Pool" - the two summed as it was entered, kept on each (fusion-of-ki.mjs).
     const kiLinked = this.parent?.getFlag?.("dbu-ttrpg", "fusionOfKi");
     if (kiLinked && ((Number(this.states?.["fusion-of-ki"]) || 0) > 0) && (Number(kiLinked.max) > 0)) this.ki.max = Number(kiLinked.max);
+    // Unlimited Power (4): "Your Ki Points may exceed your Maximum Ki Points" - what is regained held to no Maximum (read where Ki is
+    // regained as `ki.ceiling`, the Maximum otherwise).
+    this.ki.ceiling = (this.effects?.slots?.["ki.overMax"] === true) ? Number.MAX_SAFE_INTEGER : this.ki.max;
 
     // Capacity: the ceiling on Ki spent within one Combat Round. Flat bonuses land
     // before the multiplier, so a doubling effect doubles them too.

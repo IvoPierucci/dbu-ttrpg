@@ -44,7 +44,9 @@ if (stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound")) 
     allow threshold.ignore.critical;
 }
 
-# (4) Ki Points past the Maximum: the table's.
+# (4) Your Ki Points may exceed your Maximum: what is regained held to none (its `ki.ceiling`).
+[passive, effect 4]
+allow ki.overMax;
 
 # (5) At the end of your turn: 1/10th (rounded up) of your Ki Points off your Life Points - not where (1) holds.
 [automatic/end-of-turn, effect 5]

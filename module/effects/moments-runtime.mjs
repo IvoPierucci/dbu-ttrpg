@@ -27,7 +27,7 @@ import { getMoment } from "./moments.mjs";
 const STATEFUL = {
   // Regained never past the most there may be - Skill of the Watcher's 2(bT) a Counter Action.
   "life.value": { path: "system.life.value", read: a => a.system.life.value, cap: a => a.system.life.ceiling ?? a.system.life.max },
-  "ki.value": { path: "system.ki.value", read: a => a.system.ki.value, cap: a => a.system.ki.max },
+  "ki.value": { path: "system.ki.value", read: a => a.system.ki.value, cap: a => a.system.ki.ceiling ?? a.system.ki.max },
   "divineKi.value": { path: "system.divineKi.value", read: a => Number(a.system.divineKi?.value) || 0,
     cap: a => Number(a.system.divineKi?.max) || 0 },
   // Counter Actions turned into Actions this Round - Celestial Potential's.

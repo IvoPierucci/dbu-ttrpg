@@ -236,7 +236,7 @@ async function recoveryPeriods(combat) {
       const ki = minion.system.ki ?? {};
       await minion.update({
         "system.life.value": Math.max(Number(life.value) || 0, Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + roll.total)),
-        "system.ki.value": Math.max(Number(ki.value) || 0, Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + roll.total))
+        "system.ki.value": Math.max(Number(ki.value) || 0, Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + roll.total))
       });
     }
     told.push(`Recovery Period: ${master.name}'s Minions (${theirs.map(minion => minion.name).join(", ")}) regain `
@@ -1372,7 +1372,7 @@ export function registerDefeatHooks() {
     const held = Array.from(actor.items ?? []).some(item => (item.type === "gear") && (item.system?.gearId === "dragon-ball") && item.system?.integrated);
     if (!held || !(Number(written) > before)) return;
     foundry.utils.setProperty(changes, "system.ki.value",
-      Math.min(Number(actor.system.ki?.max) || 0, Number(written) + Math.floor((Number(written) - before) / 2)));
+      Math.min(Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0, Number(written) + Math.floor((Number(written) - before) / 2)));
   });
 
   Hooks.on("preUpdateActor", (actor, changes, options) => {

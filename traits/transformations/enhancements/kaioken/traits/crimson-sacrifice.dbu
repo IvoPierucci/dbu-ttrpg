@@ -14,7 +14,8 @@ text: >
 
 ---
 
-# (1) No Life Points regained (combat.mjs). (2) No Reduced Momentum from paying it: the table's.
+# (1) No Life Points regained (combat.mjs). (2) No Reduced Momentum from paying it: none is given for it (it is paid by this effect, not
+# as a Life Wager or Damage of your own).
 [passive, effect 1]
 allow life.noRegain;
 
@@ -29,4 +30,24 @@ if (inFormOrTranscended && !aspectInUse("perfect-ki-control")) {
     life.value -= 2(bT);
 }
 
-# (5) The Kaioken Dice again and G(T) Wound on an Ultimate Signature Technique, once an Encounter: the table's.
+# (5) An Ultimate Signature Technique, once an Encounter: the Kaioken Dice again on its Strike and Wound Rolls, and G(T) on its Wound -
+# offered as it is declared (use-maneuver.mjs momentDice).
+[triggered/declare-maneuver, 1/encounter, effect 5]
+requires usingUltimate;
+if (($G == 2) || ($G == 3)) {
+    attack.strikeDice += 1d4;
+    attack.woundDice += 1d4;
+}
+if ($G == 4) {
+    attack.strikeDice += 1d6;
+    attack.woundDice += 1d6;
+}
+if ($G == 5) {
+    attack.strikeDice += 1d8;
+    attack.woundDice += 1d8;
+}
+if ($G == 6) {
+    attack.strikeDice += 1d10;
+    attack.woundDice += 1d10;
+}
+attack.woundAdd += $G * 1(T);

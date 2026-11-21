@@ -805,7 +805,7 @@ export async function sadisticKi(actor) {
   const might = Math.max(0, Number(actor.system.might) || 0);
   if (!might) return UNSPENT;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.sadisticRound`]: roundKey(),
-    "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + might) });
+    "system.ki.value": Math.min(Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + might) });
 }
 
 /** Sadistic Demon Lord: a Combat Condition put on an Opponent - asked, once a Round. */
@@ -5726,7 +5726,7 @@ function renderUpkeep(message, html) {
     const item = actor?.items?.get(upkeep.itemId);
     await message.setFlag(SCOPE, UPKEEP_FLAG, { ...upkeep, stopped: true });
     if (!actor) return;
-    await actor.update({ "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + upkeep.paid),
+    await actor.update({ "system.ki.value": Math.min(actor.system.ki.ceiling ?? actor.system.ki.max, actor.system.ki.value + upkeep.paid),
       "system.capacity.spent": Math.max(0, actor.system.capacity.spent - upkeep.paid) });
     if (upkeep.actions) await refundActions(actor, upkeep.actions, "standard");
     // Binding's squeeze goes with what it was paid alongside.
@@ -10986,7 +10986,7 @@ async function regainRefund(actor, refund = {}) {
   const without = (list, gone) => { const left = [...(list ?? [])]; for (const entry of gone ?? []) {
     const at = left.lastIndexOf(entry); if (at >= 0) left.splice(at, 1); } return left; };
   await requestActorUpdate(actor, {
-    "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + (Number(refund.ki) || 0)),
+    "system.ki.value": Math.min(actor.system.ki.ceiling ?? actor.system.ki.max, actor.system.ki.value + (Number(refund.ki) || 0)),
     "system.capacity.spent": Math.max(0, actor.system.capacity.spent - (Number(refund.capacity) || 0)),
     ...(refund.divine ? { "system.divineKi.value": Math.min(actor.system.divineKi?.max ?? Infinity,
       (actor.system.divineKi?.value ?? 0) + (Number(refund.divine) || 0)) } : {}),
@@ -14574,7 +14574,7 @@ async function healerChoice(ally, healed) {
       ...held.map(([key]) => ({ value: `condition:${key}`, label: `Stop suffering from ${getTrait(key)?.name ?? key}` })),
       { value: "none", label: "Neither" }]);
   if (picked === "ki") {
-    return requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ally.system.ki?.max) || 0, (Number(ally.system.ki?.value) || 0) + ki) });
+    return requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ally.system.ki?.ceiling ?? ally.system.ki?.max) || 0, (Number(ally.system.ki?.value) || 0) + ki) });
   }
   if (String(picked ?? "").startsWith("condition:")) {
     const { setCondition } = await import("./conditions.mjs");
@@ -15208,7 +15208,7 @@ async function divineCounterRelease(cardId, cancel) {
   if (attacker && (ki || capacity || divine)) {
     const dkp = Number(attacker.system.divineKi?.value) || 0;
     await requestActorUpdate(attacker, {
-      "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + ki),
+      "system.ki.value": Math.min(attacker.system.ki.ceiling ?? attacker.system.ki.max, attacker.system.ki.value + ki),
       "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - capacity),
       ...(divine ? { "system.divineKi.value": Math.min(Number(attacker.system.divineKi?.max) || (dkp + divine), dkp + divine) } : {})
     });
@@ -15641,7 +15641,7 @@ async function paraParaHit(attack, branches) {
   requestEdit(card, { type: "paraPara", para: { ...para, failed: true } });
   const dancer = fromUuidSync(para.actorUuid);
   if (dancer && para.ki) {
-    await requestActorUpdate(dancer, { "system.ki.value": Math.min(dancer.system.ki.max, dancer.system.ki.value + para.ki),
+    await requestActorUpdate(dancer, { "system.ki.value": Math.min(dancer.system.ki.ceiling ?? dancer.system.ki.max, dancer.system.ki.value + para.ki),
       "system.capacity.spent": Math.max(0, dancer.system.capacity.spent - para.ki) });
   }
 }
@@ -16233,7 +16233,7 @@ async function punishRelease(cardId, cancel) {
   const attacker = fromUuidSync(attack.attackerUuid);
   const ki = Number(punish.exploitKi) || 0;
   if (attacker && ki) {
-    await requestActorUpdate(attacker, { "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + ki),
+    await requestActorUpdate(attacker, { "system.ki.value": Math.min(attacker.system.ki.ceiling ?? attacker.system.ki.max, attacker.system.ki.value + ki),
       "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - ki) });
   }
   return requestEdit(message, { type: "attack", attack: { ...released, punished: true } });
@@ -16283,7 +16283,7 @@ async function punishHeal(actor, name, bonus) {
   const amount = Math.max(0, roll.total + bonus);
   await requestActorUpdate(actor, {
     "system.life.value": Math.min(actor.system.life.ceiling ?? actor.system.life.max, actor.system.life.value + amount),
-    "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + amount)
+    "system.ki.value": Math.min(actor.system.ki.ceiling ?? actor.system.ki.max, actor.system.ki.value + amount)
   });
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(name)}: ${Handlebars.escapeExpression(actor.name)} regains Life and Ki Points.</div>` });
@@ -16706,7 +16706,7 @@ export async function postShapeshift(actor, maneuver, plan) {
   if (plan.mode !== "remove") return applyShape(actor, item, plan);
   await endShape(actor, item);
   const ki = 6 * Math.max(1, actor.system.tierOfPower ?? 1);
-  await actor.update({ "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + ki) });
+  await actor.update({ "system.ki.value": Math.min(actor.system.ki.ceiling ?? actor.system.ki.max, actor.system.ki.value + ki) });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(item.name)}: back to yourself - Ki Points regained.</p>`,
     flags: { [SCOPE]: { [SHAPE_FLAG]: { actorUuid: actor.uuid, itemId: item.id, actions: plan.actions, ki, reshaped: false } } } });
@@ -18648,7 +18648,7 @@ export async function unify(actor, aimed, card = null) {
     const ki = actor.system.ki ?? {};
     await actor.update({
       "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + amount),
-      "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + amount),
+      "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + amount),
       [`flags.${SCOPE}.unifiedWith`]: [...(actor.getFlag?.(SCOPE, "unifiedWith") ?? []), { uuid: other.uuid, name: other.name }]
     });
     await setCondition(actor, "unified-awakening", (Number(actor.system.conditions?.["unified-awakening"]) || 0) + 1);
@@ -19147,7 +19147,7 @@ export async function consumeBrood(actor) {
   if (!Array.isArray(picked) || !picked.length) return;
   const back = Math.ceil(picked.reduce((sum, minion) => sum + Math.max(0, Number(minion.system.ki?.value) || 0), 0) / 4);
   const ki = actor.system.ki ?? {};
-  if (back) await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
+  if (back) await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + back) });
   await requestDismissDuplicates(picked);
   ui.notifications.info(`${actor.name}: Consumable Minions - ${picked.length} Defeated, ${back} Ki Points back.`);
 }
@@ -20097,7 +20097,7 @@ export async function overwhelmHeal(actor, spent, per, cap) {
   if (gain <= 0) return;
   const ki = (actor.system.effects?.slots?.["overwhelmHeal.ki"] === true) ? Math.floor(gain / 2) : 0;
   await requestActorUpdate(actor, { "system.life.value": (Number(life.value) || 0) + gain,
-    ...(ki ? { "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + ki) } : {}),
+    ...(ki ? { "system.ki.value": Math.min(Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + ki) } : {}),
     [`flags.${SCOPE}.overwhelmHealed`]: { round, amount: already + gain } });
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor), content: `<div class="dbu-settled-note">${
     Handlebars.escapeExpression(`Suppression of Power: ${actor.name} regains ${gain} Life Points${ki ? ` and ${ki} Ki Points (Mutant's Resilience)` : ""}.`)}</div>` });
@@ -22259,7 +22259,7 @@ async function disarmingSwap(message, attacker) {
   const dkp = Number(attacker.system.divineKi?.value) || 0;
   const divine = Number(paid.divine) || 0;
   await requestActorUpdate(attacker, {
-    "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + (Number(paid.ki) || 0) + regained),
+    "system.ki.value": Math.min(attacker.system.ki.ceiling ?? attacker.system.ki.max, attacker.system.ki.value + (Number(paid.ki) || 0) + regained),
     "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - (Number(paid.capacity) || 0)),
     ...(divine ? { "system.divineKi.value": Math.min(Number(attacker.system.divineKi?.max) || (dkp + divine), dkp + divine) } : {}),
     [`flags.${SCOPE}.disarmingSwapped`]: game.combat?.id ?? "none",
@@ -24421,7 +24421,7 @@ async function lightRegain(actor, woundTotal) {
   const ki = Math.floor(Math.max(0, woundTotal) / 2);
   if (!ki) return;
   const fifth = Math.floor((Number(actor.system.ki?.max) || 0) / 5);
-  const room = Math.max(0, (Number(actor.system.ki?.max) || 0) - (Number(actor.system.ki?.value) || 0));
+  const room = Math.max(0, (Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0) - (Number(actor.system.ki?.value) || 0));
   const regained = Math.min(ki, room);
   await regainPools(actor, 0, ki);
   const stacks = fifth ? Math.floor(regained / fifth) * Math.max(1, Number(actor.system.baseTierOfPower) || 1) : 0;
@@ -25337,7 +25337,7 @@ export async function shadowGenesTrade(actor) {
   if (lost <= 0) return UNSPENT;
   const { life, ki } = actor.system;
   await requestActorUpdate(actor, { "system.life.value": (Number(life.value) || 0) - lost,
-    "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + lost) });
+    "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + lost) });
   await answerFor(actor, "life-for-ki", { lostBT: lost / bT });
   // (6): "If you reduce your Life Points by 8(bT) or more through the second effects of Dragon Genes, gain 2 Adaptation Points" - asked, once
   // an Encounter (no button: its use is the Encounter's one).
@@ -26795,7 +26795,7 @@ async function hedgeYourBets(actor, total, success) {
     const back = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
     const { life, ki } = actor.system;
     await requestActorUpdate(actor, { "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + back),
-      "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
+      "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + back) });
     return { success: false, said: `failed instead - a stack of Risk Aversion, ${back} Life and Ki Points back` };
   }
   if (!success && held) {
@@ -28201,7 +28201,7 @@ export async function felineRallyKi(actor) {
   const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated);
   for (const ally of allies) {
     const { ki } = ally.system;
-    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
+    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + back) });
   }
   if (allies.length) ui.notifications.info(`Feline Rally: ${allies.map(ally => ally.name).join(", ")} - ${back} Ki Points each.`);
 }
@@ -28217,7 +28217,7 @@ async function felineRallySurge(actor) {
   await actor.setFlag(SCOPE, "felineSurgeEncounter", game.combat?.id ?? "none");
   for (const ally of allies) {
     const { ki } = ally.system;
-    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back) });
+    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + back) });
   }
 }
 
@@ -28294,7 +28294,7 @@ async function settleCatsPaw(message, clash) {
     const taken = Math.min(more, Number(other.system.ki?.value) || 0);
     await requestActorUpdate(other, { "system.ki.value": (Number(other.system.ki?.value) || 0) - taken });
     const { ki } = holder.system;
-    await requestActorUpdate(holder, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + more) });
+    await requestActorUpdate(holder, { "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + more) });
     await settledNote(message, `Cat's Paw: ${other.name}'s attack costs ${more} Ki more; ${holder.name} regains ${more}.`);
   }
   else {
@@ -28304,7 +28304,7 @@ async function settleCatsPaw(message, clash) {
     const cost = Number(clash.catsPaw.cost) || 0;
     if (cost) {
       const { ki } = other.system;
-      await requestActorUpdate(other, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + cost) });
+      await requestActorUpdate(other, { "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + cost) });
     }
     await settledNote(message, `Cat's Paw: ${other.name}'s Energy Charge is undone${cost ? ` - ${cost} Ki back, not the Action` : ""}.`);
   }
@@ -28462,7 +28462,7 @@ async function settleGlassSlowed(message, clash) {
     const gain = Math.floor((Number(caster.system.might) || 0) / 2) * stacks;
     await requestActorUpdate(target, {
       "system.life.value": Math.min(Number(target.system.life?.ceiling ?? target.system.life?.max) || Infinity, (Number(target.system.life?.value) || 0) + gain),
-      "system.ki.value": Math.min(Number(target.system.ki?.max) || Infinity, (Number(target.system.ki?.value) || 0) + gain) });
+      "system.ki.value": Math.min(Number(target.system.ki?.ceiling ?? target.system.ki?.max) || Infinity, (Number(target.system.ki?.value) || 0) + gain) });
     return settledNote(message, `${target.name} regains ${gain} Life and Ki Points.`);
   }
   const { gainCondition } = await import("./effects/moments-runtime.mjs");
@@ -30780,6 +30780,7 @@ async function takeOutOfSequence(message, actor, offer) {
  */
 export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, wagerFromLife = false, wagerFromDivine = false, damageAttributeAgain = 0,
+                                   momentDice = null, momentWound = null,
                                    charges = 0, damageAttribute = null, autoHit = false,
                                    advantages = [], squaresCharged = 0, thrown = null,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
@@ -31372,6 +31373,9 @@ export async function postAttack(actor, target, maneuver,
           wagerFromLife: Boolean(wagerFromLife && kiWager),
           // The Damage Attribute applied so many more times, for this attack alone (profileWoundParts).
           ...((damageAttributeAgain && !reflecting) ? { damageAttributeAgain } : {}),
+          // What its declaration put on it (Crimson Sacrifice (5)).
+          ...((momentDice && !reflecting) ? { momentDice } : {}),
+          ...((momentWound && !reflecting) ? { momentWound } : {}),
           // Its Ki Point Cost before any reductions - Spiritual Elite (2).
           ...(reflecting ? {} : { baseKiCost: Math.max(0, maneuverKiCost(maneuver, { profile }, null)) }),
           // In Divine Ki Points - Cosmic Flow (4) reads it.
@@ -33347,9 +33351,11 @@ async function resolveAttackWork(message, attack) {
   const weakPoint = await weakPointNatural(attacker, targets.map(entry => entry.uuid), message);
   // Divine Armament (True God of War (3)): the Greater Dice on a Weapon's attack paid in Divine Ki.
   const armament = armamentFormula(attacker, attack);
+  // Crimson Sacrifice (5): dice its declaration put on its Strike.
+  const againStrike = (attack.momentDice?.strike ?? []).map(die => die.formula).filter(Boolean).join(" + ");
   // Violent Monster (2): every target at a lower Health Threshold.
   const strike = await rollSide(attacker, [...strikeParts(attacker, attack), ...lowerThresholdStrike(attacker, attack)], {
-    ...attackerOptions, ...(armament ? { extraDice: [attackerOptions.extraDice, armament].filter(Boolean).join(" + ") } : {}),
+    ...attackerOptions, ...((armament || againStrike) ? { extraDice: [attackerOptions.extraDice, armament, againStrike].filter(Boolean).join(" + ") } : {}),
     slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
     // A Signature Technique's: its own dice and Critical Target (a Custom Buff's). Its Adaptation Points are a Wound Roll's alone.
     signatureRoll: effectSignature(attacker, attack),
@@ -34715,6 +34721,9 @@ async function answerHit(message, attack, attacker, struck, script = null) {
   // Full Power of the Super Saiyan (4): Battle Born on the Wound, asked.
   const bornWound = await battleBornAsked(attacker, "battleBorn.wound", "your Wound Roll");
   if (bornWound) answer.marks.battleBornWound = bornWound;
+  // Golden Beast (5): every target small enough for Punching Down - 1(T) for each Size Category larger than the largest, asked.
+  const sizeWound = await punchSizesAsked(attacker, attack);
+  if (sizeWound) answer.marks.sizeWound = sizeWound;
   // Dangerous Amplification (2)(4): Life Points on the Wound, asked - and an Energy Charge for more than 8(bT), once an Encounter.
   const lifeWound = await lifeOnWoundAsked(attacker, attack);
   if (lifeWound.spent) answer.marks.lifeWound = lifeWound.spent;
@@ -35017,6 +35026,8 @@ function twoWorldsWoundParts(attacker, attack) {
   if (attack.battleBornWound) parts.push({ label: "Full Power of the Super Saiyan (Battle Born)", value: Number(attack.battleBornWound) || 0 });
   if (attack.evilWound) parts.push({ label: "Power of Evil (Evil Points)", value: Number(attack.evilWound) || 0 });
   if (attack.lifeWound) parts.push({ label: "Dangerous Amplification (Life Points)", value: Number(attack.lifeWound) || 0 });
+  if (attack.momentWound?.value) parts.push({ label: attack.momentWound.source || "On this attack", value: Number(attack.momentWound.value) || 0 });
+  if (attack.sizeWound) parts.push({ label: "Golden Beast (Size Categories larger)", value: Number(attack.sizeWound) || 0 });
   // Shared Heritage (4): "Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess."
   const fusedWound = Number(slots["wound.fusedTechnique"]?.add) || 0;
   const fusedCount = (attacker.system.fusion?.fused ?? []).length;
@@ -35064,6 +35075,8 @@ function chosenTechniqueHeld(actor, techniqueId) {
  */
 function woundDice(attacker, attack) {
   return [
+    // Crimson Sacrifice (5): dice its declaration put on its Wound.
+    ...(attack.momentDice?.wound ?? []).map(die => ({ label: die.source || "On this attack", formula: die.formula })),
     // Dangerous Amplification (4): an Energy Charge, its dice.
     ...(attack.lifeCharge ? [{ label: "Energy Charge (Dangerous Amplification)", formula: energyChargeDice(attacker, { ...attack, energyCharges: 1 }) }] : []),
     // Neo-Tuffle-Raised (3)'s Greater Dice.
@@ -36072,6 +36085,8 @@ async function rollAttackWoundWork(message, attack) {
       && ((Number(attacker.system.size?.steps) || 0) < 0)) ? -(Number(attacker.system.size?.steps) || 0) : 0)
       // Compressed Oozaru (2): "Treat your Size Category as if it was G Size Categories larger for the sake of Punching Down."
       + (Number(attacker.system?.effects?.slots?.["punchingDown.sizeSteps"]?.add) || 0)
+      // Golden Beast (2): "treat your Size Category as Colossal for your effects and the effects of Punching Down".
+      + colossalSteps(attacker)
       + (((attacker.system?.effects?.slots?.["giantGene.size"] === true) && (attacker.system.size?.key === "enormous")) ? 1 : 0);
     // Troll (3): "You may apply Punching Down if a target is only 1 Size Category smaller than you."
     const punchingRoll = ((dealt > 0) && (gap >= ((attacker.system?.effects?.slots?.["troll.punchDown"] === true) ? 1 : 2)) && !own.noPunchingDown)
@@ -38140,7 +38155,7 @@ async function returnInitialWagers(attack, attacker) {
     await requestActorUpdate(who, life
       ? { "system.life.value": Math.min(who.system.life.ceiling ?? who.system.life.max, who.system.life.value + amount),
           "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) }
-      : { "system.ki.value": Math.min(who.system.ki.max, who.system.ki.value + amount),
+      : { "system.ki.value": Math.min(who.system.ki.ceiling ?? who.system.ki.max, who.system.ki.value + amount),
           "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) });
   };
   await giveBack(attacker, own, Boolean(attack.wagerFromLife));
@@ -38560,7 +38575,7 @@ async function rollDuelClash(message, attack) {
   clashes[clashes.length - 1] = { ...clashes[clashes.length - 1], attackerRoll: mine, defenderRoll: theirs };
   for (const entry of settled.refund) {
     const who = fromUuidSync(entry.uuid);
-    if (who) await requestActorUpdate(who, { "system.ki.value": Math.min(who.system.ki.max, who.system.ki.value + entry.amount) });
+    if (who) await requestActorUpdate(who, { "system.ki.value": Math.min(who.system.ki.ceiling ?? who.system.ki.max, who.system.ki.value + entry.amount) });
   }
   const next = { ...attack, duel: { ...settled.duel, clashes } };
   if (!next.duel.outcome) return requestEdit(message, { type: "attack", attack: next });
@@ -39159,7 +39174,7 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
     // Parasitic Biology (4): "regain 3(bT) Ki Points for each Revenge Point you gained as a result of that Attacking Maneuver".
     const revengeGained = (Number(target.system.resources?.revengepoints?.stacks) || 0) - revengeBefore;
     if ((revengeGained > 0) && target.isOwner && (target.system.effects?.slots?.["parasite.kiPerRevenge"] === true)) {
-      await target.update({ "system.ki.value": Math.min(Number(target.system.ki?.max) || 0,
+      await target.update({ "system.ki.value": Math.min(Number(target.system.ki?.ceiling ?? target.system.ki?.max) || 0,
         (Number(target.system.ki?.value) || 0) + revengeGained * 3 * Math.max(1, Number(target.system.baseTierOfPower) || 1)) });
     }
   }
@@ -40217,7 +40232,7 @@ export async function rollSteadfastCheck(actor) {
 
   // Karmic Reflection (4): passed, 2(T) of Ki for each Negative Energy spent on it.
   if (passed && karmicSpent) {
-    await actor.update({ "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0,
+    await actor.update({ "system.ki.value": Math.min(Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0,
       (Number(actor.system.ki?.value) || 0) + 2 * karmicSpent * Math.max(1, Number(actor.system.tierOfPower) || 1)) });
   }
   // Passed: what answers succeeding at it - Surprising Resilience's Overwhelm.
@@ -40568,7 +40583,7 @@ export async function legendRealized(actor, { double = false } = {}) {
   // Shedding Transformation (1): "Double the amount of Life Points you gain from Legend Realized."
   const lifeGain = (roll.total + extra) * both * ((actor.system.effects?.slots?.["shedding.legend"] === true) ? 2 : 1);
   await requestActorUpdate(actor, { "system.life.value": Math.min(life.ceiling ?? life.max, life.value + lifeGain),
-    "system.ki.value": Math.min(ki.max, ki.value + kiGain) });
+    "system.ki.value": Math.min(ki.ceiling ?? ki.max, ki.value + kiGain) });
   const why = double ? " (New Level of Power: doubled)" : (narrative ? " (Narrative Transformation: doubled)" : "");
   await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
     flavor: (lifeGain !== kiGain) ? `Legend Realized${why} - ${lifeGain} Life Points (Shedding Transformation), ${kiGain} Ki Points`
@@ -40950,7 +40965,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     if (answered?.slots?.["surge.asKi"] === true) {
       const amount = total;
       const { ki, capacity } = actor.system;
-      const kiBack = Math.min(ki.max, ki.value + amount) - ki.value;
+      const kiBack = Math.min(ki.ceiling ?? ki.max, ki.value + amount) - ki.value;
       await actor.update({ "system.ki.value": ki.value + kiBack, "system.capacity.spent": capacity.spent - amount });
       await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
         flavor: `${source} - Healing Surge as Ki (Majin Malice) - ${kiBack} Ki Points, ${amount} Capacity${goop ? GOOP_SAID : ""}` });
@@ -41003,7 +41018,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   if ((actor.system.effects?.slots?.["kiRegain.halved"] === true) && (actor.system.effects?.slots?.["kiRegain.kept"] !== true)) kiGain = Math.floor(kiGain / 2);
   const capacityGain = Math.floor(capacity.max / DBUCharacterData.KI_SURGE_FRACTION);
 
-  const kiRestored = Math.min(ki.max, ki.value + kiGain) - ki.value;
+  const kiRestored = Math.min(ki.ceiling ?? ki.max, ki.value + kiGain) - ki.value;
   // Capacity comes back by giving back what has been spent this round.
   const capacityRestored = Math.max(0, Math.min(capacity.spent, capacityGain));
 
@@ -42309,7 +42324,7 @@ export async function kiToAlliesNear(actor, gap) {
   if (!amount || !allies.length) return;
   for (const ally of allies) {
     const ki = ally.system?.ki ?? {};
-    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + amount) });
+    await requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + amount) });
   }
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
     `Divine Role: ${allies.map(ally => ally.name).join(", ")} regain ${amount} Ki Points.`)}</div>` });
@@ -42722,7 +42737,7 @@ export async function spendBattleBorn(actor, then = "") {
   if (then === "healing-surge") return takeSurge(actor, { source: "Limit of the Super Saiyan", kind: "healing" });
   if (then === "ki-capacity") {
     const quarter = Math.floor((Number(actor.system.capacity?.max) || 0) / 4);
-    await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + quarter),
+    await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + quarter),
       "system.capacity.spent": Math.max(0, (Number(actor.system.capacity?.spent) || 0) - quarter) });
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
       `Limit of the Super Saiyan: ${actor.name} regains ${quarter} Ki Points and Capacity.`)}</div>` });
@@ -42897,7 +42912,7 @@ export async function spiritualHealing(actor) {
   const life = who.system.life ?? {};
   const ki = who.system.ki ?? {};
   await requestActorUpdate(who, { "system.life.value": Math.min(Number(life.ceiling ?? life.max) || 0, (Number(life.value) || 0) + roll.total),
-    "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + roll.total) });
+    "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + roll.total) });
   await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Spiritual Healing - ${who.name} regains ${roll.total} Life and Ki Points` });
 }
 
@@ -43197,7 +43212,7 @@ export async function regainAnyway(actor, life = 0, ki = 0) {
   if (!actor) return;
   const pool = actor.system.life ?? {};
   const gain = Math.max(0, Math.min(Number(life) || 0, (Number(pool.ceiling ?? pool.max) || 0) - (Number(pool.value) || 0)));
-  const kiGain = Math.max(0, Math.min(Number(ki) || 0, (Number(actor.system.ki?.max) || 0) - (Number(actor.system.ki?.value) || 0)));
+  const kiGain = Math.max(0, Math.min(Number(ki) || 0, (Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0) - (Number(actor.system.ki?.value) || 0)));
   await actor.update({ "system.life.value": (Number(pool.value) || 0) + gain, "system.ki.value": (Number(actor.system.ki?.value) || 0) + kiGain },
     { dbuRegainAnyway: true });
 }
@@ -43380,6 +43395,41 @@ export async function freeUnique(actor, id) {
   const maneuver = definitionOf(item);
   const cost = maneuverKiCost(maneuver, null, actor);
   if (!await useManeuver(actor, maneuver, { outOfSequence: true })) return UNSPENT;
-  await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + cost),
+  await requestActorUpdate(actor, { "system.ki.value": Math.min(Number(actor.system.ki?.ceiling ?? actor.system.ki?.max) || 0, (Number(actor.system.ki?.value) || 0) + cost),
     "system.capacity.spent": Math.max(0, (Number(actor.system.capacity?.spent) || 0) - cost) });
+}
+
+/** Golden Beast (2): the Size Categories between yours and Colossal, where it is yours for Punching Down - none otherwise. */
+function colossalSteps(actor) {
+  if (actor?.system?.effects?.slots?.["punchingDown.asColossal"] !== true) return 0;
+  const sizes = Object.keys(DBUCharacterData.SIZES);
+  const colossal = sizes.indexOf("colossal") - sizes.indexOf(DBUCharacterData.DEFAULT_SIZE);
+  return Math.max(0, colossal - (Number(actor.system.size?.steps) || 0));
+}
+
+/** The Size Categories you are larger than another for Punching Down, as it is worked out where the Damage is (its gap). */
+function punchGap(attacker, target) {
+  return sizeDifference(attacker, target) + (((attacker.system?.effects?.slots?.["size.soakPunchAsMedium"] === true)
+    && ((Number(attacker.system.size?.steps) || 0) < 0)) ? -(Number(attacker.system.size?.steps) || 0) : 0)
+    + (Number(attacker.system?.effects?.slots?.["punchingDown.sizeSteps"]?.add) || 0) + colossalSteps(attacker)
+    + (((attacker.system?.effects?.slots?.["giantGene.size"] === true) && (attacker.system.size?.key === "enormous")) ? 1 : 0);
+}
+
+/**
+ * Golden Beast (5): "[Triggered]: While you have 6+ stacks of Battle Born, if you make an Attacking Maneuver in which all of the targets
+ * qualify for the effects of Punching Down, increase the Wound Roll by 1(T) for each Size Category you are larger than the largest Character
+ * among those targets." Asked as it hits.
+ */
+async function punchSizesAsked(attacker, attack) {
+  if (attacker?.system?.effects?.slots?.["wound.punchSizes"] !== true) return 0;
+  const targets = attackTargets(attack ?? {}).map(entry => fromUuidSync(entry.uuid)).filter(other => other && (other.uuid !== attacker.uuid));
+  if (!targets.length) return 0;
+  const least = (attacker.system?.effects?.slots?.["troll.punchDown"] === true) ? 1 : 2;
+  const gaps = targets.map(other => punchGap(attacker, other));
+  if (gaps.some(gap => gap < least)) return 0;
+  const value = Math.min(...gaps) * Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  if (!value) return 0;
+  return ((await askPlayerChoice(attacker, `${attacker.name}: Golden Beast`, [
+    { value: "yes", label: `+${value} on the Wound (${Math.min(...gaps)} Size Categories larger than the largest of them)` },
+    { value: "no", label: "No" }])) === "yes") ? value : 0;
 }

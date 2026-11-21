@@ -7195,6 +7195,16 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     + (declared.glassForced ? 1 : 0) : 0;
   // Law-Defying Battle (5): "enter the Determined State for the duration of that Attacking Maneuver" - it hits automatically; no turn lost.
   if (declared && (declaring?.slots?.["attack.determined"] === true)) declared = { ...declared, autoHit: true, determinedNow: true };
+  // Crimson Sacrifice (5): dice on its Strike and Wound, and Wound, for this attack alone.
+  if (declared && maneuver.attacking) {
+    const dice = key => (declaring?.slots?.[key] ?? []).map(die => ({ formula: die.formula, source: die.source ?? "" })).filter(die => die.formula);
+    const strikeDice = dice("attack.strikeDice");
+    const woundDice = dice("attack.woundDice");
+    const woundAdd = Number(declaring?.slots?.["attack.woundAdd"]?.add) || 0;
+    if (strikeDice.length || woundDice.length) declared = { ...declared, momentDice: { strike: strikeDice, wound: woundDice } };
+    if (woundAdd) declared = { ...declared, momentWound: { value: woundAdd, source: (declaring.slots["attack.woundAdd"].parts ?? [])
+      .map(part => part.source).find(Boolean) ?? "" } };
+  }
 
   // A Magical Unique Ability used: this Combat Round's, for True God of Magic (5).
   if (maneuver.unique && (maneuver.uniqueType === "magical") && game.combat?.started) {

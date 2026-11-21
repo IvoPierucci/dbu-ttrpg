@@ -302,7 +302,7 @@ Hooks.on("updateItem", async (item, changes, options, userId) => {
     const back = Math.floor((Number(actor.system.surgency) || 0) / 2);
     const { life, ki } = actor.system;
     await actor.update({ "system.life.value": Math.min(Number(life.max) || 0, (Number(life.value) || 0) + back),
-      "system.ki.value": Math.min(Number(ki.max) || 0, (Number(ki.value) || 0) + back),
+      "system.ki.value": Math.min(Number(ki.ceiling ?? ki.max) || 0, (Number(ki.value) || 0) + back),
       "flags.dbu-ttrpg.styleGreedEncounter": game.combat.id });
     ui.notifications.info(`${actor.name}: Style and Greed - ${item.name} destroyed, ${back} Life and Ki Points back.`);
   }

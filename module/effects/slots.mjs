@@ -622,6 +622,20 @@ const TABLE = [
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
   { key: "timeControl.noDrain", phase: PHASES.CORE, kind: F, ops: ["allow"],
     doc: "Time Control (4)'s Life Points at the start of the turn not lost - Dominion Over Time (4)." },
+  // Ki past the Maximum; dice and Wound put on one attack as it is declared; Golden Oozaru's Size.
+  { key: "ki.overMax", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Your Ki Points may exceed your Maximum: nothing regained is held to it (`ki.ceiling`) - Unlimited Power (4)." },
+  { key: "attack.strikeDice", phase: PHASES.REACTIVE, kind: D, ops: ["add-dice"],
+    doc: "Answering its declaration: dice on this Attacking Maneuver's Strike Roll (use-maneuver.mjs momentDice) - Crimson Sacrifice (5)." },
+  { key: "attack.woundDice", phase: PHASES.REACTIVE, kind: D, ops: ["add-dice"],
+    doc: "Answering its declaration: dice on this Attacking Maneuver's Wound Roll - Crimson Sacrifice (5)." },
+  { key: "attack.woundAdd", phase: PHASES.REACTIVE, kind: N, ops: ["add"],
+    doc: "Answering its declaration: so much on this Attacking Maneuver's Wound Roll - Crimson Sacrifice (5)'s G(T)." },
+  { key: "punchingDown.asColossal", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Your Size Category Colossal for Punching Down (chat.mjs punchGap) - Golden Beast (2), in the Raging or Superior State." },
+  { key: "wound.punchSizes", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "An attack all of whose targets qualify for Punching Down: 1(T) on its Wound for each Size Category you are larger than the largest, "
+       + "asked as it hits - Golden Beast (5), with 6+ Battle Born." },
   // Time Power's Traits.
   { key: "profile.time", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Access to the Time Profile - Time Control (1)." },

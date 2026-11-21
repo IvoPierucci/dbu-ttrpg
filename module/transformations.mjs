@@ -1201,6 +1201,10 @@ export async function leftTransformation(actor, item, { into = null } = {}) {
   const aspects = aspectsOf(item, items);
   const level = id => aspects.find(aspect => aspect.id === id)?.level ?? (aspects.some(aspect => aspect.id === id) ? 1 : 0);
   const higher = into && (tierRequirementOf(into, fileOf(into), items) > tierRequirementOf(item, fileOf(item), items));
+  // Unlimited Power (4) left behind: Ki Points past the Maximum brought down to it.
+  if ((actor.system.effects?.slots?.["ki.overMax"] !== true) && ((Number(actor.system.ki?.value) || 0) > (Number(actor.system.ki?.max) || 0))) {
+    await actor.update({ "system.ki.value": Number(actor.system.ki?.max) || 0 });
+  }
   if (level("exhausting") && !higher) {
     const { setCondition } = await import("./conditions.mjs");
     await setCondition(actor, "stress-exhaustion", 1);
