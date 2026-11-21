@@ -19,5 +19,5 @@ text: >
 
 # (4) At the start of your turn, not in the God Ki State: 1/10th of your Maximum Life Points lost.
 [automatic/start-of-turn, effect 4]
-requires !inState("god-ki");
+requires !inState("god-ki") && !flagged("timeControl.noDrain");
 life.value -= floor(life.max / 10);

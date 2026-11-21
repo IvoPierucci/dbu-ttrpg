@@ -18,4 +18,12 @@ text: >
 
 ---
 
-# (2) Unique Abilities named Time 2(T) cheaper, (3) Time Control (3)'s Keywords, (4) Time Control (4) ignored: the table's.
+# (3) Time Control (3)'s Keywords: the table's, as Time Control (3) is.
+
+# (4) Time Control (4) ignored.
+[passive, effect 4]
+allow timeControl.noDrain;
+
+# (2) The Unique Abilities with 'Time' in their name 2(T) cheaper - Time Freeze (Time Seal and Time Reversion not built).
+[passive, effect 2]
+time-freeze.kiCost -= 2(T);

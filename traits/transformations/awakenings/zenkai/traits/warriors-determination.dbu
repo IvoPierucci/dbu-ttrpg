@@ -18,4 +18,7 @@ if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) 
     surgency += $Z * 1(T);
 }
 
-# (2) Z Energy Charges on an Ultimate Signature Technique used in the Undying State, once an Encounter: the table's.
+# (2) An Ultimate Signature Technique used in the Undying State, once an Encounter: Z Energy Charges on it - offered as it is declared.
+[triggered/declare-maneuver, 1/encounter, effect 2]
+requires usingUltimate && inState("undying");
+attack.energyCharges += $Z;

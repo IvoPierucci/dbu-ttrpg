@@ -2,6 +2,12 @@ id: battle-yardrat-spirit-of-battle
 name: Spirit of Battle
 order: 1
 slot: trait
+# (5)'s turn, for (6) - bookkeeping, kept off the Resources list.
+resource: spiritofbattle
+resourceInternal: true
+resourceDuration: true
+resourceLabel: Spirit of Battle
+resourceMax: 1
 description: >
   Y
 text: >
@@ -33,6 +39,13 @@ if (!bonded) {
 
 # (5) At the start of your turn: the Power Up out of sequence - the Empower Maneuver not till the start of your next (the table's).
 [triggered/start-of-turn, outOfSequence, effect 5]
+spiritofbattle.stacks += 1;
+expires(spiritofbattle, turn);
 maneuverOutOfSequence(power-up);
 
-# (6) An Energy Charge on a Signature Technique in that turn, and (7) an Ally's Actions on becoming Bonded: the table's.
+# (6) A Signature Technique in a turn (5) was used, once a Round: an Energy Charge on it - offered as it is declared.
+[triggered/declare-maneuver, 1/round, effect 6]
+requires usingSignature && hasResource("spiritofbattle");
+attack.energyCharges += 1;
+
+# (7) An Ally's Actions on becoming Bonded: the table's.

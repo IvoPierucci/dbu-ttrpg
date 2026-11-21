@@ -326,6 +326,8 @@ const PREDICATES = {
   signatureTechnique: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique)
     || customBuffBasicIsSignature(scope.data, scope.context?.maneuver?.id),
 
+  /** A Signature Technique being declared - Spirit of Battle (6)'s. */
+  usingSignature: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique),
   /** An Ultimate Signature Technique being declared - Questing Wisdom's. */
   usingUltimate: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique
     && scope.context?.maneuver?.ultimate),

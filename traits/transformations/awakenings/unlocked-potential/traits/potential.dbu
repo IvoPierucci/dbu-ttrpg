@@ -33,7 +33,9 @@ ki.perLevel += $Z;
 [passive, effect 4]
 dice.critical.category += $Z;
 
-# (5) A Combat Roll's Natural Result 1 higher after seeing it, Z times a Round: the table's.
+# (5) A Combat Roll's Natural Result 1 higher after seeing it, Z times a Round - offered on the attack's card (chat.mjs NUDGERS).
+[passive, effect 5]
+combatRoll.naturalUp += $Z;
 
 # (6) Using the Power Up, once an Encounter: the Surging State till the end of your turn.
 [triggered/power, 1/encounter, effect 6]

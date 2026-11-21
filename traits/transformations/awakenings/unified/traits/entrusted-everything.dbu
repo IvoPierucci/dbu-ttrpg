@@ -2,6 +2,12 @@ id: unified-entrusted-everything
 name: Entrusted Everything
 order: 1
 slot: trait
+# (6)'s Combat Rolls till the start of your next turn - bookkeeping, kept off the Resources list.
+resource: entrustedpower
+resourceInternal: true
+resourceDuration: true
+resourceLabel: Entrusted Everything
+resourceMax: 1
 description: >
   You have been entrusted with carrying on the legacy of another person. Their will, their power, their very essence, have been left in your hands.
 text: >
@@ -22,4 +28,12 @@ text: >
 [passive, effect 5]
 surgency += $Z * 1(bT);
 
-# (6) Combat Rolls Z(bT) till the start of your next turn with the Power Up, once an Encounter: the table's.
+# (6) Using the Power Up, once an Encounter: Combat Rolls Z(bT) till the start of your next turn.
+[passive]
+if (hasResource("entrustedpower")) {
+    combatRolls += $Z * 1(bT);
+}
+
+[triggered/power, 1/encounter, effect 6]
+entrustedpower.stacks += 1;
+expires(entrustedpower, start-of-next-turn);

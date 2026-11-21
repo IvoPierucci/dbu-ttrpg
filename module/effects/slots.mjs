@@ -620,6 +620,8 @@ const TABLE = [
     doc: "Once an Encounter, an Attacking Maneuver without paying its Ki Point Cost - its Ki Wager still paid - asked (Spiritual Apprentice (7))." },
   { key: "wound.quarterKiCost", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "The Wound 1/4 of the Attacking Maneuver's Ki Point Cost before any reductions (Spiritual Elite (2))." },
+  { key: "timeControl.noDrain", phase: PHASES.CORE, kind: F, ops: ["allow"],
+    doc: "Time Control (4)'s Life Points at the start of the turn not lost - Dominion Over Time (4)." },
   // Drunken Fist's, Feral Fist's, Wrathful's, Enraged's, Seething Fury's Traits.
   { key: "dodge.botchCritical", phase: PHASES.CORE, kind: F, ops: ["allow"],
     doc: "A Botch on a Dodge Roll a Critical instead, its Natural Result as it is (chat.mjs rollSide) - Unpredictable Combat (3)." },

@@ -2056,6 +2056,7 @@
     "transformations/enhancements/evil-saiyan/maneuvers/dark-saiya-evil-points.dbu",
     "maneuvers/movement-instant.dbu",
     "maneuvers/movement-or-basic-instant.dbu",
-    "transformations/enhancements/doping/maneuvers/amplified-power-up.dbu"
+    "transformations/enhancements/doping/maneuvers/amplified-power-up.dbu",
+    "maneuvers/healing-surge-instant.dbu"
   ]
 }

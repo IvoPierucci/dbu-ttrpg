@@ -28,6 +28,10 @@ if (demonicpower.stacks >= 3) {
 requires demonicfatigue.stacks >= 3;
 incoming.damage.category.shift += 1;
 
-# (4) Using the Power Up, once a Round: a Pressure Check - its Might Clash and the Shaken and Broken after it the table's.
+# (4) Using the Power Up, once a Round: a Pressure Check - passed, a Might Clash at every Opponent within a Sphere AoE; won, Shaken and
+# Broken till the start of your next turn (chat.mjs areaClash). The Clash follows any Pressure Check passed that Round (my reading).
 [triggered/power, 1/round, effect 4]
 pressureCheck();
+
+[triggered/pressure-passed, 1/round, effect 4]
+areaClash(might, standard, shaken, broken);
