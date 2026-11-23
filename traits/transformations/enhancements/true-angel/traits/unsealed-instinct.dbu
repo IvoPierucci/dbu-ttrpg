@@ -2,6 +2,13 @@ id: true-angel-unsealed-instinct
 name: Unsealed Instinct
 order: 2
 slot: burst
+# Activated: True Angel Linked to Autonomous Ultra Instinct for the rest of it - bookkeeping, kept off the Resources list.
+resource: unsealed
+resourceInternal: true
+resourceLabel: Unsealed Instinct
+resourceMax: 1
+resourceDuration: true
+grantsAspectTo: This = Linked (Autonomous Ultra Instinct) if unsealed.stacks >= 1
 description: >
   No longer holding back, you tap into the angelic power of Autonomous Ultra Instinct.
 text: >
@@ -10,4 +17,10 @@ text: >
 
 ---
 
-# Burst Limit: Linked (Autonomous Ultra Instinct) and access to it while in True Angel: the table's (add Autonomous Ultra Instinct).
+# Burst Limit, ticked with Apply effects on the entering card: True Angel Linked (Autonomous Ultra Instinct) - entered beside it, any
+# other Enhancement left, no Stress Test; had while in True Angel where it is not had (chat.mjs enterLinked), taken back as True Angel is
+# left. Kept for the Encounter (True Angel left, its (8) erases you anyway).
+[triggered/transform, 1/encounter, effect 1]
+unsealed.stacks += 1;
+expires(unsealed, encounter);
+enterLinked(autonomous-ultra-instinct);

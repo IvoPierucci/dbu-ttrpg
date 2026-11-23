@@ -467,6 +467,8 @@ async function runVerb(actor, call, context) {
     case "lifeBurn": return (await import("../chat.mjs")).lifeBurn(actor);
     case "namekianTechnique": return (await import("../chat.mjs")).namekianTechnique(actor);
     case "studyCharacter": return (await import("../chat.mjs")).studyCharacter(actor);
+    case "studyAll": return (await import("../chat.mjs")).studyAll(actor);
+    case "enterLinked": return (await import("../chat.mjs")).enterLinked(actor, String(args[0] ?? ""), call?.use ?? null);
     case "spectatorCheer": return (await import("../chat.mjs")).spectatorCheer(actor);
     case "commandMinions": return (await import("../chat.mjs")).commandMinions(actor);
     case "reabsorbGoops": return (await import("../chat.mjs")).reabsorbGoops(actor,

@@ -139,6 +139,18 @@ export const VERBS = Object.freeze({
     doc: "Namekian Techniques (4): an Opponent picked - Studied, the Basic Attack or a Signature Technique out of sequence at "
        + "them; not, Studied for the Round (chat.mjs namekianTechnique)."
   },
+  studyAll: {
+    args: [0, 0],
+    doc: "Every other Character on the scene Studied by you till the end of the next Combat Round - Giant's Vantage's \"All other "
+       + "Characters are Studied\" (chat.mjs studyAll)."
+  },
+  enterLinked: {
+    args: [1, 1],
+    names: [0],
+    wantsUse: true,
+    doc: "The Transformation this effect's belongs to Linked to this Enhancement as it is entered: had - or given while that one is in use - "
+       + "and entered beside it, any other Enhancement left (chat.mjs enterLinked) - Unsealed Instinct's Autonomous Ultra Instinct."
+  },
   studyCharacter: {
     args: [0, 0],
     doc: "Intelligent Fighter (2): a Character who attacked this Round picked - Studied till the end of the next (chat.mjs "

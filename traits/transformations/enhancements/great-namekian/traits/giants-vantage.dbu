@@ -2,6 +2,12 @@ id: great-namekian-giants-vantage
 name: Giant's Vantage
 order: 2
 slot: burst
+# Its Damage Reduction till the end of your next turn - bookkeeping, kept off the Resources list.
+resource: giantsvantage
+resourceInternal: true
+resourceLabel: Giant's Vantage
+resourceMax: 1
+resourceDuration: true
 description: >
   From your new height in the clouds, you can clearly see the battlefield, making everyone- and their attacks- seem like tiny ants.
 text: >
@@ -12,5 +18,14 @@ text: >
 
 ---
 
-# Its effects - Surgency by Size, Melee Range, Studied Allies sheltered, AoE, Life Points, Punching Down; the Burst Limit's Studied and
-# Damage Reduction; the Mastery's 4th Grade: the table's.
+# Burst Limit, ticked with Apply effects on the entering card: till the end of your next turn, every other Character Studied (through the
+# next Combat Round - my reading, Studied kept by the Round) and Damage Reduction 1/2 (rounded up) of G(T).
+[passive]
+if (hasResource("giantsvantage")) {
+    damageReduction += ceil($G * 1(T) / 2);
+}
+
+[triggered/transform, 1/encounter, effect 1]
+giantsvantage.stacks += 1;
+expires(giantsvantage, next-turn);
+studyAll();

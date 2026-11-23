@@ -1257,6 +1257,12 @@ export async function leftTransformation(actor, item, { into = null } = {}) {
     await actor.update({ "system.life.value": (Number(actor.system.life?.value) || 0) - lost });
     ui.notifications?.info(`${actor.name}: ${item.name} left - Drained, and ${lost} Life Points lost.`);
   }
+  // Had only while this one is in use - Unsealed Instinct's "access to Autonomous Ultra Instinct while in the True Angel Transformation"
+  // (`whileIn`, chat.mjs enterLinked): left with it, and taken back.
+  for (const held of transformationItems(actor).filter(each => each.flags?.["dbu-ttrpg"]?.whileIn === item.id)) {
+    if (held.system?.active) await leaveTransformations(actor, [held.id]);
+    if (actor.items.has(held.id)) await removeTransformation(actor, held.id);
+  }
   if (level("fading") >= 2) return removeTransformation(actor, item.id);
   if (level("fading") === 1) await item.update({ "system.choices": [...(item.system.choices ?? []).filter(entry => entry.key !== "fadedIn"),
     { key: "fadedIn", value: String(globalThis.game?.combat?.id ?? "none") }] });

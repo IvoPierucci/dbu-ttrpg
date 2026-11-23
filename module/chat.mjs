@@ -18066,6 +18066,50 @@ async function refinedSpent(actor, key) {
 }
 
 /**
+ * Giant's Vantage: "Until the end of your next turn: All other Characters are Studied." Every other Character on the scene, through the
+ * next Combat Round (my reading of "the end of your next turn", Studied being kept by the Round) - an Ally with what Studying Allies gives.
+ */
+export async function studyAll(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const others = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor?.uuid) && isCharacter(token.actor) && !token.actor.system?.defeated)
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!actor || !others.length) return UNSPENT;
+  const through = (game.combat?.round ?? 0) + 1;
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const kept = studiedEntries(actor).filter(entry => !others.some(other => other.uuid === entry.uuid));
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.studied`]: [...kept, ...others.filter(other => !allies.has(other.uuid))
+    .map(other => ({ uuid: other.uuid, combatId: game.combat?.id ?? "none", through }))] });
+  for (const ally of others.filter(other => allies.has(other.uuid))) await study(actor, ally, through);
+}
+
+/**
+ * Unsealed Instinct: "True Angel gains the Linked (Autonomous Ultra Instinct) Aspect and triggers its effects. Additionally, you have access
+ * to Autonomous Ultra Instinct while in the True Angel Transformation." The one this effect's Trait belongs to (`use`) in use: the Enhancement
+ * had, or given while that one is in use (`whileIn`, taken back as it is left - leftTransformation), and entered beside it as Linked enters
+ * one - any other Enhancement left, no Stress Test. Its Linked Aspect: the Trait's own `grantsAspectTo`.
+ */
+export async function enterLinked(actor, id, use) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const T = await import("./transformations.mjs");
+  const trait = actor?.items?.get(use?.sourceId ?? "");
+  const source = actor?.items?.get(trait?.system?.transformation ?? "");
+  if (!source?.system?.active || !id) return UNSPENT;
+  let linked = T.transformationItems(actor).find(each => each.system?.transformationId === id);
+  if (!linked) {
+    linked = await T.addTransformation(actor, id);
+    if (!linked) return UNSPENT;
+    await linked.update({ [`flags.${SCOPE}.grantedBy`]: trait.id, [`flags.${SCOPE}.whileIn`]: source.id });
+  }
+  if (linked.system?.active) return;
+  const others = T.transformationsInUse(actor).filter(each => (each.id !== source.id) && (each.id !== linked.id)
+    && (T.kindOf(T.fileOf(each)) === "enhancement") && !each.system?.transcended);
+  if (others.length) await T.leaveTransformations(actor, others.map(each => each.id));
+  await actor.updateEmbeddedDocuments("Item", [{ _id: linked.id, "system.active": true }]);
+  return settledNote({ speaker: ChatMessage.getSpeaker({ actor }) }, `${source.name}: ${actor.name} enters ${linked.name} too (Linked).`);
+}
+
+/**
  * One more Studied, through the Round given - the rest still running kept. An Ally: what those who Study Allies give them -
  * Intelligent Fighter (6)'s Combat Rolls, Spirit of Namek (2)'s Soak and Wound - each a mark of your Tier on your clock as
  * long (`ending`: chosen as a Round ends, its own edge still to come).
