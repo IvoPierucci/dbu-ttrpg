@@ -14,7 +14,7 @@ import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelPar
   woundResourceStacks, woundResources } from "./duel.mjs";
 import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
-import { automaticIds, chosenAsItHappens, reactiveFor, usesLeft } from "./effects/registry.mjs";
+import { automaticIds, chosenAsItHappens, qualitiesSuffered, reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { bondOf, evaluate as evaluateCondition, partnerOf as partnerOfSync } from "./effects/conditions.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, actionsWithin, convertActions, convertibleActions, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
@@ -34787,6 +34787,7 @@ async function answerHit(message, attack, attacker, struck, script = null) {
   // Dangerous Amplification (2)(4): Life Points on the Wound, asked - and an Energy Charge for more than 8(bT), once an Encounter.
   const lifeWound = await lifeOnWoundAsked(attacker, attack);
   if (lifeWound.spent) answer.marks.lifeWound = lifeWound.spent;
+  if (lifeWound.label) answer.marks.lifeWoundLabel = lifeWound.label;
   if (lifeWound.charge) answer.marks.lifeCharge = true;
   // Power of Evil (2): Evil Points on the Wound, asked.
   const evilWound = await evilPointsAsked(attacker, "evilPoints.onWound", "the Wound Roll");
@@ -35085,7 +35086,7 @@ function twoWorldsWoundParts(attacker, attack) {
   // Full Power of the Super Saiyan (4), taken as the hit landed.
   if (attack.battleBornWound) parts.push({ label: "Full Power of the Super Saiyan (Battle Born)", value: Number(attack.battleBornWound) || 0 });
   if (attack.evilWound) parts.push({ label: "Power of Evil (Evil Points)", value: Number(attack.evilWound) || 0 });
-  if (attack.lifeWound) parts.push({ label: "Dangerous Amplification (Life Points)", value: Number(attack.lifeWound) || 0 });
+  if (attack.lifeWound) parts.push({ label: attack.lifeWoundLabel || "Dangerous Amplification (Life Points)", value: Number(attack.lifeWound) || 0 });
   if (attack.momentWound?.value) parts.push({ label: attack.momentWound.source || "On this attack", value: Number(attack.momentWound.value) || 0 });
   if (attack.sizeWound) parts.push({ label: "Golden Beast (Size Categories larger)", value: Number(attack.sizeWound) || 0 });
   // Shared Heritage (4): "Increase the Wound Roll of your Fused Technique by 2(T) for each Fused Character you possess."
@@ -35991,6 +35992,11 @@ async function rollAttackWoundWork(message, attack) {
           .join(", ") || "Demonic Combat", value: conditioned(target)
         ? (Number(attacker.system.effects?.slots?.["wound.vsConditioned"]?.add) || 0) : 0 },
       { label: "Overwhelming Pressure", value: pressing ? pressing(target) : 0 },
+      // Scalding Assault (3): against one suffering from the Obscured Environmental Quality's effects - named by what gave it.
+      { label: `${(attacker.system.effects?.slots?.["wound.vsObscured"]?.parts ?? []).map(part => part.source).filter(Boolean)
+          .join(", ") || "Scalding Assault"} (Obscured)`,
+        value: (Number(attacker.system.effects?.slots?.["wound.vsObscured"]?.add) || 0) && qualitiesSuffered(target).includes("obscured")
+          ? (Number(attacker.system.effects?.slots?.["wound.vsObscured"]?.add) || 0) : 0 },
       { label: "Stealthy Trick", value: own.oblivious ? unseen : 0 },
       // Assassinate (1): against one Oblivious of you as it hit.
       // Master Assassin (1)'s with it - named by what gave it.
@@ -43280,6 +43286,19 @@ function notHitButtons(message, container, attack) {
  */
 async function lifeOnWoundAsked(actor, attack) {
   const none = { spent: 0, charge: false };
+  // Scalding Assault (6): "you may spend Life Points up to your Surgency to increase the Wound Roll of that Attacking Maneuver by an equal
+  // amount" - once a Round; in the Raging State's 2nd Level or higher, its script's.
+  if ((actor?.system?.effects?.slots?.["lifeOnWound.upToKiCost"] !== true) && (actor?.system?.effects?.slots?.["lifeOnWound.upToSurgency"] === true)
+    && (actor.getFlag?.(SCOPE, "scaldingLifeRound") !== roundKey())) {
+    const most = Math.max(0, Math.min(Number(actor.system.surgency) || 0, Number(actor.system.life?.value) || 0));
+    if (!most) return none;
+    const spent = Math.max(0, Math.min(most, Number(await askPlayerAmount(actor, `${actor.name}: Scalding Assault`, most,
+      `Life Points on the Wound Roll (up to your Surgency, ${most}; once a Round)`)) || 0));
+    if (!spent) return none;
+    await requestActorUpdate(actor, { "system.life.value": (Number(actor.system.life?.value) || 0) - spent,
+      [`flags.${SCOPE}.scaldingLifeRound`]: roundKey() });
+    return { spent, charge: false, label: "Scalding Assault (Life Points)" };
+  }
   if (actor?.system?.effects?.slots?.["lifeOnWound.upToKiCost"] !== true) return none;
   const most = Math.max(0, Math.min(Number(attack?.baseKiCost) || 0, Number(actor.system.life?.value) || 0));
   if (!most) return none;

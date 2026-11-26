@@ -4280,10 +4280,12 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   // God Strike's.
   const extras = [maneuver.secondProfile, ...(maneuver.appliedProfiles ?? [])].map(id => PROFILES[id ?? ""]).filter(Boolean);
   const second = extras.find(profile => profile.wagerFromLife) ?? extras[0] ?? null;
+  // Simmering Temper (4): "You may spend your Life Points as if they were Ki Points for any Ki Wagers you make" - whatever the Profile.
+  const anyLife = actor?.system?.effects?.slots?.["wager.anyFromLife"] === true;
   const lifeWager = offered.some(profile => profile.wagerFromLife) || Boolean(second?.wagerFromLife);
   const capped = amount => Math.min(amount,
     Number.isFinite(limits.wagerCap) ? limits.wagerCap : Number.POSITIVE_INFINITY);
-  const lifeMax = lifeWager ? capped(maxLifeWager(actor, features)) : 0;
+  const lifeMax = (lifeWager || anyLife) ? capped(maxLifeWager(actor, features)) : 0;
 
   // And what the Profile picked grants. Elemental (Light) "gains the Full Wager Advantage
   // for free", and it is picked in this same dialog - so the ceiling is settled once the
@@ -4293,7 +4295,7 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   const fullOffered = !features.includes("full-wager")
     && [...offered, ...extras].some(profile => profile?.grantsAdvantage === "full-wager");
   const fullMax = fullOffered ? capped(maxKiWager(actor, [...features, "full-wager"])) : 0;
-  const fullLifeMax = (fullOffered && lifeWager)
+  const fullLifeMax = (fullOffered && (lifeWager || anyLife))
     ? capped(maxLifeWager(actor, [...features, "full-wager"]))
     : 0;
 
@@ -4302,8 +4304,8 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   const wager = `
     <div class="dbu-wager dbu-wager-top">
       <label class="dbu-wager-ki"><span>Ki Wager</span>
-        <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${Math.max(wagerMax, lifeMax, fullMax, fullLifeMax)}"/></label>${lifeWager ? `
-      <label class="dbu-wager-life" data-wager-life${second?.wagerFromLife ? " data-always" : ""}
+        <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${Math.max(wagerMax, lifeMax, fullMax, fullLifeMax)}"/></label>${(lifeWager || anyLife) ? `
+      <label class="dbu-wager-life" data-wager-life${second?.wagerFromLife ? " data-always" : ""}${(anyLife && !second?.wagerFromLife) ? " data-always" : ""}
              data-tooltip="Spend Life Points instead of Ki Points. It still comes out of your Capacity. Max ${lifeMax}.">
         <input type="checkbox" name="wagerFromLife"/>
         <span>Wager Life Points</span>
@@ -4340,8 +4342,8 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
           // the browser, not a guarantee, and a typed number gets through it.
           // Paid in Life only if asked for and the Profile chosen allows it - the box is
           // drawn for the whole list, and ticking it under another Profile means nothing.
-          const wagerFromLife = Boolean((PROFILES[profile]?.wagerFromLife || second?.wagerFromLife)
-            && dialog.element.querySelector('input[name="wagerFromLife"]')?.checked);
+          const wagerFromLife = Boolean((PROFILES[profile]?.wagerFromLife || second?.wagerFromLife) || anyLife)
+            && Boolean(dialog.element.querySelector('input[name="wagerFromLife"]')?.checked);
           // Or in Divine Ki, where it is not Life: no more than there is of it.
           const wagerFromDivine = !wagerFromLife && Boolean(actor?.system?.divineKi?.active)
             && Boolean(dialog.element.querySelector('input[name="wagerFromDivine"]')?.checked);

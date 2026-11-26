@@ -768,6 +768,18 @@ function highPrograms(actor, report) {
  * Square have" and two answers to it would be two lists to keep in step.
  */
 function qualityPrograms(actor, report) {
+  const ids = qualitiesSuffered(actor);
+  if (!ids.length) return [];
+  return qualityEntries(actor, ids, report);
+}
+
+/**
+ * The Environmental Qualities whose effects this character suffers - the ones that become effects on them (qualityPrograms): none for
+ * one sheltered from them, nor one a Trait of theirs ignores. Asked by others too - Scalding Assault (3)'s "Characters suffering from
+ * the effects of the Obscured Environmental Quality".
+ */
+export function qualitiesSuffered(actor) {
+  if (!actor) return [];
   // Ignored altogether by what they are wearing - Environmental Protection.
   if (groundIgnored(Array.from(actor.items ?? []), getTrait).qualities) return [];
   // In a Vehicle: "Characters within a Vehicle ignore the effects of the Battle Environment and Environment Qualities".
@@ -786,9 +798,11 @@ function qualityPrograms(actor, report) {
   const ignoredQualities = new Set(Array.from(actor.items ?? []).filter(item => ["racial", "talent"].includes(item.type))
     .flatMap(item => [getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.ignoresQualities ?? []].flat())
     .map(each => String(each).trim().toLowerCase()).filter(Boolean));
-  const ids = qualitiesOf(actor.system, standing, getTrait).filter(id => !ignoredQualities.has(id));
-  if (!ids.length) return [];
+  return qualitiesOf(actor.system, standing, getTrait).filter(id => !ignoredQualities.has(id));
+}
 
+/** Each Quality suffered, its file's effects as an entry. */
+function qualityEntries(actor, ids, report) {
   const entries = [];
   for (const id of ids) {
     const trait = getTrait(id);

@@ -1,0 +1,18 @@
+id: boiling-rage-vigorous-boil
+name: Vigorous Boil
+order: 2
+slot: burst
+description: >
+  It doesn't matter why you're angry, your full wrath has been unleashed no matter how minor the slight, and you are ready to annihilate the target of your fury.
+text: >
+  Vigorous Boil: It doesn't matter why you're angry, your full wrath has been unleashed no matter how minor the slight, and you are ready to annihilate the target of your fury.
+  (1)-[Triggered/Transform]: Enter the Apoplectic level of the Raging State until the end of your next turn (ignoring the 5th effect of Explosive Fury). Then, trigger the 2nd effect of Steaming Fury, but increase the Magnitude of the AoE to Destructive.
+
+---
+
+# Burst Limit, ticked with Apply effects on the entering card: Apoplectic till the end of your next turn (Explosive Fury (5) does not
+# take it back: a State entered with a clock of its own), then Steaming Fury (2) - you and whoever your player targets Smoked, their
+# Square Obscured, till the end of your next turn (chat.mjs steamCloud). That its Sphere is Destructive: whom it catches, the table's.
+[triggered/transform, 1/encounter, effect 1]
+enterState(raging, 3, next-turn);
+steamCloud();

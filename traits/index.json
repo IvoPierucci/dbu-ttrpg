@@ -2075,6 +2075,10 @@
     "transformations/awakenings/time-skipper/unique/time-skip/time-restraint.dbu",
     "transformations/awakenings/time-skipper/unique/time-skip/time-shift.dbu",
     "transformations/awakenings/time-skipper/unique/time-skip/time-to-make-the-donuts.dbu",
-    "transformations/awakenings/time-skipper/unique/time-skip/walk-through-time.dbu"
+    "transformations/awakenings/time-skipper/unique/time-skip/walk-through-time.dbu",
+    "transformations/enhancements/boiling-rage/boiling-rage.dbu",
+    "transformations/enhancements/boiling-rage/traits/scalding-assault.dbu",
+    "transformations/enhancements/boiling-rage/traits/simmering-temper.dbu",
+    "transformations/enhancements/boiling-rage/traits/vigorous-boil.dbu"
   ]
 }
