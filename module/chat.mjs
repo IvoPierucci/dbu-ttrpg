@@ -33404,7 +33404,11 @@ async function resolveAttackWork(message, attack) {
   const againStrike = (attack.momentDice?.strike ?? []).map(die => die.formula).filter(Boolean).join(" + ");
   // Violent Monster (2): every target at a lower Health Threshold.
   const strike = await rollSide(attacker, [...strikeParts(attacker, attack), ...lowerThresholdStrike(attacker, attack)], {
-    ...attackerOptions, ...((armament || againStrike) ? { extraDice: [attackerOptions.extraDice, armament, againStrike].filter(Boolean).join(" + ") } : {}),
+    // Each by its name on the card - and the Strike's own Tier of Power Extra Dice kept (one joined to them was read as every roll's).
+    ...attackerOptions, ...((armament || againStrike) ? { extraDice: [{ label: "Extra dice", formula: tierDice(attacker, "strike") },
+      { label: "Divine Armament", formula: armament },
+      ...(attack.momentDice?.strike ?? []).map(die => ({ label: die.source || "On this attack", formula: die.formula }))]
+      .filter(group => group.formula) } : {}),
     slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
     // A Signature Technique's: its own dice and Critical Target (a Custom Buff's). Its Adaptation Points are a Wound Roll's alone.
     signatureRoll: effectSignature(attacker, attack),
