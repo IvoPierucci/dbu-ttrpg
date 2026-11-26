@@ -13,8 +13,8 @@ ordering, which is why the tree looks like the ladder.
 ```
 traits/
   aspects/                 shared by whichever Transformations declare them
-  states/                  the six States, whose effects scale with their level
-  transformations/<form>/
+  states/                  the States and Special States, whose effects scale with their level
+  transformations/<type>/<id>/   one folder per Transformation, with everything it owns
   races/<race>/            that race's Traits, chosen from as a catalogue
   talents/                 standalone, chosen in Progression
   conditions/              Combat Conditions
@@ -64,7 +64,11 @@ surge.life.dice += 1d10(T);
 
 ## index.json
 
-Every file has to be named there. This is not busywork that could be automated
-away - a browser cannot list a directory, and the one Foundry API that can needs a
-permission ordinary players do not have. The index is generated when the system is
-released, so nobody maintains it by hand.
+Every file has to be named there - a browser cannot list a directory, and the one
+Foundry API that can needs a permission ordinary players do not have. Don't edit it by
+hand: after adding, moving or deleting files run
+
+    python tools/reindex.py --write
+
+which appends new files and drops gone ones (and, run without `--write`, says what
+differs). After a merge conflict in `index.json`, take either side and run it again.
