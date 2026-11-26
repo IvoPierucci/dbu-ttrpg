@@ -6115,6 +6115,23 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const asked = await askTechniqueDeclaration(actor, maneuver, declared, targetActor);
       if (!asked) return false;
       declared = { ...declared, ...asked };
+      // Ascended Signature given for this use alone - Quick to Master (2)'s, Earthling-Raised (3)'s "Add a single Advantage": chosen in the
+      // window just answered, so its "At Attack Declaration, this Signature Technique can become an Ultimate" is asked now (the user's
+      // report, 2026-11-26: it was asked only of one built with it, before that window).
+      if (!maneuver.ultimate && !maneuver.ascended && ((maneuver.level ?? "super") === "super")
+        && (declared.advantages ?? []).includes("ascended-signature")
+        && !(maneuver.advantages ?? []).includes("ascended-signature")
+        && !(actor.system?.minion && !actor.items?.get?.(maneuver.itemId)?.flags?.["dbu-ttrpg"]?.minionUltimate)
+        && (ultimatesUsed(actor) < ULTIMATES_PER_ENCOUNTER)) {
+        const ascend = await foundry.applications.api.DialogV2.wait({
+          classes: ["dbu-dialog"], window: { title: `${maneuver.name} - Ascended Signature` },
+          content: "<p>Use it as an Ultimate Signature Technique? It cannot be used again this Combat Encounter.</p>",
+          buttons: [{ action: "ascend", label: "Ascend" }, { action: "super", label: "As a Super" }, { action: "cancel", label: "Cancel" }],
+          rejectClose: false
+        });
+        if (!["ascend", "super"].includes(ascend)) return false;
+        if (ascend === "ascend") maneuver = { ...maneuver, ultimate: true, ascended: true };
+      }
       // Flexible Technique (1)'s Efficiency: "-4(T) per rank" off the Technique's own Ki, never below the Profile's.
       if (declared.flexibleEfficiency) maneuver = { ...maneuver, kiCostPerTier: Math.max(0, (Number(maneuver.kiCostPerTier) || 0) - 4) };
       // Employed for Skill: Advantages off for Wound, or Disadvantages off for Ki - for this use alone.
