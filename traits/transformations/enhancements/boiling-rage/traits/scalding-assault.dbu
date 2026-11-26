@@ -5,6 +5,8 @@ slot: trait
 replaces: Frenzied Assault
 # Its [Constant] effects: a [Triggered] one that may be used outside the Transformation (the user's).
 constant: 1
+# (1) counts as Steaming Fury's 3rd for its limits: "this still counts towards its [3/Encounter] Keyword" (the user's, 2026-11-26).
+sharesUses: 1 = steaming-fury 3
 description: >
   Your erratic and unpredictable behavior combined with your intense anger allows you to strike your opponent with greater power when they least expect it.
 text: >
@@ -19,8 +21,7 @@ text: >
 ---
 
 # (1) Constant: the Power Up's window, where Steaming Fury (3) answers it - in its place, the Transformation Maneuver out of sequence.
-# Steaming Fury's own 1/Round and 3/Encounter for it (my reading): these are counted on their own, and one or the other ticked - the
-# window refuses two Out-of-Sequence Maneuvers for one trigger, but Steaming Fury (3) is not one; that it is "instead", the table's.
+# Its uses Steaming Fury (3)'s, one and the same 1/Round and 3/Encounter (its header's sharesUses): either used, both are spent.
 [triggered/power, 1/round, 3/encounter, outOfSequence, effect 1]
 requires holdsTrait("steaming-fury");
 maneuverOutOfSequence(transformation);
@@ -36,7 +37,7 @@ wound.vsObscured += 2(T);
 surgency += states.raging * 1(T);
 
 # (5) A Level of the Raging State higher - entering it, or going up a Level in it (my reading: entering it is reaching its 1st) - once a
-# Round: Life Points equal to your Surgency. Asked in the window either brings.
+# Round between the two (blocks of one effect share its limit): Life Points equal to your Surgency. Asked in the window either brings.
 [triggered/state-level/raging, 1/round, effect 5]
 life.value += surgency;
 
