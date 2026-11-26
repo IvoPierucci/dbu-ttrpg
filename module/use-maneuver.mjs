@@ -6130,7 +6130,29 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
           rejectClose: false
         });
         if (!["ascend", "super"].includes(ascend)) return false;
-        if (ascend === "ascend") maneuver = { ...maneuver, ultimate: true, ascended: true };
+        if (ascend === "ascend") {
+          maneuver = { ...maneuver, ultimate: true, ascended: true };
+          // Karmic Assault, as an Ultimate now (the user's, 2026-11-26) - put before the declaration window for one built Ascended. What its
+          // Super Profile asks there, asked here: Giga Flare's and Super Combination's extra Actions.
+          const assaulted = await karmicAssault(actor, maneuver, declared);
+          if (!assaulted) return false;
+          ({ maneuver, declared } = assaulted);
+          if (["giga-flare", "super-combination"].includes(declared.karmicAssault)) {
+            const giga = declared.karmicAssault === "giga-flare";
+            const spare = Math.max(0, actionsLeft(actor, "standard") - (Number(maneuver.actionCost) || 1) - (Number(declared.extraActions) || 0));
+            const most = giga ? Math.min(2, spare) : spare;
+            const { askPlayerAmount } = await import("./chat.mjs");
+            const extra = most ? Math.max(0, Math.min(most, Number(await askPlayerAmount(actor, `${maneuver.name}: ${giga ? "Giga Flare" : "Super Combination"}`,
+              most, giga ? "Extra Actions - each 2(T) KP and 2 Energy Charges"
+                : "Extra Actions - each a rank of Alotta Lotta Attacks and Peppering Blows, and an Energy Charge")) || 0)) : 0;
+            if (extra) {
+              const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+              declared = { ...declared, [giga ? "gigaFlare" : "superCombination"]: extra,
+                extraActions: (Number(declared.extraActions) || 0) + extra,
+                ...(giga ? { kiSurcharge: (Number(declared.kiSurcharge) || 0) + (2 * extra * tier) } : {}) };
+            }
+          }
+        }
       }
       // Flexible Technique (1)'s Efficiency: "-4(T) per rank" off the Technique's own Ki, never below the Profile's.
       if (declared.flexibleEfficiency) maneuver = { ...maneuver, kiCostPerTier: Math.max(0, (Number(maneuver.kiCostPerTier) || 0) - 4) };
