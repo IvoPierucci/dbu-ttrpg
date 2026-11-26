@@ -267,6 +267,8 @@ const TABLE = [
     doc: "Acrobatics Ranks more counted for the Flip's effects, past the maximum (Acrobat Star's; use-maneuver.mjs moveRanks)." },
   { key: "stealthStrike.extraUses", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Times more a Round Stealth Strike (2) may be used (Master Assassin's; chat.mjs stealthStrikeClashes)." },
+  { key: "clash.corporealForCognitive", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    doc: "In a Clash an Opponent initiated, the Corporeal Save offered where the Cognitive is (Hard as Steel (4)'s; chat.mjs savesOffered)." },
   { key: "wound.vsObscured", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Wound against each one hit suffering from the Obscured Environmental Quality's effects (Scalding Assault (3)'s; "
        + "chat.mjs)." },

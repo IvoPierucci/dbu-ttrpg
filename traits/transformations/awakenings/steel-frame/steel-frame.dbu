@@ -1,0 +1,25 @@
+id: steel-frame
+name: Steel Frame
+type: awakening
+subtype: lesser
+origin: body
+racial: Any
+prerequisites: N/A
+tier: 1+
+maxStacks: 1
+aspects:
+bonuses: TE +2
+description: >
+  Thanks to your defensive training and sturdy frame, you act as a shield against damage, soaking up the blows dished out by your enemies. No matter how powerful your enemy may be, they will certainly never forget how resilient you are.
+text: >
+  Thanks to your defensive training and sturdy frame, you act as a shield against damage, soaking up the blows dished out by your enemies. No matter how powerful your enemy may be, they will certainly never forget how resilient you are.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Body / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG – · FO – · TE +2 · SC – · IN – · MA – · PE –
+
+  Hard as Steel: Your rock-solid muscles make striking you akin to punching solid steel.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T).
+  (3)-[Passive]: While you are below the Injured Health Threshold, increase your Soak Value by 1(T).
+  (4)-[Passive]: If you would use your Cognitive Save for a Clash initiated by an Opponent, you may use your Corporeal Save instead.
+  (5)-[Triggered, 1/Round]: If you use the Direct Hit option of the Defend Maneuver, reduce the Damage Category of the Attacking Maneuver which targets you by 1 Category for the sake of your Damage Calculation.

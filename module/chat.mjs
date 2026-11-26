@@ -13100,7 +13100,17 @@ function skillLabel(actor, key) {
  */
 function savesOffered(clash, uuid) {
   const theirs = clash.defenderSaves ?? [];
-  return ((uuid === clash.defenderUuid) && theirs.length) ? theirs : (clash.saves ?? []);
+  const offered = ((uuid === clash.defenderUuid) && theirs.length) ? theirs : (clash.saves ?? []);
+  // Hard as Steel (4): "If you would use your Cognitive Save for a Clash initiated by an Opponent, you may use your Corporeal Save
+  // instead" - offered beside it, the one answering it chooses.
+  if ((uuid === clash.defenderUuid) && offered.includes("cognitive") && !offered.includes("corporeal")) {
+    const defender = fromUuidSync(uuid);
+    const challenger = clash.challengerUuid ? fromUuidSync(clash.challengerUuid) : null;
+    if ((defender?.system?.effects?.slots?.["clash.corporealForCognitive"] === true) && challenger && areOpponents(defender, challenger)) {
+      return [...offered, "corporeal"];
+    }
+  }
+  return offered;
 }
 
 /** Willpower (1): "Choose a Saving Throw, increase the Dice Score for any Clashes involving that Saving Throw by 1(T)." */
