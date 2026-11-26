@@ -7055,7 +7055,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Round's Fake Out.
   if (maneuver.signature && !maneuver.signatureTechnique) {
     // Flexible Technique (2)'s other Profile: another Technique - its own Round's use not this one's.
-    const entries = techniqueUseEntries(maneuver, { ascended: Boolean(maneuver.ascended) })
+    // Under the Technique's own id - the door's (`signature-technique`) is what throughSignatureTechnique left on it, and its Round's use
+    // and an Ascended one's Encounter are read by the Technique's (technique-use.mjs whyNotTechnique, usedThisRoundTwice).
+    const ownItem = maneuver.itemId ? actor.items.get(maneuver.itemId) : null;
+    const entries = techniqueUseEntries(ownItem ? { ...maneuver, id: definitionOf(ownItem).id } : maneuver, { ascended: Boolean(maneuver.ascended) })
       .filter(entry => !(declared?.flexibleProfile && entry.endsWith(".technique")));
     if (entries.length) {
       await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), ...entries] });
