@@ -5,6 +5,10 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 0.3.11 (2026-11-27)
+
 - **New Transformation:** Super Majin (a Greater Awakening of the Majins). The `surge()` verb takes a fifth number: the Surgency
   multiplied for that Surge.
 - **New Transformation:** Unkillable Majin, the first Super Awakening. With it, Grand Awakenings: a Trait with `slot: grand` is off
