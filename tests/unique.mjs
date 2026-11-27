@@ -1111,10 +1111,10 @@ const check = (label, actual, expected) => {
 // --- Refresh talents: those with no source -----------------------------------------------------------------------------------------
 {
   const { orphanTalents } = await import(modUrl("talents.mjs"));
-  const TP = read("templates", "parts", "actor-traits.hbs"), SH = read("module", "sheets", "actor-character-sheet.mjs");
+  const TP = read("templates", "parts", "actor-settings.hbs"), SH = read("module", "sheets", "actor-character-sheet.mjs");
   const talent = (id, flags) => ({ id, type: "talent", flags: { "dbu-ttrpg": { sourceId: id, ...flags } } });
   const trait = { id: "T1", type: "racial", flags: { "dbu-ttrpg": { sourceId: "majin-see" } } };
-  check("Refresh talents: a button for whoever may edit; the Progression tab's and a held Racial Trait's kept (by its file or an older Item id); one from neither, or from a Trait no longer held, named to go; not a Talent, left alone",
+  check("Refresh talents: a button for whoever may edit (Settings' Debug, the user's 2026-11-27); the Progression tab's and a held Racial Trait's kept (by its file or an older Item id); one from neither, or from a Trait no longer held, named to go; not a Talent, left alone",
     [TP.includes('data-action="refreshTalents"'), SH.includes("refreshTalents: DBUCharacterSheet._onRefreshTalents,"),
      orphanTalents([talent("a", { fromProgression: true }), talent("b", { fromTrait: "majin-see" }), talent("c", {}),
        talent("d", { fromTrait: "lingering-power" }), talent("e", { fromTrait: "T1" }), trait]).map(item => item.id)],

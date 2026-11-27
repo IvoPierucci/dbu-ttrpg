@@ -1361,6 +1361,7 @@
 
 /* Debug's buttons, a row each kind (the user's): the round and the Encounter; the Maneuvers; Fusion. */
 .dbu-ttrpg .dbu-debug-row { flex-wrap: wrap; }
+.dbu-ttrpg .dbu-debug-toggles { display: flex; flex-wrap: wrap; gap: 4px 18px; }
 .dbu-ttrpg .dbu-debug-row + .dbu-debug-row { margin-top: 6px; }
 
 .dbu-ttrpg .capacity-note {
