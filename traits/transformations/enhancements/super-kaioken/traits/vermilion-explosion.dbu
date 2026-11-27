@@ -1,0 +1,19 @@
+id: super-kaioken-vermilion-explosion
+name: Vermilion Explosion
+order: 3
+slot: burst
+description: >
+  In a brilliant burst of scarlet, your power explodes, multiplying rapidly in power.
+text: >
+  Vermilion Explosion: In a brilliant burst of scarlet, your power explodes, multiplying rapidly in power.
+  (1)-[Triggered/Transform]: Use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, reduce the Life Point Cost for each Grade of Super Kaioken to 0 until the end of your turn.
+
+---
+
+# Burst Limit: entering it, ticked with Apply effects on its card (Scarlet Multiplier's way, the user's 2026-11-21: as it is activated) - the
+# Life Point Cost 0 till the end of your turn from then (Multiplied Power's `vermilion`), and the Power Up's button on that card, out of
+# sequence.
+[triggered/transform, 1/encounter, outOfSequence, effect 1]
+vermilion.stacks += 1;
+expires(vermilion, turn);
+offerOneOf(power-up);

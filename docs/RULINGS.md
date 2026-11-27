@@ -62,6 +62,17 @@ the rule and how it is applied in the code.
 - **Secrets stay with the ARC (GM).** An effect that makes you "aware" of another character's hidden info (Alignment,
   Power Level...) reveals nothing on the card. The GM tells the player or keeps it back.
 
+## How a Trait's text shows on the sheet (the owner's, 2026-11-27)
+
+- **As dbu-rpg.com prints it:** the chat's palette and font; the Trait's name and each effect's number and keywords bold in the
+  site's yellow. The name on the folded row is yellow too.
+- **Uses left replace the limit's number** in the keywords ("[Triggered, 0/Encounter]"): yellow while all are left, orange once
+  some are spent, red at none.
+- **"Triggered" reads "Automatic"** (blue, as is its button) while the effect's Triggered/Automatic button is set Automatic.
+- **Each amount's value for this character follows it in brackets** - the owner's spreadsheet convention: "1(T) [3]", "Z(bT) [6]",
+  "1/2 of your Max Capacity [48]". Rounded down unless the text says up. Shown by default; Settings can hide them.
+- The row's buttons are all one height (18px), the row centred on one line.
+
 ## States, Thresholds, Critical
 
 - **States** are only Mindful, Raging, Superior, Surging and Undying. Everything else (Dead, Determined, Drunk, Feral,
@@ -80,7 +91,16 @@ the rule and how it is applied in the code.
 
 - **Allies are the Settings tab's Allies list**, and the relation is mutual. Token disposition never matters.
   - Use `areOpponents(a, b)` for "Opponent", never `!areAllies`. A Minion is on its Master's side.
-- **Racial Traits are added by hand** from the Traits tab, and any race's Traits may be taken. Choosing a race grants none.
+- **The race gives its Racial Traits (the owner's, 2026-11-27; until then they were added by hand).** Choosing a race (and Subrace) puts
+  all its Primary, Secondary and Subrace Traits on the character. A race that says how many Secondary Traits are chosen
+  (`secondaryChoices` in its JSON - the Majins' 4) has them picked on the Progression tab. A Minion (not a Duplicate, not of a Minion Race)
+  has its Primary Traits and picks two of its Secondary and Subrace Traits there; a Minion Race's keeps all. Changing the race replaces
+  every Racial and Factor Trait. A race Trait is exchanged for a Factor Trait from its row - a Secondary for a Secondary Factor Trait, a
+  Primary only for one that names it - and restored the same way; Factor Traits not the character's are dimmed with why, never refused.
+  Add Racial Trait is hidden, back with Settings' Debug "Show Add Racial Trait". Characters made before had their Racial and Factor Traits
+  taken off once, given their race's again as their sheet was next opened; their exchanges and picks were made again by hand.
+  "Regain access to the Racial Trait that you replaced with the Factor Trait" (Greater Mutation (3), Mastered Reincarnated (1)): while
+  the Awakening is had, the race Trait comes back beside the Factor Trait, which stays; put by again if the Awakening is (my reading).
 - **Requirements are warned about, never refused.** This covers Race, Tier of Power, Prerequisites, Quality slots, the
   Awakening Limit and Mastery caps.
 
@@ -94,6 +114,17 @@ the rule and how it is applied in the code.
   text verbatim.
 
 ## Transformations
+
+- **Grand Awakenings (2026-11-27, my readings):** a Grand Trigger detected by the system is met by itself (Unkillable Majin's: a
+  Healing Surge that leaves you in Bruised, so from Injured or Critical). The Full Awakening Maneuver is a Standard Maneuver (its entry
+  gives no Maneuver Type). The Grand Awakening stays active until that Combat Encounter ends.
+- **Saiyan Prodigy (2026-11-27, my readings):** Bottomless Battle Born is taken whenever a Battle Born would be lost for being full in
+  the Flow State (its "you may" never worth refusing); its bonus counts only in the Flow State. Bottomless Combat Prowess (4) is offered at
+  the start of your turn beside Combat Imprinting (1), taken when that gave a stack.
+
+- **Minions and Fusions (2026-11-27, my readings, not yet the owner's):** a Duplicate's Transformations are its Master's as they
+  were when it was made, with no Awakening Limit of its own. A new Fusion has every Fused Character's Awakening ticked; the table
+  unticks those it does not have, over the Fusion Awakening Limit said and never refused.
 
 - **Lines:** a Stage inherits the Traits of the Stages before it, but not their Attribute bonuses or Aspects.
 - **Variants:**

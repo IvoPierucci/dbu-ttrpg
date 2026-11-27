@@ -780,6 +780,10 @@ const TABLE = [
     doc: "Entering an Evolved Stage of Pure Form: Erratic Majin (1) ignored (Controlled Chaos (4))." },
   { key: "chaos.halveDamage", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Damage from an Attacking Maneuver: a stack of Channeled Chaos spent to halve it, asked in Take Damage (Pure Chaos (5))." },
+  // How many times more the Surge Maneuver's Surge gives its Life or Ki Points back - written at the surge-maneuver Moment, read where the
+  // Surge is worked out (chat.mjs takeSurge): Evolutionary Peak (4)'s "double the amount", 1.
+  { key: "surge.regainedTimes", phase: PHASES.REACTIVE, kind: N, ops: ["add"],
+    doc: "Times more of what the Surge Maneuver's Surge gives back (chat.mjs takeSurge)." },
   { key: "surge.healingReroll", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "A Healing Surge rerolled after seeing it, once a Round, asked (Chaotic Entity (2))." },
   // Oozaru's Traits.
@@ -1165,6 +1169,14 @@ const PATTERNS = [
   // no Bonus Momentum for knocking them through (chat.mjs); Wild Swings (2)'s Absolute Attack, asked (chat.mjs askWildSwings).
   { match: /^(statstick\.double|statstick\.noSpecial|dauntless\.noBonus|wildSwings\.absolute)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true, doc: "A Villainous Trait's: read where it applies." },
+  // A Resource's `resourceOverflowWhen`: while set, it takes the stacks another it overflows can no longer hold (moments-runtime.mjs
+  // gainOneOf) - Bottomless Combat Prowess (3)'s, in the Flow State.
+  { match: /^overflow\.[A-Za-z]+$/, phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    valid: () => true, doc: "A Resource taking what another can no longer hold: read by gainOneOf." },
+  // A Factor's replaced race Traits had again beside its Factor Traits (race-traits.mjs restoredFactors) - Greater Mutation (3)'s
+  // `restoreReplaced.mutation`, Mastered Reincarnated (1)'s `restoreReplaced.reincarnated`.
+  { match: /^restoreReplaced\.[a-z][a-z-]*$/, phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    valid: () => true, doc: "A Factor's replaced race Traits had again: read by race-traits.mjs." },
   // One Combat Roll's dice alone - a Custom Buff's (custom-buffs.mjs), after the spreadsheet's "ToP Extra Dice Cat. (Strike)",
   // "Greater Dice (Dodge)", "Extra d6 (Wound)": the Tier of Power Extra Dice of a Strike, a Dodge or a Wound Roll a Category
   // higher (actor-character.mjs `dice.extraStrike`); those dice, or the Greater Dice, applied again to every Combat Roll or to

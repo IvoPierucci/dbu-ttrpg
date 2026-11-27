@@ -1,0 +1,29 @@
+id: full-awakening
+name: Full Awakening
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# Transformation Rules, Grand Awakening: "Each Super Awakening has their own Grand Trigger, a condition that must be met during this Combat
+# Encounter before enabling a Grand Awakening. While that condition is met, that Character has access to the Full Awakening Maneuver" - open
+# by its Grand Awakening's `allow` once its Grand Trigger is met. The page's entry has no Maneuver Type line: "Standard Maneuver" is mine,
+# from its Action Cost of 1 Action.
+special: true
+source: Core Rule
+description: >
+  Unleashing your full might, you awaken the core of your being and light your fighting spirit ablaze.
+text: >
+  Full Awakening Maneuver [1/Encounter]: Unleashing your full might, you awaken the core of your being and light your fighting spirit ablaze.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Effect: Activate your Super Awakening’s Grand Awakening until the end of this Combat Encounter and regain Life and Ki Points equal to 1/4 (rounded up) of their respective maximums.
+
+---
+
+# The Grand Awakening active till the Encounter ends, a quarter of each Maximum back, rounded up (transformations.mjs fullAwakening), then
+# the full-awakening Moment.
+[on used]
+fullAwakening();

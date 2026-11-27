@@ -26,6 +26,8 @@ import { forget, forgetAll } from "./effects/registry.mjs";
 import { coreManeuverItems, registerHotbarDrop, registerMacroApi } from "./use-maneuver.mjs";
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
 import { loadManeuvers } from "./maneuvers.mjs";
+import { contentLoading } from "./content-ready.mjs";
+import { registerRaceTraitHooks, resetRaceTraits } from "./race-traits.mjs";
 import { getTrait, loadTraits } from "./effects/traits.mjs";
 import { payKiWithStamina } from "./adversary.mjs";
 import { registerCombatHooks, registerBreathHooks, registerDefeatHooks, registerWornBreathHooks, registerRacialLifeHooks }
@@ -66,6 +68,8 @@ import { registerConditionHooks } from "./conditions.mjs";
 Hooks.once("init", () => {
   // Whether the characters' tokens were linked to their sheets once (the user's) - done by the active GM at ready, then never again.
   game.settings.register("dbu-ttrpg", "charactersLinked", { scope: "world", config: false, type: Boolean, default: false });
+  // The race gives its Racial Traits now (race-traits.mjs): the characters made before had theirs taken off once (resetRaceTraits).
+  game.settings.register("dbu-ttrpg", "raceTraitsReset", { scope: "world", config: false, type: Boolean, default: false });
   console.log("DBU TTRPG | Initializing system");
 
   // Register the character data model for the "character" Actor type
@@ -172,6 +176,7 @@ Hooks.once("init", () => {
   registerDefeatHooks();
   registerRacialLifeHooks();
   registerRacialHooks();
+  registerRaceTraitHooks();
   registerTransformationHooks();
   registerAspectHooks();
   registerIntegratedHooks();
@@ -261,6 +266,40 @@ Hooks.once("ready", async () => {
       .map(item => ({ _id: item.id, "system.unique.notOwned": true }));
     if (donors.length) await actor.updateEmbeddedDocuments("Item", donors).catch(error => console.error("DBU TTRPG | Not owned", error));
   }
+});
+
+// The Core Maneuvers a character is missing - one added to the system after it was made, as Class Up's Choice Maneuvers were for
+// characters older than the Transformations (the user's, 2026-11-27): given once the world is ready, by the active GM, as Settings'
+// "Add core maneuvers" does. Each one given is remembered (`coreGranted`), so one deleted on purpose is not given again.
+Hooks.once("ready", async () => {
+  if (!game.user.isGM || (game.user !== game.users.activeGM)) return;
+  await contentLoaded;
+  for (const actor of game.actors ?? []) {
+    if (!isCharacter(actor)) continue;
+    const core = coreManeuverItems({ adversary: actor.type === "adversary" });
+    const ids = core.map(entry => entry.system?.maneuverId).filter(Boolean);
+    const given = new Set(actor.getFlag("dbu-ttrpg", "coreGranted") ?? []);
+    if (ids.every(id => given.has(id))) continue;
+    const held = new Set(Array.from(actor.items).filter(item => item.type === "maneuver").map(item => item.system?.maneuverId || item.name));
+    const missing = core.filter(entry => !held.has(entry.system?.maneuverId) && !held.has(entry.name) && !given.has(entry.system?.maneuverId));
+    try {
+      if (missing.length) await actor.createEmbeddedDocuments("Item", missing);
+      await actor.setFlag("dbu-ttrpg", "coreGranted", [...new Set([...given, ...ids])]);
+    } catch (error) {
+      console.error("DBU TTRPG | Core Maneuvers for", actor.name, error);
+    }
+  }
+});
+
+// The race gives its Racial Traits (the user's, 2026-11-27): the world's characters made before had them by hand - "quitáselos, lo re
+// colocan a mano". Once, by the active GM, after the content is loaded: their race and Factor Traits taken off, given their race's again as
+// whoever plays them next opens their sheet (race-traits.mjs).
+Hooks.once("ready", async () => {
+  if (!game.user.isGM || (game.user !== game.users.activeGM) || game.settings.get("dbu-ttrpg", "raceTraitsReset")) return;
+  await contentLoaded;
+  const reset = await resetRaceTraits([...(game.actors ?? [])]).catch(error => { console.error("DBU TTRPG | Racial Traits reset", error); return 0; });
+  await game.settings.set("dbu-ttrpg", "raceTraitsReset", true);
+  if (reset) ui.notifications.info(`DBU TTRPG: the race now gives its Racial Traits - ${reset} character(s) get their race's as their sheet is next opened; Factor Traits and picks are made again.`);
 });
 
 // Compiled effects are cached by the content they came from, so a stale entry cannot
@@ -483,17 +522,27 @@ Hooks.on("updateToken", async (token, changes, options, userId) => {
 });
 Hooks.on("updateItem", item => { if (READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)) conduitRefresh(); });
 
+/** The content files loaded (setup's): what a "ready" hook reading them waits on - Foundry does not wait on an async hook. */
+let contentLoaded = Promise.resolve();
+
 Hooks.once("setup", async () => {
   registerManeuverSocket();
   registerDebugTools();
   registerMacroApi();
   // Traits first: the Maneuvers are built from those files, so loading the two at the
   // same time would sometimes find nothing there.
-  await loadTraits();
-  await Promise.all([loadRaces(), loadManeuvers()]);
-  for (const actor of game.actors ?? []) actor.prepareData();
-  // A Minion reads its Master's effects (allies.mjs minionGifts): again, now every Master's are prepared.
-  for (const actor of game.actors ?? []) if (isMinion(actor)) actor.prepareData();
+  contentLoaded = (async () => {
+    await loadTraits();
+    await Promise.all([loadRaces(), loadManeuvers()]);
+  })();
+  // A sheet opened before this is done waits for it (content-ready.mjs; the user's, 2026-11-27: opened too soon, it was drawn
+  // without the rules) - the characters prepared with them included.
+  await contentLoading((async () => {
+    await contentLoaded;
+    for (const actor of game.actors ?? []) actor.prepareData();
+    // A Minion reads its Master's effects (allies.mjs minionGifts): again, now every Master's are prepared.
+    for (const actor of game.actors ?? []) if (isMinion(actor)) actor.prepareData();
+  })());
 });
 
 /**

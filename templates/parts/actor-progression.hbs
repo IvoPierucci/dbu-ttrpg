@@ -92,6 +92,18 @@
     </div>
     {{/if}}
 
+    {{#if racialPicks}}
+    {{! The Secondary Racial Traits picked - the Majins' 4, a Minion's 2 (race-traits.mjs): a window, as the Skill Ranks' is. }}
+    <div class="racial-row">
+      <span class="racial-row-label">{{racialPicks.label}}</span>
+      {{! Drawn as the Skill Ranks' are (the user's): their row's class. }}
+      <div class="racial-slots racial-skills racial-picks">
+        <button type="button" class="benefit-pick{{#unless racialPicks.names}} empty{{/unless}}" data-action="pickRacialTraits"
+                {{#if racialPicks.names}}data-tooltip="{{racialPicks.names}}"{{/if}}><span class="benefit-text">{{#if racialPicks.names}}{{racialPicks.names}}{{else}}Choose&hellip;{{/if}}</span>{{#if racialPicks.left}}<span class="benefit-left">({{racialPicks.left}} left)</span>{{/if}}{{#if racialPicks.over}}<span class="benefit-over">(over the {{racialPicks.choose}})</span>{{/if}}</button>
+      </div>
+    </div>
+    {{/if}}
+
     {{#if racialSavingThrow}}
     <div class="racial-row">
       <span class="racial-row-label">Saving Throw</span>

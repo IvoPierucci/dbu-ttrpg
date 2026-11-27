@@ -1,0 +1,31 @@
+id: saiyan-prodigy
+name: Saiyan Prodigy
+type: awakening
+subtype: super
+origin: mind
+racial: Saiyan
+prerequisites: Access to Pure Progress
+tier: 4+
+maxStacks: 1
+bonuses: AG +1(T), FO +1(T), TE +1(T), MA +1(T)
+description: >
+  As your body adapts to the flow of battle, your mind adjusts to accommodate. Adapting on two fronts, your combat prowess takes shape in direct response to the battle before you. Even adapting to your own adaptations, your fighting strength grows at such a rapid pace that even if you didn’t start the fight as a threat, by the end, you’ll be the only threat anyone can afford to pay attention to.
+text: >
+  As your body adapts to the flow of battle, your mind adjusts to accommodate. Adapting on two fronts, your combat prowess takes shape in direct response to the battle before you. Even adapting to your own adaptations, your fighting strength grows at such a rapid pace that even if you didn’t start the fight as a threat, by the end, you’ll be the only threat anyone can afford to pay attention to.
+
+  Racial Requirement: Saiyan / Transformation Type: Awakening / Awakening Type: Super / Awakening Origin: Mind / Prerequisite(s): Access to Pure Progress / Maximum No of Stacks: 1 / Tier of Power Requirement. 4+
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Learning through Combat: Your combat prowess skyrockets as the battle continues, and you grow exponentially stronger the longer you fight.
+  (1)-[Passive]: While you possess 4+ stacks of Progress, increase your Stress Bonus by 1.
+  (2)-[Passive]: While you possess 4+ stacks of Battle Born, increase your Stress Bonus by 1.
+  (3)-[Passive]: Increase your Surgency by 2(T).
+  (4)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, gain a stack of Battle Born.
+  (5)-[Triggered, 1/Encounter]: If you trigger the 3rd effect of Born for Battle, gain 2 stacks of Progress.
+
+  GRAND AWAKENING — Bottomless Combat Prowess: There is no limit to the depth of your combat potential- you grow in battle at a mind-boggling speed.
+  (1)-[Grand Trigger]: You are in the Flow State and possess 4+ stacks of Battle Born.
+  (2)-[Passive]: Increase your Combat Rolls and Soak Value by 1(T).
+  (3)-[Triggered, Resource]: If you are in the Flow State and would gain a stack(s) of Battle Born through an effect but are at your maximum number of Battle Born stacks, you may instead gain an equal number of Bottomless Battle Born stacks. Whenever you gain a stack of Bottomless Battle Born, you must apply it to either Strike, Dodge, or Wound (you decide), but you can only apply a Bottomless Battle Born stack to a Combat Roll if it has the lowest number of Bottomless Battle Born stacks amongst your Combat Rolls (if there’s a tie, you choose). Each stack of Bottomless Battle Born increases the corresponding Combat Roll by 1(T).
+  (4)-[Triggered, 1/Round]: If you gain a stack of Progress through the 1st effect of Combat Imprinting, gain a stack of Battle Born.
+  (5)-[Automatic]: Upon leaving the Flow State, lose all of your Bottomless Battle Born stacks.

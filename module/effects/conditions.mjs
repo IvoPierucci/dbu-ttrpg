@@ -450,6 +450,8 @@ const PREDICATES = {
 
   /** [Acclimated] (an Evolved Stage's): the Form it is on - the one in use - Mastered, or Fully Mastered (transformations.mjs). */
   originalMastered: scope => transformationQuestion("originalMastered", scope.data?.parent) === true,
+  /** A Super Awakening's Grand Trigger met this Combat Encounter (transformations.mjs grandTriggerMet) - the Full Awakening Maneuver open. */
+  grandTriggerMet: scope => transformationQuestion("grandTriggerMet", scope.data?.parent) === true,
   originalFullyMastered: scope => transformationQuestion("originalFullyMastered", scope.data?.parent) === true,
   /** "While in a Transformation with the Super Saiyan Form Aspect" - one in use with it, an Evolved Stage with its Original's. */
   aspectInUse: (scope, name) => transformationQuestion("aspectInUse", scope.data?.parent, String(name?.value ?? name ?? "")) === true,

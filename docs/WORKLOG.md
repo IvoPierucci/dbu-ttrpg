@@ -6,13 +6,13 @@ need to know: a half-finished feature, a decision taken, something you found bro
 
 ## State of the system (2026-11-26)
 
-- Version **0.3.6** in `system.json`. Everything up to it is pushed; later commits may not be (see `git log origin/main..`).
+- Version **0.3.12** in `system.json`. Everything up to it is pushed; later commits may not be (see `git log origin/main..`).
 - **Built:**
   - Characters, Minions, Adversaries, Fusions and Vehicles (Actor types), with the full character sheet.
   - Every race and Racial Trait, Factors, Other Traits (Evolution, Bestial, Monstrous, Vocations), all Talent Categories,
     Maneuvers, Unique Abilities, Signature Techniques with Super Profiles, Gear (Apparel, Weapons, Items, Buddies),
     Battlefields and Weather, Karma, Custom Buffs, Adventure.
-  - Transformations: 55, all from the owners' links or texts.
+  - Transformations: 60, all from the owners' links or texts.
 - **Testing:** most of it has been checked headlessly but little of it in a real Foundry game. Treat any bug report from
   the table as real.
 
@@ -44,7 +44,32 @@ narrates.
 
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
+- **2026-11-27 (Ivo's Claude):**
+  - The race gives its Racial Traits: `module/race-traits.mjs` (raceTraitPlan, syncRaceTraits, exchangeChoices/exchangeRaceTrait,
+    resetRaceTraits), `system.racialPicks`, `system.debug.showAddRacialTrait`, `races/majin.json secondaryChoices: 4`, a one-time
+    reset (world setting `raceTraitsReset`), harness `tests/race-traits.mjs`. An exchanged Factor Trait keeps `flags.dbu-ttrpg.exchangedFor`.
+  - Added Greater Mutation; its (3) (the replaced Racial Trait back) is the table's, done by hand, as Inherited Life's.
+  - Added Saiyan Prodigy: `resourceOverflowOf` / `resourceOverflowWhen` (traits.mjs resourceDefinitions, moments-runtime.mjs gainOneOf) and the `overflow.<name>` flag Slots.
+  - Added Super Majin. Its (4) (what may be changed as it is gained) is the table's, done by hand on the sheet.
+  - Added Unkillable Majin and Grand Awakenings: `slot: grand` + `grandTrigger: N` on the Trait, the verb `grandTrigger()` (the
+    Awakening's `flags.dbu-ttrpg.grandMet` = this Combat's id), the predicate `grandTriggerMet`, the Full Awakening Maneuver
+    (`traits/maneuvers/full-awakening.dbu`, verb `fullAwakening()`, `grandOn`), the `full-awakening` Moment.
+  - Minions and Fusions with Transformations (the owner's links to /minions/ and /fusion/): Duplicates copy Transformation Items
+    (`minion-make.mjs isDuplicatedItem`); `MINION_AWAKENING_LIMIT`; a Fusion's Awakening left out by `flags.dbu-ttrpg.fusionOff`
+    (`transformations.mjs fusionLeftOut`, read by `inUse` and `awakeningCount`). A non-Duplicate Minion's Enhancements and Forms
+    are the ARC's to give by hand, as the page says.
+  - `module/content-ready.mjs`: the actor sheets' `render` waits on the content loaded in `setup` (`waitForContent`).
+  - A Maneuver added to the system reaches old characters by itself: a GM `ready` hook gives missing core Maneuver Items once
+    (`flags.dbu-ttrpg.coreGranted`). A `ready` hook that reads content files must `await contentLoaded` (setup is async).
+  - Trait text on the sheet: `racialTraitLines(item, live)` - with `live` (the sheet's `#liveOf`) the site's style, uses left,
+    Automatic, and real values in brackets (`realValues`, hidden by `system.hideRealValues`). Without `live`, as printed: what
+    reads its HTML for "(N)-" (the [Constant] lines, harnesses) relies on that.
+  - Trait rows' buttons: Foundry gives every button `min-height: var(--button-size)`; a small button needs `min-height: 0` beside
+    its `height` (`.trait-arm`, `.trait-control`). The owner's choices for the Trait text are in `docs/RULINGS.md`.
 - **2026-11-26 (Ivo's Claude):**
+  - Added Super Kaioken: headers `initial:` (a Special Enhancement's Initial Enhancement) and `onlyAlongside:`.
+  - Respond: the Direct Hit box shows the Category lowered by ticked Direct Hit effects (`categorySteps`, `damageWith`).
+  - Amount windows take a `note` (`askPlayerAmount(..., { note })`): `adaptationNote(held)`, `mostNote("4(bT)", full, most)`.
   - The verification battery moved into the repository (`tests/`); run `bash tests/check.sh`.
   - Added `CLAUDE.md`, `docs/`, `CHANGELOG.md` and `tools/reindex.py`, and updated `README.md`.
   - Added Steel Frame and Boiling Rage (with `sharesUses:`).

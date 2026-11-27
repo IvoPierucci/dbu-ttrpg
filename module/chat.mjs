@@ -1584,7 +1584,7 @@ async function spendAdaptation(actor, what) {
   const held = Number(actor?.system?.resources?.adaptation?.stacks) || 0;
   if (held <= 0) return 0;
   const spent = Math.min(held, await askPlayerAmount(actor, `${actor.name}: Artificial Warrior - ${what}`, held,
-    `Adaptation Points (1(T) each)`));
+    `Adaptation Points (1(T) each)`, { note: adaptationNote(held) }));
   if (spent <= 0) return 0;
   await setResource(actor, "adaptation", held - spent);
   return spent;
@@ -1676,7 +1676,7 @@ export async function bioWeaponCharges(actor) {
   const held = Number(actor?.system?.resources?.adaptation?.stacks) || 0;
   if (held <= 0) return 0;
   const spent = Math.min(held, await askPlayerAmount(actor, `${actor.name}: Biological Weapon`, held,
-    "Adaptation Points - an Energy Charge for every 2, 1(bT) Ki Points each"));
+    "Adaptation Points - an Energy Charge for every 2, 1(bT) Ki Points each", { note: adaptationNote(held) }));
   if (spent <= 0) return 0;
   await setResource(actor, "adaptation", held - spent);
   await regainPools(actor, 0, spent * Math.max(1, Number(actor.system.baseTierOfPower) || 1));
@@ -1723,7 +1723,7 @@ async function toughReductionFor(target, attack, uuid) {
   const most = Math.min(full, Number(target.system.ki?.value) || 0, Number(target.system.capacity?.remaining) || 0);
   if (most <= 0) return none;
   const spent = Math.min(most, await askPlayerAmount(target, `${target.name}: Tough Warrior - hit by ${attack.maneuverName ?? "an attack"}`,
-    most, "Ki Points - as much Damage Reduction"));
+    most, "Ki Points - as much Damage Reduction", { note: mostNote("4(bT)", full, most) }));
   if (spent <= 0) return none;
   const { ki, capacity } = target.system;
   await requestActorUpdate(target, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent,
@@ -9102,25 +9102,39 @@ export async function showChoice({ title, options, text = "" }) {
 export const AMOUNT_QUERY = "dbu-ttrpg.amount";
 
 /** An amount an effect asks for, from 0 to `max`, of the character's player: the number, or 0 where none was given. */
-export async function askPlayerAmount(actor, title, max, label, { per = 0 } = {}) {
-  if (askScript) return askScript.amount({ title, max, label, per });
+/** An amount window's note: the Adaptation Points held to spend. */
+export function adaptationNote(held) {
+  return `${held} Adaptation Point${(held === 1) ? "" : "s"} available`;
+}
+
+/** An amount window's note: the most as the rule writes it and as a number - "Up to 4(bT) [12]" - and less, where Ki or Capacity hold it under. */
+export function mostNote(written, full, most, short = "with your Ki and Capacity") {
+  return `Up to ${written} [${full}]${(most < full) ? ` - ${most} ${short}` : ""}`;
+}
+
+export async function askPlayerAmount(actor, title, max, label, { per = 0, note = "" } = {}) {
+  if (askScript) return askScript.amount({ title, max, label, per, note });
   const player = playerOf(actor);
   if (!player || (max <= 0)) return 0;
-  if (player === game.user) return showAmount({ title, max, label });
-  try { return Number(await player.query(AMOUNT_QUERY, { title, max, label }, { timeout: 120000 })) || 0; }
+  if (player === game.user) return showAmount({ title, max, label, note });
+  try { return Number(await player.query(AMOUNT_QUERY, { title, max, label, note }, { timeout: 120000 })) || 0; }
   catch (error) {
     console.warn(`DBU TTRPG | ${actor.name}'s amount could not be asked`, error);
     return 0;
   }
 }
 
-/** The amount itself, on the player's client: a number up to `max`. */
-export async function showAmount({ title, max, label }) {
+/**
+ * The amount itself, on the player's client: a number up to `max`. `note` said under it - how many are held to spend (the user's:
+ * Adaptation Points), or the most as written and in number ("Up to 4(bT) [12]", Tough Warrior's).
+ */
+export async function showAmount({ title, max, label, note = "" }) {
   const escape = Handlebars.escapeExpression;
   const amount = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">${escape(label)}</span>
-      <input type="number" name="amount" min="0" max="${max}" step="1" value="${max}" autofocus/></label>`,
+      <input type="number" name="amount" min="0" max="${max}" step="1" value="${max}" autofocus/></label>${
+      note ? `<p class="dbu-respond-source">${escape(note)}</p>` : ""}`,
     buttons: [
       { action: "ok", label: "Spend", default: true,
         callback: (event, button, dialog) => Number(dialog.element.querySelector('[name="amount"]')?.value) || 0 },
@@ -9299,6 +9313,17 @@ export function rollSection(title, inner) {
  * What one Triggered effect would do to a Combat Roll if ticked, read the way the roll reads it (`combat-roll`): what it adds
  * to the roll's Slot, a Base Die it sets (Power of the Z-Warrior's 10), the Greater Dice it lends a Dodge.
  */
+/** How many Categories a ticked Triggered/Direct Hit effect moves the hit by for your Damage - Damage Inhibitor (2)'s -1. 0 where none. */
+function directHitStep(actor, entry) {
+  try {
+    const scope = { data: actor.system, errors: [], context: {}, queue: [] };
+    const { slots } = collectReactive([{ ...entry, armed: true }], "direct-hit", scope);
+    return applySlot(slots, "incoming.damage.category.shift", 0);
+  } catch (error) {
+    return 0;
+  }
+}
+
 function triggerPreview(actor, entry, slot, context = {}) {
   try {
     const scope = { data: actor.system, errors: [], context: { roll: true, ...context }, queue: [] };
@@ -9976,7 +10001,10 @@ async function respondDialog(message, respondable, { initials = new Map(), check
         (willing || balanced || fixedTriggers || karmaGroup) ? rollSection("Effects", `${willing}${balanced}${fixedTriggers}${karmaGroup}`) : ""}`,
       roll: answersAttack ? respondRollData(actor, attack) : null,
       previews: answersAttack ? Object.fromEntries(["dodge", "strike", "wound"].map(slot => [slot,
-        Object.fromEntries(triggers.map(entry => [entry.blockId, triggerPreview(actor, entry, slot, {})]))])) : {}
+        Object.fromEntries(triggers.map(entry => [entry.blockId, triggerPreview(actor, entry, slot, {})]))])) : {},
+      // What a ticked one does to the Damage Category at Direct Hit - its `direct-hit` blocks, as they are settled (heldAt).
+      categorySteps: answersAttack ? Object.fromEntries(triggers.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "") === "direct-hit")
+        .map(entry => [entry.blockId, directHitStep(actor, entry)]).filter(([, step]) => step)) : {}
     };
   };
   // One character that cannot be read does not take the others' answers with it: said in the console, and a target among them
@@ -10052,9 +10080,11 @@ function respondRollData(actor, attack) {
   };
   // Direct Hit and Guard: "Wound - Soak - DR", the Soak as it will stand and the Damage Category known before any Wound (the user's).
   // `extra` on the Soak Value before the Category - Balanced Defender's 1(T), ticked (the user's), as it is added when settled.
-  const damage = (key, extra = 0) => {
+  // `steps` the Category moved by what is ticked in the window - Damage Inhibitor (2), Hard as Steel (5) - as it is settled (heldAt).
+  const damage = (key, extra = 0, steps = 0) => {
     const from = resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0);
-    const category = resolveDamageCategory(attack.damageCategory, (attack.damageCategoryShift ?? 0) + (DEFENCES[key]?.damageCategoryShift ?? 0));
+    const category = resolveDamageCategory(attack.damageCategory, (attack.damageCategoryShift ?? 0) + (DEFENCES[key]?.damageCategoryShift ?? 0)
+      + steps);
     const own = Number(actor.system.soakValue) || 0;
     const base = own + extra;
     const soak = DEFENCES[key].soak(Math.floor(base * (DAMAGE_CATEGORIES[category]?.soakMultiplier ?? 1)));
@@ -10074,6 +10104,8 @@ function respondRollData(actor, attack) {
     };
   };
   return {
+    // The Direct Hit box again with the Category steps ticked (respondActorWindow's redraw).
+    damageWith: (key, balanced, steps) => damage(key, balanced ? balancedTier : 0, steps),
     dodge: formula("dodge"), parry: formula("parry"), crossCounter: formula("crossCounter"),
     crossCounterSignature: formula("crossCounterSignature"),
     // And as it stands with Balanced Defender ticked, where it can be.
@@ -10228,7 +10260,10 @@ async function respondActorWindow(message, entry, { fromPicker = false, initial 
     const show = (whatHtml, lineHtml) => { box.style.visibility = "visible"; what.innerHTML = whatHtml; line.innerHTML = lineHtml; };
     if (!roll || !key) { box.style.visibility = "hidden"; return; }
     if ((key === "directHit") || (key === "guard")) {
-      const shown = (element.querySelector(`input[name="balanced-${id}"]`)?.checked && roll[key].balanced) || roll[key];
+      const balanced = Boolean(element.querySelector(`input[name="balanced-${id}"]`)?.checked && roll[key].balanced);
+      const steps = (key === "directHit") ? [...element.querySelectorAll(`input[name="trigger-${id}"]:checked`)]
+        .reduce((sum, input) => sum + (Number(entry.categorySteps?.[input.value]) || 0), 0) : 0;
+      const shown = (steps && roll.damageWith) ? roll.damageWith(key, balanced, steps) : (balanced ? roll[key].balanced : roll[key]);
       return show(shown.what, shown.line);
     }
     const formula = roll[key];
@@ -12082,7 +12117,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       const held = Number(ally.system?.resources?.adaptation?.stacks) || 0;
       if (ally.system?.defeated || (held <= 0) || (ally.system?.effects?.slots?.["yardratGenes.allyRoll"] !== true)) continue;
       const spent = Math.min(held, await askPlayerAmount(ally, `${ally.name}: Yardrat Genes - ${actor.name}'s Combat Roll`, held,
-        "Adaptation Points - 1(T) of yours on it each"));
+        "Adaptation Points - 1(T) of yours on it each", { note: adaptationNote(held) }));
       if (spent <= 0) continue;
       await setResource(ally, "adaptation", held - spent);
       parts.push({ label: `${ally.name}'s Adaptation Points (${spent})`, value: spent * Math.max(1, Number(ally.system.tierOfPower) || 1) });
@@ -23956,11 +23991,11 @@ async function spendBlasterKi(attacker, attack, struck) {
   if (!which || (attacker?.system?.effects?.slots?.[which.slot] !== true)) return null;
   const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
   if (!struck.some(({ uuid }) => !allies.has(uuid))) return null;
-  const most = Math.min(5 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1), Number(attacker.system.ki?.value) || 0,
-    Number(attacker.system.capacity?.remaining) || 0);
+  const full = 5 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  const most = Math.min(full, Number(attacker.system.ki?.value) || 0, Number(attacker.system.capacity?.remaining) || 0);
   if (most <= 0) return null;
   const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: ${which.name}`, most, "Ki Points - as much on the Wound Roll",
-    { per: 1 }));
+    { per: 1, note: mostNote("5(bT)", full, most) }));
   if (spent <= 0) return null;
   const { ki, capacity } = attacker.system;
   await requestActorUpdate(attacker, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent });
@@ -23977,10 +24012,11 @@ async function geniusWoundKi(attacker, struck) {
   if ((attacker?.system?.effects?.slots?.["genius.woundKi"] !== true) || (spite <= 0)
     || (attacker.getFlag?.(SCOPE, "geniusWoundRound") === roundKey())) return 0;
   if (!struck.some(({ uuid }) => areOpponents(attacker, fromUuidSync(uuid)))) return 0;
-  const most = Math.min(2 * spite * Math.max(1, Number(attacker.system.baseTierOfPower) || 1), Number(attacker.system.ki?.value) || 0);
+  const full = 2 * spite * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  const most = Math.min(full, Number(attacker.system.ki?.value) || 0);
   if (most <= 0) return 0;
   const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: Skills of a Genius`, most, "Ki Points - as much on the Wound Roll",
-    { per: 1 }));
+    { per: 1, note: mostNote(`2x(bT), x = ${spite} Spite`, full, most, "with your Ki") }));
   if (spent <= 0) return 0;
   await requestActorUpdate(attacker, { "system.ki.value": attacker.system.ki.value - spent, [`flags.${SCOPE}.geniusWoundRound`]: roundKey() });
   return spent;
@@ -27655,7 +27691,8 @@ function bondButtons(message, attack, container) {
       button.dataset.tooltip = (spent >= 2) ? "Twice a Combat Round." : tooltip;
       button.addEventListener("click", async () => {
         button.disabled = true;
-        const amount = await askPlayerAmount(yardrat, `${yardrat.name}: Power of the Weak`, most, `Ki Points (up to ${3 * base})`);
+        const amount = await askPlayerAmount(yardrat, `${yardrat.name}: Power of the Weak`, most, "Ki Points",
+          { note: mostNote("3(bT)", 3 * base, most) });
         if (!amount) { button.disabled = false; return; }
         const { ki, capacity } = yardrat.system;
         if ((ki.value < amount) || (capacity.remaining < amount)) return ui.notifications.warn(`${yardrat.name} cannot pay ${amount} Ki Points.`);
@@ -34712,7 +34749,7 @@ function hitSpendRows(attacker, questions) {
     if (question.kind === "amount") {
       return `<label class="dbu-respond-option"><span class="dbu-respond-name">${name}</span>
         <input type="number" class="dbu-roll-number" data-spend="${key}" data-per="${question.per ?? 0}" data-label="${name}" min="0" max="${question.max}" value="0"/>
-        <span class="dbu-respond-source">${esc(question.label)} &middot; up to ${question.max}</span></label>`;
+        <span class="dbu-respond-source">${esc(question.label)} &middot; ${question.note ? esc(question.note) : `up to ${question.max}`}</span></label>`;
     }
     const yes = question.options.find(option => option.value === "yes");
     if (yes && (question.options.length === 2)) {
@@ -40965,6 +41002,17 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   });
   if (!kind || (kind === "cancel")) return false;
 
+  // The Surge Maneuver's Surge, chosen: what answers it - Evolutionary Peak (4)'s "If you use the Surge Maneuver, double the amount of Life
+  // or Ki Points you regain through your selected Surge", asked in a window first - each `surge.regainedTimes` one time more of what it gives.
+  let regainedTimes = 1;
+  if (viaManeuver === "surge") {
+    await offerTriggers(actor, "surge-maneuver", { kind });
+    const { fireMoment: fire } = await import("./effects/moments-runtime.mjs");
+    const answered = await fire(actor, "surge-maneuver", { kind }, { quiet: true });
+    regainedTimes += Math.max(0, Number(applySlot(answered?.slots ?? {}, "surge.regainedTimes", 0)) || 0);
+  }
+  if (regainedTimes > 1) lifeMultiplier = (Number(lifeMultiplier) || 1) * regainedTimes;
+
   // Surgency adds the Force Modifier to the Life and Ki regained - but not to the
   // Capacity, which the rule does not mention.
   let surgency = actor.system.surgency;
@@ -41012,7 +41060,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     if ((actor.system.effects?.slots?.["focusNamekians.surge"] === true) && (adaptationHeld > 0)
       && (actor.getFlag?.(SCOPE, "focusNamekianSurgeRound") !== roundKey())) {
       const spent = Math.min(adaptationHeld, await askPlayerAmount(actor, `${actor.name}: Genetic Focus: Namekians`, adaptationHeld,
-        "Adaptation Points - 2(bT) more Life Points each (1/Round)"));
+        "Adaptation Points - 2(bT) more Life Points each (1/Round)", { note: adaptationNote(adaptationHeld) }));
       if (spent > 0) {
         await setResource(actor, "adaptation", adaptationHeld - spent);
         await requestActorUpdate(actor, { [`flags.${SCOPE}.focusNamekianSurgeRound`]: roundKey() });
@@ -41113,7 +41161,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   const { ki, capacity } = actor.system;
   // Power Battery: "you cannot regain Ki Points through Ki Surges" - the Capacity still comes back.
   let kiGain = (actor.system.effects?.slots?.["ki.noRegain"] === true) ? 0
-    : Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency;
+    : (Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency) * regainedTimes;
   // Limitless (3): "Halve the Ki Points you regain through Ki Surges and Combat Recovery" (rounded down).
   if ((actor.system.effects?.slots?.["kiRegain.halved"] === true) && (actor.system.effects?.slots?.["kiRegain.kept"] !== true)) kiGain = Math.floor(kiGain / 2);
   const capacityGain = Math.floor(capacity.max / DBUCharacterData.KI_SURGE_FRACTION);

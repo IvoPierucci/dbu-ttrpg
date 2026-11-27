@@ -1112,7 +1112,8 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
     [C.includes("prepareRoll(attacker, triggers, `Strike Roll - ${attacker.name}`"), C.includes('slot: "strike", confirmLabel: "Ready",'),
      C.includes("prepareRoll(attacker, triggers, `Wound Roll - ${attacker.name}`"), C.includes("spend: hitSpendRows(attacker, questions),"),
      C.includes("await answerHit(message, attack, attacker, struck, questions.length ? hitAnswerScript(questions, ready?.spent ?? {}) : null);"),
-     C.includes("if (askScript) return askScript.amount({ title, max, label, per });"), C.includes("if (askScript) return askScript.choice({ title, options, per, text });")],
+     // Its note too (2026-11-26): what is held, or the most as written, shown in the row.
+     C.includes("if (askScript) return askScript.amount({ title, max, label, per, note });"), C.includes("if (askScript) return askScript.choice({ title, options, per, text });")],
     [true, true, true, true, true, true, true]);
   const B = await import(modUrl("breakdown.mjs"));
   const flat = html => html.replace(/data-tooltip(-html)?="[^"]*"/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -1847,9 +1848,124 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
   check("Guard and Direct Hit drawn with Balanced Defender's Soak where it is ticked",
     [C.includes('directHit: { ...damage("directHit"), balanced: balancedTier ? damage("directHit", balancedTier) : null },'),
      C.includes('guard: { ...damage("guard"), balanced: balancedTier ? damage("guard", balancedTier) : null },'),
-     C.includes("const shown = (element.querySelector(`input[name=\"balanced-${id}\"]`)?.checked && roll[key].balanced) || roll[key];"),
+     // With the Category steps ticked beside it (Hard as Steel (5), 2026-11-26), drawn again by damageWith with the same Soak.
+     C.includes("const balanced = Boolean(element.querySelector(`input[name=\"balanced-${id}\"]`)?.checked && roll[key].balanced);")
+       && C.includes("damageWith: (key, balanced, steps) => damage(key, balanced ? balancedTier : 0, steps),"),
      C.includes("const base = own + extra;")],
     [true, true, true, true]);
+}
+
+
+// --- Amount windows say what can be spent (the user's, 2026-11-26) ----------------------------------------------------------------
+{
+  const C = read("module", "chat.mjs");
+  const U = read("module", "use-maneuver.mjs");
+  check("Adaptation Points held shown in every window spending them; Tough Warrior and like ones their most as written and [in number]",
+    [C.includes('`Adaptation Points (1(T) each)`, { note: adaptationNote(held) }));'),
+     (C.match(/note: adaptationNote\(/g) ?? []).length + (U.match(/note: adaptationNote\(/g) ?? []).length,
+     C.includes('most, "Ki Points - as much Damage Reduction", { note: mostNote("4(bT)", full, most) }));'),
+     C.includes('return `Up to ${written} [${full}]${(most < full) ? ` - ${most} ${short}` : ""}`;'),
+     C.includes('note ? `<p class="dbu-respond-source">${escape(note)}</p>` : ""}`,'),
+     C.includes("if (askScript) return askScript.amount({ title, max, label, per, note });"),
+     C.includes("${question.note ? esc(question.note) : `up to ${question.max}`}")],
+    [true, 5, true, true, true, true, true]);
+}
+
+
+// --- A Trait's text on the sheet as the site prints it, and what stands now (the user's, 2026-11-27) ---------------------------------
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const actor = { system: { tierOfPower: 3, baseTierOfPower: 3, powerLevel: 12, capacity: { max: 96 }, life: { max: 150 }, ki: { max: 120 },
+    might: 14, surgency: 15, attributes: { insight: { mod: 9 } } } };
+  const live = { actor, letters: { G: 3, Z: 2 }, realValues: true,
+    uses: new Map([[4, { round: 1, roundMax: 1, encounter: Infinity, encounterMax: Infinity }],
+      [5, { round: Infinity, roundMax: Infinity, encounter: 0, encounterMax: 1 }], [3, { round: 1, roundMax: 1, encounter: 2, encounterMax: 3 }]]),
+    automatic: new Set([3]) };
+  const text = ["Spiritual Apprentice: You have been trained to finely control your energy.",
+    "(3)-[Triggered/Threshold, 1/Round, 3/Encounter]: Regain Life Points equal to your Surgency.",
+    "(4)-[Triggered, 1/Round]: Increase your Maximum Ki Points by 2 for every Power Level you possess.",
+    "(5)-[Triggered, 1/Encounter]: Reduce the Ki Point Cost by 1(T) and your Surgency by Z(bT), regain 1d10(bT) Life Points.",
+    "(6)-[Passive]: Wound by 1/2 (rounded up) of G(T); up to 1/2 of your Max Capacity; negative up to 1/4 (rounded up) of your Maximum Life Points.",
+    "(7)-[Passive]: 1/10th of your Maximum Life Points, 1/2 of your Might, DR by 1/2 of your Insight Modifier, by x(bT) and 2x(bT)."].join("\n");
+  const item = { flags: { "dbu-ttrpg": { sourceId: "nope" } }, system: { text, chosen: [] } };
+  const shown = RAC.racialTraitLines(item, live).map(line => line.html);
+  const values = html => [...html.matchAll(/class="dbu-real-value"[^>]*>\[([^\]]*)\]/g)].map(m => m[1]);
+  const uses = html => [...html.matchAll(/class="dbu-uses-(\w+)" data-tooltip="([^"]*)">(\d+)</g)].map(m => [m[1], m[3], m[2]]);
+  check("Trait text live: the name and each effect's number and keywords bold in the site's accent",
+    [shown[0].startsWith('<strong class="dbu-site-strong">Spiritual Apprentice</strong>:'),
+     shown[2].startsWith('(<strong class="dbu-site-strong">4</strong>)-[<strong class="dbu-site-strong">Triggered, ')], [true, true]);
+  {
+    const named = text => RAC.racialTraitLines({ flags: { "dbu-ttrpg": { sourceId: "nope" } }, system: { text, chosen: [] } }, live)[0]?.html ?? "";
+    check("a name with a colon of its own bold whole, up to its Category and what it replaced: Genetic Focus: Majins (Body) [Uncanny Monster]",
+      [named("Genetic Focus: Majins (Body) [Uncanny Monster]: Text.").startsWith('<strong class="dbu-site-strong">Genetic Focus: Majins (Body) [Uncanny Monster]</strong>:'),
+       named("Dormant Saiya Power (Body): Text.").startsWith('<strong class="dbu-site-strong">Dormant Saiya Power (Body)</strong>:')],
+      [true, true]);
+  }
+  check("its uses left: all yellow, some spent orange, none red, each with how many of how many; Triggered said Automatic where set so",
+    [uses(shown[1]), uses(shown[2]), uses(shown[3]), shown[1].includes('<span class="dbu-keyword-auto"'), shown[1].includes("Triggered"), shown[2].includes("dbu-keyword-auto")],
+    [[["full", "1", "1 of 1 left this Round"], ["part", "2", "2 of 3 left this Encounter"]], [["full", "1", "1 of 1 left this Round"]],
+     [["none", "0", "0 of 1 left this Encounter"]], true, false, false]);
+  check("the real values in brackets: Tier amounts, letters, dice, per Power Level, fractions of the character's values; x(bT) none",
+    [values(shown[1]), values(shown[2]), values(shown[3]), values(shown[4]), values(shown[5])],
+    [["15"], ["24"], ["3", "6", "3d10"], ["5", "48", "38"], ["15", "7", "4"]]);
+  check("hidden in Settings (hideRealValues): no brackets, the rest as it was; without `live`, the text as printed (what reads it for \"(N)-\")",
+    [RAC.racialTraitLines(item, { ...live, realValues: false }).some(line => line.html.includes("dbu-real-value")),
+     RAC.racialTraitLines(item, { ...live, realValues: false })[3].html.includes("dbu-uses-none"),
+     RAC.racialTraitLines(item)[3].html], [false, true, "(5)-[Triggered, 1/Encounter]: Reduce the Ki Point Cost by 1(T) and your Surgency by Z(bT), regain 1d10(bT) Life Points."]);
+  // An Option's and a Choice's own lines (the user's, 2026-11-27: Class Selection's had no colours): bold as an effect's, the "*" a bullet,
+  // and their limits counted as the effect's they are under.
+  const optionText = ["Class Selection: You've chosen a mantle.", "(2)-[Option]: Choose one:", "*Elite [Passive]: Strike by 1(T).",
+    "(3)-[Choice]: Depending on your choice:", "\u2022 Elite [1/Encounter]: Use the Surge Maneuver. It does not count towards the [1/Encounter] Keyword."].join("\n");
+  const optionLines = RAC.racialTraitLines({ flags: { "dbu-ttrpg": { sourceId: "nope" } }, system: { text: optionText, chosen: [] } },
+    { ...live, uses: new Map([[3, { round: Infinity, roundMax: Infinity, encounter: 0, encounterMax: 1 }]]) }).map(line => line.html);
+  check("an Option's and a Choice's lines bold as an effect's, the * a bullet, the Choice's limit counted as its effect's; the text's own [1/Encounter] left",
+    [optionLines[2].startsWith('\u2022 <strong class="dbu-site-strong">Elite</strong> [<strong class="dbu-site-strong">Passive</strong>]:'),
+     optionLines[4].startsWith('\u2022 <strong class="dbu-site-strong">Elite</strong> [<strong class="dbu-site-strong"><span class="dbu-uses-none"'),
+     optionLines[4].endsWith("towards the [1/Encounter] Keyword.")], [true, true, true]);
+  const SH = read("module", "sheets", "actor-character-sheet.mjs");
+  check("wired: Talents, Racial and Other Traits and a Transformation's Traits pass #liveOf; the Settings box; the CSS",
+    [(SH.match(/racialTraitLines\(item, this\.#liveOf\(item, triggered\)\)/g) ?? []).length, SH.includes("lines: held ? racialTraitLines(held, this.#liveOf(held, triggered))"),
+     SH.includes("realValues: !this.actor.system.hideRealValues };"), read("templates", "parts", "actor-settings.hbs").includes('name="system.hideRealValues"'),
+     ["dbu-site-strong", "dbu-uses-part", "dbu-uses-none", "dbu-keyword-auto", "dbu-real-value"].every(name => read("styles", "dbu-ttrpg.css").includes(`.${name}`))],
+    [2, true, true, true, true]);
+}
+
+
+// --- Core Maneuvers given to a character made before they existed (the user's, 2026-11-27: Class Up's Choice Maneuvers missing) -----
+{
+  const ENTRY = read("module", "dbu-ttrpg.mjs");
+  const core = (await import(modUrl("use-maneuver.mjs"))).coreManeuverItems ? true : false;
+  check("given once the world is ready, by the active GM, after the content is loaded; remembered (coreGranted), so one deleted is not given again",
+    [core, ENTRY.includes("  await contentLoaded;\n  for (const actor of game.actors ?? []) {\n    if (!isCharacter(actor)) continue;"),
+     ENTRY.includes("!held.has(entry.system?.maneuverId) && !held.has(entry.name) && !given.has(entry.system?.maneuverId)"),
+     ENTRY.includes('await actor.setFlag("dbu-ttrpg", "coreGranted", [...new Set([...given, ...ids])]);'),
+     ENTRY.includes("  contentLoaded = (async () => {\n    await loadTraits();")], [true, true, true, true, true]);
+}
+
+
+// --- A sheet opened before the rules are loaded waits for them (the user's, 2026-11-27: opened too soon, it was drawn incomplete) ----
+{
+  const READY = await import(modUrl("content-ready.mjs"));
+  const said = [];
+  const before = globalThis.ui;
+  globalThis.ui = { notifications: { info: text => said.push(text) } };
+  let finish;
+  const order = [];
+  READY.contentLoading(new Promise(resolve => { finish = resolve; }));
+  const first = READY.waitForContent().then(() => order.push("sheet 1"));
+  const second = READY.waitForContent().then(() => order.push("sheet 2"));
+  const waiting = [READY.contentReady(), order.length];
+  order.push("loaded");
+  finish();
+  await Promise.all([first, second]);
+  globalThis.ui = before;
+  const ENTRY = read("module", "dbu-ttrpg.mjs");
+  check("waited on, said once, drawn after the loading and the characters prepared with it; both actor sheets wait",
+    [waiting, order, READY.contentReady(), said.length, said[0]?.startsWith("DBU TTRPG: loading the rules"),
+     ENTRY.includes("  await contentLoading((async () => {\n    await contentLoaded;\n    for (const actor of game.actors ?? []) actor.prepareData();"),
+     ["actor-character-sheet.mjs", "actor-vehicle-sheet.mjs"].every(file => read("module", "sheets", file)
+       .includes("  async render(options, _options) {\n    await waitForContent();\n    return super.render(options, _options);"))],
+    [[false, 0], ["loaded", "sheet 1", "sheet 2"], true, 1, true, true, true]);
 }
 
 console.log(failed ? `\n${failed} failing` : "\n0 failing");

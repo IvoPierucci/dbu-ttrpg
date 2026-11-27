@@ -38,10 +38,12 @@
     <div class="dbu-tf-on dbu-tf-limit">
       <span class="dbu-tf-dim">Awakening Limit:</span>
       {{#if tf.awakeningLimit.none}}
-      <span class="dbu-tf-chip">No Awakening Limit (Adversary)</span>
+      <span class="dbu-tf-chip">No Awakening Limit ({{tf.awakeningLimit.noneWhy}})</span>
       {{else}}
       <span class="dbu-tf-chip{{#if tf.awakeningLimit.lesserOver}} warn{{/if}}">Lesser {{tf.awakeningLimit.lesser}} of {{tf.awakeningLimit.lesserMax}}</span>
       <span class="dbu-tf-chip{{#if tf.awakeningLimit.greaterOver}} warn{{/if}}">Greater {{tf.awakeningLimit.greater}} of {{tf.awakeningLimit.greaterMax}}</span>
+      {{#if tf.awakeningLimit.minion}}<span class="dbu-tf-dim">Minion Awakening Limit, by its Master's base Tier of Power</span>{{/if}}
+      {{#if tf.awakeningLimit.super}}<span class="dbu-tf-chip warn" data-tooltip="Minions cannot gain Super Awakenings - said, never refused">Super {{tf.awakeningLimit.super}}</span>{{/if}}
       {{/if}}
     </div>
     {{/if}}
@@ -205,13 +207,35 @@
             {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
           </button>
           {{/each}}
-          {{#if entry.changeable}}{{#if @root.editable}}
+          {{! Every Trait its pencil (the user's, 2026-11-27): its sheet - its text, and an Option, a choice or a Racial Trait it gave to change. }}
+          {{#if @root.editable}}
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
-                  data-tooltip="Change what was chosen for it - its Option or choice, on its sheet">&#9998;</button>
-          {{/if}}{{/if}}
+                  data-tooltip="{{#if entry.changeable}}Change what was chosen for it - its Option, choice or the Racial Trait it gave, on its sheet{{else}}Open this Trait's sheet{{/if}}">&#9998;</button>
+          {{/if}}
         </div>
         <div class="trait-body">
           {{#each entry.lines as |line|}}{{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}<div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}{{/each}}
+          {{#if entry.maneuvers.length}}
+          {{! Its own effects that are Maneuvers - the same Items as on the Maneuvers tab, as the Traits tab's lists draw them. }}
+          <ul class="maneuver-list trait-maneuvers">
+            {{#each entry.maneuvers as |maneuver|}}
+            <li class="maneuver" data-item-id="{{maneuver.itemId}}" draggable="true">
+              <div class="maneuver-head">
+                <span class="maneuver-mark" aria-hidden="true"></span>
+                <button type="button" class="maneuver-name rollable" data-action="useManeuver"
+                        data-item-id="{{maneuver.itemId}}">{{maneuver.name}}</button>
+                <span class="maneuver-uses">{{#if maneuver.usageLabel}}{{maneuver.usageLabel}}
+                  ({{maneuver.usesLeft}} left){{/if}}</span>
+                <span class="maneuver-cost">{{maneuver.actionLabel}}</span>
+                <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
+                <button type="button" class="maneuver-control" data-action="editItem"
+                        data-item-id="{{maneuver.itemId}}"
+                        data-tooltip="Edit this Maneuver: its name, its description, what it costs">&#9998;</button>
+              </div>
+            </li>
+            {{/each}}
+          </ul>
+          {{/if}}
         </div>
       </li>
       {{/each}}
@@ -233,10 +257,11 @@
             {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
           </button>
           {{/each}}
-          {{#if entry.changeable}}{{#if @root.editable}}
+          {{! Every Trait its pencil (the user's, 2026-11-27): its sheet - its text, and an Option, a choice or a Racial Trait it gave to change. }}
+          {{#if @root.editable}}
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
-                  data-tooltip="Change what was chosen for it - its Option or choice, on its sheet">&#9998;</button>
-          {{/if}}{{/if}}
+                  data-tooltip="{{#if entry.changeable}}Change what was chosen for it - its Option, choice or the Racial Trait it gave, on its sheet{{else}}Open this Trait's sheet{{/if}}">&#9998;</button>
+          {{/if}}
         </div>
         {{#each entry.constantLines as |line|}}<div class="dbu-tf-constant">{{{line}}}</div>{{/each}}
         <div class="trait-body">

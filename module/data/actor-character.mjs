@@ -1118,6 +1118,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     );
     // And the focused Saving Throw a race leaves up to them - the Aliens' "Any (select one)".
     schema.racialSavingThrow = new fields.StringField({ required: true, blank: true, initial: "" });
+    // The Secondary Racial Traits picked on the Progression tab, by id: a race that says how many (the Majins' 4), or a Minion's two
+    // (race-traits.mjs raceTraitPlan).
+    schema.racialPicks = new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] });
 
     // --- Capacity ---
     // The most Ki a character may spend in a single Combat Round. Only what has been
@@ -1733,6 +1736,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The Settings tab's "Only Traits you may have": Add Racial Trait and Add Other Trait leave out, rather than grey, the ones that are
     // not this character's to take (the user's).
     schema.hideUnfitTraits = new fields.BooleanField({ required: true, initial: false });
+    // The values in brackets after a Trait's amounts - "1(T) [3]" (racial.mjs realValues): shown unless hidden (the user's, 2026-11-27).
+    schema.hideRealValues = new fields.BooleanField({ required: true, initial: false });
 
     // Whether this character is Adventuring - what a Buddy's Adventure Effect waits on. A switch
     // on the Biography tab, by the table's ruling: off when a Combat Encounter starts, on again
@@ -1884,7 +1889,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // depend on them can be exercised. Ki Multiplier belongs to a Form entered through
     // the Transformation Maneuver; until Forms exist, this stands in for one.
     schema.debug = new fields.SchemaField({
-      kiMultiplier: new fields.BooleanField({ required: true, initial: false })
+      kiMultiplier: new fields.BooleanField({ required: true, initial: false }),
+      // The Traits tab's Add Racial Trait, hidden now that the race gives its Traits (the user's, 2026-11-27): shown again for odd cases.
+      showAddRacialTrait: new fields.BooleanField({ required: true, initial: false })
     });
 
     // --- Roll modifiers ---

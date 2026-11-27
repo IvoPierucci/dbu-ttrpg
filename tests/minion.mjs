@@ -646,7 +646,7 @@ check("Follower: a Minion not Commanded skips its Act Phase - its turn's start h
        "actionsSpent", "conditions", "states", "resources", "timed", "karma", "narrativeStamina", "inside", "battlefield", "transfigured", "delayed",
        "charging", "minions", "master", "specialMinion", "duplicate", "adversaryMinion", "duplicateOf", "minionLifeStep", "adventuring", "defeatsEscaped",
        "foresight", "grapple", "doffBonus", "usedManeuvers", "adventureUses", "riches", "reputation", "statDrain", "lastManeuver",
-       "biography", "allies", "alliesHidden", "hideUnfitTraits", "fusion"].includes(key))], [[], []]);
+       "biography", "allies", "alliesHidden", "hideUnfitTraits", "hideRealValues", "racialPicks", "fusion"].includes(key))], [[], []]);
 
   // Mirrored Attack, run: the attacker's Duplicate in its user's place, the Duel begun with it - or, none possible, a target.
   const edits = [], notes = [], dismissed = [];
@@ -970,7 +970,7 @@ check("Follower: a Minion not Commanded skips its Act Phase - its turn's start h
   check("the sheet offers the race's own Sizes and the Saving Throw to pick; the Racial Grants shown for any grant, the Ranks' row for Ranks",
     [SHEET.includes(".filter(([key, definition]) => (own ? own.includes(key) : definition.selectable) || (key === built))"),
      PROG.includes('<select name="system.racialSavingThrow">'), PROG.includes("{{#if racialGrants}}"),
-     SHEET.includes("context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow);"),
+     SHEET.includes("context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow") && SHEET.includes("      || context.racialPicks);"),
      read("module", "minion-make.mjs").includes('"racialAttributeChoices", "racialSavingThrow",')], [true, true, true, true, true]);
 }
 

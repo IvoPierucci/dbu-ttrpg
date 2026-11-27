@@ -29,6 +29,8 @@ There are three layers:
   On `ready` it loads the Traits and seeds the Talents. It also holds a number of world-level `Hooks.on(...)`
   (actor and item updates, sizes, links).
 - `system.json` holds the manifest, Actor and Item types, compatibility and version.
+- `module/content-ready.mjs`: whether `setup`'s loading of the content (and preparing every character with it) is done; the actor
+  sheets wait on it before they are drawn, since Foundry does not wait on an async hook.
 
 ## The effects engine (`module/effects/`)
 
@@ -112,7 +114,7 @@ Patterns used throughout:
 | Area | Modules |
 |---|---|
 | Transformations | `transformations.mjs` (Awakenings, Enhancements, Forms, Evolved Stages, Aspects combined, Stress Tests, entering and leaving), `aside.mjs` (which Traits apply right now) |
-| Racial and Other Traits | `racial.mjs` (adding Traits, Options, what a Trait grants), `races.mjs`, `genetic.mjs` |
+| Racial and Other Traits | `race-traits.mjs` (the race's Traits given, picked and exchanged for Factor Traits), `racial.mjs` (adding Traits, Options, what a Trait grants; `racialTraitLines(item, live)` - a Trait's text on the sheet, with its uses left, Automatic and real values), `races.mjs`, `genetic.mjs` |
 | Gear | `gear.mjs` (Apparel, Weapons, Items, Buddies), `integrated.mjs`, `natural-armor.mjs`, `features.mjs` |
 | Battlefield | `environments.mjs`, `weather.mjs`, `light.mjs`, `breath.mjs`, `hidden.mjs`, `guidance.mjs` |
 | Allies and Minions | `allies.mjs` (`areAllies`, `areOpponents`), `minion-make.mjs`, `token-marks.mjs` |

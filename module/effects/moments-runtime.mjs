@@ -468,6 +468,8 @@ async function runVerb(actor, call, context) {
     case "namekianTechnique": return (await import("../chat.mjs")).namekianTechnique(actor);
     case "studyCharacter": return (await import("../chat.mjs")).studyCharacter(actor);
     case "studyAll": return (await import("../chat.mjs")).studyAll(actor);
+    case "grandTrigger": return (await import("../transformations.mjs")).grandTrigger(actor, call?.use);
+    case "fullAwakening": return (await import("../transformations.mjs")).fullAwakening(actor);
     case "enterLinked": return (await import("../chat.mjs")).enterLinked(actor, String(args[0] ?? ""), call?.use ?? null);
     case "spectatorCheer": return (await import("../chat.mjs")).spectatorCheer(actor);
     case "commandMinions": return (await import("../chat.mjs")).commandMinions(actor);
@@ -965,8 +967,27 @@ async function runVerb(actor, call, context) {
       const ceiling = name => resourceCeiling(definitions[name], actor) || Infinity;
       const open = args.map(name => String(name).toLowerCase())
         .filter(name => definitions[name] && ((Number(held[name]?.stacks) || 0) < ceiling(name)));
-      if (!open.length) return;
       const { askPlayerChoice } = await import("../chat.mjs");
+      if (!open.length) {
+        // Every one full: a Resource that takes what these can no longer hold, while its flag Slot is set (`resourceOverflowOf`,
+        // `resourceOverflowWhen`) - "you can only apply a ... stack to a Combat Roll if it has the lowest number of ... stacks amongst
+        // your Combat Rolls (if there's a tie, you choose)" - Bottomless Combat Prowess (3)'s.
+        const asked = args.map(name => String(name).toLowerCase());
+        const slots = actor.system.effects?.slots ?? {};
+        const spill = Object.values(definitions).filter(each => each.overflowOf && asked.includes(each.overflowOf) && each.overflowWhen
+          && (slots[each.overflowWhen] === true) && ((Number(held[each.name]?.stacks) || 0) < ceiling(each.name)));
+        if (!spill.length) return;
+        const count = each => Number(held[each.name]?.stacks) || 0;
+        const lowest = spill.filter(each => count(each) === Math.min(...spill.map(count)));
+        const into = (lowest.length === 1) ? lowest[0].name : await askPlayerChoice(actor, `${actor.name}: ${lowest[0].source || "a stack"}`,
+          lowest.map(each => ({ value: each.name, label: each.label })));
+        if (!into) return;
+        const { replaceObject } = await import("../conditions.mjs");
+        await actor.update({ "system.resources": replaceObject({ ...held, [into]: { stacks: (Number(held[into]?.stacks) || 0) + 1,
+          max: Math.max(Number(held[into]?.max) || 0, resourceCeiling(definitions[into], actor)) } }) });
+        await stacksGained(actor, [into]);
+        return { placed: into };
+      }
       // Furious Beast (4): "If you would gain a stack of Battle Born, you must apply it to your Wound Rolls" - not with Monkey Mayhem (2).
       const woundOnly = (actor.system.effects?.slots?.["battleBorn.woundOnly"] === true) && (actor.system.effects?.slots?.["battleBorn.free"] !== true)
         && open.includes("battlebornwound");
@@ -989,7 +1010,7 @@ async function runVerb(actor, call, context) {
       // of either Surge.
       const { takeSurge } = await import("../chat.mjs");
       return takeSurge(actor, { source: "an effect", kind: args[0] ?? null, lifeMultiplier: Number(args[1]) || 1,
-        extraDie: Number(args[2]) || 0, lifePerThresholdBT: Number(args[3]) || 0 });
+        extraDie: Number(args[2]) || 0, lifePerThresholdBT: Number(args[3]) || 0, surgencyShare: Number(args[4]) || 1 });
     }
 
     case "takeOneCondition": {

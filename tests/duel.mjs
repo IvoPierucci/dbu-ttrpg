@@ -106,7 +106,7 @@ const U = await import(modUrl("united-attack.mjs"));
   check("the higher of Force or Magic", D.duelAttribute(actor), { label: "Magic", value: 9 });
   check("Power's passive raises the Wound, so its stacks count", D.woundResources().includes("power"), true);
   check("and one whose passive only takes away is left out (Arrogance, Holding Back)",
-    D.woundResources(), ["overwhelm", "heroicstyle", "calculatingstyle", "battlebornwound", "power", "grudge", "battlecreation", "warriorblood", "concentratedki", "bloodlust", "progresswound", "allout"]);
+    D.woundResources(), ["overwhelm", "heroicstyle", "calculatingstyle", "battlebornwound", "power", "grudge", "battlecreation", "warriorblood", "concentratedki", "bloodlust", "progresswound", "allout", "bottomlesswound"]);
   const rows = D.duelWagerRows({ ...actor, system: { ...actor.system, states: { raging: 2, mindful: 1, surging: 1 } } },
     { charges: 3, powerShotRanks: 1, allies: 2, resourceStacks: D.woundResourceStacks(actor, ["power"]) });
   check("Duel Wager: 1(T) more to wager for each ally, Power Shot, Energy Charge, Super Stack, Level of Raging or Mindful, Wound stack",

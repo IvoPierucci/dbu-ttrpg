@@ -1,0 +1,62 @@
+id: unkillable-majin-boundless-majin
+name: Boundless Majin
+order: 2
+# A Super Awakening's Grand Awakening: inactive until the Full Awakening Maneuver activates it, for the Combat Encounter; its Grand
+# Trigger (1) answers meanwhile (transformations.mjs grandOn, grandTrigger).
+slot: grand
+grandTrigger: 1
+description: >
+  Thanks to your unique physiology, you don’t have to obey any of the conventional limitations of the other races.
+text: >
+  Boundless Majin: Thanks to your unique physiology, you don’t have to obey any of the conventional limitations of the other races.
+  (1)-[Grand Trigger]: You have entered the Bruised Health Threshold from the Injured/Critical Health Threshold due to the use of a Healing Surge.
+  (2)-[Passive]: Your Life Points may exceed your Maximum Life Points by up to 1/2 of your Maximum Life Points.
+  (3)-[Passive]: While you are below the Injured Health Threshold, increase your Surgency by 2(T).
+  (4)-[Passive]: While you are above the Injured Health Threshold, increase your Strike and Wound Rolls by 1(T) and 2(T) respectively.
+  (5)-[Passive]: While you are in the Healthy Health Threshold, increase your Combat Rolls by 1(T).
+  (6)-[Passive]: You may spend Life Points as if they were Ki Points for Ki Wagering. If you do, any Life Points spent this way reduce your Capacity as if they were spent Ki Points.
+  (7)-[Triggered, 1/Encounter]: When you use the Full Awakening Maneuver, regain Life Points equal to 1/2 of your Maximum Life Points.
+
+---
+
+# (1) The Grand Trigger: a Healing Surge that took you above a Health Threshold (surge-threshold) and left you in Bruised - so from Injured or
+# Critical. Met by itself, once an Encounter; then the Full Awakening Maneuver is open (traits/maneuvers/full-awakening.dbu).
+[automatic/surge-threshold, effect 1]
+requires belowThreshold("bruised") && !belowThreshold("injured") && !grandTriggerMet;
+grandTrigger();
+
+[passive, effect 1]
+if (grandTriggerMet) {
+    allow maneuver.full-awakening;
+}
+
+# (2) Life Points past the Maximum by up to half of it (actor-character.mjs life.ceiling, Monstrous Vitality (2)'s).
+[passive, effect 2]
+allow monstrousVitality.overflow;
+
+# (3) Below the Injured Health Threshold: Surgency 2(T).
+[passive, effect 3]
+if (belowThreshold("injured")) {
+    surgency += 2(T);
+}
+
+# (4) Above the Injured Health Threshold: Strike 1(T), Wound 2(T).
+[passive, effect 4]
+if (!belowThreshold("injured")) {
+    strike += 1(T);
+    wound += 2(T);
+}
+
+# (5) In the Healthy Health Threshold: Combat Rolls 1(T).
+[passive, effect 5]
+if (!belowThreshold("bruised")) {
+    combatRolls += 1(T);
+}
+
+# (6) Life Points for a Ki Wager, out of the Capacity as Ki (Simmering Temper (4)'s).
+[passive, effect 6]
+allow wager.anyFromLife;
+
+# (7) The Full Awakening Maneuver used, once an Encounter: half the Maximum Life Points back - asked as it is used.
+[triggered/full-awakening, 1/encounter, effect 7]
+life.value += floor(life.max / 2);

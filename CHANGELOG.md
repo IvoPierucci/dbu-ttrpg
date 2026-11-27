@@ -5,7 +5,64 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
-(Nothing yet.)
+- **Greater Mutation (3) and Mastered Reincarnated (1) built:** the race Trait their Factor's Factor Trait replaced comes back
+  beside it while the Awakening is had (`allow restoreReplaced.<factor>;`, read by race-traits.mjs).
+
+## 0.3.12 (2026-11-27)
+
+- **The race gives its Racial Traits:** choosing a race (and Subrace) puts its Traits on the character; the Majins pick their 4
+  Secondary Traits, and a Minion its 2, on the Progression tab. A race Trait is exchanged for a Factor Trait from its row (the arrows
+  in place of the cross), and restored there. Add Racial Trait is hidden behind Settings' Debug. Characters made before have their Racial
+  and Factor Traits taken off once and get their race's as their sheet is next opened. The picks open in the Racial Skill Ranks'
+  window (tiles by Category, each saying Secondary or Subrace); the exchange in Add Racial Trait's window; an exchanged Factor Trait
+  names what it replaced in brackets; Settings' Refresh Racial Traits takes off any held twice.
+- **New Transformation:** Greater Mutation (a Greater Awakening for the Mutation Factor). New `surge-maneuver` Moment and
+  `surge.regainedTimes` Slot: what answers the Surge Maneuver's Surge, and how many times more it gives back.
+- **New Transformation:** Saiyan Prodigy (a Super Awakening of the Saiyans, beside Pure Progress). A Resource can now take what
+  another can no longer hold (`resourceOverflowOf`, while the flag Slot `resourceOverflowWhen` names is set): its Bottomless Battle
+  Born. Trait rows' buttons: no focus ring, and the Automatic one blue when hovered; every Transformation Trait has its pencil.
+
+## 0.3.11 (2026-11-27)
+
+- **New Transformation:** Super Majin (a Greater Awakening of the Majins). The `surge()` verb takes a fifth number: the Surgency
+  multiplied for that Surge.
+- **New Transformation:** Unkillable Majin, the first Super Awakening. With it, Grand Awakenings: a Trait with `slot: grand` is off
+  until its Grand Trigger is met this Combat Encounter (`grandTrigger:` names that effect, which answers meanwhile) and the new
+  Full Awakening Maneuver activates it for the Encounter, with 1/4 of the Maximum Life and Ki Points back.
+  Opened by hand in Debug's Maneuver Access (a Grand Trigger missed), it activates the character's Super Awakening all the same.
+
+## 0.3.10 (2026-11-27)
+
+- **Minions and Transformations:** a Duplicate (a Goop too) has its Master's Transformations, in the one the Master was in as it is
+  made. Another Minion's Awakening Limit is the Minion Awakening Limit by its Master's base Tier of Power; a Super Awakening on a
+  Minion is said. A Duplicate has no limit of its own.
+- **Fusion Awakenings:** the Fusion tab lists the Fusion's Awakenings, each ticked to have it for this Fusion, with the Fusion
+  Awakening Limit used; one unticked is not had.
+- **Opening a sheet as the world loads:** it waits for the rules to load ("DBU TTRPG: loading the rules...") and opens complete.
+- **A Trait's Maneuvers:** under a Trait also the Maneuvers its own effects open (`allow maneuver.<id>`, its chosen Option's too) -
+  Class Up's Choice Maneuver under Class Selection; the Transformation Traits list shows them as well.
+- **Core Maneuvers:** a character made before a Maneuver was added to the system (Class Up's Choice Maneuvers, for characters older
+  than the Transformations) gets it when the world loads; one deleted on purpose is not given again.
+- **Trait text:** an Option's and a Choice's own lines ("Elite [1/Encounter]:") bold and counted like an effect's.
+
+## 0.3.9 (2026-11-27)
+
+- **Traits on the sheet, as the site prints them:** the unfolded text of Racial and Other Traits, Talents and Transformation Traits
+  in dbu-rpg.com's font and colours, the name and each effect's number and keywords bold in its yellow. In the keywords, the uses
+  left of a limit ("0/Encounter": yellow while all are left, orange once some are spent, red at none), and "Automatic" in blue
+  where the effect's button is set so. After each amount, its value for this character in brackets ("1(T) [3]", "1/2 of your Max
+  Capacity [48]"); Settings has "Hide real values in brackets".
+- **Trait rows:** the Triggered/Automatic button, the pencil and the cross all 18px (Foundry's button `min-height` had kept some
+  taller), the row centred on one line with as much room below as above.
+
+## 0.3.8 (2026-11-26)
+
+- **New Transformation:** Super Kaioken, a Special Enhancement of Kaioken (`initial:`, and `onlyAlongside:` for one used only beside
+  another and left with it).
+- **Respond window:** with Direct Hit, a ticked effect that lowers the Damage Category (Hard as Steel (5), Damage Inhibitor
+  (2)) now shows the lower Category in the box above.
+- **Amount windows:** spending Adaptation Points says how many you have; Tough Warrior (2), Blaster/Magic Master,
+  Skills of a Genius and Power of the Weak say their most as written and in number ("Up to 4(bT) [12]").
 
 ## 0.3.7 (2026-11-26)
 

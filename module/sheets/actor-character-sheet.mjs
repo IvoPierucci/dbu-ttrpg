@@ -1,6 +1,9 @@
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
+import { waitForContent } from "../content-ready.mjs";
+import { exchangeChoices, exchangeRaceTrait, exchangeable, isRaceTraitItem, raceTraitPlan, raceTraitsOwed, refreshRaceTraits, slotOf, syncRaceTraits }
+  from "../race-traits.mjs";
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, isFusion, mayBeMaster, typicalMinion } from "../actor-types.mjs";
 import { fusionContext, racesOf } from "../fusion.mjs";
@@ -8,7 +11,7 @@ import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransfo
   combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
   lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait, ownersOf, releaseOwner, stacksOf, evolvedUnmet,
-  rowChoicesOf, setRowChoice, heartbeatOf, heartbeatRefused, heartbeatEnter, heartbeatEnd, aspectWarnings }
+  rowChoicesOf, setRowChoice, heartbeatOf, heartbeatRefused, heartbeatEnter, heartbeatEnd, aspectWarnings, grandOn, grandMet }
   from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
@@ -19,7 +22,7 @@ import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
 import { addCustomVillainousTrait, ownedVillainousTraits, villainousTraitFiles } from "../racial.mjs";
-import { factorName, addRacialTrait, optionGroupsOf, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { factorName, addRacialTrait, optionGroupsOf, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, maneuversOpenedBy, plainText, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stateTriggerBlocks } from "../effects/registry.mjs";
@@ -438,6 +441,12 @@ const THIEF_MANEUVERS = Object.freeze(["brace", "dirty-trick", "flip", "hide", "
 
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
+  /** Not drawn before the system's rules are loaded (content-ready.mjs): opened too soon, it waits for them and says so. */
+  async render(options, _options) {
+    await waitForContent();
+    return super.render(options, _options);
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["dbu-ttrpg", "character"],
     // Talents and Maneuvers are both Items, so the sheet accepts either being dropped
@@ -460,6 +469,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollMight: DBUCharacterSheet._onMightRoll,
       toggleGearText: DBUCharacterSheet._onToggleGearText,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
+      exchangeRacialTrait: DBUCharacterSheet._onExchangeRacialTrait,
+      refreshRacialTraits: DBUCharacterSheet._onRefreshRacialTraits,
+      pickRacialTraits: DBUCharacterSheet._onPickRacialTraits,
       bestialApply: DBUCharacterSheet._onBestialApply,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
       addTransformation: DBUCharacterSheet._onAddTransformation,
@@ -541,6 +553,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleQuality: DBUCharacterSheet._onToggleQuality,
       holdBreath: DBUCharacterSheet._onHoldBreath,
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
+      toggleFusionAwakening: DBUCharacterSheet._onToggleFusionAwakening,
       addGear: DBUCharacterSheet._onAddGear,
       placeGear: DBUCharacterSheet._onPlaceGear,
       detonateGear: DBUCharacterSheet._onDetonateGear,
@@ -1635,7 +1648,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       category: (cat => cat ? (cat.raceLabel ? `${cat.label} \u00b7 ${cat.raceLabel}` : cat.label) : "")(talentCategoryOf(item)),
       // Unfolded to its text as printed, as a Racial Trait is (the user's: the text was nowhere to be seen).
       open: Boolean(this.#openSections[`trait-${item.id}`]),
-      lines: racialTraitLines(item),
+      lines: racialTraitLines(item, this.#liveOf(item, triggered)),
       // What its `choose:` was answered with - Elementalist's Elemental Profile.
       chosenLines: [...(item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label).filter(Boolean),
         // Dynamic Hype's: the Option in use.
@@ -1700,6 +1713,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       alignments: DBUCharacterData.ALIGNMENTS,
       trait: id => getTrait(id)
     }) : null;
+    // Its Awakenings, each ticked to have it for this Fusion (transformations.mjs fusionLeftOut), and the Limit used.
+    if (context.fusion) {
+      const limit = awakeningCount(this.actor);
+      const list = transformationItems(this.actor).filter(item => kindOf(fileOf(item)) === "awakening")
+        .map(item => ({ id: item.id, name: item.name, subtype: String(fileOf(item)?.subtype ?? "").replace(/^./, letter => letter.toUpperCase()),
+          stacks: Number(item.system?.stacks) || 0, off: Boolean(item.flags?.["dbu-ttrpg"]?.fusionOff) }));
+      context.fusion.awakenings = { ...context.fusion.awakenings, list, lesserUsed: limit.lesser, greaterUsed: limit.greater,
+        over: (limit.lesser > context.fusion.awakenings.lesser) || (limit.greater > context.fusion.awakenings.greater) };
+    }
     if (context.isAdversary) context.adversary = this.#adversaryContext(context);
     // A tab for each type, the last one opened kept (the user's); what Manage hid left off, counted.
     {
@@ -1739,7 +1761,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // The Aliens' "Saving Throw: Any (select one)".
     context.racialSavingThrow = racialSavingThrowChosen(race) ? Object.keys(DBUCharacterData.SAVING_THROWS).map(key => ({
       value: key, label: key.charAt(0).toUpperCase() + key.slice(1), selected: key === this.actor.system.racialSavingThrow })) : null;
-    context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow);
+    // The Secondary Racial Traits picked here (race-traits.mjs): the Majins' 4, a Minion's 2 of its Secondary and Subrace Traits.
+    context.racialPicks = (plan => (plan && plan.pool.length) ? { label: plan.minion ? "Racial Traits (Minion)" : "Secondary Racial Traits",
+      choose: plan.choose, names: plan.picked.map(id => getTrait(id)?.name ?? id).join(", "), left: Math.max(0, plan.choose - plan.picked.length),
+      over: plan.picked.length > plan.choose } : null)(raceTraitPlan(this.actor));
+    context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow
+      || context.racialPicks);
     // The Minion Races under a "Minion Races" divider after every other race (the user's).
     const races = raceOptions().map(option => ({
       ...option,
@@ -3889,6 +3916,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   _onRender(context, options) {
     super._onRender(context, options);
 
+    // Its race's Racial Traits, owed - a new character's, or one made before the race gave them (race-traits.mjs): given as whoever plays
+    // it opens it, its Options asked of them. Once.
+    if (this.isEditable && !this.#raceTraitsGiving && raceTraitsOwed(this.actor) && (this.actor.isOwner)
+      && (!game.user.isGM || !Array.from(game.users).some(user => user.active && !user.isGM && this.actor.testUserPermission(user, "OWNER")))) {
+      this.#raceTraitsGiving = true;
+      syncRaceTraits(this.actor).finally(() => { this.#raceTraitsGiving = false; });
+    }
+
     // A Fusion's Alignment, within its Fused Characters' (fusion.mjs) - unnamed, the Biography tab's select having the name.
     for (const select of this.element.querySelectorAll("select[data-fusion-alignment]")) {
       select.addEventListener("change", event => {
@@ -4494,6 +4529,152 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** GM only: put the published Maneuvers in the compendium to drag from. */
   static async _onImportManeuvers() {
     return importCoreManeuvers();
+  }
+
+  /** Its race's Racial Traits being given now (race-traits.mjs) - once at a time. */
+  #raceTraitsGiving = false;
+
+  /**
+   * A race Trait's row exchanged for a Factor Trait (the user's, 2026-11-27): every Factor Trait that may take its place - those not this
+   * character's dimmed with why, and taken all the same - or, one already exchanged, the race Trait restored.
+   */
+  static async _onExchangeRacialTrait(event, target) {
+    if (!this.isEditable) return;
+    const item = this.actor.items.get(target.dataset.itemId ?? "");
+    if (!item) return;
+    const { original, current, choices } = exchangeChoices(this.actor, item);
+    if (!original) return;
+    // Add Racial Trait's window (the user's: "que sea igual"): a search over them, its Factor beside each, those not this character's
+    // dimmed with why on hover - or left out where Settings' "Only Traits you may have" is ticked - and the race Trait to restore first.
+    const listed = choices.filter(choice => !this.actor.system.hideUnfitTraits || !choice.why);
+    if (!listed.length && !current) {
+      ui.notifications.info(`No Factor Trait takes the place of ${original.name}.`);
+      return;
+    }
+    const escape = Handlebars.escapeExpression;
+    const { pickedName, wireNameSearch } = await import("../search.mjs");
+    const RESTORE = "@restore";
+    const restore = current ? `<li class="gear-quality-option" data-feature-option="${RESTORE}" data-name="${escape(`Restore ${original.name}`)}"
+      data-tooltip="${escape(`${original.name} back, in place of ${item.name}`)}">${escape(`Restore ${original.name}`)}
+      <span class="gear-quality-cost">${escape(racialTraitRace(original.owner, original.subrace))}</span></li>` : "";
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog", "dbu-ua-search"],
+      window: { title: `${this.actor.name} - Exchange ${item.name}` },
+      position: { width: 420 },
+      content: `<div class="gear-add-quality">
+        <input type="text" class="gear-quality-search" data-feature-search autocomplete="off" autofocus placeholder="Type a Factor Trait"/>
+        <ol class="gear-quality-list" data-feature-list>${restore}
+          ${listed.map(choice => {
+            const file = getTrait(choice.id);
+            return `<li class="gear-quality-option${(choice.why === "Already had") ? " blocked" : (choice.why ? " unfit" : "")}"
+              data-feature-option="${escape(choice.id)}" data-name="${escape(choice.name)}" data-also="${escape(choice.factor)}"
+              data-tooltip="${escape([choice.why, racialTraitKind(file), file?.description ?? "", factorSummary(file?.owner)].filter(Boolean).join(" - "))}">${escape(choice.name)}
+              <span class="gear-quality-cost">${escape(racialTraitRace(String(file?.race ?? ""), "", file?.owner))}</span></li>`;
+          }).join("")}
+          <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
+        </ol></div>`,
+      buttons: [
+        { action: "add", label: "Exchange", default: true, callback: (ev, button, dialog) =>
+          pickedName(dialog.element.querySelector("[data-feature-search]"), dialog.element.querySelector("[data-feature-list]")) || null },
+        { action: "cancel", label: "Cancel" }
+      ],
+      render: (event, dialog) => {
+        const root = dialog.element;
+        wireNameSearch(root.querySelector("[data-feature-search]"), root.querySelector("[data-feature-list]"), {
+          alwaysOpen: true, onSubmit: () => root.querySelector('button[data-action="add"]')?.click() });
+      },
+      rejectClose: false
+    });
+    if (!picked || (typeof picked !== "string")) return;
+    if (picked === RESTORE) return exchangeRaceTrait(this.actor, item.id, "");
+    const choice = choices.find(each => each.id === picked);
+    if (!choice) return;
+    if (choice.why === "Already had") return ui.notifications.warn(`${this.actor.name} already has ${choice.name}.`);
+    if (choice.why) ui.notifications.warn(`${this.actor.name}: ${choice.why} - ${choice.name} taken all the same.`);
+    return exchangeRaceTrait(this.actor, item.id, picked);
+  }
+
+  /** Settings' Refresh Racial Traits (the user's, 2026-11-27): any held twice taken off, and the race's put right (race-traits.mjs). */
+  static async _onRefreshRacialTraits() {
+    if (!this.isEditable) return;
+    const removed = await refreshRaceTraits(this.actor);
+    ui.notifications.info(`${this.actor.name}: Racial Traits refreshed${removed ? ` - ${removed} held twice taken off` : ""}.`);
+  }
+
+  /**
+   * The Secondary Racial Traits picked (race-traits.mjs) - in the Racial Skill Ranks' window (the user's, 2026-11-27): a tile each, by
+   * Category (Body, Mind), saying whether it is a Secondary or a Subrace Trait; how many of how many above; the slots full, those not picked
+   * shut until one is taken back. A Minion's second Subrace Trait red (one at most). Written as it closes.
+   */
+  static async _onPickRacialTraits() {
+    if (!this.isEditable) return;
+    const plan = raceTraitPlan(this.actor);
+    if (!plan?.pool.length) return;
+    const picks = [...plan.picked];
+    const escape = Handlebars.escapeExpression;
+    const overlay = document.createElement("div");
+    overlay.className = "dbu-benefit-overlay";
+    overlay.innerHTML = `<div class="dbu-benefit-window" role="dialog" aria-modal="true">
+      <header><h3>${plan.minion ? "Racial Traits (Minion)" : "Secondary Racial Traits"}</h3><span class="dbu-benefit-sub"></span></header>
+      <div class="dbu-benefit-body"></div>
+      <footer><button type="button" class="dbu-benefit-close">Close</button></footer></div>`;
+    this.element.append(overlay);
+    const body = overlay.querySelector(".dbu-benefit-body");
+    const sub = overlay.querySelector(".dbu-benefit-sub");
+    const kindOf = file => (file.subrace ? "Subrace" : "Secondary");
+    const category = file => String(file.category ?? "").replace(/^./, letter => letter.toUpperCase()) || "Other";
+    const groups = [...new Set(plan.pool.map(category))].sort((a, b) => ["Body", "Mind"].indexOf(a) - ["Body", "Mind"].indexOf(b));
+    const draw = () => {
+      const subraces = picks.filter(id => getTrait(id)?.subrace).length;
+      sub.textContent = `${plan.minion ? "Minion: two Secondary, or one and a Subrace Trait · " : ""}${picks.length} of ${plan.choose} Racial Traits`;
+      body.innerHTML = groups.map(group => `<div><div class="dbu-benefit-label">${escape(group)}</div><div class="dbu-benefit-row skills">${
+        plan.pool.filter(file => category(file) === group).map(file => {
+          const on = picks.includes(file.id);
+          const shut = !on && (picks.length >= plan.choose);
+          const over = on && plan.minion && file.subrace && (subraces > 1);
+          const tip = [`${file.name} - ${category(file)} · ${kindOf(file)}`, over ? "A Minion has one Subrace Trait at most" : "",
+            plainText(file.description ?? "")].filter(Boolean).join(" - ");
+          return `<button type="button" class="dbu-benefit-toggle${on ? " on" : ""}${over ? " over" : ""}" data-toggle="${escape(file.id)}"
+            aria-pressed="${on}" ${shut ? "disabled" : ""} data-tooltip="${escape(tip)}"><span class="name">${escape(file.name)}</span>`
+            + `<span class="step">${kindOf(file)}</span></button>`;
+        }).join("")}</div></div>`).join("")
+        + `<div class="dbu-benefit-hint">${(picks.length >= plan.choose) ? `All ${plan.choose} chosen: choose one again to take it back.` : ""}</div>`
+        + `<div class="dbu-benefit-summary">${picks.length ? `<b>${escape(picks.map(id => getTrait(id)?.name ?? id).join(", "))}</b>` : "Nothing chosen yet."}</div>`;
+    };
+    body.addEventListener("click", event => {
+      const pressed = event.target.closest("[data-toggle]");
+      if (!pressed || pressed.disabled) return;
+      const id = pressed.dataset.toggle;
+      const at = picks.indexOf(id);
+      if (at >= 0) picks.splice(at, 1);
+      else if (picks.length < plan.choose) picks.push(id);
+      draw();
+      body.querySelector(`[data-toggle="${CSS.escape(id)}"]`)?.focus();
+    });
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      const same = (picks.length === plan.picked.length) && picks.every(id => plan.picked.includes(id));
+      if (!same) this.actor.update({ "system.racialPicks": picks });
+    };
+    const onKey = event => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    };
+    overlay.querySelector(".dbu-benefit-close").addEventListener("click", close);
+    overlay.addEventListener("click", event => { if (event.target === overlay) close(); });
+    document.addEventListener("keydown", onKey, true);
+    draw();
+  }
+
+  /** A Fusion's Awakening had or left out for this Fusion ("choose which Awakenings they have access to") - its Fusion tab's tick. */
+  static async _onToggleFusionAwakening(event, target) {
+    if (!this.isEditable) return;
+    const item = this.actor.items.get(target.dataset.itemId ?? "");
+    if (!item) return;
+    return item.update({ "flags.dbu-ttrpg.fusionOff": !target.checked });
   }
 
   /**
@@ -6869,14 +7050,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       bestialOffFor: this.actor.items.get(item.flags?.["dbu-ttrpg"]?.bestialOff ?? "")?.name ?? "",
       // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
       open: Boolean(this.#openSections[`trait-${item.id}`]),
-      lines: racialTraitLines(item),
+      lines: racialTraitLines(item, this.#liveOf(item, triggered)),
       chosenLines: (item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label).filter(Boolean),
       // The Maneuvers that are this Trait's own effects - Majin Regeneration's 3rd: the character's own Maneuver Item, shown
       // here as well, used and dragged as it is on the Maneuvers tab (the user's). An Item holds no Item of its own.
       maneuvers: this.#ownedManeuvers()
-        .filter(maneuver => maneuver.fromTrait && ((maneuver.fromTrait === item.flags?.["dbu-ttrpg"]?.sourceId)
+        .filter(maneuver => (maneuver.fromTrait && ((maneuver.fromTrait === item.flags?.["dbu-ttrpg"]?.sourceId)
           // Or one of its Options' - Infinite Energy's, in Energy Core's fold.
           || (item.system.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === maneuver.fromTrait))))
+          // Or one its own effects open, and open now - Class Up's Choice Maneuver by its Option's `allow` (the user's, 2026-11-27).
+          || (maneuversOpenedBy(item).has(maneuver.id) && (this.actor.system.effects?.slots?.[`maneuver.${maneuver.id}`] === true)))
         .map(maneuver => ({
           itemId: maneuver.itemId,
           name: maneuver.name,
@@ -6887,6 +7070,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             ? `${maneuver.actionCost} ${MANEUVER_TYPES[maneuver.type].action}` : "—"
         })),
       chosen: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 "),
+      // A race Trait's row: exchanged for a Factor Trait from here (race-traits.mjs) - or, one already exchanged, restored - in the
+      // cross's place (the user's, 2026-11-27).
+      exchange: exchangeable(this.actor, item)
+        ? ((slotOf(item) !== (item.flags?.["dbu-ttrpg"]?.sourceId ?? "")) ? `In place of ${getTrait(slotOf(item))?.name ?? "a Racial Trait"}: exchange it again, or restore that one`
+          : "Exchange for a Factor Trait") : "",
+      // The cross only on one not its race's own (one added through Debug's Add Racial Trait): a race Trait goes with its race (the user's).
+      removable: !exchangeable(this.actor, item) && !isRaceTraitItem(item),
       triggered: this.#toggleButtons(item, triggered)
     }));
   }
@@ -6976,6 +7166,34 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           same.automatic = same.automatic && each.automatic;
           return buttons;
         }, []);
+  }
+
+  /**
+   * What a Trait's text says as it stands (racial.mjs liveLines; the user's, 2026-11-27): by printed effect number, the uses left of
+   * each limit its blocks count (the fewest of them) and the limit itself; the effects whose Triggered/Automatic button is set
+   * Automatic; a Transformation Trait's letters (G, Z, S, M) from its Transformation; and whether the values in brackets are shown
+   * (Settings, `hideRealValues`).
+   */
+  #liveOf(item, triggered = []) {
+    const uses = new Map();
+    for (const entry of triggered.filter(each => each.sourceId === item.id)) {
+      const block = entry.program.blocks[0];
+      const effect = Number(block?.modifiers?.effect);
+      if (!effect) continue;
+      const was = uses.get(effect) ?? { round: Infinity, roundMax: Infinity, encounter: Infinity, encounterMax: Infinity };
+      for (const period of ["round", "encounter"]) {
+        const most = Number(block?.budget?.[period]);
+        if (!Number.isFinite(most)) continue;
+        was[period] = Math.min(was[period], Math.max(0, Number(entry.uses?.[period]) || 0));
+        was[`${period}Max`] = Math.min(was[`${period}Max`], most);
+      }
+      uses.set(effect, was);
+    }
+    const automatic = new Set(this.#toggleButtons(item, triggered).filter(button => button.automatic)
+      .map(button => Number(String(button.group).split("|")[0])).filter(Boolean));
+    const owner = item.system?.transformation ? this.actor.items.get(item.system.transformation) : null;
+    return { actor: this.actor, uses, automatic, letters: owner ? lettersOf(owner, fileOf(owner)) : {},
+      realValues: !this.actor.system.hideRealValues };
   }
 
   /**
@@ -7203,6 +7421,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         if (trait.stacks && ((Number(item.system.stacks) || 0) < Number(trait.stacks))) return "missing Stacks";
         if (trait.mastery && ((Number(item.system.mastery) || 0) < Number(trait.mastery))) return `missing Mastery ${trait.mastery}`;
         if ((trait.slot === "transcendent") && !item.system.transcended) return "only Transcended";
+        // A Grand Awakening: off until the Full Awakening Maneuver activates it this Encounter (its Grand Trigger met first).
+        if ((trait.slot === "grand") && !grandOn(item)) return grandMet(item) ? "Grand Trigger met: use the Full Awakening Maneuver" : "until its Grand Trigger and the Full Awakening";
         if (trait.group && !all.some(each => (each.system?.transformation === item.id) && (each.flags?.["dbu-ttrpg"]?.sourceId === trait.id))) {
           return "not chosen";
         }
@@ -7210,7 +7430,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       };
       const noteOf = trait => [
         (trait.slot === "burst") ? "Burst Limit" : (trait.slot === "mastery") ? `Mastery ${trait.mastery || 1}`
-          : (trait.slot === "transcendent") ? "Transcendent Trait" : (trait.slot === "legendary") ? "Legendary Trait" : "",
+          : (trait.slot === "transcendent") ? "Transcendent Trait" : (trait.slot === "legendary") ? "Legendary Trait"
+          : (trait.slot === "grand") ? "Grand Awakening" : "",
         trait.stacks ? `${trait.stacks} Stacks` : "",
         trait.groupLabel ? String(trait.groupLabel) : "",
         trait.replaces ? `replaces ${trait.replaces}` : "",
@@ -7270,10 +7491,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
         aspects: file ? aspectsOf(item, all).map(aspect => ({ label: aspectLabel(aspect), summary: aspectFile(aspect.id)?.summary ?? "" })) : [],
         // Each Trait's text as its own Item has it - an Option effect showing only what was chosen (S-Cells') - or as written, where none is had.
-        traits: own.map(trait => ({ name: trait.name, note: noteOf(trait), off: Boolean(offOf(trait)),
-          lines: racialTraitLines(all.find(each => (each.type === "racial") && (each.system?.transformation === item.id)
-            && (each.flags?.["dbu-ttrpg"]?.sourceId === trait.id))
-            ?? { system: { text: trait.text ?? "", chosen: [] }, flags: { "dbu-ttrpg": { sourceId: trait.id } } }) }))
+        traits: own.map(trait => {
+          const held = all.find(each => (each.type === "racial") && (each.system?.transformation === item.id)
+            && (each.flags?.["dbu-ttrpg"]?.sourceId === trait.id));
+          return { name: trait.name, note: noteOf(trait), off: Boolean(offOf(trait)),
+            lines: held ? racialTraitLines(held, this.#liveOf(held, triggered))
+              : racialTraitLines({ system: { text: trait.text ?? "", chosen: [] }, flags: { "dbu-ttrpg": { sourceId: trait.id } } }) };
+        })
       };
     };
     const current = items.filter(item => kindOfItem(item) === this.#transformationSection);
@@ -7301,7 +7525,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     };
     // Not one whose Transformation is not in use and holds only by its [Permanent] effects (the user's: not shown).
     // One with an Option or a choice of its own (S-Cells'): its pencil, to change it on its Item's sheet, as a Racial Trait's.
-    const changeable = item => (trait => Boolean(trait && (optionGroupsOf(trait).length || trait.choose)))(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? ""));
+    const changeable = item => (trait => Boolean(trait && (optionGroupsOf(trait).length || trait.choose || trait.grantsRacialOf)))(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? ""));
     const traits = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "in"))
       .map(entry => ({ ...entry, from: fromOf(entry.item), changeable: changeable(entry.item) }));
     const constant = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "constant"))

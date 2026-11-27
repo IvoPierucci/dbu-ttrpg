@@ -546,7 +546,7 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver", "
   // 2+ Adaptation Points gained this Combat Round (Biological Weapon's).
   "adaptationTwiceThisRound",
   // [Acclimated]: the Original Form Mastered, Fully Mastered; the declared attack's Ki Wager 1/4 of the Max Capacity or more.
-  "originalMastered", "originalFullyMastered", "heavyWager", "inFormOrTranscended", "inEnhancement", "superiorAsRaging",
+  "originalMastered", "originalFullyMastered", "grandTriggerMet", "heavyWager", "inFormOrTranscended", "inEnhancement", "superiorAsRaging",
   // The Maneuver declared an Attacking Maneuver or a Unique Ability (Reserved Combatant's); a Surge through the Surge Maneuver
   // itself (Never Surrender's).
   "attackOrUnique", "bySurgeManeuver",

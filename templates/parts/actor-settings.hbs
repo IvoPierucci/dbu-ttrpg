@@ -282,6 +282,15 @@
       <input type="checkbox" name="system.hideUnfitTraits" {{#if system.hideUnfitTraits}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
       Only Traits you may have
     </label>
+    {{#if editable}}
+    <button type="button" class="capacity-reset" data-action="refreshRacialTraits"
+            data-tooltip="Any Racial Trait held twice taken off, and the race's put right: what it should not have put by, what it is missing given.">Refresh Racial Traits</button>
+    {{/if}}
+    <label class="debug-toggle"
+           data-tooltip="A Trait's text shows each amount's value for this character in brackets after it - 1(T) [3], 1/2 of your Max Capacity [48]. Tick to hide them.">
+      <input type="checkbox" name="system.hideRealValues" {{#if system.hideRealValues}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
+      Hide real values in brackets
+    </label>
   </section>
 
   {{! Skill Specialties (the user's): Craft's and Knowledge's own, each a Skill of its own - a summary here, side by side; added,
@@ -385,6 +394,11 @@
              {{#if system.debug.kiMultiplier}}checked{{/if}}/>
       Ki Multiplier
       {{#if system.debug.kiMultiplier}}<em>Ki x2 &middot; Capacity x1.5</em>{{/if}}
+    </label>
+    <label class="debug-toggle"
+           data-tooltip="The race gives its Racial Traits, and its Secondary ones are exchanged for Factor Traits from their rows. Ticked, the Traits tab's Add Racial Trait is back, for anything else.">
+      <input type="checkbox" name="system.debug.showAddRacialTrait" {{#if system.debug.showAddRacialTrait}}checked{{/if}}/>
+      Show Add Racial Trait
     </label>
     {{! The ToP Mod and Crit Target are gone (the user's, 2026-11-16): Custom Buffs do both now. }}
     {{! A row each kind (the user's): the round and the Encounter; the Maneuvers; Fusion. }}

@@ -89,8 +89,19 @@
   </div>
 
   <div class="dbu-fusion-panel">
-    <h3 class="dbu-side-title">Fusion Awakenings <span class="panel-note">Lesser {{f.awakenings.lesser}} &middot; Greater {{f.awakenings.greater}}</span></h3>
-    <p class="dbu-vehicle-empty">Waits on the Transformations.</p>
+    <h3 class="dbu-side-title">Fusion Awakenings <span class="panel-note">Lesser {{f.awakenings.lesserUsed}} of {{f.awakenings.lesser}} &middot; Greater {{f.awakenings.greaterUsed}} of {{f.awakenings.greater}}</span></h3>
+    {{! "Choose which Awakenings they have access to from that list until the Fusion ends" - unticked, not had; over the limit said, never refused. }}
+    {{#if f.awakenings.list.length}}
+    {{#each f.awakenings.list as |awakening|}}
+    <label class="debug-toggle" data-tooltip="{{awakening.subtype}} Awakening{{#if awakening.stacks}}, {{awakening.stacks}} Stack(s){{/if}} - unticked, this Fusion does not have it">
+      <input type="checkbox" data-action="toggleFusionAwakening" data-item-id="{{awakening.id}}" {{#unless awakening.off}}checked{{/unless}} {{#unless @root.editable}}disabled{{/unless}}/>
+      {{awakening.name}} <span class="panel-note">{{awakening.subtype}}</span>
+    </label>
+    {{/each}}
+    {{#if f.awakenings.over}}<p class="dbu-vehicle-empty warn">Over the Fusion Awakening Limit - untick the ones this Fusion does not have.</p>{{/if}}
+    {{else}}
+    <p class="dbu-vehicle-empty">None of the Fused Characters has an Awakening.</p>
+    {{/if}}
   </div>
   {{/with}}
 </section>

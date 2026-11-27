@@ -13,6 +13,10 @@ that have worked, with the steps people tend to miss.
    `[passive, effect 2]` or `[triggered/power, 1/round, effect 5]`. Put a comment above it saying what it does. Where
    code does part of it, say where (`# (3) ... (chat.mjs lifeOnWoundAsked)`). Where nothing does, say why it is
    "the table's".
+   The sheet reads the text too (`racial.mjs` `racialTraitLines(item, live)`): keep each effect's "(N)-[keywords]:" as printed and
+   give its blocks that `effect N` - that is how its uses left and its Automatic are shown in the right line. Amounts written as
+   the page writes them ("1(T)", "G(T)", "1/2 (rounded up) of your Maximum Life Points") get their value in brackets by
+   themselves; a character value the text names and the sheet does not know yet goes in `STAT_NAMES` there.
 4. **Register the file:** run `python tools/reindex.py --write`, which adds new files to `traits/index.json` and drops
    deleted ones.
 5. **Check it.** Run `bash tests/check.sh`. Its `compile-traits` harness compiles every file and names any that fail,
@@ -67,9 +71,12 @@ Special Maneuver.
 ### A Transformation
 - **One folder per Transformation:** `traits/transformations/<awakenings|enhancements|forms/alternate|forms/legendary|evolved>/<id>/`.
   - `<id>.dbu` holds the header (`type`, `subtype`, `racial`, `prerequisites`, `tier`, `stress`, `aspects`, `bonuses`,
-    `maxStacks` for Awakenings, `variantOf`, `line`/`stage`, `grades`...) and the whole page's text.
+    `maxStacks` for Awakenings, `variantOf`, `initial` (a Special Enhancement's Initial Enhancement), `onlyAlongside`, `line`/`stage`,
+    `grades`...) and the whole page's text.
   - `traits/<trait>.dbu` holds each Transformation Trait, with `slot: trait|burst|mastery|transcendent|legendary`,
-    `mastery: N`, `replaces: <name>` (in a Variant) and `constant: N`.
+    `mastery: N`, `replaces: <name>` (in a Variant) and `constant: N`. A Super Awakening's Grand Awakening is `slot: grand` with
+    `grandTrigger: N` (its Grand Trigger effect, which calls `grandTrigger()` once met; the rest applies only once the Full
+    Awakening Maneuver has activated it this Encounter) - Unkillable Majin's Boundless Majin.
   - `unique/`, `maneuvers/`, `conditions/` and `states/` hold anything else it owns.
 - **Everything it owns stays in its folder.** `module/` and `templates/` never name it.
 - **Aspects:** name them in the header; their effects live in `traits/aspects/`. A Trait that changes Aspects uses

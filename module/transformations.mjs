@@ -496,6 +496,7 @@ export function transformationItems(actor) {
 export function inUse(item) {
   const file = fileOf(item);
   if (!file) return false;
+  if (fusionLeftOut(item)) return false;
   if (kindOf(file) === "awakening") return stacksOf(item, file) > 0;
   return Boolean(item.system?.active);
 }
@@ -617,6 +618,8 @@ export function transformationTraitAside(item, items = item?.parent?.items) {
   const kind = kindOf(ownerFile);
   if (trait?.stacks && (stacksOf(owner, ownerFile) < Number(trait.stacks))) return "stacks";
   if (trait?.mastery && ((Number(owner.system?.mastery) || 0) < Number(trait.mastery))) return "mastery";
+  // A Super Awakening's Grand Awakening: "inactive until it is activated" (grandOn) - its Grand Trigger effect, by number, kept meanwhile.
+  if ((trait?.slot === "grand") && !grandOn(owner)) return numbersOf(trait.grandTrigger).length ? "" : "grand";
   if (kind === "awakening") return "";
   // "A Legendary Trait applies only while the Form is Legendary" (the user's, 2026-11-16) - Pure Form's once Pure Chaos makes it one.
   if (trait?.slot === "legendary") return (formTypeFor(owner, list) === "legendary") ? "" : "legendary";
@@ -668,6 +671,10 @@ export function transformationTraitProgram(item, program, items = item?.parent?.
   if (!item?.system?.transformation) return program;
   const owner = Array.from(items ?? []).find(each => each.id === item.system.transformation);
   const trait = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  if ((trait?.slot === "grand") && owner && !grandOn(owner)) {
+    const trigger = new Set(numbersOf(trait.grandTrigger));
+    return { ...program, blocks: (program.blocks ?? []).filter(block => trigger.has(Number(block.modifiers?.effect) || 0)) };
+  }
   if (owner && (kindOf(fileOf(owner)) === "awakening")) return program;
   if (trait?.slot === "legendary") return (formTypeFor(owner, items) === "legendary") ? program : { ...program, blocks: [] };
   const using = owner ? traitsInUse(owner, items) : false;
@@ -719,6 +726,67 @@ export function transformationTraitScript(item, items = item?.parent?.items) {
 }
 
 useTransformationGate((item, items) => transformationTraitAside(item, items));
+
+// --- A Super Awakening's Grand Awakening (Transformation Rules: "Grand Awakening", "Grand Trigger", "Full Awakening Maneuver") -----------
+
+/** This Combat Encounter, as a key; "" outside one - a Grand Trigger and a Grand Awakening are an Encounter's. */
+function encounterKey() {
+  return globalThis.game?.combat?.started ? String(globalThis.game.combat.id ?? "") : "";
+}
+
+/** Its Grand Trigger met this Combat Encounter: the Full Awakening Maneuver open. */
+export function grandMet(item) {
+  const key = encounterKey();
+  return Boolean(key) && (item?.flags?.["dbu-ttrpg"]?.grandMet === key);
+}
+
+/** Its Grand Awakening active: "until the end of the Combat Encounter" it was activated in. */
+export function grandOn(item) {
+  const key = encounterKey();
+  return Boolean(key) && (item?.flags?.["dbu-ttrpg"]?.grandOn === key);
+}
+
+/** A Super Awakening of theirs whose Grand Trigger is met this Encounter - "you can only have 1 Super Awakening". */
+function grandReady(actor) {
+  return transformationItems(actor).find(item => (kindOf(fileOf(item)) === "awakening") && grandMet(item)) ?? null;
+}
+
+useTransformationQuestion("grandTriggerMet", actor => Boolean(grandReady(actor)));
+
+/**
+ * The Grand Trigger met (its Trait's `grandTrigger` effect's script, `grandTrigger()`): the Super Awakening the Trait is of marked for this
+ * Combat Encounter - the Full Awakening Maneuver open - and said. Nothing outside a Combat Encounter.
+ */
+export async function grandTrigger(actor, use) {
+  const key = encounterKey();
+  const trait = actor?.items?.get?.(use?.sourceId ?? "");
+  const owner = trait?.system?.transformation ? actor.items.get(trait.system.transformation) : null;
+  if (!key || !owner || grandMet(owner)) return;
+  await owner.update({ "flags.dbu-ttrpg.grandMet": key });
+  globalThis.ui?.notifications?.info(`${actor.name}: ${owner.name}'s Grand Trigger is met - the Full Awakening Maneuver is open this Encounter.`);
+}
+
+/**
+ * The Full Awakening Maneuver used: "activate the Grand Awakening until the end of the Combat Encounter and regain Life Points and Ki Points
+ * equal to 1/4 (rounded up) of your Maximum Life Points and Maximum Ki Points"; then what answers it (the `full-awakening` Moment).
+ */
+export async function fullAwakening(actor) {
+  if (!encounterKey()) return globalThis.ui?.notifications?.warn("The Full Awakening Maneuver is a Combat Encounter's: none is under way.");
+  // Opened by hand - Debug's Maneuver Access, its Grand Trigger missed (the user's, 2026-11-27: a way around it mid-game) - their Super
+  // Awakening all the same ("you can only possess a single Super Awakening"), its Grand Trigger marked met as it is.
+  const forced = grandReady(actor) ? null : transformationItems(actor).find(item => (kindOf(fileOf(item)) === "awakening")
+    && (String(fileOf(item)?.subtype ?? "").toLowerCase() === "super") && (stacksOf(item, fileOf(item)) > 0));
+  const owner = grandReady(actor) ?? forced;
+  if (!owner) return globalThis.ui?.notifications?.warn(`${actor?.name ?? "This character"} has no Super Awakening.`);
+  await owner.update({ "flags.dbu-ttrpg.grandOn": encounterKey(), ...(forced ? { "flags.dbu-ttrpg.grandMet": encounterKey() } : {}) });
+  const { life, ki } = actor.system;
+  await actor.update({ "system.life.value": Math.min(life.ceiling ?? life.max, (Number(life.value) || 0) + Math.ceil((Number(life.max) || 0) / 4)),
+    "system.ki.value": Math.min(ki.ceiling ?? ki.max, (Number(ki.value) || 0) + Math.ceil((Number(ki.max) || 0) / 4)) });
+  globalThis.ui?.notifications?.info(`${actor.name}: ${owner.name}'s Grand Awakening is active until the end of the Encounter${
+    forced ? " (its Grand Trigger not met: opened by hand)" : ""}.`);
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(actor, "full-awakening", {});
+}
 
 /**
  * How a Transformation Trait Item stands now, for the list of them: "in" (all of it applies), "permanent" (its Transformation not
@@ -817,6 +885,17 @@ export async function removeTransformation(actor, itemId) {
 /** The Awakening Limit by base Tier of Power (Lesser, Greater): "1 -> 2/1, 2 -> 3/1, 3 -> 4/2, 4 -> 5/2, 5 -> 6/3, 6 -> 7/3, 7 -> 7/4". */
 export const AWAKENING_LIMIT = Object.freeze({ 1: [2, 1], 2: [3, 1], 3: [4, 2], 4: [5, 2], 5: [6, 3], 6: [7, 3], 7: [7, 4] });
 
+/** Minions' "Minion Awakening Limit" by their Master's base Tier of Power: [Lesser, Greater]. "Minions cannot gain Super Awakenings." */
+export const MINION_AWAKENING_LIMIT = Object.freeze({ 1: [1, 0], 2: [1, 1], 3: [2, 1], 4: [2, 2], 5: [3, 2], 6: [3, 3], 7: [4, 3] });
+
+/**
+ * A Fusion's Awakening left out: "when a Fusion is created, choose which Awakenings they have access to from that list until the Fusion
+ * ends" - unticked on its Fusion tab (`fusionOff`), it is not had: not in use, its Traits aside, not counted.
+ */
+export function fusionLeftOut(item) {
+  return Boolean(item?.flags?.["dbu-ttrpg"]?.fusionOff) && (item?.parent?.type === "fusion");
+}
+
 /**
  * How many Lesser and Greater Awakenings count toward the Awakening Limit, and the Limit - said, never refused (the user's). Each
  * Stack one; a Temporary Awakening's not ("does not count towards your Awakening Limit"); nor one whose file says it is free of
@@ -825,10 +904,11 @@ export const AWAKENING_LIMIT = Object.freeze({ 1: [2, 1], 2: [3, 1], 3: [4, 2], 
 export function awakeningCount(actor) {
   const items = transformationItems(actor);
   const had = new Set(items.map(item => item.system?.transformationId));
-  const count = { lesser: 0, greater: 0 };
+  const count = { lesser: 0, greater: 0, super: 0 };
   for (const item of items) {
     const file = fileOf(item);
     if (kindOf(file) !== "awakening") continue;
+    if (fusionLeftOut(item)) continue;
     if (listOf(file.limitFreeWith).some(id => had.has(id))) continue;
     const type = String(file.subtype ?? "").toLowerCase();
     if (!(type in count)) continue;
@@ -836,7 +916,19 @@ export function awakeningCount(actor) {
   }
   const base = Math.min(7, Math.max(1, Number(actor?.system?.baseTierOfPower) || 1));
   // An Adversary "ignores the Awakening Limit"; a Fusion has its own ("Fusion Awakenings": "up to its own limit by base Tier of Power").
-  if (actor?.type === "adversary") return { lesser: count.lesser, greater: count.greater, lesserMax: null, greaterMax: null, none: true };
+  if (actor?.type === "adversary") return { lesser: count.lesser, greater: count.greater, lesserMax: null, greaterMax: null, none: true,
+    noneWhy: "Adversary" };
+  // A Duplicate has its Master's, whatever they are; another Minion "the Minion Awakening Limit" by its Master's base Tier of Power, and
+  // no Super Awakening - said, never refused.
+  if ((actor?.type === "minion") && actor.system?.duplicate) {
+    return { lesser: count.lesser, greater: count.greater, lesserMax: null, greaterMax: null, none: true, noneWhy: "Duplicate: its Master's" };
+  }
+  if (actor?.type === "minion") {
+    const master = globalThis.game?.actors?.get?.(String(actor.system?.master ?? ""));
+    const masterBase = Math.min(7, Math.max(1, Number(master?.system?.baseTierOfPower) || base));
+    const [lesser, greater] = MINION_AWAKENING_LIMIT[masterBase];
+    return { lesser: count.lesser, greater: count.greater, lesserMax: lesser, greaterMax: greater, minion: true, super: count.super };
+  }
   const [lesser, greater] = (actor?.type === "fusion") ? FUSION_AWAKENINGS[Math.min(FUSION_MAX_BASE_TIER, base)] : AWAKENING_LIMIT[base];
   return { lesser: count.lesser, greater: count.greater, lesserMax: lesser, greaterMax: greater };
 }
@@ -1217,6 +1309,10 @@ export async function enterTransformation(actor, item, { grade, scales, prelude,
     for (const other of transformationItems(actor).filter(each => each.system?.active && (each.id !== enhancement.id)
       && (kindOf(fileOf(each)) === "enhancement") && !each.system?.transcended)) changes.push({ _id: other.id, "system.active": false });
   }
+  // Left with one of these: what was used beside it only (`onlyAlongside`) - not where the one entered is that.
+  for (const id of alongsideLeaving(actor, changes.filter(change => change["system.active"] === false).map(change => change._id), item.id)) {
+    if (!changes.some(change => change._id === id)) changes.push({ _id: id, "system.active": false });
+  }
   const leaving = changes.filter(change => change["system.active"] === false).map(change => actor.items.get(change._id)).filter(Boolean);
   await actor.updateEmbeddedDocuments("Item", [own, ...changes]);
   // Multiple per Stage: a lower Stage held twice - which one this inherits from, asked.
@@ -1270,6 +1366,22 @@ export async function leftTransformation(actor, item, { into = null } = {}) {
     { key: "fadedIn", value: String(globalThis.game?.combat?.id ?? "none") }] });
 }
 
+/** The Forms and Enhancements in use beside one - an Awakening is not "used in conjunction" with it. */
+function alongsideOf(actor, item) {
+  return transformationsInUse(actor).filter(each => (each.id !== item?.id) && (kindOf(fileOf(each)) !== "awakening"));
+}
+
+/**
+ * `onlyAlongside:` (Super Kaioken's Multiplied Power (3)): "If you would leave a Transformation used in conjunction with this Transformation,
+ * leave this Transformation too" - those in use with it, kept, as one beside them is left. Not the one entered.
+ */
+function alongsideLeaving(actor, leavingIds, enteringId = null) {
+  const leaving = new Set(leavingIds);
+  if (!leavingIds.some(id => kindOf(fileOf(actor.items.get(id))) !== "awakening")) return [];
+  return transformationsInUse(actor).filter(each => fileOf(each)?.onlyAlongside && !leaving.has(each.id) && (each.id !== enteringId))
+    .map(each => each.id);
+}
+
 /** Leave Transformations - the Revert Maneuver's, a failed Stress Test's: put by, and what leaving each does. */
 export async function leaveTransformations(actor, ids) {
   // Linked: "If you have to leave the Linked Enhancement due to any effects, also leave this Transformation."
@@ -1279,6 +1391,7 @@ export async function leaveTransformations(actor, ids) {
     if (links.some(link => ids.some(id => { const left = actor.items.get(id); return left && ((left.system?.transformationId === link)
       || (aspectId(left.name) === link)); }))) leavingIds.add(each.id);
   }
+  for (const id of alongsideLeaving(actor, [...leavingIds])) leavingIds.add(id);
   ids = [...leavingIds];
   const items = ids.map(id => actor.items.get(id)).filter(Boolean);
   if (!items.length) return;
@@ -1412,7 +1525,9 @@ export function inTransformationOf(actor, wanted) {
     const line = String(wanted).slice(5);
     return using.some(item => (kinds(item) === "form") && (lineOf(fileOf(item), actor?.items) === line));
   }
-  return using.some(item => (item.system?.transformationId === wanted) || (String(fileOf(item)?.variantOf ?? "") === wanted));
+  // A Special Enhancement "is treated as its Initial Enhancement for all effects" (`initial:`) - Super Kaioken as Kaioken.
+  return using.some(item => (item.system?.transformationId === wanted) || (String(fileOf(item)?.variantOf ?? "") === wanted)
+    || (String(fileOf(item)?.initial ?? "") === wanted));
 }
 
 /**
@@ -1903,6 +2018,14 @@ export function aspectWarnings(actor, item) {
     said.push("Beyond: not with Holding Back stacks unless Fully Mastered");
   }
   if (aspects.includes("blutz-wave") && actor?.getFlag?.("dbu-ttrpg", "tailLost")) said.push("Blutz Wave: you have no tail");
+  // A Special Enhancement: "you must have Mastered its Initial Enhancement to use it" (`initial:`).
+  const initial = String(fileOf(item)?.initial ?? "");
+  if (initial) {
+    const had = transformationItems(actor).find(each => each.system?.transformationId === initial);
+    if (!isMastered(had)) said.push(`Special Enhancement: its Initial Enhancement ${had?.name ?? transformationFile(initial)?.name ?? initial} is not Mastered`);
+  }
+  // `onlyAlongside:` - "You can only enter this Transformation if it would be used in conjunction with another Transformation" (Super Kaioken's).
+  if (fileOf(item)?.onlyAlongside && !alongsideOf(actor, item).length) said.push(`${item.name}: only with another Transformation in use`);
   said.push(...lineLockWarnings(actor, item));
   return said.join("; ");
 }

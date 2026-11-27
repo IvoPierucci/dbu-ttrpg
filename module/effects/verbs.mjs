@@ -671,6 +671,17 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "A Unique Ability of yours by its id, used without paying its Ki Point Cost - Time Has Stopped's Time Freeze (chat.mjs freeUnique)."
   },
+  grandTrigger: {
+    args: [0, 0],
+    wantsUse: true,
+    doc: "A Super Awakening's Grand Trigger met: the Full Awakening Maneuver open this Combat Encounter (transformations.mjs grandTrigger) - "
+       + "Boundless Majin (1)'s."
+  },
+  fullAwakening: {
+    args: [0, 0],
+    doc: "The Full Awakening Maneuver: the Grand Awakening active till the Encounter ends, 1/4 (rounded up) of the Maximum Life and Ki "
+       + "Points back (transformations.mjs fullAwakening)."
+  },
   offerOneOf: {
     args: [1, 5],
     names: [0, 1, 2, 3, 4],
@@ -1300,12 +1311,13 @@ export const VERBS = Object.freeze({
        + "of your next turn."
   },
   surge: {
-    args: [0, 4],
+    args: [0, 5],
     names: [0],
     doc: "Take a Surge. Name \"healing\" or \"ki\" to force which, or neither to be asked. A number after it multiplies "
        + "the Life Points a Healing Surge gives back - Majin Regeneration's \"double the amount\" - and a third, a die rolled "
        + "once per Tier of Power on top - Revenge Bomber's 1d6(T) (6). A fourth, Life Points per base Tier for each Health "
-       + "Threshold below - From Goop's 2(bT) (4)."
+       + "Threshold below - From Goop's 2(bT) (4). A fifth multiplies the Surgency for that Surge - Super Majin (8)'s \"double your "
+       + "Surgency for the duration of that Healing Surge\"."
   },
   leaveState: {
     args: [0, 1],

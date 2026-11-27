@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 55, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Overflowing Power 2026-11-26)", files.length, 56);
+check("the first group, all 61, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin, Super Majin, Saiyan Prodigy and Greater Mutation 2026-11-27, Overflowing Power)", files.length, 61);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",
@@ -1684,6 +1684,209 @@ allow counter.free;`).program.blocks[0].requires;
      S["clash.corporealForCognitive"], getTrait("steel-frame-hard-as-steel").script.includes("[triggered/direct-hit, 1/round, chosen, effect 5]"),
      CH.includes('(defender?.system?.effects?.slots?.["clash.corporealForCognitive"] === true) && challenger && areOpponents(defender, challenger)')],
     ["awakening", "lesser", "body", 1, "2", 2, steel.system.tierOfPower, true, true, true]);
+  // Ticked in Respond, the box above shows the Category it leaves (the user's, 2026-11-26): its Direct Hit step read as settled.
+  const { reactiveFor } = await import(modUrl("effects/registry.mjs"));
+  const { collectReactive, applySlot } = await import(modUrl("effects/interpreter.mjs"));
+  const step = reactiveFor(steel).filter(entry => entry.program.blocks[0].moment === "direct-hit").map(entry => applySlot(collectReactive([{ ...entry, armed: true }],
+    "direct-hit", { data: steel.system, errors: [], context: {}, queue: [] }).slots, "incoming.damage.category.shift", 0));
+  check("Hard as Steel (5) ticked in Respond: the Direct Hit box one Category lower (chat.mjs directHitStep, categorySteps, damageWith)",
+    [step, CH.includes('const { slots } = collectReactive([{ ...entry, armed: true }], "direct-hit", scope);'),
+     CH.includes(".reduce((sum, input) => sum + (Number(entry.categorySteps?.[input.value]) || 0), 0) : 0;"),
+     CH.includes("const shown = (steps && roll.damageWith) ? roll.damageWith(key, balanced, steps) : (balanced ? roll[key].balanced : roll[key]);")],
+    [[-1], true, true, true]);
+}
+
+// --- Super Kaioken (the user's link, 2026-11-26): a Special Enhancement, Initial Enhancement Kaioken, 3 Grades ------------------------
+{
+  const sk = transformation("super-kaioken", { active: true, grade: 3 });
+  const ssj = transformation("super-saiyan-1", { active: true });
+  const with3 = holding([ssj, sk, ...T.traitFilesFor(T.transformationFile("super-kaioken")).map(t => traitItem(sk, t.id))]);
+  const alone = holding([transformation("super-kaioken", { active: true })]);
+  const TM = fs.readFileSync(path.join(ROOT, "module", "transformations.mjs"), "utf8");
+  check("Super Kaioken: Grade 3 AG/FO/MA 3(T), Extra Dice 2 Categories up, Signature Wound G(T); counts as Kaioken; Kaioken not Mastered and alone said",
+    [Object.values(T.bonusesOf(sk)).map(T.bonusWritten), partsOf(with3, "dice.extra.category"), partsOf(with3, "wound.signature"),
+     T.inTransformationOf(with3, "kaioken"), T.aspectWarnings(with3, sk), T.aspectWarnings(alone, alone.items[0])],
+    [["3(T)", "3(T)", "3(T)"], [["Multiplied Power", 2]], [["Power of a Heartbeat", 3 * with3.system.tierOfPower]], true,
+     "Special Enhancement: its Initial Enhancement Kaioken is not Mastered",
+     "Special Enhancement: its Initial Enhancement Kaioken is not Mastered; Super Kaioken: only with another Transformation in use"]);
+  check("Super Kaioken left with the one beside it (onlyAlongside): the Revert's and one put by as another is entered, not the one entered",
+    [TM.includes("for (const id of alongsideLeaving(actor, [...leavingIds])) leavingIds.add(id);"),
+     TM.includes("for (const id of alongsideLeaving(actor, changes.filter(change => change[\"system.active\"] === false).map(change => change._id), item.id)) {"),
+     getTrait("super-kaioken-multiplied-power").script.includes("requires attackingManeuver && !hasResource(\"vermilion\");"),
+     getTrait("super-kaioken-vermilion-explosion").script.includes("expires(vermilion, turn);") && getTrait("super-kaioken-vermilion-explosion").script.includes("offerOneOf(power-up);")],
+    [true, true, true, true]);
+}
+
+// --- A Trait's Maneuvers by its Option's `allow` (the user's, 2026-11-27): Class Up's Choice Maneuver under Class Selection ----------------
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const cu = transformation("class-up", { stacks: 1 });
+  const sel = traitItem(cu, "class-up-class-selection");
+  sel.system.chosen = [{ key: "option", value: "class-up-elite" }];
+  const held = holding([cu, sel]);
+  const SH = fs.readFileSync(path.join(ROOT, "module", "sheets", "actor-character-sheet.mjs"), "utf8");
+  const TT = fs.readFileSync(path.join(ROOT, "templates", "parts", "actor-transformations.hbs"), "utf8");
+  check("Class Selection with Elite opens Class Up: Elite, listed under it; the Transformation Traits list draws a Trait's Maneuvers",
+    [[...RAC.maneuversOpenedBy(sel)], held.system.effects.slots["maneuver.class-up-elite-choice"],
+     SH.includes("|| (maneuversOpenedBy(item).has(maneuver.id) && (this.actor.system.effects?.slots?.[`maneuver.${maneuver.id}`] === true)))"),
+     TT.includes('<ul class="maneuver-list trait-maneuvers">')],
+    [["class-up-elite-choice"], true, true, true]);
+}
+
+// --- Minions and Fusions (the user's links, 2026-11-27) ------------------------------------------------------------------------------
+{
+  const MAKE = await import(modUrl("minion-make.mjs"));
+  const holder = (type, system, items) => {
+    const actor = { type, system, items };
+    for (const item of items) item.parent = actor;
+    return actor;
+  };
+  const before = globalThis.game.actors;
+  globalThis.game.actors = { get: id => (id === "m1") ? { system: { baseTierOfPower: 3 } } : undefined };
+  const minion = holder("minion", { master: "m1", baseTierOfPower: 1 }, [transformation("zenkai", { stacks: 2 }), transformation("unlocked-potential", { stacks: 1 })]);
+  const duplicate = holder("minion", { master: "m1", duplicate: true, baseTierOfPower: 1 }, [transformation("zenkai", { stacks: 3 })]);
+  globalThis.game.actors = before;
+  const cut = transformation("zenkai", { stacks: 2 });
+  cut.flags["dbu-ttrpg"] = { fusionOff: true };
+  const fusion = holder("fusion", { baseTierOfPower: 3 }, [cut, transformation("unlocked-potential", { stacks: 1 })]);
+  const kept = transformation("zenkai", { stacks: 2 });
+  kept.flags["dbu-ttrpg"] = { fusionOff: true };
+  holder("character", { baseTierOfPower: 3 }, [kept]);
+  check("a Duplicate copies its Master's Transformations (in use as they were); a Minion's Awakening Limit by its Master's base Tier; a Duplicate none",
+    [MAKE.isDuplicatedItem({ type: "transformation" }),
+     (() => { globalThis.game.actors = { get: id => (id === "m1") ? { system: { baseTierOfPower: 3 } } : undefined };
+       const limit = T.awakeningCount(minion); globalThis.game.actors = before; return [limit.lesser, limit.lesserMax, limit.greater, limit.greaterMax, limit.minion]; })(),
+     [T.awakeningCount(duplicate).none, T.awakeningCount(duplicate).noneWhy]],
+    [true, [2, 2, 1, 1, true], [true, "Duplicate: its Master's"]]);
+  check("a Fusion's Awakening unticked is not had - not in use, not counted; the flag means nothing on another character",
+    [T.inUse(cut), T.awakeningCount(fusion).lesser, T.awakeningCount(fusion).greater, T.inUse(kept)], [false, 0, 1, true]);
+}
+
+// --- Unkillable Majin (the user's link, 2026-11-27): the first Super Awakening, its Grand Awakening off until the Full Awakening ------------
+{
+  const um = transformation("unkillable-majin", { stacks: 1 });
+  const items = [um, ...T.traitFilesFor(T.transformationFile("unkillable-majin")).map(t => traitItem(um, t.id))];
+  const before = globalThis.game.combat;
+  const prepared = () => holding(items).system.effects.slots;
+  globalThis.game.combat = { started: true, id: "c1" };
+  const off = prepared();
+  um.flags["dbu-ttrpg"] = { grandMet: "c1" };
+  const met = prepared();
+  um.flags["dbu-ttrpg"] = { grandMet: "c1", grandOn: "c1" };
+  const on = prepared();
+  globalThis.game.combat = { started: true, id: "c2" };
+  const nextEncounter = prepared();
+  globalThis.game.combat = before;
+  const boundless = getTrait("unkillable-majin-boundless-majin");
+  check("Unkillable Majin: a Super Awakening of the Body; Always Bouncing Back always; Boundless Majin a Grand Awakening, its (1) the Grand Trigger",
+    [T.kindOf(T.transformationFile("unkillable-majin")), T.transformationFile("unkillable-majin").subtype, partsOf(holding(items), "stressBonus").length > 0,
+     boundless.slot, boundless.grandTrigger, boundless.script.includes('[automatic/surge-threshold, effect 1]\nrequires belowThreshold("bruised") && !belowThreshold("injured") && !grandTriggerMet;\ngrandTrigger();')],
+    ["awakening", "super", true, "grand", 1, true]);
+  check("the Grand Awakening: off (its Grand Trigger alone), the Full Awakening open once it is met, all of it on once activated, off again the next Encounter",
+    [[off["monstrousVitality.overflow"], off["maneuver.full-awakening"]], [met["monstrousVitality.overflow"], met["maneuver.full-awakening"]],
+     [on["monstrousVitality.overflow"], on["wager.anyFromLife"]], nextEncounter["monstrousVitality.overflow"]],
+    [[undefined, undefined], [undefined, true], [true, true], undefined]);
+}
+
+// --- The Full Awakening opened by hand (Debug's Maneuver Access, the user's 2026-11-27): their Super Awakening activated all the same ------
+{
+  const { allManeuvers, loadManeuvers, maneuverAccessRows } = await import(modUrl("maneuvers.mjs"));
+  if (!allManeuvers().length) await loadManeuvers();
+  const dotted = (target, changes) => { for (const [key, value] of Object.entries(changes)) foundry.utils.setProperty(target, key, value); };
+  const um = transformation("unkillable-majin", { stacks: 1 });
+  um.update = async changes => dotted(um, changes);
+  const actor = { name: "Buu", items: [um], system: { life: { value: 10, max: 100, ceiling: 100 }, ki: { value: 0, max: 80, ceiling: 80 } },
+    update: async changes => dotted(actor, changes), getFlag: () => undefined };
+  um.parent = actor;
+  const before = [globalThis.game.combat, globalThis.ui];
+  globalThis.game.combat = { started: true, id: "c9" };
+  globalThis.ui = { notifications: { info: () => {}, warn: () => {} } };
+  await T.fullAwakening(actor).catch(() => {});
+  [globalThis.game.combat, globalThis.ui] = before;
+  check("its Grand Trigger missed, the Full Awakening still activates their Super Awakening, its Grand Trigger marked; listed in Debug's Maneuver Access",
+    [um.flags["dbu-ttrpg"]?.grandOn, um.flags["dbu-ttrpg"]?.grandMet, actor.system.life.value, actor.system.ki.value,
+     maneuverAccessRows({ items: [], system: { effects: { slots: {} } }, getFlag: () => [] }).some(row => row.id === "full-awakening")],
+    ["c9", "c9", 35, 20, true]);
+}
+
+// --- Super Majin (the user's link, 2026-11-27): a Greater Awakening of the Body, 1 Stack -------------------------------------------------
+{
+  const sm = transformation("super-majin", { stacks: 1 });
+  const mania = traitItem(sm, "super-majin-majin-mania");
+  const rubbery = { id: "rb1", name: "Rubbery Body", type: "racial", uuid: "Actor.me.Item.rb1", flags: { "dbu-ttrpg": { sourceId: "rubbery-body" } },
+    system: { script: getTrait("rubbery-body").script, chosen: [] } };
+  const withRubbery = holding([sm, mania, rubbery]);
+  const onlyRubbery = holding([rubbery]);
+  const without = holding([sm, mania]);
+  const S = without.system.effects.slots;
+  const MR = fs.readFileSync(path.join(ROOT, "module", "effects", "moments-runtime.mjs"), "utf8");
+  check("Super Majin: Greater, Body; AG +1, FO +2, TE +1, MA +2; Healthy Combat Rolls and Soak 1(T); Rubbery Body (6) undone where it is had, nothing where not",
+    [T.kindOf(T.transformationFile("super-majin")), T.transformationFile("super-majin").subtype,
+     Object.fromEntries(Object.entries(T.bonusesOf(sm)).map(([k, b]) => [k, T.bonusWritten(b)])),
+     partsOf(without, "soakValue").some(([name]) => name === "Majin Mania"),
+     [onlyRubbery.system.effects.slots["incoming.damage.directOrHigher"]?.add, withRubbery.system.effects.slots["incoming.damage.directOrHigher"]?.add,
+      S["incoming.damage.directOrHigher"]?.add],
+     getTrait("super-majin-majin-mania").grantsRacialOf, getTrait("super-majin-majin-mania").script.includes("surge(healing, 1, 0, 0, 2);"),
+     MR.includes("lifePerThresholdBT: Number(args[3]) || 0, surgencyShare: Number(args[4]) || 1 });")],
+    ["awakening", "greater", { agility: "1", force: "2", tenacity: "1", magic: "2" }, true,
+     [5 * onlyRubbery.system.baseTierOfPower, 0, undefined], "majin", true, true]);
+}
+
+// --- Saiyan Prodigy (the user's link, 2026-11-27): a Super Awakening of the Mind; Bottomless Battle Born, what Battle Born cannot hold ------
+{
+  const { resourceDefinitions } = await import(modUrl("effects/traits.mjs"));
+  const sp = transformation("saiyan-prodigy", { stacks: 1 });
+  const items = [sp, ...T.traitFilesFor(T.transformationFile("saiyan-prodigy")).map(t => traitItem(sp, t.id))];
+  const prepared = (extra = {}) => {
+    const parent = new ActorStub({}, { strict: false });
+    parent.items = items;
+    for (const item of items) item.parent = parent;
+    parent.uuid = "Actor.me";
+    const model = new DBUCharacterData({ powerLevel: 20, progression: progressionTo(20), ...extra }, { parent, strict: false });
+    parent.system = model;
+    model.prepareBaseData?.();
+    model.prepareDerivedData();
+    return parent;
+  };
+  const full = { battlebornstrike: { stacks: 2, max: 2 }, battleborndodge: { stacks: 2, max: 2 }, battlebornwound: { stacks: 2, max: 2 },
+    bottomlessstrike: { stacks: 1, max: 99 } };
+  const before = globalThis.game.combat;
+  globalThis.game.combat = { started: true, id: "c5" };
+  const off = prepared({ resources: full, states: { flow: 1 } });
+  sp.flags["dbu-ttrpg"] = { grandMet: "c5", grandOn: "c5" };
+  const on = prepared({ resources: full, states: { flow: 1 } });
+  const outOfFlow = prepared({ resources: full, states: {} });
+  globalThis.game.combat = before;
+  sp.flags["dbu-ttrpg"] = {};
+  const definitions = resourceDefinitions();
+  const MR = fs.readFileSync(path.join(ROOT, "module", "effects", "moments-runtime.mjs"), "utf8");
+  check("Saiyan Prodigy: Super, Mind; 4+ Battle Born Stress Bonus 1; Bottomless Battle Born overflows Battle Born in the Flow State once its Grand Awakening is on",
+    [T.transformationFile("saiyan-prodigy").subtype, partsOf(off, "stressBonus").some(([name]) => name === "Learning through Combat"),
+     [off.system.effects.slots["overflow.bottomless"], on.system.effects.slots["overflow.bottomless"], outOfFlow.system.effects.slots["overflow.bottomless"]],
+     partsOf(on, "strike").some(([name, value]) => (name === "Bottomless Combat Prowess") && (value === on.system.tierOfPower)),
+     [definitions.bottomlesswound?.overflowOf, definitions.bottomlesswound?.overflowWhen],
+     MR.includes("const spill = Object.values(definitions).filter(each => each.overflowOf && asked.includes(each.overflowOf) && each.overflowWhen")],
+    ["super", true, [undefined, true, undefined], true, ["battlebornwound", "overflow.bottomless"], true]);
+}
+
+// --- Greater Mutation (the user's link, 2026-11-27): a Greater Awakening of the Body, 1 Stack -------------------------------------------
+{
+  const { reactiveFor } = await import(modUrl("effects/registry.mjs"));
+  const { collectReactive, applySlot } = await import(modUrl("effects/interpreter.mjs"));
+  const gm = transformation("greater-mutation", { stacks: 1 });
+  const peak = traitItem(gm, "greater-mutation-evolutionary-peak");
+  const actor = holding([gm, peak]);
+  const plain = holding([]);
+  const times = reactiveFor(actor).filter(entry => entry.program.blocks[0].moment === "surge-maneuver")
+    .map(entry => applySlot(collectReactive([{ ...entry, armed: true }], "surge-maneuver", { data: actor.system, errors: [], context: {}, queue: [] }).slots,
+      "surge.regainedTimes", 0));
+  const CH = fs.readFileSync(path.join(ROOT, "module", "chat.mjs"), "utf8");
+  check("Greater Mutation: AG/FO/TE/MA +2; 2 Max Life and Ki a Power Level; Wound and Soak 1(bT); the Surge Maneuver's Surge doubled, asked",
+    [Object.values(T.bonusesOf(gm)).map(T.bonusWritten), actor.system.life.max - plain.system.life.max, actor.system.ki.max - plain.system.ki.max > 0,
+     partsOf(actor, "soakValue").some(([name, value]) => (name === "Evolutionary Peak") && (value === actor.system.baseTierOfPower)), times,
+     CH.includes('const answered = await fire(actor, "surge-maneuver", { kind }, { quiet: true });'),
+     CH.includes(": (Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency) * regainedTimes;")],
+    [["2", "2", "2", "2"], 2 * actor.system.powerLevel, true, true, [1], true, true]);
 }
 
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------

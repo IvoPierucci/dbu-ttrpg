@@ -1,0 +1,68 @@
+id: saiyan-prodigy-bottomless-combat-prowess
+name: Bottomless Combat Prowess
+order: 2
+# A Super Awakening's Grand Awakening: inactive until the Full Awakening Maneuver activates it, for the Combat Encounter; its Grand
+# Trigger (1) answers meanwhile (transformations.mjs grandOn, grandTrigger).
+slot: grand
+grandTrigger: 1
+# (3) Bottomless Battle Born, one for each Combat Roll, no limit: what Battle Born can no longer hold, while in the Flow State
+# (moments-runtime.mjs gainOneOf - onto the lowest of them).
+resource: bottomlessstrike, bottomlessdodge, bottomlesswound
+resourceLabel: Bottomless Battle Born (Strike), Bottomless Battle Born (Dodge), Bottomless Battle Born (Wound)
+resourceMax: 99
+resourceOverflowOf: battlebornstrike, battleborndodge, battlebornwound
+resourceOverflowWhen: overflow.bottomless
+description: >
+  There is no limit to the depth of your combat potential- you grow in battle at a mind-boggling speed.
+text: >
+  Bottomless Combat Prowess: There is no limit to the depth of your combat potential- you grow in battle at a mind-boggling speed.
+  (1)-[Grand Trigger]: You are in the Flow State and possess 4+ stacks of Battle Born.
+  (2)-[Passive]: Increase your Combat Rolls and Soak Value by 1(T).
+  (3)-[Triggered, Resource]: If you are in the Flow State and would gain a stack(s) of Battle Born through an effect but are at your maximum number of Battle Born stacks, you may instead gain an equal number of Bottomless Battle Born stacks. Whenever you gain a stack of Bottomless Battle Born, you must apply it to either Strike, Dodge, or Wound (you decide), but you can only apply a Bottomless Battle Born stack to a Combat Roll if it has the lowest number of Bottomless Battle Born stacks amongst your Combat Rolls (if there’s a tie, you choose). Each stack of Bottomless Battle Born increases the corresponding Combat Roll by 1(T).
+  (4)-[Triggered, 1/Round]: If you gain a stack of Progress through the 1st effect of Combat Imprinting, gain a stack of Battle Born.
+  (5)-[Automatic]: Upon leaving the Flow State, lose all of your Bottomless Battle Born stacks.
+
+---
+
+# (1) The Grand Trigger: in the Flow State with 4+ stacks of Battle Born - met by itself as either comes true (entering Flow, a stack of
+# Battle Born gained); then the Full Awakening Maneuver is open.
+[automatic/state/flow, effect 1]
+requires stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound") && !grandTriggerMet;
+grandTrigger();
+
+[automatic/battle-born, effect 1]
+requires inState("flow") && stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound") && !grandTriggerMet;
+grandTrigger();
+
+[passive, effect 1]
+if (grandTriggerMet) {
+    allow maneuver.full-awakening;
+}
+
+# (2) Combat Rolls and Soak Value 1(T).
+[passive, effect 2]
+combatRolls += 1(T);
+soakValue += 1(T);
+
+# (3) In the Flow State, Battle Born full: a stack of Bottomless Battle Born instead, onto the lowest (its header's overflow) - taken
+# whenever one would be lost for being full, as nothing else would come of it. Each stack 1(T) on its Combat Roll, in the Flow State.
+[passive, effect 3]
+if (inState("flow")) {
+    allow overflow.bottomless;
+    strike += bottomlessstrike.stacks * 1(T);
+    dodge += bottomlessdodge.stacks * 1(T);
+    wound += bottomlesswound.stacks * 1(T);
+}
+
+# (4) A stack of Progress gained through Combat Imprinting (1) - itself taken at the start of your turn - once a Round: a stack of Battle
+# Born. Offered at the start of your turn beside it, taken when it gave a stack (my reading).
+[triggered/start-of-turn, 1/round, effect 4]
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
+
+# (5) Leaving the Flow State: every stack of Bottomless Battle Born lost - as a failed Steadfast Check leaves it (the Flow State (4));
+# left otherwise (Life at 0, Ki under 1/4), they count for nothing outside it (3) and go with the Encounter.
+[automatic/steadfast-failed, effect 5]
+requires inState("flow");
+bottomlessstrike.stacks = 0;
+bottomlessdodge.stacks = 0;
+bottomlesswound.stacks = 0;

@@ -1,6 +1,7 @@
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
+import { waitForContent } from "../content-ready.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { isCharacter } from "../actor-types.mjs";
 import { getTrait, printedLines } from "../effects/traits.mjs";
@@ -13,6 +14,12 @@ import { actorAt, battleEnvironments, environmentName, MAX_VEHICLE_LEVEL, qualit
  * (its Vehicle Qualities and Vehicle Weapons) and Creation (what it was made with).
  */
 export default class DBUVehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+
+  /** Not drawn before the system's rules are loaded (content-ready.mjs): opened too soon, it waits for them and says so. */
+  async render(options, _options) {
+    await waitForContent();
+    return super.render(options, _options);
+  }
 
   static DEFAULT_OPTIONS = {
     classes: ["dbu-ttrpg", "vehicle"],

@@ -3975,9 +3975,9 @@ async function askHeal(actor, maneuver) {
   const adaptation = Number(actor.system.resources?.adaptation?.stacks) || 0;
   let clanLife = 0;
   if ((actor.system.effects?.slots?.["namekianGenes.dragon"] === true) && (adaptation > 0)) {
-    const { askPlayerAmount, setResource } = await import("./chat.mjs");
+    const { askPlayerAmount, setResource, adaptationNote } = await import("./chat.mjs");
     const spent = Math.min(adaptation, await askPlayerAmount(actor, `${actor.name}: Genes of a Dragon Clan`, adaptation,
-      "Adaptation Points - 4(bT) Life Points more each"));
+      "Adaptation Points - 4(bT) Life Points more each", { note: adaptationNote(adaptation) }));
     if (spent > 0) {
       await setResource(actor, "adaptation", adaptation - spent);
       clanLife = spent * 4 * baseTier;

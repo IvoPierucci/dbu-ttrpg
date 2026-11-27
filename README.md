@@ -26,7 +26,7 @@ This repository holds the system's code and the game's rules content.
   - Maneuvers, Unique Abilities with Advancements, Signature Technique Advantages and Disadvantages, and Super Profiles.
   - Combat Conditions and States, Apparel, Weapons, Items and Buddies, Battlefields, Weather and Environmental
     Qualities, Karmic Effects.
-  - 55 Transformations (Awakenings, Enhancements, Forms, Evolved Stages) with their Aspects.
+  - 60 Transformations (Awakenings, Enhancements, Forms, Evolved Stages) with their Aspects.
 - **Play:**
   - Maneuvers and attacks are run through chat cards that roll Strike, Dodge and Wound, settle Clashes and apply Damage.
   - Health Thresholds and Steadfast Checks, out-of-sequence offers, and Combat Rounds with the Action economy.
