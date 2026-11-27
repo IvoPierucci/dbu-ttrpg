@@ -5,6 +5,10 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 0.3.7 (2026-11-26)
+
 - **New Transformations:** Boiling Rage (Variant of Enraged) and Steel Frame (Lesser Awakening).
 - **Entering a Transformation:**
   - Its card has an Apply effects button for every Triggered/Transform effect, Burst Limits included.
