@@ -6568,3 +6568,12 @@
 .dbu-ttrpg .trait-list .trait-name {
   color: var(--dbu-chat-accent, #dfe288);
 }
+
+/* Foundry outlines a focused button (button:focus) - left on a Trait row's buttons after a click, red beside the blue (the user's):
+   none on them. */
+.dbu-ttrpg .trait-arm:focus,
+.dbu-ttrpg .trait-control:focus,
+.dbu-ttrpg .maneuver-control:focus {
+  outline: none;
+  box-shadow: none;
+}
