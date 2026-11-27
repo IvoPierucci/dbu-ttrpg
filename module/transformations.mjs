@@ -706,6 +706,8 @@ export function transformationTraitScript(item, items = item?.parent?.items) {
   return rowWritten(owner, fileOf(owner), parts.filter(Boolean).join("\n\n"))
     .replace(/\$aspect\.([a-z0-9-]+)/g, (all, id) => String((found => found ? (found.level ?? 1) : 0)(levels.find(aspect => aspect.id === id))))
     .replace(/\$([GZSM])\b/g, (all, letter) => String(letters[letter] ?? 0))
+    // An Adversary's PCC - Overflowing Power's "PCC(bT)" and "PCC/Encounter" (adversary.mjs adversaryGains); 0 for anyone else.
+    .replace(/\$PCC\b/g, String(Number(owner?.parent?.system?.adversaryGains?.pcc) || 0))
     // Its Higher Scales - True God of Wisdom (2)'s "the Transformation's Attribute Modifier Bonus (MA)".
     .replace(/\$scales/g, String(Number(owner?.system?.scales) || 0))
     // The highest Tier of Power Requirement of the others in use beside it - Angelic Technique's "of any Transformation used in

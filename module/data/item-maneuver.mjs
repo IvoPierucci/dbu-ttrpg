@@ -341,6 +341,11 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * wrong. Blank means ask, which is what the Surge Maneuver does.
        */
       surgeKind: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * Adversary Actions it costs - Overflowing Power (3)'s "spend an Adversary Action to use a Surge of your choice". An
+       * Elite's or a Villain's Counter Actions (actor-character.mjs), paid as it is used; refused without them.
+       */
+      adversaryActionCost: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       /** A Healing Surge of its own size: Divine Breathing's "Regain 5d10(bT) Life Points". 0 is the Surge's own. */
       surgeDicePerBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       /**

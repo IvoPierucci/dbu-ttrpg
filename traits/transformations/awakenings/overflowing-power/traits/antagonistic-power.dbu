@@ -1,0 +1,35 @@
+id: overflowing-power-antagonistic-power
+name: Antagonistic Power
+order: 1
+slot: trait
+description: >
+  You are teeming with amazing power and seemingly endless amounts of energy.
+text: >
+  Antagonistic Power: You are teeming with amazing power and seemingly endless amounts of energy.
+  (1)-[Passive]: Increase your Wound Rolls, Soak Value, and Surgency by Z(T).
+  (2)-[Passive]: For each time you have taken this Awakening, increase your Narrative Stamina by PCC(bT).
+  (3)-[PCC/Encounter]: As an Instant Maneuver, you may spend an Adversary Action to use a Surge of your choice.
+  (4)-[Triggered/Start of Combat Round, Z/Encounter]: Use a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) Z its Stacks ("Z" is equal to the number of Stacks you possess for that Awakening - /transformation-rules/).
+[passive, effect 1]
+wound += $Z * 1(T);
+soakValue += $Z * 1(T);
+surgency += $Z * 1(T);
+
+# (2) PCC(bT) for each Stack, on what an Elite or a Villain gains each Combat Round (actor-character.mjs; a Standard one has none).
+[passive, effect 2]
+narrativeStamina.max += $Z * $PCC * 1(bT);
+
+# (3) Its own Instant Maneuver (maneuvers/overflowing-surge.dbu): a Surge of your choice for an Adversary Action, once an
+# Encounter there and PCC - 1 more here.
+[passive, effect 3]
+allow maneuver.overflowing-surge;
+overflowing-surge.uses += max(0, $PCC - 1);
+
+# (4) The Combat Round beginning, Z times an Encounter: one of your Standard Maneuvers of 1 Action out of sequence - which, asked;
+# never Automatic (chat.mjs standardOutOfSequence).
+[triggered/start-of-round, $Z/encounter, outOfSequence, effect 4]
+standardOutOfSequence();

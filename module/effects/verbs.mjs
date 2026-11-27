@@ -221,6 +221,11 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  standardOutOfSequence: {
+    args: [0, 0],
+    doc: "A Standard Maneuver of 1 Action of the character's choice, out of sequence (Overflowing Power (4); chat.mjs "
+       + "standardOutOfSequence). Unspent where none is picked."
+  },
   surgeOutOfSequence: {
     args: [0, 0],
     doc: "A Surge of the character's choice, the Surge Maneuver out of sequence (Honorable Demon (4); chat.mjs surgeOutOfSequence)."

@@ -943,6 +943,18 @@ async function honorableInstead(by, target, key) {
   return ownOutOfSequence(by, "power-up");
 }
 
+/**
+ * Overflowing Power (4): "Use a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver" - one of theirs,
+ * picked as Inherited Freedom's is (pickStandardManeuver), no Action paid. Unspent where none is picked or made.
+ */
+export async function standardOutOfSequence(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const picked = await pickStandardManeuver(actor, `${actor.name}: Overflowing Power`);
+  if (!picked) return UNSPENT;
+  const { useManeuver } = await import("./use-maneuver.mjs");
+  return (await useManeuver(actor, picked, { outOfSequence: true })) ? undefined : UNSPENT;
+}
+
 /** Honorable Demon (4): "use a Surge of your choice as an Out-of-Sequence Maneuver" - the Surge Maneuver, its kind asked by it. */
 export async function surgeOutOfSequence(actor) {
   const used = await ownOutOfSequence(actor, "surge");

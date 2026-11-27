@@ -2877,7 +2877,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     }
     // Narrative Stamina's most, a Round: "PCC*6(bT)" an Elite's, "PCC*12(bT)" a Villain's.
     if (this.narrativeStamina) {
-      this.narrativeStamina.max = this.adversaryNarrative ? this.adversaryGains.staminaPerTier * (Number(this.baseTierOfPower) || 1) : 0;
+      // And what effects add to it - Overflowing Power (2) - only where there is Narrative Stamina at all: a Standard one has none.
+      this.narrativeStamina.max = this.adversaryNarrative
+        ? Math.max(0, this.adversaryGains.staminaPerTier * (Number(this.baseTierOfPower) || 1) + slot(this, "narrativeStamina.max"))
+        : 0;
     }
 
     // Actions available each Combat Round. An effect can take Actions away, but never

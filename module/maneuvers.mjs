@@ -5322,6 +5322,7 @@ export async function loadManeuvers() {
     fromTrait: trait.fromTrait ?? "",
     fromEffect: Number(trait.fromEffect) || 0,
     surgeKind: trait.surgeKind ?? "",
+    adversaryActionCost: Number(trait.adversaryActionCost) || 0,
     magicTrick: Boolean(trait.magicTrick),
     exploitOnLoss: Boolean(trait.exploitOnLoss),
     clashDefenderSaves: [].concat(trait.clashDefenderSaves ?? []),

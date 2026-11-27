@@ -203,6 +203,10 @@ const TABLE = [
     doc: "Stress Bonus, which is the Dice Score of a Stress Test above the die." },
   { key: "awareness", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Awareness." },
   { key: "surgency", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Surgency." },
+  // Overflowing Power (2): "For each time you have taken this Awakening, increase your Narrative Stamina by PCC(bT)." Read where
+  // its most is worked out (actor-character.mjs), so the Round's refill (combat.mjs newRoundFor) carries it.
+  { key: "narrativeStamina.max", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Added to the Narrative Stamina an Elite or Villain Adversary gains at the start of each Combat Round." },
   { key: "haste", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Haste." },
   { key: "meleeRange", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Melee Range, in Squares beyond the adjacent ones. 0 reaches only what you touch." },

@@ -1,0 +1,23 @@
+id: overflowing-surge
+name: Overflowing Surge
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+surge: true
+adversaryActionCost: 1
+# Overflowing Power (3)'s, open while it applies; its PCC uses are the Trait's `overflowing-surge.uses` (maneuvers.mjs maneuverUsesLeft).
+special: true
+source: Core Rule
+description: >
+  An Adversary Action for a Surge of your choice, as an Instant Maneuver.
+text: >
+  Overflowing Power (3) [PCC/Encounter]: As an Instant Maneuver, you may spend an Adversary Action to use a Surge of your choice.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: 1 Adversary Action
+  –KP Cost: N/A
+  –Effect: Use either a Healing Surge or a Ki Surge.
+
+---

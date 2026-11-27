@@ -1,0 +1,29 @@
+id: overflowing-power
+name: Overflowing Power
+type: awakening
+subtype: lesser
+origin: mind
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+maxStacks: 3
+aspects:
+bonuses: AG +1, FO +1, TE +1, MA +1
+description: >
+  You are overflowing with an immense power far beyond that of the normal warrior.
+text: >
+  You are overflowing with an immense power far beyond that of the normal warrior.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Mind / Prerequisite(s): This character is an Adversary / Maximum No of Stacks: 3 / Tier of Power Requirement. 1+
+  AG +1 · FO +1 · TE +1 · SC – · IN – · MA +1 · PE –
+
+  Antagonistic Power: You are teeming with amazing power and seemingly endless amounts of energy.
+  (1)-[Passive]: Increase your Wound Rolls, Soak Value, and Surgency by Z(T).
+  (2)-[Passive]: For each time you have taken this Awakening, increase your Narrative Stamina by PCC(bT).
+  (3)-[PCC/Encounter]: As an Instant Maneuver, you may spend an Adversary Action to use a Surge of your choice.
+  (4)-[Triggered/Start of Combat Round, Z/Encounter]: Use a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+
+---
+
+# Its own effects are its Trait's (traits/); its numbers are read from the header above (transformations.mjs).

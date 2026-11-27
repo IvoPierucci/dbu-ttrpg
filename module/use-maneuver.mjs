@@ -2826,6 +2826,7 @@ function makeDefinition(item) {
     fromEffect: item.system.fromEffect,
     surgeKind: item.system.surgeKind,
     surgeDicePerBaseTier: item.system.surgeDicePerBaseTier,
+    adversaryActionCost: item.system.adversaryActionCost,
     magicTrick: item.system.magicTrick,
     exploitOnLoss: item.system.exploitOnLoss,
     clashSaves: [...(item.system.clashSaves ?? [])],
@@ -5624,6 +5625,19 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Liquid State's sixth effect is a Healing Surge and nothing else, and asking which
     // would be asking a question the rule already answered.
     // A Surge with a price - Divine Breathing's 5(bT), in Divine Ki - paid first, and given back if it is not taken.
+    // Overflowing Power (3): paid in Adversary Actions - an Elite's or a Villain's - and refused without enough of them.
+    const adversaryCost = Number(maneuver.adversaryActionCost) || 0;
+    if (adversaryCost > 0) {
+      if (!actor.system?.adversaryNarrative) {
+        ui.notifications.warn(`${maneuver.name}: ${actor.name} has no Adversary Actions - an Elite's or a Villain's.`);
+        return false;
+      }
+      // Adversary Actions themselves (actionsLeft), not Standard Actions turned into Counter Actions (actionsWithin).
+      if (game.combat?.started && (actionsLeft(actor, "counter") < adversaryCost)) {
+        ui.notifications.warn(`${maneuver.name}: ${actor.name} has no Adversary Action left this Round.`);
+        return false;
+      }
+    }
     const surgeCost = maneuverKiCost(maneuver, null, actor);
     if ((surgeCost > 0) && !await spendManeuverCost(actor, maneuver, surgeCost)) return false;
     if (!await takeSurge(actor, {
@@ -5637,6 +5651,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       if (surgeCost > 0) await refundManeuverCost(actor, maneuver);
       return false;
     }
+    if (adversaryCost > 0) await spendActions(actor, adversaryCost, "counter");
     await payActions(actor, maneuver);
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type);
@@ -8307,6 +8322,7 @@ export function maneuverItemFrom(definition) {
       fromEffect: definition.fromEffect ?? 0,
       surgeKind: definition.surgeKind ?? "",
       surgeDicePerBaseTier: Number(definition.surgeDicePerBaseTier) || 0,
+      adversaryActionCost: Number(definition.adversaryActionCost) || 0,
       magicTrick: Boolean(definition.magicTrick),
       exploitOnLoss: Boolean(definition.exploitOnLoss),
       clashSaves: [].concat(definition.clashSaves ?? []),
