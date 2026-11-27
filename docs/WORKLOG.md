@@ -12,7 +12,7 @@ need to know: a half-finished feature, a decision taken, something you found bro
   - Every race and Racial Trait, Factors, Other Traits (Evolution, Bestial, Monstrous, Vocations), all Talent Categories,
     Maneuvers, Unique Abilities, Signature Techniques with Super Profiles, Gear (Apparel, Weapons, Items, Buddies),
     Battlefields and Weather, Karma, Custom Buffs, Adventure.
-  - Transformations: 56, all from the owners' links or texts.
+  - Transformations: 57, all from the owners' links or texts.
 - **Testing:** most of it has been checked headlessly but little of it in a real Foundry game. Treat any bug report from
   the table as real.
 
@@ -45,6 +45,9 @@ narrates.
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
 - **2026-11-27 (Ivo's Claude):**
+  - Added Unkillable Majin and Grand Awakenings: `slot: grand` + `grandTrigger: N` on the Trait, the verb `grandTrigger()` (the
+    Awakening's `flags.dbu-ttrpg.grandMet` = this Combat's id), the predicate `grandTriggerMet`, the Full Awakening Maneuver
+    (`traits/maneuvers/full-awakening.dbu`, verb `fullAwakening()`, `grandOn`), the `full-awakening` Moment.
   - Minions and Fusions with Transformations (the owner's links to /minions/ and /fusion/): Duplicates copy Transformation Items
     (`minion-make.mjs isDuplicatedItem`); `MINION_AWAKENING_LIMIT`; a Fusion's Awakening left out by `flags.dbu-ttrpg.fusionOff`
     (`transformations.mjs fusionLeftOut`, read by `inUse` and `awakeningCount`). A non-Duplicate Minion's Enhancements and Forms

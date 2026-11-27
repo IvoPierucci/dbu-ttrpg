@@ -74,7 +74,9 @@ Special Maneuver.
     `maxStacks` for Awakenings, `variantOf`, `initial` (a Special Enhancement's Initial Enhancement), `onlyAlongside`, `line`/`stage`,
     `grades`...) and the whole page's text.
   - `traits/<trait>.dbu` holds each Transformation Trait, with `slot: trait|burst|mastery|transcendent|legendary`,
-    `mastery: N`, `replaces: <name>` (in a Variant) and `constant: N`.
+    `mastery: N`, `replaces: <name>` (in a Variant) and `constant: N`. A Super Awakening's Grand Awakening is `slot: grand` with
+    `grandTrigger: N` (its Grand Trigger effect, which calls `grandTrigger()` once met; the rest applies only once the Full
+    Awakening Maneuver has activated it this Encounter) - Unkillable Majin's Boundless Majin.
   - `unique/`, `maneuvers/`, `conditions/` and `states/` hold anything else it owns.
 - **Everything it owns stays in its folder.** `module/` and `templates/` never name it.
 - **Aspects:** name them in the header; their effects live in `traits/aspects/`. A Trait that changes Aspects uses

@@ -666,6 +666,17 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "A Unique Ability of yours by its id, used without paying its Ki Point Cost - Time Has Stopped's Time Freeze (chat.mjs freeUnique)."
   },
+  grandTrigger: {
+    args: [0, 0],
+    wantsUse: true,
+    doc: "A Super Awakening's Grand Trigger met: the Full Awakening Maneuver open this Combat Encounter (transformations.mjs grandTrigger) - "
+       + "Boundless Majin (1)'s."
+  },
+  fullAwakening: {
+    args: [0, 0],
+    doc: "The Full Awakening Maneuver: the Grand Awakening active till the Encounter ends, 1/4 (rounded up) of the Maximum Life and Ki "
+       + "Points back (transformations.mjs fullAwakening)."
+  },
   offerOneOf: {
     args: [1, 5],
     names: [0, 1, 2, 3, 4],

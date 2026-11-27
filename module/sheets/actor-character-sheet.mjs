@@ -9,7 +9,7 @@ import { BONUS_ATTRIBUTES, TRANSFORMATION_KINDS, TRANSFORMATION_TYPE, addTransfo
   combineAspects, fileOf, formTypeOf, gradeRow, inUseChanges, gradesOf, inUse, kindOf, masteryMax, racialRequirementOf, racialUnmet,
   removeTransformation, stressOf, traitFilesFor, traitStanding, transformationFile, transformationFiles, transformationItems,
   lettersOf, awakeningCount, keepTemporary, endTemporary, groupsOf, chooseGroupTrait, ownersOf, releaseOwner, stacksOf, evolvedUnmet,
-  rowChoicesOf, setRowChoice, heartbeatOf, heartbeatRefused, heartbeatEnter, heartbeatEnd, aspectWarnings }
+  rowChoicesOf, setRowChoice, heartbeatOf, heartbeatRefused, heartbeatEnter, heartbeatEnd, aspectWarnings, grandOn, grandMet }
   from "../transformations.mjs";
 import { vehicleHolding } from "../vehicle-crew.mjs";
 import { remotePilotedVehicle, vehicleRemoteMode } from "../vehicles.mjs";
@@ -7258,6 +7258,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         if (trait.stacks && ((Number(item.system.stacks) || 0) < Number(trait.stacks))) return "missing Stacks";
         if (trait.mastery && ((Number(item.system.mastery) || 0) < Number(trait.mastery))) return `missing Mastery ${trait.mastery}`;
         if ((trait.slot === "transcendent") && !item.system.transcended) return "only Transcended";
+        // A Grand Awakening: off until the Full Awakening Maneuver activates it this Encounter (its Grand Trigger met first).
+        if ((trait.slot === "grand") && !grandOn(item)) return grandMet(item) ? "Grand Trigger met: use the Full Awakening Maneuver" : "until its Grand Trigger and the Full Awakening";
         if (trait.group && !all.some(each => (each.system?.transformation === item.id) && (each.flags?.["dbu-ttrpg"]?.sourceId === trait.id))) {
           return "not chosen";
         }
@@ -7265,7 +7267,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       };
       const noteOf = trait => [
         (trait.slot === "burst") ? "Burst Limit" : (trait.slot === "mastery") ? `Mastery ${trait.mastery || 1}`
-          : (trait.slot === "transcendent") ? "Transcendent Trait" : (trait.slot === "legendary") ? "Legendary Trait" : "",
+          : (trait.slot === "transcendent") ? "Transcendent Trait" : (trait.slot === "legendary") ? "Legendary Trait"
+          : (trait.slot === "grand") ? "Grand Awakening" : "",
         trait.stacks ? `${trait.stacks} Stacks` : "",
         trait.groupLabel ? String(trait.groupLabel) : "",
         trait.replaces ? `replaces ${trait.replaces}` : "",

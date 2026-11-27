@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 56, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26)", files.length, 56);
+check("the first group, all 57, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin 2026-11-27)", files.length, 57);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",
@@ -1760,6 +1760,32 @@ allow counter.free;`).program.blocks[0].requires;
     [true, [2, 2, 1, 1, true], [true, "Duplicate: its Master's"]]);
   check("a Fusion's Awakening unticked is not had - not in use, not counted; the flag means nothing on another character",
     [T.inUse(cut), T.awakeningCount(fusion).lesser, T.awakeningCount(fusion).greater, T.inUse(kept)], [false, 0, 1, true]);
+}
+
+// --- Unkillable Majin (the user's link, 2026-11-27): the first Super Awakening, its Grand Awakening off until the Full Awakening ------------
+{
+  const um = transformation("unkillable-majin", { stacks: 1 });
+  const items = [um, ...T.traitFilesFor(T.transformationFile("unkillable-majin")).map(t => traitItem(um, t.id))];
+  const before = globalThis.game.combat;
+  const prepared = () => holding(items).system.effects.slots;
+  globalThis.game.combat = { started: true, id: "c1" };
+  const off = prepared();
+  um.flags["dbu-ttrpg"] = { grandMet: "c1" };
+  const met = prepared();
+  um.flags["dbu-ttrpg"] = { grandMet: "c1", grandOn: "c1" };
+  const on = prepared();
+  globalThis.game.combat = { started: true, id: "c2" };
+  const nextEncounter = prepared();
+  globalThis.game.combat = before;
+  const boundless = getTrait("unkillable-majin-boundless-majin");
+  check("Unkillable Majin: a Super Awakening of the Body; Always Bouncing Back always; Boundless Majin a Grand Awakening, its (1) the Grand Trigger",
+    [T.kindOf(T.transformationFile("unkillable-majin")), T.transformationFile("unkillable-majin").subtype, partsOf(holding(items), "stressBonus").length > 0,
+     boundless.slot, boundless.grandTrigger, boundless.script.includes('[automatic/surge-threshold, effect 1]\nrequires belowThreshold("bruised") && !belowThreshold("injured") && !grandTriggerMet;\ngrandTrigger();')],
+    ["awakening", "super", true, "grand", 1, true]);
+  check("the Grand Awakening: off (its Grand Trigger alone), the Full Awakening open once it is met, all of it on once activated, off again the next Encounter",
+    [[off["monstrousVitality.overflow"], off["maneuver.full-awakening"]], [met["monstrousVitality.overflow"], met["maneuver.full-awakening"]],
+     [on["monstrousVitality.overflow"], on["wager.anyFromLife"]], nextEncounter["monstrousVitality.overflow"]],
+    [[undefined, undefined], [undefined, true], [true, true], undefined]);
 }
 
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------

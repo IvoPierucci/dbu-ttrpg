@@ -5,7 +5,9 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
-(Nothing yet.)
+- **New Transformation:** Unkillable Majin, the first Super Awakening. With it, Grand Awakenings: a Trait with `slot: grand` is off
+  until its Grand Trigger is met this Combat Encounter (`grandTrigger:` names that effect, which answers meanwhile) and the new
+  Full Awakening Maneuver activates it for the Encounter, with 1/4 of the Maximum Life and Ki Points back.
 
 ## 0.3.10 (2026-11-27)
 

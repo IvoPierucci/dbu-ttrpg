@@ -618,6 +618,8 @@ export function transformationTraitAside(item, items = item?.parent?.items) {
   const kind = kindOf(ownerFile);
   if (trait?.stacks && (stacksOf(owner, ownerFile) < Number(trait.stacks))) return "stacks";
   if (trait?.mastery && ((Number(owner.system?.mastery) || 0) < Number(trait.mastery))) return "mastery";
+  // A Super Awakening's Grand Awakening: "inactive until it is activated" (grandOn) - its Grand Trigger effect, by number, kept meanwhile.
+  if ((trait?.slot === "grand") && !grandOn(owner)) return numbersOf(trait.grandTrigger).length ? "" : "grand";
   if (kind === "awakening") return "";
   // "A Legendary Trait applies only while the Form is Legendary" (the user's, 2026-11-16) - Pure Form's once Pure Chaos makes it one.
   if (trait?.slot === "legendary") return (formTypeFor(owner, list) === "legendary") ? "" : "legendary";
@@ -669,6 +671,10 @@ export function transformationTraitProgram(item, program, items = item?.parent?.
   if (!item?.system?.transformation) return program;
   const owner = Array.from(items ?? []).find(each => each.id === item.system.transformation);
   const trait = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  if ((trait?.slot === "grand") && owner && !grandOn(owner)) {
+    const trigger = new Set(numbersOf(trait.grandTrigger));
+    return { ...program, blocks: (program.blocks ?? []).filter(block => trigger.has(Number(block.modifiers?.effect) || 0)) };
+  }
   if (owner && (kindOf(fileOf(owner)) === "awakening")) return program;
   if (trait?.slot === "legendary") return (formTypeFor(owner, items) === "legendary") ? program : { ...program, blocks: [] };
   const using = owner ? traitsInUse(owner, items) : false;
@@ -718,6 +724,61 @@ export function transformationTraitScript(item, items = item?.parent?.items) {
 }
 
 useTransformationGate((item, items) => transformationTraitAside(item, items));
+
+// --- A Super Awakening's Grand Awakening (Transformation Rules: "Grand Awakening", "Grand Trigger", "Full Awakening Maneuver") -----------
+
+/** This Combat Encounter, as a key; "" outside one - a Grand Trigger and a Grand Awakening are an Encounter's. */
+function encounterKey() {
+  return globalThis.game?.combat?.started ? String(globalThis.game.combat.id ?? "") : "";
+}
+
+/** Its Grand Trigger met this Combat Encounter: the Full Awakening Maneuver open. */
+export function grandMet(item) {
+  const key = encounterKey();
+  return Boolean(key) && (item?.flags?.["dbu-ttrpg"]?.grandMet === key);
+}
+
+/** Its Grand Awakening active: "until the end of the Combat Encounter" it was activated in. */
+export function grandOn(item) {
+  const key = encounterKey();
+  return Boolean(key) && (item?.flags?.["dbu-ttrpg"]?.grandOn === key);
+}
+
+/** A Super Awakening of theirs whose Grand Trigger is met this Encounter - "you can only have 1 Super Awakening". */
+function grandReady(actor) {
+  return transformationItems(actor).find(item => (kindOf(fileOf(item)) === "awakening") && grandMet(item)) ?? null;
+}
+
+useTransformationQuestion("grandTriggerMet", actor => Boolean(grandReady(actor)));
+
+/**
+ * The Grand Trigger met (its Trait's `grandTrigger` effect's script, `grandTrigger()`): the Super Awakening the Trait is of marked for this
+ * Combat Encounter - the Full Awakening Maneuver open - and said. Nothing outside a Combat Encounter.
+ */
+export async function grandTrigger(actor, use) {
+  const key = encounterKey();
+  const trait = actor?.items?.get?.(use?.sourceId ?? "");
+  const owner = trait?.system?.transformation ? actor.items.get(trait.system.transformation) : null;
+  if (!key || !owner || grandMet(owner)) return;
+  await owner.update({ "flags.dbu-ttrpg.grandMet": key });
+  globalThis.ui?.notifications?.info(`${actor.name}: ${owner.name}'s Grand Trigger is met - the Full Awakening Maneuver is open this Encounter.`);
+}
+
+/**
+ * The Full Awakening Maneuver used: "activate the Grand Awakening until the end of the Combat Encounter and regain Life Points and Ki Points
+ * equal to 1/4 (rounded up) of your Maximum Life Points and Maximum Ki Points"; then what answers it (the `full-awakening` Moment).
+ */
+export async function fullAwakening(actor) {
+  const owner = grandReady(actor);
+  if (!owner) return globalThis.ui?.notifications?.warn(`${actor?.name ?? "This character"} has no Grand Trigger met this Encounter.`);
+  await owner.update({ "flags.dbu-ttrpg.grandOn": encounterKey() });
+  const { life, ki } = actor.system;
+  await actor.update({ "system.life.value": Math.min(life.ceiling ?? life.max, (Number(life.value) || 0) + Math.ceil((Number(life.max) || 0) / 4)),
+    "system.ki.value": Math.min(ki.ceiling ?? ki.max, (Number(ki.value) || 0) + Math.ceil((Number(ki.max) || 0) / 4)) });
+  globalThis.ui?.notifications?.info(`${actor.name}: ${owner.name}'s Grand Awakening is active until the end of the Encounter.`);
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(actor, "full-awakening", {});
+}
 
 /**
  * How a Transformation Trait Item stands now, for the list of them: "in" (all of it applies), "permanent" (its Transformation not

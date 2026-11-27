@@ -1,0 +1,24 @@
+id: unkillable-majin-from-goop
+name: Unkillable Majin: From Goop
+type: instant
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+# Always Bouncing Back (5)'s, open while From Goop is held (its `allow`).
+special: true
+source: Core Rule
+description: >
+  The 3rd effect of From Goop as an Instant Maneuver, still for 1 Action.
+text: >
+  (5)-[Passive]: The 3rd effect of Majin Regeneration and 3rd effect of From Goop becomes an Instant Maneuver, but you must still spend 1 Action to use the effect.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: 1 Action
+  –KP Cost: N/A (the 3rd effect's: 4(bT))
+  –Effect: Use the 3rd effect of From Goop.
+
+---
+
+# Its Action paid here; the 3rd effect of From Goop used out of sequence - its 4(bT) Ki Points and once a Round as written.
+[on used]
+maneuverOutOfSequence(from-goop-third-effect);

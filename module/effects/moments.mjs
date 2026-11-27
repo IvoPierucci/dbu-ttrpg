@@ -406,6 +406,8 @@ const TABLE = [
   { key: "critical", label: "You score a Critical Result on a Combat Roll", provides: [CTX.ROLL],
     doc: "Read once the Natural Result is, with the Critical Extra Dice - Celestial Potential's 2(T) more." },
   { key: "healing-surge", label: "You take a Healing Surge", provides: [CTX.AMOUNT] },
+  { key: "full-awakening", label: "You use the Full Awakening Maneuver", provides: [],
+    doc: "Fired once the Grand Awakening is active and its Life and Ki are back (transformations.mjs fullAwakening) - Boundless Majin (7)'s." },
   { key: "ki-surge", label: "You take a Ki Surge", provides: [CTX.AMOUNT],
     doc: "Fired once its Ki and Capacity are back (chat.mjs takeSurge), `surgeManeuver` where it was the Surge Maneuver's - "
        + "Never Surrender's. What is the player's is asked in a window first." },

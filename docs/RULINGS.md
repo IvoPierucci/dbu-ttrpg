@@ -106,6 +106,10 @@ the rule and how it is applied in the code.
 
 ## Transformations
 
+- **Grand Awakenings (2026-11-27, my readings):** a Grand Trigger detected by the system is met by itself (Unkillable Majin's: a
+  Healing Surge that leaves you in Bruised, so from Injured or Critical). The Full Awakening Maneuver is a Standard Maneuver (its entry
+  gives no Maneuver Type). The Grand Awakening stays active until that Combat Encounter ends.
+
 - **Minions and Fusions (2026-11-27, my readings, not yet the owner's):** a Duplicate's Transformations are its Master's as they
   were when it was made, with no Awakening Limit of its own. A new Fusion has every Fused Character's Awakening ticked; the table
   unticks those it does not have, over the Fusion Awakening Limit said and never refused.

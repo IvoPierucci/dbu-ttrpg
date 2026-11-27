@@ -2085,6 +2085,12 @@
     "transformations/enhancements/super-kaioken/super-kaioken.dbu",
     "transformations/enhancements/super-kaioken/traits/multiplied-power.dbu",
     "transformations/enhancements/super-kaioken/traits/power-of-a-heartbeat.dbu",
-    "transformations/enhancements/super-kaioken/traits/vermilion-explosion.dbu"
+    "transformations/enhancements/super-kaioken/traits/vermilion-explosion.dbu",
+    "maneuvers/full-awakening.dbu",
+    "transformations/awakenings/unkillable-majin/maneuvers/unkillable-majin-from-goop.dbu",
+    "transformations/awakenings/unkillable-majin/maneuvers/unkillable-majin-regeneration.dbu",
+    "transformations/awakenings/unkillable-majin/traits/always-bouncing-back.dbu",
+    "transformations/awakenings/unkillable-majin/traits/boundless-majin.dbu",
+    "transformations/awakenings/unkillable-majin/unkillable-majin.dbu"
   ]
 }

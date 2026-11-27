@@ -1,0 +1,34 @@
+id: unkillable-majin
+name: Unkillable Majin
+type: awakening
+subtype: super
+origin: body
+racial: Majin
+prerequisites: N/A
+tier: 4+
+maxStacks: 1
+bonuses: AG +1(T), FO +1(T), TE +1(T), MA +1(T)
+description: >
+  Thanks to the gum-like substance your body is made of, your rubbery form is basically indestructible, making you nigh-immortal. Try as your enemies might, there’s basically nothing they can do to put you down for good. You’re the ultimate force of survival, an Unkillable Majin.
+text: >
+  Thanks to the gum-like substance your body is made of, your rubbery form is basically indestructible, making you nigh-immortal. Try as your enemies might, there’s basically nothing they can do to put you down for good. You’re the ultimate force of survival, an Unkillable Majin.
+
+  Racial Requirement: Majin / Transformation Type: Awakening / Awakening Type: Super / Awakening Origin: Body / Prerequisite(s): N/A / Maximum No of Stacks: 1 / Tier of Power Requirement. 4+
+  AG +1(T) · FO +1(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Always Bouncing Back: You never stay down for very long, thanks to your indestructible physiology.
+  (1)-[Passive]: Increase your Stress Bonus by 1.
+  (2)-[Passive]: Increase your Surgency by 2(T).
+  (3)-[Passive]: While you are above the Injured Health Threshold, increase your Soak Value and Defense Value by 1(T).
+  (4)-[Passive]: While you are in the Healthy Health Threshold, all Collision Damage you’d receive is reduced to 0.
+  (5)-[Passive]: The 3rd effect of Majin Regeneration and 3rd effect of From Goop becomes an Instant Maneuver, but you must still spend 1 Action to use the effect.
+  (6)-[Triggered, 1/Encounter]: If you use a Healing Surge, after concluding that Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+
+  GRAND AWAKENING — Boundless Majin: Thanks to your unique physiology, you don’t have to obey any of the conventional limitations of the other races.
+  (1)-[Grand Trigger]: You have entered the Bruised Health Threshold from the Injured/Critical Health Threshold due to the use of a Healing Surge.
+  (2)-[Passive]: Your Life Points may exceed your Maximum Life Points by up to 1/2 of your Maximum Life Points.
+  (3)-[Passive]: While you are below the Injured Health Threshold, increase your Surgency by 2(T).
+  (4)-[Passive]: While you are above the Injured Health Threshold, increase your Strike and Wound Rolls by 1(T) and 2(T) respectively.
+  (5)-[Passive]: While you are in the Healthy Health Threshold, increase your Combat Rolls by 1(T).
+  (6)-[Passive]: You may spend Life Points as if they were Ki Points for Ki Wagering. If you do, any Life Points spent this way reduce your Capacity as if they were spent Ki Points.
+  (7)-[Triggered, 1/Encounter]: When you use the Full Awakening Maneuver, regain Life Points equal to 1/2 of your Maximum Life Points.
