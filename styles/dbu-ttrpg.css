@@ -1779,7 +1779,21 @@
    the text unfolded below (the user's: the buttons alone lifted left the name looking low beside them). */
 .dbu-ttrpg .trait-list .trait-head {
   align-items: center;
-  padding-bottom: 3px;
+}
+
+/* Its 6px above and below as the row's own padding; the 3px only once it is open, before its text (the user's: it looked taller
+   below than above). */
+.dbu-ttrpg .trait-list .trait-open > .trait-head {
+  margin-bottom: 3px;
+}
+
+/* The name and what it is centred by their letters, not by the room Foundry's line height leaves under them (the user's: they
+   touched the top beside the buttons). */
+.dbu-ttrpg .trait-list .trait-head .trait-name,
+.dbu-ttrpg .trait-list .trait-head .trait-prereq {
+  line-height: 1;
+  position: relative;
+  top: 1px;
 }
 
 .dbu-ttrpg .trait-arm.active {
