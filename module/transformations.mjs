@@ -769,13 +769,19 @@ export async function grandTrigger(actor, use) {
  * equal to 1/4 (rounded up) of your Maximum Life Points and Maximum Ki Points"; then what answers it (the `full-awakening` Moment).
  */
 export async function fullAwakening(actor) {
-  const owner = grandReady(actor);
-  if (!owner) return globalThis.ui?.notifications?.warn(`${actor?.name ?? "This character"} has no Grand Trigger met this Encounter.`);
-  await owner.update({ "flags.dbu-ttrpg.grandOn": encounterKey() });
+  if (!encounterKey()) return globalThis.ui?.notifications?.warn("The Full Awakening Maneuver is a Combat Encounter's: none is under way.");
+  // Opened by hand - Debug's Maneuver Access, its Grand Trigger missed (the user's, 2026-11-27: a way around it mid-game) - their Super
+  // Awakening all the same ("you can only possess a single Super Awakening"), its Grand Trigger marked met as it is.
+  const forced = grandReady(actor) ? null : transformationItems(actor).find(item => (kindOf(fileOf(item)) === "awakening")
+    && (String(fileOf(item)?.subtype ?? "").toLowerCase() === "super") && (stacksOf(item, fileOf(item)) > 0));
+  const owner = grandReady(actor) ?? forced;
+  if (!owner) return globalThis.ui?.notifications?.warn(`${actor?.name ?? "This character"} has no Super Awakening.`);
+  await owner.update({ "flags.dbu-ttrpg.grandOn": encounterKey(), ...(forced ? { "flags.dbu-ttrpg.grandMet": encounterKey() } : {}) });
   const { life, ki } = actor.system;
   await actor.update({ "system.life.value": Math.min(life.ceiling ?? life.max, (Number(life.value) || 0) + Math.ceil((Number(life.max) || 0) / 4)),
     "system.ki.value": Math.min(ki.ceiling ?? ki.max, (Number(ki.value) || 0) + Math.ceil((Number(ki.max) || 0) / 4)) });
-  globalThis.ui?.notifications?.info(`${actor.name}: ${owner.name}'s Grand Awakening is active until the end of the Encounter.`);
+  globalThis.ui?.notifications?.info(`${actor.name}: ${owner.name}'s Grand Awakening is active until the end of the Encounter${
+    forced ? " (its Grand Trigger not met: opened by hand)" : ""}.`);
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   await fireMoment(actor, "full-awakening", {});
 }

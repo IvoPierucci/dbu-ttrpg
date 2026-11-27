@@ -1788,6 +1788,27 @@ allow counter.free;`).program.blocks[0].requires;
     [[undefined, undefined], [undefined, true], [true, true], undefined]);
 }
 
+// --- The Full Awakening opened by hand (Debug's Maneuver Access, the user's 2026-11-27): their Super Awakening activated all the same ------
+{
+  const { allManeuvers, loadManeuvers, maneuverAccessRows } = await import(modUrl("maneuvers.mjs"));
+  if (!allManeuvers().length) await loadManeuvers();
+  const dotted = (target, changes) => { for (const [key, value] of Object.entries(changes)) foundry.utils.setProperty(target, key, value); };
+  const um = transformation("unkillable-majin", { stacks: 1 });
+  um.update = async changes => dotted(um, changes);
+  const actor = { name: "Buu", items: [um], system: { life: { value: 10, max: 100, ceiling: 100 }, ki: { value: 0, max: 80, ceiling: 80 } },
+    update: async changes => dotted(actor, changes), getFlag: () => undefined };
+  um.parent = actor;
+  const before = [globalThis.game.combat, globalThis.ui];
+  globalThis.game.combat = { started: true, id: "c9" };
+  globalThis.ui = { notifications: { info: () => {}, warn: () => {} } };
+  await T.fullAwakening(actor).catch(() => {});
+  [globalThis.game.combat, globalThis.ui] = before;
+  check("its Grand Trigger missed, the Full Awakening still activates their Super Awakening, its Grand Trigger marked; listed in Debug's Maneuver Access",
+    [um.flags["dbu-ttrpg"]?.grandOn, um.flags["dbu-ttrpg"]?.grandMet, actor.system.life.value, actor.system.ki.value,
+     maneuverAccessRows({ items: [], system: { effects: { slots: {} } }, getFlag: () => [] }).some(row => row.id === "full-awakening")],
+    ["c9", "c9", 35, 20, true]);
+}
+
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------
 
 const code = [];
