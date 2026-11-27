@@ -1894,6 +1894,13 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
   check("Trait text live: the name and each effect's number and keywords bold in the site's accent",
     [shown[0].startsWith('<strong class="dbu-site-strong">Spiritual Apprentice</strong>:'),
      shown[2].startsWith('(<strong class="dbu-site-strong">4</strong>)-[<strong class="dbu-site-strong">Triggered, ')], [true, true]);
+  {
+    const named = text => RAC.racialTraitLines({ flags: { "dbu-ttrpg": { sourceId: "nope" } }, system: { text, chosen: [] } }, live)[0]?.html ?? "";
+    check("a name with a colon of its own bold whole, up to its Category and what it replaced: Genetic Focus: Majins (Body) [Uncanny Monster]",
+      [named("Genetic Focus: Majins (Body) [Uncanny Monster]: Text.").startsWith('<strong class="dbu-site-strong">Genetic Focus: Majins (Body) [Uncanny Monster]</strong>:'),
+       named("Dormant Saiya Power (Body): Text.").startsWith('<strong class="dbu-site-strong">Dormant Saiya Power (Body)</strong>:')],
+      [true, true]);
+  }
   check("its uses left: all yellow, some spent orange, none red, each with how many of how many; Triggered said Automatic where set so",
     [uses(shown[1]), uses(shown[2]), uses(shown[3]), shown[1].includes('<span class="dbu-keyword-auto"'), shown[1].includes("Triggered"), shown[2].includes("dbu-keyword-auto")],
     [[["full", "1", "1 of 1 left this Round"], ["part", "2", "2 of 3 left this Encounter"]], [["full", "1", "1 of 1 left this Round"]],

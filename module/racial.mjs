@@ -2051,7 +2051,8 @@ export function liveLines(lines, live) {
       html = html.slice(option[0].length);
     }
     else if ((at === first) && !line.bullet) {
-      const name = /^([^:<(][^:<]{0,80}?):(\s|$)/.exec(html);
+      // Up to its Category's "(Body) [Replaced]:" where it has one - a name with a colon of its own, "Genetic Focus: Majins (Body)", whole.
+      const name = /^([^:<(][^<]{0,80}?\s\([A-Za-z]+\)(?:\s\[[^\]]*\])?):(\s|$)/.exec(html) || /^([^:<(][^:<]{0,80}?):(\s|$)/.exec(html);
       if (name) {
         head = `${strong(name[1])}:`;
         html = html.slice(name[1].length + 1);
