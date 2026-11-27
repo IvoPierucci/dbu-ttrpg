@@ -1905,6 +1905,16 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
     [RAC.racialTraitLines(item, { ...live, realValues: false }).some(line => line.html.includes("dbu-real-value")),
      RAC.racialTraitLines(item, { ...live, realValues: false })[3].html.includes("dbu-uses-none"),
      RAC.racialTraitLines(item)[3].html], [false, true, "(5)-[Triggered, 1/Encounter]: Reduce the Ki Point Cost by 1(T) and your Surgency by Z(bT), regain 1d10(bT) Life Points."]);
+  // An Option's and a Choice's own lines (the user's, 2026-11-27: Class Selection's had no colours): bold as an effect's, the "*" a bullet,
+  // and their limits counted as the effect's they are under.
+  const optionText = ["Class Selection: You've chosen a mantle.", "(2)-[Option]: Choose one:", "*Elite [Passive]: Strike by 1(T).",
+    "(3)-[Choice]: Depending on your choice:", "\u2022 Elite [1/Encounter]: Use the Surge Maneuver. It does not count towards the [1/Encounter] Keyword."].join("\n");
+  const optionLines = RAC.racialTraitLines({ flags: { "dbu-ttrpg": { sourceId: "nope" } }, system: { text: optionText, chosen: [] } },
+    { ...live, uses: new Map([[3, { round: Infinity, roundMax: Infinity, encounter: 0, encounterMax: 1 }]]) }).map(line => line.html);
+  check("an Option's and a Choice's lines bold as an effect's, the * a bullet, the Choice's limit counted as its effect's; the text's own [1/Encounter] left",
+    [optionLines[2].startsWith('\u2022 <strong class="dbu-site-strong">Elite</strong> [<strong class="dbu-site-strong">Passive</strong>]:'),
+     optionLines[4].startsWith('\u2022 <strong class="dbu-site-strong">Elite</strong> [<strong class="dbu-site-strong"><span class="dbu-uses-none"'),
+     optionLines[4].endsWith("towards the [1/Encounter] Keyword.")], [true, true, true]);
   const SH = read("module", "sheets", "actor-character-sheet.mjs");
   check("wired: Talents, Racial and Other Traits and a Transformation's Traits pass #liveOf; the Settings box; the CSS",
     [(SH.match(/racialTraitLines\(item, this\.#liveOf\(item, triggered\)\)/g) ?? []).length, SH.includes("lines: held ? racialTraitLines(held, this.#liveOf(held, triggered))"),

@@ -2005,14 +2005,24 @@ const tip = text => Handlebars.escapeExpression(text);
  */
 export function liveLines(lines, live) {
   const first = lines.findIndex(line => line.html && !line.gap && !line.addendum);
+  // The effect a line belongs to: an Option's or a Choice's own lines - "Elite [1/Encounter]:" - count that effect's uses.
+  let current = 0;
   return lines.map((line, at) => {
     if (!line.html || line.gap || line.addendum) return line;
     let html = line.html;
     let head = "";
     const effect = /^\((\d+)\)-\[([^\]]*)\]:/.exec(html);
+    // "*Elite [Passive]:", "• Elite [1/Encounter]:", "Tall Yardrat [Passive]:" - an Option or Choice's line, bold as an effect's (the
+    // user's, 2026-11-27); its "*" drawn as the Choice's bullet.
+    const option = !effect && (at !== first) && /^(?:[*•]\s*)?([^[<:*•][^[<:]{0,60}?) \[([^\]]*)\]:/.exec(html);
     if (effect) {
-      head = `(${strong(effect[1])})-[${strong(keywordsLive(Number(effect[1]), effect[2], live))}]:`;
+      current = Number(effect[1]);
+      head = `(${strong(effect[1])})-[${strong(keywordsLive(current, effect[2], live))}]:`;
       html = html.slice(effect[0].length);
+    }
+    else if (option) {
+      head = `${/^[*•]/.test(html) ? "• " : ""}${strong(option[1])} [${strong(keywordsLive(current, option[2], live))}]:`;
+      html = html.slice(option[0].length);
     }
     else if ((at === first) && !line.bullet) {
       const name = /^([^:<(][^:<]{0,80}?):(\s|$)/.exec(html);

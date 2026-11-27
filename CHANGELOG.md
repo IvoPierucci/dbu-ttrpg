@@ -5,7 +5,7 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
-(Nothing yet.)
+- **Trait text:** an Option's and a Choice's own lines ("Elite [1/Encounter]:") bold and counted like an effect's.
 
 ## 0.3.9 (2026-11-27)
 
