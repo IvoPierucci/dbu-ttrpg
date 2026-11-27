@@ -2,7 +2,8 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { waitForContent } from "../content-ready.mjs";
-import { exchangeChoices, exchangeRaceTrait, exchangeable, raceTraitPlan, raceTraitsOwed, slotOf, syncRaceTraits } from "../race-traits.mjs";
+import { exchangeChoices, exchangeRaceTrait, exchangeable, isRaceTraitItem, raceTraitPlan, raceTraitsOwed, refreshRaceTraits, slotOf, syncRaceTraits }
+  from "../race-traits.mjs";
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, isFusion, mayBeMaster, typicalMinion } from "../actor-types.mjs";
 import { fusionContext, racesOf } from "../fusion.mjs";
@@ -469,6 +470,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleGearText: DBUCharacterSheet._onToggleGearText,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
       exchangeRacialTrait: DBUCharacterSheet._onExchangeRacialTrait,
+      refreshRacialTraits: DBUCharacterSheet._onRefreshRacialTraits,
       pickRacialTraits: DBUCharacterSheet._onPickRacialTraits,
       bestialApply: DBUCharacterSheet._onBestialApply,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
@@ -4542,28 +4544,61 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!item) return;
     const { original, current, choices } = exchangeChoices(this.actor, item);
     if (!original) return;
+    // Add Racial Trait's window (the user's: "que sea igual"): a search over them, its Factor beside each, those not this character's
+    // dimmed with why on hover - or left out where Settings' "Only Traits you may have" is ticked - and the race Trait to restore first.
+    const listed = choices.filter(choice => !this.actor.system.hideUnfitTraits || !choice.why);
+    if (!listed.length && !current) {
+      ui.notifications.info(`No Factor Trait takes the place of ${original.name}.`);
+      return;
+    }
     const escape = Handlebars.escapeExpression;
-    let factor = "";
-    const rows = choices.map(choice => {
-      const head = (choice.factor !== factor) ? `<div class="dbu-respond-source" style="margin-top:6px">${escape(choice.factor)}</div>` : "";
-      factor = choice.factor;
-      return `${head}<label class="dbu-respond-option${choice.why ? " dbu-dim" : ""}"${choice.why ? ` data-tooltip="${escape(choice.why)}"` : ""}>
-        <input type="radio" name="exchange" value="${escape(choice.id)}"/><span class="dbu-respond-name">${escape(choice.name)}</span>
-        ${choice.why ? `<span class="dbu-respond-source">${escape(choice.why)}</span>` : ""}</label>`;
-    }).join("");
-    const restore = current ? `<label class="dbu-respond-option"><input type="radio" name="exchange" value="" checked/>
-      <span class="dbu-respond-name">Restore ${escape(original.name)}</span></label>` : "";
+    const { pickedName, wireNameSearch } = await import("../search.mjs");
+    const RESTORE = "@restore";
+    const restore = current ? `<li class="gear-quality-option" data-feature-option="${RESTORE}" data-name="${escape(`Restore ${original.name}`)}"
+      data-tooltip="${escape(`${original.name} back, in place of ${item.name}`)}">${escape(`Restore ${original.name}`)}
+      <span class="gear-quality-cost">${escape(racialTraitRace(original.owner, original.subrace))}</span></li>` : "";
     const picked = await foundry.applications.api.DialogV2.wait({
-      classes: ["dbu-dialog"], window: { title: `Exchange ${item.name}` },
-      content: `<div class="dbu-respond-list">${restore}${rows || `<p class="dbu-respond-hint">No Factor Trait takes the place of ${escape(original.name)}.</p>`}</div>`,
-      buttons: [{ action: "ok", label: "Exchange", default: true,
-        callback: (event, button, dialog) => dialog.element.querySelector('input[name="exchange"]:checked')?.value ?? null },
-        { action: "cancel", label: "Cancel", callback: () => null }],
+      classes: ["dbu-dialog", "dbu-ua-search"],
+      window: { title: `${this.actor.name} - Exchange ${item.name}` },
+      position: { width: 420 },
+      content: `<div class="gear-add-quality">
+        <input type="text" class="gear-quality-search" data-feature-search autocomplete="off" autofocus placeholder="Type a Factor Trait"/>
+        <ol class="gear-quality-list" data-feature-list>${restore}
+          ${listed.map(choice => {
+            const file = getTrait(choice.id);
+            return `<li class="gear-quality-option${(choice.why === "Already had") ? " blocked" : (choice.why ? " unfit" : "")}"
+              data-feature-option="${escape(choice.id)}" data-name="${escape(choice.name)}" data-also="${escape(choice.factor)}"
+              data-tooltip="${escape([choice.why, racialTraitKind(file), file?.description ?? "", factorSummary(file?.owner)].filter(Boolean).join(" - "))}">${escape(choice.name)}
+              <span class="gear-quality-cost">${escape(racialTraitRace(String(file?.race ?? ""), "", file?.owner))}</span></li>`;
+          }).join("")}
+          <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
+        </ol></div>`,
+      buttons: [
+        { action: "add", label: "Exchange", default: true, callback: (ev, button, dialog) =>
+          pickedName(dialog.element.querySelector("[data-feature-search]"), dialog.element.querySelector("[data-feature-list]")) || null },
+        { action: "cancel", label: "Cancel" }
+      ],
+      render: (event, dialog) => {
+        const root = dialog.element;
+        wireNameSearch(root.querySelector("[data-feature-search]"), root.querySelector("[data-feature-list]"), {
+          alwaysOpen: true, onSubmit: () => root.querySelector('button[data-action="add"]')?.click() });
+      },
       rejectClose: false
     });
-    if ((picked === null) || (picked === undefined)) return;
-    if (!picked && !current) return;
+    if (!picked || (typeof picked !== "string")) return;
+    if (picked === RESTORE) return exchangeRaceTrait(this.actor, item.id, "");
+    const choice = choices.find(each => each.id === picked);
+    if (!choice) return;
+    if (choice.why === "Already had") return ui.notifications.warn(`${this.actor.name} already has ${choice.name}.`);
+    if (choice.why) ui.notifications.warn(`${this.actor.name}: ${choice.why} - ${choice.name} taken all the same.`);
     return exchangeRaceTrait(this.actor, item.id, picked);
+  }
+
+  /** Settings' Refresh Racial Traits (the user's, 2026-11-27): any held twice taken off, and the race's put right (race-traits.mjs). */
+  static async _onRefreshRacialTraits() {
+    if (!this.isEditable) return;
+    const removed = await refreshRaceTraits(this.actor);
+    ui.notifications.info(`${this.actor.name}: Racial Traits refreshed${removed ? ` - ${removed} held twice taken off` : ""}.`);
   }
 
   /** The Secondary Racial Traits picked (race-traits.mjs): a window of the race's, ticked up to how many - past it said, never refused. */
@@ -6997,6 +7032,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       exchange: exchangeable(this.actor, item)
         ? ((slotOf(item) !== (item.flags?.["dbu-ttrpg"]?.sourceId ?? "")) ? `In place of ${getTrait(slotOf(item))?.name ?? "a Racial Trait"}: exchange it again, or restore that one`
           : "Exchange for a Factor Trait") : "",
+      // The cross only on one not its race's own (one added through Debug's Add Racial Trait): a race Trait goes with its race (the user's).
+      removable: !exchangeable(this.actor, item) && !isRaceTraitItem(item),
       triggered: this.#toggleButtons(item, triggered)
     }));
   }

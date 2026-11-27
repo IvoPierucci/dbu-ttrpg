@@ -200,3 +200,25 @@ export async function resetRaceTraits(actors) {
 export function raceTraitsOwed(actor) {
   return managesRaceTraits(actor) && (actor.getFlag?.(SCOPE, "raceTraitsSet") !== actor.system.race);
 }
+
+/**
+ * Settings' Refresh Racial Traits (the user's, 2026-11-27): a Racial or Factor Trait held twice - the same file - taken off but the first,
+ * and the race's put right (syncRaceTraits). How many were taken off.
+ */
+export async function refreshRaceTraits(actor) {
+  const seen = new Set();
+  let removed = 0;
+  for (const item of Array.from(actor?.items ?? [])) {
+    if ((item.type !== "racial") || item.system?.transformation || item.flags?.[SCOPE]?.grantedBy) continue;
+    const source = String(item.flags?.[SCOPE]?.sourceId ?? "");
+    if (!source) continue;
+    if (!seen.has(source)) {
+      seen.add(source);
+      continue;
+    }
+    await removeRacialTrait(actor, item.id);
+    removed++;
+  }
+  await syncRaceTraits(actor);
+  return removed;
+}

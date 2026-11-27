@@ -114,5 +114,11 @@ check("wired: Add Racial Trait only with Debug's toggle; the exchange button in 
    ENTRY.includes('game.settings.get("dbu-ttrpg", "raceTraitsReset")')],
   [true, true, true, true, true, true, true]);
 
+check("the exchange window is Add Racial Trait's (a search over the list, the Factor beside each, the race Trait to restore first); no cross on a race Trait; Settings' Refresh Racial Traits",
+  [SHEET.includes('window: { title: `${this.actor.name} - Exchange ${item.name}` },'), SHEET.includes('placeholder="Type a Factor Trait"'),
+   TRAITS.includes("{{else if entry.removable}}"), SHEET.includes("removable: !exchangeable(this.actor, item) && !isRaceTraitItem(item),"),
+   read("templates", "parts", "actor-settings.hbs").includes('data-action="refreshRacialTraits"'), typeof RT.refreshRaceTraits],
+  [true, true, true, true, true, "function"]);
+
 console.log(failed ? `\n${failed} failing` : "\n0 failing");
 if (failed) process.exitCode = 1;

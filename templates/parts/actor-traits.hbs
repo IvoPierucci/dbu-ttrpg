@@ -90,7 +90,7 @@
           {{#if entry.exchange}}
           <button type="button" class="trait-control trait-exchange" data-action="exchangeRacialTrait" data-item-id="{{entry.item.id}}"
                   data-tooltip="{{entry.exchange}}"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i></button>
-          {{else}}
+          {{else if entry.removable}}
           <button type="button" class="trait-control" data-action="toggleRacialTrait" data-item-id="{{entry.item.id}}"
                   data-tooltip="Remove this Racial Trait">&times;</button>
           {{/if}}
