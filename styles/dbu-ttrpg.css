@@ -1763,12 +1763,24 @@
   border-radius: 3px;
 }
 
+/* As tall as the pencil and the cross beside it (the user's): Foundry's own button height left it taller. */
 .dbu-ttrpg .trait-arm {
   flex: 0 0 auto;
   width: auto;
+  height: 18px;
+  min-height: 0;
+  box-sizing: border-box;
   padding: 0 8px;
-  line-height: 18px;
+  line-height: 16px;
   font-size: 10px;
+}
+
+/* A Trait's row buttons centred on the row and lifted 2px, clear of the text unfolded under it (the user's), not on its baseline. */
+.dbu-ttrpg .trait-head > .trait-arm,
+.dbu-ttrpg .trait-head > .trait-control {
+  align-self: center;
+  position: relative;
+  top: -2px;
 }
 
 .dbu-ttrpg .trait-arm.active {
