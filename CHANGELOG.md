@@ -5,6 +5,8 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+- **New Transformation:** Greater Mutation (a Greater Awakening for the Mutation Factor). New `surge-maneuver` Moment and
+  `surge.regainedTimes` Slot: what answers the Surge Maneuver's Surge, and how many times more it gives back.
 - **New Transformation:** Saiyan Prodigy (a Super Awakening of the Saiyans, beside Pure Progress). A Resource can now take what
   another can no longer hold (`resourceOverflowOf`, while the flag Slot `resourceOverflowWhen` names is set): its Bottomless Battle
   Born. Trait rows' buttons: no focus ring, and the Automatic one blue when hovered; every Transformation Trait has its pencil.

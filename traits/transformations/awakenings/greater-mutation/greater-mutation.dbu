@@ -1,0 +1,23 @@
+id: greater-mutation
+name: Greater Mutation
+type: awakening
+subtype: greater
+origin: body
+racial: Any
+prerequisites: Mutation Factor
+tier: 1+
+maxStacks: 1
+bonuses: AG +2, FO +2, TE +2, MA +2
+description: >
+  Amongst some species, there exist some individuals with rare and unusual abilities, warping their bodies and sometimes even their minds. Sometimes the changes are obvious, but sometimes they are subtle, making them all the more deadly.
+text: >
+  Amongst some species, there exist some individuals with rare and unusual abilities, warping their bodies and sometimes even their minds. Sometimes the changes are obvious, but sometimes they are subtle, making them all the more deadly.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Body / Prerequisite(s): Mutation Factor / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG +2 · FO +2 · TE +2 · SC – · IN – · MA +2 · PE –
+
+  Evolutionary Peak: Adapted to survive even more efficiently than your peers, you are the apex of your kind.
+  (1)-[Passive]: Increase your Maximum Life Points and Maximum Ki Points by 2 for each Power Level reached.
+  (2)-[Passive]: Increase your Wound Rolls and Soak Value by 1(bT).
+  (3)-[Passive]: Upon gaining this Transformation, regain access to the Racial Trait that you replaced with the Factor Trait from the Mutation Factor.
+  (4)-[Triggered, 1/Encounter]: If you use the Surge Maneuver, double the amount of Life or Ki Points you regain through your selected Surge.

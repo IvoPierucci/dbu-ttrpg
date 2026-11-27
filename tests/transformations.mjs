@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 59, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin, Super Majin and Saiyan Prodigy 2026-11-27)", files.length, 59);
+check("the first group, all 60, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin, Super Majin, Saiyan Prodigy and Greater Mutation 2026-11-27)", files.length, 60);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",
@@ -1867,6 +1867,26 @@ allow counter.free;`).program.blocks[0].requires;
      [definitions.bottomlesswound?.overflowOf, definitions.bottomlesswound?.overflowWhen],
      MR.includes("const spill = Object.values(definitions).filter(each => each.overflowOf && asked.includes(each.overflowOf) && each.overflowWhen")],
     ["super", true, [undefined, true, undefined], true, ["battlebornwound", "overflow.bottomless"], true]);
+}
+
+// --- Greater Mutation (the user's link, 2026-11-27): a Greater Awakening of the Body, 1 Stack -------------------------------------------
+{
+  const { reactiveFor } = await import(modUrl("effects/registry.mjs"));
+  const { collectReactive, applySlot } = await import(modUrl("effects/interpreter.mjs"));
+  const gm = transformation("greater-mutation", { stacks: 1 });
+  const peak = traitItem(gm, "greater-mutation-evolutionary-peak");
+  const actor = holding([gm, peak]);
+  const plain = holding([]);
+  const times = reactiveFor(actor).filter(entry => entry.program.blocks[0].moment === "surge-maneuver")
+    .map(entry => applySlot(collectReactive([{ ...entry, armed: true }], "surge-maneuver", { data: actor.system, errors: [], context: {}, queue: [] }).slots,
+      "surge.regainedTimes", 0));
+  const CH = fs.readFileSync(path.join(ROOT, "module", "chat.mjs"), "utf8");
+  check("Greater Mutation: AG/FO/TE/MA +2; 2 Max Life and Ki a Power Level; Wound and Soak 1(bT); the Surge Maneuver's Surge doubled, asked",
+    [Object.values(T.bonusesOf(gm)).map(T.bonusWritten), actor.system.life.max - plain.system.life.max, actor.system.ki.max - plain.system.ki.max > 0,
+     partsOf(actor, "soakValue").some(([name, value]) => (name === "Evolutionary Peak") && (value === actor.system.baseTierOfPower)), times,
+     CH.includes('const answered = await fire(actor, "surge-maneuver", { kind }, { quiet: true });'),
+     CH.includes(": (Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency) * regainedTimes;")],
+    [["2", "2", "2", "2"], 2 * actor.system.powerLevel, true, true, [1], true, true]);
 }
 
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------

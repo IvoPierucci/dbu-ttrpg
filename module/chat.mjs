@@ -40990,6 +40990,17 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   });
   if (!kind || (kind === "cancel")) return false;
 
+  // The Surge Maneuver's Surge, chosen: what answers it - Evolutionary Peak (4)'s "If you use the Surge Maneuver, double the amount of Life
+  // or Ki Points you regain through your selected Surge", asked in a window first - each `surge.regainedTimes` one time more of what it gives.
+  let regainedTimes = 1;
+  if (viaManeuver === "surge") {
+    await offerTriggers(actor, "surge-maneuver", { kind });
+    const { fireMoment: fire } = await import("./effects/moments-runtime.mjs");
+    const answered = await fire(actor, "surge-maneuver", { kind }, { quiet: true });
+    regainedTimes += Math.max(0, Number(applySlot(answered?.slots ?? {}, "surge.regainedTimes", 0)) || 0);
+  }
+  if (regainedTimes > 1) lifeMultiplier = (Number(lifeMultiplier) || 1) * regainedTimes;
+
   // Surgency adds the Force Modifier to the Life and Ki regained - but not to the
   // Capacity, which the rule does not mention.
   let surgency = actor.system.surgency;
@@ -41138,7 +41149,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   const { ki, capacity } = actor.system;
   // Power Battery: "you cannot regain Ki Points through Ki Surges" - the Capacity still comes back.
   let kiGain = (actor.system.effects?.slots?.["ki.noRegain"] === true) ? 0
-    : Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency;
+    : (Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency) * regainedTimes;
   // Limitless (3): "Halve the Ki Points you regain through Ki Surges and Combat Recovery" (rounded down).
   if ((actor.system.effects?.slots?.["kiRegain.halved"] === true) && (actor.system.effects?.slots?.["kiRegain.kept"] !== true)) kiGain = Math.floor(kiGain / 2);
   const capacityGain = Math.floor(capacity.max / DBUCharacterData.KI_SURGE_FRACTION);

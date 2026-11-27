@@ -1,0 +1,32 @@
+id: greater-mutation-evolutionary-peak
+name: Evolutionary Peak
+order: 1
+slot: trait
+description: >
+  Adapted to survive even more efficiently than your peers, you are the apex of your kind.
+text: >
+  Evolutionary Peak: Adapted to survive even more efficiently than your peers, you are the apex of your kind.
+  (1)-[Passive]: Increase your Maximum Life Points and Maximum Ki Points by 2 for each Power Level reached.
+  (2)-[Passive]: Increase your Wound Rolls and Soak Value by 1(bT).
+  (3)-[Passive]: Upon gaining this Transformation, regain access to the Racial Trait that you replaced with the Factor Trait from the Mutation Factor.
+  (4)-[Triggered, 1/Encounter]: If you use the Surge Maneuver, double the amount of Life or Ki Points you regain through your selected Surge.
+
+---
+
+# (1) 2 Maximum Life and Ki Points a Power Level (Long-Awaited Perfection (1)'s way).
+[passive, effect 1]
+life.perLevel += 2;
+ki.perLevel += 2;
+
+# (2) Wound Rolls and Soak Value 1(bT).
+[passive, effect 2]
+wound += 1(bT);
+soakValue += 1(bT);
+
+# (3) The Racial Trait the Mutation Factor's Factor Trait replaced, back: the table's - added again by hand from the Traits tab (a Factor
+# Trait takes a Racial Trait's place by hand too), as Inherited Life's Mastered Reincarnated (1).
+
+# (4) The Surge Maneuver used, once an Encounter: its Surge's Life or Ki Points doubled - asked as its Surge is chosen (the surge-maneuver
+# Moment, chat.mjs takeSurge).
+[triggered/surge-maneuver, 1/encounter, effect 4]
+surge.regainedTimes += 1;

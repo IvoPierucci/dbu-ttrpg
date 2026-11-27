@@ -776,6 +776,10 @@ const TABLE = [
     doc: "Entering an Evolved Stage of Pure Form: Erratic Majin (1) ignored (Controlled Chaos (4))." },
   { key: "chaos.halveDamage", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "Damage from an Attacking Maneuver: a stack of Channeled Chaos spent to halve it, asked in Take Damage (Pure Chaos (5))." },
+  // How many times more the Surge Maneuver's Surge gives its Life or Ki Points back - written at the surge-maneuver Moment, read where the
+  // Surge is worked out (chat.mjs takeSurge): Evolutionary Peak (4)'s "double the amount", 1.
+  { key: "surge.regainedTimes", phase: PHASES.REACTIVE, kind: N, ops: ["add"],
+    doc: "Times more of what the Surge Maneuver's Surge gives back (chat.mjs takeSurge)." },
   { key: "surge.healingReroll", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     doc: "A Healing Surge rerolled after seeing it, once a Round, asked (Chaotic Entity (2))." },
   // Oozaru's Traits.
