@@ -6569,11 +6569,31 @@
   color: var(--dbu-chat-accent, #dfe288);
 }
 
-/* Foundry outlines a focused button (button:focus) - left on a Trait row's buttons after a click, red beside the blue (the user's):
-   none on them. */
+/* Foundry rings a focused or hovered button in its warm red (button:focus's --button-focus-outline-color, button:hover's
+   --button-hover-border-color) - left on a Trait row's buttons after a click, red beside the blue (the user's): its own colours set here,
+   so whichever of Foundry's rules draws it, none on the row's buttons and the same blue on one set Automatic. */
+.dbu-ttrpg .trait-arm,
+.dbu-ttrpg .trait-control,
+.dbu-ttrpg .maneuver-control {
+  --button-focus-outline-color: transparent;
+}
+
+.dbu-ttrpg .trait-arm.active[data-action="automateTrigger"] {
+  --button-focus-outline-color: #7fb4d4;
+  --button-hover-border-color: #7fb4d4;
+}
+
 .dbu-ttrpg .trait-arm:focus,
+.dbu-ttrpg .trait-arm:focus-visible,
 .dbu-ttrpg .trait-control:focus,
-.dbu-ttrpg .maneuver-control:focus {
+.dbu-ttrpg .trait-control:focus-visible,
+.dbu-ttrpg .maneuver-control:focus,
+.dbu-ttrpg .maneuver-control:focus-visible {
   outline: none;
   box-shadow: none;
+}
+
+.dbu-ttrpg .trait-arm.active[data-action="automateTrigger"]:hover,
+.dbu-ttrpg .trait-arm.active[data-action="automateTrigger"]:focus {
+  border-color: #7fb4d4;
 }
