@@ -7362,7 +7362,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     };
     // Not one whose Transformation is not in use and holds only by its [Permanent] effects (the user's: not shown).
     // One with an Option or a choice of its own (S-Cells'): its pencil, to change it on its Item's sheet, as a Racial Trait's.
-    const changeable = item => (trait => Boolean(trait && (optionGroupsOf(trait).length || trait.choose)))(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? ""));
+    const changeable = item => (trait => Boolean(trait && (optionGroupsOf(trait).length || trait.choose || trait.grantsRacialOf)))(getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? ""));
     const traits = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "in"))
       .map(entry => ({ ...entry, from: fromOf(entry.item), changeable: changeable(entry.item) }));
     const constant = this.#racialTraitChoices(triggered, traitItems.filter(item => standing.get(item.id) === "constant"))

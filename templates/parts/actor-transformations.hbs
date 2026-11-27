@@ -207,10 +207,11 @@
             {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
           </button>
           {{/each}}
-          {{#if entry.changeable}}{{#if @root.editable}}
+          {{! Every Trait its pencil (the user's, 2026-11-27): its sheet - its text, and an Option, a choice or a Racial Trait it gave to change. }}
+          {{#if @root.editable}}
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
-                  data-tooltip="Change what was chosen for it - its Option or choice, on its sheet">&#9998;</button>
-          {{/if}}{{/if}}
+                  data-tooltip="{{#if entry.changeable}}Change what was chosen for it - its Option, choice or the Racial Trait it gave, on its sheet{{else}}Open this Trait's sheet{{/if}}">&#9998;</button>
+          {{/if}}
         </div>
         <div class="trait-body">
           {{#each entry.lines as |line|}}{{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}<div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}{{/each}}
@@ -256,10 +257,11 @@
             {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
           </button>
           {{/each}}
-          {{#if entry.changeable}}{{#if @root.editable}}
+          {{! Every Trait its pencil (the user's, 2026-11-27): its sheet - its text, and an Option, a choice or a Racial Trait it gave to change. }}
+          {{#if @root.editable}}
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
-                  data-tooltip="Change what was chosen for it - its Option or choice, on its sheet">&#9998;</button>
-          {{/if}}{{/if}}
+                  data-tooltip="{{#if entry.changeable}}Change what was chosen for it - its Option, choice or the Racial Trait it gave, on its sheet{{else}}Open this Trait's sheet{{/if}}">&#9998;</button>
+          {{/if}}
         </div>
         {{#each entry.constantLines as |line|}}<div class="dbu-tf-constant">{{{line}}}</div>{{/each}}
         <div class="trait-body">
