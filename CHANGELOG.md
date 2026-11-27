@@ -10,6 +10,8 @@ What each version brought, in broad strokes. Every change is described in its co
   left of a limit ("0/Encounter": yellow while all are left, orange once some are spent, red at none), and "Automatic" in blue
   where the effect's button is set so. After each amount, its value for this character in brackets ("1(T) [3]", "1/2 of your Max
   Capacity [48]"); Settings has "Hide real values in brackets".
+- **Trait rows:** the Triggered/Automatic button, the pencil and the cross all 18px (Foundry's button `min-height` had kept some
+  taller), the row centred on one line with as much room below as above.
 
 ## 0.3.8 (2026-11-26)
 

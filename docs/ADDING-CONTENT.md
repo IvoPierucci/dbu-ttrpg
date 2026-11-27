@@ -13,6 +13,10 @@ that have worked, with the steps people tend to miss.
    `[passive, effect 2]` or `[triggered/power, 1/round, effect 5]`. Put a comment above it saying what it does. Where
    code does part of it, say where (`# (3) ... (chat.mjs lifeOnWoundAsked)`). Where nothing does, say why it is
    "the table's".
+   The sheet reads the text too (`racial.mjs` `racialTraitLines(item, live)`): keep each effect's "(N)-[keywords]:" as printed and
+   give its blocks that `effect N` - that is how its uses left and its Automatic are shown in the right line. Amounts written as
+   the page writes them ("1(T)", "G(T)", "1/2 (rounded up) of your Maximum Life Points") get their value in brackets by
+   themselves; a character value the text names and the sheet does not know yet goes in `STAT_NAMES` there.
 4. **Register the file:** run `python tools/reindex.py --write`, which adds new files to `traits/index.json` and drops
    deleted ones.
 5. **Check it.** Run `bash tests/check.sh`. Its `compile-traits` harness compiles every file and names any that fail,

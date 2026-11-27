@@ -62,6 +62,17 @@ the rule and how it is applied in the code.
 - **Secrets stay with the ARC (GM).** An effect that makes you "aware" of another character's hidden info (Alignment,
   Power Level...) reveals nothing on the card. The GM tells the player or keeps it back.
 
+## How a Trait's text shows on the sheet (the owner's, 2026-11-27)
+
+- **As dbu-rpg.com prints it:** the chat's palette and font; the Trait's name and each effect's number and keywords bold in the
+  site's yellow. The name on the folded row is yellow too.
+- **Uses left replace the limit's number** in the keywords ("[Triggered, 0/Encounter]"): yellow while all are left, orange once
+  some are spent, red at none.
+- **"Triggered" reads "Automatic"** (blue, as is its button) while the effect's Triggered/Automatic button is set Automatic.
+- **Each amount's value for this character follows it in brackets** - the owner's spreadsheet convention: "1(T) [3]", "Z(bT) [6]",
+  "1/2 of your Max Capacity [48]". Rounded down unless the text says up. Shown by default; Settings can hide them.
+- The row's buttons are all one height (18px), the row centred on one line.
+
 ## States, Thresholds, Critical
 
 - **States** are only Mindful, Raging, Superior, Surging and Undying. Everything else (Dead, Determined, Drunk, Feral,
