@@ -22,7 +22,7 @@ import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
 import { addCustomVillainousTrait, ownedVillainousTraits, villainousTraitFiles } from "../racial.mjs";
-import { factorName, addRacialTrait, optionGroupsOf, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, maneuversOpenedBy, racialTraitRace,
+import { factorName, addRacialTrait, optionGroupsOf, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, maneuversOpenedBy, plainText, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stateTriggerBlocks } from "../effects/registry.mjs";
@@ -4601,29 +4601,72 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     ui.notifications.info(`${this.actor.name}: Racial Traits refreshed${removed ? ` - ${removed} held twice taken off` : ""}.`);
   }
 
-  /** The Secondary Racial Traits picked (race-traits.mjs): a window of the race's, ticked up to how many - past it said, never refused. */
+  /**
+   * The Secondary Racial Traits picked (race-traits.mjs) - in the Racial Skill Ranks' window (the user's, 2026-11-27): a tile each, by
+   * Category (Body, Mind), saying whether it is a Secondary or a Subrace Trait; how many of how many above; the slots full, those not picked
+   * shut until one is taken back. A Minion's second Subrace Trait red (one at most). Written as it closes.
+   */
   static async _onPickRacialTraits() {
     if (!this.isEditable) return;
     const plan = raceTraitPlan(this.actor);
     if (!plan?.pool.length) return;
+    const picks = [...plan.picked];
     const escape = Handlebars.escapeExpression;
-    const rows = plan.pool.map(file => `<label class="dbu-respond-option"><input type="checkbox" name="pick" value="${escape(file.id)}"
-      ${plan.picked.includes(file.id) ? "checked" : ""}/><span class="dbu-respond-name">${escape(file.name)}</span>
-      <span class="dbu-respond-source">${file.subrace ? "Subrace" : "Secondary"}</span></label>`).join("");
-    const hint = plan.minion ? "A Minion: two of its Secondary Racial Traits, or one and a Subrace Trait." : `Pick ${plan.choose}.`;
-    const picked = await foundry.applications.api.DialogV2.wait({
-      classes: ["dbu-dialog"], window: { title: `${this.actor.name}: Racial Traits` },
-      content: `<p class="dbu-respond-hint">${escape(hint)}</p><div class="dbu-respond-list">${rows}</div>`,
-      buttons: [{ action: "ok", label: "Done", default: true,
-        callback: (event, button, dialog) => [...dialog.element.querySelectorAll('input[name="pick"]:checked')].map(input => input.value) },
-        { action: "cancel", label: "Cancel", callback: () => null }],
-      rejectClose: false
+    const overlay = document.createElement("div");
+    overlay.className = "dbu-benefit-overlay";
+    overlay.innerHTML = `<div class="dbu-benefit-window" role="dialog" aria-modal="true">
+      <header><h3>${plan.minion ? "Racial Traits (Minion)" : "Secondary Racial Traits"}</h3><span class="dbu-benefit-sub"></span></header>
+      <div class="dbu-benefit-body"></div>
+      <footer><button type="button" class="dbu-benefit-close">Close</button></footer></div>`;
+    this.element.append(overlay);
+    const body = overlay.querySelector(".dbu-benefit-body");
+    const sub = overlay.querySelector(".dbu-benefit-sub");
+    const kindOf = file => (file.subrace ? "Subrace" : "Secondary");
+    const category = file => String(file.category ?? "").replace(/^./, letter => letter.toUpperCase()) || "Other";
+    const groups = [...new Set(plan.pool.map(category))].sort((a, b) => ["Body", "Mind"].indexOf(a) - ["Body", "Mind"].indexOf(b));
+    const draw = () => {
+      const subraces = picks.filter(id => getTrait(id)?.subrace).length;
+      sub.textContent = `${plan.minion ? "Minion: two Secondary, or one and a Subrace Trait · " : ""}${picks.length} of ${plan.choose} Racial Traits`;
+      body.innerHTML = groups.map(group => `<div><div class="dbu-benefit-label">${escape(group)}</div><div class="dbu-benefit-row skills">${
+        plan.pool.filter(file => category(file) === group).map(file => {
+          const on = picks.includes(file.id);
+          const shut = !on && (picks.length >= plan.choose);
+          const over = on && plan.minion && file.subrace && (subraces > 1);
+          const tip = [`${file.name} - ${category(file)} · ${kindOf(file)}`, over ? "A Minion has one Subrace Trait at most" : "",
+            plainText(file.description ?? "")].filter(Boolean).join(" - ");
+          return `<button type="button" class="dbu-benefit-toggle${on ? " on" : ""}${over ? " over" : ""}" data-toggle="${escape(file.id)}"
+            aria-pressed="${on}" ${shut ? "disabled" : ""} data-tooltip="${escape(tip)}"><span class="name">${escape(file.name)}</span>`
+            + `<span class="step">${kindOf(file)}</span></button>`;
+        }).join("")}</div></div>`).join("")
+        + `<div class="dbu-benefit-hint">${(picks.length >= plan.choose) ? `All ${plan.choose} chosen: choose one again to take it back.` : ""}</div>`
+        + `<div class="dbu-benefit-summary">${picks.length ? `<b>${escape(picks.map(id => getTrait(id)?.name ?? id).join(", "))}</b>` : "Nothing chosen yet."}</div>`;
+    };
+    body.addEventListener("click", event => {
+      const pressed = event.target.closest("[data-toggle]");
+      if (!pressed || pressed.disabled) return;
+      const id = pressed.dataset.toggle;
+      const at = picks.indexOf(id);
+      if (at >= 0) picks.splice(at, 1);
+      else if (picks.length < plan.choose) picks.push(id);
+      draw();
+      body.querySelector(`[data-toggle="${CSS.escape(id)}"]`)?.focus();
     });
-    if (!Array.isArray(picked)) return;
-    const subraces = picked.filter(id => getTrait(id)?.subrace).length;
-    if (picked.length > plan.choose) ui.notifications.warn(`${this.actor.name}: ${picked.length} picked, past the ${plan.choose} (said, not refused).`);
-    if (plan.minion && (subraces > 1)) ui.notifications.warn(`${this.actor.name}: a Minion has one Subrace Trait at most (said, not refused).`);
-    return this.actor.update({ "system.racialPicks": picked });
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      const same = (picks.length === plan.picked.length) && picks.every(id => plan.picked.includes(id));
+      if (!same) this.actor.update({ "system.racialPicks": picks });
+    };
+    const onKey = event => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    };
+    overlay.querySelector(".dbu-benefit-close").addEventListener("click", close);
+    overlay.addEventListener("click", event => { if (event.target === overlay) close(); });
+    document.addEventListener("keydown", onKey, true);
+    draw();
   }
 
   /** A Fusion's Awakening had or left out for this Fusion ("choose which Awakenings they have access to") - its Fusion tab's tick. */

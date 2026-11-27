@@ -120,5 +120,15 @@ check("the exchange window is Add Racial Trait's (a search over the list, the Fa
    read("templates", "parts", "actor-settings.hbs").includes('data-action="refreshRacialTraits"'), typeof RT.refreshRaceTraits],
   [true, true, true, true, true, "function"]);
 
+{
+  const start = SHEET.indexOf("  static async _onPickRacialTraits() {");
+  const body = SHEET.slice(start, SHEET.indexOf("\n  }\n", start));
+  check("the picks drawn in the Racial Skill Ranks' window: tiles by Category, each saying Secondary or Subrace; full slots shut the rest; written as it closes",
+    [start > 0, body.includes('overlay.className = "dbu-benefit-overlay";'), body.includes('class="dbu-benefit-toggle'),
+     body.includes('<span class="step">${kindOf(file)}</span>'), body.includes("const shut = !on && (picks.length >= plan.choose);"),
+     body.includes('this.actor.update({ "system.racialPicks": picks })'), body.includes("DialogV2")],
+    [true, true, true, true, true, true, false]);
+}
+
 console.log(failed ? `\n${failed} failing` : "\n0 failing");
 if (failed) process.exitCode = 1;
