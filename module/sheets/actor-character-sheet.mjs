@@ -1635,7 +1635,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       category: (cat => cat ? (cat.raceLabel ? `${cat.label} \u00b7 ${cat.raceLabel}` : cat.label) : "")(talentCategoryOf(item)),
       // Unfolded to its text as printed, as a Racial Trait is (the user's: the text was nowhere to be seen).
       open: Boolean(this.#openSections[`trait-${item.id}`]),
-      lines: racialTraitLines(item),
+      lines: racialTraitLines(item, this.#liveOf(item, triggered)),
       // What its `choose:` was answered with - Elementalist's Elemental Profile.
       chosenLines: [...(item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label).filter(Boolean),
         // Dynamic Hype's: the Option in use.
@@ -6869,7 +6869,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       bestialOffFor: this.actor.items.get(item.flags?.["dbu-ttrpg"]?.bestialOff ?? "")?.name ?? "",
       // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
       open: Boolean(this.#openSections[`trait-${item.id}`]),
-      lines: racialTraitLines(item),
+      lines: racialTraitLines(item, this.#liveOf(item, triggered)),
       chosenLines: (item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label).filter(Boolean),
       // The Maneuvers that are this Trait's own effects - Majin Regeneration's 3rd: the character's own Maneuver Item, shown
       // here as well, used and dragged as it is on the Maneuvers tab (the user's). An Item holds no Item of its own.
@@ -6976,6 +6976,34 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           same.automatic = same.automatic && each.automatic;
           return buttons;
         }, []);
+  }
+
+  /**
+   * What a Trait's text says as it stands (racial.mjs liveLines; the user's, 2026-11-27): by printed effect number, the uses left of
+   * each limit its blocks count (the fewest of them) and the limit itself; the effects whose Triggered/Automatic button is set
+   * Automatic; a Transformation Trait's letters (G, Z, S, M) from its Transformation; and whether the values in brackets are shown
+   * (Settings, `hideRealValues`).
+   */
+  #liveOf(item, triggered = []) {
+    const uses = new Map();
+    for (const entry of triggered.filter(each => each.sourceId === item.id)) {
+      const block = entry.program.blocks[0];
+      const effect = Number(block?.modifiers?.effect);
+      if (!effect) continue;
+      const was = uses.get(effect) ?? { round: Infinity, roundMax: Infinity, encounter: Infinity, encounterMax: Infinity };
+      for (const period of ["round", "encounter"]) {
+        const most = Number(block?.budget?.[period]);
+        if (!Number.isFinite(most)) continue;
+        was[period] = Math.min(was[period], Math.max(0, Number(entry.uses?.[period]) || 0));
+        was[`${period}Max`] = Math.min(was[`${period}Max`], most);
+      }
+      uses.set(effect, was);
+    }
+    const automatic = new Set(this.#toggleButtons(item, triggered).filter(button => button.automatic)
+      .map(button => Number(String(button.group).split("|")[0])).filter(Boolean));
+    const owner = item.system?.transformation ? this.actor.items.get(item.system.transformation) : null;
+    return { actor: this.actor, uses, automatic, letters: owner ? lettersOf(owner, fileOf(owner)) : {},
+      realValues: !this.actor.system.hideRealValues };
   }
 
   /**
@@ -7270,10 +7298,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           value: bonuses[attribute] ? `+${bonusWritten(bonuses[attribute])}` : "+0", up: Boolean(bonuses[attribute]) })),
         aspects: file ? aspectsOf(item, all).map(aspect => ({ label: aspectLabel(aspect), summary: aspectFile(aspect.id)?.summary ?? "" })) : [],
         // Each Trait's text as its own Item has it - an Option effect showing only what was chosen (S-Cells') - or as written, where none is had.
-        traits: own.map(trait => ({ name: trait.name, note: noteOf(trait), off: Boolean(offOf(trait)),
-          lines: racialTraitLines(all.find(each => (each.type === "racial") && (each.system?.transformation === item.id)
-            && (each.flags?.["dbu-ttrpg"]?.sourceId === trait.id))
-            ?? { system: { text: trait.text ?? "", chosen: [] }, flags: { "dbu-ttrpg": { sourceId: trait.id } } }) }))
+        traits: own.map(trait => {
+          const held = all.find(each => (each.type === "racial") && (each.system?.transformation === item.id)
+            && (each.flags?.["dbu-ttrpg"]?.sourceId === trait.id));
+          return { name: trait.name, note: noteOf(trait), off: Boolean(offOf(trait)),
+            lines: held ? racialTraitLines(held, this.#liveOf(held, triggered))
+              : racialTraitLines({ system: { text: trait.text ?? "", chosen: [] }, flags: { "dbu-ttrpg": { sourceId: trait.id } } }) };
+        })
       };
     };
     const current = items.filter(item => kindOfItem(item) === this.#transformationSection);

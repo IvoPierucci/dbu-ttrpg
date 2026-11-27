@@ -282,6 +282,11 @@
       <input type="checkbox" name="system.hideUnfitTraits" {{#if system.hideUnfitTraits}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
       Only Traits you may have
     </label>
+    <label class="debug-toggle"
+           data-tooltip="A Trait's text shows each amount's value for this character in brackets after it - 1(T) [3], 1/2 of your Max Capacity [48]. Tick to hide them.">
+      <input type="checkbox" name="system.hideRealValues" {{#if system.hideRealValues}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
+      Hide real values in brackets
+    </label>
   </section>
 
   {{! Skill Specialties (the user's): Craft's and Knowledge's own, each a Skill of its own - a summary here, side by side; added,

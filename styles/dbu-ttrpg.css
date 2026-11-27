@@ -6480,3 +6480,62 @@
 .dbu-ttrpg .dbu-tf-choices { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .dbu-ttrpg .dbu-tf-choices .dbu-tf-in { display: inline-flex; align-items: center; gap: 6px; }
 .dbu-ttrpg .dbu-tf-choices select { width: auto; min-width: 9em; }
+
+/* --- A Trait's text as dbu-rpg.com prints it (the user's, 2026-11-27) ------------------------------------------------------------
+   The chat's palette (.system-dbu-ttrpg's --dbu-chat-*, the site's own) on the unfolded text of Racial and Other Traits, Talents and
+   Transformation Traits: the name and each effect's number and keywords bold in the accent (racial.mjs liveLines); the uses left of
+   a limit yellow while all are left, orange once some are spent, red at none; an effect set Automatic in blue, its button too; each
+   amount's value for this character in brackets, grey. */
+.dbu-ttrpg .trait-open > .trait-body,
+.dbu-ttrpg .dbu-tf-trait {
+  background: var(--dbu-chat-bg, #282828);
+  color: var(--dbu-chat-text, #cccccc);
+  font-family: var(--dbu-chat-font, "Open Sans", "Signika", sans-serif);
+  font-size: 12.5px;
+  line-height: 1.6;
+  border: 1px solid var(--dbu-chat-rule, rgba(223, 226, 136, 0.3));
+  border-radius: 4px;
+  padding: 4px 8px 2px 20px;
+}
+
+.dbu-ttrpg .dbu-tf-trait {
+  padding-left: 8px;
+  margin-bottom: 4px;
+}
+
+.dbu-ttrpg .dbu-site-strong {
+  color: var(--dbu-chat-accent, #dfe288);
+  font-weight: bold;
+}
+
+.dbu-ttrpg .dbu-uses-full,
+.dbu-ttrpg .dbu-uses-part,
+.dbu-ttrpg .dbu-uses-none {
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+
+.dbu-ttrpg .dbu-uses-full { color: var(--dbu-chat-accent, #dfe288); }
+.dbu-ttrpg .dbu-uses-part { color: #e8a25a; }
+.dbu-ttrpg .dbu-uses-none { color: #e06c6c; }
+
+.dbu-ttrpg .dbu-keyword-auto,
+.dbu-ttrpg .trait-arm.active[data-action="automateTrigger"] {
+  color: #7fb4d4;
+}
+
+.dbu-ttrpg .trait-arm.active[data-action="automateTrigger"] {
+  border-color: #7fb4d4;
+}
+
+.dbu-ttrpg .dbu-real-value {
+  color: #9a9a9a;
+  font-weight: normal;
+  border-bottom: 1px dotted #9a9a9a;
+  cursor: help;
+}
+
+/* The Trait's name on its folded row in the site's yellow too (my default, objectable). */
+.dbu-ttrpg .trait-list .trait-name {
+  color: var(--dbu-chat-accent, #dfe288);
+}

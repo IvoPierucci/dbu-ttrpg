@@ -5,7 +5,11 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
-(Nothing yet.)
+- **Traits on the sheet, as the site prints them:** the unfolded text of Racial and Other Traits, Talents and Transformation Traits
+  in dbu-rpg.com's font and colours, the name and each effect's number and keywords bold in its yellow. In the keywords, the uses
+  left of a limit ("0/Encounter": yellow while all are left, orange once some are spent, red at none), and "Automatic" in blue
+  where the effect's button is set so. After each amount, its value for this character in brackets ("1(T) [3]", "1/2 of your Max
+  Capacity [48]"); Settings has "Hide real values in brackets".
 
 ## 0.3.8 (2026-11-26)
 

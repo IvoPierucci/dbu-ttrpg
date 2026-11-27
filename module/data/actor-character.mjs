@@ -1733,6 +1733,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The Settings tab's "Only Traits you may have": Add Racial Trait and Add Other Trait leave out, rather than grey, the ones that are
     // not this character's to take (the user's).
     schema.hideUnfitTraits = new fields.BooleanField({ required: true, initial: false });
+    // The values in brackets after a Trait's amounts - "1(T) [3]" (racial.mjs realValues): shown unless hidden (the user's, 2026-11-27).
+    schema.hideRealValues = new fields.BooleanField({ required: true, initial: false });
 
     // Whether this character is Adventuring - what a Buddy's Adventure Effect waits on. A switch
     // on the Biography tab, by the table's ruling: off when a Combat Encounter starts, on again

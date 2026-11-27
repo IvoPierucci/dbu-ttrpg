@@ -1871,4 +1871,46 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
     [true, 5, true, true, true, true, true]);
 }
 
+
+// --- A Trait's text on the sheet as the site prints it, and what stands now (the user's, 2026-11-27) ---------------------------------
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const actor = { system: { tierOfPower: 3, baseTierOfPower: 3, powerLevel: 12, capacity: { max: 96 }, life: { max: 150 }, ki: { max: 120 },
+    might: 14, surgency: 15, attributes: { insight: { mod: 9 } } } };
+  const live = { actor, letters: { G: 3, Z: 2 }, realValues: true,
+    uses: new Map([[4, { round: 1, roundMax: 1, encounter: Infinity, encounterMax: Infinity }],
+      [5, { round: Infinity, roundMax: Infinity, encounter: 0, encounterMax: 1 }], [3, { round: 1, roundMax: 1, encounter: 2, encounterMax: 3 }]]),
+    automatic: new Set([3]) };
+  const text = ["Spiritual Apprentice: You have been trained to finely control your energy.",
+    "(3)-[Triggered/Threshold, 1/Round, 3/Encounter]: Regain Life Points equal to your Surgency.",
+    "(4)-[Triggered, 1/Round]: Increase your Maximum Ki Points by 2 for every Power Level you possess.",
+    "(5)-[Triggered, 1/Encounter]: Reduce the Ki Point Cost by 1(T) and your Surgency by Z(bT), regain 1d10(bT) Life Points.",
+    "(6)-[Passive]: Wound by 1/2 (rounded up) of G(T); up to 1/2 of your Max Capacity; negative up to 1/4 (rounded up) of your Maximum Life Points.",
+    "(7)-[Passive]: 1/10th of your Maximum Life Points, 1/2 of your Might, DR by 1/2 of your Insight Modifier, by x(bT) and 2x(bT)."].join("\n");
+  const item = { flags: { "dbu-ttrpg": { sourceId: "nope" } }, system: { text, chosen: [] } };
+  const shown = RAC.racialTraitLines(item, live).map(line => line.html);
+  const values = html => [...html.matchAll(/class="dbu-real-value"[^>]*>\[([^\]]*)\]/g)].map(m => m[1]);
+  const uses = html => [...html.matchAll(/class="dbu-uses-(\w+)" data-tooltip="([^"]*)">(\d+)</g)].map(m => [m[1], m[3], m[2]]);
+  check("Trait text live: the name and each effect's number and keywords bold in the site's accent",
+    [shown[0].startsWith('<strong class="dbu-site-strong">Spiritual Apprentice</strong>:'),
+     shown[2].startsWith('(<strong class="dbu-site-strong">4</strong>)-[<strong class="dbu-site-strong">Triggered, ')], [true, true]);
+  check("its uses left: all yellow, some spent orange, none red, each with how many of how many; Triggered said Automatic where set so",
+    [uses(shown[1]), uses(shown[2]), uses(shown[3]), shown[1].includes('<span class="dbu-keyword-auto"'), shown[1].includes("Triggered"), shown[2].includes("dbu-keyword-auto")],
+    [[["full", "1", "1 of 1 left this Round"], ["part", "2", "2 of 3 left this Encounter"]], [["full", "1", "1 of 1 left this Round"]],
+     [["none", "0", "0 of 1 left this Encounter"]], true, false, false]);
+  check("the real values in brackets: Tier amounts, letters, dice, per Power Level, fractions of the character's values; x(bT) none",
+    [values(shown[1]), values(shown[2]), values(shown[3]), values(shown[4]), values(shown[5])],
+    [["15"], ["24"], ["3", "6", "3d10"], ["5", "48", "38"], ["15", "7", "4"]]);
+  check("hidden in Settings (hideRealValues): no brackets, the rest as it was; without `live`, the text as printed (what reads it for \"(N)-\")",
+    [RAC.racialTraitLines(item, { ...live, realValues: false }).some(line => line.html.includes("dbu-real-value")),
+     RAC.racialTraitLines(item, { ...live, realValues: false })[3].html.includes("dbu-uses-none"),
+     RAC.racialTraitLines(item)[3].html], [false, true, "(5)-[Triggered, 1/Encounter]: Reduce the Ki Point Cost by 1(T) and your Surgency by Z(bT), regain 1d10(bT) Life Points."]);
+  const SH = read("module", "sheets", "actor-character-sheet.mjs");
+  check("wired: Talents, Racial and Other Traits and a Transformation's Traits pass #liveOf; the Settings box; the CSS",
+    [(SH.match(/racialTraitLines\(item, this\.#liveOf\(item, triggered\)\)/g) ?? []).length, SH.includes("lines: held ? racialTraitLines(held, this.#liveOf(held, triggered))"),
+     SH.includes("realValues: !this.actor.system.hideRealValues };"), read("templates", "parts", "actor-settings.hbs").includes('name="system.hideRealValues"'),
+     ["dbu-site-strong", "dbu-uses-part", "dbu-uses-none", "dbu-keyword-auto", "dbu-real-value"].every(name => read("styles", "dbu-ttrpg.css").includes(`.${name}`))],
+    [2, true, true, true, true]);
+}
+
 console.log(failed ? `\n${failed} failing` : "\n0 failing");

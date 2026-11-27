@@ -646,7 +646,7 @@ check("Follower: a Minion not Commanded skips its Act Phase - its turn's start h
        "actionsSpent", "conditions", "states", "resources", "timed", "karma", "narrativeStamina", "inside", "battlefield", "transfigured", "delayed",
        "charging", "minions", "master", "specialMinion", "duplicate", "adversaryMinion", "duplicateOf", "minionLifeStep", "adventuring", "defeatsEscaped",
        "foresight", "grapple", "doffBonus", "usedManeuvers", "adventureUses", "riches", "reputation", "statDrain", "lastManeuver",
-       "biography", "allies", "alliesHidden", "hideUnfitTraits", "fusion"].includes(key))], [[], []]);
+       "biography", "allies", "alliesHidden", "hideUnfitTraits", "hideRealValues", "fusion"].includes(key))], [[], []]);
 
   // Mirrored Attack, run: the attacker's Duplicate in its user's place, the Duel begun with it - or, none possible, a target.
   const edits = [], notes = [], dismissed = [];

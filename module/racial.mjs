@@ -155,8 +155,15 @@ function choicePicked(item) {
 /**
  * A Racial Trait Item's text as shown on the Traits tab: its printed lines, and where it has an Option effect, that line
  * with only what was chosen under it - "(3)-[Option]:" and the Option's own line - not the whole list (the user's).
+ * With `live` (the character's sheet): as the site prints it, and what stands now (liveLines). Without, as printed - what
+ * reads it for "(N)-" (the sheet's [Constant] lines, the harnesses) keeps it.
  */
-export function racialTraitLines(item) {
+export function racialTraitLines(item, live = null) {
+  const out = printedTraitLines(item);
+  return live ? liveLines(out, live) : out;
+}
+
+function printedTraitLines(item) {
   const picked = (item?.system?.chosen ?? []).filter(entry => entry.key === "option")
     .map(entry => getTrait(entry.value)).filter(Boolean);
   const choices = choicePicked(item);
@@ -1979,4 +1986,130 @@ export function registerRacialHooks() {
       }
     }
   });
+}
+
+
+// --- The text as the site prints it, and what stands now (the user's, 2026-11-27) -------------------------------------------------
+
+/** One part bold in the site's accent, as dbu-rpg.com bolds a Trait's name and each effect's number and keywords. */
+const strong = html => `<strong class="dbu-site-strong">${html}</strong>`;
+
+/** A tooltip's text, for an attribute. */
+const tip = text => Handlebars.escapeExpression(text);
+
+/**
+ * The sheet's lines (`live`): the Trait's name at its start and each effect's "(N)-[keywords]:" bold, as the site has them; in the
+ * keywords, the uses left of a limit counted (`live.uses`: effect -> {round, encounter, roundMax, encounterMax}) - all yellow, some
+ * spent orange, none red - and "Triggered" said "Automatic" where its button is so (`live.automatic`, effect numbers); and, unless
+ * hidden in Settings (`live.realValues`), each amount's value for this character in brackets after it - "1(T) [3]" (realValues).
+ */
+export function liveLines(lines, live) {
+  const first = lines.findIndex(line => line.html && !line.gap && !line.addendum);
+  return lines.map((line, at) => {
+    if (!line.html || line.gap || line.addendum) return line;
+    let html = line.html;
+    let head = "";
+    const effect = /^\((\d+)\)-\[([^\]]*)\]:/.exec(html);
+    if (effect) {
+      head = `(${strong(effect[1])})-[${strong(keywordsLive(Number(effect[1]), effect[2], live))}]:`;
+      html = html.slice(effect[0].length);
+    }
+    else if ((at === first) && !line.bullet) {
+      const name = /^([^:<(][^:<]{0,80}?):(\s|$)/.exec(html);
+      if (name) {
+        head = `${strong(name[1])}:`;
+        html = html.slice(name[1].length + 1);
+      }
+    }
+    if (live.realValues !== false) html = realValues(html, live);
+    return { ...line, html: head + html };
+  });
+}
+
+/** An effect's keywords: its limits as what is left, "Triggered" as "Automatic" where set so. */
+function keywordsLive(n, keywords, live) {
+  const uses = live.uses?.get?.(n);
+  let html = keywords.replace(/(^|[\s,])([0-9A-Z]+)\/(Round|Encounter)\b/g, (whole, before, count, period) => {
+    const key = period.toLowerCase();
+    const left = uses?.[key];
+    const most = uses?.[`${key}Max`];
+    if (!Number.isFinite(left) || !Number.isFinite(most)) return whole;
+    const kind = (left >= most) ? "full" : (left > 0) ? "part" : "none";
+    return `${before}<span class="dbu-uses-${kind}" data-tooltip="${tip(`${left} of ${most} left this ${period}`)}">${left}</span>/${period}`;
+  });
+  if (live.automatic?.has?.(n)) {
+    html = html.replace(/\bTriggered\b/g, '<span class="dbu-keyword-auto" data-tooltip="Set to Automatic on its button - it answers by itself">Automatic</span>');
+  }
+  return html;
+}
+
+/** The character's values a Trait's text names - "1/2 of your Max Capacity" - by their printed names. */
+const STAT_NAMES = {
+  "Surgency": data => data.surgency,
+  "Maximum Life Points": data => data.life?.max,
+  "Maximum Ki Points": data => data.ki?.max,
+  "Max Capacity": data => data.capacity?.max,
+  "Maximum Capacity": data => data.capacity?.max,
+  "Might": data => data.might,
+  "Soak Value": data => data.soakValue,
+  "Damage Reduction": data => data.damageReduction,
+  "Racial Life Modifier": data => data.racialLifeModifier,
+  "Boosted Speed": data => data.speed?.boosted,
+  "Speed": data => data.speed?.normal,
+  "Stress Bonus": data => data.stressBonus,
+  "Power Level": data => data.powerLevel,
+  ...Object.fromEntries(["Agility", "Force", "Tenacity", "Scholarship", "Insight", "Magic", "Personality"]
+    .map(name => [`${name} Modifier`, data => data.attributes?.[name.toLowerCase()]?.mod]))
+};
+const STAT_PATTERN = Object.keys(STAT_NAMES).sort((a, b) => b.length - a.length).join("|");
+
+/** "1/2 (rounded up) of", "1/10th of", "double": what it does to a value, and its words for the tooltip. Nothing in front, the value. */
+function fractionOf(written, rounding) {
+  if (!written) return { apply: value => value, said: "", after: "" };
+  if (/^(double|twice)$/i.test(written)) return { apply: value => value * 2, said: "twice ", after: "" };
+  const up = /up/.test(rounding ?? "");
+  const by = Number(/^1\/(\d+)/.exec(written)?.[1]) || 1;
+  return { apply: value => (up ? Math.ceil(value / by) : Math.floor(value / by)), said: `1/${by} of `, after: up ? ", rounded up" : "" };
+}
+
+/** "1/2 (rounded up) of " in front of an amount: its fraction and rounding captured. */
+const FRACTION = "(?:(1\\/\\d+(?:th)?|double|twice)(?: \\((rounded (?:up|down))\\))? of )";
+
+/**
+ * Each amount's value for this character, in brackets after it (the user's spreadsheet's way): "N(T)", "N(bT)", a Transformation's
+ * "G(T)", "Z(bT)" (`live.letters`), dice "1d10(bT)" as "[3d10]", "by 2 for every Power Level", and "of your X" / "equal to your X" /
+ * "by your X" for the character's values (STAT_NAMES) - each with "1/2 (rounded up) of", "1/10th of", "double" in front. Rounded down
+ * unless it says up. What the sentence defines ("x(bT)") or the moment gives ("the Ki Point Cost of that Attacking Maneuver") has none.
+ */
+export function realValues(html, live) {
+  const data = live.actor?.system ?? {};
+  const T = Math.max(1, Number(data.tierOfPower) || 1);
+  const bT = Math.max(1, Number(data.baseTierOfPower) || 1);
+  const letters = live.letters ?? {};
+  const bracket = (value, said) => ` <span class="dbu-real-value" data-tooltip="${tip(said)}">[${value}]</span>`;
+  // Tier amounts: "1/2 (rounded up) of G(T)", "3(bT)", "1d10(T)" - not "x(T)", "2x(bT)".
+  html = html.replace(new RegExp(`(?<![A-Za-z0-9/])${FRACTION}?(\\d+|[GZSM])(?:d(\\d+))?\\((b?)T\\)(?![\\w\\]])`, "g"),
+    (whole, fraction, rounding, count, die, base) => {
+      const tier = base ? bT : T;
+      const tierSaid = `${base ? "base Tier of Power" : "Tier of Power"} ${tier}`;
+      const letter = /^[GZSM]$/.test(count);
+      if (letter && !Number.isFinite(Number(letters[count]))) return whole;
+      const n = letter ? Number(letters[count]) : Number(count);
+      const nSaid = letter ? `${count} ${n}` : String(n);
+      if (die) return whole + bracket(`${n * tier}d${die}`, `${nSaid}d${die} × ${tierSaid}`);
+      const { apply, said, after } = fractionOf(fraction, rounding);
+      return whole + bracket(apply(n * tier), `${said}${nSaid} × ${tierSaid}${fraction ? ` = ${n * tier}` : ""}${after}`);
+    });
+  // "by 2 for every Power Level you possess".
+  html = html.replace(/\bby (\d+) for (?:every|each) Power Level(?: you possess| you have reached| reached)?(?![\w\]])/g, (whole, per) =>
+    whole + bracket(Number(per) * (Number(data.powerLevel) || 0), `${per} × Power Level ${Number(data.powerLevel) || 0}`));
+  // The character's values: "1/2 of your Max Capacity", "equal to your Surgency", "by your Might".
+  html = html.replace(new RegExp(`(?:${FRACTION}|\\bequal to |\\bby )your (${STAT_PATTERN})\\b`, "g"),
+    (whole, fraction, rounding, name) => {
+      const value = Number(STAT_NAMES[name]?.(data));
+      if (!Number.isFinite(value)) return whole;
+      const { apply, said, after } = fractionOf(fraction, rounding);
+      return whole + bracket(apply(value), `${said}${name} ${value}${after}`);
+    });
+  return html;
 }

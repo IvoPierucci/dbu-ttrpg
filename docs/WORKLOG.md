@@ -44,6 +44,10 @@ narrates.
 
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
+- **2026-11-27 (Ivo's Claude):**
+  - Trait text on the sheet: `racialTraitLines(item, live)` - with `live` (the sheet's `#liveOf`) the site's style, uses left,
+    Automatic, and real values in brackets (`realValues`, hidden by `system.hideRealValues`). Without `live`, as printed: what
+    reads its HTML for "(N)-" (the [Constant] lines, harnesses) relies on that.
 - **2026-11-26 (Ivo's Claude):**
   - Added Super Kaioken: headers `initial:` (a Special Enhancement's Initial Enhancement) and `onlyAlongside:`.
   - Respond: the Direct Hit box shows the Category lowered by ticked Direct Hit effects (`categorySteps`, `damageWith`).
