@@ -391,6 +391,11 @@
       Ki Multiplier
       {{#if system.debug.kiMultiplier}}<em>Ki x2 &middot; Capacity x1.5</em>{{/if}}
     </label>
+    <label class="debug-toggle"
+           data-tooltip="The race gives its Racial Traits, and its Secondary ones are exchanged for Factor Traits from their rows. Ticked, the Traits tab's Add Racial Trait is back, for anything else.">
+      <input type="checkbox" name="system.debug.showAddRacialTrait" {{#if system.debug.showAddRacialTrait}}checked{{/if}}/>
+      Show Add Racial Trait
+    </label>
     {{! The ToP Mod and Crit Target are gone (the user's, 2026-11-16): Custom Buffs do both now. }}
     {{! A row each kind (the user's): the round and the Encounter; the Maneuvers; Fusion. }}
     {{! Turning the round and the Encounter over by hand - for a table playing without a formal Encounter, and for putting

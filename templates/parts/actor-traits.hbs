@@ -50,14 +50,17 @@
   </details>
   {{/if}}
 
-  {{! Racial Traits are added by hand - this race's or any other's - and removed the same way. }}
+  {{! Racial Traits come with the race (race-traits.mjs; the user's, 2026-11-27); a race Trait is exchanged for a Factor Trait from its row.
+      Add Racial Trait only where Debug shows it. }}
   <details class="trait-group" data-section="racialTraits"
            {{#if openSections.racialTraits}}open{{/if}}>
     <summary>
       Racial Traits
       <span class="trait-count">{{racialTraits.length}}</span>
+      {{#if system.debug.showAddRacialTrait}}
       <button type="button" class="edit-toggle" data-action="addRacialTrait"
               data-tooltip="Your race's first, then every other race's">Add Racial Trait</button>
+      {{/if}}
     </summary>
 
     {{#if racialTraits.length}}
@@ -84,8 +87,13 @@
           {{/each}}
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
                   data-tooltip="Edit this Racial Trait - its Effect is what it does on this character">&#9998;</button>
+          {{#if entry.exchange}}
+          <button type="button" class="trait-control trait-exchange" data-action="exchangeRacialTrait" data-item-id="{{entry.item.id}}"
+                  data-tooltip="{{entry.exchange}}"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i></button>
+          {{else}}
           <button type="button" class="trait-control" data-action="toggleRacialTrait" data-item-id="{{entry.item.id}}"
                   data-tooltip="Remove this Racial Trait">&times;</button>
+          {{/if}}
         </div>
         <div class="trait-body">
           {{#each entry.lines as |line|}}

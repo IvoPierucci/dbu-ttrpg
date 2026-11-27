@@ -2,6 +2,7 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { waitForContent } from "../content-ready.mjs";
+import { exchangeChoices, exchangeRaceTrait, exchangeable, raceTraitPlan, raceTraitsOwed, slotOf, syncRaceTraits } from "../race-traits.mjs";
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, isFusion, mayBeMaster, typicalMinion } from "../actor-types.mjs";
 import { fusionContext, racesOf } from "../fusion.mjs";
@@ -467,6 +468,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollMight: DBUCharacterSheet._onMightRoll,
       toggleGearText: DBUCharacterSheet._onToggleGearText,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
+      exchangeRacialTrait: DBUCharacterSheet._onExchangeRacialTrait,
+      pickRacialTraits: DBUCharacterSheet._onPickRacialTraits,
       bestialApply: DBUCharacterSheet._onBestialApply,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
       addTransformation: DBUCharacterSheet._onAddTransformation,
@@ -1756,7 +1759,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // The Aliens' "Saving Throw: Any (select one)".
     context.racialSavingThrow = racialSavingThrowChosen(race) ? Object.keys(DBUCharacterData.SAVING_THROWS).map(key => ({
       value: key, label: key.charAt(0).toUpperCase() + key.slice(1), selected: key === this.actor.system.racialSavingThrow })) : null;
-    context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow);
+    // The Secondary Racial Traits picked here (race-traits.mjs): the Majins' 4, a Minion's 2 of its Secondary and Subrace Traits.
+    context.racialPicks = (plan => (plan && plan.pool.length) ? { label: plan.minion ? "Racial Traits (Minion)" : "Secondary Racial Traits",
+      choose: plan.choose, names: plan.picked.map(id => getTrait(id)?.name ?? id).join(", "), left: Math.max(0, plan.choose - plan.picked.length),
+      over: plan.picked.length > plan.choose } : null)(raceTraitPlan(this.actor));
+    context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow
+      || context.racialPicks);
     // The Minion Races under a "Minion Races" divider after every other race (the user's).
     const races = raceOptions().map(option => ({
       ...option,
@@ -3906,6 +3914,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   _onRender(context, options) {
     super._onRender(context, options);
 
+    // Its race's Racial Traits, owed - a new character's, or one made before the race gave them (race-traits.mjs): given as whoever plays
+    // it opens it, its Options asked of them. Once.
+    if (this.isEditable && !this.#raceTraitsGiving && raceTraitsOwed(this.actor) && (this.actor.isOwner)
+      && (!game.user.isGM || !Array.from(game.users).some(user => user.active && !user.isGM && this.actor.testUserPermission(user, "OWNER")))) {
+      this.#raceTraitsGiving = true;
+      syncRaceTraits(this.actor).finally(() => { this.#raceTraitsGiving = false; });
+    }
+
     // A Fusion's Alignment, within its Fused Characters' (fusion.mjs) - unnamed, the Biography tab's select having the name.
     for (const select of this.element.querySelectorAll("select[data-fusion-alignment]")) {
       select.addEventListener("change", event => {
@@ -4511,6 +4527,68 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** GM only: put the published Maneuvers in the compendium to drag from. */
   static async _onImportManeuvers() {
     return importCoreManeuvers();
+  }
+
+  /** Its race's Racial Traits being given now (race-traits.mjs) - once at a time. */
+  #raceTraitsGiving = false;
+
+  /**
+   * A race Trait's row exchanged for a Factor Trait (the user's, 2026-11-27): every Factor Trait that may take its place - those not this
+   * character's dimmed with why, and taken all the same - or, one already exchanged, the race Trait restored.
+   */
+  static async _onExchangeRacialTrait(event, target) {
+    if (!this.isEditable) return;
+    const item = this.actor.items.get(target.dataset.itemId ?? "");
+    if (!item) return;
+    const { original, current, choices } = exchangeChoices(this.actor, item);
+    if (!original) return;
+    const escape = Handlebars.escapeExpression;
+    let factor = "";
+    const rows = choices.map(choice => {
+      const head = (choice.factor !== factor) ? `<div class="dbu-respond-source" style="margin-top:6px">${escape(choice.factor)}</div>` : "";
+      factor = choice.factor;
+      return `${head}<label class="dbu-respond-option${choice.why ? " dbu-dim" : ""}"${choice.why ? ` data-tooltip="${escape(choice.why)}"` : ""}>
+        <input type="radio" name="exchange" value="${escape(choice.id)}"/><span class="dbu-respond-name">${escape(choice.name)}</span>
+        ${choice.why ? `<span class="dbu-respond-source">${escape(choice.why)}</span>` : ""}</label>`;
+    }).join("");
+    const restore = current ? `<label class="dbu-respond-option"><input type="radio" name="exchange" value="" checked/>
+      <span class="dbu-respond-name">Restore ${escape(original.name)}</span></label>` : "";
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `Exchange ${item.name}` },
+      content: `<div class="dbu-respond-list">${restore}${rows || `<p class="dbu-respond-hint">No Factor Trait takes the place of ${escape(original.name)}.</p>`}</div>`,
+      buttons: [{ action: "ok", label: "Exchange", default: true,
+        callback: (event, button, dialog) => dialog.element.querySelector('input[name="exchange"]:checked')?.value ?? null },
+        { action: "cancel", label: "Cancel", callback: () => null }],
+      rejectClose: false
+    });
+    if ((picked === null) || (picked === undefined)) return;
+    if (!picked && !current) return;
+    return exchangeRaceTrait(this.actor, item.id, picked);
+  }
+
+  /** The Secondary Racial Traits picked (race-traits.mjs): a window of the race's, ticked up to how many - past it said, never refused. */
+  static async _onPickRacialTraits() {
+    if (!this.isEditable) return;
+    const plan = raceTraitPlan(this.actor);
+    if (!plan?.pool.length) return;
+    const escape = Handlebars.escapeExpression;
+    const rows = plan.pool.map(file => `<label class="dbu-respond-option"><input type="checkbox" name="pick" value="${escape(file.id)}"
+      ${plan.picked.includes(file.id) ? "checked" : ""}/><span class="dbu-respond-name">${escape(file.name)}</span>
+      <span class="dbu-respond-source">${file.subrace ? "Subrace" : "Secondary"}</span></label>`).join("");
+    const hint = plan.minion ? "A Minion: two of its Secondary Racial Traits, or one and a Subrace Trait." : `Pick ${plan.choose}.`;
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${this.actor.name}: Racial Traits` },
+      content: `<p class="dbu-respond-hint">${escape(hint)}</p><div class="dbu-respond-list">${rows}</div>`,
+      buttons: [{ action: "ok", label: "Done", default: true,
+        callback: (event, button, dialog) => [...dialog.element.querySelectorAll('input[name="pick"]:checked')].map(input => input.value) },
+        { action: "cancel", label: "Cancel", callback: () => null }],
+      rejectClose: false
+    });
+    if (!Array.isArray(picked)) return;
+    const subraces = picked.filter(id => getTrait(id)?.subrace).length;
+    if (picked.length > plan.choose) ui.notifications.warn(`${this.actor.name}: ${picked.length} picked, past the ${plan.choose} (said, not refused).`);
+    if (plan.minion && (subraces > 1)) ui.notifications.warn(`${this.actor.name}: a Minion has one Subrace Trait at most (said, not refused).`);
+    return this.actor.update({ "system.racialPicks": picked });
   }
 
   /** A Fusion's Awakening had or left out for this Fusion ("choose which Awakenings they have access to") - its Fusion tab's tick. */
@@ -6914,6 +6992,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             ? `${maneuver.actionCost} ${MANEUVER_TYPES[maneuver.type].action}` : "—"
         })),
       chosen: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 "),
+      // A race Trait's row: exchanged for a Factor Trait from here (race-traits.mjs) - or, one already exchanged, restored - in the
+      // cross's place (the user's, 2026-11-27).
+      exchange: exchangeable(this.actor, item)
+        ? ((slotOf(item) !== (item.flags?.["dbu-ttrpg"]?.sourceId ?? "")) ? `In place of ${getTrait(slotOf(item))?.name ?? "a Racial Trait"}: exchange it again, or restore that one`
+          : "Exchange for a Factor Trait") : "",
       triggered: this.#toggleButtons(item, triggered)
     }));
   }

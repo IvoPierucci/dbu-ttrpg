@@ -5,6 +5,10 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+- **The race gives its Racial Traits:** choosing a race (and Subrace) puts its Traits on the character; the Majins pick their 4
+  Secondary Traits, and a Minion its 2, on the Progression tab. A race Trait is exchanged for a Factor Trait from its row (the arrows
+  in place of the cross), and restored there. Add Racial Trait is hidden behind Settings' Debug. Characters made before have their Racial
+  and Factor Traits taken off once and get their race's as their sheet is next opened.
 - **New Transformation:** Greater Mutation (a Greater Awakening for the Mutation Factor). New `surge-maneuver` Moment and
   `surge.regainedTimes` Slot: what answers the Surge Maneuver's Surge, and how many times more it gives back.
 - **New Transformation:** Saiyan Prodigy (a Super Awakening of the Saiyans, beside Pure Progress). A Resource can now take what

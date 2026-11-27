@@ -27,6 +27,7 @@ import { coreManeuverItems, registerHotbarDrop, registerMacroApi } from "./use-m
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
 import { loadManeuvers } from "./maneuvers.mjs";
 import { contentLoading } from "./content-ready.mjs";
+import { registerRaceTraitHooks, resetRaceTraits } from "./race-traits.mjs";
 import { getTrait, loadTraits } from "./effects/traits.mjs";
 import { payKiWithStamina } from "./adversary.mjs";
 import { registerCombatHooks, registerBreathHooks, registerDefeatHooks, registerWornBreathHooks, registerRacialLifeHooks }
@@ -67,6 +68,8 @@ import { registerConditionHooks } from "./conditions.mjs";
 Hooks.once("init", () => {
   // Whether the characters' tokens were linked to their sheets once (the user's) - done by the active GM at ready, then never again.
   game.settings.register("dbu-ttrpg", "charactersLinked", { scope: "world", config: false, type: Boolean, default: false });
+  // The race gives its Racial Traits now (race-traits.mjs): the characters made before had theirs taken off once (resetRaceTraits).
+  game.settings.register("dbu-ttrpg", "raceTraitsReset", { scope: "world", config: false, type: Boolean, default: false });
   console.log("DBU TTRPG | Initializing system");
 
   // Register the character data model for the "character" Actor type
@@ -173,6 +176,7 @@ Hooks.once("init", () => {
   registerDefeatHooks();
   registerRacialLifeHooks();
   registerRacialHooks();
+  registerRaceTraitHooks();
   registerTransformationHooks();
   registerAspectHooks();
   registerIntegratedHooks();
@@ -285,6 +289,17 @@ Hooks.once("ready", async () => {
       console.error("DBU TTRPG | Core Maneuvers for", actor.name, error);
     }
   }
+});
+
+// The race gives its Racial Traits (the user's, 2026-11-27): the world's characters made before had them by hand - "quitáselos, lo re
+// colocan a mano". Once, by the active GM, after the content is loaded: their race and Factor Traits taken off, given their race's again as
+// whoever plays them next opens their sheet (race-traits.mjs).
+Hooks.once("ready", async () => {
+  if (!game.user.isGM || (game.user !== game.users.activeGM) || game.settings.get("dbu-ttrpg", "raceTraitsReset")) return;
+  await contentLoaded;
+  const reset = await resetRaceTraits([...(game.actors ?? [])]).catch(error => { console.error("DBU TTRPG | Racial Traits reset", error); return 0; });
+  await game.settings.set("dbu-ttrpg", "raceTraitsReset", true);
+  if (reset) ui.notifications.info(`DBU TTRPG: the race now gives its Racial Traits - ${reset} character(s) get their race's as their sheet is next opened; Factor Traits and picks are made again.`);
 });
 
 // Compiled effects are cached by the content they came from, so a stale entry cannot

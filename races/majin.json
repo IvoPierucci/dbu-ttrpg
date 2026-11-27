@@ -16,5 +16,6 @@
     }
   ],
   "savingThrow": "morale",
-  "skillRanks": 2
+  "skillRanks": 2,
+  "secondaryChoices": 4
 }

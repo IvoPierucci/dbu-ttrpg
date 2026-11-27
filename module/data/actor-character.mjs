@@ -1118,6 +1118,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     );
     // And the focused Saving Throw a race leaves up to them - the Aliens' "Any (select one)".
     schema.racialSavingThrow = new fields.StringField({ required: true, blank: true, initial: "" });
+    // The Secondary Racial Traits picked on the Progression tab, by id: a race that says how many (the Majins' 4), or a Minion's two
+    // (race-traits.mjs raceTraitPlan).
+    schema.racialPicks = new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { required: true, initial: [] });
 
     // --- Capacity ---
     // The most Ki a character may spend in a single Combat Round. Only what has been
@@ -1886,7 +1889,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // depend on them can be exercised. Ki Multiplier belongs to a Form entered through
     // the Transformation Maneuver; until Forms exist, this stands in for one.
     schema.debug = new fields.SchemaField({
-      kiMultiplier: new fields.BooleanField({ required: true, initial: false })
+      kiMultiplier: new fields.BooleanField({ required: true, initial: false }),
+      // The Traits tab's Add Racial Trait, hidden now that the race gives its Traits (the user's, 2026-11-27): shown again for odd cases.
+      showAddRacialTrait: new fields.BooleanField({ required: true, initial: false })
     });
 
     // --- Roll modifiers ---

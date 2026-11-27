@@ -91,7 +91,14 @@ the rule and how it is applied in the code.
 
 - **Allies are the Settings tab's Allies list**, and the relation is mutual. Token disposition never matters.
   - Use `areOpponents(a, b)` for "Opponent", never `!areAllies`. A Minion is on its Master's side.
-- **Racial Traits are added by hand** from the Traits tab, and any race's Traits may be taken. Choosing a race grants none.
+- **The race gives its Racial Traits (the owner's, 2026-11-27; until then they were added by hand).** Choosing a race (and Subrace) puts
+  all its Primary, Secondary and Subrace Traits on the character. A race that says how many Secondary Traits are chosen
+  (`secondaryChoices` in its JSON - the Majins' 4) has them picked on the Progression tab. A Minion (not a Duplicate, not of a Minion Race)
+  has its Primary Traits and picks two of its Secondary and Subrace Traits there; a Minion Race's keeps all. Changing the race replaces
+  every Racial and Factor Trait. A race Trait is exchanged for a Factor Trait from its row - a Secondary for a Secondary Factor Trait, a
+  Primary only for one that names it - and restored the same way; Factor Traits not the character's are dimmed with why, never refused.
+  Add Racial Trait is hidden, back with Settings' Debug "Show Add Racial Trait". Characters made before had their Racial and Factor Traits
+  taken off once, given their race's again as their sheet was next opened; their exchanges and picks were made again by hand.
 - **Requirements are warned about, never refused.** This covers Race, Tier of Power, Prerequisites, Quality slots, the
   Awakening Limit and Mastery caps.
 

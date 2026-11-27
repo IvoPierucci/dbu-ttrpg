@@ -312,7 +312,7 @@ export function factorSummary(id) {
 }
 
 /** The Factor a Trait's file or Item is a Factor Trait of, or "". */
-function factorOf(trait) {
+export function factorOf(trait) {
   if (trait?.system) return String(trait.system.factor ?? "");
   return (trait?.kind === "factors") ? String(trait.owner ?? "") : "";
 }
@@ -506,7 +506,7 @@ async function grantSignature(actor, item, name) {
   if (made) await (await import("./chat.mjs")).openForPlayer(actor, made, `${item.name}: build its Signature Technique - up to ${cap} TP, none of yours spent.`);
 }
 
-function replacedTraitOf(file, race) {
+export function replacedTraitOf(file, race) {
   if (!file || !factorOf(file) || !race) return null;
   // Up to its first "(Category) [Trait]:" - its name may have a colon of its own (Genetic Focus: Android).
   const named = /^[^\n]*?\)\s*\[([^\]]+)\]\s*:/.exec(String(file.text ?? "").trim())?.[1]?.trim().toLowerCase();

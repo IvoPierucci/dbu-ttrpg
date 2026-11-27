@@ -45,6 +45,9 @@ narrates.
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
 - **2026-11-27 (Ivo's Claude):**
+  - The race gives its Racial Traits: `module/race-traits.mjs` (raceTraitPlan, syncRaceTraits, exchangeChoices/exchangeRaceTrait,
+    resetRaceTraits), `system.racialPicks`, `system.debug.showAddRacialTrait`, `races/majin.json secondaryChoices: 4`, a one-time
+    reset (world setting `raceTraitsReset`), harness `tests/race-traits.mjs`. An exchanged Factor Trait keeps `flags.dbu-ttrpg.exchangedFor`.
   - Added Greater Mutation; its (3) (the replaced Racial Trait back) is the table's, done by hand, as Inherited Life's.
   - Added Saiyan Prodigy: `resourceOverflowOf` / `resourceOverflowWhen` (traits.mjs resourceDefinitions, moments-runtime.mjs gainOneOf) and the `overflow.<name>` flag Slots.
   - Added Super Majin. Its (4) (what may be changed as it is gained) is the table's, done by hand on the sheet.

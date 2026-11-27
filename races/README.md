@@ -37,6 +37,7 @@ directory - it can only fetch files it is told about by name.
 | `subraces` | no | Variants of the race, as `{ "id", "name" }` entries. A race with none offers no subrace choice at all. |
 | `description` | no | Free text, shown as a tooltip. |
 | `minionRace` | no | `true` for a Minion Race: as a Minion its Maximum Life Points are 1/2 rather than 1/4, and it keeps all its Racial Traits. |
+| `secondaryChoices` | no | How many of its Secondary Racial Traits a character picks (on the Progression tab) instead of having them all - the Majins' 4. Without it, all of them come with the race (`module/race-traits.mjs`). |
 | `sizes` | no | A Minion Race's own Size Categories at Character Creation, as a list of keys, or `"any"`. Without it, the usual Small to Large. |
 
 Attribute keys: `agility`, `force`, `tenacity`, `scholarship`, `insight`, `magic`,
