@@ -1112,7 +1112,8 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
     [C.includes("prepareRoll(attacker, triggers, `Strike Roll - ${attacker.name}`"), C.includes('slot: "strike", confirmLabel: "Ready",'),
      C.includes("prepareRoll(attacker, triggers, `Wound Roll - ${attacker.name}`"), C.includes("spend: hitSpendRows(attacker, questions),"),
      C.includes("await answerHit(message, attack, attacker, struck, questions.length ? hitAnswerScript(questions, ready?.spent ?? {}) : null);"),
-     C.includes("if (askScript) return askScript.amount({ title, max, label, per });"), C.includes("if (askScript) return askScript.choice({ title, options, per, text });")],
+     // Its note too (2026-11-26): what is held, or the most as written, shown in the row.
+     C.includes("if (askScript) return askScript.amount({ title, max, label, per, note });"), C.includes("if (askScript) return askScript.choice({ title, options, per, text });")],
     [true, true, true, true, true, true, true]);
   const B = await import(modUrl("breakdown.mjs"));
   const flat = html => html.replace(/data-tooltip(-html)?="[^"]*"/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -1852,6 +1853,22 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
        && C.includes("damageWith: (key, balanced, steps) => damage(key, balanced ? balancedTier : 0, steps),"),
      C.includes("const base = own + extra;")],
     [true, true, true, true]);
+}
+
+
+// --- Amount windows say what can be spent (the user's, 2026-11-26) ----------------------------------------------------------------
+{
+  const C = read("module", "chat.mjs");
+  const U = read("module", "use-maneuver.mjs");
+  check("Adaptation Points held shown in every window spending them; Tough Warrior and like ones their most as written and [in number]",
+    [C.includes('`Adaptation Points (1(T) each)`, { note: adaptationNote(held) }));'),
+     (C.match(/note: adaptationNote\(/g) ?? []).length + (U.match(/note: adaptationNote\(/g) ?? []).length,
+     C.includes('most, "Ki Points - as much Damage Reduction", { note: mostNote("4(bT)", full, most) }));'),
+     C.includes('return `Up to ${written} [${full}]${(most < full) ? ` - ${most} ${short}` : ""}`;'),
+     C.includes('note ? `<p class="dbu-respond-source">${escape(note)}</p>` : ""}`,'),
+     C.includes("if (askScript) return askScript.amount({ title, max, label, per, note });"),
+     C.includes("${question.note ? esc(question.note) : `up to ${question.max}`}")],
+    [true, 5, true, true, true, true, true]);
 }
 
 console.log(failed ? `\n${failed} failing` : "\n0 failing");

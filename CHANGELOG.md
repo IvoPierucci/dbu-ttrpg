@@ -7,6 +7,8 @@ What each version brought, in broad strokes. Every change is described in its co
 
 - **Respond window:** with Direct Hit, a ticked effect that lowers the Damage Category (Hard as Steel (5), Damage Inhibitor
   (2)) now shows the lower Category in the box above.
+- **Amount windows:** spending Adaptation Points says how many you have; Tough Warrior (2), Blaster/Magic Master,
+  Skills of a Genius and Power of the Weak say their most as written and in number ("Up to 4(bT) [12]").
 
 ## 0.3.7 (2026-11-26)
 
