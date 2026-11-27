@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 55, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage and Steel Frame 2026-11-26)", files.length, 55);
+check("the first group, all 55, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Overflowing Power 2026-11-26)", files.length, 56);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",

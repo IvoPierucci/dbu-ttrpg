@@ -134,6 +134,8 @@ for (const file of files) {
     // A Transformation Trait's (transformations.mjs transformationTraitScript): its Transformation's G, Z, S and M.
     // Its row's choices and its Transformation's Aspect levels (transformations.mjs rowWritten): a 1 or a 0, a level.
     .replace(/\$is\.[a-z]+\.[a-z0-9-]+/g, "1").replace(/\$aspect\.[a-z0-9-]+/g, "1").replace(/\$row\.\w+/g, "1").replaceAll("$absorbedBonus", "2").replaceAll("$scales", "1").replace(/\$self\b/g, "evil-saiyan").replace(/\$besideTier\b/g, "2")
+    // Its Adversary's Player Character Count (transformationTraitScript's $PCC, Overflowing Power's).
+    .replace(/\$PCC\b/g, "1")
     .replace(/\$([GZSM])\b/g, "1");
   // A Racial Trait's `choose: list` - its own values, as slugs, each `$<value>` a 1 or a 0 (Alternate Scale Structure's).
   const listed = (String(trait.choose ?? "").trim() === "list");
