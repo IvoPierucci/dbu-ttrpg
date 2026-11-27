@@ -45,6 +45,10 @@ narrates.
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
 - **2026-11-27 (Ivo's Claude):**
+  - Minions and Fusions with Transformations (the owner's links to /minions/ and /fusion/): Duplicates copy Transformation Items
+    (`minion-make.mjs isDuplicatedItem`); `MINION_AWAKENING_LIMIT`; a Fusion's Awakening left out by `flags.dbu-ttrpg.fusionOff`
+    (`transformations.mjs fusionLeftOut`, read by `inUse` and `awakeningCount`). A non-Duplicate Minion's Enhancements and Forms
+    are the ARC's to give by hand, as the page says.
   - `module/content-ready.mjs`: the actor sheets' `render` waits on the content loaded in `setup` (`waitForContent`).
   - A Maneuver added to the system reaches old characters by itself: a GM `ready` hook gives missing core Maneuver Items once
     (`flags.dbu-ttrpg.coreGranted`). A `ready` hook that reads content files must `await contentLoaded` (setup is async).

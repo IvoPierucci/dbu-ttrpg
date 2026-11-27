@@ -496,6 +496,7 @@ export function transformationItems(actor) {
 export function inUse(item) {
   const file = fileOf(item);
   if (!file) return false;
+  if (fusionLeftOut(item)) return false;
   if (kindOf(file) === "awakening") return stacksOf(item, file) > 0;
   return Boolean(item.system?.active);
 }
@@ -815,6 +816,17 @@ export async function removeTransformation(actor, itemId) {
 /** The Awakening Limit by base Tier of Power (Lesser, Greater): "1 -> 2/1, 2 -> 3/1, 3 -> 4/2, 4 -> 5/2, 5 -> 6/3, 6 -> 7/3, 7 -> 7/4". */
 export const AWAKENING_LIMIT = Object.freeze({ 1: [2, 1], 2: [3, 1], 3: [4, 2], 4: [5, 2], 5: [6, 3], 6: [7, 3], 7: [7, 4] });
 
+/** Minions' "Minion Awakening Limit" by their Master's base Tier of Power: [Lesser, Greater]. "Minions cannot gain Super Awakenings." */
+export const MINION_AWAKENING_LIMIT = Object.freeze({ 1: [1, 0], 2: [1, 1], 3: [2, 1], 4: [2, 2], 5: [3, 2], 6: [3, 3], 7: [4, 3] });
+
+/**
+ * A Fusion's Awakening left out: "when a Fusion is created, choose which Awakenings they have access to from that list until the Fusion
+ * ends" - unticked on its Fusion tab (`fusionOff`), it is not had: not in use, its Traits aside, not counted.
+ */
+export function fusionLeftOut(item) {
+  return Boolean(item?.flags?.["dbu-ttrpg"]?.fusionOff) && (item?.parent?.type === "fusion");
+}
+
 /**
  * How many Lesser and Greater Awakenings count toward the Awakening Limit, and the Limit - said, never refused (the user's). Each
  * Stack one; a Temporary Awakening's not ("does not count towards your Awakening Limit"); nor one whose file says it is free of
@@ -823,10 +835,11 @@ export const AWAKENING_LIMIT = Object.freeze({ 1: [2, 1], 2: [3, 1], 3: [4, 2], 
 export function awakeningCount(actor) {
   const items = transformationItems(actor);
   const had = new Set(items.map(item => item.system?.transformationId));
-  const count = { lesser: 0, greater: 0 };
+  const count = { lesser: 0, greater: 0, super: 0 };
   for (const item of items) {
     const file = fileOf(item);
     if (kindOf(file) !== "awakening") continue;
+    if (fusionLeftOut(item)) continue;
     if (listOf(file.limitFreeWith).some(id => had.has(id))) continue;
     const type = String(file.subtype ?? "").toLowerCase();
     if (!(type in count)) continue;
@@ -834,7 +847,19 @@ export function awakeningCount(actor) {
   }
   const base = Math.min(7, Math.max(1, Number(actor?.system?.baseTierOfPower) || 1));
   // An Adversary "ignores the Awakening Limit"; a Fusion has its own ("Fusion Awakenings": "up to its own limit by base Tier of Power").
-  if (actor?.type === "adversary") return { lesser: count.lesser, greater: count.greater, lesserMax: null, greaterMax: null, none: true };
+  if (actor?.type === "adversary") return { lesser: count.lesser, greater: count.greater, lesserMax: null, greaterMax: null, none: true,
+    noneWhy: "Adversary" };
+  // A Duplicate has its Master's, whatever they are; another Minion "the Minion Awakening Limit" by its Master's base Tier of Power, and
+  // no Super Awakening - said, never refused.
+  if ((actor?.type === "minion") && actor.system?.duplicate) {
+    return { lesser: count.lesser, greater: count.greater, lesserMax: null, greaterMax: null, none: true, noneWhy: "Duplicate: its Master's" };
+  }
+  if (actor?.type === "minion") {
+    const master = globalThis.game?.actors?.get?.(String(actor.system?.master ?? ""));
+    const masterBase = Math.min(7, Math.max(1, Number(master?.system?.baseTierOfPower) || base));
+    const [lesser, greater] = MINION_AWAKENING_LIMIT[masterBase];
+    return { lesser: count.lesser, greater: count.greater, lesserMax: lesser, greaterMax: greater, minion: true, super: count.super };
+  }
   const [lesser, greater] = (actor?.type === "fusion") ? FUSION_AWAKENINGS[Math.min(FUSION_MAX_BASE_TIER, base)] : AWAKENING_LIMIT[base];
   return { lesser: count.lesser, greater: count.greater, lesserMax: lesser, greaterMax: greater };
 }

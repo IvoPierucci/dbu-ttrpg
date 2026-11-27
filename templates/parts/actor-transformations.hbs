@@ -38,10 +38,12 @@
     <div class="dbu-tf-on dbu-tf-limit">
       <span class="dbu-tf-dim">Awakening Limit:</span>
       {{#if tf.awakeningLimit.none}}
-      <span class="dbu-tf-chip">No Awakening Limit (Adversary)</span>
+      <span class="dbu-tf-chip">No Awakening Limit ({{tf.awakeningLimit.noneWhy}})</span>
       {{else}}
       <span class="dbu-tf-chip{{#if tf.awakeningLimit.lesserOver}} warn{{/if}}">Lesser {{tf.awakeningLimit.lesser}} of {{tf.awakeningLimit.lesserMax}}</span>
       <span class="dbu-tf-chip{{#if tf.awakeningLimit.greaterOver}} warn{{/if}}">Greater {{tf.awakeningLimit.greater}} of {{tf.awakeningLimit.greaterMax}}</span>
+      {{#if tf.awakeningLimit.minion}}<span class="dbu-tf-dim">Minion Awakening Limit, by its Master's base Tier of Power</span>{{/if}}
+      {{#if tf.awakeningLimit.super}}<span class="dbu-tf-chip warn" data-tooltip="Minions cannot gain Super Awakenings - said, never refused">Super {{tf.awakeningLimit.super}}</span>{{/if}}
       {{/if}}
     </div>
     {{/if}}

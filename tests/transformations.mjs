@@ -1733,6 +1733,35 @@ allow counter.free;`).program.blocks[0].requires;
     [["class-up-elite-choice"], true, true, true]);
 }
 
+// --- Minions and Fusions (the user's links, 2026-11-27) ------------------------------------------------------------------------------
+{
+  const MAKE = await import(modUrl("minion-make.mjs"));
+  const holder = (type, system, items) => {
+    const actor = { type, system, items };
+    for (const item of items) item.parent = actor;
+    return actor;
+  };
+  const before = globalThis.game.actors;
+  globalThis.game.actors = { get: id => (id === "m1") ? { system: { baseTierOfPower: 3 } } : undefined };
+  const minion = holder("minion", { master: "m1", baseTierOfPower: 1 }, [transformation("zenkai", { stacks: 2 }), transformation("unlocked-potential", { stacks: 1 })]);
+  const duplicate = holder("minion", { master: "m1", duplicate: true, baseTierOfPower: 1 }, [transformation("zenkai", { stacks: 3 })]);
+  globalThis.game.actors = before;
+  const cut = transformation("zenkai", { stacks: 2 });
+  cut.flags["dbu-ttrpg"] = { fusionOff: true };
+  const fusion = holder("fusion", { baseTierOfPower: 3 }, [cut, transformation("unlocked-potential", { stacks: 1 })]);
+  const kept = transformation("zenkai", { stacks: 2 });
+  kept.flags["dbu-ttrpg"] = { fusionOff: true };
+  holder("character", { baseTierOfPower: 3 }, [kept]);
+  check("a Duplicate copies its Master's Transformations (in use as they were); a Minion's Awakening Limit by its Master's base Tier; a Duplicate none",
+    [MAKE.isDuplicatedItem({ type: "transformation" }),
+     (() => { globalThis.game.actors = { get: id => (id === "m1") ? { system: { baseTierOfPower: 3 } } : undefined };
+       const limit = T.awakeningCount(minion); globalThis.game.actors = before; return [limit.lesser, limit.lesserMax, limit.greater, limit.greaterMax, limit.minion]; })(),
+     [T.awakeningCount(duplicate).none, T.awakeningCount(duplicate).noneWhy]],
+    [true, [2, 2, 1, 1, true], [true, "Duplicate: its Master's"]]);
+  check("a Fusion's Awakening unticked is not had - not in use, not counted; the flag means nothing on another character",
+    [T.inUse(cut), T.awakeningCount(fusion).lesser, T.awakeningCount(fusion).greater, T.inUse(kept)], [false, 0, 1, true]);
+}
+
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------
 
 const code = [];

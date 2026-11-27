@@ -37,7 +37,10 @@ export function isDuplicatedGear(item) {
 
 /** Whether a Master's Item is copied onto a Duplicate: every Trait, Talent and Maneuver, and their gear but where it has none. */
 export function isDuplicatedItem(item, gear = true) {
-  if (["talent", "racial", "maneuver"].includes(item?.type)) return true;
+  // Minions (Duplicates): "Duplicates possess the same ... Transformations as their Master ... If their Master was in a Transformation
+  // when they were created, they are in that Transformation at the time of creation" - its Items copied as they are, in use or not
+  // (the user's link, 2026-11-27: a Goop made without them). Their Traits came already, as `racial` Items naming them by id.
+  if (["talent", "racial", "maneuver", "transformation"].includes(item?.type)) return true;
   return gear && isDuplicatedGear(item);
 }
 

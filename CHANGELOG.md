@@ -5,6 +5,11 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+- **Minions and Transformations:** a Duplicate (a Goop too) has its Master's Transformations, in the one the Master was in as it is
+  made. Another Minion's Awakening Limit is the Minion Awakening Limit by its Master's base Tier of Power; a Super Awakening on a
+  Minion is said. A Duplicate has no limit of its own.
+- **Fusion Awakenings:** the Fusion tab lists the Fusion's Awakenings, each ticked to have it for this Fusion, with the Fusion
+  Awakening Limit used; one unticked is not had.
 - **Opening a sheet as the world loads:** it waits for the rules to load ("DBU TTRPG: loading the rules...") and opens complete.
 - **A Trait's Maneuvers:** under a Trait also the Maneuvers its own effects open (`allow maneuver.<id>`, its chosen Option's too) -
   Class Up's Choice Maneuver under Class Selection; the Transformation Traits list shows them as well.

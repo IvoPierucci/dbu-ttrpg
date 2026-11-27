@@ -548,6 +548,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleQuality: DBUCharacterSheet._onToggleQuality,
       holdBreath: DBUCharacterSheet._onHoldBreath,
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
+      toggleFusionAwakening: DBUCharacterSheet._onToggleFusionAwakening,
       addGear: DBUCharacterSheet._onAddGear,
       placeGear: DBUCharacterSheet._onPlaceGear,
       detonateGear: DBUCharacterSheet._onDetonateGear,
@@ -1707,6 +1708,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       alignments: DBUCharacterData.ALIGNMENTS,
       trait: id => getTrait(id)
     }) : null;
+    // Its Awakenings, each ticked to have it for this Fusion (transformations.mjs fusionLeftOut), and the Limit used.
+    if (context.fusion) {
+      const limit = awakeningCount(this.actor);
+      const list = transformationItems(this.actor).filter(item => kindOf(fileOf(item)) === "awakening")
+        .map(item => ({ id: item.id, name: item.name, subtype: String(fileOf(item)?.subtype ?? "").replace(/^./, letter => letter.toUpperCase()),
+          stacks: Number(item.system?.stacks) || 0, off: Boolean(item.flags?.["dbu-ttrpg"]?.fusionOff) }));
+      context.fusion.awakenings = { ...context.fusion.awakenings, list, lesserUsed: limit.lesser, greaterUsed: limit.greater,
+        over: (limit.lesser > context.fusion.awakenings.lesser) || (limit.greater > context.fusion.awakenings.greater) };
+    }
     if (context.isAdversary) context.adversary = this.#adversaryContext(context);
     // A tab for each type, the last one opened kept (the user's); what Manage hid left off, counted.
     {
@@ -4501,6 +4511,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** GM only: put the published Maneuvers in the compendium to drag from. */
   static async _onImportManeuvers() {
     return importCoreManeuvers();
+  }
+
+  /** A Fusion's Awakening had or left out for this Fusion ("choose which Awakenings they have access to") - its Fusion tab's tick. */
+  static async _onToggleFusionAwakening(event, target) {
+    if (!this.isEditable) return;
+    const item = this.actor.items.get(target.dataset.itemId ?? "");
+    if (!item) return;
+    return item.update({ "flags.dbu-ttrpg.fusionOff": !target.checked });
   }
 
   /**

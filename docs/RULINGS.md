@@ -106,6 +106,10 @@ the rule and how it is applied in the code.
 
 ## Transformations
 
+- **Minions and Fusions (2026-11-27, my readings, not yet the owner's):** a Duplicate's Transformations are its Master's as they
+  were when it was made, with no Awakening Limit of its own. A new Fusion has every Fused Character's Awakening ticked; the table
+  unticks those it does not have, over the Fusion Awakening Limit said and never refused.
+
 - **Lines:** a Stage inherits the Traits of the Stages before it, but not their Attribute bonuses or Aspects.
 - **Variants:**
   - A Variant inherits the original's Traits except the ones it replaces (named in brackets).
