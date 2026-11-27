@@ -10,7 +10,9 @@
  * A Racial Trait is exchanged for a Factor Trait from its row (its exchange button): a Secondary for a Factor Trait that takes a Secondary's
  * place, a Primary only for one that names it ("From Goop (Body) [Majin Regeneration]"). The Factor Trait remembers what it stands for
  * (`flags.dbu-ttrpg.exchangedFor`), and gives it back as it is restored. Changing the race puts every one of the old race's and its Factor
- * Traits by for the new race's.
+ * Traits by for the new race's. While something sets `restoreReplaced.<factor>` ("regain access to the Racial Trait that you replaced with
+ * the Factor Trait from the Mutation Factor" - Greater Mutation (3), Mastered Reincarnated (1)), that Factor's exchanged Traits are kept
+ * and the race Traits they replaced are had again beside them; once it is no longer set, put by again.
  *
  * Not a Fusion's (its own window), nor a Duplicate's (its Master's copied) - nor an Other, a Villainous or a Transformation Trait, nor one
  * another Trait gave.
@@ -73,32 +75,59 @@ function isFactorTraitItem(item) {
  * added one is). An exchanged Factor Trait stands for the one it replaced. `raceChanged`: every Factor Trait put by too.
  */
 export async function syncRaceTraits(actor, { raceChanged = false } = {}) {
-  const plan = raceTraitPlan(actor);
-  if (!plan) return false;
-  const wanted = new Set(plan.wanted);
-  const held = new Set();
-  for (const item of Array.from(actor.items)) {
-    const source = String(item.flags?.[SCOPE]?.sourceId ?? "");
-    if (isRaceTraitItem(item)) {
-      if (wanted.has(source) && !held.has(source)) held.add(source);
-      else await removeRacialTrait(actor, item.id);
-      continue;
-    }
-    if (!isFactorTraitItem(item)) continue;
-    const slot = String(item.flags?.[SCOPE]?.exchangedFor ?? "");
-    if (slot && wanted.has(slot) && !held.has(slot)) {
-      held.add(slot);
-      continue;
-    }
-    if (slot || raceChanged) await removeRacialTrait(actor, item.id);
-  }
-  for (const id of plan.wanted) {
-    if (held.has(id)) continue;
+  const changes = raceTraitChanges(actor, { raceChanged });
+  if (!changes) return false;
+  for (const id of changes.remove) if (actor.items.get(id)) await removeRacialTrait(actor, id);
+  for (const id of changes.add) {
     const file = getTrait(id);
     if (file) await addRacialTrait(actor, file);
   }
   await actor.setFlag(SCOPE, "raceTraitsSet", actor.system.race);
   return true;
+}
+
+/**
+ * The Factors whose replaced race Traits are had again (`restoreReplaced.<factor>` set by an effect of theirs - Greater Mutation (3)'s
+ * `restoreReplaced.mutation`).
+ */
+export function restoredFactors(actor) {
+  const slots = actor?.system?.effects?.slots ?? {};
+  return new Set(Object.keys(slots).filter(key => key.startsWith("restoreReplaced.") && (slots[key] === true))
+    .map(key => key.slice("restoreReplaced.".length)));
+}
+
+/**
+ * What syncRaceTraits does, worked out: the Item ids to `remove` and the Trait ids to `add`. An exchanged Factor Trait first stands for the
+ * race Trait it replaced - unless its Factor is restored (restoredFactors), when it is kept and that race Trait is had too. Then each race
+ * Trait wanted is kept once, any other put by; what is missing given. `raceChanged`: every Factor Trait put by too. Null where its race
+ * does not say.
+ */
+export function raceTraitChanges(actor, { raceChanged = false } = {}) {
+  const plan = raceTraitPlan(actor);
+  if (!plan) return null;
+  const wanted = new Set(plan.wanted);
+  const restored = restoredFactors(actor);
+  const items = Array.from(actor.items ?? []);
+  const held = new Set();
+  const taken = new Set();
+  const remove = [];
+  for (const item of items) {
+    if (!isFactorTraitItem(item)) continue;
+    const slot = String(item.flags?.[SCOPE]?.exchangedFor ?? "");
+    if (slot && wanted.has(slot) && !taken.has(slot)) {
+      taken.add(slot);
+      if (!restored.has(factorOf(item))) held.add(slot);
+      continue;
+    }
+    if (slot || raceChanged) remove.push(item.id);
+  }
+  for (const item of items) {
+    if (!isRaceTraitItem(item)) continue;
+    const source = String(item.flags?.[SCOPE]?.sourceId ?? "");
+    if (wanted.has(source) && !held.has(source)) held.add(source);
+    else remove.push(item.id);
+  }
+  return { remove, add: plan.wanted.filter(id => !held.has(id)) };
 }
 
 /** The race Trait a row stands for: its own, or the one an exchanged Factor Trait replaced. "" for any other. */
@@ -114,6 +143,9 @@ export function exchangeable(actor, item) {
   const file = getTrait(slot);
   if (!file) return false;
   if (!isRaceTraitItem(item)) return true;
+  // The race Trait had again beside the Factor Trait that replaced it (restoredFactors): that one's row exchanges, not this.
+  if (Array.from(actor.items ?? []).some(each => isFactorTraitItem(each) && (String(each.flags?.[SCOPE]?.exchangedFor ?? "") === slot)))
+    return false;
   if (file.importance === "secondary") return true;
   return racialTraitFiles().some(each => factorOf(each) && (replacedTraitOf(each, actor.system.race)?.id === slot));
 }
@@ -161,6 +193,8 @@ export async function exchangeRaceTrait(actor, itemId, choice) {
   const file = choice ? getTrait(choice) : original;
   if (!file) return null;
   await removeRacialTrait(actor, item.id);
+  // Restored with the race Trait already had again beside it (restoredFactors): only the Factor Trait goes.
+  if (!choice && Array.from(actor.items).some(each => isRaceTraitItem(each) && (String(each.flags?.[SCOPE]?.sourceId ?? "") === slot))) return null;
   const made = await addRacialTrait(actor, file);
   if (made && choice) await made.setFlag(SCOPE, "exchangedFor", slot);
   return made;
@@ -177,6 +211,15 @@ export function registerRaceTraitHooks() {
     if (("race" in system) || ("subrace" in system)) syncRaceTraits(actor, { raceChanged: "race" in system });
     else if ("racialPicks" in system) syncRaceTraits(actor);
   });
+  // A Transformation had or put by: what gives a replaced race Trait back (restoredFactors) may have come or gone.
+  const transformationChanged = (item, options, userId) => {
+    const actor = item?.parent;
+    if ((userId !== game.user.id) || (item?.type !== "transformation") || !managesRaceTraits(actor) || raceTraitsOwed(actor)) return;
+    const changes = raceTraitChanges(actor);
+    if (changes && (changes.remove.length || changes.add.length)) syncRaceTraits(actor);
+  };
+  Hooks.on("createItem", transformationChanged);
+  Hooks.on("deleteItem", transformationChanged);
 }
 
 /**

@@ -92,6 +92,28 @@ const exchanged = { id: "i-from-goop", type: "racial", system: { factor: "primor
 check("an exchanged Factor Trait stands for what it replaced: exchangeable again, to restore it", [RT.slotOf(exchanged), RT.exchangeable(goopy, exchanged),
   RT.exchangeChoices(goopy, exchanged).original?.id], ["majin-regeneration", true, "majin-regeneration"]);
 
+// Greater Mutation (3) / Mastered Reincarnated (1): `restoreReplaced.<factor>` keeps the exchanged Factor Trait and has the race Trait again.
+{
+  const brute = { id: "i-brute", type: "racial", system: { factor: "mutation" }, flags: { "dbu-ttrpg": { sourceId: "brute", exchangedFor: "powerful-physique" } } };
+  const saiyanItems = () => RT.raceTraitPlan(actor("character", { race: "saiyan" })).auto.filter(file => file.id !== "powerful-physique").map(file => item(file.id));
+  const without = actor("character", { race: "saiyan", effects: { slots: {} } }, [...saiyanItems(), brute]);
+  const withIt = actor("character", { race: "saiyan", effects: { slots: { "restoreReplaced.mutation": true } } }, [...saiyanItems(), brute]);
+  const both = actor("character", { race: "saiyan", effects: { slots: {} } }, [...saiyanItems(), brute, item("powerful-physique")]);
+  const bothOn = actor("character", { race: "saiyan", effects: { slots: { "restoreReplaced.mutation": true } } }, [...saiyanItems(), brute, item("powerful-physique")]);
+  const other = actor("character", { race: "saiyan", effects: { slots: { "restoreReplaced.reincarnated": true } } }, [...saiyanItems(), brute]);
+  check("a replaced race Trait back while its Factor is restored: Brute kept, Powerful Physique given; put by again when not; another Factor's restoring does nothing",
+    [RT.raceTraitChanges(without), RT.raceTraitChanges(withIt), RT.raceTraitChanges(both), RT.raceTraitChanges(bothOn), RT.raceTraitChanges(other),
+     [...RT.restoredFactors(withIt)]],
+    [{ remove: [], add: [] }, { remove: [], add: ["powerful-physique"] }, { remove: ["i-powerful-physique"], add: [] }, { remove: [], add: [] },
+     { remove: [], add: [] }, ["mutation"]]);
+  check("the race Trait had again does not exchange (its Factor Trait's row does)", [RT.exchangeable(bothOn, bothOn.items.at(-1)), RT.exchangeable(bothOn, brute)],
+    [false, true]);
+  check("written: Greater Mutation (3) allows restoreReplaced.mutation; Mastered Reincarnated (1) restoreReplaced.reincarnated; the hooks on a Transformation had or put by",
+    [/\[passive, effect 3\]\s*allow restoreReplaced\.mutation;/.test(getTrait("greater-mutation-evolutionary-peak")?.script ?? read("traits", "transformations", "awakenings", "greater-mutation", "traits", "evolutionary-peak.dbu")),
+     read("traits", "transformations", "awakenings", "inherited-life", "traits", "mastered-reincarnated.dbu").includes("allow restoreReplaced.reincarnated;"),
+     read("module", "race-traits.mjs").includes('Hooks.on("createItem", transformationChanged);')], [true, true, true]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

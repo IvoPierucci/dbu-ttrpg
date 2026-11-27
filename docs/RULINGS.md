@@ -99,6 +99,8 @@ the rule and how it is applied in the code.
   Primary only for one that names it - and restored the same way; Factor Traits not the character's are dimmed with why, never refused.
   Add Racial Trait is hidden, back with Settings' Debug "Show Add Racial Trait". Characters made before had their Racial and Factor Traits
   taken off once, given their race's again as their sheet was next opened; their exchanges and picks were made again by hand.
+  "Regain access to the Racial Trait that you replaced with the Factor Trait" (Greater Mutation (3), Mastered Reincarnated (1)): while
+  the Awakening is had, the race Trait comes back beside the Factor Trait, which stays; put by again if the Awakening is (my reading).
 - **Requirements are warned about, never refused.** This covers Race, Tier of Power, Prerequisites, Quality slots, the
   Awakening Limit and Mastery caps.
 

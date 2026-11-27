@@ -23,8 +23,10 @@ ki.perLevel += 2;
 wound += 1(bT);
 soakValue += 1(bT);
 
-# (3) The Racial Trait the Mutation Factor's Factor Trait replaced, back: the table's - added again by hand from the Traits tab (a Factor
-# Trait takes a Racial Trait's place by hand too), as Inherited Life's Mastered Reincarnated (1).
+# (3) The Racial Trait the Mutation Factor's Factor Trait replaced, back beside it while this is had (race-traits.mjs, by the exchange
+# that Factor Trait remembers). One added through Debug's Add Racial Trait remembers none: the table's.
+[passive, effect 3]
+allow restoreReplaced.mutation;
 
 # (4) The Surge Maneuver used, once an Encounter: its Surge's Life or Ki Points doubled - asked as its Surge is chosen (the surge-maneuver
 # Moment, chat.mjs takeSurge).

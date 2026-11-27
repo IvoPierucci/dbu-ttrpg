@@ -5,7 +5,8 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
-(Nothing yet.)
+- **Greater Mutation (3) and Mastered Reincarnated (1) built:** the race Trait their Factor's Factor Trait replaced comes back
+  beside it while the Awakening is had (`allow restoreReplaced.<factor>;`, read by race-traits.mjs).
 
 ## 0.3.12 (2026-11-27)
 

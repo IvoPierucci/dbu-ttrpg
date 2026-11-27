@@ -1169,6 +1169,10 @@ const PATTERNS = [
   // gainOneOf) - Bottomless Combat Prowess (3)'s, in the Flow State.
   { match: /^overflow\.[A-Za-z]+$/, phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
     valid: () => true, doc: "A Resource taking what another can no longer hold: read by gainOneOf." },
+  // A Factor's replaced race Traits had again beside its Factor Traits (race-traits.mjs restoredFactors) - Greater Mutation (3)'s
+  // `restoreReplaced.mutation`, Mastered Reincarnated (1)'s `restoreReplaced.reincarnated`.
+  { match: /^restoreReplaced\.[a-z][a-z-]*$/, phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    valid: () => true, doc: "A Factor's replaced race Traits had again: read by race-traits.mjs." },
   // One Combat Roll's dice alone - a Custom Buff's (custom-buffs.mjs), after the spreadsheet's "ToP Extra Dice Cat. (Strike)",
   // "Greater Dice (Dodge)", "Extra d6 (Wound)": the Tier of Power Extra Dice of a Strike, a Dodge or a Wound Roll a Category
   // higher (actor-character.mjs `dice.extraStrike`); those dice, or the Greater Dice, applied again to every Combat Roll or to
