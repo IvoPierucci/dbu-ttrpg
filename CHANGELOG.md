@@ -5,6 +5,10 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 0.3.9 (2026-11-27)
+
 - **Traits on the sheet, as the site prints them:** the unfolded text of Racial and Other Traits, Talents and Transformation Traits
   in dbu-rpg.com's font and colours, the name and each effect's number and keywords bold in its yellow. In the keywords, the uses
   left of a limit ("0/Encounter": yellow while all are left, orange once some are spent, red at none), and "Automatic" in blue

@@ -6,7 +6,7 @@ need to know: a half-finished feature, a decision taken, something you found bro
 
 ## State of the system (2026-11-26)
 
-- Version **0.3.8** in `system.json`. Everything up to it is pushed; later commits may not be (see `git log origin/main..`).
+- Version **0.3.9** in `system.json`. Everything up to it is pushed; later commits may not be (see `git log origin/main..`).
 - **Built:**
   - Characters, Minions, Adversaries, Fusions and Vehicles (Actor types), with the full character sheet.
   - Every race and Racial Trait, Factors, Other Traits (Evolution, Bestial, Monstrous, Vocations), all Talent Categories,
