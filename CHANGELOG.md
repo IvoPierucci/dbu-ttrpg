@@ -5,6 +5,10 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 0.3.8 (2026-11-26)
+
 - **New Transformation:** Super Kaioken, a Special Enhancement of Kaioken (`initial:`, and `onlyAlongside:` for one used only beside
   another and left with it).
 - **Respond window:** with Direct Hit, a ticked effect that lowers the Damage Category (Hard as Steel (5), Damage Inhibitor
