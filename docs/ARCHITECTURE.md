@@ -131,3 +131,12 @@ Each folder has a README. The folder decides what a file is:
   Abilities, Maneuvers, Conditions, States).
 
 `races/*.json` (outside `traits/`) holds each race's base numbers.
+
+## Tests (`tests/`)
+
+The verification battery is `bash tests/check.sh`: syntax and import checks, then about 130 harnesses run headlessly on
+the Node inside Foundry's executable. See [`tests/README.md`](../tests/README.md).
+
+## Tools (`tools/`)
+
+`reindex.py` keeps `traits/index.json` in step with the files on disk.

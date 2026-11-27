@@ -1,0 +1,147 @@
+BUDDIES - rules text as the user pasted it, 2026-09-27. Verbatim.
+
+Buddies
+A Buddy is a small companion that assists you in certain ways both in and out of combat. They are not true Characters, typically weak companions that are owned by a Character, but grant particular benefits while active.
+Gaining a Buddy. You can gain a Buddy at Character Creation through the Gear Kit. Otherwise, your ARC may grant you a Buddy.
+Using a Buddy. You can call a Buddy at the start of your turn as an Instant Maneuver. If you do, that Buddy is considered Active and the Buddy occupies the same Square as you (or one of your Squares if you occupy multiple ~ decide which upon calling the Buddy).
+An Active Buddy can be dismissed at the start of your turn as an Instant Maneuver.
+You can only have one Buddy active at any one time.
+Benefits of a Buddy. While a Buddy is Active, they give access to a Buddy Effect. This Buddy Effect may be Passive (meaning it is always active while the Buddy is) or Activated (meaning it must be activated to be used during each Combat Round). An Activated Buddy Effect can only be used once per Combat Round and will possess a Maneuver Type and Action Cost.
+Buddy Attribute. Some Buddy Effects will refer to a Buddy Attribute. A Buddy Attribute is equal to the Attribute Score Limit at your base Tier of Power.
+Destroying a Buddy. Make a Called Shot against a Character with an Active Buddy, claiming the Buddy as the target (you still use that Character’s Combat Rolls for this Attacking Maneuver). If you successfully hit the Buddy, it is destroyed, but the target Character receives no Damage from that Called Shot. You can stop a Buddy from being destroyed by spending 1 Karma Point, but that Buddy is unable to be made Active again for the remainder of the Combat Encounter.
+If the Character uses the Guard or Direct Hit options of the Defend Maneuver, you do not hit the Buddy. In this instance, the Character has moved in front of their Buddy to take the attack.
+Adventuring Buddies. Buddies can help with certain things out of combat, too. This is known as their Adventure Effect. You do not need to call or dismiss Buddies while Adventuring, they are always assumed to be available to you.
+
+Assault Buddy: This little helper is able to assist you in battle.
+–Buddy Effect Type: Active
+–Maneuver Type: Standard Maneuver
+–Action Cost: 1 Action
+–Effects: Upon gaining this Buddy, assign a Profile to this Buddy. When you use this Buddy Effect, make an Attacking Maneuver of the assigned Profile. The Damage Attribute for this Attacking Maneuver is your Buddy Attribute.
+–Adventure Effect: This Buddy increases your Force and Magic Modifiers by 1(bT) while Adventuring.
+
+Companion Buddy: Cute and adorable, this fellow raises your spirits.
+–Buddy Effect Type: Passive
+–Effects: Increase your Morale and Cognitive Saves by 1(bT). Additionally, increase the Skill Bonus for your Persuasion Skill by 2.
+–Adventure Effect: Increase the Skill Bonus for your Persuasion Skill by 2.
+
+Healing Buddy: This useful assistant heals your wounds.
+–Buddy Effect Type: Active
+–Maneuver Type: Standard Maneuver
+–Action Cost: 1 Action
+–Effects: Target yourself or an adjacent Ally. That target regains 2d10(bT) Life Points.
+–Adventure Effect: Increase the amount of Life Points you gain through the Recovery Adventure Maneuver by 1/2 of your Buddy Attribute.
+
+Mentor Buddy: This wise teacher insists that you continue to improve.
+–Buddy Effect Type: Passive
+–Effects: Increase your Combat Rolls by 1(bT).
+–Adventure Effect: While Adventuring, increase your Insight Modifier by 1(bT) and the Skill Bonus of all of your Skills that use your Insight Score by 1.
+
+Ride Buddy: You always have someone to give you a lift with this guy around.
+–Buddy Effect Type: Active
+–Maneuver Type: Standard Maneuver
+–Action Cost: 1 Action
+–Effects: If your Size Category is Large or lower, move a number of Squares in any direction equal to your Buddy Attribute. If you are targeted by an Attacking Maneuver through the Exploit Maneuver due to this movement, increase your Combat Rolls by 2(bT) for the duration of that Attacking Maneuver.
+Upon gaining this Buddy, choose one of these effects:
+* Flyin’ Buddy. You gain access to the Soar Maneuver. If you already had access to the Soar Maneuver, then increase your Dodge Rolls by 2(bT) when this Buddy is targeted by a Called Shot.
+* Dodgin’ Buddy. Increase your Dodge Rolls by 1(bT).
+–Adventure Effect: When Travelling, if your Size Category is Large or lower, you may treat your Ride Buddy as a Vehicle.
+
+Shifting Buddy: This handy little friend changes shape to suit your needs.
+–Buddy Effect Type: Active
+–Maneuver Type: Instant Maneuver
+–Action Cost: N/A
+–Effects: Your Buddy shapeshifts, turning into one of the following things until the end of the Combat Round:
+* Weapon. Create a Weapon with a Craftsmanship Grade equal to 2 + your base Tier of Power that you may immediately equip. Your Buddy isn’t automatically destroyed if hit as a Weapon, but this Weapon’s Life Points are equal to your Buddy Attribute multiplied by 5 and if it is destroyed, then your Buddy is destroyed.
+* Ride Buddy. Your Buddy can use the Buddy Effect of a Ride Buddy.
+* Assault Buddy. Your Buddy can use the Buddy Effect of an Assault Buddy.
+Your Shifting Buddy can only use their Buddy Effect 3 times per Combat Encounter and cannot use their Buddy Effect if they used it during the last Combat Round.
+–Adventure Effect: Your Buddy may use the Morph Adventuring Maneuver in your place.
+
+Skill Buddy: This aide assists you with your tasks on a particular topic.
+–Buddy Effect Type: Passive
+–Effects: Select a Skill upon gaining this Buddy. While your Buddy is present, increase the Skill Bonus for that Skill by 1/4 (rounded up) of your Buddy Attribute.
+–Adventure Effect: Increase the Skill Bonus of your selected Skill by 1/4 (rounded up) of your Buddy Attribute.
+
+Smart Buddy: This researcher toils away tirelessly to help you.
+–Buddy Effect Type: Passive
+–Effects: Gain access to the Analysis Special Maneuver, and you may use your Buddy Attribute instead of Scholarship for its effects.
+–Adventure Effect: You gain access to the Research Adventuring Maneuver and increase your Knowledge Skill by 1/4 (rounded up) of your Buddy Attribute.
+
+Support Buddy: This comrade focuses their efforts on operating devices for you so that you don’t have to.
+–Buddy Effect Type: Passive
+–Effects: Your Buddy is able to interact with machines. Apply the following effects:
+* Your Buddy may function as a Communicator.
+* Your Buddy may function as a Remote Control for any Items/Vehicles/Battle Jackets you possess that may link with a Remote Control (it is considered to already be connected to them).
+* If you are Defeated, at the start of each Combat Round, your Buddy may move you any number of Squares up to 1/2 of your Buddy Attribute.
+–Adventure Effect: Your Buddy functions as a Communicator.
+
+Special Buddies
+Special Buddies cannot be gained at Character Creation, but must be given by an ARC. Special Buddies come in two categories: Greater Buddies or Unique Buddies.
+Greater Buddies are Special Buddies that possess an elevated version of the capabilities of a normal Buddy, while Unique Buddies are their own type of Buddy.
+
+Cruise Buddy: This gigantic mount allows you and your team to move freely around the battlefield.
+–Special Buddy Type: Greater
+–Original Buddy: Ride Buddy
+–Effects: This Buddy has a Destructive Sphere AoE (centered on you). When you move with this Buddy’s effect, you may also move any number of Allies who are inside of that AoE the same number of Squares in the same direction (this does not cause Collision). They may apply the same benefits, as if this was their Buddy, if they are targeted by an Attacking Maneuver through the Exploit Maneuver.
+This Buddy may also move you (and Allies) through its effects if your/their Size Category is Gigantic or lower (rather than Large or lower).
+Additionally, increase the number of Squares you can move through the Buddy Effect of this Buddy by 6.
+
+Guiding Spirit: This person has contacted you from beyond the veil to aid you in your hour of greatest need.
+–Special Buddy Type: Unique
+–Buddy Effect Type: Passive
+–Effects: This Buddy is a Character who has passed on, but is giving advice and support while deceased through some means – that Character is known as the ‘Spirit’. While this Buddy is Active, increase your Skill Bonus for your Skills by the number of Skill Ranks your Spirit has in each of those Skills and increase your Combat Rolls by 1(bT) – using the base Tier of Power of your Spirit. This Buddy cannot be targeted by a Called Shot, but will decide if they will continue to assist you as a Buddy at the end of each Combat Encounter. If they decide not to, you lose access to this Buddy.
+–Adventure Effect: Increase your Skill Bonus for your Skills by the number of Skill Ranks your Spirit has in each of those Skills.
+
+Invincibuddy: This little guy is totally indestructible.
+–Special Buddy Type: Greater
+–Original Buddy: Any (chosen by the ARC ~ cannot be a Special Buddy)
+–Effects: This Buddy cannot be targeted by Called Shots.
+
+Nimbus: This mystical flying cloud decides who it allows to ride it.
+–Special Buddy Type: Greater
+–Original Buddy: Ride Buddy
+–Effects: You can only use the Buddy Effect of this Buddy if you are Pure Good. Increase the number of Squares you can move through the Buddy Effect of this Buddy by 6. Additionally, while this Buddy is Active, you have access to the Nimbus Pro Enhancement.
+
+Oracle Fish: This prophetic assistant tells you about the future.
+–Special Buddy Type: Unique
+–Buddy Effect Type: Passive
+–Effects: You gain access to the Precognition Unique Ability.
+–Adventure Effect: By spending 1 Hour and an Ingredient of Uncommon or higher rarity (see — Cooking), you may listen to the stories of the Oracle Fish. Your ARC will tell you a story that hints at future events or points towards areas that may be of interest to you and your allies. More information and more detail will be given the more rare the Ingredient is that you spend on the Oracle Fish. The ARC may have the Oracle Fish be unable to tell you anything at the moment, but you won’t lose any Ingredients in that case.
+
+Senzu Farmer: This special helper grows mystical Senzu Beans while you’re busy doing other things.
+–Special Buddy Type: Greater
+–Original Buddy: Any (chosen by the ARC ~ cannot be a Special Buddy)
+–Effects: While Adventuring, this Buddy may spend 1~4 Months growing Senzu Beans. Gain a Small Bag of Senzu Beans, but increase the size of the Senzu Beans bag by 1 for every month spent after the first.
+
+Studied Shifting Buddy: This mystical companion can shapeshift for you without restraint.
+–Special Buddy Type: Greater
+–Original Buddy: Shifting Buddy
+–Effects: This Buddy can use their Buddy Effect any number of times per Combat Encounter and can use their Buddy Effect even if they used it during the last Combat Round.
+
+Team Buddy: This amazing buddy helps not only you, but all of your friends, too.
+–Special Buddy Type: Greater
+–Original Buddy: Any (chosen by the ARC ~ cannot be a Special Buddy)
+–Effects: At the start of an Allies’ turn, you may give this Buddy to that Ally for the duration of this Combat Encounter. This Buddy remains Active for that Ally.
+
+Technique Hermit: This specialized mentor teaches you the hidden secrets of their special technique.
+–Special Buddy Type: Greater
+–Original Buddy: Mentor Buddy
+–Effects: Select a Signature Technique you have access to upon gaining this Buddy. If you use that Signature Technique, double the benefits from Mentor Buddy for the duration of that Attacking Maneuver.
+
+Warrior Buddy: This particular helper is especially suited to combat.
+–Special Buddy Type: Greater
+–Original Buddy: Assault Buddy
+–Effects: Instead of a Profile, you may create a Signature Technique with a TP Cost of 25. Use that Signature Technique instead for the effects of the Buddy.
+
+Zen-O: This powerful guy is nearly omnipotent in his power, but his childish antics are just as powerful in scope.
+–Special Buddy Type: Unique
+–Buddy Effect Type: Active
+–Maneuver Type: Standard Maneuver
+–Action Cost: 1 Action
+–Effects: Target a Character. Make a Persuasion Skill Check with a DC of Grandmaster. If you succeed, erase that target from existence. If you fail, you are erased from existence. This Buddy cannot be targeted by a Called Shot. At the end of each Combat Round, your ARC makes a Temperament Check, deciding on the temperament of Zen-O depending on what happened during this Combat Round:
+* Angry. Erases the universe and all Characters in it from existence.
+* Bored. Erase every Character in the Battlefield from existence.
+* Annoyed. Flip a coin. If you get heads, a random Character amongst you and your Allies are erased from existence. If you get tails, a random Character amongst your Opponents is erased from existence. Then, Zen-O is dismissed and cannot be called for the remainder of the Combat Encounter.
+* Mildly Interested. Nothing happens.
+* Entertained. Increase the Combat Rolls of you and all of your Allies by 1(bT) for the duration of the next Combat Round.
+–Adventure Effect: You must appease the whims of Zen-O and stop them from being bored. If you fail to do so, you may be erased, or at the very least they may start a Combat Encounter with a Temperament of Annoyed.

@@ -25,6 +25,8 @@ What each version brought, in broad strokes. Every change is described in its co
   - New verbs `offerOneOf`, `studyAll` and `enterLinked`.
 - **Documentation:** `CLAUDE.md`, `docs/` (architecture, rulings, adding content, work log), this changelog and
   `tools/reindex.py`.
+- **Tests:** the verification battery is in the repository (`tests/`, `bash tests/check.sh`). It is portable, finding
+  Foundry through `FOUNDRY_NODE` / `FOUNDRY_APP`.
 
 ## 0.3.x (2026-11-20 to 2026-11-21)
 

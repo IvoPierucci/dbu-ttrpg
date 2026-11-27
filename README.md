@@ -42,3 +42,4 @@ and AI assistants. Then, as needed:
 - [`docs/RULINGS.md`](docs/RULINGS.md) records how ambiguous rules are read.
 - [`docs/WORKLOG.md`](docs/WORKLOG.md) lists open items and what is being worked on.
 - [`CHANGELOG.md`](CHANGELOG.md) lists changes by version.
+- [`tests/README.md`](tests/README.md) explains the verification battery (`bash tests/check.sh`).

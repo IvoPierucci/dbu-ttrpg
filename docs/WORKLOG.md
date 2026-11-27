@@ -38,8 +38,6 @@ Each file says so in its comments, with the word "the table's". To list them all
 narrates.
 
 ### Known gaps
-- **The verification battery is not in the repository.** About 200 headless scripts run on the owner's machine only. Moving
-  it into the repository is proposed, not done.
 - **`README.md` screenshots and install manifest:** not set up.
 
 ## Log
@@ -47,6 +45,7 @@ narrates.
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
 - **2026-11-26 (Ivo's Claude):**
+  - The verification battery moved into the repository (`tests/`); run `bash tests/check.sh`.
   - Added `CLAUDE.md`, `docs/`, `CHANGELOG.md` and `tools/reindex.py`, and updated `README.md`.
   - Added Steel Frame and Boiling Rage (with `sharesUses:`).
   - Fixed Ascended Signature through Quick to Master / Earthling-Raised (the Ascend choice and Karmic Assault now show).

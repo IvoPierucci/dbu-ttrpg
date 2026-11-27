@@ -53,16 +53,20 @@ Traits, Talents, Maneuvers, Transformations, Gear...) is data in `traits/**/*.db
    the Transformation card), never a new message.
 7. **Say what is left undone.** If you can't automate part of an effect, write it in the file's comments as
    "the table's", with the reason. Tell the owner which calls were your own reading of the rule.
-8. **Don't break what others rely on.** Many internal checks pin exact lines of code (see Verification). If you change such a
-   line, keep the behaviour and say so in the commit.
+8. **Don't break what others rely on.** Many harnesses pin exact lines of code (see Verification). If you change such a
+   line, keep the behaviour, update the harness in the same commit, and say why.
 
 ## Verification
 
-- `node --check module/**/*.mjs` (or the Foundry executable run as Node: `ELECTRON_RUN_AS_NODE=1 "Foundry Virtual Tabletop.exe"
-  --check <file>`) catches syntax errors.
-- The repository's owner keeps a larger battery of headless checks (about 200 scripts that compile every Trait, run
-  rules functions and pin key lines). **It is not in the repository yet.** Until it is, run the syntax check, reload in
-  Foundry, and try the change on a test actor. Say in your report what you tested and what you didn't.
+- **Run `bash tests/check.sh` before every commit, and commit only if it passes.** Chain the commit on its exit status
+  (`if bash tests/check.sh > battery.log 2>&1; then git commit ...; fi`); never run both unconditionally. See
+  [`tests/README.md`](tests/README.md). It needs Foundry VTT installed; it finds it in the usual place or through
+  `FOUNDRY_NODE` / `FOUNDRY_APP`.
+- **The battery is about 130 harnesses.** They compile every Trait, build characters headlessly and check numbers, and
+  pin key lines of code. A harness failing after your change is telling you something; read its `FAIL` line before
+  touching the harness.
+- **Add checks for what you build,** in the harness of that area, so the next person's change can't silently undo it.
+- **Then try it in Foundry** on a test actor. Say in your report what you tested there and what you didn't.
 - Every Trait file is compiled when Foundry loads. A file that fails to compile is skipped and named in the console
   (F12), and the rest keep working.
 
@@ -72,7 +76,7 @@ Traits, Talents, Maneuvers, Transformations, Gear...) is data in `traits/**/*.db
   `Boiling Rage (the owner's link, 2026-11-26): an Enhancement, Variant of Enraged ...`.
 - The body says why. It also says which parts are your own reading and what is left to the table.
 - `main` is the working branch. Commit only when the change works; never commit a known-broken state.
-- Don't commit `battery.log`, editor folders, or `packs/*/` (LevelDB files Foundry builds itself).
+- Don't commit `battery.log` (git ignores it), editor folders, or `packs/*/` (LevelDB files Foundry builds itself).
 
 ## Gotchas that cost time before
 

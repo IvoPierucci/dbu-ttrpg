@@ -15,8 +15,9 @@ that have worked, with the steps people tend to miss.
    "the table's".
 4. **Register the file:** run `python tools/reindex.py --write`, which adds new files to `traits/index.json` and drops
    deleted ones.
-5. **Check it.** Reload Foundry and look at the console (F12). A file that fails to compile is named there, with the
-   line. Then try it on a test character: the sheet's hovers show each Slot's parts by source.
+5. **Check it.** Run `bash tests/check.sh`. Its `compile-traits` harness compiles every file and names any that fail,
+   with the line. Add a check for what you built to the area's harness (see [`tests/README.md`](../tests/README.md)).
+   Then reload Foundry and try it on a test character: the sheet's hovers show each Slot's parts by source.
 6. **Commit** as [`CLAUDE.md`](../CLAUDE.md) describes, saying what was your own reading.
 
 ## What exists to reuse
