@@ -1923,4 +1923,16 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
     [2, true, true, true, true]);
 }
 
+
+// --- Core Maneuvers given to a character made before they existed (the user's, 2026-11-27: Class Up's Choice Maneuvers missing) -----
+{
+  const ENTRY = read("module", "dbu-ttrpg.mjs");
+  const core = (await import(modUrl("use-maneuver.mjs"))).coreManeuverItems ? true : false;
+  check("given once the world is ready, by the active GM, after the content is loaded; remembered (coreGranted), so one deleted is not given again",
+    [core, ENTRY.includes("  await contentLoaded;\n  for (const actor of game.actors ?? []) {\n    if (!isCharacter(actor)) continue;"),
+     ENTRY.includes("!held.has(entry.system?.maneuverId) && !held.has(entry.name) && !given.has(entry.system?.maneuverId)"),
+     ENTRY.includes('await actor.setFlag("dbu-ttrpg", "coreGranted", [...new Set([...given, ...ids])]);'),
+     ENTRY.includes("  contentLoaded = (async () => {\n    await loadTraits();")], [true, true, true, true, true]);
+}
+
 console.log(failed ? `\n${failed} failing` : "\n0 failing");

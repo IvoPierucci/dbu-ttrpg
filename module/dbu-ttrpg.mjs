@@ -263,6 +263,29 @@ Hooks.once("ready", async () => {
   }
 });
 
+// The Core Maneuvers a character is missing - one added to the system after it was made, as Class Up's Choice Maneuvers were for
+// characters older than the Transformations (the user's, 2026-11-27): given once the world is ready, by the active GM, as Settings'
+// "Add core maneuvers" does. Each one given is remembered (`coreGranted`), so one deleted on purpose is not given again.
+Hooks.once("ready", async () => {
+  if (!game.user.isGM || (game.user !== game.users.activeGM)) return;
+  await contentLoaded;
+  for (const actor of game.actors ?? []) {
+    if (!isCharacter(actor)) continue;
+    const core = coreManeuverItems({ adversary: actor.type === "adversary" });
+    const ids = core.map(entry => entry.system?.maneuverId).filter(Boolean);
+    const given = new Set(actor.getFlag("dbu-ttrpg", "coreGranted") ?? []);
+    if (ids.every(id => given.has(id))) continue;
+    const held = new Set(Array.from(actor.items).filter(item => item.type === "maneuver").map(item => item.system?.maneuverId || item.name));
+    const missing = core.filter(entry => !held.has(entry.system?.maneuverId) && !held.has(entry.name) && !given.has(entry.system?.maneuverId));
+    try {
+      if (missing.length) await actor.createEmbeddedDocuments("Item", missing);
+      await actor.setFlag("dbu-ttrpg", "coreGranted", [...new Set([...given, ...ids])]);
+    } catch (error) {
+      console.error("DBU TTRPG | Core Maneuvers for", actor.name, error);
+    }
+  }
+});
+
 // Compiled effects are cached by the content they came from, so a stale entry cannot
 // happen - an edit produces a different key. These only bound how much is kept.
 Hooks.on("updateItem", item => forget(item.uuid));
@@ -483,14 +506,20 @@ Hooks.on("updateToken", async (token, changes, options, userId) => {
 });
 Hooks.on("updateItem", item => { if (READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)) conduitRefresh(); });
 
+/** The content files loaded (setup's): what a "ready" hook reading them waits on - Foundry does not wait on an async hook. */
+let contentLoaded = Promise.resolve();
+
 Hooks.once("setup", async () => {
   registerManeuverSocket();
   registerDebugTools();
   registerMacroApi();
   // Traits first: the Maneuvers are built from those files, so loading the two at the
   // same time would sometimes find nothing there.
-  await loadTraits();
-  await Promise.all([loadRaces(), loadManeuvers()]);
+  contentLoaded = (async () => {
+    await loadTraits();
+    await Promise.all([loadRaces(), loadManeuvers()]);
+  })();
+  await contentLoaded;
   for (const actor of game.actors ?? []) actor.prepareData();
   // A Minion reads its Master's effects (allies.mjs minionGifts): again, now every Master's are prepared.
   for (const actor of game.actors ?? []) if (isMinion(actor)) actor.prepareData();
