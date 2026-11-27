@@ -5,6 +5,10 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 0.3.10 (2026-11-27)
+
 - **Minions and Transformations:** a Duplicate (a Goop too) has its Master's Transformations, in the one the Master was in as it is
   made. Another Minion's Awakening Limit is the Minion Awakening Limit by its Master's base Tier of Power; a Super Awakening on a
   Minion is said. A Duplicate has no limit of its own.
