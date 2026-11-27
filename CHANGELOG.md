@@ -5,7 +5,9 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
-(Nothing yet.)
+- **New Transformation:** Saiyan Prodigy (a Super Awakening of the Saiyans, beside Pure Progress). A Resource can now take what
+  another can no longer hold (`resourceOverflowOf`, while the flag Slot `resourceOverflowWhen` names is set): its Bottomless Battle
+  Born. Trait rows' buttons: no focus ring, and the Automatic one blue when hovered; every Transformation Trait has its pencil.
 
 ## 0.3.11 (2026-11-27)
 

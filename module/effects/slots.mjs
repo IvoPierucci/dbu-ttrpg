@@ -1161,6 +1161,10 @@ const PATTERNS = [
   // no Bonus Momentum for knocking them through (chat.mjs); Wild Swings (2)'s Absolute Attack, asked (chat.mjs askWildSwings).
   { match: /^(statstick\.double|statstick\.noSpecial|dauntless\.noBonus|wildSwings\.absolute)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true, doc: "A Villainous Trait's: read where it applies." },
+  // A Resource's `resourceOverflowWhen`: while set, it takes the stacks another it overflows can no longer hold (moments-runtime.mjs
+  // gainOneOf) - Bottomless Combat Prowess (3)'s, in the Flow State.
+  { match: /^overflow\.[A-Za-z]+$/, phase: PHASES.CORE, kind: F, ops: ["allow", "set"],
+    valid: () => true, doc: "A Resource taking what another can no longer hold: read by gainOneOf." },
   // One Combat Roll's dice alone - a Custom Buff's (custom-buffs.mjs), after the spreadsheet's "ToP Extra Dice Cat. (Strike)",
   // "Greater Dice (Dodge)", "Extra d6 (Wound)": the Tier of Power Extra Dice of a Strike, a Dodge or a Wound Roll a Category
   // higher (actor-character.mjs `dice.extraStrike`); those dice, or the Greater Dice, applied again to every Combat Roll or to

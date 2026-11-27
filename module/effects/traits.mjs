@@ -219,7 +219,12 @@ export function resourceDefinitions() {
       // Not lost when a Combat Encounter ends or begins - Unfamiliar's, which a body keeps.
       keeps: Boolean(trait.resourceKeeps),
       // Set from the sheet, its stacks the table's to give and take - Unfamiliar's.
-      manual: Boolean(trait.resourceManual)
+      manual: Boolean(trait.resourceManual),
+      // What it takes in when another is full (`resourceOverflowOf`, in the same order as `resource`), while the flag Slot
+      // `resourceOverflowWhen` names is set - Bottomless Combat Prowess (3)'s Bottomless Battle Born, onto the lowest of them
+      // (moments-runtime.mjs gainOneOf).
+      overflowOf: String([].concat(trait.resourceOverflowOf ?? [])[index] ?? "").trim().toLowerCase(),
+      overflowWhen: String(trait.resourceOverflowWhen ?? "").trim()
     };
     });
   }

@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 58, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin and Super Majin 2026-11-27)", files.length, 58);
+check("the first group, all 59, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin, Super Majin and Saiyan Prodigy 2026-11-27)", files.length, 59);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",
@@ -1830,6 +1830,43 @@ allow counter.free;`).program.blocks[0].requires;
      MR.includes("lifePerThresholdBT: Number(args[3]) || 0, surgencyShare: Number(args[4]) || 1 });")],
     ["awakening", "greater", { agility: "1", force: "2", tenacity: "1", magic: "2" }, true,
      [5 * onlyRubbery.system.baseTierOfPower, 0, undefined], "majin", true, true]);
+}
+
+// --- Saiyan Prodigy (the user's link, 2026-11-27): a Super Awakening of the Mind; Bottomless Battle Born, what Battle Born cannot hold ------
+{
+  const { resourceDefinitions } = await import(modUrl("effects/traits.mjs"));
+  const sp = transformation("saiyan-prodigy", { stacks: 1 });
+  const items = [sp, ...T.traitFilesFor(T.transformationFile("saiyan-prodigy")).map(t => traitItem(sp, t.id))];
+  const prepared = (extra = {}) => {
+    const parent = new ActorStub({}, { strict: false });
+    parent.items = items;
+    for (const item of items) item.parent = parent;
+    parent.uuid = "Actor.me";
+    const model = new DBUCharacterData({ powerLevel: 20, progression: progressionTo(20), ...extra }, { parent, strict: false });
+    parent.system = model;
+    model.prepareBaseData?.();
+    model.prepareDerivedData();
+    return parent;
+  };
+  const full = { battlebornstrike: { stacks: 2, max: 2 }, battleborndodge: { stacks: 2, max: 2 }, battlebornwound: { stacks: 2, max: 2 },
+    bottomlessstrike: { stacks: 1, max: 99 } };
+  const before = globalThis.game.combat;
+  globalThis.game.combat = { started: true, id: "c5" };
+  const off = prepared({ resources: full, states: { flow: 1 } });
+  sp.flags["dbu-ttrpg"] = { grandMet: "c5", grandOn: "c5" };
+  const on = prepared({ resources: full, states: { flow: 1 } });
+  const outOfFlow = prepared({ resources: full, states: {} });
+  globalThis.game.combat = before;
+  sp.flags["dbu-ttrpg"] = {};
+  const definitions = resourceDefinitions();
+  const MR = fs.readFileSync(path.join(ROOT, "module", "effects", "moments-runtime.mjs"), "utf8");
+  check("Saiyan Prodigy: Super, Mind; 4+ Battle Born Stress Bonus 1; Bottomless Battle Born overflows Battle Born in the Flow State once its Grand Awakening is on",
+    [T.transformationFile("saiyan-prodigy").subtype, partsOf(off, "stressBonus").some(([name]) => name === "Learning through Combat"),
+     [off.system.effects.slots["overflow.bottomless"], on.system.effects.slots["overflow.bottomless"], outOfFlow.system.effects.slots["overflow.bottomless"]],
+     partsOf(on, "strike").some(([name, value]) => (name === "Bottomless Combat Prowess") && (value === on.system.tierOfPower)),
+     [definitions.bottomlesswound?.overflowOf, definitions.bottomlesswound?.overflowWhen],
+     MR.includes("const spill = Object.values(definitions).filter(each => each.overflowOf && asked.includes(each.overflowOf) && each.overflowWhen")],
+    ["super", true, [undefined, true, undefined], true, ["battlebornwound", "overflow.bottomless"], true]);
 }
 
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------

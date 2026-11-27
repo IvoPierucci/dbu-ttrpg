@@ -12,7 +12,7 @@ need to know: a half-finished feature, a decision taken, something you found bro
   - Every race and Racial Trait, Factors, Other Traits (Evolution, Bestial, Monstrous, Vocations), all Talent Categories,
     Maneuvers, Unique Abilities, Signature Techniques with Super Profiles, Gear (Apparel, Weapons, Items, Buddies),
     Battlefields and Weather, Karma, Custom Buffs, Adventure.
-  - Transformations: 58, all from the owners' links or texts.
+  - Transformations: 59, all from the owners' links or texts.
 - **Testing:** most of it has been checked headlessly but little of it in a real Foundry game. Treat any bug report from
   the table as real.
 
@@ -45,6 +45,7 @@ narrates.
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
 - **2026-11-27 (Ivo's Claude):**
+  - Added Saiyan Prodigy: `resourceOverflowOf` / `resourceOverflowWhen` (traits.mjs resourceDefinitions, moments-runtime.mjs gainOneOf) and the `overflow.<name>` flag Slots.
   - Added Super Majin. Its (4) (what may be changed as it is gained) is the table's, done by hand on the sheet.
   - Added Unkillable Majin and Grand Awakenings: `slot: grand` + `grandTrigger: N` on the Trait, the verb `grandTrigger()` (the
     Awakening's `flags.dbu-ttrpg.grandMet` = this Combat's id), the predicate `grandTriggerMet`, the Full Awakening Maneuver

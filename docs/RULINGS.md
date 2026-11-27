@@ -109,6 +109,9 @@ the rule and how it is applied in the code.
 - **Grand Awakenings (2026-11-27, my readings):** a Grand Trigger detected by the system is met by itself (Unkillable Majin's: a
   Healing Surge that leaves you in Bruised, so from Injured or Critical). The Full Awakening Maneuver is a Standard Maneuver (its entry
   gives no Maneuver Type). The Grand Awakening stays active until that Combat Encounter ends.
+- **Saiyan Prodigy (2026-11-27, my readings):** Bottomless Battle Born is taken whenever a Battle Born would be lost for being full in
+  the Flow State (its "you may" never worth refusing); its bonus counts only in the Flow State. Bottomless Combat Prowess (4) is offered at
+  the start of your turn beside Combat Imprinting (1), taken when that gave a stack.
 
 - **Minions and Fusions (2026-11-27, my readings, not yet the owner's):** a Duplicate's Transformations are its Master's as they
   were when it was made, with no Awakening Limit of its own. A new Fusion has every Fused Character's Awakening ticked; the table

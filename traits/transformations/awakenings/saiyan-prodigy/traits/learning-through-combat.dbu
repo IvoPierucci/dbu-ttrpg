@@ -1,0 +1,41 @@
+id: saiyan-prodigy-learning-through-combat
+name: Learning through Combat
+order: 1
+slot: trait
+description: >
+  Your combat prowess skyrockets as the battle continues, and you grow exponentially stronger the longer you fight.
+text: >
+  Learning through Combat: Your combat prowess skyrockets as the battle continues, and you grow exponentially stronger the longer you fight.
+  (1)-[Passive]: While you possess 4+ stacks of Progress, increase your Stress Bonus by 1.
+  (2)-[Passive]: While you possess 4+ stacks of Battle Born, increase your Stress Bonus by 1.
+  (3)-[Passive]: Increase your Surgency by 2(T).
+  (4)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, gain a stack of Battle Born.
+  (5)-[Triggered, 1/Encounter]: If you trigger the 3rd effect of Born for Battle, gain 2 stacks of Progress.
+
+---
+
+# (1) 4+ stacks of Progress (Pure Progress's Combat Imprinting): Stress Bonus 1.
+[passive, effect 1]
+if (stacksAtLeast(4, "progressstrike", "progressdodge", "progresswound")) {
+    stressBonus += 1;
+}
+
+# (2) 4+ stacks of Battle Born: Stress Bonus 1.
+[passive, effect 2]
+if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    stressBonus += 1;
+}
+
+# (3) Surgency 2(T).
+[passive, effect 3]
+surgency += 2(T);
+
+# (4) An Opponent knocked through a Health Threshold by your Attacking Maneuver, once a Round: a stack of Battle Born, put where you say.
+[triggered/knock-through, 1/round, effect 4]
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
+
+# (5) Born for Battle (3) triggered (the `heritage` Moment, which it answers), once an Encounter: 2 stacks of Progress, each put where
+# you say.
+[triggered/heritage, 1/encounter, effect 5]
+gainOneOf(progressstrike, progressdodge, progresswound);
+gainOneOf(progressstrike, progressdodge, progresswound);
