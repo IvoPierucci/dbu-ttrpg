@@ -1684,6 +1684,16 @@ allow counter.free;`).program.blocks[0].requires;
      S["clash.corporealForCognitive"], getTrait("steel-frame-hard-as-steel").script.includes("[triggered/direct-hit, 1/round, chosen, effect 5]"),
      CH.includes('(defender?.system?.effects?.slots?.["clash.corporealForCognitive"] === true) && challenger && areOpponents(defender, challenger)')],
     ["awakening", "lesser", "body", 1, "2", 2, steel.system.tierOfPower, true, true, true]);
+  // Ticked in Respond, the box above shows the Category it leaves (the user's, 2026-11-26): its Direct Hit step read as settled.
+  const { reactiveFor } = await import(modUrl("effects/registry.mjs"));
+  const { collectReactive, applySlot } = await import(modUrl("effects/interpreter.mjs"));
+  const step = reactiveFor(steel).filter(entry => entry.program.blocks[0].moment === "direct-hit").map(entry => applySlot(collectReactive([{ ...entry, armed: true }],
+    "direct-hit", { data: steel.system, errors: [], context: {}, queue: [] }).slots, "incoming.damage.category.shift", 0));
+  check("Hard as Steel (5) ticked in Respond: the Direct Hit box one Category lower (chat.mjs directHitStep, categorySteps, damageWith)",
+    [step, CH.includes('const { slots } = collectReactive([{ ...entry, armed: true }], "direct-hit", scope);'),
+     CH.includes(".reduce((sum, input) => sum + (Number(entry.categorySteps?.[input.value]) || 0), 0) : 0;"),
+     CH.includes("const shown = (steps && roll.damageWith) ? roll.damageWith(key, balanced, steps) : (balanced ? roll[key].balanced : roll[key]);")],
+    [[-1], true, true, true]);
 }
 
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------

@@ -1847,7 +1847,9 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
   check("Guard and Direct Hit drawn with Balanced Defender's Soak where it is ticked",
     [C.includes('directHit: { ...damage("directHit"), balanced: balancedTier ? damage("directHit", balancedTier) : null },'),
      C.includes('guard: { ...damage("guard"), balanced: balancedTier ? damage("guard", balancedTier) : null },'),
-     C.includes("const shown = (element.querySelector(`input[name=\"balanced-${id}\"]`)?.checked && roll[key].balanced) || roll[key];"),
+     // With the Category steps ticked beside it (Hard as Steel (5), 2026-11-26), drawn again by damageWith with the same Soak.
+     C.includes("const balanced = Boolean(element.querySelector(`input[name=\"balanced-${id}\"]`)?.checked && roll[key].balanced);")
+       && C.includes("damageWith: (key, balanced, steps) => damage(key, balanced ? balancedTier : 0, steps),"),
      C.includes("const base = own + extra;")],
     [true, true, true, true]);
 }

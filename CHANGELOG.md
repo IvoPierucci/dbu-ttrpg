@@ -5,7 +5,8 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
-(Nothing yet.)
+- **Respond window:** with Direct Hit, a ticked effect that lowers the Damage Category (Hard as Steel (5), Damage Inhibitor
+  (2)) now shows the lower Category in the box above.
 
 ## 0.3.7 (2026-11-26)
 

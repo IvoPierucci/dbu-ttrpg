@@ -45,6 +45,7 @@ narrates.
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
 - **2026-11-26 (Ivo's Claude):**
+  - Respond: the Direct Hit box shows the Category lowered by ticked Direct Hit effects (`categorySteps`, `damageWith`).
   - The verification battery moved into the repository (`tests/`); run `bash tests/check.sh`.
   - Added `CLAUDE.md`, `docs/`, `CHANGELOG.md` and `tools/reindex.py`, and updated `README.md`.
   - Added Steel Frame and Boiling Rage (with `sharesUses:`).

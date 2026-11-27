@@ -9287,6 +9287,17 @@ export function rollSection(title, inner) {
  * What one Triggered effect would do to a Combat Roll if ticked, read the way the roll reads it (`combat-roll`): what it adds
  * to the roll's Slot, a Base Die it sets (Power of the Z-Warrior's 10), the Greater Dice it lends a Dodge.
  */
+/** How many Categories a ticked Triggered/Direct Hit effect moves the hit by for your Damage - Damage Inhibitor (2)'s -1. 0 where none. */
+function directHitStep(actor, entry) {
+  try {
+    const scope = { data: actor.system, errors: [], context: {}, queue: [] };
+    const { slots } = collectReactive([{ ...entry, armed: true }], "direct-hit", scope);
+    return applySlot(slots, "incoming.damage.category.shift", 0);
+  } catch (error) {
+    return 0;
+  }
+}
+
 function triggerPreview(actor, entry, slot, context = {}) {
   try {
     const scope = { data: actor.system, errors: [], context: { roll: true, ...context }, queue: [] };
@@ -9964,7 +9975,10 @@ async function respondDialog(message, respondable, { initials = new Map(), check
         (willing || balanced || fixedTriggers || karmaGroup) ? rollSection("Effects", `${willing}${balanced}${fixedTriggers}${karmaGroup}`) : ""}`,
       roll: answersAttack ? respondRollData(actor, attack) : null,
       previews: answersAttack ? Object.fromEntries(["dodge", "strike", "wound"].map(slot => [slot,
-        Object.fromEntries(triggers.map(entry => [entry.blockId, triggerPreview(actor, entry, slot, {})]))])) : {}
+        Object.fromEntries(triggers.map(entry => [entry.blockId, triggerPreview(actor, entry, slot, {})]))])) : {},
+      // What a ticked one does to the Damage Category at Direct Hit - its `direct-hit` blocks, as they are settled (heldAt).
+      categorySteps: answersAttack ? Object.fromEntries(triggers.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "") === "direct-hit")
+        .map(entry => [entry.blockId, directHitStep(actor, entry)]).filter(([, step]) => step)) : {}
     };
   };
   // One character that cannot be read does not take the others' answers with it: said in the console, and a target among them
@@ -10040,9 +10054,11 @@ function respondRollData(actor, attack) {
   };
   // Direct Hit and Guard: "Wound - Soak - DR", the Soak as it will stand and the Damage Category known before any Wound (the user's).
   // `extra` on the Soak Value before the Category - Balanced Defender's 1(T), ticked (the user's), as it is added when settled.
-  const damage = (key, extra = 0) => {
+  // `steps` the Category moved by what is ticked in the window - Damage Inhibitor (2), Hard as Steel (5) - as it is settled (heldAt).
+  const damage = (key, extra = 0, steps = 0) => {
     const from = resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0);
-    const category = resolveDamageCategory(attack.damageCategory, (attack.damageCategoryShift ?? 0) + (DEFENCES[key]?.damageCategoryShift ?? 0));
+    const category = resolveDamageCategory(attack.damageCategory, (attack.damageCategoryShift ?? 0) + (DEFENCES[key]?.damageCategoryShift ?? 0)
+      + steps);
     const own = Number(actor.system.soakValue) || 0;
     const base = own + extra;
     const soak = DEFENCES[key].soak(Math.floor(base * (DAMAGE_CATEGORIES[category]?.soakMultiplier ?? 1)));
@@ -10062,6 +10078,8 @@ function respondRollData(actor, attack) {
     };
   };
   return {
+    // The Direct Hit box again with the Category steps ticked (respondActorWindow's redraw).
+    damageWith: (key, balanced, steps) => damage(key, balanced ? balancedTier : 0, steps),
     dodge: formula("dodge"), parry: formula("parry"), crossCounter: formula("crossCounter"),
     crossCounterSignature: formula("crossCounterSignature"),
     // And as it stands with Balanced Defender ticked, where it can be.
@@ -10216,7 +10234,10 @@ async function respondActorWindow(message, entry, { fromPicker = false, initial 
     const show = (whatHtml, lineHtml) => { box.style.visibility = "visible"; what.innerHTML = whatHtml; line.innerHTML = lineHtml; };
     if (!roll || !key) { box.style.visibility = "hidden"; return; }
     if ((key === "directHit") || (key === "guard")) {
-      const shown = (element.querySelector(`input[name="balanced-${id}"]`)?.checked && roll[key].balanced) || roll[key];
+      const balanced = Boolean(element.querySelector(`input[name="balanced-${id}"]`)?.checked && roll[key].balanced);
+      const steps = (key === "directHit") ? [...element.querySelectorAll(`input[name="trigger-${id}"]:checked`)]
+        .reduce((sum, input) => sum + (Number(entry.categorySteps?.[input.value]) || 0), 0) : 0;
+      const shown = (steps && roll.damageWith) ? roll.damageWith(key, balanced, steps) : (balanced ? roll[key].balanced : roll[key]);
       return show(shown.what, shown.line);
     }
     const formula = roll[key];
