@@ -12,7 +12,7 @@ need to know: a half-finished feature, a decision taken, something you found bro
   - Every race and Racial Trait, Factors, Other Traits (Evolution, Bestial, Monstrous, Vocations), all Talent Categories,
     Maneuvers, Unique Abilities, Signature Techniques with Super Profiles, Gear (Apparel, Weapons, Items, Buddies),
     Battlefields and Weather, Karma, Custom Buffs, Adventure.
-  - Transformations: 55, all from the owners' links or texts.
+  - Transformations: 56, all from the owners' links or texts.
 - **Testing:** most of it has been checked headlessly but little of it in a real Foundry game. Treat any bug report from
   the table as real.
 
@@ -45,6 +45,7 @@ narrates.
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
 - **2026-11-26 (Ivo's Claude):**
+  - Added Super Kaioken: headers `initial:` (a Special Enhancement's Initial Enhancement) and `onlyAlongside:`.
   - Respond: the Direct Hit box shows the Category lowered by ticked Direct Hit effects (`categorySteps`, `damageWith`).
   - Amount windows take a `note` (`askPlayerAmount(..., { note })`): `adaptationNote(held)`, `mostNote("4(bT)", full, most)`.
   - The verification battery moved into the repository (`tests/`); run `bash tests/check.sh`.

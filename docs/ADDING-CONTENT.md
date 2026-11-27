@@ -67,7 +67,8 @@ Special Maneuver.
 ### A Transformation
 - **One folder per Transformation:** `traits/transformations/<awakenings|enhancements|forms/alternate|forms/legendary|evolved>/<id>/`.
   - `<id>.dbu` holds the header (`type`, `subtype`, `racial`, `prerequisites`, `tier`, `stress`, `aspects`, `bonuses`,
-    `maxStacks` for Awakenings, `variantOf`, `line`/`stage`, `grades`...) and the whole page's text.
+    `maxStacks` for Awakenings, `variantOf`, `initial` (a Special Enhancement's Initial Enhancement), `onlyAlongside`, `line`/`stage`,
+    `grades`...) and the whole page's text.
   - `traits/<trait>.dbu` holds each Transformation Trait, with `slot: trait|burst|mastery|transcendent|legendary`,
     `mastery: N`, `replaces: <name>` (in a Variant) and `constant: N`.
   - `unique/`, `maneuvers/`, `conditions/` and `states/` hold anything else it owns.

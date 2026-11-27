@@ -1,0 +1,51 @@
+id: super-kaioken
+name: Super Kaioken
+type: enhancement
+subtype: special
+# A Special Enhancement's Initial Enhancement: counts as it for effects, wants it Mastered (said, never refused), never used with it.
+initial: kaioken
+racial: Any
+prerequisites: N/A
+tier: 2+
+stress: 4
+aspects: Graded, Heartbeat (LV3), Glowing, High Speed, Enhanced Save (Impulsive/Cognitive), Peaked
+# Multiplied Power (2)-(3): entered only beside another Transformation (said, never refused), and left with it.
+onlyAlongside: true
+# Its S-Kaioken Grades table.
+grades: 3
+grade1: stress 4; AG/FO/MA 1(T); extraDice N/A; lifeCost 2(bT); label x2
+grade2: stress 6; AG/FO/MA 2(T); extraDice +1 Dice Category; lifeCost 4(bT); label x10
+grade3: stress 8; AG/FO/MA 3(T); extraDice +2 Dice Categories; lifeCost 6(bT); label x20
+bonuses: AG *, FO *, MA *
+description: >
+  Despite your strenuous transformation, you manage to manifest the brilliant crimson flames of the Kaioken, further multiplying your already enhanced power. Though you’ve managed to lessen the downsides to make this tactic possible, it comes at the cost of reduced power gain.
+text: >
+  Despite your strenuous transformation, you manage to manifest the brilliant crimson flames of the Kaioken, further multiplying your already enhanced power. Though you’ve managed to lessen the downsides to make this tactic possible, it comes at the cost of reduced power gain.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Special / Initial Enhancement: Kaioken / Prerequisite(s): N/A / Stress Test Requirement: 4 / Tier of Power Requirement. 2+
+  Aspects: Graded, Heartbeat (LV3), Glowing, High Speed, Enhanced Save (Impulsive/Cognitive), Peaked
+  AG * · FO * · TE – · SC – · IN – · MA * · PE –
+
+  Multiplied Power: A blazing aura surrounds you, vastly multiplying your power and agility.
+  (1)-[Passive]: If used in conjunction with a Transformation with the Perfect Ki Control Aspect, halve the Life Point Cost.
+  (2)-[Permanent]: You can only enter this Transformation if it would be used in conjunction with another Transformation.
+  (3)-[Automatic]: If you would leave a Transformation used in conjunction with this Transformation, leave this Transformation too.
+  (4)-[Graded]: Super Kaioken has 3 Grades. Each Super Kaioken Grade:
+  Each Grade after the first increases the Stress Test Requirement by 2.
+  Increases the Tier of Power Extra Dice by the amount of Categories listed on the S-Kaioken Grades table.
+  Sets the AMB (Attribute Modifier Bonus) of Super Kaioken for the listed Attributes to the amount listed on the Grades table.
+  Has a Life Point Cost you must pay to be able to use any Attacking Maneuver.
+  | S-Kaioken Grades | ToP Extra Dice | AMB (AG/FO/MA) | Life Point Cost |
+  | 1 (x2) | N/A | 1(T) | 2(bT) |
+  | 2 (x10) | +1 Dice Category | 2(T) | 4(bT) |
+  | 3 (x20) | +2 Dice Categories | 3(T) | 6(bT) |
+
+  Power of a Heartbeat: Pushing your body to its limits, you increase both strength and speed at the cost of your own vitality.
+  (1)-[Passive]: You cannot regain Life Points.
+  (2)-[Passive]: You do not suffer from Reduced Momentum if you are knocked through a Health Threshold due to paying the Life Point Cost of Kaioken.
+  (3)-[Passive]: Increase the Wound Rolls of your Signature Techniques by G(T).
+  (4)-[Triggered, 1/Round]: If you are targeted by an Opponent’s Attacking Maneuver, increase your Dodge Rolls by G(T) for the duration of that Attacking Maneuver.
+  (5)-[Triggered/Power, 1/Encounter]: If you are below the Injured Health Threshold, use a Ki Surge.
+
+  BURST LIMIT — Vermilion Explosion: In a brilliant burst of scarlet, your power explodes, multiplying rapidly in power.
+  (1)-[Triggered/Transform]: Use the Power Up Maneuver as an Out-of-Sequence Maneuver. If you do, reduce the Life Point Cost for each Grade of Super Kaioken to 0 until the end of your turn.

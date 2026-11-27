@@ -5,6 +5,8 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+- **New Transformation:** Super Kaioken, a Special Enhancement of Kaioken (`initial:`, and `onlyAlongside:` for one used only beside
+  another and left with it).
 - **Respond window:** with Direct Hit, a ticked effect that lowers the Damage Category (Hard as Steel (5), Damage Inhibitor
   (2)) now shows the lower Category in the box above.
 - **Amount windows:** spending Adaptation Points says how many you have; Tough Warrior (2), Blaster/Magic Master,

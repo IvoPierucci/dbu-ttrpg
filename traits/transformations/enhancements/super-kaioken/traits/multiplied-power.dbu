@@ -1,0 +1,47 @@
+id: super-kaioken-multiplied-power
+name: Multiplied Power
+order: 1
+slot: trait
+# Paid while Vermilion Explosion has not made it 0 this turn - bookkeeping, not a Resource the rules name.
+resource: vermilion
+resourceInternal: true
+resourceLabel: Vermilion Explosion
+resourceMax: 1
+description: >
+  A blazing aura surrounds you, vastly multiplying your power and agility.
+text: >
+  Multiplied Power: A blazing aura surrounds you, vastly multiplying your power and agility.
+  (1)-[Passive]: If used in conjunction with a Transformation with the Perfect Ki Control Aspect, halve the Life Point Cost.
+  (2)-[Permanent]: You can only enter this Transformation if it would be used in conjunction with another Transformation.
+  (3)-[Automatic]: If you would leave a Transformation used in conjunction with this Transformation, leave this Transformation too.
+  (4)-[Graded]: Super Kaioken has 3 Grades. Each Super Kaioken Grade:
+  • Each Grade after the first increases the Stress Test Requirement by 2.
+  • Increases the Tier of Power Extra Dice by the amount of Categories listed on the S-Kaioken Grades table.
+  • Sets the AMB (Attribute Modifier Bonus) of Super Kaioken for the listed Attributes to the amount listed on the Grades table.
+  • Has a Life Point Cost you must pay to be able to use any Attacking Maneuver.
+
+---
+
+# (2) Entered only beside another Transformation: said as it is entered, never refused; (3) left with the one used beside it - its file's
+# `onlyAlongside` (transformations.mjs alongsideLeaving).
+
+# (4) Its Grades: Stress Test and Attribute Modifier Bonuses (its file's grade lines); the Tier of Power Extra Dice a Category up at
+# Grade 2, two at Grade 3.
+[passive, effect 4]
+if ($G == 2) {
+    dice.extra.category += 1;
+}
+if ($G == 3) {
+    dice.extra.category += 2;
+}
+
+# (4) Its Grade's Life Point Cost, paid as any Attacking Maneuver is declared (Kaioken's way: charged by itself) - 2(bT) a Grade, (1)
+# halved beside a Transformation with the Perfect Ki Control Aspect; none while Vermilion Explosion made it 0.
+[automatic/declare-maneuver, effect 4]
+requires attackingManeuver && !hasResource("vermilion");
+if (aspectInUse("perfect-ki-control")) {
+    life.value -= $G * 1(bT);
+}
+if (!aspectInUse("perfect-ki-control")) {
+    life.value -= 2 * $G * 1(bT);
+}

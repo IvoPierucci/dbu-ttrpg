@@ -1,0 +1,32 @@
+id: super-kaioken-power-of-a-heartbeat
+name: Power of a Heartbeat
+order: 2
+slot: trait
+description: >
+  Pushing your body to its limits, you increase both strength and speed at the cost of your own vitality.
+text: >
+  Power of a Heartbeat: Pushing your body to its limits, you increase both strength and speed at the cost of your own vitality.
+  (1)-[Passive]: You cannot regain Life Points.
+  (2)-[Passive]: You do not suffer from Reduced Momentum if you are knocked through a Health Threshold due to paying the Life Point Cost of Kaioken.
+  (3)-[Passive]: Increase the Wound Rolls of your Signature Techniques by G(T).
+  (4)-[Triggered, 1/Round]: If you are targeted by an Opponent’s Attacking Maneuver, increase your Dodge Rolls by G(T) for the duration of that Attacking Maneuver.
+  (5)-[Triggered/Power, 1/Encounter]: If you are below the Injured Health Threshold, use a Ki Surge.
+
+---
+
+# (1) No Life Points regained. (2) No Reduced Momentum from paying it: none is given for it (paid by Multiplied Power (4), not as Damage).
+[passive, effect 1]
+allow life.noRegain;
+
+# (3) Signature Techniques' Wound Rolls G(T).
+[passive, effect 3]
+wound.signature += $G * 1(T);
+
+# (4) Ticked in Respond, once a Round, for the Dodge Roll against the attack: G(T).
+[triggered/combat-roll, 1/round, effect 4]
+dodge += $G * 1(T);
+
+# (5) The Power Up used below the Injured Health Threshold, once an Encounter: a Ki Surge.
+[triggered/power, 1/encounter, effect 5]
+requires belowThreshold("injured");
+surge(ki);

@@ -1215,6 +1215,10 @@ export async function enterTransformation(actor, item, { grade, scales, prelude,
     for (const other of transformationItems(actor).filter(each => each.system?.active && (each.id !== enhancement.id)
       && (kindOf(fileOf(each)) === "enhancement") && !each.system?.transcended)) changes.push({ _id: other.id, "system.active": false });
   }
+  // Left with one of these: what was used beside it only (`onlyAlongside`) - not where the one entered is that.
+  for (const id of alongsideLeaving(actor, changes.filter(change => change["system.active"] === false).map(change => change._id), item.id)) {
+    if (!changes.some(change => change._id === id)) changes.push({ _id: id, "system.active": false });
+  }
   const leaving = changes.filter(change => change["system.active"] === false).map(change => actor.items.get(change._id)).filter(Boolean);
   await actor.updateEmbeddedDocuments("Item", [own, ...changes]);
   // Multiple per Stage: a lower Stage held twice - which one this inherits from, asked.
@@ -1268,6 +1272,22 @@ export async function leftTransformation(actor, item, { into = null } = {}) {
     { key: "fadedIn", value: String(globalThis.game?.combat?.id ?? "none") }] });
 }
 
+/** The Forms and Enhancements in use beside one - an Awakening is not "used in conjunction" with it. */
+function alongsideOf(actor, item) {
+  return transformationsInUse(actor).filter(each => (each.id !== item?.id) && (kindOf(fileOf(each)) !== "awakening"));
+}
+
+/**
+ * `onlyAlongside:` (Super Kaioken's Multiplied Power (3)): "If you would leave a Transformation used in conjunction with this Transformation,
+ * leave this Transformation too" - those in use with it, kept, as one beside them is left. Not the one entered.
+ */
+function alongsideLeaving(actor, leavingIds, enteringId = null) {
+  const leaving = new Set(leavingIds);
+  if (!leavingIds.some(id => kindOf(fileOf(actor.items.get(id))) !== "awakening")) return [];
+  return transformationsInUse(actor).filter(each => fileOf(each)?.onlyAlongside && !leaving.has(each.id) && (each.id !== enteringId))
+    .map(each => each.id);
+}
+
 /** Leave Transformations - the Revert Maneuver's, a failed Stress Test's: put by, and what leaving each does. */
 export async function leaveTransformations(actor, ids) {
   // Linked: "If you have to leave the Linked Enhancement due to any effects, also leave this Transformation."
@@ -1277,6 +1297,7 @@ export async function leaveTransformations(actor, ids) {
     if (links.some(link => ids.some(id => { const left = actor.items.get(id); return left && ((left.system?.transformationId === link)
       || (aspectId(left.name) === link)); }))) leavingIds.add(each.id);
   }
+  for (const id of alongsideLeaving(actor, [...leavingIds])) leavingIds.add(id);
   ids = [...leavingIds];
   const items = ids.map(id => actor.items.get(id)).filter(Boolean);
   if (!items.length) return;
@@ -1410,7 +1431,9 @@ export function inTransformationOf(actor, wanted) {
     const line = String(wanted).slice(5);
     return using.some(item => (kinds(item) === "form") && (lineOf(fileOf(item), actor?.items) === line));
   }
-  return using.some(item => (item.system?.transformationId === wanted) || (String(fileOf(item)?.variantOf ?? "") === wanted));
+  // A Special Enhancement "is treated as its Initial Enhancement for all effects" (`initial:`) - Super Kaioken as Kaioken.
+  return using.some(item => (item.system?.transformationId === wanted) || (String(fileOf(item)?.variantOf ?? "") === wanted)
+    || (String(fileOf(item)?.initial ?? "") === wanted));
 }
 
 /**
@@ -1901,6 +1924,14 @@ export function aspectWarnings(actor, item) {
     said.push("Beyond: not with Holding Back stacks unless Fully Mastered");
   }
   if (aspects.includes("blutz-wave") && actor?.getFlag?.("dbu-ttrpg", "tailLost")) said.push("Blutz Wave: you have no tail");
+  // A Special Enhancement: "you must have Mastered its Initial Enhancement to use it" (`initial:`).
+  const initial = String(fileOf(item)?.initial ?? "");
+  if (initial) {
+    const had = transformationItems(actor).find(each => each.system?.transformationId === initial);
+    if (!isMastered(had)) said.push(`Special Enhancement: its Initial Enhancement ${had?.name ?? transformationFile(initial)?.name ?? initial} is not Mastered`);
+  }
+  // `onlyAlongside:` - "You can only enter this Transformation if it would be used in conjunction with another Transformation" (Super Kaioken's).
+  if (fileOf(item)?.onlyAlongside && !alongsideOf(actor, item).length) said.push(`${item.name}: only with another Transformation in use`);
   said.push(...lineLockWarnings(actor, item));
   return said.join("; ");
 }

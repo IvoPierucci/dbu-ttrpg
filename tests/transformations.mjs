@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 55, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage and Steel Frame 2026-11-26)", files.length, 55);
+check("the first group, all 56, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26)", files.length, 56);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",
@@ -1694,6 +1694,27 @@ allow counter.free;`).program.blocks[0].requires;
      CH.includes(".reduce((sum, input) => sum + (Number(entry.categorySteps?.[input.value]) || 0), 0) : 0;"),
      CH.includes("const shown = (steps && roll.damageWith) ? roll.damageWith(key, balanced, steps) : (balanced ? roll[key].balanced : roll[key]);")],
     [[-1], true, true, true]);
+}
+
+// --- Super Kaioken (the user's link, 2026-11-26): a Special Enhancement, Initial Enhancement Kaioken, 3 Grades ------------------------
+{
+  const sk = transformation("super-kaioken", { active: true, grade: 3 });
+  const ssj = transformation("super-saiyan-1", { active: true });
+  const with3 = holding([ssj, sk, ...T.traitFilesFor(T.transformationFile("super-kaioken")).map(t => traitItem(sk, t.id))]);
+  const alone = holding([transformation("super-kaioken", { active: true })]);
+  const TM = fs.readFileSync(path.join(ROOT, "module", "transformations.mjs"), "utf8");
+  check("Super Kaioken: Grade 3 AG/FO/MA 3(T), Extra Dice 2 Categories up, Signature Wound G(T); counts as Kaioken; Kaioken not Mastered and alone said",
+    [Object.values(T.bonusesOf(sk)).map(T.bonusWritten), partsOf(with3, "dice.extra.category"), partsOf(with3, "wound.signature"),
+     T.inTransformationOf(with3, "kaioken"), T.aspectWarnings(with3, sk), T.aspectWarnings(alone, alone.items[0])],
+    [["3(T)", "3(T)", "3(T)"], [["Multiplied Power", 2]], [["Power of a Heartbeat", 3 * with3.system.tierOfPower]], true,
+     "Special Enhancement: its Initial Enhancement Kaioken is not Mastered",
+     "Special Enhancement: its Initial Enhancement Kaioken is not Mastered; Super Kaioken: only with another Transformation in use"]);
+  check("Super Kaioken left with the one beside it (onlyAlongside): the Revert's and one put by as another is entered, not the one entered",
+    [TM.includes("for (const id of alongsideLeaving(actor, [...leavingIds])) leavingIds.add(id);"),
+     TM.includes("for (const id of alongsideLeaving(actor, changes.filter(change => change[\"system.active\"] === false).map(change => change._id), item.id)) {"),
+     getTrait("super-kaioken-multiplied-power").script.includes("requires attackingManeuver && !hasResource(\"vermilion\");"),
+     getTrait("super-kaioken-vermilion-explosion").script.includes("expires(vermilion, turn);") && getTrait("super-kaioken-vermilion-explosion").script.includes("offerOneOf(power-up);")],
+    [true, true, true, true]);
 }
 
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------
