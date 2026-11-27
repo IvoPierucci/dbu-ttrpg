@@ -1788,11 +1788,15 @@
   color: var(--dbu-accent);
 }
 
+/* Foundry's buttons carry `min-height: var(--button-size)`, taller than these: left at 0 so the 18px stands, as the Triggered
+   button's beside them. */
 .dbu-ttrpg .trait-control,
 .dbu-ttrpg .maneuver-control {
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
+  min-height: 0;
+  box-sizing: border-box;
   padding: 0;
   line-height: 16px;
   font-size: 12px;
