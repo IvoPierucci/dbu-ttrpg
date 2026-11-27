@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 57, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin 2026-11-27)", files.length, 57);
+check("the first group, all 58, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin and Super Majin 2026-11-27)", files.length, 58);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",
@@ -1807,6 +1807,29 @@ allow counter.free;`).program.blocks[0].requires;
     [um.flags["dbu-ttrpg"]?.grandOn, um.flags["dbu-ttrpg"]?.grandMet, actor.system.life.value, actor.system.ki.value,
      maneuverAccessRows({ items: [], system: { effects: { slots: {} } }, getFlag: () => [] }).some(row => row.id === "full-awakening")],
     ["c9", "c9", 35, 20, true]);
+}
+
+// --- Super Majin (the user's link, 2026-11-27): a Greater Awakening of the Body, 1 Stack -------------------------------------------------
+{
+  const sm = transformation("super-majin", { stacks: 1 });
+  const mania = traitItem(sm, "super-majin-majin-mania");
+  const rubbery = { id: "rb1", name: "Rubbery Body", type: "racial", uuid: "Actor.me.Item.rb1", flags: { "dbu-ttrpg": { sourceId: "rubbery-body" } },
+    system: { script: getTrait("rubbery-body").script, chosen: [] } };
+  const withRubbery = holding([sm, mania, rubbery]);
+  const onlyRubbery = holding([rubbery]);
+  const without = holding([sm, mania]);
+  const S = without.system.effects.slots;
+  const MR = fs.readFileSync(path.join(ROOT, "module", "effects", "moments-runtime.mjs"), "utf8");
+  check("Super Majin: Greater, Body; AG +1, FO +2, TE +1, MA +2; Healthy Combat Rolls and Soak 1(T); Rubbery Body (6) undone where it is had, nothing where not",
+    [T.kindOf(T.transformationFile("super-majin")), T.transformationFile("super-majin").subtype,
+     Object.fromEntries(Object.entries(T.bonusesOf(sm)).map(([k, b]) => [k, T.bonusWritten(b)])),
+     partsOf(without, "soakValue").some(([name]) => name === "Majin Mania"),
+     [onlyRubbery.system.effects.slots["incoming.damage.directOrHigher"]?.add, withRubbery.system.effects.slots["incoming.damage.directOrHigher"]?.add,
+      S["incoming.damage.directOrHigher"]?.add],
+     getTrait("super-majin-majin-mania").grantsRacialOf, getTrait("super-majin-majin-mania").script.includes("surge(healing, 1, 0, 0, 2);"),
+     MR.includes("lifePerThresholdBT: Number(args[3]) || 0, surgencyShare: Number(args[4]) || 1 });")],
+    ["awakening", "greater", { agility: "1", force: "2", tenacity: "1", magic: "2" }, true,
+     [5 * onlyRubbery.system.baseTierOfPower, 0, undefined], "majin", true, true]);
 }
 
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------

@@ -990,7 +990,7 @@ async function runVerb(actor, call, context) {
       // of either Surge.
       const { takeSurge } = await import("../chat.mjs");
       return takeSurge(actor, { source: "an effect", kind: args[0] ?? null, lifeMultiplier: Number(args[1]) || 1,
-        extraDie: Number(args[2]) || 0, lifePerThresholdBT: Number(args[3]) || 0 });
+        extraDie: Number(args[2]) || 0, lifePerThresholdBT: Number(args[3]) || 0, surgencyShare: Number(args[4]) || 1 });
     }
 
     case "takeOneCondition": {

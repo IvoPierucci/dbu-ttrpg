@@ -1,0 +1,61 @@
+id: super-majin-majin-mania
+name: Majin Mania
+order: 1
+slot: trait
+# (5) "select and gain access to an additional Majin Secondary Racial Trait while you possess this Awakening" - asked as it is gained, had
+# while it applies (racial.mjs, Pure Form's Erratic Majin (3) way).
+grantsRacialOf: majin
+grantsRacialImportance: secondary
+description: >
+  You become a veritable juggernaut, allowing you to shake off damage and continue fighting long past when most would go down.
+text: >
+  Majin Mania: You become a veritable juggernaut, allowing you to shake off damage and continue fighting long past when most would go down.
+  (1)-[Passive]: While you are at the Healthy Health Threshold, increase your Combat Rolls and Soak Value by 1(T).
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase your Surgency by 2(T).
+  (3)-[Passive]: Ignore the 6th effect of the Rubbery Body Racial Trait.
+  (4)-[Passive]: When you gain this Awakening, you may:
+  • Change your base Size Category.
+  • Gain any Factors (you must still exchange Racial Traits as usual for their Factor Traits).
+  • Exchange any number of your Secondary Racial Traits for any other Majin Secondary Racial Traits.
+  • Lose access to any number of Signature Techniques and regain any Technique Points spent on them. Then, you may spend your Technique Points as you wish.
+  (5)-[Passive]: Upon gaining this Awakening, select and gain access to an additional Majin Secondary Racial Trait while you possess this Awakening.
+  (6)-[Triggered, 1/Round]: If you get hit by an Attacking Maneuver, regain Life Points equal to your Surgency before calculating Damage.
+  (7)-[Triggered/Start of Turn]: Regain Life Points equal to 1/4 (rounded up) of your Surgency.
+  (8)-[Triggered/Defeated]: Use a Healing Surge as an Out-of-Sequence Maneuver. If you do, double your Surgency for the duration of that Healing Surge.
+
+---
+
+# (1) In the Healthy Health Threshold: Combat Rolls and Soak Value 1(T).
+[passive, effect 1]
+if (!belowThreshold("bruised")) {
+    combatRolls += 1(T);
+    soakValue += 1(T);
+}
+
+# (2) Below the Injured Health Threshold: Surgency 2(T).
+[passive, effect 2]
+if (belowThreshold("injured")) {
+    surgency += 2(T);
+}
+
+# (3) Rubbery Body (6)'s 5(bT) more Damage from a Direct or Lethal attack taken back - where Rubbery Body is had.
+[passive, effect 3]
+if (holdsTrait("rubbery-body")) {
+    incoming.damage.directOrHigher -= 5(bT);
+}
+
+# (4) What may be changed as it is gained - the base Size Category, Factors, Secondary Racial Traits, Signature Techniques and their
+# Technique Points: the table's, done by hand on the sheet (Settings, the Traits tab, Signature Techniques) as it is gained.
+# (5) Its header's `grantsRacialOf`.
+
+# (6) Hit by an Attacking Maneuver, once a Round: Life Points equal to your Surgency before the Damage - ticked in the window as you are hit.
+[triggered/being-hit, 1/round, effect 6]
+life.value += surgency;
+
+# (7) The start of your turn: 1/4 (rounded up) of your Surgency in Life Points - its Triggered/Automatic button.
+[triggered/start-of-turn, effect 7]
+life.value += ceil(surgency / 4);
+
+# (8) Defeated: a Healing Surge out of sequence, its Surgency doubled for it - chosen on the Defeated card, never Automatic.
+[triggered/defeated, outOfSequence, effect 8]
+surge(healing, 1, 0, 0, 2);

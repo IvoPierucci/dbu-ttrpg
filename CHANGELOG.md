@@ -5,6 +5,8 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+- **New Transformation:** Super Majin (a Greater Awakening of the Majins). The `surge()` verb takes a fifth number: the Surgency
+  multiplied for that Surge.
 - **New Transformation:** Unkillable Majin, the first Super Awakening. With it, Grand Awakenings: a Trait with `slot: grand` is off
   until its Grand Trigger is met this Combat Encounter (`grandTrigger:` names that effect, which answers meanwhile) and the new
   Full Awakening Maneuver activates it for the Encounter, with 1/4 of the Maximum Life and Ki Points back.
