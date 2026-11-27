@@ -6581,6 +6581,14 @@
 .dbu-ttrpg .trait-arm.active[data-action="automateTrigger"] {
   --button-focus-outline-color: #7fb4d4;
   --button-hover-border-color: #7fb4d4;
+  /* Hovered, Foundry's warm red fill (button:hover's --button-hover-background-color): blue as well (the user's). */
+  --button-hover-background-color: rgba(127, 180, 212, 0.25);
+  --button-hover-text-color: #d6ebf7;
+}
+
+.dbu-ttrpg .trait-arm.active[data-action="automateTrigger"]:hover {
+  background: rgba(127, 180, 212, 0.25);
+  color: #d6ebf7;
 }
 
 .dbu-ttrpg .trait-arm:focus,
