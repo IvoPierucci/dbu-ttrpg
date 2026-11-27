@@ -1,0 +1,38 @@
+id: steel-frame-hard-as-steel
+name: Hard as Steel
+order: 1
+slot: trait
+description: >
+  Your rock-solid muscles make striking you akin to punching solid steel.
+text: >
+  Hard as Steel: Your rock-solid muscles make striking you akin to punching solid steel.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: Increase your Damage Reduction by 1(T).
+  (3)-[Passive]: While you are below the Injured Health Threshold, increase your Soak Value by 1(T).
+  (4)-[Passive]: If you would use your Cognitive Save for a Clash initiated by an Opponent, you may use your Corporeal Save instead.
+  (5)-[Triggered, 1/Round]: If you use the Direct Hit option of the Defend Maneuver, reduce the Damage Category of the Attacking Maneuver which targets you by 1 Category for the sake of your Damage Calculation.
+
+---
+
+# (1) Racial Life Modifier 2.
+[passive, effect 1]
+racialLifeModifier += 2;
+
+# (2) Damage Reduction 1(T).
+[passive, effect 2]
+damageReduction += 1(T);
+
+# (3) Below the Injured Health Threshold: Soak Value 1(T).
+[passive, effect 3]
+if (belowThreshold("injured")) {
+    soakValue += 1(T);
+}
+
+# (4) A Clash an Opponent initiated asking for your Cognitive Save: the Corporeal offered beside it (chat.mjs savesOffered).
+[passive, effect 4]
+allow clash.corporealForCognitive;
+
+# (5) Direct Hit, once a Round: the Category one lower for your Damage alone, where the hit is settled - ticked in Respond as you Defend
+# (Damage Inhibitor (2)'s way).
+[triggered/direct-hit, 1/round, chosen, effect 5]
+incoming.damage.category.shift -= 1;

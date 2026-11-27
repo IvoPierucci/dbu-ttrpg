@@ -768,6 +768,18 @@ function highPrograms(actor, report) {
  * Square have" and two answers to it would be two lists to keep in step.
  */
 function qualityPrograms(actor, report) {
+  const ids = qualitiesSuffered(actor);
+  if (!ids.length) return [];
+  return qualityEntries(actor, ids, report);
+}
+
+/**
+ * The Environmental Qualities whose effects this character suffers - the ones that become effects on them (qualityPrograms): none for
+ * one sheltered from them, nor one a Trait of theirs ignores. Asked by others too - Scalding Assault (3)'s "Characters suffering from
+ * the effects of the Obscured Environmental Quality".
+ */
+export function qualitiesSuffered(actor) {
+  if (!actor) return [];
   // Ignored altogether by what they are wearing - Environmental Protection.
   if (groundIgnored(Array.from(actor.items ?? []), getTrait).qualities) return [];
   // In a Vehicle: "Characters within a Vehicle ignore the effects of the Battle Environment and Environment Qualities".
@@ -786,9 +798,11 @@ function qualityPrograms(actor, report) {
   const ignoredQualities = new Set(Array.from(actor.items ?? []).filter(item => ["racial", "talent"].includes(item.type))
     .flatMap(item => [getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.ignoresQualities ?? []].flat())
     .map(each => String(each).trim().toLowerCase()).filter(Boolean));
-  const ids = qualitiesOf(actor.system, standing, getTrait).filter(id => !ignoredQualities.has(id));
-  if (!ids.length) return [];
+  return qualitiesOf(actor.system, standing, getTrait).filter(id => !ignoredQualities.has(id));
+}
 
+/** Each Quality suffered, its file's effects as an entry. */
+function qualityEntries(actor, ids, report) {
   const entries = [];
   for (const id of ids) {
     const trait = getTrait(id);
@@ -1149,8 +1163,10 @@ export function reactiveFor(actor, options = {}) {
   // What the player set to Automatic on a Racial Trait (the user's): answers its moment each time, never spent off. And a
   // State's, Automatic until set back.
   const automatic = automaticIds(actor);
+  const entries = programsFor(actor, options);
+  const shared = sharedUses(actor, entries);
 
-  return programsFor(actor, options).flatMap(entry =>
+  return entries.flatMap(entry =>
     (entry.program.blocks ?? [])
       .filter(b => (b.mode === "triggered") || (b.mode === "automatic"))
       // A block waiting on a Level - Raging's Apoplectic, `from 3` - only once the State is at it (the user's: offered at every Level
@@ -1167,8 +1183,8 @@ export function reactiveFor(actor, options = {}) {
           // A Talent armed under the old per-Talent key still counts, so nothing a
           // player armed before this change quietly stops working.
           || armed.has(entry.sourceId),
-        uses: usesLeft(actor, entry.sourceId, b, siblings(entry.program, b)),
-        available: usesLeft(actor, entry.sourceId, b, siblings(entry.program, b)).available,
+        uses: usesLeft(actor, entry.sourceId, b, siblings(entry.program, b), shared.get(`${entry.sourceId}#${b.index}`)),
+        available: usesLeft(actor, entry.sourceId, b, siblings(entry.program, b), shared.get(`${entry.sourceId}#${b.index}`)).available,
         budget: b.budget
       }))
   );
@@ -1185,10 +1201,36 @@ function siblings(program, b) {
     .map(other => other.index);
 }
 
+/**
+ * Effects of two Traits that count as one for their limits - `sharesUses: 1 = steaming-fury 3` on a Trait: its 1st effect and that
+ * Trait's 3rd spend the same uses (Scalding Assault (1)'s "this still counts towards its [3/Encounter] Keyword"). Each block id of the
+ * pair to all of theirs, both ways.
+ */
+function sharedUses(actor, entries) {
+  const shared = new Map();
+  const traitOf = entry => getTrait(actor.items?.get?.(entry.sourceId)?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  const blocksOf = (entry, number) => (entry.program.blocks ?? []).filter(b => String(b.modifiers?.effect ?? "") === String(number))
+    .map(b => `${entry.sourceId}#${b.index}`);
+  for (const entry of entries) {
+    const spec = traitOf(entry)?.sharesUses;
+    if (!spec) continue;
+    for (const part of String(spec).split(";").map(each => each.trim()).filter(Boolean)) {
+      const match = part.match(/^(\d+)\s*=\s*([\w-]+)\s+(\d+)$/);
+      if (!match) continue;
+      const other = entries.find(each => traitOf(each)?.id === match[2]);
+      if (!other) continue;
+      const ids = [...blocksOf(entry, match[1]), ...blocksOf(other, match[3])];
+      for (const id of ids) shared.set(id, [...new Set([...(shared.get(id) ?? []), ...ids])]);
+    }
+  }
+  return shared;
+}
+
 /** What is left of one block's own limits - and of its printed effect's other blocks', `also`. */
-export function usesLeft(actor, sourceId, b, also = []) {
+export function usesLeft(actor, sourceId, b, also = [], sharedIds = []) {
   const uses = actor.system?.effectUses ?? actor.system?.talentUses ?? { round: [], encounter: [] };
-  const ids = [`${sourceId}#${b.index}`, ...also.map(index => `${sourceId}#${index}`)];
+  // And another Trait's effect it counts as one with (sharedUses).
+  const ids = [...new Set([`${sourceId}#${b.index}`, ...also.map(index => `${sourceId}#${index}`), ...(sharedIds ?? [])])];
 
   // Counts recorded under the old per-Talent key still count against the block, so a
   // use spent before this change is not handed back.

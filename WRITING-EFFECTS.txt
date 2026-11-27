@@ -800,7 +800,7 @@ not - the list is closed, so naming is exact and stays exact if a fifth is ever
 added.
 
 
-12b. A PIECE OF APPAREL'S OWN EFFECTS
+12e. A PIECE OF APPAREL'S OWN EFFECTS
 -------------------------------------
 
 A built Item - a piece of Apparel - has an Effects tab, and what is written there is what the
@@ -846,7 +846,7 @@ An `if` around a `piece.` line reads the wearer - Weather Resistant's
 `if (survival.ranks >= 2) { piece.resistsWeather.cold-weather += 2; }`.
 
 
-12e. A WEAPON'S OWN EFFECTS
+12f. A WEAPON'S OWN EFFECTS
 ---------------------------
 
 A Weapon's Effects work the same way, with `weapon.` Slots for what it does to an attack made

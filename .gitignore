@@ -13,3 +13,6 @@ desktop.ini
 # Compendium databases. Foundry builds these from the manifest on world load, and they
 # are binary LevelDB files - the talents themselves live in talents.json.
 packs/*/
+
+# The verification battery's output
+battery.log

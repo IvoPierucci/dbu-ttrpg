@@ -1,45 +1,45 @@
 # DBU TTRPG
 
-An unofficial Foundry VTT implementation of the
-[Dragon Ball Universe Tabletop RPG](https://dbu-rpg.com).
+An unofficial Foundry VTT game system for the [Dragon Ball Universe Tabletop RPG](https://dbu-rpg.com).
 
-Not affiliated with or endorsed by the DBU TTRPG authors. Dragon Ball is owned by
-its respective rights holders; this repository contains only game-system code.
+Not affiliated with or endorsed by the DBU TTRPG authors. Dragon Ball is owned by its respective rights holders.
+This repository holds the system's code and the game's rules content.
 
-> **Early development.** The character sheet works, but the system is incomplete
-> and its data model still changes in ways that break existing actors. Create new
-> characters rather than migrating old ones.
+> **In active development.** Most of the game is implemented, but much of it has been tried at a real table only a
+> little. The data model can still change; back up your world before updating.
 
-## Requirements
+## Requirements and installation
 
-Foundry VTT v13 or v14.
+- Foundry VTT v13 or v14.
+- Copy this folder into `Data/systems/dbu-ttrpg` in your Foundry user data directory, then create a world with the
+  DBU TTRPG system.
 
-## Installation
+## What is in it
 
-Copy this folder into `Data/systems/dbu-ttrpg` in your Foundry user data
-directory, or install it by manifest URL once one is published.
+- **Actors:** Characters, Minions (Special and Duplicate), Adversaries (Standard, Elite, Villain, with Quickplay),
+  Fusions and Vehicles.
+- **Character sheet:** Attributes and Skills, the Power Level progression table, Combat (Life, Ki, Capacity, Actions,
+  States and Conditions), Signature Techniques, Unique Abilities, Traits, Gear, Maneuvers, Transformations, Custom
+  Buffs, Adventure, Biography and Settings.
+- **Content** (2,000+ rules files):
+  - Every race with its Racial Traits, Factors and Other Traits, and Talents by Category.
+  - Maneuvers, Unique Abilities with Advancements, Signature Technique Advantages and Disadvantages, and Super Profiles.
+  - Combat Conditions and States, Apparel, Weapons, Items and Buddies, Battlefields, Weather and Environmental
+    Qualities, Karmic Effects.
+  - 55 Transformations (Awakenings, Enhancements, Forms, Evolved Stages) with their Aspects.
+- **Play:**
+  - Maneuvers and attacks are run through chat cards that roll Strike, Dodge and Wound, settle Clashes and apply Damage.
+  - Health Thresholds and Steadfast Checks, out-of-sequence offers, and Combat Rounds with the Action economy.
 
-## What works
+## Contributing
 
-- **Character sheet** on the modern ApplicationV2 API, with Main, Progression and
-  Biography tabs.
-- **Attributes** — Scores derived from the progression table, with the Aptitudes
-  and Saving Throws that come off them.
-- **Progression table** for Power Levels 1-30, reproducing the published Power
-  Level table. Each option unlocks exactly one column and fixes the rest.
-- **Skills** — all 21, with Ranks fed from Skill Improvement rows and Tier of
-  Power rank caps enforced as of the Level each Rank was earned.
-- **Races** — all 18 playable races, as editable data files. See
-  [`races/README.md`](races/README.md).
-- **Life and Ki**, Tier of Power and Breakthrough, Technique Points, and checks
-  with critical and botch handling.
+Read [`CLAUDE.md`](CLAUDE.md) first. It holds the project's rules and conventions and is the entry point for both people
+and AI assistants. Then, as needed:
 
-## Not implemented yet
-
-Talents, Transformations, traits and racial effects, Items, and the Signature
-Technique budget granted at Power Level 1.
-
-## Adding content
-
-Races are plain JSON files under [`races/`](races/) — drop a file in, add it to
-the index, reload. No code required.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is a map of the code.
+- [`docs/ADDING-CONTENT.md`](docs/ADDING-CONTENT.md) explains how to add Traits, Talents, Transformations and more.
+- [`WRITING-EFFECTS.txt`](WRITING-EFFECTS.txt) documents the effects language used in `traits/**/*.dbu`.
+- [`docs/RULINGS.md`](docs/RULINGS.md) records how ambiguous rules are read.
+- [`docs/WORKLOG.md`](docs/WORKLOG.md) lists open items and what is being worked on.
+- [`CHANGELOG.md`](CHANGELOG.md) lists changes by version.
+- [`tests/README.md`](tests/README.md) explains the verification battery (`bash tests/check.sh`).

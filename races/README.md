@@ -3,7 +3,8 @@
 One JSON file per race. To add a race:
 
 1. Drop a new `.json` file in this folder.
-2. Add its filename to the `races` array in `index.json`.
+2. Add its filename to the `races` array in `races/index.json` (this one is edited by hand;
+   `traits/index.json` is not - see `traits/README.md`).
 3. Reload Foundry.
 
 The list lives in `index.json` because a browser cannot read the contents of a

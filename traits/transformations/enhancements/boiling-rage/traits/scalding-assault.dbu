@@ -1,0 +1,52 @@
+id: boiling-rage-scalding-assault
+name: Scalding Assault
+order: 1
+slot: trait
+replaces: Frenzied Assault
+# Its [Constant] effects: a [Triggered] one that may be used outside the Transformation (the user's).
+constant: 1
+# (1) counts as Steaming Fury's 3rd for its limits: "this still counts towards its [3/Encounter] Keyword" (the user's, 2026-11-26).
+sharesUses: 1 = steaming-fury 3
+description: >
+  Your erratic and unpredictable behavior combined with your intense anger allows you to strike your opponent with greater power when they least expect it.
+text: >
+  Scalding Assault (Frenzied Assault): Your erratic and unpredictable behavior combined with your intense anger allows you to strike your opponent with greater power when they least expect it.
+  (1)-[Constant]: If you trigger the 3rd effect of Steaming Fury, you may instead use the Transformation Maneuver to enter this Transformation as an Out-of-Sequence Maneuver (this still counts towards its [3/Encounter] Keyword).
+  (2)-[Passive]: Increase the AoE for the 2nd effect of Steaming Fury by 1 Magnitude.
+  (3)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers that target Characters suffering from the effects of the Obscured Environmental Quality by 2(T).
+  (4)-[Passive]: Increase your Surgency by x(T), where x is equal to your current level of the Raging State.
+  (5)-[Triggered, 1/Round]: If you increase your level of the Raging State, you may regain Life Points equal to your Surgency.
+  (6)-[Triggered, 1/Round]: If you target an Opponent with an Attacking Maneuver while in the 2nd or higher Level of the Raging State, you may spend Life Points up to your Surgency to increase the Wound Roll of that Attacking Maneuver by an equal amount.
+
+---
+
+# (1) Constant: the Power Up's window, where Steaming Fury (3) answers it - in its place, the Transformation Maneuver out of sequence.
+# Its uses Steaming Fury (3)'s, one and the same 1/Round and 3/Encounter (its header's sharesUses): either used, both are spent.
+[triggered/power, 1/round, 3/encounter, outOfSequence, effect 1]
+requires holdsTrait("steaming-fury");
+maneuverOutOfSequence(transformation);
+
+# (2) Steaming Fury's Sphere a Magnitude larger: whom it catches is your player's targets (chat.mjs steamCloud) - the table's.
+
+# (3) Wound Rolls 2(T) against each one hit suffering from the Obscured Environmental Quality's effects (chat.mjs).
+[passive, effect 3]
+wound.vsObscured += 2(T);
+
+# (4) Surgency 1(T) for each Level of the Raging State.
+[passive, effect 4]
+surgency += states.raging * 1(T);
+
+# (5) A Level of the Raging State higher - entering it, or going up a Level in it (my reading: entering it is reaching its 1st) - once a
+# Round between the two (blocks of one effect share its limit): Life Points equal to your Surgency. Asked in the window either brings.
+[triggered/state-level/raging, 1/round, effect 5]
+life.value += surgency;
+
+[triggered/state/raging, 1/round, effect 5]
+life.value += surgency;
+
+# (6) In the Raging State's 2nd Level or higher, once a Round: Life Points up to your Surgency on an attack's Wound Roll, asked as it is
+# rolled (chat.mjs lifeOnWoundAsked).
+[passive, effect 6]
+if (states.raging >= 2) {
+    allow lifeOnWound.upToSurgency;
+}

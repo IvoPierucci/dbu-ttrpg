@@ -1,0 +1,35 @@
+id: boiling-rage-simmering-temper
+name: Simmering Temper
+order: 3
+slot: mastery
+mastery: 1
+# (3) "While you are in the Apoplectic Level of the Raging State, this Transformation possesses the Armored Aspect."
+grantsAspectTo: This = Armored if states.raging >= 3
+description: >
+  Your body may take damage, but all you feel is the endless wellspring of rage bubbling inside you as you pummel your enemies into oblivion.
+text: >
+  Simmering Temper: Your body may take damage, but all you feel is the endless wellspring of rage bubbling inside you as you pummel your enemies into oblivion.
+  (1)-[Passive]: While you possess the Guard Down Combat Condition, it does not count as a Combat Condition for the effects of your Opponents.
+  (2)-[Passive]: Ignore the second effect of the Angry level of the Raging State.
+  (3)-[Passive]: While you are in the Apoplectic Level of the Raging State, this Transformation possesses the Armored Aspect.
+  (4)-[Passive]: You may spend your Life Points as if they were Ki Points for any Ki Wagers you make. Any Life Points spent through this effect reduce your Capacity as if they were Ki Points being spent.
+  (5)-[1/Round]: If you are occupying a Square that has the Obscured Environmental Quality, you may move to any other Square that has the Obscured Environmental Quality as an Instant Maneuver.
+
+---
+
+# (3) Armored in the Apoplectic Level: its header's grantsAspectTo. (5) From one Obscured Square to another as an Instant: placing a token
+# where the steam is - the table's.
+
+# (1) Your Guard Down no Combat Condition for your Opponents' effects.
+[passive, effect 1]
+allow conditions.guardDownHidden;
+
+# (2) The Raging State's Angry Level 2nd effect - the Botch Range - ignored.
+[passive, effect 2]
+if (inState("raging")) {
+    botchRange.notWound -= states.raging;
+}
+
+# (4) Any Ki Wager in Life Points, out of Capacity as Ki would be - Wager Life Points in the attack's window, whatever its Profile.
+[passive, effect 4]
+allow wager.anyFromLife;

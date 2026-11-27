@@ -3250,7 +3250,8 @@ async function wagerAgain(actor, maneuver, before, declared, second) {
   const lifeNow = Boolean(PROFILES[second]?.wagerFromLife) && !PROFILES[declared.profile]?.wagerFromLife;
   if (!full && !lifeNow) return declared;
   const advantages = declared.advantages ?? [];
-  const life = Boolean(PROFILES[second]?.wagerFromLife || PROFILES[declared.profile]?.wagerFromLife);
+  const life = Boolean(PROFILES[second]?.wagerFromLife || PROFILES[declared.profile]?.wagerFromLife
+    || (actor.system.effects?.slots?.["wager.anyFromLife"] === true));
   const kiMax = maxKiWager(actor, advantages);
   const lifeMax = life ? maxLifeWager(actor, advantages) : 0;
   const floor = forcedFullWager(advantages) ? kiMax : minimumKiWager(actor, maneuver);

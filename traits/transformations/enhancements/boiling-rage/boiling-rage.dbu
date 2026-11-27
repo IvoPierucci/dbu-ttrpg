@@ -1,0 +1,37 @@
+id: boiling-rage
+name: Boiling Rage
+type: enhancement
+subtype: standard
+racial: Any
+prerequisites: Steaming Fury Racial Trait
+tier: 1+
+stress: 10
+variantOf: enraged
+aspects: Variant (Enraged), Innate State (Raging), Raging
+bonuses: FO +1(T), TE +1(T), MA +1(T)
+description: >
+  When your anger reaches its boiling point, it's much more literal than most, as steam starts to pour out of your body. Not only are you empowered by your rage, but the cloud of steam left in your presence makes you harder to spot, giving you greater defenses but also obscuring your attacks, leaving your opponents wide open.
+text: >
+  When your anger reaches its boiling point, it's much more literal than most, as steam starts to pour out of your body. Not only are you empowered by your rage, but the cloud of steam left in your presence makes you harder to spot, giving you greater defenses but also obscuring your attacks, leaving your opponents wide open.
+
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): Steaming Fury Racial Trait / Stress Test Requirement: 10 / Tier of Power Requirement. 1+
+  Aspects: Variant (Enraged), Innate State (Raging), Raging
+  AG – · FO +1(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Scalding Assault (Frenzied Assault): Your erratic and unpredictable behavior combined with your intense anger allows you to strike your opponent with greater power when they least expect it.
+  (1)-[Constant]: If you trigger the 3rd effect of Steaming Fury, you may instead use the Transformation Maneuver to enter this Transformation as an Out-of-Sequence Maneuver (this still counts towards its [3/Encounter] Keyword).
+  (2)-[Passive]: Increase the AoE for the 2nd effect of Steaming Fury by 1 Magnitude.
+  (3)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers that target Characters suffering from the effects of the Obscured Environmental Quality by 2(T).
+  (4)-[Passive]: Increase your Surgency by x(T), where x is equal to your current level of the Raging State.
+  (5)-[Triggered, 1/Round]: If you increase your level of the Raging State, you may regain Life Points equal to your Surgency.
+  (6)-[Triggered, 1/Round]: If you target an Opponent with an Attacking Maneuver while in the 2nd or higher Level of the Raging State, you may spend Life Points up to your Surgency to increase the Wound Roll of that Attacking Maneuver by an equal amount.
+
+  BURST LIMIT — Vigorous Boil: It doesn't matter why you're angry, your full wrath has been unleashed no matter how minor the slight, and you are ready to annihilate the target of your fury.
+  (1)-[Triggered/Transform]: Enter the Apoplectic level of the Raging State until the end of your next turn (ignoring the 5th effect of Explosive Fury). Then, trigger the 2nd effect of Steaming Fury, but increase the Magnitude of the AoE to Destructive.
+
+  MASTERY TRAIT — Simmering Temper: Your body may take damage, but all you feel is the endless wellspring of rage bubbling inside you as you pummel your enemies into oblivion.
+  (1)-[Passive]: While you possess the Guard Down Combat Condition, it does not count as a Combat Condition for the effects of your Opponents.
+  (2)-[Passive]: Ignore the second effect of the Angry level of the Raging State.
+  (3)-[Passive]: While you are in the Apoplectic Level of the Raging State, this Transformation possesses the Armored Aspect.
+  (4)-[Passive]: You may spend your Life Points as if they were Ki Points for any Ki Wagers you make. Any Life Points spent through this effect reduce your Capacity as if they were Ki Points being spent.
+  (5)-[1/Round]: If you are occupying a Square that has the Obscured Environmental Quality, you may move to any other Square that has the Obscured Environmental Quality as an Instant Maneuver.
