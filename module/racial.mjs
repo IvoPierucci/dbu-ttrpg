@@ -494,9 +494,10 @@ export function ownedRacialTraits(actor) {
   const slots = actor?.system?.effects?.slots;
   const fileOf = item => getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   // A Factor Trait that replaces a Racial Trait of theirs by name - From Goop's "[Majin Regeneration]" - stands where that one would (the
-  // user's): its race's group, its order.
+  // user's): its race's group, its order. One exchanged from a race Trait's row stands where that one did, whichever it was (the
+  // user's, 2026-11-27: `exchangedFor`).
   const place = item => {
-    const replaced = races.map(race => replacedTraitOf(fileOf(item), race)).find(Boolean);
+    const replaced = getTrait(item.flags?.["dbu-ttrpg"]?.exchangedFor ?? "") || races.map(race => replacedTraitOf(fileOf(item), race)).find(Boolean);
     return replaced ? { rank: 0, group: groupName(replaced), order: orderOf(replaced) + 0.5 }
       : { rank: Math.min(...races.map(race => groupRank(item, race, slots))), group: groupName(item), order: orderOf(fileOf(item)) };
   };

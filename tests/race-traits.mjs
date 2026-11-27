@@ -114,6 +114,19 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
      read("module", "race-traits.mjs").includes('Hooks.on("createItem", transformationChanged);')], [true, true, true]);
 }
 
+// An exchanged Factor Trait listed where the race Trait it replaced stood, not last (the user's, 2026-11-27).
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const auto = RT.raceTraitPlan(actor("character", { race: "saiyan" })).auto.map(file => file.id);
+  const at = auto.indexOf("powerful-physique");
+  const brute = { id: "i-brute", name: "Brute", type: "racial", system: { factor: "mutation" }, flags: { "dbu-ttrpg": { sourceId: "brute", exchangedFor: "powerful-physique" } } };
+  const rows = [brute, ...auto.filter(id => id !== "powerful-physique").map(id => ({ ...item(id, { system: { race: "saiyan" } }), name: getTrait(id).name }))];
+  const listed = RAC.ownedRacialTraits(actor("character", { race: "saiyan", effects: { slots: {} } }, rows)).map(row => row.flags["dbu-ttrpg"].sourceId);
+  const order = RAC.ownedRacialTraits(actor("character", { race: "saiyan", effects: { slots: {} } }, auto.map(id => ({ ...item(id, { system: { race: "saiyan" } }), name: getTrait(id).name }))))
+    .map(row => row.flags["dbu-ttrpg"].sourceId);
+  check("Brute, exchanged for Powerful Physique, listed in its place", [at >= 0, listed.indexOf("brute") === order.indexOf("powerful-physique")], [true, true]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));
