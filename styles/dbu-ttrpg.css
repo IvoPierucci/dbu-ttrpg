@@ -1775,12 +1775,11 @@
   font-size: 10px;
 }
 
-/* A Trait's row buttons centred on the row and lifted 2px, clear of the text unfolded under it (the user's), not on its baseline. */
-.dbu-ttrpg .trait-head > .trait-arm,
-.dbu-ttrpg .trait-head > .trait-control {
-  align-self: center;
-  position: relative;
-  top: -2px;
+/* A Trait's row: everything on it - arrow, image, name, what it is, its buttons - centred on one line, and 3px under it before
+   the text unfolded below (the user's: the buttons alone lifted left the name looking low beside them). */
+.dbu-ttrpg .trait-list .trait-head {
+  align-items: center;
+  padding-bottom: 3px;
 }
 
 .dbu-ttrpg .trait-arm.active {
