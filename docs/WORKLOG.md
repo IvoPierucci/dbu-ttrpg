@@ -45,6 +45,7 @@ narrates.
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
 - **2026-11-27 (Ivo's Claude):**
+  - `module/content-ready.mjs`: the actor sheets' `render` waits on the content loaded in `setup` (`waitForContent`).
   - A Maneuver added to the system reaches old characters by itself: a GM `ready` hook gives missing core Maneuver Items once
     (`flags.dbu-ttrpg.coreGranted`). A `ready` hook that reads content files must `await contentLoaded` (setup is async).
   - Trait text on the sheet: `racialTraitLines(item, live)` - with `live` (the sheet's `#liveOf`) the site's style, uses left,

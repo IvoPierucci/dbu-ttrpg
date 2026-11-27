@@ -26,6 +26,7 @@ import { forget, forgetAll } from "./effects/registry.mjs";
 import { coreManeuverItems, registerHotbarDrop, registerMacroApi } from "./use-maneuver.mjs";
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
 import { loadManeuvers } from "./maneuvers.mjs";
+import { contentLoading } from "./content-ready.mjs";
 import { getTrait, loadTraits } from "./effects/traits.mjs";
 import { payKiWithStamina } from "./adversary.mjs";
 import { registerCombatHooks, registerBreathHooks, registerDefeatHooks, registerWornBreathHooks, registerRacialLifeHooks }
@@ -519,10 +520,14 @@ Hooks.once("setup", async () => {
     await loadTraits();
     await Promise.all([loadRaces(), loadManeuvers()]);
   })();
-  await contentLoaded;
-  for (const actor of game.actors ?? []) actor.prepareData();
-  // A Minion reads its Master's effects (allies.mjs minionGifts): again, now every Master's are prepared.
-  for (const actor of game.actors ?? []) if (isMinion(actor)) actor.prepareData();
+  // A sheet opened before this is done waits for it (content-ready.mjs; the user's, 2026-11-27: opened too soon, it was drawn
+  // without the rules) - the characters prepared with them included.
+  await contentLoading((async () => {
+    await contentLoaded;
+    for (const actor of game.actors ?? []) actor.prepareData();
+    // A Minion reads its Master's effects (allies.mjs minionGifts): again, now every Master's are prepared.
+    for (const actor of game.actors ?? []) if (isMinion(actor)) actor.prepareData();
+  })());
 });
 
 /**

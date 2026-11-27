@@ -29,6 +29,8 @@ There are three layers:
   On `ready` it loads the Traits and seeds the Talents. It also holds a number of world-level `Hooks.on(...)`
   (actor and item updates, sizes, links).
 - `system.json` holds the manifest, Actor and Item types, compatibility and version.
+- `module/content-ready.mjs`: whether `setup`'s loading of the content (and preparing every character with it) is done; the actor
+  sheets wait on it before they are drawn, since Foundry does not wait on an async hook.
 
 ## The effects engine (`module/effects/`)
 

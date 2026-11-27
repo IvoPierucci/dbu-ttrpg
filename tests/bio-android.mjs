@@ -1935,4 +1935,30 @@ const blocks = script => compile(script).program.blocks.filter(b => b.mode !== "
      ENTRY.includes("  contentLoaded = (async () => {\n    await loadTraits();")], [true, true, true, true, true]);
 }
 
+
+// --- A sheet opened before the rules are loaded waits for them (the user's, 2026-11-27: opened too soon, it was drawn incomplete) ----
+{
+  const READY = await import(modUrl("content-ready.mjs"));
+  const said = [];
+  const before = globalThis.ui;
+  globalThis.ui = { notifications: { info: text => said.push(text) } };
+  let finish;
+  const order = [];
+  READY.contentLoading(new Promise(resolve => { finish = resolve; }));
+  const first = READY.waitForContent().then(() => order.push("sheet 1"));
+  const second = READY.waitForContent().then(() => order.push("sheet 2"));
+  const waiting = [READY.contentReady(), order.length];
+  order.push("loaded");
+  finish();
+  await Promise.all([first, second]);
+  globalThis.ui = before;
+  const ENTRY = read("module", "dbu-ttrpg.mjs");
+  check("waited on, said once, drawn after the loading and the characters prepared with it; both actor sheets wait",
+    [waiting, order, READY.contentReady(), said.length, said[0]?.startsWith("DBU TTRPG: loading the rules"),
+     ENTRY.includes("  await contentLoading((async () => {\n    await contentLoaded;\n    for (const actor of game.actors ?? []) actor.prepareData();"),
+     ["actor-character-sheet.mjs", "actor-vehicle-sheet.mjs"].every(file => read("module", "sheets", file)
+       .includes("  async render(options, _options) {\n    await waitForContent();\n    return super.render(options, _options);"))],
+    [[false, 0], ["loaded", "sheet 1", "sheet 2"], true, 1, true, true, true]);
+}
+
 console.log(failed ? `\n${failed} failing` : "\n0 failing");

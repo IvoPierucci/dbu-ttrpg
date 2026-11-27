@@ -1,6 +1,7 @@
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
+import { waitForContent } from "../content-ready.mjs";
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, isFusion, mayBeMaster, typicalMinion } from "../actor-types.mjs";
 import { fusionContext, racesOf } from "../fusion.mjs";
@@ -437,6 +438,12 @@ const THIEF_MANEUVERS = Object.freeze(["brace", "dirty-trick", "flip", "hide", "
   "snatch", "terrify", "treatment"]);
 
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+
+  /** Not drawn before the system's rules are loaded (content-ready.mjs): opened too soon, it waits for them and says so. */
+  async render(options, _options) {
+    await waitForContent();
+    return super.render(options, _options);
+  }
 
   static DEFAULT_OPTIONS = {
     classes: ["dbu-ttrpg", "character"],
