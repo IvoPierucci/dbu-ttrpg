@@ -220,6 +220,16 @@ function printedTraitLines(item) {
 }
 
 /**
+ * The Maneuvers a Trait's own effects open - `allow maneuver.<id>` in its file or in its chosen Options' (Class Up's Choice
+ * Maneuvers, the user's 2026-11-27) - listed under it on the Traits tab as a `fromTrait` Maneuver is.
+ */
+export function maneuversOpenedBy(item) {
+  const files = [getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? ""),
+    ...(item?.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value))].filter(Boolean);
+  return new Set(files.flatMap(file => [...String(file.script ?? "").matchAll(/\ballow\s+maneuver\.([\w-]+)\s*;/g)].map(match => match[1])));
+}
+
+/**
  * One printed effect of a Trait's (or Talent's) Item, as its text has it - "(4)-[Triggered, 1/Encounter]: When you target
  * ..." - for the hover wherever that effect is chosen (the user's). An Option or Choice effect with what was chosen for
  * it. "" where the text has no such line.

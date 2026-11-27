@@ -19,7 +19,7 @@ import { areAllies, masterOf, minionsOf } from "../allies.mjs";
 import { importCoreTalents, ownedTalents, refreshTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { traitAside } from "../aside.mjs";
 import { addCustomVillainousTrait, ownedVillainousTraits, villainousTraitFiles } from "../racial.mjs";
-import { factorName, addRacialTrait, optionGroupsOf, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { factorName, addRacialTrait, optionGroupsOf, bestialLimit, bestialOff, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, minionRacialUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, maneuversOpenedBy, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens, automaticIds, STATE_CODE_TRIGGERS, stateTriggerBlocks } from "../effects/registry.mjs";
@@ -6874,9 +6874,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // The Maneuvers that are this Trait's own effects - Majin Regeneration's 3rd: the character's own Maneuver Item, shown
       // here as well, used and dragged as it is on the Maneuvers tab (the user's). An Item holds no Item of its own.
       maneuvers: this.#ownedManeuvers()
-        .filter(maneuver => maneuver.fromTrait && ((maneuver.fromTrait === item.flags?.["dbu-ttrpg"]?.sourceId)
+        .filter(maneuver => (maneuver.fromTrait && ((maneuver.fromTrait === item.flags?.["dbu-ttrpg"]?.sourceId)
           // Or one of its Options' - Infinite Energy's, in Energy Core's fold.
           || (item.system.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === maneuver.fromTrait))))
+          // Or one its own effects open, and open now - Class Up's Choice Maneuver by its Option's `allow` (the user's, 2026-11-27).
+          || (maneuversOpenedBy(item).has(maneuver.id) && (this.actor.system.effects?.slots?.[`maneuver.${maneuver.id}`] === true)))
         .map(maneuver => ({
           itemId: maneuver.itemId,
           name: maneuver.name,

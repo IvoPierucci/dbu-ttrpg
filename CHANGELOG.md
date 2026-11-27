@@ -5,6 +5,8 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+- **A Trait's Maneuvers:** under a Trait also the Maneuvers its own effects open (`allow maneuver.<id>`, its chosen Option's too) -
+  Class Up's Choice Maneuver under Class Selection; the Transformation Traits list shows them as well.
 - **Core Maneuvers:** a character made before a Maneuver was added to the system (Class Up's Choice Maneuvers, for characters older
   than the Transformations) gets it when the world loads; one deleted on purpose is not given again.
 - **Trait text:** an Option's and a Choice's own lines ("Elite [1/Encounter]:") bold and counted like an effect's.

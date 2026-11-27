@@ -1717,6 +1717,22 @@ allow counter.free;`).program.blocks[0].requires;
     [true, true, true, true]);
 }
 
+// --- A Trait's Maneuvers by its Option's `allow` (the user's, 2026-11-27): Class Up's Choice Maneuver under Class Selection ----------------
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const cu = transformation("class-up", { stacks: 1 });
+  const sel = traitItem(cu, "class-up-class-selection");
+  sel.system.chosen = [{ key: "option", value: "class-up-elite" }];
+  const held = holding([cu, sel]);
+  const SH = fs.readFileSync(path.join(ROOT, "module", "sheets", "actor-character-sheet.mjs"), "utf8");
+  const TT = fs.readFileSync(path.join(ROOT, "templates", "parts", "actor-transformations.hbs"), "utf8");
+  check("Class Selection with Elite opens Class Up: Elite, listed under it; the Transformation Traits list draws a Trait's Maneuvers",
+    [[...RAC.maneuversOpenedBy(sel)], held.system.effects.slots["maneuver.class-up-elite-choice"],
+     SH.includes("|| (maneuversOpenedBy(item).has(maneuver.id) && (this.actor.system.effects?.slots?.[`maneuver.${maneuver.id}`] === true)))"),
+     TT.includes('<ul class="maneuver-list trait-maneuvers">')],
+    [["class-up-elite-choice"], true, true, true]);
+}
+
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------
 
 const code = [];
