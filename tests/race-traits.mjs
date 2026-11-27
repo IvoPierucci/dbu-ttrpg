@@ -92,6 +92,17 @@ const exchanged = { id: "i-from-goop", type: "racial", system: { factor: "primor
 check("an exchanged Factor Trait stands for what it replaced: exchangeable again, to restore it", [RT.slotOf(exchanged), RT.exchangeable(goopy, exchanged),
   RT.exchangeChoices(goopy, exchanged).original?.id], ["majin-regeneration", true, "majin-regeneration"]);
 
+// Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const first = (id, exchangedFor) => RAC.racialTraitLines({ type: "racial", system: { factor: getTrait(id).owner, text: getTrait(id).text, chosen: [] },
+    flags: { "dbu-ttrpg": { sourceId: id, exchangedFor } } })[0]?.html ?? "";
+  check("an exchanged Factor Trait's text: \"Dormant Saiya Power (Body) [Blood of the Warrior]:\"; Alternative Warrior Race keeps its own [Powerful Physique]",
+    [first("dormant-saiya-power", "blood-of-the-warrior").startsWith("Dormant Saiya Power (Body) [Blood of the Warrior]: "),
+     first("alternative-warrior-race", "warriors-pride").startsWith("Alternative Warrior Race (Body) [Powerful Physique]: "),
+     first("dormant-saiya-power", "").startsWith("Dormant Saiya Power (Body): ")], [true, true, true]);
+}
+
 const SHEET = read("module", "sheets", "actor-character-sheet.mjs");
 const ENTRY = read("module", "dbu-ttrpg.mjs");
 const TRAITS = read("templates", "parts", "actor-traits.hbs");

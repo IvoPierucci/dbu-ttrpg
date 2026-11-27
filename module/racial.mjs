@@ -159,8 +159,24 @@ function choicePicked(item) {
  * reads it for "(N)-" (the sheet's [Constant] lines, the harnesses) keeps it.
  */
 export function racialTraitLines(item, live = null) {
-  const out = printedTraitLines(item);
+  const out = exchangedNamed(item, printedTraitLines(item));
   return live ? liveLines(out, live) : out;
+}
+
+/**
+ * A Factor Trait exchanged for a Racial Trait (race-traits.mjs `exchangedFor`): what it replaced named in brackets after its name, as a
+ * Factor Trait that replaces a Primary prints it - "Dormant Saiya Power (Body) [Blood of the Warrior]:" (the user's, 2026-11-27). Not where
+ * its text names one already (Alternative Warrior Race's "[Powerful Physique]").
+ */
+function exchangedNamed(item, lines) {
+  const replaced = getTrait(String(item?.flags?.["dbu-ttrpg"]?.exchangedFor ?? ""));
+  if (!replaced || !item?.system?.factor) return lines;
+  const at = lines.findIndex(line => line.html && !line.gap && !line.addendum);
+  if (at < 0) return lines;
+  const head = /^([^:]*?\))(\s*):/.exec(lines[at].html);
+  if (!head || /\[[^\]]*\]\s*$/.test(head[1])) return lines;
+  const named = `${head[1]} [${lineHtml(replaced.name)}]:`;
+  return lines.map((line, index) => (index === at) ? { ...line, html: named + line.html.slice(head[0].length) } : line);
 }
 
 function printedTraitLines(item) {
