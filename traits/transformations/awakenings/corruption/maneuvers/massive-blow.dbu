@@ -1,0 +1,30 @@
+id: massive-blow
+name: Massive Blow
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: true
+requiresTarget: true
+usageLimit: 1/round
+# KP Cost: 5(T) over its Profile's - the table's to add as it is declared.
+# Opened while its Awakening applies (allow maneuver.<id>); a Special Maneuver, not a Villainous one - those every Adversary has.
+special: true
+source: Core Rule
+description: >
+  You destroy everything.
+text: >
+  Massive Blow [1/Round]: You destroy everything.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –KP Cost: 5(T) higher than the Ki Point Cost of your chosen Profile
+  –Exploitable: All Adjacent Opponents. If you take Damage from an Attacking Maneuver made through the Exploit Maneuver in response to this Attacking Maneuver, the Maneuver fails.
+  –Effect: Make an Attacking Maneuver of any Profile. That Attacking Maneuver gains a Destructive AoE of your choice. After concluding that Attacking Maneuver, all squares within that AoE gain the Desolated Environmental Quality for 2 Combat Rounds.
+
+---
+
+# Exploitable: whoever may Exploit it, and that a Damage taken from it makes it fail - the table's, as every Exploit is called.
+# An Attacking Maneuver of any Profile with a Destructive AoE of your choice (asked as it is declared); the Squares it covers Desolated
+# for 2 Combat Rounds afterwards: the table's (traits/qualities/desolated.dbu says what it does).
+[automatic/declare-maneuver]
+requires using("massive-blow");
+allow area.destructiveAdded;

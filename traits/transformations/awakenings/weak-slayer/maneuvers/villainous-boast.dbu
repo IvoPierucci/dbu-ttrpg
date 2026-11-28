@@ -1,0 +1,30 @@
+id: villainous-boast
+name: Villainous Boast
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Opened while its Awakening applies (allow maneuver.<id>); a Special Maneuver, not a Villainous one - those every Adversary has.
+special: true
+source: Core Rule
+description: >
+  You mock those weaker than you, forcing the weak to understand their own helplessness.
+text: >
+  Villainous Boast [1/Round]: You mock those weaker than you, forcing the weak to understand their own helplessness.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: All Adjacent Opponents. If you take Damage from an Attacking Maneuver made through the Exploit Maneuver in response to this Attacking Maneuver, the Maneuver fails.
+  –Effect: Make a Clash (Morale) against all Opponents that have a Tier of Power lower than yours. If you win, that Opponent suffers from the Shaken and Broken Combat Conditions until the start of your next turn. If you had knocked an Opponent through a Health Threshold during this Combat Round, they automatically lose this Clash.
+  If you had been knocked through a Health Threshold during this Combat Round, you cannot use this Adversary Maneuver.
+
+---
+
+# Exploitable: whoever may Exploit it, and that a Damage taken from it makes it fail - the table's, as every Exploit is called.
+# A Morale Clash at every Opponent of a lower Tier (here: every Opponent in a Destructive Sphere - who is of a lower Tier, and who
+# loses outright for having been knocked through this Round, the table's); won, Shaken and Broken until the start of your next turn.
+# Refused after you were knocked through this Round: the table's.
+[on used]
+areaClash(cognitiveVsMorale, destructive, shaken, broken);

@@ -1,0 +1,63 @@
+id: corruption-corrupted-body
+name: Corrupted Body
+order: 1
+slot: trait
+# (3): the Desolated Environmental Quality's effects not suffered (registry.mjs qualitiesSuffered).
+ignoresQualities: desolated
+# (7)'s Energy Charges: the Adversary Actions spent for Massive Blow.
+resource: massivecharges
+resourceLabel: Massive Blow Charges
+resourceMax: 99
+description: >
+  You exchange the sanctity of your body and mind for power.
+text: >
+  Corrupted Body: You exchange the sanctity of your body and mind for power.
+  (1)-[Passive]: While you are below the Bruised Health Threshold, reduce your Defense Value and Awareness by 1(T), but increase your Wound Rolls and Soak Value by 2(T).
+  (2)-[Passive]: Increase your Combat Rolls and Soak Value by 1(T).
+  (3)-[Passive]: Ignore the effects of the Desolated Environmental Quality. Additionally, while occupying a square with the Desolated Environmental Quality, apply an Energy Charge to all of your Attacking Maneuvers.
+  (4)-[Passive]: Upon gaining this Awakening, gain a Monstrous Trait while you possess this Awakening.
+  (5)-[Passive]: Gain access to the Massive Blow Adversary Maneuver.
+  (6)-[Triggered/Threshold]: Enter the Raging State.
+  (7)-[Triggered/Threshold]: You may spend all of your remaining Adversary Actions to use the Massive Blow Adversary Maneuver as an Out-of-Sequence Maneuver. If you do, for each Adversary Action spent, apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# (1) Below Bruised: Defense Value and Awareness 1(T) lower, Wound Rolls and Soak Value 2(T) higher.
+[passive, effect 1]
+if (belowThreshold("bruised")) {
+    defenseValue -= 1(T);
+    awareness -= 1(T);
+    wound += 2(T);
+    soakValue += 2(T);
+}
+
+# (2) Combat Rolls and Soak Value 1(T).
+[passive, effect 2]
+combatRolls += 1(T);
+soakValue += 1(T);
+
+# (3) Desolated ignored (the ignoresQualities header above), and an Energy Charge on every Attacking Maneuver made on a Desolated Square.
+[automatic/declare-maneuver, effect 3]
+requires attackingManeuver && onSquare("desolated");
+attack.energyCharges += 1;
+
+# (4) A Monstrous Trait while you have this Awakening: the table's to pick from the Traits tab (Other Traits, Monstrous).
+
+# (5) Massive Blow, opened.
+[passive, effect 5]
+allow maneuver.massive-blow;
+
+# (6) Knocked through a Health Threshold: the Raging State.
+[triggered/threshold, effect 6]
+enterState(raging, 1);
+
+# (7) Knocked through: every Adversary Action left spent, Massive Blow out of sequence with that many Energy Charges (massivecharges,
+# taken by Massive Blow as it is declared).
+[triggered/threshold, outOfSequence, effect 7]
+spendAdversaryActions(all, massivecharges);
+maneuverOutOfSequence(massive-blow);
+
+[automatic/declare-maneuver]
+requires using("massive-blow") && stacksAtLeast(1, "massivecharges");
+attack.energyCharges += massivecharges.stacks;
+massivecharges.stacks -= massivecharges.stacks;

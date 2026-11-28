@@ -99,7 +99,7 @@ const who = (tier) => ({
   check("aimed at somebody", tail.requiresTarget, true);
   check("and it is itself the attack", tail.attacking, true);
   check("which is what makes it the first of those",
-    allManeuvers().filter(m => m.special && m.attacking).map(m => m.id), ["area-wipe", "bite-attack", "planet-burst", "tail-attack"]);
+    allManeuvers().filter(m => m.special && m.attacking).map(m => m.id), ["area-wipe", "bite-attack", "massive-blow", "planet-burst", "tail-attack"]);
   check("priced at 2(T) of its own", tail.kiCostPerTier, 2);
   check("it is the flag it is", tail.tailAttack, true);
   check("and it is outside Diminishing Offense", tail.outsideDiminishing, true);

@@ -1,0 +1,28 @@
+id: kill-box
+name: Kill Box
+type: standard
+actionCost: 1
+kiCost: 0
+kiCostPerTier: 8
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Opened while its Awakening applies (allow maneuver.<id>); a Special Maneuver, not a Villainous one - those every Adversary has.
+special: true
+source: Core Rule
+description: >
+  You isolate an area to wear down opponents quickly and without mercy.
+text: >
+  Kill Box [1/Round]: You isolate an area to wear down opponents quickly and without mercy.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –KP Cost: 8(T)
+  –Exploitable: All Adjacent Opponents. If you take Damage from an Attacking Maneuver made through the Exploit Maneuver in response to this Attacking Maneuver, the Maneuver fails.
+  –Effect: You may use this Maneuver if an Ally in your Villainous Team is within a Line AoE (centered on you) by selecting that Ally and having that Ally spend an Action in response.
+  Create a Kill Box. The Kill Box is a unique Line AoE that occupies the squares between you and your selected Ally. The Magnitude of this AoE is increased by 1/2 PCC (min. +1 Magnitude), and remains on the Battlefield until either you or your selected Ally move for any reason.
+  All Opponents within the Kill Box trigger the Exploit Maneuver of you and your select Ally with all of their Maneuvers, and both you and your selected Ally increase the Strike and Wound Rolls of any Attacking Maneuver you make that target only characters within the Kill Box by 1(T) and 4(T) respectively.
+
+---
+
+# Exploitable: whoever may Exploit it, and that a Damage taken from it makes it fail - the table's, as every Exploit is called.
+# The Kill Box: its Squares, the Ally's Action, who is in it and its 1(T) Strike / 4(T) Wound against those alone - the table's.

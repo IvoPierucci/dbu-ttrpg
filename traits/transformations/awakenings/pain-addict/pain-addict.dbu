@@ -1,0 +1,29 @@
+id: pain-addict
+name: Pain Addict
+type: awakening
+subtype: lesser
+origin: mind
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: FO +1, TE +1, MA +1
+description: >
+  You’re a master of taking your pain and turning it into strength. You thrive on your own pain even! It fuels you to greater heights compared to most. You can’t live without it– pain proves you’re alive, right?– so much so that one could even call you an addict.
+text: >
+  You’re a master of taking your pain and turning it into strength. You thrive on your own pain even! It fuels you to greater heights compared to most. You can’t live without it– pain proves you’re alive, right?– so much so that one could even call you an addict.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Mind / Prerequisite(s): This character is an Adversary / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG – · FO +1 · TE +1 · SC – · IN – · MA +1 · PE –
+
+  Pain is Power: You have learned to relish in pain, meaning every effort to defeat you has only made you stronger.
+  (1)-[Passive]: If you are below the Injured Health Threshold, double the Attribute Modifier Bonus of this Transformation. If you are below the Critical Health Threshold, double it again.
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase your Combat Rolls and Soak Value by 1(T).
+  (3)-[Passive]: You automatically succeed at all Steadfast Checks.
+  (4)-[Triggered/Threshold, Ruling]: Spend all of your Adversary Actions. If you do, you become Numb to an equal number of Attacking Maneuvers that hit you. While you are Numb to an Attacking Maneuver, halve the amount of Damage you take.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

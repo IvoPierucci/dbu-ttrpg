@@ -1,0 +1,28 @@
+id: break-free
+name: Break Free
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+adversaryActionCost: 1
+# Opened while its Awakening applies (allow maneuver.<id>); a Special Maneuver, not a Villainous one - those every Adversary has.
+special: true
+source: Core Rule
+description: >
+  Break into a dangerous sprint, blowing away those foes that cling near to you.
+text: >
+  Break Free [1/Round]: Break into a dangerous sprint, blowing away those foes that cling near to you.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: To use this Maneuver, you must spend an Adversary Action. Make a Clash (Impulsive vs Impulsive/Corporeal) against all Opponents within a Minor Sphere AoE. If you win, that Opponent is moved up to 1(T) squares in a straight line away from you. Then, you may use the Movement Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# An Adversary Action (adversaryActionCost); an Impulsive Clash at every Opponent in a Minor Sphere (theirs Impulsive or Corporeal -
+# the Impulsive here); won, moved 1(T) Squares away - the table's. Then the Movement Maneuver out of sequence.
+[on used]
+areaClash(impulsiveVsCorporeal, minor);
+maneuverOutOfSequence(movement);

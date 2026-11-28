@@ -1,0 +1,30 @@
+id: stable-foe
+name: Stable Foe
+type: awakening
+subtype: greater
+origin: mind
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: AG +2, TE +2
+description: >
+  This Antagonist can adapt to most threats put out by the heroes, at least until they’re on their last legs.
+text: >
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Mind / Prerequisite(s): This character is an Adversary / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG +2 · FO – · TE +2 · SC – · IN – · MA – · PE –
+
+  Adaptive Antagonist: This Antagonist can adapt to most threats put out by the heroes, at least until they’re on their last legs.
+  (1)-[Passive]: While above the Injured Health Threshold, increase your Combat Rolls and Soak Value by 1(T).
+  (2)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers made through the Exploit Maneuver by 2(T).
+  (3)-[Passive]: While below the Injured Health Threshold, increase your Surgency by 2(T).
+  (4)-[Passive]: You gain access to the Directional Defense Villainous Maneuver.
+  (5)-[1/Round, PCC/Encounter]: While below the Injured Health Threshold, you may use a Healing Surge as an Out-of-Sequence Maneuver.
+  (6)-[Triggered/Start of Turn]: You may spend any number of Adversary Actions to remove an equal number of Combat Conditions (except Suffocating or Pinned). For the sake of this effect, if a Combat Condition has multiple stacks, each stack is considered its own Combat Condition for the amount of Adversary Actions required to remove it.
+  (7)-[Triggered/Start of Combat Round]: You may spend an Adversary Action to use the Directional Defense Villainous Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

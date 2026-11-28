@@ -1,0 +1,34 @@
+id: unbreaking-tide-dangerous-counter
+name: Dangerous Counter
+order: 2
+slot: trait
+description: >
+  You are a danger to attack, always ready to counter.
+text: >
+  Dangerous Counter: You are a danger to attack, always ready to counter.
+  (1)-[Passive]: While it is not your Turn, increase the Attribute Modifier Bonus (IN) of this Transformation by 1(T).
+  (2)-[Passive]: While it is not your Turn, increase your Wound Rolls by 2(T).
+  (3)-[Triggered]: If you are hit by an Attacking Maneuver but not knocked through a Health Threshold as a result, you may spend an Adversary Action to use the Basic Attack Maneuver after concluding that Attacking Maneuver. If you do, that Attacking Maneuver cannot possess an AoE and must target the character whose Attacking Maneuver triggered this effect.
+  (4)-[Triggered, 1/Encounter]: If you trigger the 3rd effect of Dangerous Counter, you may enter the Determined State for the duration of that Attacking Maneuver.
+
+---
+
+# (1) Not your Turn: this Transformation's IN Attribute Modifier Bonus 1(T) more.
+[passive, effect 1]
+if (!ownTurn) {
+    insight.mod += 1(T);
+}
+
+# (2) Not your Turn: Wound Rolls 2(T).
+[passive, effect 2]
+if (!ownTurn) {
+    wound += 2(T);
+}
+
+# (3) Hit and not knocked through: an Adversary Action for a Basic Attack at the attacker, no AoE, after theirs.
+[triggered/hit-not-knocked, costs 1 counter, outOfSequence, effect 3]
+maneuverOutOfSequence(basic-attack);
+
+# (4) Once an Encounter, with (3): the Determined State for that attack.
+[triggered/hit-not-knocked, 1/encounter, effect 4]
+enterState(determined, 1, turn);

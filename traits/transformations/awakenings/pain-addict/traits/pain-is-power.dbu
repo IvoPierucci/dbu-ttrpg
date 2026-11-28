@@ -1,0 +1,52 @@
+id: pain-addict-pain-is-power
+name: Pain is Power
+order: 1
+slot: trait
+# (4)'s Numb: how many Attacking Maneuvers that hit you have their Damage halved (spendAdversaryActions).
+resource: numb
+resourceLabel: Numb
+resourceMax: 99
+# A stack spent on each Attacking Maneuver that deals you Damage, the Damage halved (chat.mjs halvingResource).
+resourceHalvesDamage: true
+description: >
+  You have learned to relish in pain, meaning every effort to defeat you has only made you stronger.
+text: >
+  Pain is Power: You have learned to relish in pain, meaning every effort to defeat you has only made you stronger.
+  (1)-[Passive]: If you are below the Injured Health Threshold, double the Attribute Modifier Bonus of this Transformation. If you are below the Critical Health Threshold, double it again.
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase your Combat Rolls and Soak Value by 1(T).
+  (3)-[Passive]: You automatically succeed at all Steadfast Checks.
+  (4)-[Triggered/Threshold, Ruling]: Spend all of your Adversary Actions. If you do, you become Numb to an equal number of Attacking Maneuvers that hit you. While you are Numb to an Attacking Maneuver, halve the amount of Damage you take.
+
+---
+
+# (1) This Transformation's Attribute Modifier Bonus (FO +1, TE +1, MA +1) doubled below Injured, and doubled again below Critical:
+# +1 more each below Injured, +2 more below Critical (four times the +1) - doublings multiply (docs/RULINGS.md).
+[passive, effect 1]
+if (belowThreshold("injured")) {
+    force.mod += 1;
+    tenacity.mod += 1;
+    magic.mod += 1;
+}
+if (belowThreshold("critical")) {
+    force.mod += 2;
+    tenacity.mod += 2;
+    magic.mod += 2;
+}
+
+# (2) Below Injured: Combat Rolls and Soak Value 1(T).
+[passive, effect 2]
+if (belowThreshold("injured")) {
+    combatRolls += 1(T);
+    soakValue += 1(T);
+}
+
+# (3) Every Steadfast Check passed.
+[passive, effect 3]
+allow steadfast.autoPass.bruised;
+allow steadfast.autoPass.injured;
+allow steadfast.autoPass.critical;
+
+# (4) Knocked through a Health Threshold: every Adversary Action left spent, as many stacks of Numb. Each Attacking Maneuver that
+# hits you for Damage while you hold one: its Damage halved, a stack spent (the resourceHalvesDamage header above).
+[triggered/threshold, effect 4]
+spendAdversaryActions(all, numb);

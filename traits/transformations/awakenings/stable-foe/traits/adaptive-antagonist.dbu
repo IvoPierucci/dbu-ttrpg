@@ -1,0 +1,52 @@
+id: stable-foe-adaptive-antagonist
+name: Adaptive Antagonist
+order: 1
+slot: trait
+description: >
+  This Antagonist can adapt to most threats put out by the heroes, at least until they’re on their last legs.
+text: >
+  Adaptive Antagonist: This Antagonist can adapt to most threats put out by the heroes, at least until they’re on their last legs.
+  (1)-[Passive]: While above the Injured Health Threshold, increase your Combat Rolls and Soak Value by 1(T).
+  (2)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers made through the Exploit Maneuver by 2(T).
+  (3)-[Passive]: While below the Injured Health Threshold, increase your Surgency by 2(T).
+  (4)-[Passive]: You gain access to the Directional Defense Villainous Maneuver.
+  (5)-[1/Round, PCC/Encounter]: While below the Injured Health Threshold, you may use a Healing Surge as an Out-of-Sequence Maneuver.
+  (6)-[Triggered/Start of Turn]: You may spend any number of Adversary Actions to remove an equal number of Combat Conditions (except Suffocating or Pinned). For the sake of this effect, if a Combat Condition has multiple stacks, each stack is considered its own Combat Condition for the amount of Adversary Actions required to remove it.
+  (7)-[Triggered/Start of Combat Round]: You may spend an Adversary Action to use the Directional Defense Villainous Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) Above Injured (Healthy or Bruised): Combat Rolls and Soak Value 1(T).
+[passive, effect 1]
+if (!belowThreshold("injured")) {
+    combatRolls += 1(T);
+    soakValue += 1(T);
+}
+
+# (2) Wound Rolls 2(T) on Attacking Maneuvers made through the Exploit Maneuver.
+[passive, effect 2]
+wound.viaExploit += 2(T);
+
+# (3) Below Injured: Surgency 2(T).
+[passive, effect 3]
+if (belowThreshold("injured")) {
+    surgency += 2(T);
+}
+
+# (4) Directional Defense, opened.
+[passive, effect 4]
+allow maneuver.directional-defense;
+
+# (5) Once a Round, PCC an Encounter, below Injured: a Healing Surge out of sequence - offered at the start of each turn of yours.
+[triggered/start-of-turn, 1/round, $PCC/encounter, outOfSequence, effect 5]
+requires belowThreshold("injured");
+surge("healing");
+
+# (6) Your turn beginning: how many Adversary Actions asked, a Combat Condition stack shed for each (not Suffocating nor Pinned),
+# which asked for each stack (the owner's ruling, 2026-11-28: asked how many).
+[triggered/start-of-turn, effect 6]
+shedForAdversaryActions(suffocating, pinned);
+
+# (7) An Adversary Action: Directional Defense out of sequence.
+[triggered/start-of-round, costs 1 counter, outOfSequence, effect 7]
+maneuverOutOfSequence(directional-defense);

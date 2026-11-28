@@ -1,0 +1,36 @@
+id: sadistic-villain-playing-with-food
+name: Playing with Food
+order: 1
+slot: trait
+description: >
+  You enjoy playing with your food, slowly whittling down your players while making them helpless.
+text: >
+  Playing with Food: You enjoy playing with your food, slowly whittling down your players while making them helpless.
+  (1)-[Passive]: Increase your Strike and Wound Rolls by 1(T).
+  (2)-[Triggered]: If you target an Opponent that is below the Injured Health Threshold with a Signature Technique, increase the Damage Category of that Attacking Maneuver by 1 Category.
+  (3)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, set their Life Points to only be 1 lower than the Health Threshold they were knocked through for this effect. If you do, regain PCC*2(bT) Narrative Stamina and that Opponent gains the Shaken Combat Condition until the start of your next turn.
+  (4)-[Triggered, PCC/Encounter]: If you Defeat an Opponent with an Attacking Maneuver, you may use a Surge of your choice as an Out-of-Sequence Maneuver. You cannot trigger this effect if you have Defeated this Opponent previously in this Combat Encounter.
+
+---
+
+# (1) Strike and Wound Rolls 1(T).
+[passive, effect 1]
+strike += 1(T);
+wound += 1(T);
+
+# (2) A Signature Technique at an Opponent below Injured: its Damage Category 1 higher - ticked as it is declared.
+[triggered/declare-maneuver, toggle, effect 2]
+requires usingSignature && targetBelowThreshold("injured");
+attack.damageCategory.all += 1;
+
+# (3) Once a Round, knocking an Opponent through a Health Threshold: their Life Points 1 below its line, PCC*2(bT) Narrative Stamina
+# regained, and that Opponent Shaken until the start of your next turn.
+[triggered/knock-through, 1/round, effect 3]
+knockedJustBelow();
+gainStamina($PCC * 2(bT));
+markKnocked(shaken, 1, start);
+
+# (4) PCC an Encounter, Defeating an Opponent: a Surge of your choice out of sequence. "Not one you have Defeated before this
+# Encounter": the table's (who was Defeated before is not kept).
+[triggered/defeat-opponent, $PCC/encounter, outOfSequence, effect 4]
+surgeOutOfSequence();

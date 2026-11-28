@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 61, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin, Super Majin, Saiyan Prodigy and Greater Mutation 2026-11-27, Overflowing Power)", files.length, 61);
+check("the first group, all 76, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin, Super Majin, Saiyan Prodigy and Greater Mutation 2026-11-27, Overflowing Power and the 15 other Adversary Transformations)", files.length, 76);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",

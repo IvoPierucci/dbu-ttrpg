@@ -1,0 +1,27 @@
+id: directional-defense
+name: Directional Defense
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# Opened while its Awakening applies (allow maneuver.<id>); a Special Maneuver, not a Villainous one - those every Adversary has.
+special: true
+source: Core Rule
+description: >
+  You focus yourself in one direction, making your perfect defensive parameter.
+text: >
+  Directional Defense [1/Round]: You focus yourself in one direction, making your perfect defensive parameter.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: All Adjacent Opponents that are not in your selected Direction. If you take Damage from an Attacking Maneuver made through the Exploit Maneuver in response to this Maneuver, the Maneuver fails.
+  –Effect: Choose up, down, left, or right. From your square on the Battlefield, all squares that are in your chosen direction become your Direction.
+  Increase your Strike Rolls, Dodge Rolls, and Soak Value by 2(T) for the duration of any Attacking Maneuvers made by characters on a square in your chosen Direction. Additionally, if you are targeted by an Attacking Maneuver made by a character on a square of your chosen Direction, and do not take Damage from that Attacking Maneuver for any reason, this triggers your Exploit Maneuver.
+
+---
+
+# Exploitable: whoever may Exploit it, and that a Damage taken from it makes it fail - the table's, as every Exploit is called.
+# Your Direction (up, down, left or right) and who stands in it: the table's. Strike, Dodge and Soak 2(T) against those attacks, and
+# the Exploit when one of them does you no Damage - said on the card, added by the table.

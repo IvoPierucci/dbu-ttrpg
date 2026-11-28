@@ -104,10 +104,9 @@ const atMoment = (model, moment) => {
 
 // --- The nine, as the rulebook lists them -------------------------------------------------------
 {
-  check("nine Environmental Qualities",
+  check("ten Environmental Qualities (Desolated, an Adversary Transformation's, 2026-11-27)",
     traitsOfKind("qualities").map(quality => quality.id).sort(),
-    ["aflame", "bouncy", "dangerous", "electrified", "frozen", "glass", "metallic",
-     "obscured", "poisonous"]);
+    ["aflame", "bouncy", "dangerous", "desolated", "electrified", "frozen", "glass", "metallic", "obscured", "poisonous"]);
   check("and every one of them says it is one",
     traitsOfKind("qualities").every(quality => quality.envQuality === true), true);
 

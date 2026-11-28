@@ -1,0 +1,32 @@
+id: archetypal-bruiser
+name: Archetypal Bruiser
+type: awakening
+subtype: greater
+origin: mind
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: FO +2, TE +2, MA +2
+description: >
+  Big, strong, and not too bright, you have more muscle than brains, but you know how to use them. When you fight, your enemies tend to flee in terror of the pain which you are about to bestow.
+text: >
+  Big, strong, and not too bright, you have more muscle than brains, but you know how to use them. When you fight, your enemies tend to flee in terror of the pain which you are about to bestow.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Mind / Prerequisite(s): This character is an Adversary / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG – · FO +2 · TE +2 · SC – · IN – · MA +2 · PE –
+
+  Resilient Foe: Beat down the players with a gameplan of incredible resilience and constant AoEs to keep them on the move.
+  (1)-[Passive]: You may use your Force Modifier to calculate your Speeds instead of your Agility Modifier.
+  (2)-[Passive]: Increase your Combat Rolls, Might, and Soak Value by 1(T).
+  (3)-[Passive]: While you are below the Injured Health Threshold, increase your Soak Value by 1(T).
+  (4)-[Passive]: Treat your Size Category as if it was 1 larger for Gigantic Grip and Punching Down.
+  (5)-[Triggered]: If you use the Direct Hit option of the Defend Maneuver, you may spend an Adversary Action to reduce the Damage Category of that Attacking Maneuver by 1 Category.
+  (6)-[Triggered, 1/Round]: If you use an Attacking Maneuver that does not possess an AoE, you may spend an Adversary Action to apply an AoE of your choice to that Attacking Maneuver.
+  (7)-[Triggered/Start of Combat Round]: Apply a Destructive AoE of your choice to the Battlefield and then you may spend any number of Adversary Actions. At the end of the Combat Round, make an Attacking Maneuver of the Simple Profile with an equal number of Energy Charges to the amount of Adversary Actions you spent on that Attacking Maneuver. The targets for this Attacking Maneuver are all other characters within the AoE established at the start of the Combat Round through this effect, and this Attacking Maneuver is an Absolute Attack.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

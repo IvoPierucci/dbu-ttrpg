@@ -1,0 +1,41 @@
+id: unbreaking-tide-super-armor
+name: Super Armor
+order: 1
+slot: trait
+resource: armorpoints
+resourceLabel: Armor Points
+resourceMax: 9999
+# (1)-(2): lowered as your Life Points are by an Attacking Maneuver's Damage, and at 0 this Transformation left (chat.mjs drainOnDamage).
+resourceDrainedByDamage: true
+resourceEmptyLeaves: unbreaking-tide
+description: >
+  You withstand the hits of the protagonists, unbending and unrelenting.
+text: >
+  Super Armor: You withstand the hits of the protagonists, unbending and unrelenting.
+  (1)-[Automatic/Transform, Resource]: Gain Armor Points equal to 1/4 of your Maximum Life Points. If your Life Points would be reduced by Damage from an Attacking Maneuver, reduce your Armor Points by the same amount.
+  (2)-[Automatic]: If your Armor Points are reduced to 0, leave this Transformation immediately.
+  (3)-[Automatic]: If you leave this Transformation, gain 2 stacks of the Broken Combat Condition for 1 Combat Round.
+  (4)-[Passive]: Increase your Damage Reduction by the Attribute Modifier Bonus (TE) of this Transformation.
+  (5)-[Triggered, PCC/Encounter]: If an Attacking Maneuver that hits you would deal Direct Damage after all calculations of Damage Category, you may spend an Adversary Action to reduce the Damage Category of that Attacking Maneuver to Standard for the sake of your Damage Calculation.
+
+---
+
+# (1) Entering it: Armor Points 1/4 of your Maximum Life Points. "If your Life Points would be reduced by Damage from an Attacking
+# Maneuver, reduce your Armor Points by the same amount": both lowered - your Life Points as ever, and the Armor Points by as many
+# (our reading: the text says "reduce ... by the same amount", not "instead") - the resourceDrainedByDamage header above.
+# (2) Armor Points at 0: this Transformation left at once - resourceEmptyLeaves above.
+# (3) Leaving it, however it is left (Revert, (2), a failed Stress Test): 2 stacks of Broken for a Combat Round - till the start of
+# your next turn, a Round's length (our reading). Left by unticking it on the sheet: the table's (the sheet's tick does nothing else).
+[automatic/transform, effect 1]
+armorpoints.stacks += floor(life.max / 4);
+
+[automatic/transform, effect 3]
+conditionOnLeave(unbreaking-tide, broken, 2, start-of-next-turn);
+
+# (4) Damage Reduction by this Transformation's TE Attribute Modifier Bonus (1(T)).
+[passive, effect 4]
+damageReduction += 1(T);
+
+# (5) PCC an Encounter, a hit dealing Direct Damage: an Adversary Action for the Damage Category Standard - ticked in Respond.
+[triggered/direct-hit, $PCC/encounter, costs 1 counter, chosen, effect 5]
+incoming.damage.category.shift -= 1;

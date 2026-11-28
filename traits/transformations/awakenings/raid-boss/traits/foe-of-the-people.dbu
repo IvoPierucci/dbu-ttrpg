@@ -1,0 +1,35 @@
+id: raid-boss-foe-of-the-people
+name: Foe of the People
+order: 1
+slot: trait
+description: >
+  You are an enemy that must be overcome in masses.
+text: >
+  Foe of the People: You are an enemy that must be overcome in masses.
+  (1)-[Passive]: Increase your Soak Value by 2(T) and double the increase to your Maximum Life Points from your Adversary Category.
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase your Might and Wound Rolls by 1(T) and 2(T) respectively.
+  (3)-[Triggered]: If you use an Attacking Maneuver, you may apply an AoE of your choice to that Attacking Maneuver.
+  (4)-[Triggered/Start of Combat Round]: Spend an Adversary Action to make a Might Clash against all Opponents within a Minor Sphere AoE (centered on you). If you win, those Opponents have their Life Points reduced by your Might and you may move those Opponents a number of squares up to your Might away in a straight line away from you.
+
+---
+
+# (1) Soak Value 2(T); the Maximum Life Points the Adversary Category gives doubled (not its Ki - Statstick's doubles both).
+[passive, effect 1]
+soakValue += 2(T);
+adversaryLife.multiplier *= 2;
+
+# (2) Below Injured: Might 1(T), Wound Rolls 2(T).
+[passive, effect 2]
+if (belowThreshold("injured")) {
+    might += 1(T);
+    wound += 2(T);
+}
+
+# (3) An AoE of your choice on any Attacking Maneuver with none - asked as it is declared (maneuvers.mjs askAnyAddedArea).
+[passive, effect 3]
+allow area.anyAdded;
+
+# (4) An Adversary Action: a Might Clash at every Opponent in a Minor Sphere on you; won, their Life Points lower by your Might.
+# Moving them up to your Might in Squares away from you: the table's (token placement).
+[triggered/start-of-round, costs 1 counter, effect 4]
+areaClash(might, minor, fullMight);

@@ -1,0 +1,51 @@
+id: archetypal-speedster-quick-foe
+name: Quick Foe
+order: 1
+slot: trait
+description: >
+  Force the players to try to keep up in a deadly game of tag.
+text: >
+  Quick Foe: Force the players to try to keep up in a deadly game of tag.
+  (1)-[Passive]: Increase your Combat Rolls, Impulsive Saves, Initiative Value, and Speeds by 1(T).
+  (2)-[Passive]: You gain access to the ‘Break Free’ Adversary Maneuver.
+  (3)-[Passive]: The bonus to the Wound Roll from the Charging Assault Advantage can be as high as 6(T).
+  (4)-[Triggered]: If you successfully dodge an Attacking Maneuver, you may spend an Adversary Action to use the Movement Maneuver as an Out-of-Sequence Maneuver. This use of the Movement Maneuver does not count towards the round limit of the Movement Maneuver, but this effect can only be triggered once per each Turn.
+  (5)-[Triggered]: If you use the Movement Maneuver during an Opponent’s Turn, increase your Dodge Rolls by 1(T) for the remainder of that Turn. This effect does not stack.
+  (6)-[Triggered/Start of Turn]: You may spend an Adversary Action to use the Break Free Adversary Maneuver as an Out-of-Sequence Maneuver, ignoring its [1/Round] limitation.
+  (7)-[Triggered/Start of Combat Round]: If no Opponents are occupying a square within a Large Sphere AoE (centered on you), use the Basic Attack Maneuver, Signature Technique Maneuver, Power Up Maneuver, or Energy Charge Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) Combat Rolls, Impulsive Saves, Initiative and Speeds 1(T).
+[passive, effect 1]
+combatRolls += 1(T);
+save.impulsive += 1(T);
+initiative += 1(T);
+speed.all += 1(T);
+
+# (2) Break Free, opened.
+[passive, effect 2]
+allow maneuver.break-free;
+
+# (3) Charging Assault's Wound bonus up to 6(T) - its 2(T) cap raised by 4(T) (signature.mjs advantageWoundParts).
+[passive, effect 3]
+chargingAssault.capPerTier += 4;
+
+# (4) Once a Turn, dodging an Attacking Maneuver: an Adversary Action for the Movement Maneuver out of sequence.
+[triggered/dodged-attack, costs 1 counter, outOfSequence, effect 4]
+maneuverOutOfSequence(movement);
+
+# (5) Moving on an Opponent's Turn: Dodge 1(T) for the rest of it - ticked as the Movement Maneuver is declared on another's turn.
+[triggered/declare-maneuver, toggle, effect 5]
+requires using("movement") && opponentsTurn;
+dodge += 1(T);
+
+# (6) Your turn beginning: an Adversary Action for Break Free out of sequence, its 1/Round not counted.
+[triggered/start-of-turn, costs 1 counter, outOfSequence, effect 6]
+break-free.uses += 1;
+maneuverOutOfSequence(break-free);
+
+# (7) No Opponent in a Large Sphere on you: Basic Attack, Signature Technique, Power Up or Energy Charge out of sequence.
+[triggered/start-of-round, outOfSequence, effect 7]
+requires !opponentWithin("large");
+offerOneOf(basic-attack, signature-technique, power-up, energy-charge);

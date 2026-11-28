@@ -1,0 +1,32 @@
+id: terrifying-teamwork
+name: Terrifying Teamwork
+type: awakening
+subtype: greater
+origin: mind
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary, Teamwork Talent
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: AG +1, FO +2, TE +1, SC +1, IN +1, MA +2, PE +1
+description: >
+  You are part of a unique group of individuals that has spent so much time training together that you can’t imagine fighting with anyone else. You’re a team, and when all of you fight together, no one can stop you.
+text: >
+  You are part of a unique group of individuals that has spent so much time training together that you can’t imagine fighting with anyone else. You’re a team, and when all of you fight together, no one can stop you.
+
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Mind / Prerequisite(s): This character is an Adversary, Teamwork Talent / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG +1 · FO +2 · TE +1 · SC +1 · IN +1 · MA +2 · PE +1
+
+  Dedicated Team: You are accustomed to fighting with a specific group of people.
+  (1)-[Ruling]: Upon gaining access to this Awakening, name and declare a ‘Villainous Team’. All Adversaries who possess this Awakening and have declared the same ‘Villainous Team’ are on your ‘Villainous Team’.
+  (2)-[Passive]: While an Ally (that is not Defeated) is in your Villainous Team, increase your Combat Rolls by 1(T).
+  (3)-[Passive]: Double the bonuses from the 2nd effect of the Teamwork Talent.
+  (4)-[Passive]: Gain access to the ‘Kill Box’ Adversary Maneuver.
+  (5)-[Triggered, 1/Round]: If an Ally that is in your Villainous Team deals Damage to an Opponent with an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target an Opponent that received Damage from your Ally’s Attacking Maneuver.
+  (6)-[Triggered/Start of Combat Round]: If an Opponent is in the Kill Box, you may use the Basic Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, you do not have to pay the Ki Point Cost for this Attacking Maneuver.
+  (7)-[Triggered/Start of Combat Round]: If 1/2 of PCC Opponents or more would be in the Kill Box after using the Kill Box Maneuver, you may use the Kill Box Adversary Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

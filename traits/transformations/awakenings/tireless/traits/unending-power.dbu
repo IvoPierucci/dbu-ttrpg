@@ -1,0 +1,62 @@
+id: tireless-unending-power
+name: Unending Power
+order: 1
+slot: trait
+description: >
+  For one reason or another, you have tapped into an endless source of energy.
+text: >
+  Unending Power: For one reason or another, you have tapped into an endless source of energy.
+  (1)-[Passive]: Increase your Strike Rolls and Dodge Rolls by 1(T).
+  (2)-[Passive]: Reduce the Dice Score of your Steadfast Checks by 2.
+  (3)-[Passive]: Increase your Wound Rolls by 3(T), but reduce your Wound Rolls by 1(T) for each Health Threshold you are below.
+  (4)-[Passive]: Halve your Narrative Stamina.
+  (5)-[Passive]: You cannot Ki Wager more than 1/10th of your Maximum Ki Points on any Attacking Maneuver.
+  (6)-[Triggered]: If you use an Attacking Maneuver with a Ki Wager equal to 1/10th of your Maximum Ki Points, apply an Energy Charge to that Attacking Maneuver.
+  (7)-[Triggered/Start of Combat Round]: Regain Ki Points until your Ki Points match your Maximum Ki Points.
+  (8)-[Triggered/Start of Combat Round]: Target PCC squares on the map. Each of those squares gains a Minor Sphere AoE with the targeted square as the Target Square until the end of the Combat Round. If any Opponent ends their turn within one of those AoEs, remove that AoE and use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target the triggering Opponent with that Attacking Maneuver.
+
+---
+
+# (1) Strike and Dodge Rolls 1(T).
+[passive, effect 1]
+strike += 1(T);
+dodge += 1(T);
+
+# (2) Steadfast Checks' Dice Score 2 lower.
+[passive, effect 2]
+steadfast.dice -= 2;
+
+# (3) Wound Rolls 3(T), 1(T) less for each Health Threshold below Healthy.
+[passive, effect 3]
+wound += 3(T);
+if (belowThreshold("bruised")) {
+    wound -= 1(T);
+}
+if (belowThreshold("injured")) {
+    wound -= 1(T);
+}
+if (belowThreshold("critical")) {
+    wound -= 1(T);
+}
+
+# (4) Narrative Stamina halved.
+[passive, effect 4]
+narrativeStamina.multiplier *= 0.5;
+
+# (5) No Ki Wager over 1/10th of your Maximum Ki Points.
+[passive, effect 5]
+kiWager.capacityShare = 0.1;
+
+# (6) A Ki Wager of exactly 1/10th of your Maximum Ki Points: an Energy Charge - ticked as it is declared.
+[triggered/declare-maneuver, toggle, effect 6]
+requires attackingManeuver;
+attack.energyCharges += 1;
+
+# (7) The Combat Round beginning: Ki Points back to their Maximum.
+[triggered/start-of-round, effect 7]
+ki.value += ki.max;
+
+# (8) PCC Squares, each a Minor Sphere till the Round ends; an Opponent ending a turn in one: a Basic Attack out of sequence at them.
+# Which Squares, and who ends a turn in them: the table's. The Basic Attack offered on the Round's card.
+[triggered/start-of-round, outOfSequence, effect 8]
+maneuverOutOfSequence(basic-attack);

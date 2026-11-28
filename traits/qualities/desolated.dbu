@@ -1,0 +1,25 @@
+id: desolated
+name: Desolated
+kind: battlefield
+envQuality: true
+source: Core Rule
+description: >
+  Ending your Turn here drops your Life Points to 1 below your next Health Threshold, and your Steadfast Check's Dice Score 2 lower.
+text: >
+  Desolated
+  If you end your Turn in this Environment, then reduce your Life Points to be 1 below your next Health Threshold and reduce your Dice Score for the Steadfast Check by 2. If, before applying this effect, you are below the Injured Health Threshold, then instead set your Life Points to their lowest minimum value and you are Defeated.
+
+---
+
+# Corruption's Massive Blow leaves it (traits/transformations/awakenings/corruption/), its Corrupted Body (3) ignores it and gives an
+# Energy Charge on it (onSquare("desolated")).
+#
+# The Steadfast Check made on such a turn's end: its Dice Score 2 lower, while you occupy it.
+[passive]
+steadfast.dice -= 2;
+#
+# Ending your Turn here: your Life Points 1 below the line of your next Health Threshold - or, already below Injured, at their lowest
+# and Defeated (lifeBelowNextThreshold). Which Squares are Desolated, and for how long (2 Combat Rounds after a Massive Blow): the
+# table's, as every Quality's placement is.
+[automatic/end-of-turn]
+lifeBelowNextThreshold(injured);

@@ -1,0 +1,16 @@
+id: meteor-striker-widespread-destruction
+name: Widespread Destruction
+order: 3
+slot: burst
+description: >
+  You unleash your power, threatening all foes within the vicinity.
+text: >
+  Widespread Destruction: You unleash your power, threatening all foes within the vicinity.
+  (1)-[Triggered/Transform]: Select up to 1/2 (rounded up) of PCC squares on the Battlefield. These squares are the Target Squares for a series of Minor Sphere AoEs. Make an Attacking Maneuver of any Profile that does not possess an AoE through its effects. All other characters within those AoEs are the targets of this Attacking Maneuver. This Attacking Maneuver gains an Energy Charge.
+
+---
+
+# Up to 1/2 (rounded up) of PCC Squares, each a Minor Sphere; an Attacking Maneuver at everyone in them, with an Energy Charge -
+# which Squares and who, the table's; the attack offered on the entering card, its Charge added as it is declared.
+[triggered/transform, 1/encounter, outOfSequence, effect 1]
+offerOneOf(basic-attack, signature-technique);

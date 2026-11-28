@@ -1,0 +1,33 @@
+id: adversary-burst
+name: Adversary Burst
+type: enhancement
+subtype: standard
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+stress: 10
+variantOf: burst-attack
+aspects: Variant (Burst Attack), Innate State (Surging), Raging, Exhausting, Peaked, Limited (LV1), Fading (LV1)
+bonuses: FO +1(T), IN +1(T), MA +1(T)
+description: >
+  You have your back up against a wall, and the only thing to do is unleash everything you have!
+text: >
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): This character is an Adversary / Stress Test Requirement: 10 / Tier of Power Requirement. 1+
+  Aspects: Variant (Burst Attack), Innate State (Surging), Raging, Exhausting, Peaked, Limited (LV1), Fading (LV1)
+  AG – · FO +1(T) · TE – · SC – · IN +1(T) · MA +1(T) · PE –
+
+  Villainous Crash (Burst Through the Limit): You have your back up against a wall, and the only thing to do is unleash everything you have!
+  (1)-[Permanent]: You cannot enter this Transformation unless you are below the Injured Health Threshold.
+  (2)-[Automatic/Transform]: Upon entering this Transformation, double your Narrative Stamina.
+  (3)-[Passive]: You can only use your Narrative Stamina as a substitute for Ki Points.
+  (4)-[Triggered]: If you use the Basic Attack Maneuver, you may spend an Adversary Action to apply an Energy Charge to that Attacking Maneuver.
+  (5)-[Triggered]: If you use an Attacking Maneuver, that Attacking Maneuver gains a Destructive AoE of your choice.
+  (6)-[Triggered, 1/Encounter]: If you use a Signature Technique, you may spend any number of Energy Burst stacks to apply an equal number of Energy Charges on that Attacking Maneuver.
+
+  BURST LIMIT — Crash Out: With your back up against a wall, you lose it. You have to beat those pesky protagonists.
+  (1)-[Automatic/Transform, Resource]: Gain PCC stacks of Energy Burst.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

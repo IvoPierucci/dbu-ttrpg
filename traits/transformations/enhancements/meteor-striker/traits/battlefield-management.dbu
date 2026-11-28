@@ -1,0 +1,43 @@
+id: meteor-striker-battlefield-management
+name: Battlefield Management
+order: 2
+slot: trait
+description: >
+  Y
+text: >
+  Battlefield Management: Y
+  (1)-[Passive]: While an Opponent is within your Melee Range, increase your Defense Value and Soak Value by 1(T), but reduce your Wound Rolls by 2(T).
+  (2)-[Passive]: While no Opponent is within your Melee Range, increase your Wound Rolls by 2(T).
+  (3)-[Passive]: During your Turn, increase your Might by 1(T).
+  (4)-[Triggered, 1/Round]: If you use an Attacking Maneuver, you may apply the Knockback Advantage to that Attacking Maneuver.
+  (5)-[Triggered/Start of Turn]: Make a Might Clash against all Opponents within your Melee Range. If you win, you may move that Opponent any number of squares up to your Might in a straight line away from you.
+
+---
+
+# Its description on the site reads "Y" (copied as it is).
+# (1) An Opponent in your Melee Range (adjacent): Defense Value and Soak Value 1(T), Wound Rolls 2(T) lower.
+# (2) None: Wound Rolls 2(T).
+[passive, effect 1]
+if (opponentInMelee) {
+    defenseValue += 1(T);
+    soakValue += 1(T);
+    wound -= 2(T);
+}
+
+[passive, effect 2]
+if (!opponentInMelee) {
+    wound += 2(T);
+}
+
+# (3) During your Turn: Might 1(T).
+[passive, effect 3]
+if (ownTurn) {
+    might += 1(T);
+}
+
+# (4) Once a Round, the Knockback Advantage on an Attacking Maneuver - the table's to add as it is declared.
+
+# (5) Your turn beginning: a Might Clash at every Opponent in your Melee Range; moving them up to your Might away: the table's.
+[triggered/start-of-turn, effect 5]
+requires opponentInMelee;
+areaClash(might, minor);

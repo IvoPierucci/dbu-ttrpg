@@ -1,0 +1,25 @@
+id: unbreaking-tide-you-cant-win
+name: You Can’t Win
+order: 3
+slot: burst
+# The TE Attribute Modifier Bonus 1(T) more till you leave it: kept as a stack (an Encounter's at most - Burst Limits are).
+resource: cantwin
+resourceInternal: true
+resourceMax: 1
+description: >
+  You prepare to handle the unrelenting assault of the protagonists.
+text: >
+  You Can’t Win: You prepare to handle the unrelenting assault of the protagonists.
+  (1)-[Triggered/Transform]: Regain Life Points equal to 1/4 (rounded up) of your Maximum Life Points and then increase the Attribute Modifier Bonus (TE) of this Transformation by 1(T) until you leave this Transformation.
+
+---
+
+# Life Points 1/4 (rounded up) of your Maximum, then this Transformation's TE Attribute Modifier Bonus 1(T) more till you leave it.
+[triggered/transform, 1/encounter, effect 1]
+life.value += ceil(life.max / 4);
+cantwin.stacks += 1;
+
+[passive]
+if (stacksAtLeast(1, "cantwin")) {
+    tenacity.mod += 1(T);
+}

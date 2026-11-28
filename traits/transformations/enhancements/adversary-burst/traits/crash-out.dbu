@@ -1,0 +1,18 @@
+id: adversary-burst-crash-out
+name: Crash Out
+order: 2
+slot: burst
+resource: energyburst
+resourceLabel: Energy Burst
+resourceMax: 99
+description: >
+  With your back up against a wall, you lose it. You have to beat those pesky protagonists.
+text: >
+  Crash Out: With your back up against a wall, you lose it. You have to beat those pesky protagonists.
+  (1)-[Automatic/Transform, Resource]: Gain PCC stacks of Energy Burst.
+
+---
+
+# Entering it: PCC stacks of Energy Burst ("PCC": the Adversary's Player Character Count, as everywhere).
+[automatic/transform, effect 1]
+energyburst.stacks += $PCC;

@@ -1,0 +1,42 @@
+id: weak-slayer-superior-being
+name: Superior Being
+order: 1
+slot: trait
+description: >
+  You stand atop the mountain of inferior fighters, exerting your might over them. Only through awakening a New Level of Power can your foes hope to stand up to you.
+text: >
+  Superior Being: You stand atop the mountain of inferior fighters, exerting your might over them. Only through awakening a New Level of Power can your foes hope to stand up to you.
+  (1)-[Passive]: While you are above the Bruised Health Threshold and all of your Opponents have a lower Tier of Power than you, increase your Combat Rolls and Soak Value by 1(T).
+  (2)-[Passive]: Double the Damage that Minions suffer from your Attacking Maneuvers.
+  (3)-[Passive]: Increase the Damage Category of all of your Attacking Maneuvers that only target characters with a lower Tier of Power than you by 1 Category.
+  (4)-[Passive]: You gain access to the Villainous Boast Adversary Maneuver.
+  (5)-[Triggered/Start of Turn]: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. This Attacking Maneuver cannot possess an AoE and the target of this Attacking Maneuver must be within your Melee Range, but you may apply a Ki Wager equal to 1/4 (rounded up) of your Narrative Stamina to this Attacking Maneuver. After using this Maneuver, you lose all of your Narrative Stamina.
+
+---
+
+# (1) Above Bruised (Healthy), every Opponent of a lower Tier of Power: Combat Rolls and Soak Value 1(T).
+[passive, effect 1]
+if (!belowThreshold("bruised") && allOpponentsLowerTier) {
+    combatRolls += 1(T);
+    soakValue += 1(T);
+}
+
+# (2) Minions take double Damage from your Attacking Maneuvers (chat.mjs, on the Damage there is).
+[passive, effect 2]
+damage.vsMinions.multiplier *= 2;
+
+# (3) An Attacking Maneuver at none but lower-Tier characters: its Damage Category 1 higher - as it is declared, Automatic.
+[automatic/declare-maneuver, effect 3]
+requires attackingManeuver && targetsAllLowerTier;
+attack.damageCategory.all += 1;
+
+# (4) Villainous Boast, opened.
+[passive, effect 4]
+allow maneuver.villainous-boast;
+
+# (5) Your turn beginning: a Basic Attack out of sequence, at one in your Melee Range, no AoE. The Ki Wager of 1/4 (rounded up) of
+# your Narrative Stamina, then all of it lost: the Wager the table's to add, the Stamina emptied here.
+[triggered/start-of-turn, outOfSequence, effect 5]
+requires opponentInMelee;
+maneuverOutOfSequence(basic-attack);
+spendStamina(narrativeStamina.value);

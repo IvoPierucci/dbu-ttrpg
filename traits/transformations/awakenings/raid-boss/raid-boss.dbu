@@ -1,0 +1,27 @@
+id: raid-boss
+name: Raid Boss
+type: awakening
+subtype: lesser
+origin: mind
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: AG +1, FO +1, TE +1, IN +1, MA +1
+description: >
+  You are an enemy that must be overcome in masses.
+text: >
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Mind / Prerequisite(s): This character is an Adversary / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG +1 · FO +1 · TE +1 · SC – · IN +1 · MA +1 · PE –
+
+  Foe of the People: You are an enemy that must be overcome in masses.
+  (1)-[Passive]: Increase your Soak Value by 2(T) and double the increase to your Maximum Life Points from your Adversary Category.
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase your Might and Wound Rolls by 1(T) and 2(T) respectively.
+  (3)-[Triggered]: If you use an Attacking Maneuver, you may apply an AoE of your choice to that Attacking Maneuver.
+  (4)-[Triggered/Start of Combat Round]: Spend an Adversary Action to make a Might Clash against all Opponents within a Minor Sphere AoE (centered on you). If you win, those Opponents have their Life Points reduced by your Might and you may move those Opponents a number of squares up to your Might away in a straight line away from you.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

@@ -1,0 +1,39 @@
+id: meteor-striker-battlefield-annihilator
+name: Battlefield Annihilator
+order: 1
+slot: trait
+description: >
+  Y
+text: >
+  Battlefield Annihilator: Y
+  (1)-[Triggered/Start of Combat Round]: Select up to 1/2 (rounded up) of PCC squares on the Battlefield. These squares are the Target Squares for a series of AoEs (you decide which AoE for each square). At the end of the Combat Round, make an Attacking Maneuver of any Profile that does not possess an AoE through its effects. All other characters within those AoEs are the targets of this Attacking Maneuver.
+  (2)-[Triggered]: At the start of an Opponent’s Turn, you may spend an Adversary Action to use the Basic Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, you must target that Opponent with this Attacking Maneuver.
+  (3)-[Passive]: Ignore Diminishing Offense.
+  (4)-[Passive]: Increase the Magnitude of any AoE you gain through the effects of a Profile by 1 Magnitude.
+  (5)-[Passive]: Apply an Energy Charge to your Signature Techniques.
+
+---
+
+# Its description on the site reads "Y" (copied as it is).
+# (1) Up to 1/2 (rounded up) of PCC Squares, each an AoE; at the Round's end an Attacking Maneuver at everyone in them - which
+# Squares, and who: the table's. The attack offered at the Round's end.
+[triggered/end-of-round, outOfSequence, effect 1]
+offerOneOf(basic-attack, signature-technique);
+
+# (2) An Opponent's turn beginning: an Adversary Action for a Basic Attack or Signature Technique at them, out of sequence.
+[triggered/opponent-start-of-turn, costs 1 counter, outOfSequence, effect 2]
+offerOneOf(basic-attack, signature-technique);
+
+# (3) Diminishing Offense ignored: its stacks cost your Strike Rolls nothing.
+[passive, effect 3]
+diminishing.offense.perStack *= 0;
+
+# (4) An AoE from a Profile 1 Magnitude higher - as the attack is declared.
+[automatic/declare-maneuver, effect 4]
+requires attackingManeuver;
+area.size += 1;
+
+# (5) An Energy Charge on your Signature Techniques.
+[automatic/declare-maneuver, effect 5]
+requires usingSignature;
+attack.energyCharges += 1;

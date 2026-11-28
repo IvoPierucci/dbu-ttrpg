@@ -1,0 +1,37 @@
+id: unbreaking-tide
+name: Unbreaking Tide
+type: enhancement
+subtype: standard
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+stress: 8
+aspects: Enhanced Save (All), Armored, Exhausting, Fading (LV1), Peaked
+bonuses: FO +1(T), TE +1(T), MA +1(T)
+description: >
+  You withstand the hits of the protagonists, unbending and unrelenting.
+text: >
+  Racial Requirement: Any / Transformation Type: Enhancement / Enhancement Type: Standard / Prerequisite(s): This character is an Adversary / Stress Test Requirement: 8 / Tier of Power Requirement. 1+
+  Aspects: Enhanced Save (All), Armored, Exhausting, Fading (LV1), Peaked
+  AG – · FO +1(T) · TE +1(T) · SC – · IN – · MA +1(T) · PE –
+
+  Super Armor: You withstand the hits of the protagonists, unbending and unrelenting.
+  (1)-[Automatic/Transform, Resource]: Gain Armor Points equal to 1/4 of your Maximum Life Points. If your Life Points would be reduced by Damage from an Attacking Maneuver, reduce your Armor Points by the same amount.
+  (2)-[Automatic]: If your Armor Points are reduced to 0, leave this Transformation immediately.
+  (3)-[Automatic]: If you leave this Transformation, gain 2 stacks of the Broken Combat Condition for 1 Combat Round.
+  (4)-[Passive]: Increase your Damage Reduction by the Attribute Modifier Bonus (TE) of this Transformation.
+  (5)-[Triggered, PCC/Encounter]: If an Attacking Maneuver that hits you would deal Direct Damage after all calculations of Damage Category, you may spend an Adversary Action to reduce the Damage Category of that Attacking Maneuver to Standard for the sake of your Damage Calculation.
+
+  Dangerous Counter: You are a danger to attack, always ready to counter.
+  (1)-[Passive]: While it is not your Turn, increase the Attribute Modifier Bonus (IN) of this Transformation by 1(T).
+  (2)-[Passive]: While it is not your Turn, increase your Wound Rolls by 2(T).
+  (3)-[Triggered]: If you are hit by an Attacking Maneuver but not knocked through a Health Threshold as a result, you may spend an Adversary Action to use the Basic Attack Maneuver after concluding that Attacking Maneuver. If you do, that Attacking Maneuver cannot possess an AoE and must target the character whose Attacking Maneuver triggered this effect.
+  (4)-[Triggered, 1/Encounter]: If you trigger the 3rd effect of Dangerous Counter, you may enter the Determined State for the duration of that Attacking Maneuver.
+
+  BURST LIMIT — You Can’t Win: You prepare to handle the unrelenting assault of the protagonists.
+  (1)-[Triggered/Transform]: Regain Life Points equal to 1/4 (rounded up) of your Maximum Life Points and then increase the Attribute Modifier Bonus (TE) of this Transformation by 1(T) until you leave this Transformation.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

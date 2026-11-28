@@ -1,0 +1,27 @@
+id: sadistic-villain
+name: Sadistic Villain
+type: awakening
+subtype: lesser
+origin: mind
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: FO +1, IN +1, MA +1
+description: >
+  You enjoy playing with your food, slowly whittling down your players while making them helpless.
+text: >
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Mind / Prerequisite(s): This character is an Adversary / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG – · FO +1 · TE – · SC – · IN +1 · MA +1 · PE –
+
+  Playing with Food: You enjoy playing with your food, slowly whittling down your players while making them helpless.
+  (1)-[Passive]: Increase your Strike and Wound Rolls by 1(T).
+  (2)-[Triggered]: If you target an Opponent that is below the Injured Health Threshold with a Signature Technique, increase the Damage Category of that Attacking Maneuver by 1 Category.
+  (3)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, set their Life Points to only be 1 lower than the Health Threshold they were knocked through for this effect. If you do, regain PCC*2(bT) Narrative Stamina and that Opponent gains the Shaken Combat Condition until the start of your next turn.
+  (4)-[Triggered, PCC/Encounter]: If you Defeat an Opponent with an Attacking Maneuver, you may use a Surge of your choice as an Out-of-Sequence Maneuver. You cannot trigger this effect if you have Defeated this Opponent previously in this Combat Encounter.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

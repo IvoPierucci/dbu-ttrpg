@@ -1,0 +1,30 @@
+id: archetypal-trickster
+name: Archetypal Trickster
+type: awakening
+subtype: greater
+origin: mind
+racial: Any
+# An Adversary Transformation (dbu-rpg.com/adversary-transformations/). Said, not enforced, like every Prerequisite.
+prerequisites: This character is an Adversary
+tier: 1+
+maxStacks: 1
+aspects: 
+bonuses: AG +1, FO +1, SC +2, IN +2, MA +1, PE +2
+description: >
+  Overwhelm your players with trickery.
+text: >
+  Racial Requirement: Any / Transformation Type: Awakening / Awakening Type: Greater / Awakening Origin: Mind / Prerequisite(s): This character is an Adversary / Maximum No of Stacks: 1 / Tier of Power Requirement. 1+
+  AG +1 · FO +1 · TE – · SC +2 · IN +2 · MA +1 · PE +2
+
+  Tricky Foe: Overwhelm your players with trickery.
+  (1)-[Passive]: Increase your Combat Rolls and Saving Throws by 1(T).
+  (2)-[Passive]: Increase your Skill Bonuses by 1.
+  (3)-[Passive]: You gain access to the Twisted Trick Adversary Maneuver.
+  (4)-[Triggered]: If you make a Clash against an Opponent that uses your Saving Throws or Skills, you may spend an Adversary Action to increase the Dice Score of your Clash by 1(T) or 2 respectively.
+  (5)-[Triggered]: If you inflict a Combat Condition on an Opponent, you may spend PCC(bT) Narrative Stamina to reduce their Ki Points by your highest Attribute Modifier.
+  (6)-[Triggered, 1/Round]: After an Opponent rolls a Combat Roll, you may spend an Adversary Action to increase or reduce the Natural Result of that Combat Roll by 1.
+  (7)-[Triggered/Start of Combat Round]: You may spend an Adversary Action to use the Twisted Trick Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# Its own effects are its Traits' (traits/); its numbers are read from the header above (transformations.mjs).

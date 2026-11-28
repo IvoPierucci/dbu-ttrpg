@@ -1,0 +1,31 @@
+id: sinful-soliloquy
+name: Sinful Soliloquy
+type: standard
+actionCost: 3
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# Opened while its Awakening applies (allow maneuver.<id>); a Special Maneuver, not a Villainous one - those every Adversary has.
+special: true
+source: Core Rule
+description: >
+  Y
+text: >
+  Sinful Soliloquy [1/Encounter]: Y
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 3 Actions
+  –KP Cost: N/A
+  –Exploitable: All Opponents within a Large Sphere AoE (centered on you). If you take Damage from an Attacking Maneuver made through the Exploit Maneuver in response to this Maneuver, the Maneuver fails.
+  –Effect: Enter the Superior State until the end of your next turn and gain PCC Adversary Actions.
+  If you successfully use this Maneuver, until the end of your next turn, if an Opponent targets you with an Attacking Maneuver, that triggers your Exploit Maneuver.
+
+---
+
+# Exploitable: whoever may Exploit it, and that a Damage taken from it makes it fail - the table's, as every Exploit is called.
+# Superior until the end of your next turn and PCC Adversary Actions; an Opponent targeting you meanwhile triggers your Exploit -
+# the table's (said on the card). Its description on the site reads "Y" (copied as it is).
+[on used]
+enterState(superior, 1, next-turn);
+# PCC: the Adversary's own (adversaryGains.pcc) - $PCC is a Transformation Trait's token, not a Maneuver's.
+actions.counterGained += adversaryGains.pcc;

@@ -1,0 +1,49 @@
+id: archetypal-trickster-tricky-foe
+name: Tricky Foe
+order: 1
+slot: trait
+description: >
+  Overwhelm your players with trickery.
+text: >
+  Tricky Foe: Overwhelm your players with trickery.
+  (1)-[Passive]: Increase your Combat Rolls and Saving Throws by 1(T).
+  (2)-[Passive]: Increase your Skill Bonuses by 1.
+  (3)-[Passive]: You gain access to the Twisted Trick Adversary Maneuver.
+  (4)-[Triggered]: If you make a Clash against an Opponent that uses your Saving Throws or Skills, you may spend an Adversary Action to increase the Dice Score of your Clash by 1(T) or 2 respectively.
+  (5)-[Triggered]: If you inflict a Combat Condition on an Opponent, you may spend PCC(bT) Narrative Stamina to reduce their Ki Points by your highest Attribute Modifier.
+  (6)-[Triggered, 1/Round]: After an Opponent rolls a Combat Roll, you may spend an Adversary Action to increase or reduce the Natural Result of that Combat Roll by 1.
+  (7)-[Triggered/Start of Combat Round]: You may spend an Adversary Action to use the Twisted Trick Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) Combat Rolls and Saving Throws 1(T).
+[passive, effect 1]
+combatRolls += 1(T);
+save.all += 1(T);
+
+# (2) Skill Bonuses 1.
+[passive, effect 2]
+skills.allBonus += 1;
+
+# (3) Twisted Trick, opened.
+[passive, effect 3]
+allow maneuver.twisted-trick;
+
+# (4) A Clash against an Opponent with your Saving Throw or Skill: an Adversary Action for 1(T) or 2 on your Dice Score - a box in
+# that Clash's window (chat.mjs adversaryBumpOpen).
+[passive, effect 4]
+allow clash.adversaryBump;
+
+# (5) Inflicting a Combat Condition on an Opponent: PCC(bT) Narrative Stamina for their Ki Points lower by your highest Attribute
+# Modifier (inflict-condition).
+[triggered/inflict-condition, effect 5]
+requires narrativeStamina.value >= $PCC * 1(bT);
+spendStamina($PCC * 1(bT));
+inflictedLosesKi(highest);
+
+# (6) Once a Round, after an Opponent's Combat Roll: an Adversary Action to move its Natural Result by 1 - the table's: the window
+# after a roll is the roller's own (its Karmic Effects), and the Opponent's choice has no place in it yet.
+
+# (7) An Adversary Action: Twisted Trick out of sequence.
+[triggered/start-of-round, costs 1 counter, outOfSequence, effect 7]
+maneuverOutOfSequence(twisted-trick);

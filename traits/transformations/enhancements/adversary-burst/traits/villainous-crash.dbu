@@ -1,0 +1,40 @@
+id: adversary-burst-villainous-crash
+name: Villainous Crash (Burst Through the Limit)
+order: 1
+slot: trait
+replaces: Burst Through the Limit
+description: >
+  You have your back up against a wall, and the only thing to do is unleash everything you have!
+text: >
+  Villainous Crash (Burst Through the Limit): You have your back up against a wall, and the only thing to do is unleash everything you have!
+  (1)-[Permanent]: You cannot enter this Transformation unless you are below the Injured Health Threshold.
+  (2)-[Automatic/Transform]: Upon entering this Transformation, double your Narrative Stamina.
+  (3)-[Passive]: You can only use your Narrative Stamina as a substitute for Ki Points.
+  (4)-[Triggered]: If you use the Basic Attack Maneuver, you may spend an Adversary Action to apply an Energy Charge to that Attacking Maneuver.
+  (5)-[Triggered]: If you use an Attacking Maneuver, that Attacking Maneuver gains a Destructive AoE of your choice.
+  (6)-[Triggered, 1/Encounter]: If you use a Signature Technique, you may spend any number of Energy Burst stacks to apply an equal number of Energy Charges on that Attacking Maneuver.
+
+---
+
+# (1) [Permanent] Entered only below Injured - warned, never refused (docs/RULINGS.md); the table's.
+
+# (2) Entering it: your Narrative Stamina doubled.
+[automatic/transform, effect 2]
+multiplyStamina(2);
+
+# (3) Narrative Stamina only as a substitute for Ki Points - the core rule (adversary.mjs payKiWithStamina); nothing more here.
+
+# (4) The Basic Attack Maneuver: an Adversary Action for an Energy Charge - ticked as it is declared.
+[triggered/declare-maneuver, toggle, costs 1 counter, effect 4]
+requires using("basic-attack");
+attack.energyCharges += 1;
+
+# (5) Every Attacking Maneuver: a Destructive AoE of your choice (asked as it is declared, on one with none).
+[passive, effect 5]
+allow area.destructiveAdded;
+
+# (6) Once an Encounter, a Signature Technique: Energy Burst stacks spent for as many Energy Charges - one a tick.
+[triggered/declare-maneuver, 1/encounter, toggle, effect 6]
+requires usingSignature && stacksAtLeast(1, "energyburst");
+attack.energyCharges += energyburst.stacks;
+energyburst.stacks -= energyburst.stacks;

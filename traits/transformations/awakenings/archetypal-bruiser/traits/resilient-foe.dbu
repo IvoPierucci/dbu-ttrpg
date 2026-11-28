@@ -1,0 +1,57 @@
+id: archetypal-bruiser-resilient-foe
+name: Resilient Foe
+order: 1
+slot: trait
+# (7)'s Energy Charges: the Adversary Actions spent at the Round's start.
+resource: bruisercharges
+resourceLabel: Bruiser Charges
+resourceMax: 99
+description: >
+  Beat down the players with a gameplan of incredible resilience and constant AoEs to keep them on the move.
+text: >
+  Resilient Foe: Beat down the players with a gameplan of incredible resilience and constant AoEs to keep them on the move.
+  (1)-[Passive]: You may use your Force Modifier to calculate your Speeds instead of your Agility Modifier.
+  (2)-[Passive]: Increase your Combat Rolls, Might, and Soak Value by 1(T).
+  (3)-[Passive]: While you are below the Injured Health Threshold, increase your Soak Value by 1(T).
+  (4)-[Passive]: Treat your Size Category as if it was 1 larger for Gigantic Grip and Punching Down.
+  (5)-[Triggered]: If you use the Direct Hit option of the Defend Maneuver, you may spend an Adversary Action to reduce the Damage Category of that Attacking Maneuver by 1 Category.
+  (6)-[Triggered, 1/Round]: If you use an Attacking Maneuver that does not possess an AoE, you may spend an Adversary Action to apply an AoE of your choice to that Attacking Maneuver.
+  (7)-[Triggered/Start of Combat Round]: Apply a Destructive AoE of your choice to the Battlefield and then you may spend any number of Adversary Actions. At the end of the Combat Round, make an Attacking Maneuver of the Simple Profile with an equal number of Energy Charges to the amount of Adversary Actions you spent on that Attacking Maneuver. The targets for this Attacking Maneuver are all other characters within the AoE established at the start of the Combat Round through this effect, and this Attacking Maneuver is an Absolute Attack.
+
+---
+
+# (1) Speeds from your Force Modifier where it is higher than your Agility Modifier.
+[passive, effect 1]
+allow speed.byForce;
+
+# (2) Combat Rolls, Might and Soak Value 1(T).
+[passive, effect 2]
+combatRolls += 1(T);
+might += 1(T);
+soakValue += 1(T);
+
+# (3) Below Injured: Soak Value 1(T) more.
+[passive, effect 3]
+if (belowThreshold("injured")) {
+    soakValue += 1(T);
+}
+
+# (4) Size 1 larger for Punching Down, and for Gigantic Grip (Wrestler (1)'s same words: wrestler.grip, maneuvers.mjs gripDifference).
+[passive, effect 4]
+punchingDown.sizeSteps += 1;
+allow wrestler.grip;
+
+# (5) Direct Hit: an Adversary Action for the Damage Category 1 lower - ticked in Respond as you Defend.
+[triggered/direct-hit, costs 1 counter, chosen, effect 5]
+incoming.damage.category.shift -= 1;
+
+# (6) Once a Round, an Adversary Action: an AoE of your choice on an Attacking Maneuver with none (asked as it is declared).
+[passive, effect 6]
+allow area.anyAdded;
+allow area.anyAddedRound;
+area.anyAddedAdversaryCost += 1;
+
+# (7) A Destructive AoE on the Battlefield (where: the table's), then any number of Adversary Actions - counted as Bruiser Charges.
+# At the Round's end, the Absolute Simple Attack at everyone in it with that many Energy Charges: the table's to make; its Charges here.
+[triggered/start-of-round, effect 7]
+spendAdversaryActions(any, bruisercharges);

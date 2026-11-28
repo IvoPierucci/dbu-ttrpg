@@ -1,0 +1,28 @@
+id: twisted-trick
+name: Twisted Trick
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+# Opened while its Awakening applies (allow maneuver.<id>); a Special Maneuver, not a Villainous one - those every Adversary has.
+special: true
+source: Core Rule
+description: >
+  Target a foe, turning them into a target of trickery.
+text: >
+  Twisted Trick [1/Round]: Target a foe, turning them into a target of trickery.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: All Adjacent Opponents. If you take Damage from an Attacking Maneuver made through the Exploit Maneuver in response to this Attacking Maneuver, the Maneuver fails.
+  –Effect: Target an Opponent and make a Clash (Cognitive/Morale) against them. If you win, that Opponent becomes a ‘Jinx’ until the end of the Combat Round.
+  The Jinx and all of their Allies within a Large Sphere AoE of the Jinx, have their Critical Target and Botch Range swapped – meaning they score a Critical Result when they would score a Botch Result and vice versa.
+  If the Jinx or any character affected by the AoE scores a Critical Result or a Botch Result, reduce their Life Points by your highest Attribute Modifier.
+
+---
+
+# Exploitable: whoever may Exploit it, and that a Damage taken from it makes it fail - the table's, as every Exploit is called.
+# A Clash (Cognitive/Morale) at the target; won, the Jinx till the Round ends - its Critical and Botch swapped with its Allies in a
+# Large Sphere, and Life Points lost by your highest Attribute Modifier on either: the table's (said on the card).
