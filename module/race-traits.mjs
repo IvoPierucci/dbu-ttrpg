@@ -18,10 +18,12 @@
  * another Trait gave.
  */
 
-import { getTrait } from "./effects/traits.mjs";
+import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { getRace, isMinionRace } from "./races.mjs";
-import { addRacialTrait, factorOf, minionRacialUnfit, racialFactor, racialTraitFiles, racialTraitUnfit, removeRacialTrait,
-  replacedTraitOf } from "./racial.mjs";
+import { addRacialTrait, answered, changeChoice, changeRacialOption, emptyGrantRows, factorOf, grantAuto, grantPage, grantSpecsOf, grantTitle,
+  minionRacialUnfit, optionGroupsOf, ownedRacialTraits, racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait,
+  replacedTraitOf, traitPage, traitPageable, unansweredOf } from "./racial.mjs";
+import { askPages } from "./race-window.mjs";
 
 const SCOPE = "dbu-ttrpg";
 
@@ -74,16 +76,172 @@ function isFactorTraitItem(item) {
  * The character's Racial Traits as its race says: those it should not have put by, those it is missing given (asked their Options as any
  * added one is). An exchanged Factor Trait stands for the one it replaced. `raceChanged`: every Factor Trait put by too.
  */
-export async function syncRaceTraits(actor, { raceChanged = false } = {}) {
+export function syncRaceTraits(actor, options = {}) {
+  // One at a time for a character (the user's, 2026-11-28: duplicates): a race chosen syncs from its update and again as its sheet
+  // redraws, and the race's window waits on its answers meanwhile - a second run would give the same Traits twice. Each waits for the
+  // one before, then works out what is still missing.
+  const key = actor?.uuid ?? actor?.id ?? "";
+  const before = syncing.get(key) ?? Promise.resolve();
+  const run = before.catch(() => {}).then(() => syncNow(actor, options));
+  syncing.set(key, run);
+  run.finally(() => { if (syncing.get(key) === run) syncing.delete(key); });
+  return run;
+}
+
+const syncing = new Map();
+
+async function syncNow(actor, { raceChanged = false } = {}) {
   const changes = raceTraitChanges(actor, { raceChanged });
   if (!changes) return false;
   for (const id of changes.remove) if (actor.items.get(id)) await removeRacialTrait(actor, id);
-  for (const id of changes.add) {
+  // Its race's own Traits in their window (the user's); those picked on the Progression tab - the Majins' 4, a Minion's 2 - each asking
+  // in its own windows, as before.
+  const picked = new Set(raceTraitPlan(actor)?.picked ?? []);
+  const fixed = changes.add.filter(id => !picked.has(id)).map(id => getTrait(id)).filter(Boolean);
+  if (fixed.length) await addRaceTraitFiles(actor, fixed);
+  for (const id of changes.add.filter(each => picked.has(each))) {
     const file = getTrait(id);
     if (file) await addRacialTrait(actor, file);
   }
   await actor.setFlag(SCOPE, "raceTraitsSet", actor.system.race);
   return true;
+}
+
+/**
+ * The Factor a race Trait must be exchanged for, by an Option already chosen - in `chosen` lists (Items' `system.chosen`): Enhanced
+ * Organism's "You must exchange the Functional Purpose Racial Trait for the Factor Trait" (`exchangesRaceTrait: functional-purpose`,
+ * `exchangeFactor: alternate-upbringing` in the Option's header). "" where none.
+ */
+export function forcedExchange(traitId, chosen) {
+  for (const entry of chosen.flat()) {
+    if (entry?.key !== "option") continue;
+    const option = getTrait(entry.value);
+    if (option && (String(option.exchangesRaceTrait ?? "") === traitId) && option.exchangeFactor) return String(option.exchangeFactor);
+  }
+  return "";
+}
+
+/** The page asking which of a Factor's Traits takes a race Trait's place (its window, race-window.mjs). */
+function exchangePage(file, factor) {
+  const escape = Handlebars.escapeExpression;
+  const offered = racialTraitFiles().filter(each => factorOf(each) === factor).sort((a, b) => a.name.localeCompare(b.name));
+  const name = racialFactor(factor)?.name ?? factor;
+  return {
+    html: `<p class="dbu-respond-hint">${escape(file.name)} is exchanged for a Factor Trait of ${escape(name)}: which?</p>
+      <select name="factor">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select>`,
+    wire: () => {},
+    read: root => root.querySelector('[name="factor"]')?.value ?? ""
+  };
+}
+
+/** A race's own Traits, ordered: one an Option may exchange away last, once the Options that might are chosen. */
+function exchangeLast(files) {
+  const away = new Set([...traitsOfKind("races"), ...traitsOfKind("factors")].map(each => String(each.exchangesRaceTrait ?? "")).filter(Boolean));
+  return [...files.filter(file => !away.has(file.id)), ...files.filter(file => away.has(file.id))];
+}
+
+/** The Options its window's answers chose, as `system.chosen` entries - what forcedExchange reads. */
+function chosenIn(answers) {
+  return [...answers.values()].flatMap(answer => Object.values(answer?.options ?? {}).flat().map(value => ({ key: "option", value })));
+}
+
+/**
+ * The pages of a race's window for these Traits and the answers so far: a page a Trait that asks something (traitPageable); in place of
+ * one an Option chose to exchange away, a page for which of that Factor's Traits, and that Trait's own page if it asks anything.
+ */
+export function racePages(actor, files, answers, held = []) {
+  const pages = [];
+  // A Trait's own page, then a page for each thing it gives by choice (the user's, 2026-11-28) - an Other Trait, a Unique Ability, a
+  // Talent, its Dragon Ball, Installed Weapons - its Options' as its page chose them; one with nothing to choose given without asking.
+  const pagesOf = file => {
+    if (traitPageable(file)) pages.push({ key: `trait:${file.id}`, title: file.name, build: () => traitPage(file, actor, optionGroupsOf(file)) });
+    for (const spec of grantSpecsOf(file, optionsIn(answers.get(`trait:${file.id}`)))) {
+      if (grantAuto(actor, spec)) continue;
+      const key = `grant:${file.id}:${spec.key}`;
+      // The Other Traits chosen on its other pages not offered again - two Traits giving Bestial Traits would give one twice.
+      const exclude = [...answers.entries()].filter(([each, value]) => (each !== key) && each.startsWith("grant:") && Array.isArray(value)).flatMap(([, value]) => value);
+      pages.push({ key, title: `${file.name} - ${grantTitle(spec)}`, build: () => grantPage(spec, file, actor, { exclude }) });
+    }
+    // And each Other Trait chosen there (or given without asking) that asks something of its own - Bestial Build's Option: its page.
+    for (const spec of grantSpecsOf(file, optionsIn(answers.get(`trait:${file.id}`))).filter(each => each.kind === "other")) {
+      for (const id of [].concat(grantAuto(actor, spec) ?? answers.get(`grant:${file.id}:${spec.key}`) ?? [])) {
+        const other = getTrait(id);
+        if (other && traitPageable(other)) pages.push({ key: `granted:${id}`, title: `${file.name} - ${other.name}`,
+          build: () => traitPage(other, actor, optionGroupsOf(other)) });
+      }
+    }
+  };
+  for (const file of exchangeLast(files)) {
+    const factor = forcedExchange(file.id, [...held, ...chosenIn(answers)]);
+    if (factor) {
+      const key = `exchange:${file.id}`;
+      pages.push({ key, title: `${file.name} - exchanged`, build: async () => exchangePage(file, factor) });
+      const replacing = getTrait(answers.get(key) ?? "");
+      if (replacing) pagesOf(replacing);
+      continue;
+    }
+    pagesOf(file);
+  }
+  return pages;
+}
+
+/** The Options a Trait's page chose. */
+function optionsIn(answer) {
+  return Object.values(answer?.options ?? {}).flat();
+}
+
+/** What a Trait gives by choice, as its window answered it (addRacialTrait `grants`): by key; those given without asking, all. */
+function grantsIn(actor, file, answers) {
+  const out = { traits: {} };
+  for (const spec of grantSpecsOf(file, optionsIn(answers.get(`trait:${file.id}`)))) {
+    const auto = grantAuto(actor, spec);
+    const answer = auto ?? answers.get(`grant:${file.id}:${spec.key}`);
+    if (answer !== undefined) out[spec.key] = answer;
+    // The Other Traits' own pages (`granted:<id>`).
+    if (spec.kind === "other") for (const id of [].concat(answer ?? [])) if (answers.has(`granted:${id}`)) out.traits[id] = answers.get(`granted:${id}`);
+  }
+  return out;
+}
+
+/**
+ * A race's own Traits given (the user's, 2026-11-27): their Options and choices asked first in one window, a page a Trait, Last and
+ * Next between them (race-window.mjs) - then made with those answers. One an Option chose to exchange for a Factor's (forcedExchange) is
+ * not given: the Factor Trait its window chose is, remembering it (`exchangedFor`). Closed before all is answered, every Trait is given
+ * all the same, what was not answered left empty: Set Racial Options asks it later. What a Trait asks as it is made (a Weapon, a Unique
+ * Ability) and what its page cannot draw ask in their own windows.
+ */
+export async function addRaceTraitFiles(actor, files) {
+  const held = Array.from(actor.items ?? []).map(item => item.system?.chosen ?? []);
+  const answers = await askPages(`${actor.name} - Racial Traits`, given => racePages(actor, files, given, held));
+  const made = [];
+  // Had already - given while the window waited - not given again: by its file, or a Factor Trait standing in its place (not one whose
+  // Factor gives the replaced Trait back - restoredFactors).
+  const restored = restoredFactors(actor);
+  const had = id => Array.from(actor.items ?? []).some(item => (item.type === "racial") && !item.system?.transformation
+    && ((String(item.flags?.[SCOPE]?.sourceId ?? "") === id)
+      || ((String(item.flags?.[SCOPE]?.exchangedFor ?? "") === id) && !restored.has(factorOf(item)))));
+  const give = async (file, extra = {}) => {
+    if (had(file.id) || (extra.exchangedFor && had(extra.exchangedFor))) return;
+    const answer = traitPageable(file) ? (answers.get(`trait:${file.id}`) ?? null) : undefined;
+    const data = await racialItemFrom(file, actor, { answers: answer });
+    if (!data) return;
+    Object.assign(data.data.flags[SCOPE], extra);
+    const item = await addRacialTrait(actor, file, { made: data, grants: grantsIn(actor, file, answers) });
+    if (item) made.push(item);
+  };
+  for (const file of exchangeLast(files)) {
+    const factor = forcedExchange(file.id, [...held, ...chosenIn(answers)]);
+    if (!factor) {
+      await give(file);
+      continue;
+    }
+    // Not said which (its window closed first): the race Trait itself kept, its questions left - Set Racial Options asks which then
+    // (the user's, 2026-11-28: "si no se eligió, sigue teniendo Functional Purpose").
+    const replacing = getTrait(answers.get(`exchange:${file.id}`) ?? "");
+    if (replacing) await give(replacing, { exchangedFor: file.id });
+    else await give(file);
+  }
+  return made;
 }
 
 /**
@@ -237,6 +395,100 @@ export async function resetRaceTraits(actors) {
     reset++;
   }
   return reset;
+}
+
+/** Its Racial and Factor Traits with something left unanswered (unansweredOf), in the Traits tab's order. */
+export function unansweredRaceTraits(actor) {
+  return ownedRacialTraits(actor).filter(item => !item.system?.other && !item.system?.transformation
+    && (unansweredOf(item).length || owedExchange(actor, item)));
+}
+
+/** The Factor a race Trait it still holds must be exchanged for - Functional Purpose kept with Enhanced Organism chosen - or "". */
+export function owedExchange(actor, item) {
+  if (!isRaceTraitItem(item)) return "";
+  return forcedExchange(String(item.flags?.[SCOPE]?.sourceId ?? ""), Array.from(actor?.items ?? []).map(each => each.system?.chosen ?? []));
+}
+
+/**
+ * The Progression tab's Set Racial Options (the user's, 2026-11-27): only what was left unanswered, a page a Trait in its race's window
+ * (Last, Next, Done) - an Option effect's missing Options with their own choices, and each choice not made - written as the pencil
+ * writes them (changeRacialOption, changeChoice). Closed midway, what was answered is written. One whose questions cannot be drawn on a
+ * page is answered by its pencil.
+ */
+export async function answerRaceTraitQuestions(actor) {
+  const items = unansweredRaceTraits(actor);
+  if (!items.length) return 0;
+  const askedOf = item => {
+    const file = getTrait(item.flags?.[SCOPE]?.sourceId ?? "");
+    const chosen = item.system?.chosen ?? [];
+    const value = key => chosen.find(entry => entry.key === key)?.value ?? "";
+    const gaps = unansweredOf(item);
+    const open = group => group.options.filter(option => !chosen.some(entry => (entry.key === "option") && (entry.value === option.id)));
+    return { file, groups: gaps.filter(gap => gap.kind === "option").map(gap => ({ ...gap.group, options: open(gap.group), count: gap.missing })),
+      which: gaps.filter(gap => gap.kind === "choice").map(gap => gap.which),
+      known: { 1: value(file?.id), 2: value(`${file?.id}#2`), 3: value(`${file?.id}#3`) } };
+  };
+  // One an Option chose to exchange away (Functional Purpose with Enhanced Organism): which Factor Trait, in place of its own questions.
+  const swaps = items.filter(item => owedExchange(actor, item)).map(item => ({ key: `swap:${item.id}`, title: `${item.name} - exchanged`, item,
+    build: async () => exchangePage(getTrait(item.flags?.[SCOPE]?.sourceId ?? ""), owedExchange(actor, item)) }));
+  const entries = items.filter(item => !owedExchange(actor, item)).map(item => ({ item, ...askedOf(item) })).filter(entry => entry.file);
+  // Its own missing questions; then what it gives by choice not given yet (unansweredOf's grants) - and what an Option chosen here gives.
+  const pagesFor = answers => [...entries.flatMap(entry => {
+    const own = (entry.which.length || entry.groups.length) && traitPageable(entry.file, entry.groups)
+      ? [{ key: `item:${entry.item.id}`, title: entry.item.name, entry,
+        build: () => traitPage(entry.file, actor, entry.groups, { which: entry.which, known: entry.known }) }] : [];
+    const missing = unansweredOf(entry.item).filter(gap => gap.kind === "grant").map(gap => ({ key: `gap:${entry.item.id}:${gap.spec.key}`,
+      title: `${entry.item.name} - ${grantTitle(gap.spec)}`, gap, item: entry.item,
+      build: () => grantPage(gap.spec, entry.file, actor, { count: gap.missing }) }));
+    const fresh = grantSpecsOf(entry.file, optionsIn(answers.get(`item:${entry.item.id}`))).filter(spec => spec.key.includes(":")
+      && !grantAuto(actor, spec) && optionsIn(answers.get(`item:${entry.item.id}`)).some(id => spec.key.endsWith(`:${id}`)))
+      .map(spec => ({ key: `new:${entry.item.id}:${spec.key}`, title: `${entry.item.name} - ${grantTitle(spec)}`,
+        build: () => grantPage(spec, entry.file, actor) }));
+    return [...own, ...fresh, ...missing];
+  }), ...swaps];
+  const pages = pagesFor(new Map());
+  const answers = await askPages(`${actor.name} - Racial Options`, pagesFor);
+  let written = 0;
+  for (const swap of swaps) {
+    const picked = answers.get(swap.key);
+    if (picked && actor.items.get(swap.item.id) && await exchangeRaceTrait(actor, swap.item.id, picked)) written++;
+  }
+  for (const page of pages.filter(each => each.entry)) {
+    const answer = answers.get(page.key);
+    const item = actor.items.get(page.entry.item.id);
+    if (!answer || !item) continue;
+    for (const [n, picked] of Object.entries(answer.choices ?? {})) {
+      if (await changeChoice(actor.items.get(item.id), Number(n), picked)) written++;
+    }
+    for (const id of Object.values(answer.options ?? {}).flat()) {
+      const option = getTrait(id);
+      const extra = [];
+      const script = option ? await answered(option, extra, actor, answer.optionChoices?.[id] ?? "") : null;
+      // What the Option gives by choice: its page's answer, or given without asking - nothing asked in a window of its own.
+      const grants = {};
+      for (const spec of grantSpecsOf(page.entry.file, [id]).filter(each => each.key.endsWith(`:${id}`))) {
+        const value = grantAuto(actor, spec) ?? answers.get(`new:${item.id}:${spec.key}`);
+        if (value !== undefined) grants[spec.key] = value;
+      }
+      if ((script !== null) && await changeRacialOption(actor.items.get(item.id), id, "", { script, extra }, grants)) written++;
+    }
+  }
+  // What it gives by choice and had not been given: each answer written as its pencil would (changeChoice's grant rows).
+  for (const page of pagesFor(answers).filter(each => each.gap)) {
+    const answer = answers.get(page.key);
+    const item = actor.items.get(page.item.id);
+    if (!item || (answer === undefined)) continue;
+    const spec = page.gap.spec;
+    if (spec.kind === "other") {
+      const empty = emptyGrantRows(item, spec);
+      for (const [at, value] of [].concat(answer).entries()) {
+        if ((at < empty.length) && await changeChoice(actor.items.get(item.id), `other|${spec.group}|${spec.option}|${empty[at]}`, value)) written++;
+      }
+      continue;
+    }
+    if (answer && await changeChoice(actor.items.get(item.id), spec.kind, answer)) written++;
+  }
+  return written;
 }
 
 /** Whether its sheet, opened by whoever plays it, should give it its race's Traits: none given for its race yet. */

@@ -198,7 +198,7 @@ const add = (model, key) => Number(model.effects.slots[key]?.add) || 0;
      CH.includes("if (result && !result.wound) metalButtons(message, attack, container);"),
      CH.includes("...metalParts(attack, target),"),
      CH.includes("if (pledged && target?.isOwner) await setResource(target, \"power\","),
-     read("module", "racial.mjs").includes("if (trait.grantsFactorTraitOf) await grantFactorTrait(actor, item, String(trait.grantsFactorTraitOf));")],
+     read("module", "racial.mjs").includes("if (grants === undefined) await grantFactorTrait(actor, item, String(trait.grantsFactorTraitOf));")],
     Array(12).fill(true));
 }
 

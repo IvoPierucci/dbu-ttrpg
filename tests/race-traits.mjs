@@ -127,6 +127,192 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
   check("Brute, exchanged for Powerful Physique, listed in its place", [at >= 0, listed.indexOf("brute") === order.indexOf("powerful-physique")], [true, true]);
 }
 
+// A race's window (race-window.mjs; the user's, 2026-11-27): its own Traits' questions, a page a Trait - nothing else's. Enhanced Organism
+// exchanges Functional Purpose for an Alternate Upbringing Trait.
+{
+  const RTS = read("module", "race-traits.mjs"), RW = read("module", "race-window.mjs"), RACSRC = read("module", "racial.mjs");
+  check("Enhanced Organism names the exchange; chosen, Functional Purpose is exchanged for an Alternate Upbringing Factor Trait; not chosen, nothing",
+    [getTrait("enhanced-organism")?.exchangesRaceTrait, getTrait("enhanced-organism")?.exchangeFactor,
+     RT.forcedExchange("functional-purpose", [[{ key: "option", value: "construct" }], [{ key: "option", value: "enhanced-organism" }]]),
+     RT.forcedExchange("functional-purpose", [[{ key: "option", value: "construct" }]]), RT.forcedExchange("technological-being", [[{ key: "option", value: "enhanced-organism" }]])],
+    ["functional-purpose", "alternate-upbringing", "alternate-upbringing", "", ""]);
+  const android = RT.raceTraitPlan(actor("character", { race: "android" })).auto;
+  const keys = answers => RT.racePages(null, android, answers).map(page => page.key);
+  const being = { choices: {}, options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": "impulsive" } };
+  check("the Android's pages: a page a Trait that asks, Functional Purpose last; Enhanced Organism chosen, its page becomes which Alternate Upbringing Trait - and that Trait's own page where it asks (Majin-Raised)",
+    [keys(new Map()).at(-1), keys(new Map()).includes("trait:technological-being"),
+     keys(new Map([["trait:technological-being", being]])).at(-1),
+     keys(new Map([["trait:technological-being", being], ["exchange:functional-purpose", "majin-raised"]])).at(-1),
+     keys(new Map([["trait:technological-being", being], ["exchange:functional-purpose", "earthling-raised"]])).at(-1)],
+    ["trait:functional-purpose", true, "exchange:functional-purpose", "trait:majin-raised", "exchange:functional-purpose"]);
+  check("only the race's own Traits through it - picked ones (Majins, Minions), Factors and Add Racial Trait in their own windows; Foundry's dialogs untouched",
+    [RTS.includes("if (fixed.length) await addRaceTraitFiles(actor, fixed);"), RTS.includes("const answers = await askPages(`${actor.name} - Racial Traits`"),
+     !RW.includes("DialogV2.wait ="), !RACSRC.includes("DialogV2.wait ="), RACSRC.includes("const made = given ?? await racialItemFrom(trait, actor, { presetOption, presetChoice });"),
+     RW.includes('<span class="dbu-wizard-step">${shown + 1} of ${pages.length}</span>'), RW.includes('next.innerHTML = last ? `Done <i class="fa-solid fa-check"></i>`'),
+     RW.includes("if (pagesFor(answers).length <= (shown + 1)) return close();"), RW.includes("if (value === NOT_YET) {")],
+    [true, true, true, true, true, true, true, true, true]);
+}
+
+// Its answers written in (racialItemFrom `answers`): nothing asked; null - the window closed before its page - the Trait given all the
+// same, what was not answered empty; Set Racial Options finds just that (unansweredOf). "A Skill you have 2+ Skill Ranks in" may be None.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const asked = [];
+  globalThis.CSS = { escape: String };
+  globalThis.foundry.applications = { api: { DialogV2: { wait: async config => { asked.push(config.window?.title); return null; } } } };
+  const purpose = await RAC.racialItemFrom(getTrait("functional-purpose"), null,
+    { answers: { choices: { 1: "stealth", 2: "" }, options: { 2: ["destroyer"] }, optionChoices: {} } });
+  const being = await RAC.racialItemFrom(getTrait("technological-being"), null, { answers: { choices: {},
+    options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": "impulsive" } } });
+  const closed = await RAC.racialItemFrom(getTrait("technological-being"), null, { answers: null });
+  const closedPurpose = await RAC.racialItemFrom(getTrait("functional-purpose"), null, { answers: null });
+  const asOwn = await RAC.racialItemFrom(getTrait("technological-being"), null);
+  delete globalThis.foundry.applications;
+  const item = made => ({ type: "racial", system: made.data.system, flags: made.data.flags });
+  const gaps = made => RAC.unansweredOf(item(made)).map(gap => (gap.kind === "option") ? `option ${gap.group.effect}:${gap.missing}` : `choice ${gap.which}`);
+  check("answered: Functional Purpose's Rank given, its Critical Target to None left out, Destroyer; Technological Being's three Options and Enhanced Organism's Save; nothing asked",
+    [purpose.data.system.script.includes("skill.stealth.ranks += 1;"), purpose.data.system.script.includes("criticalTarget"),
+     purpose.data.system.chosen.map(entry => [entry.key, entry.value]), gaps(purpose),
+     being.data.system.chosen.filter(entry => entry.key === "option").map(entry => entry.value), being.data.system.script.includes("save.racial.impulsive"), gaps(being)],
+    [true, false, [["functional-purpose", "stealth"], ["functional-purpose#2", ""], ["option", "destroyer"]], [],
+     ["enhanced-organism", "surging-power", "hyper-resilience"], true, []]);
+  check("closed: given with nothing chosen and nothing asked, its unanswered found; a Trait not from a race's window asks in its own windows as before (closed there: not given)",
+    [Boolean(closed), closed.data.system.chosen, closed.data.system.script.includes("#@ option"), gaps(closed), closedPurpose.data.system.script, gaps(closedPurpose),
+     asOwn, asked.length > 0],
+    [true, [], false, ["option 2:1", "option 3:2"], "", ["choice 1", "choice 2", "option 2:1"], null, true]);
+  check("None: a choice answered empty leaves out every line naming it", [RAC.fillChoice("a $choice2;\nb $choice;", "$choice2", ""), RAC.fillChoice("a $choice2;", "$choice2", "x")],
+    ["b $choice;", "a x;"]);
+  const P = read("templates", "parts", "actor-progression.hbs");
+  check("Set Racial Options beside the Racial Grants' title while any is left, through the same window",
+    [P.includes('data-action="setRacialOptions"'), P.includes("{{#if racialUnanswered}}"),
+     read("module", "sheets", "actor-character-sheet.mjs").includes("setRacialOptions: DBUCharacterSheet._onSetRacialOptions,"),
+     read("module", "race-traits.mjs").includes("const answers = await askPages(`${actor.name} - Racial Options`, pagesFor);")],
+    [true, true, true, true]);
+}
+
+// No duplicates (the user's, 2026-11-28): a character's syncs one after another, each working out what is still missing; a Trait had
+// already by the time its window is answered not given again.
+{
+  let order = [];
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const fake = { uuid: "Actor.dup", type: "character", system: { race: "" }, items: [], getFlag: () => undefined, setFlag: async () => {} };
+  const first = RT.syncRaceTraits(fake).then(() => order.push("first"));
+  const second = RT.syncRaceTraits(fake).then(() => order.push("second"));
+  await Promise.all([first, second]);
+  const RTS = read("module", "race-traits.mjs");
+  check("a second sync waits for the first; a Trait had already (or a Factor Trait in its place) skipped as the window's answers are given",
+    [order, RTS.includes("const run = before.catch(() => {}).then(() => syncNow(actor, options));"),
+     RTS.includes("if (had(file.id) || (extra.exchangedFor && had(extra.exchangedFor))) return;")], [["first", "second"], true, true]);
+}
+
+// Functional Purpose's pencil (the user's, 2026-11-28): its 1st choice's Rank, already in the Skills, counted once for the 2+ Ranks list.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const rowsWith = async ranks => {
+    const owner = { system: { skills: { investigation: { ranks } } } };
+    const item = { actor: owner, flags: { "dbu-ttrpg": { sourceId: "functional-purpose" } },
+      system: { chosen: [{ key: "functional-purpose", value: "investigation" }, { key: "functional-purpose#2", value: "" }] } };
+    return (await RAC.choiceRowsOf(item))[1].options.map(option => option.value);
+  };
+  check("2nd choice: Investigation at 1 Rank (the Trait's own) not offered; at 2 (one more of its own) offered; None always",
+    [await rowsWith(1), await rowsWith(2)], [[""], ["", "investigation"]]);
+}
+
+// The user's, 2026-11-28: Enhanced Organism's "additional" Saving Throw not the Android's own Cognitive; a Multi-Option's second pick added
+// beside the first; Functional Purpose kept where its exchange was not said, and asked by Set Racial Options.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const androidActor = { type: "character", system: { race: "android", racialPicks: [] }, items: [], getFlag: () => undefined };
+  const with_ = async save => (await RAC.racialItemFrom(getTrait("technological-being"), androidActor, { answers: { choices: {},
+    options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": save } } }))
+    .data.system.chosen.filter(entry => entry.key === "option").map(entry => entry.value);
+    const willpower = await RAC.racialItemFrom({ ...getTrait("saiyan-genes") }, androidActor, { answers: { choices: { 1: "cognitive" }, options: {}, optionChoices: {} } });
+  check("only an \"additional\" Save leaves the race's own out (chooseExceptRacial): a Gene's \"Any\" may be the Android's Cognitive",
+    [getTrait("enhanced-organism").chooseExceptRacial, willpower.data.system.chosen.map(entry => entry.value)], [true, ["cognitive"]]);
+check("Enhanced Organism's Save: Impulsive taken, Cognitive (the Android's own) not offered - the Option left unanswered",
+    [await with_("impulsive"), await with_("cognitive")], [["enhanced-organism", "surging-power", "hyper-resilience"], ["surging-power", "hyper-resilience"]]);
+  const being = { id: "i-tb", type: "racial", system: { chosen: [{ key: "option", value: "enhanced-organism" }] }, flags: { "dbu-ttrpg": { sourceId: "technological-being" } } };
+  const purpose = { id: "i-fp", type: "racial", system: { chosen: [] }, flags: { "dbu-ttrpg": { sourceId: "functional-purpose" } } };
+  const withEO = { ...androidActor, items: [being, purpose] };
+  check("Functional Purpose held with Enhanced Organism chosen: an exchange owed, so Set Racial Options lists it",
+    [RT.owedExchange(withEO, purpose), RT.owedExchange(withEO, being)], ["alternate-upbringing", ""]);
+  const RACSRC = read("module", "racial.mjs"), RTS = read("module", "race-traits.mjs");
+  check("wired: a Multi-Option's second pick beside the first; Functional Purpose given where its exchange was not said; its exchange page in Set Racial Options",
+    [RACSRC.includes("const old = replacing || ((sameEffect.length >= asks) ? (sameEffect[0] ?? \"\") : \"\");"),
+     RTS.includes("    else await give(file);"),
+     RTS.includes("if (picked && actor.items.get(swap.item.id) && await exchangeRaceTrait(actor, swap.item.id, picked)) written++;")],
+    [true, true, true]);
+}
+
+// An Option effect left short (the user's, 2026-11-28): its text still lists what may yet be chosen; full, only what was chosen.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const text = getTrait("technological-being").text;
+  const shown = chosen => RAC.racialTraitLines({ type: "racial", flags: { "dbu-ttrpg": { sourceId: "technological-being" } },
+    system: { text, chosen: chosen.map(value => ({ key: "option", value })) } }).map(line => line.html).join(" ");
+  const one = shown(["enhanced-organism", "surging-power"]);
+  const full = shown(["enhanced-organism", "surging-power", "hyper-resilience"]);
+  check("Technological Being with one of its (3) two: Surging Power and the rest of the list (Weapon Ports...); with both, only those two",
+    [one.includes("Surging Power"), one.includes("Weapon Ports"), one.includes("Construct"), full.includes("Weapon Ports"), full.includes("Hyper Resilience")],
+    [true, true, false, false, true]);
+  globalThis.CSS = { escape: String };
+  const RACSRC = read("module", "racial.mjs");
+  check("its page lets an Option effect be left short, never over", [RACSRC.includes("const right = ticked.length <= Number(box.dataset.count);")], [true]);
+}
+
+// What a race's own Traits give by choice (the user's, 2026-11-28): pages of the race's window, and rows of the Trait's pencil.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const plan = race => RT.raceTraitPlan(actor("character", { race })).auto;
+  const keys = (race, answers = new Map()) => RT.racePages(actor("character", { race }), plan(race), answers).map(page => page.key);
+  const monster = { choices: {}, options: { 1: ["two-bestial-traits"] }, optionChoices: {} };
+  const uncannyEffect = RAC.optionGroupsOf(getTrait("uncanny-monster"))[0]?.effect;
+  const bio = new Map([["trait:uncanny-monster", { choices: {}, options: { [uncannyEffect]: ["two-bestial-traits"] }, optionChoices: {} }]]);
+  const being = new Map([["trait:technological-being", { choices: {}, options: { 2: ["construct"], 3: ["extension-feature", "weapon-ports"] }, optionChoices: {} }]]);
+  check("pages for what is given by choice: the Animals' Bestial Traits, Uncanny Monster's two Bestial as chosen, Weapon Ports' Weapons - Extension Feature's one Monstrous Trait given without asking",
+    [keys("animal").filter(key => key.startsWith("grant:")), keys("bio-android", bio).filter(key => key.startsWith("grant:")),
+     keys("android", being).filter(key => key.startsWith("grant:")), RAC.grantAuto(null, RAC.grantSpecsOf(getTrait("technological-being"), ["extension-feature"])[0])],
+    [["grant:beast-of-a-kind:other:bestial:", "grant:bestial-presence:other:bestial:"], ["grant:uncanny-monster:other:bestial:two-bestial-traits"],
+     ["grant:technological-being:weapons:weapon-ports"], ["extension-attack"]]);
+  // The pencil: Uncanny Monster with Two Bestial Traits, one given - two rows, the first that one, the second empty; each listing the
+  // Bestial Traits not had, but its own.
+  const uncanny = { id: "i-um", type: "racial", flags: { "dbu-ttrpg": { sourceId: "uncanny-monster" } },
+    system: { chosen: [{ key: "option", value: "two-bestial-traits" }] } };
+  const arboreal = { id: "i-arb", type: "racial", flags: { "dbu-ttrpg": { sourceId: "arboreal", grantedBy: "i-um", grantedByOption: "two-bestial-traits" } }, system: {} };
+  const owner = { type: "character", system: { race: "bio-android" }, items: [uncanny, arboreal] };
+  uncanny.actor = owner;
+  const rows = (await RAC.choiceRowsOf(uncanny)).filter(row => String(row.which).startsWith("other|"));
+  check("its pencil: a row each Bestial Trait the Option gives - the one given, then empty; Arboreal offered on its own row only; what is missing found",
+    [rows.map(row => [row.which, row.current]), rows[0].options.some(option => option.value === "arboreal"), rows[1].options.some(option => option.value === "arboreal"),
+     RAC.unansweredOf(uncanny).filter(gap => gap.kind === "grant").map(gap => [gap.spec.key, gap.missing])],
+    [[["other|bestial|two-bestial-traits|0", "arboreal"], ["other|bestial|two-bestial-traits|1", ""]], true, false,
+     [["other:bestial:two-bestial-traits", 1]]]);
+}
+
+// Last check (2026-11-28): a granted Other Trait with questions of its own gets its page; one window's grant pages do not offer twice.
+{
+  const RTS = read("module", "race-traits.mjs"), RACSRC = read("module", "racial.mjs");
+  check("a granted Other Trait's own page (Bestial Build's Option) and its answers given through; a Trait chosen on another page not offered; rows kept by grantSlot",
+    [RTS.includes("pages.push({ key: `granted:${id}`, title: `${file.name} - ${other.name}`,"), RACSRC.includes("function traitAnswerOf(grants, id) {"),
+     RTS.includes("build: () => grantPage(spec, file, actor, { exclude }) });"), RACSRC.includes("function grantRows(given, count) {"),
+     RTS.includes("const empty = emptyGrantRows(item, spec);")], [true, true, true, true, true]);
+}
+
+// Every race given headless (2026-11-28): a Unique Ability of either Type it gives (Namekian Techniques' Telekinesis) and a Talent it gives
+// that asks something get their pages too; a page short of a choice leaves that part empty, never asks.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const keys = id => RAC.grantSpecsOf(getTrait(id)).map(spec => spec.key);
+  const tele = Object.entries(getTrait("namekian-techniques") ?? {}).some(([key, value]) => (key === "grantsUnique") && String(value).includes("telekinesis"));
+  globalThis.foundry.applications = { api: { DialogV2: { wait: async () => { throw new Error("asked"); } } } };
+  const short = await RAC.racialItemFrom(getTrait("skills-of-a-genius"), null, { answers: { choices: { 1: "investigation" }, options: {}, optionChoices: {} } });
+  delete globalThis.foundry.applications;
+  check("Telekinesis's Type a page; Skills of a Genius answered short given with its first Skill only, nothing asked",
+    [!tele || keys("namekian-techniques").includes("type:telekinesis"), short.data.system.chosen.map(entry => entry.key), short.data.system.script],
+    [true, ["skills-of-a-genius"], ""]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

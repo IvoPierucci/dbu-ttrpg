@@ -44,11 +44,22 @@ narrates.
 
 Newest first. Keep it to one or two lines per item; the commit message has the detail.
 
+- **2026-11-28 (Ivo's Claude):**
+  - A race's own Traits are asked in one window, a page a Trait (`module/race-window.mjs` askPages, `racial.mjs` traitPage), then made
+    with the answers (`racialItemFrom(..., {answers})`, `addRacialTrait(..., {made, grants})`). Picked ones (Majins, Minions), Factor
+    Traits and Add Racial Trait keep their own windows. Closed early: every Trait given, unanswered parts empty; the Progression tab's
+    "Set Racial Options" (next to Racial Grants) asks only those (`unansweredOf`, `answerRaceTraitQuestions`).
+  - What a Trait gives by choice (`grantSpecsOf`: Other Traits, a Unique Ability, a Talent, a Factor Trait, a Dragon Ball, Installed
+    Weapons) has its own pages, and the pencil a row each (`grantRowsOf` / `changeGrant`; a given Other Trait keeps its row, `grantSlot`).
+  - Enhanced Organism: `exchangesRaceTrait` / `exchangeFactor` - Functional Purpose exchanged for an Alternate Upbringing Trait, asked;
+    kept until said (`owedExchange`). `chooseExceptRacial: true` for "an additional Saving Throw". `skillRanked` offers None.
+  - Greater Mutation (3) / Mastered Reincarnated (1) built: `allow restoreReplaced.<factor>;`. Syncs of one character run one at a time
+    (no duplicate Traits). Settings' Debug holds Refresh Racial Traits and Refresh Talents.
 - **2026-11-27 (Ivo's Claude):**
   - The race gives its Racial Traits: `module/race-traits.mjs` (raceTraitPlan, syncRaceTraits, exchangeChoices/exchangeRaceTrait,
     resetRaceTraits), `system.racialPicks`, `system.debug.showAddRacialTrait`, `races/majin.json secondaryChoices: 4`, a one-time
     reset (world setting `raceTraitsReset`), harness `tests/race-traits.mjs`. An exchanged Factor Trait keeps `flags.dbu-ttrpg.exchangedFor`.
-  - Added Greater Mutation; its (3) (the replaced Racial Trait back) is the table's, done by hand, as Inherited Life's.
+  - Added Greater Mutation (its (3) built 2026-11-28, see above).
   - Added Saiyan Prodigy: `resourceOverflowOf` / `resourceOverflowWhen` (traits.mjs resourceDefinitions, moments-runtime.mjs gainOneOf) and the `overflow.<name>` flag Slots.
   - Added Super Majin. Its (4) (what may be changed as it is gained) is the table's, done by hand on the sheet.
   - Added Unkillable Majin and Grand Awakenings: `slot: grand` + `grandTrigger: N` on the Trait, the verb `grandTrigger()` (the

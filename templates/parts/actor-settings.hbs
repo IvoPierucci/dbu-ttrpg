@@ -282,10 +282,6 @@
       <input type="checkbox" name="system.hideUnfitTraits" {{#if system.hideUnfitTraits}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
       Only Traits you may have
     </label>
-    {{#if editable}}
-    <button type="button" class="capacity-reset" data-action="refreshRacialTraits"
-            data-tooltip="Any Racial Trait held twice taken off, and the race's put right: what it should not have put by, what it is missing given.">Refresh Racial Traits</button>
-    {{/if}}
     <label class="debug-toggle"
            data-tooltip="A Trait's text shows each amount's value for this character in brackets after it - 1(T) [3], 1/2 of your Max Capacity [48]. Tick to hide them.">
       <input type="checkbox" name="system.hideRealValues" {{#if system.hideRealValues}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
@@ -388,6 +384,8 @@
       Debug
       <span class="panel-note">Manual stand-ins for unimplemented systems</span>
     </h3>
+    {{! Debug's toggles side by side (the user's, 2026-11-27). }}
+    <div class="dbu-debug-toggles">
     <label class="debug-toggle"
            data-tooltip="From a Form entered through the Transformation Maneuver: Maximum Ki doubled, Max Capacity increased by half.">
       <input type="checkbox" name="system.debug.kiMultiplier"
@@ -400,6 +398,7 @@
       <input type="checkbox" name="system.debug.showAddRacialTrait" {{#if system.debug.showAddRacialTrait}}checked{{/if}}/>
       Show Add Racial Trait
     </label>
+    </div>
     {{! The ToP Mod and Crit Target are gone (the user's, 2026-11-16): Custom Buffs do both now. }}
     {{! A row each kind (the user's): the round and the Encounter; the Maneuvers; Fusion. }}
     {{! Turning the round and the Encounter over by hand - for a table playing without a formal Encounter, and for putting
@@ -425,13 +424,20 @@
       <button type="button" data-action="openCombatWindow" data-window="maneuverAccess" class="capacity-reset"
               data-tooltip="Open any Special or God Maneuver to this character, as an effect would - a God Maneuver still in the God Ki State.">Maneuver Access</button>
     </div>
-    {{! Fusion (the user's): with whom and by which Method - a new Fusion, or theirs fused again. Not a Fusion's own. }}
-    {{#unless isFusion}}
+    {{! Fusion (the user's): with whom and by which Method - a new Fusion, or theirs fused again. Not a Fusion's own. Beside it, the
+        Racial Traits' and the Talents' refreshes (the user's, 2026-11-27: from Trait lists and the Traits tab). }}
     <div class="capacity dbu-debug-row">
+      {{#unless isFusion}}
       <button type="button" data-action="fuseWith" class="capacity-reset"
               data-tooltip="Fuse with other Characters by a Fusion Method: a new Fusion, or the one they make fused again (recalculated).">Fuse</button>
+      {{/unless}}
+      {{#if editable}}
+      <button type="button" class="capacity-reset" data-action="refreshRacialTraits"
+              data-tooltip="Any Racial Trait held twice taken off, and the race's put right: what it should not have put by, what it is missing given.">Refresh Racial Traits</button>
+      <button type="button" class="capacity-reset" data-action="refreshTalents"
+              data-tooltip="Match the Talents to where they come from - the Progression tab's rows, a Racial Trait - and remove those with no source">Refresh Talents</button>
+      {{/if}}
     </div>
-    {{/unless}}
   </section>
 
 </div>

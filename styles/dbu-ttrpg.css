@@ -1361,6 +1361,7 @@
 
 /* Debug's buttons, a row each kind (the user's): the round and the Encounter; the Maneuvers; Fusion. */
 .dbu-ttrpg .dbu-debug-row { flex-wrap: wrap; }
+.dbu-ttrpg .dbu-debug-toggles { display: flex; flex-wrap: wrap; gap: 4px 18px; }
 .dbu-ttrpg .dbu-debug-row + .dbu-debug-row { margin-top: 6px; }
 
 .dbu-ttrpg .capacity-note {
@@ -6604,4 +6605,87 @@
 .dbu-ttrpg .trait-arm.active[data-action="automateTrigger"]:hover,
 .dbu-ttrpg .trait-arm.active[data-action="automateTrigger"]:focus {
   border-color: #7fb4d4;
+}
+
+/* A race's window (race-window.mjs, the user's 2026-11-27): the page's Trait and count above, its questions,
+   and Last / Next below - Last left, Next right. */
+.application.dbu-choice-wizard .dbu-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.application.dbu-choice-wizard .dbu-wizard-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border-bottom: 1px solid var(--dbu-chat-rule);
+  padding-bottom: 4px;
+}
+.application.dbu-choice-wizard .dbu-wizard-head h3 {
+  margin: 0;
+  border: none;
+  font-size: 14px;
+  color: var(--dbu-chat-accent);
+}
+.application.dbu-choice-wizard .dbu-wizard-step {
+  font-size: 11px;
+  color: var(--dbu-chat-dim);
+  white-space: nowrap;
+}
+.application.dbu-choice-wizard .dbu-wizard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.application.dbu-choice-wizard .dbu-wizard-others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.application.dbu-choice-wizard .dbu-wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.application.dbu-choice-wizard .dbu-respond-hint.dbu-wizard-needs {
+  color: #e06c6c;
+}
+.application.dbu-choice-wizard .dbu-wizard-nav button {
+  flex: 0 0 auto;
+  min-width: 90px;
+}
+
+/* A Trait's questions on one page (racial.mjs askTraitTogether): its choices first, a label and its list on a row; then each Option
+   effect under its hint, an Option's own choice beside its name. */
+.application.dbu-dialog .dbu-together {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.application.dbu-dialog .dbu-together-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.application.dbu-dialog .dbu-together-choice select {
+  flex: 1 1 auto;
+}
+.application.dbu-dialog .dbu-together-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+.application.dbu-dialog .dbu-together-group .dbu-respond-option select {
+  margin-left: auto;
+  max-width: 45%;
+}
+
+/* Set Racial Options beside the Racial Grants' title (the user's, 2026-11-27). */
+.dbu-ttrpg .panel-title .dbu-set-options {
+  align-self: center;
+  margin: 0 auto 0 8px;
+  text-transform: none;
 }

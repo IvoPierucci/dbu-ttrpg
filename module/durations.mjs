@@ -343,6 +343,23 @@ export async function encounterEnded(actor) {
 }
 
 /**
+ * The Turn State's Reset (the user's, 2026-11-28: "que también quite efectos temporales como el Stat Drain"): everything on a clock taken
+ * off now, whatever edge it waited for - a State's level, a Condition's or a Resource's stack held for a while, Damage Over Time, Stat
+ * Drain - and the clocks stopped. What was put on by hand, with no clock, stays.
+ */
+export async function allTimedEnded(actor) {
+  const held = actor.system.timed ?? [];
+  if (!held.length) return [];
+  await actor.update({ "system.timed": [] });
+  const ran = [];
+  for (const entry of held) {
+    await takeOff(actor, entry);
+    ran.push(entry.source || entry.key);
+  }
+  return ran;
+}
+
+/**
  * Take one thing off, whatever kind of thing it is.
  *
  * Off whoever it was about, which is usually the character whose clock it was and is not

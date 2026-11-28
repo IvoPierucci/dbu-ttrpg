@@ -970,7 +970,7 @@ check("Follower: a Minion not Commanded skips its Act Phase - its turn's start h
   check("the sheet offers the race's own Sizes and the Saving Throw to pick; the Racial Grants shown for any grant, the Ranks' row for Ranks",
     [SHEET.includes(".filter(([key, definition]) => (own ? own.includes(key) : definition.selectable) || (key === built))"),
      PROG.includes('<select name="system.racialSavingThrow">'), PROG.includes("{{#if racialGrants}}"),
-     SHEET.includes("context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow") && SHEET.includes("      || context.racialPicks);"),
+     SHEET.includes("context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow") && SHEET.includes("      || context.racialPicks || context.racialUnanswered);"),
      read("module", "minion-make.mjs").includes('"racialAttributeChoices", "racialSavingThrow",')], [true, true, true, true, true]);
 }
 

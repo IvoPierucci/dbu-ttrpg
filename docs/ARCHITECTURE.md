@@ -114,7 +114,7 @@ Patterns used throughout:
 | Area | Modules |
 |---|---|
 | Transformations | `transformations.mjs` (Awakenings, Enhancements, Forms, Evolved Stages, Aspects combined, Stress Tests, entering and leaving), `aside.mjs` (which Traits apply right now) |
-| Racial and Other Traits | `race-traits.mjs` (the race's Traits given, picked and exchanged for Factor Traits), `racial.mjs` (adding Traits, Options, what a Trait grants; `racialTraitLines(item, live)` - a Trait's text on the sheet, with its uses left, Automatic and real values), `races.mjs`, `genetic.mjs` |
+| Racial and Other Traits | `race-traits.mjs` (the race's Traits given, picked and exchanged for Factor Traits; the race's own Traits' questions in one window, `race-window.mjs` `askPages`, a page a Trait drawn by `racial.mjs` `traitPage`), `racial.mjs` (adding Traits, Options, what a Trait grants; `racialTraitLines(item, live)` - a Trait's text on the sheet, with its uses left, Automatic and real values), `races.mjs`, `genetic.mjs` |
 | Gear | `gear.mjs` (Apparel, Weapons, Items, Buddies), `integrated.mjs`, `natural-armor.mjs`, `features.mjs` |
 | Battlefield | `environments.mjs`, `weather.mjs`, `light.mjs`, `breath.mjs`, `hidden.mjs`, `guidance.mjs` |
 | Allies and Minions | `allies.mjs` (`areAllies`, `areOpponents`), `minion-make.mjs`, `token-marks.mjs` |

@@ -14,7 +14,7 @@ import { actsFreely, areAllies, areOpponents, masterOf, minionsOf, opponentsCoun
 import { commandedNow, isAdversary, isCharacter, isMinion } from "./actor-types.mjs";
 import { adversaryEncounterEnd, adversaryEncounterStart } from "./adversary.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
-import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
+import { EDGES, allTimedEnded, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { replaceObject, setCondition } from "./conditions.mjs";
 import { getTrait, keptResources } from "./effects/traits.mjs";
@@ -1139,8 +1139,11 @@ export async function resetTurnState(actor) {
   const marks = new Set(allConditions().filter(condition => !condition.combatCondition).map(condition => condition.key));
   const conditions = Object.fromEntries(Object.entries(actor.system.conditions ?? {}).filter(([key]) => !marks.has(key)));
   await actor.update({ "system.conditions": replaceObject(conditions) });
-  // Every clock of theirs stopped - one that would never have run out outside of a Combat is why this exists.
-  await encounterEnded(actor);
+  // Every clock of theirs stopped - one that would never have run out outside of a Combat is why this exists - and what each held taken
+  // off with it: the temporary effects (the user's, 2026-11-28) - a State's level, a stack, Damage Over Time, Stat Drain.
+  await allTimedEnded(actor);
+  // Stat Drain is never more than temporary: gone even where nothing put it on a clock.
+  if (Number(actor.system.statDrain) > 0) await actor.update({ "system.statDrain": 0 });
 }
 
 /**
