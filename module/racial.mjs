@@ -884,6 +884,8 @@ export function unansweredOf(item) {
       if (had < group.count) gaps.push({ kind: "option", group, missing: group.count - had });
     }
   }
+  // And what it gives that is chosen, not given yet - on the character (grantGapsOf).
+  gaps.push(...grantGapsOf(item, file));
   return gaps;
 }
 
@@ -891,7 +893,9 @@ export async function choiceRowsOf(item) {
   const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   // And the Racial Trait a `grantsRacialOf` gave (Majin Genes').
   const talentRow = await talentChoiceRow(item, file) ?? racialGrantRow(item, file);
-  if (!file?.choose) return talentRow ? [talentRow] : [];
+  // And what it gives that is chosen - an Other Trait, a Unique Ability, a Factor Trait (grantRowsOf).
+  const grantRows = await grantRowsOf(item, file);
+  if (!file?.choose) return [...(talentRow ? [talentRow] : []), ...grantRows];
   const actor = item.actor ?? null;
   const chosen = item.system.chosen ?? [];
   const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
@@ -912,7 +916,7 @@ export async function choiceRowsOf(item) {
   return [await row(1, file.choose, first, [second, third].filter(Boolean)),
     ...(file.choose2 ? [await row(2, file.choose2, second, [first, third].filter(Boolean))] : []),
     ...(file.choose3 ? [await row(3, file.choose3, third, [first, second].filter(Boolean))] : []),
-    ...(talentRow ? [talentRow] : [])];
+    ...(talentRow ? [talentRow] : []), ...grantRows];
 }
 
 /** The Talents a `grantsTalentChoiceFrom` offers this character - those not had, but the one it gave - by name. */
@@ -944,6 +948,8 @@ export async function changeChoice(item, which, value) {
   if (which === "talent") return changeTalentChoice(item, file, value);
   // The Racial Trait a `grantsRacialOf` gave: the old one off, the new one on.
   if (which === "racial") return changeRacialGrant(item, file, value);
+  // What it gives that is chosen (grantRowsOf).
+  if ((which === "unique") || (which === "factor") || String(which).startsWith("other|")) return changeGrant(item, file, which, value);
   if (!file?.choose) return false;
   const key = (which === 3) ? `${file.id}#3` : (which === 2) ? `${file.id}#2` : file.id;
   const kind = (which === 3) ? file.choose3 : (which === 2) ? file.choose2 : file.choose;
@@ -1180,6 +1186,266 @@ export async function traitPage(trait, actor, groups, { which = [1, 2, 3], known
 }
 
 /**
+ * What a Trait gives that is chosen (the user's, 2026-11-28): an Other Trait of a group (`grantsOther` - the Trait's or a chosen Option's;
+ * `grantsOtherCount`, `grantsOtherFrom`), a Unique Ability of a TP Cost or less (`grantsUniqueChoice`), a Talent (`grantsTalentChoiceFrom`),
+ * a Factor Trait (`grantsFactorTraitOf`), its Dragon Ball (`dragonBall`), Installed Weapons (an Option's `installsWeapons`). Each a spec
+ * with its `key` - the key its answer goes by (addRacialTrait `grants`).
+ */
+export function grantSpecsOf(trait, optionIds = []) {
+  if (!trait) return [];
+  const specs = [];
+  for (const group of listOf(trait.grantsOther)) specs.push({ kind: "other", key: `other:${group}:`, group, option: "",
+    count: Math.max(1, Number(trait.grantsOtherCount) || 1), from: listOf(trait.grantsOtherFrom) });
+  let unique = Number(trait.grantsUniqueChoice) || 0;
+  let uniqueType = String(trait.grantsUniqueChoiceType ?? "");
+  for (const id of optionIds) {
+    const option = getTrait(id);
+    if (!option) continue;
+    for (const group of listOf(option.grantsOther)) specs.push({ kind: "other", key: `other:${group}:${option.id}`, group, option: option.id,
+      count: Math.max(1, Number(option.grantsOtherCount) || 1), from: listOf(option.grantsOtherFrom) });
+    if (Number(option.installsWeapons) > 0) specs.push({ kind: "weapons", key: `weapons:${option.id}`, option: option.id });
+    if (Number(option.grantsUniqueChoice) > 0) {
+      unique = Number(option.grantsUniqueChoice);
+      uniqueType = String(option.grantsUniqueChoiceType ?? "");
+    }
+  }
+  if (unique) specs.push({ kind: "unique", key: "unique", most: unique, type: uniqueType });
+  if (listOf(trait.grantsTalentChoiceFrom).length) specs.push({ kind: "talent", key: "talent" });
+  if (trait.grantsFactorTraitOf) specs.push({ kind: "factor", key: "factor", factor: String(trait.grantsFactorTraitOf) });
+  if (trait.dragonBall) specs.push({ kind: "dragonBall", key: "dragonBall" });
+  return specs;
+}
+
+/** The Other Traits a spec offers: of its group (and its list), not had - but `keep`. */
+export function otherGrantOffered(actor, spec, keep = []) {
+  const had = new Set(Array.from(actor?.items ?? []).map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
+  return traitsOfKind("other", spec.group).filter(trait => (keep.includes(trait.id) || !had.has(trait.id))
+    && (!spec.from.length || spec.from.includes(trait.id))).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** The Factor Traits a `grantsFactorTraitOf` offers: that Factor's, not had - but `keep`. */
+function factorGrantOffered(actor, factor, keep = "") {
+  const had = new Set(Array.from(actor?.items ?? []).map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
+  return traitsOfKind("factors").filter(each => (each.owner === factor) && !each.optionOf && ((each.id === keep) || !had.has(each.id)))
+    .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || a.name.localeCompare(b.name));
+}
+
+/** The Unique Abilities a character holds, by their file. */
+async function heldUniques(actor) {
+  const { isUniqueAbility } = await import("./unique.mjs");
+  return new Set(Array.from(actor?.items ?? []).filter(isUniqueAbility).map(each => each.system.unique?.libraryId));
+}
+
+/**
+ * Whether a spec needs asking: an Other Trait spec whose list has no more than it gives (Extension Feature's Extension Attack) is given
+ * without asking - `auto` the ids; the rest asked.
+ */
+export function grantAuto(actor, spec) {
+  if (spec.kind !== "other") return null;
+  const offered = otherGrantOffered(actor, spec);
+  return (spec.from.length && (offered.length <= spec.count)) ? offered.map(each => each.id) : null;
+}
+
+/** A spec's title on its page: "a Bestial Trait", "a Unique Ability". */
+export function grantTitle(spec) {
+  if (spec.kind === "other") return (spec.count > 1) ? `${spec.count} ${otherGroupName(spec.group)} Traits` : `a ${otherGroupName(spec.group)} Trait`;
+  if (spec.kind === "unique") return "a Unique Ability";
+  if (spec.kind === "talent") return "a Talent";
+  if (spec.kind === "factor") return `a ${factorName(spec.factor)} Factor Trait`;
+  if (spec.kind === "weapons") return "Installed Weapons";
+  return "your Dragon Ball";
+}
+
+/**
+ * A spec's page for its race's window (race-window.mjs): `{html, wire, read}` - read giving its answer (ids, an id, the Dragon Ball) or
+ * NOT_YET (the same Trait twice, two Weapons of one Type). `count` how many rows (Set Racial Options: those still missing).
+ */
+export async function grantPage(spec, trait, actor, { count = spec.count ?? 1 } = {}) {
+  const escape = Handlebars.escapeExpression;
+  const select = (name, pairs, blank = true) => `<select name="${name}">${blank ? '<option value="">-</option>' : ""}${pairs.map(([value, label]) =>
+    `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select>`;
+  const row = (label, inner) => `<label class="dbu-respond-option dbu-together-choice"><span class="dbu-respond-name">${escape(label)}</span>${inner}</label>`;
+  const one = name => ({ wire: () => {}, read: root => root.querySelector(`[name="${name}"]`)?.value ?? "" });
+  if (spec.kind === "other") {
+    const pairs = otherGrantOffered(actor, spec).map(each => [each.id, each.name]);
+    const name = otherGroupName(spec.group);
+    return { html: `<p class="dbu-respond-hint">${escape((count > 1) ? `Choose ${count} ${name} Traits, different.` : `Choose a ${name} Trait.`)}</p>
+      ${Array.from({ length: count }, (each, at) => row((count > 1) ? `${name} Trait ${at + 1}` : `${name} Trait`, select(`grant${at}`, pairs))).join("")}`,
+    wire: () => {},
+    read: (root, pressed) => {
+      const ids = Array.from({ length: count }, (each, at) => root.querySelector(`[name="grant${at}"]`)?.value ?? "").filter(Boolean);
+      const twice = new Set(ids).size !== ids.length;
+      if (pressed) root.querySelector(".dbu-respond-hint")?.classList.toggle("dbu-wizard-needs", twice);
+      return twice ? NOT_YET : ids;
+    } };
+  }
+  if (spec.kind === "unique") {
+    const said = value => [].concat(value ?? []).join(", ");
+    const pairs = uniqueChoiceOffered(spec.most, await heldUniques(actor), spec.type).map(each => [each.id,
+      `${each.name} - ${Number(each.tpCost) || 0} TP${said(each.prerequisite) ? ` - ${said(each.prerequisite)}` : ""}`]);
+    return { html: `<p class="dbu-respond-hint">${escape(`A ${spec.type ? `${spec.type.charAt(0).toUpperCase()}${spec.type.slice(1)} ` : ""}Unique Ability of ${spec.most} TP or less.`)}</p>
+      ${row("Unique Ability", select("grant", pairs))}`, ...one("grant") };
+  }
+  if (spec.kind === "talent") {
+    const { talentCategoryOf } = await import("./talent-categories.mjs");
+    const pairs = (await talentChoices(trait, actor)).map(each => [each.id, `${each.name} (${talentCategoryOf(each)?.label ?? ""})`]);
+    return { html: row("Talent", select("grant", pairs)), ...one("grant") };
+  }
+  if (spec.kind === "factor") {
+    return { html: row("Factor Trait", select("grant", factorGrantOffered(actor, spec.factor).map(each => [each.id, each.name]))), ...one("grant") };
+  }
+  if (spec.kind === "dragonBall") {
+    const sizes = [["nano", "Nano"], ["tiny", "Tiny"], ["small", "Small"]];
+    return { html: `${row("Set", '<input type="text" name="set" value="" placeholder="Which set of Dragon Balls"/>')}
+      ${row("Size Category", select("size", sizes, false))}${row("Stars", '<input type="number" name="stars" value="1" min="1" max="7"/>')}`,
+    wire: () => {},
+    read: root => ({ set: String(root.querySelector('[name="set"]')?.value ?? "").trim(), size: root.querySelector('[name="size"]')?.value ?? "small",
+      stars: Math.min(7, Math.max(1, Math.floor(Number(root.querySelector('[name="stars"]')?.value) || 1))) }) };
+  }
+  // Installed Weapons: as many as the Option makes, of different Weapon Types.
+  const option = getTrait(spec.option);
+  const many = Number(option?.installsWeapons) || 1;
+  const { WEAPON_TYPES } = await import("./gear.mjs");
+  const ofType = String(option?.installsWeaponType ?? "");
+  const categories = traitsOfKind("crafting", "weapon-categories").filter(each => each.weaponType && (each.id !== "shield")
+    && (!ofType || (each.weaponType === ofType)));
+  const pairs = categories.map(each => [each.id, `${each.name} (${WEAPON_TYPES[each.weaponType]?.label ?? each.weaponType})`]);
+  return { html: `<p class="dbu-respond-hint">${escape(`Grade ${Number(option?.installsWeaponGrade) || 2}${(many > 1) ? " - different Weapon Types" : ""}.`)}</p>
+    ${Array.from({ length: many }, (each, at) => row(`Weapon ${at + 1}`, select(`grant${at}`, pairs, false))).join("")}`,
+  wire: () => {},
+  read: (root, pressed) => {
+    const ids = Array.from({ length: many }, (each, at) => root.querySelector(`[name="grant${at}"]`)?.value ?? "");
+    const types = ids.map(id => categories.find(each => each.id === id)?.weaponType);
+    const same = (many > 1) && (new Set(types).size !== types.length);
+    if (pressed) root.querySelector(".dbu-respond-hint")?.classList.toggle("dbu-wizard-needs", same);
+    return same ? NOT_YET : ids;
+  } };
+}
+
+/** The Other Traits `item` gave for one spec - its own, or its Option's - in the order given. */
+function grantedOthers(actor, item, spec) {
+  const ofGroup = new Set(traitsOfKind("other", spec.group).map(each => each.id));
+  return Array.from(actor?.items ?? []).filter(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
+    && ofGroup.has(each.flags?.["dbu-ttrpg"]?.sourceId)
+    && (String(each.flags?.["dbu-ttrpg"]?.grantedByOption ?? "") === spec.option));
+}
+
+/** The Unique Ability `item` gave by its choice: one it gave that is none it names. */
+function grantedUniqueChoice(actor, item, file) {
+  const named = new Set([...listOf(file?.grantsUnique), ...chosenOptions(item).flatMap(option => listOf(option.grantsUnique))]);
+  return Array.from(actor?.items ?? []).find(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id) && each.system?.unique
+    && !named.has(each.system.unique.libraryId)) ?? null;
+}
+
+/** The Factor Trait `item` gave (`grantsFactorTraitOf`). */
+function grantedFactorTrait(actor, item, file) {
+  return Array.from(actor?.items ?? []).find(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id) && (each.type === "racial")
+    && (factorOf(getTrait(each.flags?.["dbu-ttrpg"]?.sourceId ?? "")) === String(file?.grantsFactorTraitOf ?? ""))) ?? null;
+}
+
+/**
+ * What it gave that was chosen, as rows of its pencil (the user's, 2026-11-28: Uncanny Monster's Bestial and Monstrous Traits could not be
+ * chosen again): each Other Trait it gives - one row each - the Unique Ability it gives by choice, the Factor Trait it gives. Changing
+ * one takes the old off and gives the new (changeChoice).
+ */
+async function grantRowsOf(item, file) {
+  const actor = item?.actor;
+  if (!actor || !file) return [];
+  const rows = [];
+  for (const spec of grantSpecsOf(file, chosenOptions(item).map(option => option.id))) {
+    if (spec.kind === "other") {
+      const given = grantedOthers(actor, item, spec).map(each => String(each.flags?.["dbu-ttrpg"]?.sourceId ?? ""));
+      for (let at = 0; at < spec.count; at++) {
+        const current = given[at] ?? "";
+        const offered = otherGrantOffered(actor, spec, [current]);
+        rows.push({ which: `other|${spec.group}|${spec.option}|${at}`, current,
+          label: `${otherGroupName(spec.group)} Trait${(spec.count > 1) ? ` ${at + 1}` : ""}`,
+          options: offered.map(trait => ({ value: trait.id, label: trait.name, selected: trait.id === current })) });
+      }
+    }
+    if (spec.kind === "unique") {
+      const had = grantedUniqueChoice(actor, item, file);
+      const current = String(had?.system?.unique?.libraryId ?? "");
+      const held = await heldUniques(actor);
+      held.delete(current);
+      rows.push({ which: "unique", current, label: "Unique Ability",
+        options: uniqueChoiceOffered(spec.most, held, spec.type).map(each => ({ value: each.id, label: `${each.name} - ${Number(each.tpCost) || 0} TP`,
+          selected: each.id === current })) });
+    }
+    if (spec.kind === "factor") {
+      const current = String(grantedFactorTrait(actor, item, file)?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+      rows.push({ which: "factor", current, label: "Factor Trait",
+        options: factorGrantOffered(actor, spec.factor, current).map(each => ({ value: each.id, label: each.name, selected: each.id === current })) });
+    }
+  }
+  return rows;
+}
+
+/** A grant row changed (grantRowsOf): the one it gave there taken off, the new one given by it ("" - none). False where nothing changed. */
+async function changeGrant(item, file, which, value) {
+  const actor = item?.actor;
+  if (!actor || !file) return false;
+  if (which === "unique") {
+    const had = grantedUniqueChoice(actor, item, file);
+    if (String(had?.system?.unique?.libraryId ?? "") === value) return false;
+    const spec = grantSpecsOf(file, chosenOptions(item).map(option => option.id)).find(each => each.kind === "unique");
+    const held = await heldUniques(actor);
+    const picked = value ? uniqueChoiceOffered(spec?.most ?? 0, held, spec?.type ?? "").find(each => each.id === value) : null;
+    if (value && !picked) return false;
+    if (had) await actor.deleteEmbeddedDocuments("Item", [had.id]);
+    if (picked) {
+      const { uniqueItemFrom } = await import("./unique.mjs");
+      await actor.createEmbeddedDocuments("Item", [freeUnique(uniqueItemFrom, picked, item,
+        { chosenType: (picked.uaType === "both") ? (spec?.type || "") : "" })]);
+    }
+    return true;
+  }
+  if (which === "factor") {
+    const had = grantedFactorTrait(actor, item, file);
+    if (String(had?.flags?.["dbu-ttrpg"]?.sourceId ?? "") === value) return false;
+    const picked = value ? factorGrantOffered(actor, String(file.grantsFactorTraitOf), "").find(each => each.id === value) : null;
+    if (value && !picked) return false;
+    if (had) await removeRacialTrait(actor, had.id);
+    if (picked) await addRacialTrait(actor, picked, { grantedBy: item.id });
+    return true;
+  }
+  const [, group, option, at] = String(which).split("|");
+  const spec = grantSpecsOf(file, chosenOptions(item).map(each => each.id)).find(each => (each.kind === "other") && (each.group === group)
+    && (each.option === option));
+  if (!spec) return false;
+  const old = grantedOthers(actor, item, spec)[Number(at) || 0] ?? null;
+  if (String(old?.flags?.["dbu-ttrpg"]?.sourceId ?? "") === value) return false;
+  if (value && !otherGrantOffered(actor, spec).some(each => each.id === value)) return false;
+  if (old) await removeRacialTrait(actor, old.id);
+  if (value) {
+    const given = await giveOtherTrait(actor, item, value, option ? {} : otherPresetsOf(file));
+    if (given && option) await given.setFlag("dbu-ttrpg", "grantedByOption", option);
+    if (given && !option && file.wereTraits) await given.setFlag("dbu-ttrpg", "wereTrait", true);
+  }
+  return true;
+}
+
+/** What it gives by choice and has not been given (unansweredOf): an Other Trait spec short of its count, a Unique Ability or Factor
+ * Trait not given, a Talent not chosen. Read off the character - none where the Item is on none. */
+function grantGapsOf(item, file) {
+  const actor = item?.actor;
+  if (!actor || !file) return [];
+  const gaps = [];
+  for (const spec of grantSpecsOf(file, chosenOptions(item).map(option => option.id))) {
+    if (spec.kind === "other") {
+      const given = grantedOthers(actor, item, spec).length;
+      if ((given < spec.count) && (otherGrantOffered(actor, spec).length > 0)) gaps.push({ kind: "grant", spec, missing: spec.count - given });
+    }
+    if ((spec.kind === "unique") && !grantedUniqueChoice(actor, item, file)) gaps.push({ kind: "grant", spec, missing: 1 });
+    if ((spec.kind === "factor") && !grantedFactorTrait(actor, item, file)) gaps.push({ kind: "grant", spec, missing: 1 });
+    if ((spec.kind === "talent") && !(item.system?.chosen ?? []).some(entry => entry.key === `${file.id}#talent`)) {
+      gaps.push({ kind: "grant", spec, missing: 1 });
+    }
+  }
+  return gaps;
+}
+
+/**
  * A Racial Trait's file, as the Item a character takes - its Option and choices asked now ("At Character Creation,
  * choose ..."), their scripts written into its own. Null if backed out of anywhere.
  *
@@ -1284,16 +1550,20 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
  * Requirements, marked as given by it so it goes with it; each Talent, kept if it is ever lost. One already held is not
  * given twice; a Talent or Unique Ability not written yet is named.
  */
-export async function addRacialTrait(actor, trait, { grantedBy = "", presetOption = "", presetChoice = "", transformation = "", made: given = null } = {}) {
+export async function addRacialTrait(actor, trait, { grantedBy = "", presetOption = "", presetChoice = "", transformation = "", made: given = null,
+  grants = undefined } = {}) {
+  // `grants` (its race's window - race-traits.mjs; the user's, 2026-11-28): what it gives that is chosen (grantSpecsOf), answered there by
+  // key - nothing asked here; a key missing (the window closed first), none given, its pencil or Set Racial Options to choose later.
+  // Undefined: asked here, a window each, as any other Trait.
   // `made`: its Item's data already asked (race-traits.mjs, all of a race's asked in one window before any is made).
   const made = given ?? await racialItemFrom(trait, actor, { presetOption, presetChoice });
   if (!made) return null;
   // Personified Dragon Ball: "select a set of Dragon Balls (including a Size Category from Nano to Small) and a number of
   // stars from among them".
   if (trait.dragonBall) {
-    const ball = await askDragonBall(trait);
-    if (!ball) return null;
-    made.data.flags["dbu-ttrpg"].dragonBall = ball;
+    const ball = (grants !== undefined) ? (grants.dragonBall ?? null) : await askDragonBall(trait);
+    if (!ball && (grants === undefined)) return null;
+    if (ball) made.data.flags["dbu-ttrpg"].dragonBall = ball;
   }
   // Lingering Power (1): the Past Life - and from it the Skill, the Attribute, the Talent and the base Tier its effects read.
   if (trait.pastLife) {
@@ -1315,7 +1585,7 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
       .sort((a, b) => a.name.localeCompare(b.name));
     if (offered.length) {
       const escape = Handlebars.escapeExpression;
-      const picked = await foundry.applications.api.DialogV2.wait({
+      const picked = (grants !== undefined) ? (grants.talent ?? "") : await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"], window: { title: `${trait.name} - a Talent` },
         content: `<label class="dbu-respond-option" data-tooltip="Its Prerequisites the table's"><span class="dbu-respond-name">Talent</span>
           <select name="talent">${offered.map(talent => `<option value="${escape(talent.id)}">${escape(talent.name)} (${escape(talentCategoryOf(talent)?.label ?? "")})</option>`).join("")}</select></label>`,
@@ -1342,7 +1612,7 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   if (transformation) made.data.system.transformation = transformation;
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
   if (!item) return null;
-  await giveGrants(actor, item, made.grants, trait.name);
+  await giveGrants(actor, item, made.grants, trait.name, grants);
   await automateAll(actor, item);
   // A Special Item it makes - Neko Majin-Dama's: "At Character Creation, create a Majin-Dama Special Accessory, which is
   // Integrated into your Character".
@@ -1371,13 +1641,21 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
   // And a Quality on it in no Slot - Sturdy Shell's Dense Armor, Treacherous Spikes' Spiked; Reinforced Suit's two.
   if (trait.naturalArmor) for (const quality of listOf(trait.naturalArmorQuality)) await platingQuality(actor, item, quality, true);
-  for (const option of chosenOptions(item)) await madeByOption(actor, item, option);
+  for (const option of chosenOptions(item)) await madeByOption(actor, item, option, grants);
   if (trait.defaultCostume) await askDefaultCostume(actor);
   // An Other Trait it gives, chosen now - Bestial Evolution's "Select and gain a Bestial Trait of your choice".
   // Fallen Idol's two: one of each group it names.
   // Feline Build's: two, of the four it names.
   const from = listOf(trait.grantsOtherFrom);
   for (const group of listOf(trait.grantsOther)) {
+    // Answered on its race's window: those, nothing asked.
+    if (grants !== undefined) {
+      for (const id of [].concat(grants[`other:${group}:`] ?? [])) {
+        const other = await giveOtherTrait(actor, item, id, otherPresetsOf(trait));
+        if (other && trait.wereTraits) await other.setFlag("dbu-ttrpg", "wereTrait", true);
+      }
+      continue;
+    }
     for (let n = 0; n < Math.max(1, Number(trait.grantsOtherCount) || 1); n++) {
       const given = await grantOtherTrait(actor, item, group, from, otherPresetsOf(trait));
       // Were-Beast (1): "These are known as your 'Were-Traits'" - applying only in a Round chosen for them (aside.mjs).
@@ -1385,7 +1663,10 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
     }
   }
   // Robot Ripoff (2): "Gain a Factor Trait from Alternate Upbringing" - which, asked; gone with it.
-  if (trait.grantsFactorTraitOf) await grantFactorTrait(actor, item, String(trait.grantsFactorTraitOf));
+  if (trait.grantsFactorTraitOf) {
+    if (grants === undefined) await grantFactorTrait(actor, item, String(trait.grantsFactorTraitOf));
+    else if (getTrait(grants.factor ?? "")) await addRacialTrait(actor, getTrait(grants.factor), { grantedBy: item.id });
+  }
   // Majin Genes (2), Genetic Focus: Majins (2): "Gain access to a Majin Secondary Trait of your choice" - which, asked; changeable on
   // its Options tab; gone with it.
   if (trait.grantsRacialOf) await grantRacialOf(actor, item, trait);
@@ -1562,8 +1843,16 @@ async function grantOtherTrait(actor, item, group, from = [], presets = {}) {
     rejectClose: false
   });
   const trait = offered.find(entry => entry.id === picked);
-  return trait ? addRacialTrait(actor, trait, { grantedBy: item.id, presetOption: presets.options?.[trait.id] ?? "",
-    presetChoice: presets.choices?.[trait.id] ?? "" }) : null;
+  return trait ? giveOtherTrait(actor, item, trait.id, presets) : null;
+}
+
+/** An Other Trait given by `item` (grantedBy), with the Option and choice its giver names - not one had already. */
+async function giveOtherTrait(actor, item, id, presets = {}) {
+  const trait = getTrait(id);
+  if (!trait || (trait.kind !== "other")) return null;
+  if (Array.from(actor.items ?? []).some(each => each.flags?.["dbu-ttrpg"]?.sourceId === id)) return null;
+  return addRacialTrait(actor, trait, { grantedBy: item.id, presetOption: presets.options?.[trait.id] ?? "",
+    presetChoice: presets.choices?.[trait.id] ?? "" });
 }
 
 /** A Factor Trait of that Factor, chosen - one not had already - given by `item`, gone with it; "Later, by hand" for none. */
@@ -1699,10 +1988,15 @@ function freeUnique(uniqueItemFrom, definition, item, { applied = [], chosenType
 }
 
 /** A Unique Ability of that type and TP Cost or less, not had, chosen - or null (Denizen of the Demon Realm's). */
-async function askUniqueChoice(actor, name, most, held, type = "") {
-  const offered = traitsOfKind("unique").filter(each => !each.owner && !held.has(each.id)
+/** The Unique Abilities a `grantsUniqueChoice` offers: of that type and TP Cost or less, not had. */
+export function uniqueChoiceOffered(most, held, type = "") {
+  return traitsOfKind("unique").filter(each => !each.owner && !held.has(each.id)
     && ((Number(each.tpCost) || 0) <= most) && (!type || [type, "both"].includes(each.uaType)))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function askUniqueChoice(actor, name, most, held, type = "") {
+  const offered = uniqueChoiceOffered(most, held, type);
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
   const said = value => [].concat(value ?? []).join(", ");
@@ -1743,7 +2037,7 @@ async function askUniqueInstead(actor, had, most, held) {
  * What a Racial Trait gives, made on the character: each Unique Ability free and without its Requirements, marked as given
  * by it (and by which Option, where one gave it); each Talent, kept if the Trait is ever lost.
  */
-async function giveGrants(actor, item, grants, name) {
+async function giveGrants(actor, item, grants, name, answers = undefined) {
   const { uniqueItemFrom, isUniqueAbility } = await import("./unique.mjs");
   const held = new Set(Array.from(actor.items).filter(isUniqueAbility).map(each => each.system.unique?.libraryId));
   const created = [];
@@ -1796,7 +2090,9 @@ async function giveGrants(actor, item, grants, name) {
     // Devil (3): "For the Unique Monstrosity Monstrous Trait, you may select any Unique Ability regardless of the TP Cost".
     const cap = ((item.flags?.["dbu-ttrpg"]?.sourceId === "unique-monstrosity") && (actor.system?.effects?.slots?.["devil.anyUnique"] === true))
       ? Infinity : grants.uniqueChoice;
-    const picked = await askUniqueChoice(actor, name, cap, held, grants.uniqueChoiceType);
+    const picked = (answers !== undefined)
+      ? (uniqueChoiceOffered(cap, held, grants.uniqueChoiceType).find(each => each.id === answers.unique) ?? null)
+      : await askUniqueChoice(actor, name, cap, held, grants.uniqueChoiceType);
     if (picked) {
       created.push(freeUnique(uniqueItemFrom, picked, item,
         { chosenType: (picked.uaType === "both") ? (grants.uniqueChoiceType || "") : "" }));
@@ -1891,7 +2187,7 @@ export function chosenOptions(item) {
  * of 2 that have different Weapon Types (and are not of the Shield Weapon Category). These Weapons possess the Artisan
  * Weapon Quality" - their Categories asked, made on the Gear tab, marked as that Option's and never damaged or destroyed.
  */
-async function madeByOption(actor, item, option) {
+async function madeByOption(actor, item, option, grants = undefined) {
   // Clever's: "Gain an additional Skill Improvement at Character Creation" - a Character Perk at Power Level 1, its Technique Points
   // a Skill Improvement's, written on it as every Perk's are.
   if (option?.grantsPerk) await grantPerks(actor, perkSource(option, item), listOf(option.grantsPerk));
@@ -1899,6 +2195,13 @@ async function madeByOption(actor, item, option) {
   // An Other Trait it gives - Extension Feature's "You possess the Extension Attack Monstrous Trait".
   // `grantsOtherCount` of them (Uncanny Monster's two Bestial Traits) - each marked its Option's, so another Option chosen takes it away.
   for (const group of listOf(option?.grantsOther)) {
+    if (grants !== undefined) {
+      for (const id of [].concat(grants[`other:${group}:${option.id}`] ?? [])) {
+        const given = await giveOtherTrait(actor, item, id);
+        if (given) await given.setFlag("dbu-ttrpg", "grantedByOption", option.id);
+      }
+      continue;
+    }
     for (let n = 0; n < Math.max(1, Number(option.grantsOtherCount) || 1); n++) {
       const given = await grantOtherTrait(actor, item, group, listOf(option.grantsOtherFrom));
       if (given) await given.setFlag("dbu-ttrpg", "grantedByOption", option.id);
@@ -1918,7 +2221,8 @@ async function madeByOption(actor, item, option) {
   const select = n => `<label class="dbu-respond-option"><span class="dbu-respond-name">Weapon ${n}</span>
     <select name="weapon${n}">${categories.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} (${
       WEAPON_TYPES[each.weaponType]?.label ?? each.weaponType})`)}</option>`).join("")}</select></label>`;
-  let picked = null;
+  let picked = (grants !== undefined) ? (Array.isArray(grants[`weapons:${option.id}`]) ? grants[`weapons:${option.id}`] : null) : null;
+  if ((grants !== undefined) && !picked) return;
   while (!picked) {
     const answer = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"], window: { title: `${option.name} - Installed Weapons` },
@@ -2001,7 +2305,7 @@ export function tailToGrab(actor) {
  * old one's between the `#@ option` markers, its choice asked, what was recorded and its wording changed with it; the
  * Unique Abilities the old Option gave go, the new one's are given - Talents given are kept, as on losing the Trait.
  */
-export async function changeRacialOption(item, optionId, replacing = "", prepared = null) {
+export async function changeRacialOption(item, optionId, replacing = "", prepared = null, grants = undefined) {
   const actor = item?.actor;
   const sourceId = item?.flags?.["dbu-ttrpg"]?.sourceId ?? "";
   const options = racialOptionsOf(sourceId);
@@ -2042,7 +2346,8 @@ export async function changeRacialOption(item, optionId, replacing = "", prepare
   // And what the old one put on Natural Armor - Combat Plating's Armed.
   const was = old ? getTrait(old) : null;
   if (was?.platingQuality) await platingQuality(actor, item, String(was.platingQuality), false);
-  await madeByOption(actor, item, option);
+  // `grants`: what it gives by choice, answered already (Set Racial Options' pages) - an Other Trait, Installed Weapons.
+  await madeByOption(actor, item, option, grants);
   await giveGrants(actor, item, {
     unique: listOf(option.grantsUnique).map(id => ({ id, restrictions: listOf(option.uniqueRestrictions), option: option.id,
       advancements: listOf(option.uniqueAdvancements) })),

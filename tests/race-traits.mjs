@@ -186,7 +186,7 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
   check("Set Racial Options beside the Racial Grants' title while any is left, through the same window",
     [P.includes('data-action="setRacialOptions"'), P.includes("{{#if racialUnanswered}}"),
      read("module", "sheets", "actor-character-sheet.mjs").includes("setRacialOptions: DBUCharacterSheet._onSetRacialOptions,"),
-     read("module", "race-traits.mjs").includes("const answers = await askPages(`${actor.name} - Racial Options`, () => pages);")],
+     read("module", "race-traits.mjs").includes("const answers = await askPages(`${actor.name} - Racial Options`, pagesFor);")],
     [true, true, true, true]);
 }
 
@@ -259,6 +259,35 @@ check("Enhanced Organism's Save: Impulsive taken, Cognitive (the Android's own) 
   globalThis.CSS = { escape: String };
   const RACSRC = read("module", "racial.mjs");
   check("its page lets an Option effect be left short, never over", [RACSRC.includes("const right = ticked.length <= Number(box.dataset.count);")], [true]);
+}
+
+// What a race's own Traits give by choice (the user's, 2026-11-28): pages of the race's window, and rows of the Trait's pencil.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const plan = race => RT.raceTraitPlan(actor("character", { race })).auto;
+  const keys = (race, answers = new Map()) => RT.racePages(actor("character", { race }), plan(race), answers).map(page => page.key);
+  const monster = { choices: {}, options: { 1: ["two-bestial-traits"] }, optionChoices: {} };
+  const uncannyEffect = RAC.optionGroupsOf(getTrait("uncanny-monster"))[0]?.effect;
+  const bio = new Map([["trait:uncanny-monster", { choices: {}, options: { [uncannyEffect]: ["two-bestial-traits"] }, optionChoices: {} }]]);
+  const being = new Map([["trait:technological-being", { choices: {}, options: { 2: ["construct"], 3: ["extension-feature", "weapon-ports"] }, optionChoices: {} }]]);
+  check("pages for what is given by choice: the Animals' Bestial Traits, Uncanny Monster's two Bestial as chosen, Weapon Ports' Weapons - Extension Feature's one Monstrous Trait given without asking",
+    [keys("animal").filter(key => key.startsWith("grant:")), keys("bio-android", bio).filter(key => key.startsWith("grant:")),
+     keys("android", being).filter(key => key.startsWith("grant:")), RAC.grantAuto(null, RAC.grantSpecsOf(getTrait("technological-being"), ["extension-feature"])[0])],
+    [["grant:beast-of-a-kind:other:bestial:", "grant:bestial-presence:other:bestial:"], ["grant:uncanny-monster:other:bestial:two-bestial-traits"],
+     ["grant:technological-being:weapons:weapon-ports"], ["extension-attack"]]);
+  // The pencil: Uncanny Monster with Two Bestial Traits, one given - two rows, the first that one, the second empty; each listing the
+  // Bestial Traits not had, but its own.
+  const uncanny = { id: "i-um", type: "racial", flags: { "dbu-ttrpg": { sourceId: "uncanny-monster" } },
+    system: { chosen: [{ key: "option", value: "two-bestial-traits" }] } };
+  const arboreal = { id: "i-arb", type: "racial", flags: { "dbu-ttrpg": { sourceId: "arboreal", grantedBy: "i-um", grantedByOption: "two-bestial-traits" } }, system: {} };
+  const owner = { type: "character", system: { race: "bio-android" }, items: [uncanny, arboreal] };
+  uncanny.actor = owner;
+  const rows = (await RAC.choiceRowsOf(uncanny)).filter(row => String(row.which).startsWith("other|"));
+  check("its pencil: a row each Bestial Trait the Option gives - the one given, then empty; Arboreal offered on its own row only; what is missing found",
+    [rows.map(row => [row.which, row.current]), rows[0].options.some(option => option.value === "arboreal"), rows[1].options.some(option => option.value === "arboreal"),
+     RAC.unansweredOf(uncanny).filter(gap => gap.kind === "grant").map(gap => [gap.spec.key, gap.missing])],
+    [[["other|bestial|two-bestial-traits|0", "arboreal"], ["other|bestial|two-bestial-traits|1", ""]], true, false,
+     [["other:bestial:two-bestial-traits", 1]]]);
 }
 
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.

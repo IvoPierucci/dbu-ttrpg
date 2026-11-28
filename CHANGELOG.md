@@ -13,6 +13,9 @@ What each version brought, in broad strokes. Every change is described in its co
   all is answered. Closed early, every Trait is given with what was not answered left empty, and the Progression tab's Racial Grants
   show Set Racial Options, asking just those again; it goes once all are answered (there or by each Trait's pencil). A Trait's own
   questions share one page (its choices, each Option effect, an Option's choice); "a Skill you have 2+ Skill Ranks in" offers None.
+  What a race's own Trait gives by choice - an Other Trait (Bestial, Monstrous, Vocation), a Unique Ability, a Talent, its Dragon
+  Ball, Installed Weapons - is asked on that window too, and its pencil shows a row for each Other Trait, Unique Ability or Factor
+  Trait it gave by choice, to choose again (Uncanny Monster's Bestial and Monstrous Traits).
   An Option may exchange a race Trait for a Factor's (`exchangesRaceTrait:` / `exchangeFactor:`): Enhanced Organism gives no
   Functional Purpose and asks which Alternate Upbringing Factor Trait takes its place.
 
