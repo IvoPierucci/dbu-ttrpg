@@ -8,7 +8,8 @@ What each version brought, in broad strokes. Every change is described in its co
 - **Greater Mutation (3) and Mastered Reincarnated (1) built:** the race Trait their Factor's Factor Trait replaced comes back
   beside it while the Awakening is had (`allow restoreReplaced.<factor>;`, read by race-traits.mjs).
 - **A race's questions in one window:** the Options and choices of the Racial Traits a race gives are asked as pages of a single
-  window, with Last and Next (Done on the last) and its close at the top right (`module/choice-wizard.mjs`); the Traits are made once
+  window, a page a Trait, with Last and Next (Done on the last) and its close at the top right (`module/race-window.mjs`); only
+  the race's own Traits - those picked (Majins, Minions), Factor Traits and Add Racial Trait ask in their own windows. The Traits are made once
   all is answered. Closed early, every Trait is given with what was not answered left empty, and the Progression tab's Racial Grants
   show Set Racial Options, asking just those again; it goes once all are answered (there or by each Trait's pencil). A Trait's own
   questions share one page (its choices, each Option effect, an Option's choice); "a Skill you have 2+ Skill Ranks in" offers None.

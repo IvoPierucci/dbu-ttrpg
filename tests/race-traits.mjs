@@ -127,76 +127,67 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
   check("Brute, exchanged for Powerful Physique, listed in its place", [at >= 0, listed.indexOf("brute") === order.indexOf("powerful-physique")], [true, true]);
 }
 
-// One window for a race's questions (choice-wizard.mjs); Enhanced Organism exchanges Functional Purpose for an Alternate Upbringing Trait.
+// A race's window (race-window.mjs; the user's, 2026-11-27): its own Traits' questions, a page a Trait - nothing else's. Enhanced Organism
+// exchanges Functional Purpose for an Alternate Upbringing Trait.
 {
-  const WIZ = read("module", "choice-wizard.mjs");
-  const RTS = read("module", "race-traits.mjs");
+  const RTS = read("module", "race-traits.mjs"), RW = read("module", "race-window.mjs"), RACSRC = read("module", "racial.mjs");
   check("Enhanced Organism names the exchange; chosen, Functional Purpose is exchanged for an Alternate Upbringing Factor Trait; not chosen, nothing",
     [getTrait("enhanced-organism")?.exchangesRaceTrait, getTrait("enhanced-organism")?.exchangeFactor,
      RT.forcedExchange("functional-purpose", [[{ key: "option", value: "construct" }], [{ key: "option", value: "enhanced-organism" }]]),
      RT.forcedExchange("functional-purpose", [[{ key: "option", value: "construct" }]]), RT.forcedExchange("technological-being", [[{ key: "option", value: "enhanced-organism" }]])],
     ["functional-purpose", "alternate-upbringing", "alternate-upbringing", "", ""]);
-  const RACSRC = read("module", "racial.mjs");
-  check("the race's Traits asked in one window (Last, Next, its close), made only after; the sync gives them through it; only their own questions drawn there - Foundry's dialogs (an Actor's delete) never taken over",
-    [WIZ.includes("if (active && !active.session.finished) return active.session.ask(config);"), !WIZ.includes("DialogV2.wait ="), WIZ.includes('data-wizard="last"'),
-     WIZ.includes('data-wizard="next"'), RTS.includes("if (files.length) await addRaceTraitFiles(actor, files);"), !RACSRC.includes("DialogV2.wait(") && !RTS.includes("DialogV2.wait("),
-     RTS.includes("const entries = await wizard.rewindable(async () => {"), RTS.includes("made.data.flags[SCOPE].exchangedFor = file.id;"),
-     read("module", "racial.mjs").includes("const made = given ?? await racialItemFrom(trait, actor, { presetOption, presetChoice });")],
+  const android = RT.raceTraitPlan(actor("character", { race: "android" })).auto;
+  const keys = answers => RT.racePages(null, android, answers).map(page => page.key);
+  const being = { choices: {}, options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": "impulsive" } };
+  check("the Android's pages: a page a Trait that asks, Functional Purpose last; Enhanced Organism chosen, its page becomes which Alternate Upbringing Trait - and that Trait's own page where it asks (Majin-Raised)",
+    [keys(new Map()).at(-1), keys(new Map()).includes("trait:technological-being"),
+     keys(new Map([["trait:technological-being", being]])).at(-1),
+     keys(new Map([["trait:technological-being", being], ["exchange:functional-purpose", "majin-raised"]])).at(-1),
+     keys(new Map([["trait:technological-being", being], ["exchange:functional-purpose", "earthling-raised"]])).at(-1)],
+    ["trait:functional-purpose", true, "exchange:functional-purpose", "trait:majin-raised", "exchange:functional-purpose"]);
+  check("only the race's own Traits through it - picked ones (Majins, Minions), Factors and Add Racial Trait in their own windows; Foundry's dialogs untouched",
+    [RTS.includes("if (fixed.length) await addRaceTraitFiles(actor, fixed);"), RTS.includes("const answers = await askPages(`${actor.name} - Racial Traits`"),
+     !RW.includes("DialogV2.wait ="), !RACSRC.includes("DialogV2.wait ="), RACSRC.includes("const made = given ?? await racialItemFrom(trait, actor, { presetOption, presetChoice });"),
+     RW.includes('<span class="dbu-wizard-step">${shown + 1} of ${pages.length}</span>'), RW.includes('next.innerHTML = last ? `Done <i class="fa-solid fa-check"></i>`'),
+     RW.includes("if (pagesFor(answers).length <= (shown + 1)) return close();"), RW.includes("if (value === NOT_YET) {")],
     [true, true, true, true, true, true, true, true, true]);
 }
 
-// The window closed before all is answered (the user's, 2026-11-27): the Trait given all the same, what was not answered empty; Set Racial
-// Options finds just that (unansweredOf), and its button goes once all is answered.
-{
-  const RAC = await import(modUrl("racial.mjs"));
-  globalThis.foundry.applications = { api: { DialogV2: { wait: async () => null } } };
-  const closed = await RAC.racialItemFrom(getTrait("technological-being"), null, { partial: true });
-  const whole = await RAC.racialItemFrom(getTrait("technological-being"), null);
-  const purpose = await RAC.racialItemFrom(getTrait("functional-purpose"), null, { partial: true });
-  const asItem = made => ({ type: "racial", system: made.data.system, flags: made.data.flags });
-  const gaps = item => RAC.unansweredOf(item).map(gap => (gap.kind === "option") ? `option ${gap.group.effect}:${gap.missing}` : `choice ${gap.which}`);
-  const answeredItem = { type: "racial", flags: { "dbu-ttrpg": { sourceId: "functional-purpose" } }, system: { chosen: [{ key: "functional-purpose", value: "stealth" },
-    { key: "functional-purpose#2", value: "stealth" }, { key: "option", value: "destroyer" }] } };
-  check("closed: Technological Being given with no Option and its (1) kept (not given at all without `partial`); Functional Purpose without its choices' part",
-    [Boolean(closed), whole, closed?.data.system.chosen, closed?.data.system.script.includes("#@ option"), purpose?.data.system.script.includes("$choice"),
-     purpose?.data.system.script],
-    [true, null, [], false, false, ""]);
-  check("what is left unanswered: Technological Being's (2) one and (3) two; Functional Purpose's two choices and its Option; none once answered",
-    [gaps(asItem(closed)), gaps(asItem(purpose)), gaps(answeredItem)],
-    [["option 2:1", "option 3:2"], ["choice 1", "choice 2", "option 2:1"], []]);
-  delete globalThis.foundry.applications;
-  const P = read("templates", "parts", "actor-progression.hbs"), W = read("module", "choice-wizard.mjs");
-  check("Set Racial Options on the Racial Grants while any is left; the last question's Next said Done, closing the window at once; a Multi-Option's Next, pressed short of its count, staying on it",
-    [P.includes('data-action="setRacialOptions"'), P.includes("{{#if racialUnanswered}}"), read("module", "sheets", "actor-character-sheet.mjs").includes("setRacialOptions: DBUCharacterSheet._onSetRacialOptions,"),
-     typeof RT.answerRaceTraitQuestions, W.includes("const last = await this.isLast(index, value);"), W.includes("Done <i class=\"fa-solid fa-check\"></i>"),
-     W.includes("if (done && !this.pending && (root.querySelector(\".dbu-wizard-body\") === body)) this.hide();"),
-     read("module", "racial.mjs").includes("(picked => (picked.length === count) ? picked : Symbol.for(\"dbu-ttrpg.notYet\"))("), W.includes('export const NOT_YET = Symbol.for("dbu-ttrpg.notYet");')],
-    [true, true, true, "function", true, true, true, true, true]);
-}
-
-// A Trait's questions on one page (the user's, 2026-11-27): Functional Purpose's two Skills and its Option answered together; "a Skill you
-// have 2+ Skill Ranks in" may be None, its line left out.
+// Its answers written in (racialItemFrom `answers`): nothing asked; null - the window closed before its page - the Trait given all the
+// same, what was not answered empty; Set Racial Options finds just that (unansweredOf). "A Skill you have 2+ Skill Ranks in" may be None.
 {
   const RAC = await import(modUrl("racial.mjs"));
   const asked = [];
-  const answer = { "functional-purpose": { choices: { 1: "stealth", 2: "" }, options: { 2: ["destroyer"] }, optionChoices: {} },
-    "technological-being": { choices: {}, options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": "impulsive" } } };
   globalThis.CSS = { escape: String };
-  globalThis.foundry.applications = { api: { DialogV2: { wait: async config => { asked.push(config.window.title); return answer[config.window.title === "Functional Purpose" ? "functional-purpose" : "technological-being"]; } } } };
-  const purpose = await RAC.racialItemFrom(getTrait("functional-purpose"), null, { partial: true });
-  const being = await RAC.racialItemFrom(getTrait("technological-being"), null, { partial: true });
+  globalThis.foundry.applications = { api: { DialogV2: { wait: async config => { asked.push(config.window?.title); return null; } } } };
+  const purpose = await RAC.racialItemFrom(getTrait("functional-purpose"), null,
+    { answers: { choices: { 1: "stealth", 2: "" }, options: { 2: ["destroyer"] }, optionChoices: {} } });
+  const being = await RAC.racialItemFrom(getTrait("technological-being"), null, { answers: { choices: {},
+    options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": "impulsive" } } });
+  const closed = await RAC.racialItemFrom(getTrait("technological-being"), null, { answers: null });
+  const closedPurpose = await RAC.racialItemFrom(getTrait("functional-purpose"), null, { answers: null });
+  const asOwn = await RAC.racialItemFrom(getTrait("technological-being"), null);
   delete globalThis.foundry.applications;
   const item = made => ({ type: "racial", system: made.data.system, flags: made.data.flags });
-  check("one page each: Functional Purpose's Rank given, its Critical Target to None left out, Destroyer chosen; Technological Being's three Options and Enhanced Organism's Save",
-    [asked, purpose.data.system.script.includes("skill.stealth.ranks += 1;"), purpose.data.system.script.includes("criticalTarget"),
-     purpose.data.system.chosen.map(entry => [entry.key, entry.value]), RAC.unansweredOf(item(purpose)).length,
-     being.data.system.chosen.filter(entry => entry.key === "option").map(entry => entry.value), being.data.system.script.includes("save.racial.impulsive"),
-     RAC.unansweredOf(item(being)).length],
-    [["Functional Purpose", "Technological Being"], true, false,
-     [["functional-purpose", "stealth"], ["functional-purpose#2", ""], ["option", "destroyer"]], 0,
-     ["enhanced-organism", "surging-power", "hyper-resilience"], true, 0]);
+  const gaps = made => RAC.unansweredOf(item(made)).map(gap => (gap.kind === "option") ? `option ${gap.group.effect}:${gap.missing}` : `choice ${gap.which}`);
+  check("answered: Functional Purpose's Rank given, its Critical Target to None left out, Destroyer; Technological Being's three Options and Enhanced Organism's Save; nothing asked",
+    [purpose.data.system.script.includes("skill.stealth.ranks += 1;"), purpose.data.system.script.includes("criticalTarget"),
+     purpose.data.system.chosen.map(entry => [entry.key, entry.value]), gaps(purpose),
+     being.data.system.chosen.filter(entry => entry.key === "option").map(entry => entry.value), being.data.system.script.includes("save.racial.impulsive"), gaps(being)],
+    [true, false, [["functional-purpose", "stealth"], ["functional-purpose#2", ""], ["option", "destroyer"]], [],
+     ["enhanced-organism", "surging-power", "hyper-resilience"], true, []]);
+  check("closed: given with nothing chosen and nothing asked, its unanswered found; a Trait not from a race's window asks in its own windows as before (closed there: not given)",
+    [Boolean(closed), closed.data.system.chosen, closed.data.system.script.includes("#@ option"), gaps(closed), closedPurpose.data.system.script, gaps(closedPurpose),
+     asOwn, asked.length > 0],
+    [true, [], false, ["option 2:1", "option 3:2"], "", ["choice 1", "choice 2", "option 2:1"], null, true]);
   check("None: a choice answered empty leaves out every line naming it", [RAC.fillChoice("a $choice2;\nb $choice;", "$choice2", ""), RAC.fillChoice("a $choice2;", "$choice2", "x")],
     ["b $choice;", "a x;"]);
+  const P = read("templates", "parts", "actor-progression.hbs");
+  check("Set Racial Options beside the Racial Grants' title while any is left, through the same window",
+    [P.includes('data-action="setRacialOptions"'), P.includes("{{#if racialUnanswered}}"),
+     read("module", "sheets", "actor-character-sheet.mjs").includes("setRacialOptions: DBUCharacterSheet._onSetRacialOptions,"),
+     read("module", "race-traits.mjs").includes("const answers = await askPages(`${actor.name} - Racial Options`, () => pages);")],
+    [true, true, true, true]);
 }
 
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.

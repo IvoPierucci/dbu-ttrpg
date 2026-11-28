@@ -65,7 +65,6 @@
  * character has).
  */
 
-import { dialogWait } from "./choice-wizard.mjs";
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { isCharacter, isMinion } from "./actor-types.mjs";
 import { getRace, isMinionRace, subraceName } from "./races.mjs";
@@ -775,7 +774,7 @@ export async function askChoice(source, kind = source.choose, context = {}) {
     return null;
   }
   const escape = Handlebars.escapeExpression;
-  const chosen = await dialogWait({
+  const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: source.name },
     content: `<select name="choice">${offered.map(([value, label]) =>
@@ -795,7 +794,7 @@ export async function askChoice(source, kind = source.choose, context = {}) {
 export async function askOptions(trait, options, count = Math.max(1, Number(trait.options) || 1), effect = 0) {
   const escape = Handlebars.escapeExpression;
   const type = (count === 1) ? "radio" : "checkbox";
-  const chosen = await dialogWait({
+  const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${trait.name} - ${effect ? `${ordinal(effect)} effect` : "Option"}` },
     position: { width: 460 },
@@ -805,18 +804,12 @@ export async function askOptions(trait, options, count = Math.max(1, Number(trai
         <span class="dbu-respond-name">${escape(option.name)}</span>
         <span class="dbu-respond-source">${escape(plainText(option.description ?? ""))}</span></label>`).join("")}`,
     buttons: [
-      // Not yet while fewer or more than it asks are ticked: in the one window of a race's Traits, Next stays on it (choice-wizard.mjs).
       { action: "confirm", label: "Choose", default: true, callback: (event, button, dialog) =>
-        (picked => (picked.length === count) ? picked : Symbol.for("dbu-ttrpg.notYet"))(
-          [...dialog.element.querySelectorAll('input[name="option"]:checked')].map(input => input.value)) },
+        [...dialog.element.querySelectorAll('input[name="option"]:checked')].map(input => input.value) },
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
-  if (chosen === Symbol.for("dbu-ttrpg.notYet")) {
-    ui.notifications.warn(`${trait.name}: choose ${count}.`);
-    return null;
-  }
   if (!Array.isArray(chosen)) return null;
   if (chosen.length !== count) {
     ui.notifications.warn(`${trait.name}: choose ${count}.`);
@@ -1002,7 +995,7 @@ async function favoredFeatureChoice(source, actor, techniqueId, advantageId) {
   const offered = featureChoiceOptions(def, { ranks: 1, sig, actor });
   if (!offered.length) return "";
   const escape = Handlebars.escapeExpression;
-  const picked = await dialogWait({
+  const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${source.name}: ${def.name}` },
     content: `<select name="choice">${offered.map(([value, label]) =>
@@ -1023,7 +1016,7 @@ export async function answered(source, chosen, actor = null, preset = "", preset
   let script = String(source.script ?? "").trim();
   if (!source.choose) return script;
   // Named by what gives it - Plant Monster's Elemental (Plantlife) - not asked, where it is among those offered. `presets` ({1, 2, 3}):
-  // answered already, on the Trait's one page (askTraitTogether) - "" a None.
+  // answered already, on the Trait's page of its race's window (traitPage) - "" a None.
   const given = async (which, kind, earlier) => {
     const value = presets?.[which];
     if (value === undefined) return undefined;
@@ -1069,22 +1062,33 @@ export function fillChoice(script, token, value) {
 }
 
 /**
- * A Trait's own questions on one page (the user's, 2026-11-27: "for things of the same Trait, ask in the same window") - its choices
- * (`choose`, `choose2`, `choose3`; a later one's list following the earlier ones') and each Option effect, with the choice of an Option
- * under it. Its answers as {choices: {1, 2, 3}, options: {effect: [ids]}, optionChoices: {id: value}}; null where closed; undefined
- * where it is asked as before, a question at a time - one question only, or one this page cannot draw (Favored Technique's, an
- * Option's second choice). `which` the choices to ask (Set Racial Options: those still missing), `known` those already made.
+ * A Trait's own questions as one page of its race's window (race-window.mjs; the user's, 2026-11-27): its choices (`choose`, `choose2`,
+ * `choose3` - a later one's list following the earlier ones on the page, as Functional Purpose's 2+ Ranks counts the Rank just chosen)
+ * and each Option effect, an Option's own choice in a list beside its name. `{html, wire(root), read(root, pressed)}`: `read` gives
+ * {choices: {n: value}, options: {effect: [ids]}, optionChoices: {id: value}} - or NOT_YET while an Option effect has fewer or more
+ * ticked than it asks (marked red where `pressed`). Null where nothing is asked, or where something cannot be drawn on a page
+ * (Favored Technique's Advantage, an Option's second choice): those ask in their own windows as they are given. `which` the choices to
+ * ask (Set Racial Options: those still missing), `known` those already made.
  */
-export async function askTraitTogether(trait, actor, groups, { which = [1, 2, 3], known = {} } = {}) {
+export const NOT_YET = Symbol.for("dbu-ttrpg.notYet");
+
+/** Whether a Trait's questions can be drawn on its page (traitPage) - and so whether its race's window asks them. */
+export function traitPageable(trait, groups = optionGroupsOf(trait)) {
+  if (!trait || trait.optionsByRace || trait.optionsFollow) return false;
+  const kinds = [trait.choose, trait.choose && trait.choose2, trait.choose && trait.choose2 && trait.choose3].filter(Boolean);
+  if (kinds.includes("advantageUpTo10")) return false;
+  if (groups.some(group => group.options.some(option => option.choose2 || (option.choose === "advantageUpTo10")))) return false;
+  return Boolean(kinds.length || groups.length);
+}
+
+export async function traitPage(trait, actor, groups, { which = [1, 2, 3], known = {} } = {}) {
   const kindOf = n => (n === 1) ? trait.choose : (n === 2) ? (trait.choose && trait.choose2) : (trait.choose && trait.choose2 && trait.choose3);
   const asked = which.filter(n => kindOf(n));
-  if (asked.some(n => kindOf(n) === "advantageUpTo10")) return undefined;
-  if (groups.some(group => group.options.some(option => option.choose2 || (option.choose === "advantageUpTo10")))) return undefined;
-  const questions = asked.length + groups.length;
-  if (questions < 2) return undefined;
+  if (asked.some(n => kindOf(n) === "advantageUpTo10")) return null;
+  if (groups.some(group => group.options.some(option => option.choose2 || (option.choose === "advantageUpTo10")))) return null;
+  if (!asked.length && !groups.length) return null;
   const escape = Handlebars.escapeExpression;
-  // Each asked choice's list by the answers before it - the page's or those already made (Functional Purpose's 2+ Ranks counts the Rank
-  // just chosen): keyed by the page's earlier answers, "a|b".
+  // Each asked choice's list by the answers before it - the page's or those already made: keyed by the page's earlier answers, "a|b".
   const lists = {};
   const build = async (at, picked) => {
     if (at >= asked.length) return;
@@ -1096,7 +1100,6 @@ export async function askTraitTogether(trait, actor, groups, { which = [1, 2, 3]
     for (const [value] of pairs) await build(at + 1, { ...picked, [n]: value });
   };
   await build(0, {});
-  const kinds = asked;
   const optionPairs = {};
   for (const group of groups) for (const option of group.options) if (option.choose) optionPairs[option.id] = await choicesFor(option.choose, option, { actor });
   const select = (name, pairs) => `<select name="${name}">${pairs.map(([value, label]) =>
@@ -1120,13 +1123,9 @@ export async function askTraitTogether(trait, actor, groups, { which = [1, 2, 3]
     element.innerHTML = pairs.map(([value, text]) => `<option value="${escape(value)}">${escape(text)}</option>`).join("");
     if (pairs.some(([value]) => value === keep)) element.value = keep;
   };
-  const answer = await dialogWait({
-    classes: ["dbu-dialog"],
-    window: { title: trait.name },
-    position: { width: 480 },
-    content: `<div class="dbu-together">${parts.join("")}</div>`,
-    render: (event, dialog) => {
-      const root = dialog.element;
+  return {
+    html: `<div class="dbu-together">${parts.join("")}</div>`,
+    wire: root => {
       const field = n => root.querySelector(`[name="choice${n}"]`);
       // Each later choice's list follows the earlier ones on the page.
       const follow = () => asked.forEach((n, at) => {
@@ -1135,38 +1134,27 @@ export async function askTraitTogether(trait, actor, groups, { which = [1, 2, 3]
       for (const n of asked) field(n)?.addEventListener("change", follow);
       follow();
     },
-    buttons: [
-      { action: "confirm", label: "Choose", default: true, callback: (event, button, dialog) => {
-        const root = dialog.element;
-        const options = {};
-        const optionChoices = {};
-        let short = false;
-        for (const box of root.querySelectorAll(".dbu-together-group")) {
-          const ticked = [...box.querySelectorAll("input:checked")].map(input => input.value);
-          const right = ticked.length === Number(box.dataset.count);
-          // Marked red as Next is pressed short - not while the window only looks ahead (choice-wizard.mjs's "probe").
-          if (event?.type !== "probe") box.querySelector(".dbu-respond-hint")?.classList.toggle("dbu-wizard-needs", !right);
-          if (!right) short = true;
-          options[box.dataset.effect] = ticked;
-          for (const id of ticked) {
-            const pick = root.querySelector(`[name="optchoice-${CSS.escape(id)}"]`);
-            if (pick) optionChoices[id] = pick.value;
-          }
+    read: (root, pressed = false) => {
+      const options = {};
+      const optionChoices = {};
+      let short = false;
+      for (const box of root.querySelectorAll(".dbu-together-group")) {
+        const ticked = [...box.querySelectorAll("input:checked")].map(input => input.value);
+        const right = ticked.length === Number(box.dataset.count);
+        if (pressed) box.querySelector(".dbu-respond-hint")?.classList.toggle("dbu-wizard-needs", !right);
+        if (!right) short = true;
+        options[box.dataset.effect] = ticked;
+        for (const id of ticked) {
+          const pick = root.querySelector(`[name="optchoice-${CSS.escape(id)}"]`);
+          if (pick) optionChoices[id] = pick.value;
         }
-        if (short) return Symbol.for("dbu-ttrpg.notYet");
-        const choices = {};
-        for (const n of asked) choices[n] = root.querySelector(`[name="choice${n}"]`)?.value ?? "";
-        return { choices, options, optionChoices };
-      } },
-      { action: "cancel", label: "Cancel" }
-    ],
-    rejectClose: false
-  });
-  if (answer === Symbol.for("dbu-ttrpg.notYet")) {
-    ui.notifications.warn(`${trait.name}: choose as many as each Option effect asks.`);
-    return null;
-  }
-  return (answer && (typeof answer === "object")) ? answer : null;
+      }
+      if (short) return NOT_YET;
+      const choices = {};
+      for (const n of asked) choices[n] = root.querySelector(`[name="choice${n}"]`)?.value ?? "";
+      return { choices, options, optionChoices };
+    }
+  };
 }
 
 /**
@@ -1175,16 +1163,14 @@ export async function askTraitTogether(trait, actor, groups, { which = [1, 2, 3]
  *
  * @returns {Promise<?{data: object, grants: {unique: {id: string, restrictions: string[]}[], talents: string[]}}>}
  */
-export async function racialItemFrom(trait, actor = null, { presetOption = "", presetChoice = "", partial = false } = {}) {
+export async function racialItemFrom(trait, actor = null, { presetOption = "", presetChoice = "", answers = undefined } = {}) {
   const chosen = [];
-  // Its questions on one page where they may be (askTraitTogether) - not where something names its Option or choice.
-  const named = presetOption || presetChoice || trait.optionsByRace || trait.optionsFollow;
-  const together = named ? undefined : await askTraitTogether(trait, actor, optionGroupsOf(trait));
-  if ((together === null) && !partial) return null;
-  // `partial` (a race's Traits, the user's 2026-11-27): a question left unanswered leaves that piece empty - its own part of the script
-  // out, an Option not chosen - rather than the Trait not taken; Set Racial Options asks it later (unansweredOf).
-  let own = (together === null) ? null : await answered(trait, chosen, actor, presetChoice, together?.choices ?? null);
-  if ((own === null) && partial) own = "";
+  // `answers` (a race's own Traits, asked in its window - race-window.mjs; the user's, 2026-11-27): its page's answers, written in, nothing
+  // asked; null where the window was closed before its page was answered - the Trait given all the same, what was not answered empty (its
+  // own part of the script out, no Option chosen), for Set Racial Options to ask later (unansweredOf). Undefined: asked here, a window
+  // a question, as any other Trait is.
+  const together = answers;
+  let own = (together === null) ? "" : await answered(trait, chosen, actor, presetChoice, together?.choices ?? null);
   if (own === null) return null;
   const scripts = [own];
   const texts = [];
@@ -1215,15 +1201,16 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
     if (together === null) continue;
     const picked = (presetOption && (group.count === 1) && options.some(entry => entry.id === presetOption))
       ? [presetOption] : together ? (together.options?.[group.effect] ?? null) : await askOptions(trait, options, group.count, group.effect);
-    if (!picked && partial) continue;
+    if (!picked && together) continue;
     if (!picked) return null;
     for (const id of picked) {
       const option = options.find(entry => entry.id === id);
       const before = chosen.length;
       chosen.push({ key: "option", value: option.id, label: option.name });
-      const script = await answered(option, chosen, null, together?.optionChoices?.[option.id] ?? "");
-      // Its own choice unanswered: the Option not chosen either, asked whole later.
-      if ((script === null) && partial) {
+      // Its own choice as its page answered it - not there, the Option not chosen either, asked whole later.
+      const missing = together && option.choose && !(option.id in (together.optionChoices ?? {}));
+      const script = missing ? null : await answered(option, chosen, null, together?.optionChoices?.[option.id] ?? "");
+      if ((script === null) && together) {
         chosen.length = before;
         continue;
       }
@@ -1305,7 +1292,7 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
       .sort((a, b) => a.name.localeCompare(b.name));
     if (offered.length) {
       const escape = Handlebars.escapeExpression;
-      const picked = await dialogWait({
+      const picked = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"], window: { title: `${trait.name} - a Talent` },
         content: `<label class="dbu-respond-option" data-tooltip="Its Prerequisites the table's"><span class="dbu-respond-name">Talent</span>
           <select name="talent">${offered.map(talent => `<option value="${escape(talent.id)}">${escape(talent.name)} (${escape(talentCategoryOf(talent)?.label ?? "")})</option>`).join("")}</select></label>`,
@@ -1431,7 +1418,7 @@ export async function askPastLife(actor, trait) {
   const escape = Handlebars.escapeExpression;
   const others = Array.from(globalThis.game?.actors ?? []).filter(other => (isCharacter(other)) && (other.id !== actor?.id))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const who = await dialogWait({
+  const who = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${trait.name} - your Past Life` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Past Life</span>
       <select name="past"><option value="">Not in this world - named</option>${others.map(other =>
@@ -1460,7 +1447,7 @@ export async function askPastLife(actor, trait) {
     .sort((a, b) => a.name.localeCompare(b.name));
   const tier = past ? (Number(past.system?.baseTierOfPower) || 1) : 1;
   const label = key => key.charAt(0).toUpperCase() + key.slice(1);
-  const answer = await dialogWait({
+  const answer = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${trait.name} - ${past?.name ?? (who.name || "your Past Life")}` },
     content: `<label class="dbu-respond-option" data-tooltip="Their Skill with the most Skill Ranks - a tie, yours to decide">
         <span class="dbu-respond-name">Skill Rank</span>
@@ -1491,7 +1478,7 @@ async function askNormalTrait(actor, item) {
   const own = ownedRacialTraits(actor).filter(each => (each.id !== item.id) && !each.system?.factor);
   if (!own.length) return;
   const escape = Handlebars.escapeExpression;
-  const picked = await dialogWait({
+  const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${item.name} - your Normal Trait` },
     content: `<p class="dbu-respond-hint">The Secondary Racial Trait exchanged for it: kept, applying in every Combat Round your Were-Traits are not chosen for.</p>
       <label class="dbu-respond-option"><span class="dbu-respond-name">Normal Trait</span>
@@ -1507,7 +1494,7 @@ async function askNormalTrait(actor, item) {
 /** The Dragon Ball set asked for - its name, Size Category and stars - or null if backed out of. */
 async function askDragonBall(trait) {
   const sizes = [["nano", "Nano"], ["tiny", "Tiny"], ["small", "Small"]];
-  const answer = await dialogWait({
+  const answer = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${trait.name} - your Dragon Ball` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Set</span>
         <input type="text" name="set" value="" placeholder="Which set of Dragon Balls"/></label>
@@ -1540,7 +1527,7 @@ async function grantOtherTrait(actor, item, group, from = [], presets = {}) {
     return null;
   }
   const escape = Handlebars.escapeExpression;
-  const picked = await dialogWait({
+  const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${item.name} - a ${name} Trait` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">${escape(name)} Trait</span>
       <select name="other">${offered.map(trait => `<option value="${escape(trait.id)}">${escape(trait.name)}</option>`)
@@ -1563,7 +1550,7 @@ async function grantFactorTrait(actor, item, factor) {
     .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || a.name.localeCompare(b.name));
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
-  const picked = await dialogWait({
+  const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${item.name} - a ${factorName(factor)} Factor Trait` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Factor Trait</span>
       <select name="factor">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select></label>`,
@@ -1602,7 +1589,7 @@ async function grantRacialOf(actor, item, file) {
   const offered = racialGrantChoices(file, actor);
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
-  const picked = await dialogWait({
+  const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${item.name} - a ${racialGrantLabel(file)}` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">${escape(racialGrantLabel(file))}</span>
       <select name="racial">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select></label>`,
@@ -1659,7 +1646,7 @@ async function askDefaultCostume(actor) {
   const apparel = Array.from(actor.items ?? []).filter(item => (item.type === "gear") && (item.system?.crafted?.kind === "apparel"));
   const marked = apparel.find(item => item.getFlag?.("dbu-ttrpg", "defaultCostume"));
   if (marked) return marked;
-  const choice = apparel.length ? await dialogWait({
+  const choice = apparel.length ? await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: "Majin Style - Default Costume" }, content: "",
     buttons: [...apparel.map(item => ({ action: item.id, label: item.name })), { action: "new", label: "A new one (Grade 2)" }],
     rejectClose: false
@@ -1696,7 +1683,7 @@ async function askUniqueChoice(actor, name, most, held, type = "") {
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
   const said = value => [].concat(value ?? []).join(", ");
-  const id = await dialogWait({
+  const id = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${actor.name} - ${name}` },
     content: `<p class="dbu-respond-hint">A ${type ? `${type.charAt(0).toUpperCase()}${type.slice(1)} ` : ""}Unique Ability of ${most} TP or less.</p>
       <select name="unique">${offered.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} - ${
@@ -1716,7 +1703,7 @@ async function askUniqueInstead(actor, had, most, held) {
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
   const said = value => [].concat(value ?? []).join(", ");
-  const id = await dialogWait({
+  const id = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${actor.name} already has ${had.name}` },
     content: `<p class="dbu-respond-hint">A Unique Ability of ${most} TP or less instead.</p>
       <select name="unique">${offered.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} - ${
@@ -1757,7 +1744,7 @@ async function giveGrants(actor, item, grants, name) {
     }
     let chosenType = "";
     if (definition.uaType === "both") {
-      chosenType = await dialogWait({
+      chosenType = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"],
         window: { title: `${definition.name} - Type` },
         content: "",
@@ -1910,7 +1897,7 @@ async function madeByOption(actor, item, option) {
       WEAPON_TYPES[each.weaponType]?.label ?? each.weaponType})`)}</option>`).join("")}</select></label>`;
   let picked = null;
   while (!picked) {
-    const answer = await dialogWait({
+    const answer = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"], window: { title: `${option.name} - Installed Weapons` },
       content: `<p class="dbu-respond-hint">Grade ${grade}, ${qualityIds.map(id => getTrait(id)?.name ?? id).join(", ")}${(count > 1) ? " - two different Weapon Types" : ""}.</p>
         ${Array.from({ length: count }, (each, index) => select(index + 1)).join("")}`,

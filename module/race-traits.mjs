@@ -20,10 +20,10 @@
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { getRace, isMinionRace } from "./races.mjs";
-import { addRacialTrait, answered, askChoice, askOptions, askTraitTogether, changeChoice, changeRacialOption, factorOf, minionRacialUnfit,
-  ownedRacialTraits, racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait, replacedTraitOf,
+import { addRacialTrait, answered, changeChoice, changeRacialOption, factorOf, minionRacialUnfit, optionGroupsOf, ownedRacialTraits,
+  racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait, replacedTraitOf, traitPage, traitPageable,
   unansweredOf } from "./racial.mjs";
-import { dialogWait, withChoiceWizard } from "./choice-wizard.mjs";
+import { askPages } from "./race-window.mjs";
 
 const SCOPE = "dbu-ttrpg";
 
@@ -80,8 +80,15 @@ export async function syncRaceTraits(actor, { raceChanged = false } = {}) {
   const changes = raceTraitChanges(actor, { raceChanged });
   if (!changes) return false;
   for (const id of changes.remove) if (actor.items.get(id)) await removeRacialTrait(actor, id);
-  const files = changes.add.map(id => getTrait(id)).filter(Boolean);
-  if (files.length) await addRaceTraitFiles(actor, files);
+  // Its race's own Traits in their window (the user's); those picked on the Progression tab - the Majins' 4, a Minion's 2 - each asking
+  // in its own windows, as before.
+  const picked = new Set(raceTraitPlan(actor)?.picked ?? []);
+  const fixed = changes.add.filter(id => !picked.has(id)).map(id => getTrait(id)).filter(Boolean);
+  if (fixed.length) await addRaceTraitFiles(actor, fixed);
+  for (const id of changes.add.filter(each => picked.has(each))) {
+    const file = getTrait(id);
+    if (file) await addRacialTrait(actor, file);
+  }
   await actor.setFlag(SCOPE, "raceTraitsSet", actor.system.race);
   return true;
 }
@@ -100,62 +107,81 @@ export function forcedExchange(traitId, chosen) {
   return "";
 }
 
-/** Which of a Factor's Traits takes a race Trait's place - asked; its id, or "" (closed). */
-async function askExchangeFactor(file, factor) {
+/** The page asking which of a Factor's Traits takes a race Trait's place (its window, race-window.mjs). */
+function exchangePage(file, factor) {
   const escape = Handlebars.escapeExpression;
   const offered = racialTraitFiles().filter(each => factorOf(each) === factor).sort((a, b) => a.name.localeCompare(b.name));
-  if (!offered.length) return "";
   const name = racialFactor(factor)?.name ?? factor;
-  const picked = await dialogWait({
-    classes: ["dbu-dialog"],
-    window: { title: `${file.name} - exchanged for a ${name} Factor Trait` },
-    content: `<p class="dbu-respond-hint">${escape(file.name)} is exchanged for a Factor Trait of ${escape(name)}: which?</p>
+  return {
+    html: `<p class="dbu-respond-hint">${escape(file.name)} is exchanged for a Factor Trait of ${escape(name)}: which?</p>
       <select name="factor">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select>`,
-    buttons: [{ action: "take", label: "Choose", default: true,
-      callback: (event, button, dialog) => dialog.element.querySelector('[name="factor"]')?.value ?? "" },
-      { action: "cancel", label: "Cancel" }],
-    rejectClose: false
-  });
-  return offered.some(each => each.id === picked) ? picked : "";
+    wire: () => {},
+    read: root => root.querySelector('[name="factor"]')?.value ?? ""
+  };
+}
+
+/** A race's own Traits, ordered: one an Option may exchange away last, once the Options that might are chosen. */
+function exchangeLast(files) {
+  const away = new Set([...traitsOfKind("races"), ...traitsOfKind("factors")].map(each => String(each.exchangesRaceTrait ?? "")).filter(Boolean));
+  return [...files.filter(file => !away.has(file.id)), ...files.filter(file => away.has(file.id))];
+}
+
+/** The Options its window's answers chose, as `system.chosen` entries - what forcedExchange reads. */
+function chosenIn(answers) {
+  return [...answers.values()].flatMap(answer => Object.values(answer?.options ?? {}).flat().map(value => ({ key: "option", value })));
 }
 
 /**
- * A race's Traits given together (the user's, 2026-11-27): every Option and choice of them asked in one window, Last and Next between
- * them (choice-wizard.mjs) - and only then are they made, what they ask as they are made (a Weapon's, a Unique Ability's) in the same
- * window. One an Option already chosen exchanges for a Factor's (forcedExchange) is not given: which of that Factor's Traits takes its
- * place is asked instead, and given remembering it (`exchangedFor`). Closed before all is answered, every Trait is given all the same,
- * what was not answered left empty (the user's): Set Racial Options asks it later (answerRaceTraitQuestions).
+ * The pages of a race's window for these Traits and the answers so far: a page a Trait that asks something (traitPageable); in place of
+ * one an Option chose to exchange away, a page for which of that Factor's Traits, and that Trait's own page if it asks anything.
+ */
+export function racePages(actor, files, answers, held = []) {
+  const pages = [];
+  for (const file of exchangeLast(files)) {
+    const factor = forcedExchange(file.id, [...held, ...chosenIn(answers)]);
+    if (factor) {
+      const key = `exchange:${file.id}`;
+      pages.push({ key, title: `${file.name} - exchanged`, build: async () => exchangePage(file, factor) });
+      const replacing = getTrait(answers.get(key) ?? "");
+      if (replacing && traitPageable(replacing)) pages.push({ key: `trait:${replacing.id}`, title: replacing.name,
+        build: () => traitPage(replacing, actor, optionGroupsOf(replacing)) });
+      continue;
+    }
+    if (traitPageable(file)) pages.push({ key: `trait:${file.id}`, title: file.name, build: () => traitPage(file, actor, optionGroupsOf(file)) });
+  }
+  return pages;
+}
+
+/**
+ * A race's own Traits given (the user's, 2026-11-27): their Options and choices asked first in one window, a page a Trait, Last and
+ * Next between them (race-window.mjs) - then made with those answers. One an Option chose to exchange for a Factor's (forcedExchange) is
+ * not given: the Factor Trait its window chose is, remembering it (`exchangedFor`). Closed before all is answered, every Trait is given
+ * all the same, what was not answered left empty: Set Racial Options asks it later. What a Trait asks as it is made (a Weapon, a Unique
+ * Ability) and what its page cannot draw ask in their own windows.
  */
 export async function addRaceTraitFiles(actor, files) {
-  const title = `${actor.name} - Racial Traits`;
-  return withChoiceWizard(title, async wizard => {
-    const held = Array.from(actor.items ?? []).map(item => item.system?.chosen ?? []);
-    const entries = await wizard.rewindable(async () => {
-      const out = [];
-      // One an Option may exchange away asked last, once the Options that might are chosen.
-      const exchangeable = new Set([...traitsOfKind("races"), ...traitsOfKind("factors")].map(each => String(each.exchangesRaceTrait ?? "")).filter(Boolean));
-      const ordered = [...files.filter(file => !exchangeable.has(file.id)), ...files.filter(file => exchangeable.has(file.id))];
-      for (const file of ordered) {
-        const factor = forcedExchange(file.id, [...held, ...out.map(entry => entry.made?.data?.system?.chosen ?? [])]);
-        if (factor) {
-          const replacing = getTrait(await askExchangeFactor(file, factor));
-          const made = replacing ? await racialItemFrom(replacing, actor, { partial: true }) : null;
-          if (made) made.data.flags[SCOPE].exchangedFor = file.id;
-          out.push({ file: replacing, made });
-          continue;
-        }
-        out.push({ file, made: await racialItemFrom(file, actor, { partial: true }) });
-      }
-      return out;
-    });
-    const made = [];
-    for (const entry of entries) {
-      if (!entry.made || !entry.file) continue;
-      const item = await addRacialTrait(actor, entry.file, { made: entry.made });
-      if (item) made.push(item);
+  const held = Array.from(actor.items ?? []).map(item => item.system?.chosen ?? []);
+  const answers = await askPages(`${actor.name} - Racial Traits`, given => racePages(actor, files, given, held));
+  const made = [];
+  const give = async (file, extra = {}) => {
+    const answer = traitPageable(file) ? (answers.get(`trait:${file.id}`) ?? null) : undefined;
+    const data = await racialItemFrom(file, actor, { answers: answer });
+    if (!data) return;
+    Object.assign(data.data.flags[SCOPE], extra);
+    const item = await addRacialTrait(actor, file, { made: data });
+    if (item) made.push(item);
+  };
+  for (const file of exchangeLast(files)) {
+    const factor = forcedExchange(file.id, [...held, ...chosenIn(answers)]);
+    if (!factor) {
+      await give(file);
+      continue;
     }
-    return made;
-  });
+    // Closed before which was said: none given in its place - Refresh Racial Traits asks again.
+    const replacing = getTrait(answers.get(`exchange:${file.id}`) ?? "");
+    if (replacing) await give(replacing, { exchangedFor: file.id });
+  }
+  return made;
 }
 
 /**
@@ -317,74 +343,44 @@ export function unansweredRaceTraits(actor) {
 }
 
 /**
- * The Progression tab's Set Racial Options (the user's, 2026-11-27): only what was left unanswered, Trait by Trait, in the same window
- * (Last, Next, Done) - an Option effect's missing Options with their own choices, then each choice not made - and written as the pencil
- * writes them (changeRacialOption, changeChoice) once all is asked. Closed midway, what was answered is written.
+ * The Progression tab's Set Racial Options (the user's, 2026-11-27): only what was left unanswered, a page a Trait in its race's window
+ * (Last, Next, Done) - an Option effect's missing Options with their own choices, and each choice not made - written as the pencil
+ * writes them (changeRacialOption, changeChoice). Closed midway, what was answered is written. One whose questions cannot be drawn on a
+ * page is answered by its pencil.
  */
 export async function answerRaceTraitQuestions(actor) {
   const items = unansweredRaceTraits(actor);
   if (!items.length) return 0;
-  return withChoiceWizard(`${actor.name} - Racial Options`, async wizard => {
-    const steps = await wizard.rewindable(async () => {
-      const out = [];
-      for (const item of items) {
-        const file = getTrait(item.flags?.[SCOPE]?.sourceId ?? "");
-        if (!file) continue;
-        const chosen = item.system?.chosen ?? [];
-        const value = key => chosen.find(entry => entry.key === key)?.value ?? "";
-        const gaps = unansweredOf(item);
-        const openOf = group => group.options.filter(option => !chosen.some(entry => (entry.key === "option") && (entry.value === option.id)));
-        // Its missing questions on one page, as the race asked them (askTraitTogether) - or one at a time where that cannot be drawn.
-        const together = await askTraitTogether(file, actor,
-          gaps.filter(gap => gap.kind === "option").map(gap => ({ ...gap.group, options: openOf(gap.group), count: gap.missing })),
-          { which: gaps.filter(gap => gap.kind === "choice").map(gap => gap.which),
-            known: { 1: value(file.id), 2: value(`${file.id}#2`), 3: value(`${file.id}#3`) } });
-        if (together === null) continue;
-        if (together) {
-          for (const [n, picked] of Object.entries(together.choices ?? {})) out.push({ item, which: Number(n), value: picked });
-          for (const ids of Object.values(together.options ?? {})) {
-            for (const id of ids) {
-              const option = getTrait(id);
-              const extra = [];
-              const script = option ? await answered(option, extra, actor, together.optionChoices?.[id] ?? "") : null;
-              if (script !== null) out.push({ item, option: id, prepared: { script, extra } });
-            }
-          }
-          continue;
-        }
-        const given = [];
-        for (const gap of gaps) {
-          if (gap.kind === "option") {
-            const open = gap.group.options.filter(option => !chosen.some(entry => (entry.key === "option") && (entry.value === option.id)));
-            const picked = await askOptions(file, open, gap.missing, gap.group.effect);
-            if (!picked) continue;
-            for (const id of picked) {
-              const option = open.find(each => each.id === id);
-              const extra = [];
-              const script = await answered(option, extra, actor);
-              if (script !== null) out.push({ item, option: id, prepared: { script, extra } });
-            }
-            continue;
-          }
-          const kind = (gap.which === 3) ? file.choose3 : (gap.which === 2) ? file.choose2 : file.choose;
-          const earlier = [value(file.id), value(`${file.id}#2`), value(`${file.id}#3`), ...given].filter(Boolean);
-          const picked = await askChoice(file, kind, { actor, earlier });
-          if (!picked) continue;
-          given.push(picked.value);
-          out.push({ item, which: gap.which, value: picked.value });
-        }
-      }
-      return out;
-    });
-    let written = 0;
-    for (const step of steps) {
-      const item = actor.items.get(step.item.id);
-      if (!item) continue;
-      const done = step.option ? await changeRacialOption(item, step.option, "", step.prepared) : await changeChoice(item, step.which, step.value);
-      if (done) written++;
+  const askedOf = item => {
+    const file = getTrait(item.flags?.[SCOPE]?.sourceId ?? "");
+    const chosen = item.system?.chosen ?? [];
+    const value = key => chosen.find(entry => entry.key === key)?.value ?? "";
+    const gaps = unansweredOf(item);
+    const open = group => group.options.filter(option => !chosen.some(entry => (entry.key === "option") && (entry.value === option.id)));
+    return { file, groups: gaps.filter(gap => gap.kind === "option").map(gap => ({ ...gap.group, options: open(gap.group), count: gap.missing })),
+      which: gaps.filter(gap => gap.kind === "choice").map(gap => gap.which),
+      known: { 1: value(file?.id), 2: value(`${file?.id}#2`), 3: value(`${file?.id}#3`) } };
+  };
+  const pages = items.map(item => ({ item, ...askedOf(item) })).filter(entry => entry.file && traitPageable(entry.file, entry.groups))
+    .map(entry => ({ key: `item:${entry.item.id}`, title: entry.item.name, entry,
+      build: () => traitPage(entry.file, actor, entry.groups, { which: entry.which, known: entry.known }) }));
+  const answers = await askPages(`${actor.name} - Racial Options`, () => pages);
+  let written = 0;
+  for (const page of pages) {
+    const answer = answers.get(page.key);
+    const item = actor.items.get(page.entry.item.id);
+    if (!answer || !item) continue;
+    for (const [n, picked] of Object.entries(answer.choices ?? {})) {
+      if (await changeChoice(actor.items.get(item.id), Number(n), picked)) written++;
     }
-    return written;
-  });
+    for (const id of Object.values(answer.options ?? {}).flat()) {
+      const option = getTrait(id);
+      const extra = [];
+      const script = option ? await answered(option, extra, actor, answer.optionChoices?.[id] ?? "") : null;
+      if ((script !== null) && await changeRacialOption(actor.items.get(item.id), id, "", { script, extra })) written++;
+    }
+  }
+  return written;
 }
 
 /** Whether its sheet, opened by whoever plays it, should give it its race's Traits: none given for its race yet. */

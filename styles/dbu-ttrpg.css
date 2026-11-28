@@ -6607,8 +6607,8 @@
   border-color: #7fb4d4;
 }
 
-/* One window for many questions (choice-wizard.mjs, the user's 2026-11-27): the question's title and number above, its own content,
-   its other answers ("None", "Later, by hand") beside it, and Last / Next below - Last left, Next right. */
+/* A race's window (race-window.mjs, the user's 2026-11-27): the page's Trait and count above, its questions,
+   and Last / Next below - Last left, Next right. */
 .application.dbu-choice-wizard .dbu-wizard {
   display: flex;
   flex-direction: column;
