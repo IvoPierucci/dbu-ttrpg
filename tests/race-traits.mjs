@@ -290,6 +290,15 @@ check("Enhanced Organism's Save: Impulsive taken, Cognitive (the Android's own) 
      [["other:bestial:two-bestial-traits", 1]]]);
 }
 
+// Last check (2026-11-28): a granted Other Trait with questions of its own gets its page; one window's grant pages do not offer twice.
+{
+  const RTS = read("module", "race-traits.mjs"), RACSRC = read("module", "racial.mjs");
+  check("a granted Other Trait's own page (Bestial Build's Option) and its answers given through; a Trait chosen on another page not offered; rows kept by grantSlot",
+    [RTS.includes("pages.push({ key: `granted:${id}`, title: `${file.name} - ${other.name}`,"), RACSRC.includes("function traitAnswerOf(grants, id) {"),
+     RTS.includes("build: () => grantPage(spec, file, actor, { exclude }) });"), RACSRC.includes("function grantRows(given, count) {"),
+     RTS.includes("const empty = emptyGrantRows(item, spec);")], [true, true, true, true, true]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

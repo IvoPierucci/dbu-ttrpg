@@ -20,7 +20,7 @@
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { getRace, isMinionRace } from "./races.mjs";
-import { addRacialTrait, answered, changeChoice, changeRacialOption, factorOf, grantAuto, grantPage, grantSpecsOf, grantTitle,
+import { addRacialTrait, answered, changeChoice, changeRacialOption, emptyGrantRows, factorOf, grantAuto, grantPage, grantSpecsOf, grantTitle,
   minionRacialUnfit, optionGroupsOf, ownedRacialTraits, racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait,
   replacedTraitOf, traitPage, traitPageable, unansweredOf } from "./racial.mjs";
 import { askPages } from "./race-window.mjs";
@@ -157,7 +157,18 @@ export function racePages(actor, files, answers, held = []) {
     if (traitPageable(file)) pages.push({ key: `trait:${file.id}`, title: file.name, build: () => traitPage(file, actor, optionGroupsOf(file)) });
     for (const spec of grantSpecsOf(file, optionsIn(answers.get(`trait:${file.id}`)))) {
       if (grantAuto(actor, spec)) continue;
-      pages.push({ key: `grant:${file.id}:${spec.key}`, title: `${file.name} - ${grantTitle(spec)}`, build: () => grantPage(spec, file, actor) });
+      const key = `grant:${file.id}:${spec.key}`;
+      // The Other Traits chosen on its other pages not offered again - two Traits giving Bestial Traits would give one twice.
+      const exclude = [...answers.entries()].filter(([each, value]) => (each !== key) && each.startsWith("grant:") && Array.isArray(value)).flatMap(([, value]) => value);
+      pages.push({ key, title: `${file.name} - ${grantTitle(spec)}`, build: () => grantPage(spec, file, actor, { exclude }) });
+    }
+    // And each Other Trait chosen there (or given without asking) that asks something of its own - Bestial Build's Option: its page.
+    for (const spec of grantSpecsOf(file, optionsIn(answers.get(`trait:${file.id}`))).filter(each => each.kind === "other")) {
+      for (const id of [].concat(grantAuto(actor, spec) ?? answers.get(`grant:${file.id}:${spec.key}`) ?? [])) {
+        const other = getTrait(id);
+        if (other && traitPageable(other)) pages.push({ key: `granted:${id}`, title: `${file.name} - ${other.name}`,
+          build: () => traitPage(other, actor, optionGroupsOf(other)) });
+      }
     }
   };
   for (const file of exchangeLast(files)) {
@@ -181,11 +192,13 @@ function optionsIn(answer) {
 
 /** What a Trait gives by choice, as its window answered it (addRacialTrait `grants`): by key; those given without asking, all. */
 function grantsIn(actor, file, answers) {
-  const out = {};
+  const out = { traits: {} };
   for (const spec of grantSpecsOf(file, optionsIn(answers.get(`trait:${file.id}`)))) {
     const auto = grantAuto(actor, spec);
     const answer = auto ?? answers.get(`grant:${file.id}:${spec.key}`);
     if (answer !== undefined) out[spec.key] = answer;
+    // The Other Traits' own pages (`granted:<id>`).
+    if (spec.kind === "other") for (const id of [].concat(answer ?? [])) if (answers.has(`granted:${id}`)) out.traits[id] = answers.get(`granted:${id}`);
   }
   return out;
 }
@@ -467,9 +480,9 @@ export async function answerRaceTraitQuestions(actor) {
     if (!item || (answer === undefined)) continue;
     const spec = page.gap.spec;
     if (spec.kind === "other") {
-      const had = Number(spec.count) - Number(page.gap.missing);
+      const empty = emptyGrantRows(item, spec);
       for (const [at, value] of [].concat(answer).entries()) {
-        if (await changeChoice(actor.items.get(item.id), `other|${spec.group}|${spec.option}|${had + at}`, value)) written++;
+        if ((at < empty.length) && await changeChoice(actor.items.get(item.id), `other|${spec.group}|${spec.option}|${empty[at]}`, value)) written++;
       }
       continue;
     }
