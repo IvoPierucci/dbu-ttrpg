@@ -104,6 +104,18 @@
     </div>
     {{/if}}
 
+    {{#if racialUnanswered}}
+    {{! Racial Options left unanswered as the race gave its Traits (the user's, 2026-11-27): back to just those; gone once all are answered,
+        here or by each Trait's pencil. }}
+    <div class="racial-row">
+      <span class="racial-row-label">Racial Options</span>
+      <div class="racial-slots racial-skills racial-picks">
+        <button type="button" class="benefit-pick empty" data-action="setRacialOptions"
+                data-tooltip="Left unanswered: {{racialUnanswered.names}}"><span class="benefit-text">Set Racial Options&hellip;</span><span class="benefit-left">({{racialUnanswered.count}} left)</span></button>
+      </div>
+    </div>
+    {{/if}}
+
     {{#if racialSavingThrow}}
     <div class="racial-row">
       <span class="racial-row-label">Saving Throw</span>

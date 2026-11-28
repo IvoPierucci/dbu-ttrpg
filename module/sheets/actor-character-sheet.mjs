@@ -2,7 +2,8 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { waitForContent } from "../content-ready.mjs";
-import { exchangeChoices, exchangeRaceTrait, exchangeable, isRaceTraitItem, raceTraitPlan, raceTraitsOwed, refreshRaceTraits, slotOf, syncRaceTraits }
+import { answerRaceTraitQuestions, exchangeChoices, exchangeRaceTrait, exchangeable, isRaceTraitItem, raceTraitPlan, raceTraitsOwed, refreshRaceTraits, slotOf,
+  syncRaceTraits, unansweredRaceTraits }
   from "../race-traits.mjs";
 import { portalsMaxOf } from "../chat.mjs";
 import { isAdversary, isCharacter, isFusion, mayBeMaster, typicalMinion } from "../actor-types.mjs";
@@ -472,6 +473,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       exchangeRacialTrait: DBUCharacterSheet._onExchangeRacialTrait,
       refreshRacialTraits: DBUCharacterSheet._onRefreshRacialTraits,
       pickRacialTraits: DBUCharacterSheet._onPickRacialTraits,
+      setRacialOptions: DBUCharacterSheet._onSetRacialOptions,
       bestialApply: DBUCharacterSheet._onBestialApply,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
       addTransformation: DBUCharacterSheet._onAddTransformation,
@@ -1765,8 +1767,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.racialPicks = (plan => (plan && plan.pool.length) ? { label: plan.minion ? "Racial Traits (Minion)" : "Secondary Racial Traits",
       choose: plan.choose, names: plan.picked.map(id => getTrait(id)?.name ?? id).join(", "), left: Math.max(0, plan.choose - plan.picked.length),
       over: plan.picked.length > plan.choose } : null)(raceTraitPlan(this.actor));
+    // What a race's Traits were given unanswered (their window closed): a button back to just those, gone once all is answered.
+    context.racialUnanswered = (items => items.length ? { count: items.length, names: items.map(item => item.name).join(", ") } : null)(
+      unansweredRaceTraits(this.actor));
     context.racialGrants = Boolean(context.racialSkillRanks.length || context.racialAttributeChoices.length || context.racialSavingThrow
-      || context.racialPicks);
+      || context.racialPicks || context.racialUnanswered);
     // The Minion Races under a "Minion Races" divider after every other race (the user's).
     const races = raceOptions().map(option => ({
       ...option,
@@ -4606,6 +4611,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Category (Body, Mind), saying whether it is a Secondary or a Subrace Trait; how many of how many above; the slots full, those not picked
    * shut until one is taken back. A Minion's second Subrace Trait red (one at most). Written as it closes.
    */
+  /** The Racial Options left unanswered, asked again - only those (race-traits.mjs answerRaceTraitQuestions). */
+  static async _onSetRacialOptions() {
+    if (!this.isEditable) return;
+    await answerRaceTraitQuestions(this.actor);
+  }
+
   static async _onPickRacialTraits() {
     if (!this.isEditable) return;
     const plan = raceTraitPlan(this.actor);

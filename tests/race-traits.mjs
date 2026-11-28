@@ -144,6 +144,33 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
     [true, true, true, true, true, true, true, true]);
 }
 
+// The window closed before all is answered (the user's, 2026-11-27): the Trait given all the same, what was not answered empty; Set Racial
+// Options finds just that (unansweredOf), and its button goes once all is answered.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  globalThis.foundry.applications = { api: { DialogV2: { wait: async () => null } } };
+  const closed = await RAC.racialItemFrom(getTrait("technological-being"), null, { partial: true });
+  const whole = await RAC.racialItemFrom(getTrait("technological-being"), null);
+  const purpose = await RAC.racialItemFrom(getTrait("functional-purpose"), null, { partial: true });
+  const asItem = made => ({ type: "racial", system: made.data.system, flags: made.data.flags });
+  const gaps = item => RAC.unansweredOf(item).map(gap => (gap.kind === "option") ? `option ${gap.group.effect}:${gap.missing}` : `choice ${gap.which}`);
+  const answeredItem = { type: "racial", flags: { "dbu-ttrpg": { sourceId: "functional-purpose" } }, system: { chosen: [{ key: "functional-purpose", value: "stealth" },
+    { key: "functional-purpose#2", value: "stealth" }, { key: "option", value: "destroyer" }] } };
+  check("closed: Technological Being given with no Option and its (1) kept (not given at all without `partial`); Functional Purpose without its choices' part",
+    [Boolean(closed), whole, closed?.data.system.chosen, closed?.data.system.script.includes("#@ option"), purpose?.data.system.script.includes("$choice"),
+     purpose?.data.system.script],
+    [true, null, [], false, false, ""]);
+  check("what is left unanswered: Technological Being's (2) one and (3) two; Functional Purpose's two choices and its Option; none once answered",
+    [gaps(asItem(closed)), gaps(asItem(purpose)), gaps(answeredItem)],
+    [["option 2:1", "option 3:2"], ["choice 1", "choice 2", "option 2:1"], []]);
+  delete globalThis.foundry.applications;
+  const P = read("templates", "parts", "actor-progression.hbs"), W = read("module", "choice-wizard.mjs");
+  check("Set Racial Options on the Racial Grants while any is left; the last question's Next said Done",
+    [P.includes('data-action="setRacialOptions"'), P.includes("{{#if racialUnanswered}}"), read("module", "sheets", "actor-character-sheet.mjs").includes("setRacialOptions: DBUCharacterSheet._onSetRacialOptions,"),
+     typeof RT.answerRaceTraitQuestions, W.includes("const last = await this.isLast(index, value);"), W.includes("Done <i class=\"fa-solid fa-check\"></i>")],
+    [true, true, true, "function", true, true]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

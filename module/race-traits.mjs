@@ -20,8 +20,9 @@
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { getRace, isMinionRace } from "./races.mjs";
-import { addRacialTrait, factorOf, minionRacialUnfit, racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait,
-  replacedTraitOf } from "./racial.mjs";
+import { addRacialTrait, answered, askChoice, askOptions, changeChoice, changeRacialOption, factorOf, minionRacialUnfit,
+  ownedRacialTraits, racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait, replacedTraitOf,
+  unansweredOf } from "./racial.mjs";
 import { withChoiceWizard } from "./choice-wizard.mjs";
 
 const SCOPE = "dbu-ttrpg";
@@ -122,7 +123,8 @@ async function askExchangeFactor(file, factor) {
  * A race's Traits given together (the user's, 2026-11-27): every Option and choice of them asked in one window, Last and Next between
  * them (choice-wizard.mjs) - and only then are they made, what they ask as they are made (a Weapon's, a Unique Ability's) in the same
  * window. One an Option already chosen exchanges for a Factor's (forcedExchange) is not given: which of that Factor's Traits takes its
- * place is asked instead, and given remembering it (`exchangedFor`). One whose questions were closed is not given.
+ * place is asked instead, and given remembering it (`exchangedFor`). Closed before all is answered, every Trait is given all the same,
+ * what was not answered left empty (the user's): Set Racial Options asks it later (answerRaceTraitQuestions).
  */
 export async function addRaceTraitFiles(actor, files) {
   const title = `${actor.name} - Racial Traits`;
@@ -137,12 +139,12 @@ export async function addRaceTraitFiles(actor, files) {
         const factor = forcedExchange(file.id, [...held, ...out.map(entry => entry.made?.data?.system?.chosen ?? [])]);
         if (factor) {
           const replacing = getTrait(await askExchangeFactor(file, factor));
-          const made = replacing ? await racialItemFrom(replacing, actor) : null;
+          const made = replacing ? await racialItemFrom(replacing, actor, { partial: true }) : null;
           if (made) made.data.flags[SCOPE].exchangedFor = file.id;
           out.push({ file: replacing, made });
           continue;
         }
-        out.push({ file, made: await racialItemFrom(file, actor) });
+        out.push({ file, made: await racialItemFrom(file, actor, { partial: true }) });
       }
       return out;
     });
@@ -307,6 +309,62 @@ export async function resetRaceTraits(actors) {
     reset++;
   }
   return reset;
+}
+
+/** Its Racial and Factor Traits with something left unanswered (unansweredOf), in the Traits tab's order. */
+export function unansweredRaceTraits(actor) {
+  return ownedRacialTraits(actor).filter(item => !item.system?.other && !item.system?.transformation && unansweredOf(item).length);
+}
+
+/**
+ * The Progression tab's Set Racial Options (the user's, 2026-11-27): only what was left unanswered, Trait by Trait, in the same window
+ * (Last, Next, Done) - an Option effect's missing Options with their own choices, then each choice not made - and written as the pencil
+ * writes them (changeRacialOption, changeChoice) once all is asked. Closed midway, what was answered is written.
+ */
+export async function answerRaceTraitQuestions(actor) {
+  const items = unansweredRaceTraits(actor);
+  if (!items.length) return 0;
+  return withChoiceWizard(`${actor.name} - Racial Options`, async wizard => {
+    const steps = await wizard.rewindable(async () => {
+      const out = [];
+      for (const item of items) {
+        const file = getTrait(item.flags?.[SCOPE]?.sourceId ?? "");
+        if (!file) continue;
+        const chosen = item.system?.chosen ?? [];
+        const value = key => chosen.find(entry => entry.key === key)?.value ?? "";
+        const given = [];
+        for (const gap of unansweredOf(item)) {
+          if (gap.kind === "option") {
+            const open = gap.group.options.filter(option => !chosen.some(entry => (entry.key === "option") && (entry.value === option.id)));
+            const picked = await askOptions(file, open, gap.missing, gap.group.effect);
+            if (!picked) continue;
+            for (const id of picked) {
+              const option = open.find(each => each.id === id);
+              const extra = [];
+              const script = await answered(option, extra, actor);
+              if (script !== null) out.push({ item, option: id, prepared: { script, extra } });
+            }
+            continue;
+          }
+          const kind = (gap.which === 3) ? file.choose3 : (gap.which === 2) ? file.choose2 : file.choose;
+          const earlier = [value(file.id), value(`${file.id}#2`), value(`${file.id}#3`), ...given].filter(Boolean);
+          const picked = await askChoice(file, kind, { actor, earlier });
+          if (!picked) continue;
+          given.push(picked.value);
+          out.push({ item, which: gap.which, value: picked.value });
+        }
+      }
+      return out;
+    });
+    let written = 0;
+    for (const step of steps) {
+      const item = actor.items.get(step.item.id);
+      if (!item) continue;
+      const done = step.option ? await changeRacialOption(item, step.option, "", step.prepared) : await changeChoice(item, step.which, step.value);
+      if (done) written++;
+    }
+    return written;
+  });
 }
 
 /** Whether its sheet, opened by whoever plays it, should give it its race's Traits: none given for its race yet. */

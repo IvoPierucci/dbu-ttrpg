@@ -4,7 +4,8 @@
  * client is drawn as a page of a single window instead - its title the question's, its content and its own buttons as they were - with
  * Last and Next below and the window's close at the top right.
  *
- * - **Next** answers as the question's default button would.
+ * - **Next** answers as the question's default button would - **Done** where nothing is asked after it in the `rewindable` work (its
+ *   end found by running that work again with this answer; the work makes nothing).
  * - **Last** goes back a question. The questions asked in `rewindable` work are asked again from the start with the answers already given
  *   (nothing is made there, so nothing is undone), the earlier question shown with what was ticked in it; Last is off once that work is
  *   done and things are being made with the answers.
@@ -14,6 +15,7 @@
  */
 
 const REWIND = Symbol("rewind");
+const MORE = Symbol("more");
 
 /** The window: a page drawn by the session - its class made when first wanted (Foundry's API is not there as this module loads headless). */
 let ChoiceWizardApp = null;
@@ -59,6 +61,9 @@ class ChoiceSession {
     this.cursor = 0;
     this.rewindable = false;
     this.rewindStart = 0;
+    this.rewindFn = null;
+    // While finding whether a question is the last: the answers to run the work again with.
+    this.probe = null;
     this.closed = false;
     this.app = null;
     this.pending = null;
@@ -73,6 +78,10 @@ class ChoiceSession {
   }
 
   async ask(config = {}) {
+    if (this.probe) {
+      if (this.probe.cursor < this.probe.answers.length) return this.probe.answers[this.probe.cursor++];
+      throw MORE;
+    }
     if (this.closed) return null;
     const index = this.cursor++;
     if (index < this.answers.length) return this.answers[index];
@@ -80,6 +89,22 @@ class ChoiceSession {
       this.pending = { resolve, reject, index, config };
       this.draw(config, index);
     });
+  }
+
+  /** Whether the question `index`, answered `value`, is the last the `rewindable` work asks. */
+  async isLast(index, value) {
+    if (!this.rewindable || !this.rewindFn) return false;
+    this.probe = { answers: [...this.answers.slice(0, index), value], cursor: this.rewindStart };
+    try {
+      await this.rewindFn();
+      return true;
+    }
+    catch (error) {
+      return false;
+    }
+    finally {
+      this.probe = null;
+    }
   }
 
   async draw(config, index) {
@@ -123,7 +148,34 @@ class ChoiceSession {
       this.pending = null;
       pending.resolve(value);
     };
-    root.querySelector('[data-wizard="next"]')?.addEventListener("click", event => answer(main, event.currentTarget, event));
+    const next = root.querySelector('[data-wizard="next"]');
+    next?.addEventListener("click", event => {
+      const done = next.dataset.done === "1";
+      answer(main, event.currentTarget, event).then(() => {
+        // Done: the page put away while what was answered is given.
+        if (done && !this.pending && root.querySelector(".dbu-wizard-body") === body) {
+          root.innerHTML = `<div class="dbu-wizard"><p class="dbu-wizard-step">Done.</p></div>`;
+          this.app?.setPosition({ height: "auto" });
+        }
+      });
+    });
+    // Next or Done: Done where nothing would be asked after this answer (isLast) - found again as the answer changes.
+    let probing = 0;
+    const label = async () => {
+      if (!next || !main) return;
+      const ticket = ++probing;
+      next.disabled = true;
+      let value = null;
+      try { value = main.callback ? await main.callback(new Event("probe"), next, dialog) : main.action; }
+      catch (error) { value = null; }
+      const last = await this.isLast(index, value);
+      if (ticket !== probing) return;
+      next.disabled = false;
+      next.dataset.done = last ? "1" : "0";
+      next.innerHTML = last ? `Done <i class="fa-solid fa-check"></i>` : `Next <i class="fa-solid fa-chevron-right"></i>`;
+    };
+    body.addEventListener("change", label);
+    body.addEventListener("input", label);
     for (const element of root.querySelectorAll(".dbu-wizard-others [data-action]")) {
       const button = others.find(each => each.action === element.dataset.action);
       element.addEventListener("click", event => answer(button, element, event));
@@ -144,6 +196,7 @@ class ChoiceSession {
     });
     (body.querySelector("[autofocus]") ?? body.querySelector("input, select, textarea") ?? root.querySelector('[data-wizard="next"]'))?.focus?.();
     this.app.setPosition({ height: "auto" });
+    label();
   }
 
   async finish() {
@@ -182,6 +235,7 @@ export async function withChoiceWizard(title, work) {
   const handle = {
     rewindable: async fn => {
       session.rewindable = true;
+      session.rewindFn = fn;
       const start = session.rewindStart = session.cursor;
       try {
         for (;;) {
@@ -196,6 +250,7 @@ export async function withChoiceWizard(title, work) {
       }
       finally {
         session.rewindable = false;
+        session.rewindFn = null;
       }
     },
     get closed() { return session.closed; }

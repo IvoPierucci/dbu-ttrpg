@@ -764,7 +764,7 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
 }
 
 /** Ask a `choose:` - one of its values, or null when backed out of. */
-async function askChoice(source, kind = source.choose, context = {}) {
+export async function askChoice(source, kind = source.choose, context = {}) {
   const offered = await choicesFor(kind, source, context);
   if (!offered.length) {
     ui.notifications.warn(`${source.name}: nothing to choose for "${kind}".`);
@@ -788,7 +788,7 @@ async function askChoice(source, kind = source.choose, context = {}) {
 }
 
 /** Ask an Option effect: "choose one of the following effects" - or two, a Multi-Option's. The ids chosen, or null. */
-async function askOptions(trait, options, count = Math.max(1, Number(trait.options) || 1), effect = 0) {
+export async function askOptions(trait, options, count = Math.max(1, Number(trait.options) || 1), effect = 0) {
   const escape = Handlebars.escapeExpression;
   const type = (count === 1) ? "radio" : "checkbox";
   const chosen = await foundry.applications.api.DialogV2.wait({
@@ -845,6 +845,30 @@ export async function answeredTalent(data, trait, actor) {
  * What a Trait's or a Talent's own `choose:` (and `choose2:`, `choose3:`) was answered with, as rows its sheet can change: which,
  * what is chosen, and what may be. The Option's own choices are its Option's, not these.
  */
+/**
+ * What a Racial or Factor Trait Item was given unanswered (its window closed - the user's, 2026-11-27): each choice of its own not made
+ * (`{kind: "choice", which}`), each Option effect with fewer Options chosen than it asks (`{kind: "option", group, missing}`). Empty
+ * where all is answered - by Set Racial Options or by its pencil, a choice at a time.
+ */
+export function unansweredOf(item) {
+  const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  if (!file) return [];
+  const chosen = item.system?.chosen ?? [];
+  const has = key => chosen.some(entry => entry.key === key);
+  const gaps = [];
+  if (file.choose && !has(file.id)) gaps.push({ kind: "choice", which: 1 });
+  if (file.choose2 && !has(`${file.id}#2`)) gaps.push({ kind: "choice", which: 2 });
+  if (file.choose3 && !has(`${file.id}#3`)) gaps.push({ kind: "choice", which: 3 });
+  // Options a race or another Trait names (optionsByRace, optionsFollow) are given, not asked: not counted.
+  if (!file.optionsByRace && !file.optionsFollow) {
+    for (const group of optionGroupsOf(file)) {
+      const had = group.options.filter(option => chosen.some(entry => (entry.key === "option") && (entry.value === option.id))).length;
+      if (had < group.count) gaps.push({ kind: "option", group, missing: group.count - had });
+    }
+  }
+  return gaps;
+}
+
 export async function choiceRowsOf(item) {
   const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   // And the Racial Trait a `grantsRacialOf` gave (Majin Genes').
@@ -913,8 +937,9 @@ export async function changeChoice(item, which, value) {
     if (third === null) return false;
     chosen = [...chosen.filter(entry => entry.key !== `${file.id}#3`), ...(third ? [third] : [])];
   }
-  // Its own part: the file's script with both answers written in - a list's flags too.
-  let own = String(file.script ?? "").trim();
+  // Its own part: the file's script with both answers written in - a list's flags too; none while one is still unanswered (a race's
+  // Trait whose window was closed, answered a choice at a time).
+  let own = (first && (!file.choose2 || second) && (!file.choose3 || third)) ? String(file.script ?? "").trim() : "";
   if (third) own = own.replaceAll("$choice3", third);
   if (second) own = own.replaceAll("$choice2", second);
   const flags = (file.choose === "list") ? (await choicesFor("list", file)).map(([each]) => each).sort((a, b) => b.length - a.length) : [];
@@ -981,7 +1006,7 @@ async function favoredFeatureChoice(source, actor, techniqueId, advantageId) {
 }
 
 /** A part's script with its `choose:` answered - `$choice` replaced - and the choice recorded. */
-async function answered(source, chosen, actor = null, preset = "") {
+export async function answered(source, chosen, actor = null, preset = "") {
   let script = String(source.script ?? "").trim();
   if (!source.choose) return script;
   // Named by what gives it - Plant Monster's Elemental (Plantlife) - not asked, where it is among those offered.
@@ -1020,9 +1045,12 @@ async function answered(source, chosen, actor = null, preset = "") {
  *
  * @returns {Promise<?{data: object, grants: {unique: {id: string, restrictions: string[]}[], talents: string[]}}>}
  */
-export async function racialItemFrom(trait, actor = null, { presetOption = "", presetChoice = "" } = {}) {
+export async function racialItemFrom(trait, actor = null, { presetOption = "", presetChoice = "", partial = false } = {}) {
   const chosen = [];
-  const own = await answered(trait, chosen, actor, presetChoice);
+  // `partial` (a race's Traits, the user's 2026-11-27): a question left unanswered leaves that piece empty - its own part of the script
+  // out, an Option not chosen - rather than the Trait not taken; Set Racial Options asks it later (unansweredOf).
+  let own = await answered(trait, chosen, actor, presetChoice);
+  if ((own === null) && partial) own = "";
   if (own === null) return null;
   const scripts = [own];
   const texts = [];
@@ -1052,11 +1080,18 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
     // Named by what gives it - Troll's "you must select Thick Hide for its Option effect" - not asked.
     const picked = (presetOption && (group.count === 1) && options.some(entry => entry.id === presetOption))
       ? [presetOption] : await askOptions(trait, options, group.count, group.effect);
+    if (!picked && partial) continue;
     if (!picked) return null;
     for (const id of picked) {
       const option = options.find(entry => entry.id === id);
+      const before = chosen.length;
       chosen.push({ key: "option", value: option.id, label: option.name });
       const script = await answered(option, chosen);
+      // Its own choice unanswered: the Option not chosen either, asked whole later.
+      if ((script === null) && partial) {
+        chosen.length = before;
+        continue;
+      }
       if (script === null) return null;
       scripts.push(`#@ option ${option.id} | ${option.name}\n${script}\n#@ end`);
       texts.push(`${option.name}: ${String(option.text ?? "").trim()}`);
@@ -1821,7 +1856,7 @@ export function tailToGrab(actor) {
  * old one's between the `#@ option` markers, its choice asked, what was recorded and its wording changed with it; the
  * Unique Abilities the old Option gave go, the new one's are given - Talents given are kept, as on losing the Trait.
  */
-export async function changeRacialOption(item, optionId, replacing = "") {
+export async function changeRacialOption(item, optionId, replacing = "", prepared = null) {
   const actor = item?.actor;
   const sourceId = item?.flags?.["dbu-ttrpg"]?.sourceId ?? "";
   const options = racialOptionsOf(sourceId);
@@ -1832,8 +1867,9 @@ export async function changeRacialOption(item, optionId, replacing = "") {
   const trait = getTrait(sourceId);
   const old = replacing || had.find(id => optionEffectOf(getTrait(id), trait) === optionEffectOf(option, trait)) || "";
 
-  const extra = [];
-  const script = await answered(option, extra);
+  // `prepared`: its own choices already asked ({script, extra} - Set Racial Options asks them all first).
+  const extra = prepared ? [...prepared.extra] : [];
+  const script = prepared ? prepared.script : await answered(option, extra);
   if (script === null) return false;
   const chosen = [...(item.system.chosen ?? []).filter(entry => !((entry.key === "option") && (entry.value === old))
     && (entry.key !== old)), { key: "option", value: option.id, label: option.name }, ...extra];
