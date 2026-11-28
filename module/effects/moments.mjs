@@ -412,6 +412,9 @@ const TABLE = [
   { key: "critical", label: "You score a Critical Result on a Combat Roll", provides: [CTX.ROLL],
     doc: "Read once the Natural Result is, with the Critical Extra Dice - Celestial Potential's 2(T) more." },
   { key: "healing-surge", label: "You take a Healing Surge", provides: [CTX.AMOUNT] },
+  { key: "damage-cut", label: "You would receive Damage from an Attacking Maneuver - lowered by an amount", provides: [],
+    doc: "Offered in Take Damage's \"Before the Damage\" (chat.mjs dealDamageWindow): ticked, it fires there and the Damage taken is lowered by "
+       + "what it wrote in `damage.cut` - Unending (3)'s \"reduce the Damage by your Surgency\". Always the player's (WINDOW_MOMENTS)." },
   { key: "surge-maneuver", label: "You use the Surge Maneuver", provides: [],
     doc: "Fired as the Surge Maneuver's Surge is chosen, before what it gives back is worked out (chat.mjs takeSurge) - Evolutionary "
        + "Peak (4)'s `surge.regainedTimes`. What is the player's is asked in a window first." },

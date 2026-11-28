@@ -1440,12 +1440,20 @@ function momentKey(definition, context) {
   return `moment:${definition.key}${each}`;
 }
 
+/** Whether a character may still answer the Defeated Moment this Encounter - its one, or more (`defeated.uses`). */
+export function defeatedLeft(actor) {
+  const used = (actor?.system?.talentUses?.encounter ?? []).filter(entry => entry === "moment:defeated").length;
+  return used < (1 + Math.max(0, applySlot(actor?.system?.effects?.slots, "defeated.uses", 0)));
+}
+
 function momentAvailable(actor, definition, context) {
   const list = (definition.limit.per === "round")
     ? actor.system.talentUses?.round : actor.system.talentUses?.encounter;
   const key = momentKey(definition, context);
   const used = (list ?? []).filter(entry => entry === key).length;
-  return used < (definition.limit.amount ?? 1);
+  // Raised by an effect - Unending (1)'s "an effect with the [Triggered/Defeated] Keyword an additional time per Combat Encounter":
+  // `defeated.uses += 1`.
+  return used < ((definition.limit.amount ?? 1) + Math.max(0, applySlot(actor.system?.effects?.slots, `${definition.key}.uses`, 0)));
 }
 
 /**

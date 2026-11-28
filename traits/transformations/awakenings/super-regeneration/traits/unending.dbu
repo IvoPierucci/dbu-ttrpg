@@ -1,0 +1,31 @@
+id: super-regeneration-unending
+name: Unending
+order: 2
+slot: trait
+stacks: 2
+description: >
+  You are impossible to destroy, and similarly impossible to exhaust.
+text: >
+  Unending (2): You are impossible to destroy, and similarly impossible to exhaust.
+  (1)-[Passive]: You may use an effect with the [Triggered/Defeated] Keyword an additional time per Combat Encounter, but you can still only use the same effect once per Combat Encounter.
+  (2)-[Passive]: While you are in the Healthy Health Threshold, double the bonuses from the second effect of Rubbery Body.
+  (3)-[Triggered, 1/Encounter]: If you receive Damage from an Attacking Maneuver, you may reduce the Damage by your Surgency.
+
+---
+
+# (1) One more Triggered/Defeated effect a Combat Encounter (the Defeated Moment's limit raised - moments-runtime.mjs); each effect still
+# once (registry.mjs usesLeft holds a Triggered/Defeated block to one an Encounter).
+[passive, effect 1]
+defeated.uses += 1;
+
+# (2) In the Healthy Health Threshold, Rubbery Body (2)'s Soak Value and Defense Value 1(T) once more - doubled, where Rubbery Body is had.
+[passive, effect 2]
+if (holdsTrait("rubbery-body") && !belowThreshold("bruised")) {
+    soakValue += 1(T);
+    defenseValue += 1(T);
+}
+
+# (3) Damage from an Attacking Maneuver, once an Encounter: lowered by your Surgency - ticked in Take Damage's Before the Damage
+# (the damage-cut Moment).
+[triggered/damage-cut, 1/encounter, effect 3]
+damage.cut += surgency;

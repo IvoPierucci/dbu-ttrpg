@@ -1,0 +1,32 @@
+id: super-regeneration-untiring
+name: Untiring
+order: 1
+slot: trait
+description: >
+  You cannot be defeated by ordinary means; your existence is eternal.
+text: >
+  Untiring (1): You cannot be defeated by ordinary means; your existence is eternal.
+  (1)-[Passive]: Any Traits, Maneuvers or effects used by other Characters cannot reduce or spend your Ki Points.
+  (2)-[Passive]: Increase your Surgency by Z(T).
+  (3)-[Triggered, 1/Round]: If you use a Healing Surge, regain Ki Points equal to 1/2 of your Surgency.
+  (4)-[Triggered/Start of Turn]: Regain Z(bT) Life and Ki Points.
+
+---
+
+# (1) What another's Traits, Maneuvers or effects take of your Ki Points comes to nothing (Energy Core (1)'s `ki.protected` - chat.mjs
+# reduceKiPoints).
+# (2) Surgency Z(T) - Z the Stacks of Super Regeneration.
+[passive, effect 1]
+allow ki.protected;
+
+[passive, effect 2]
+surgency += $Z * 1(T);
+
+# (3) A Healing Surge used, once a Round: Ki Points, 1/2 of your Surgency (rounded down) - asked as the Surge is used.
+[triggered/healing-surge, 1/round, effect 3]
+ki.value += floor(surgency / 2);
+
+# (4) The start of your turn: Z(bT) Life and Ki Points - its Triggered/Automatic button.
+[triggered/start-of-turn, effect 4]
+life.value += $Z * 1(bT);
+ki.value += $Z * 1(bT);

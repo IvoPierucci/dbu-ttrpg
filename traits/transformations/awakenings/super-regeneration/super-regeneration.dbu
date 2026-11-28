@@ -1,0 +1,28 @@
+id: super-regeneration
+name: Super Regeneration
+type: awakening
+subtype: lesser
+origin: body
+racial: Majin
+prerequisites: N/A
+tier: 1+
+maxStacks: 2
+bonuses: FO +1, TE +1, MA +1
+description: >
+  Whether due to your origins as a primordial being, or the uncanny nature of your enhanced body, you bear strange properties, even for a Majin. You bear stamina that seems never-ending and untouchable to those not used to your powers, and when your enemies would think you to be on the defensive, you bounce right back, more resilient than ever.
+text: >
+  Whether due to your origins as a primordial being, or the uncanny nature of your enhanced body, you bear strange properties, even for a Majin. You bear stamina that seems never-ending and untouchable to those not used to your powers, and when your enemies would think you to be on the defensive, you bounce right back, more resilient than ever.
+
+  Racial Requirement: Majin / Transformation Type: Awakening / Awakening Type: Lesser / Awakening Origin: Body / Prerequisite(s): N/A / Maximum No of Stacks: 2 / Tier of Power Requirement. 1+
+  AG – · FO +1 · TE +1 · SC – · IN – · MA +1 · PE –
+
+  Untiring (1): You cannot be defeated by ordinary means; your existence is eternal.
+  (1)-[Passive]: Any Traits, Maneuvers or effects used by other Characters cannot reduce or spend your Ki Points.
+  (2)-[Passive]: Increase your Surgency by Z(T).
+  (3)-[Triggered, 1/Round]: If you use a Healing Surge, regain Ki Points equal to 1/2 of your Surgency.
+  (4)-[Triggered/Start of Turn]: Regain Z(bT) Life and Ki Points.
+
+  Unending (2): You are impossible to destroy, and similarly impossible to exhaust.
+  (1)-[Passive]: You may use an effect with the [Triggered/Defeated] Keyword an additional time per Combat Encounter, but you can still only use the same effect once per Combat Encounter.
+  (2)-[Passive]: While you are in the Healthy Health Threshold, double the bonuses from the second effect of Rubbery Body.
+  (3)-[Triggered, 1/Encounter]: If you receive Damage from an Attacking Maneuver, you may reduce the Damage by your Surgency.

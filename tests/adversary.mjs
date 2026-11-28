@@ -282,7 +282,7 @@ const ADV = await import(modUrl("adversary.mjs"));
   const CHAT = read("module", "chat.mjs");
   check("the Take Damage window: its own section, offered whenever there is Stamina and a hit that costs Life Points",
     [CHAT.includes("const stamina = ((Number(own?.damage) || 0) > 0) ? staminaLeft(target) : 0;"),
-     CHAT.includes("any: Boolean(before.length || taken.length || none.length || stamina)"),
+     CHAT.includes("any: Boolean(before.length || cut.length || taken.length || none.length || stamina)"),
      CHAT.includes('<input type="number" name="stamina" value="0" min="0" max="${staminaMost}" step="1"/>'),
      CHAT.includes("Stay above the line"), CHAT.includes("lines.map(line => `<span class=\"dbu-stamina-line\""),
      CHAT.includes("stamina: staminaIn(dialog.element),")],

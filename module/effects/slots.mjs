@@ -809,6 +809,9 @@ const TABLE = [
     doc: "Damage from an Attacking Maneuver: a stack of Channeled Chaos spent to halve it, asked in Take Damage (Pure Chaos (5))." },
   // How many times more the Surge Maneuver's Surge gives its Life or Ki Points back - written at the surge-maneuver Moment, read where the
   // Surge is worked out (chat.mjs takeSurge): Evolutionary Peak (4)'s "double the amount", 1.
+  // How much a Damage about to be taken is lowered by - written at the damage-cut Moment, read in Take Damage (chat.mjs dealDamageWindow).
+  { key: "damage.cut", phase: PHASES.REACTIVE, kind: N, ops: ["add"],
+    doc: "Damage from an Attacking Maneuver lowered by this, ticked in Take Damage's Before the Damage (Unending (3))." },
   { key: "surge.regainedTimes", phase: PHASES.REACTIVE, kind: N, ops: ["add"],
     doc: "Times more of what the Surge Maneuver's Surge gives back (chat.mjs takeSurge)." },
   { key: "surge.healingReroll", phase: PHASES.CORE, kind: F, ops: ["allow", "set"],

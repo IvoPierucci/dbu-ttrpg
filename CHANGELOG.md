@@ -5,6 +5,9 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+- **New Transformation:** Super Regeneration (a Lesser Awakening of the Majins, 2 Stacks). New `damage-cut` Moment and
+  `damage.cut` Slot (Damage lowered by an amount, ticked in Take Damage's Before the Damage); a Moment's limit raised by `<moment>.uses`
+  (`defeated.uses`: one more Triggered/Defeated effect an Encounter), each Triggered/Defeated effect still once an Encounter.
 (Nothing yet.)
 
 ## 0.3.13 (2026-11-28)

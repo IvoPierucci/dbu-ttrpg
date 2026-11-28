@@ -10797,6 +10797,8 @@ const DAMAGE_MOMENTS = Object.freeze({ taken: ["opponent-damage", "heavy-hit", "
  */
 function dealDamageChoices(target, own) {
   const before = (own?.lightOffer ?? []).map(id => reactiveFor(target).find(entry => entry.blockId === id)).filter(entry => entry?.available);
+  // What lowers the Damage by an amount (the damage-cut Moment - Unending (3)'s Surgency): ticked, it is taken that much less.
+  const cut = ((Number(own?.damage) || 0) > 0) ? unarmedTriggers(target, "damage-cut").filter(entry => entry.available !== false) : [];
   const taken = DAMAGE_MOMENTS.taken.flatMap(moment => unarmedTriggers(target, moment));
   const none = DAMAGE_MOMENTS.none.flatMap(moment => unarmedTriggers(target, moment));
   const unique = list => [...new Map(list.map(entry => [entry.blockId, entry])).values()];
@@ -10805,8 +10807,8 @@ function dealDamageChoices(target, own) {
   // Pure Chaos (5): "If you take Damage from an Attacking Maneuver, you may spend a stack of Channeled Chaos to halve the amount of Damage".
   const chaosHalf = ((Number(own?.damage) || 0) > 0) && (target.system?.effects?.slots?.["chaos.halveDamage"] === true)
     && ((Number(target.system?.resources?.channeledchaos?.stacks) || 0) > 0);
-  return { before, taken: unique(taken), none: unique(none), stamina, chaosHalf,
-    any: Boolean(before.length || taken.length || none.length || stamina) || chaosHalf };
+  return { before, cut: unique(cut), taken: unique(taken), none: unique(none), stamina, chaosHalf,
+    any: Boolean(before.length || cut.length || taken.length || none.length || stamina) || chaosHalf };
 }
 
 /**
@@ -10850,7 +10852,8 @@ async function dealDamageWindow(message, target, attack) {
     return Math.max(0, Math.min(staminaMost, typed));
   };
   const body = `${staminaSection}${choices.chaosHalf ? rollSection("Channeled Chaos", `<label class="dbu-respond-option"><input type="checkbox" name="chaoshalf"/>
-      <span class="dbu-respond-name">Pure Chaos</span><span class="dbu-respond-source">Half the Damage (${Math.floor(taken / 2)}) - a stack of Channeled Chaos</span></label>`) : ""}${choices.before.length ? rollSection("Before the Damage", choices.before.map(entry => row(entry, "before")).join("")) : ""}${
+      <span class="dbu-respond-name">Pure Chaos</span><span class="dbu-respond-source">Half the Damage (${Math.floor(taken / 2)}) - a stack of Channeled Chaos</span></label>`) : ""}${(choices.before.length || choices.cut.length) ? rollSection("Before the Damage", [...choices.before.map(entry => row(entry, "before")),
+      ...choices.cut.map(entry => row(entry, "cut"))].join("")) : ""}${
     choices.taken.length ? `<div data-taken>${rollSection("On taking Damage", choices.taken.map(entry => row(entry, "taken")).join(""))}</div>` : ""}${
     choices.none.length ? `<div data-none>${rollSection("On taking no Damage", choices.none.map(entry => row(entry, "none")).join(""))}</div>` : ""}`;
   const top = `<div class="dbu-roll-resources"><span>Life <b>${life}</b> / ${max}</span><span>Soak <b>${own.soak ?? target.system.soakValue ?? 0}</b></span>
@@ -10918,6 +10921,7 @@ async function dealDamageWindow(message, target, attack) {
         stamina: staminaIn(dialog.element),
         chaosHalf: Boolean(dialog.element.querySelector('input[name="chaoshalf"]:checked')),
         before: [...dialog.element.querySelectorAll('input[name="before"]:checked')].map(input => input.value),
+        cut: [...dialog.element.querySelectorAll('input[name="cut"]:checked')].map(input => input.value),
         after: [...dialog.element.querySelectorAll('input[name="taken"]:checked, input[name="none"]:checked')].map(input => input.value) }) },
       { action: "cancel", label: "Close" }
     ],
@@ -10930,7 +10934,14 @@ async function dealDamageWindow(message, target, attack) {
   const damageOverride = chosen.before.length ? 0 : null;
   const chaosHalved = !chosen.before.length && chosen.chaosHalf;
   if (chaosHalved) await setResource(target, "channeledchaos", (Number(target.system.resources?.channeledchaos?.stacks) || 0) - 1);
-  const chaosOverride = chaosHalved ? Math.floor((Number(own.damage) || 0) / 2) : damageOverride;
+  let chaosOverride = chaosHalved ? Math.floor((Number(own.damage) || 0) / 2) : damageOverride;
+  // What lowers it by an amount, ticked (damage-cut): fired now, the Damage that much less - none of it below nothing.
+  if (!chosen.before.length && (chosen.cut ?? []).length) {
+    const { fireMoment } = await import("./effects/moments-runtime.mjs");
+    const { slots } = await fireMoment(target, "damage-cut", {}, { blocks: chosen.cut });
+    const by = Math.max(0, Math.floor(applySlot(slots ?? {}, "damage.cut", 0)));
+    chaosOverride = Math.max(0, (chaosOverride ?? (Number(own.damage) || 0)) - by);
+  }
   if (chosen.after.length) {
     await target.update({ "system.armedTalents": [...new Set([...(target.system.armedTalents ?? []), ...chosen.after])] });
   }
@@ -39811,8 +39822,7 @@ export async function postMoment(moment, {
  */
 function defeatClosed(actor, card) {
   if (card.moment !== "defeated") return false;
-  return !card.pending || Boolean(card.silenced)
-    || (actor?.system?.talentUses?.encounter ?? []).includes("moment:defeated");
+  return !card.pending || Boolean(card.silenced) || !defeatedLeftOf(actor);
 }
 
 function momentTriggers(actor, card) {
@@ -39854,6 +39864,12 @@ function momentAnswerers(card) {
       && momentTriggers(actor, card).length);
 }
 
+/** Whether a character may still answer a Defeated card this Encounter - one, or more (`defeated.uses`, Unending (1)). */
+function defeatedLeftOf(actor) {
+  const used = (actor?.system?.talentUses?.encounter ?? []).filter(entry => entry === "moment:defeated").length;
+  return used < (1 + Math.max(0, applySlot(actor?.system?.effects?.slots, "defeated.uses", 0)));
+}
+
 /** Whether anybody at all could still answer this Moment, whoever they belong to. */
 export function anyoneAnswers(moment, uuids, subjectUuid = "") {
   return uuids.some(uuid => {
@@ -39864,7 +39880,7 @@ export function anyoneAnswers(moment, uuids, subjectUuid = "") {
       && triggersFor(actor, ["lethal-damage"]).length) return true;
     if (moment === "lethal-only") return false;
     // Their one Triggered/Defeated of the Encounter already used: nothing of theirs answers another.
-    if ((moment === "defeated") && (actor?.system?.talentUses?.encounter ?? []).includes("moment:defeated")) return false;
+    if ((moment === "defeated") && !defeatedLeftOf(actor)) return false;
     return triggersFor(actor, [moment]).length;
   });
 }

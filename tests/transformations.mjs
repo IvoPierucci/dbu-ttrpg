@@ -69,7 +69,7 @@ check("an Advancement of it, in its Unique Ability's folder",
 check("any other file is not one", transformationPlace("races/saiyan/saiyan-heritage.dbu".split("/")), null);
 
 const files = T.transformationFiles();
-check("the first group, all 76, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin, Super Majin, Saiyan Prodigy and Greater Mutation 2026-11-27, Overflowing Power and the 15 other Adversary Transformations)", files.length, 76);
+check("the first group, all 76, read (Superior Super Saiyan and Time-Skipper added 2026-11-21, Boiling Rage, Steel Frame and Super Kaioken 2026-11-26, Unkillable Majin, Super Majin, Saiyan Prodigy and Greater Mutation 2026-11-27, Overflowing Power and the 15 other Adversary Transformations 2026-11-27, Super Regeneration 2026-11-28)", files.length, 77);
 check("no id defined twice (no Transformation's clashing with another file's)",
   warnings.filter(each => /defined more than once|has no id|folder this system does not know/.test(each)), []);
 check("each one's type from its header or folder",
@@ -1887,6 +1887,32 @@ allow counter.free;`).program.blocks[0].requires;
      CH.includes('const answered = await fire(actor, "surge-maneuver", { kind }, { quiet: true });'),
      CH.includes(": (Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency) * regainedTimes;")],
     [["2", "2", "2", "2"], 2 * actor.system.powerLevel, true, true, [1], true, true]);
+}
+
+// --- Super Regeneration (the user's link, 2026-11-28): a Lesser Awakening of the Majins, 2 Stacks -------------------------------------
+{
+  const { reactiveFor, usesLeft } = await import(modUrl("effects/registry.mjs"));
+  const { collectReactive, applySlot } = await import(modUrl("effects/interpreter.mjs"));
+  const one = transformation("super-regeneration", { stacks: 1 });
+  const two = transformation("super-regeneration", { stacks: 2 });
+  const withOne = holding([one, traitItem(one, "super-regeneration-untiring"), traitItem(one, "super-regeneration-unending")]);
+  const withTwo = holding([two, traitItem(two, "super-regeneration-untiring"), traitItem(two, "super-regeneration-unending")]);
+  const plain = holding([]);
+  const at = (actor, moment, slot) => reactiveFor(actor).filter(entry => entry.program.blocks[0].moment === moment)
+    .map(entry => applySlot(collectReactive([{ ...entry, armed: true }], moment, { data: actor.system, errors: [], context: {}, queue: [] }).slots, slot, 0));
+  const slots = actor => actor.system.effects?.slots ?? {};
+  const CH = fs.readFileSync(path.join(ROOT, "module", "chat.mjs"), "utf8"), MR = fs.readFileSync(path.join(ROOT, "module", "effects", "moments-runtime.mjs"), "utf8");
+  check("Super Regeneration: FO/TE/MA +1 a Stack; Ki not another's to take; Surgency Z(T); Z(bT) Life and Ki at the start of the turn; Unending (2) only with 2 Stacks - one more Defeated use, the Damage cut by the Surgency",
+    [Object.values(T.bonusesOf(two)).map(T.bonusWritten), slots(withOne)["ki.protected"] === true,
+     partsOf(withTwo, "surgency").some(([name, value]) => (name === "Untiring") && (value === 2 * withTwo.system.tierOfPower)),
+     at(withTwo, "start-of-turn", "life.value"), applySlot(slots(withOne), "defeated.uses", 0), applySlot(slots(withTwo), "defeated.uses", 0),
+     at(withTwo, "damage-cut", "damage.cut")[0] === withTwo.system.surgency],
+    [["2", "2", "2"], true, true, [2 * withTwo.system.baseTierOfPower], 0, 1, true]);
+  check("its machinery: a Defeated effect once an Encounter by its Keyword; the Defeated Moment's limit raised by defeated.uses; Take Damage's cut",
+    [usesLeft({ system: { talentUses: { round: [], encounter: ["x#0"] } } }, "x", { index: 0, mode: "triggered", moment: "defeated" }).available,
+     MR.includes("export function defeatedLeft(actor) {"), CH.includes("if ((moment === \"defeated\") && !defeatedLeftOf(actor)) return false;"),
+     CH.includes('const { slots } = await fireMoment(target, "damage-cut", {}, { blocks: chosen.cut });')],
+    [false, true, true, true]);
 }
 
 // --- Nothing in module/ or templates/ names one --------------------------------------------------------------------------------

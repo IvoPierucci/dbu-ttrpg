@@ -1097,7 +1097,9 @@ export const WINDOW_MOMENTS = Object.freeze(["power", "declare-maneuver", "botch
   // And what Respond and a roll's own window already offer - Flow of Combat's (3) in Respond.
   "defending", "combat-roll", "hit", "being-hit", "before-wound", "clash-resolved",
   // A Healing Surge about to be used - Blood of the Warrior's doubled Surgency.
-  "healing-surge"]);
+  "healing-surge",
+  // Damage about to be taken, lowered by an amount in Take Damage - Unending (3)'s.
+  "damage-cut"]);
 
 /**
  * Chosen as it happens, never set beforehand and never Automatic: what a window offers (WINDOW_MOMENTS), and what hands
@@ -1239,7 +1241,10 @@ export function usesLeft(actor, sourceId, b, also = [], sharedIds = []) {
   const counts = list => (list ?? []).filter(x => ids.includes(x) || (x === sourceId)).length;
 
   const perRound = b.budget?.round ?? Infinity;
-  const perEncounter = b.budget?.encounter ?? Infinity;
+  // A Triggered/Defeated effect once an Encounter whatever else is said - "you can still only use the same effect once per Combat
+  // Encounter" (Unending (1)): its Keyword's own limit, which more uses of the Moment do not lift.
+  const defeatedBlock = (b.mode === "triggered") && (String(b.moment ?? "").split(/[(/]/)[0] === "defeated");
+  const perEncounter = b.budget?.encounter ?? (defeatedBlock ? 1 : Infinity);
   const spentRound = counts(uses.round);
   const spentEncounter = counts(uses.encounter);
 

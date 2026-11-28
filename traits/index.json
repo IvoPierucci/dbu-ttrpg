@@ -2144,6 +2144,9 @@
     "transformations/enhancements/unbreaking-tide/traits/super-armor.dbu",
     "transformations/enhancements/unbreaking-tide/traits/you-cant-win.dbu",
     "transformations/enhancements/unbreaking-tide/unbreaking-tide.dbu",
-    "qualities/desolated.dbu"
+    "qualities/desolated.dbu",
+    "transformations/awakenings/super-regeneration/super-regeneration.dbu",
+    "transformations/awakenings/super-regeneration/traits/unending.dbu",
+    "transformations/awakenings/super-regeneration/traits/untiring.dbu"
   ]
 }
