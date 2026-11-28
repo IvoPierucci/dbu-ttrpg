@@ -190,6 +190,22 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
     [true, true, true, true]);
 }
 
+// No duplicates (the user's, 2026-11-28): a character's syncs one after another, each working out what is still missing; a Trait had
+// already by the time its window is answered not given again.
+{
+  let order = [];
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const fake = { uuid: "Actor.dup", type: "character", system: { race: "" }, items: [], getFlag: () => undefined, setFlag: async () => {} };
+  const first = RT.syncRaceTraits(fake).then(() => order.push("first"));
+  const second = RT.syncRaceTraits(fake).then(() => order.push("second"));
+  await Promise.all([first, second]);
+  const RTS = read("module", "race-traits.mjs");
+  check("a second sync waits for the first; a Trait had already (or a Factor Trait in its place) skipped as the window's answers are given",
+    [order, RTS.includes("const run = before.catch(() => {}).then(() => syncNow(actor, options));"),
+     RTS.includes("if (had(file.id) || (extra.exchangedFor && had(extra.exchangedFor))) return;")], [["first", "second"], true, true]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

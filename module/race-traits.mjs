@@ -76,7 +76,21 @@ function isFactorTraitItem(item) {
  * The character's Racial Traits as its race says: those it should not have put by, those it is missing given (asked their Options as any
  * added one is). An exchanged Factor Trait stands for the one it replaced. `raceChanged`: every Factor Trait put by too.
  */
-export async function syncRaceTraits(actor, { raceChanged = false } = {}) {
+export function syncRaceTraits(actor, options = {}) {
+  // One at a time for a character (the user's, 2026-11-28: duplicates): a race chosen syncs from its update and again as its sheet
+  // redraws, and the race's window waits on its answers meanwhile - a second run would give the same Traits twice. Each waits for the
+  // one before, then works out what is still missing.
+  const key = actor?.uuid ?? actor?.id ?? "";
+  const before = syncing.get(key) ?? Promise.resolve();
+  const run = before.catch(() => {}).then(() => syncNow(actor, options));
+  syncing.set(key, run);
+  run.finally(() => { if (syncing.get(key) === run) syncing.delete(key); });
+  return run;
+}
+
+const syncing = new Map();
+
+async function syncNow(actor, { raceChanged = false } = {}) {
   const changes = raceTraitChanges(actor, { raceChanged });
   if (!changes) return false;
   for (const id of changes.remove) if (actor.items.get(id)) await removeRacialTrait(actor, id);
@@ -163,7 +177,14 @@ export async function addRaceTraitFiles(actor, files) {
   const held = Array.from(actor.items ?? []).map(item => item.system?.chosen ?? []);
   const answers = await askPages(`${actor.name} - Racial Traits`, given => racePages(actor, files, given, held));
   const made = [];
+  // Had already - given while the window waited - not given again: by its file, or a Factor Trait standing in its place (not one whose
+  // Factor gives the replaced Trait back - restoredFactors).
+  const restored = restoredFactors(actor);
+  const had = id => Array.from(actor.items ?? []).some(item => (item.type === "racial") && !item.system?.transformation
+    && ((String(item.flags?.[SCOPE]?.sourceId ?? "") === id)
+      || ((String(item.flags?.[SCOPE]?.exchangedFor ?? "") === id) && !restored.has(factorOf(item)))));
   const give = async (file, extra = {}) => {
+    if (had(file.id) || (extra.exchangedFor && had(extra.exchangedFor))) return;
     const answer = traitPageable(file) ? (answers.get(`trait:${file.id}`) ?? null) : undefined;
     const data = await racialItemFrom(file, actor, { answers: answer });
     if (!data) return;
