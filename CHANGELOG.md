@@ -5,6 +5,23 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+- **16 Adversary Transformations** (the second contributor's, from the owner's links):
+  - Lesser Awakenings: Overflowing Power, Pain Addict, Raid Boss, Sadistic Villain, Weak Slayer, Dramatic Antagonist.
+  - Greater Awakenings: Archetypal Bruiser, Archetypal Speedster, Archetypal Trickster, Corruption, Terrifying Teamwork, Tireless,
+    Stable Foe.
+  - Standard Enhancements: Unbreaking Tide, Adversary Burst, Meteor Striker.
+  - 7 Maneuvers of their own (Special, opened only by their Awakening): Break Free, Twisted Trick, Massive Blow, Kill Box,
+    Villainous Boast, Sinful Soliloquy, Directional Defense. A new Environmental Quality: Desolated.
+- **Adversary machinery (generic, for any Adversary content):** a Maneuver may cost Adversary Actions (`adversaryActionCost`),
+  refused without them; `costs N counter` is paid in every window where it is ticked (Moment cards, Respond, the hit, a declared
+  Maneuver, the windows after a dodge or a hit). Narrative Stamina gained, spent and multiplied by effects. An effect may answer an
+  Opponent's turn beginning (`opponent-start-of-turn`, on that turn's own card) or any Combat Condition you inflict
+  (`inflict-condition`). Resources that halve an attack's Damage (Numb - the Deal Damage window shows it halved) or are worn down
+  by it and end a Transformation at 0 (Armor Points). Conditions gained as a Transformation is left (`conditionOnLeave`). Charging
+  Assault's cap, Teamwork (2) and Combat Recovery raised by effects; an Adversary Action box in a Save or Skill Clash; an Ally's
+  Damage answered by a Basic Attack offered on the attack's card. Transformation Traits may ignore an Environmental Quality.
+- **What is still the table's, and what was tried:** see `docs/WORKLOG.md`, "Adversary Transformations: tried and not tried".
+
 - **Greater Mutation (3) and Mastered Reincarnated (1) built:** the race Trait their Factor's Factor Trait replaced comes back
   beside it while the Awakening is had (`allow restoreReplaced.<factor>;`, read by race-traits.mjs).
 - **A race's questions in one window:** the Options and choices of the Racial Traits a race gives are asked as pages of a single

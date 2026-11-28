@@ -144,3 +144,12 @@ the rule and how it is applied in the code.
   effect inside a Trait. Grant one with `grantsAspectTo:`.
 - **Kaioken's Life Point Cost** is charged by itself when an Attacking Maneuver is declared.
 - **"Until the end of your next turn" for Studied** is kept by the Round: through the end of the next Combat Round.
+
+## Adversary Transformations (the second contributor's owner, 2026-11-28)
+
+- **Melee Range is the adjacent Squares** (the 8 around you): the predicate `opponentInMelee` (conditions.mjs).
+- **"You may use your Force Modifier to calculate your Speeds instead of your Agility Modifier"** (Archetypal Bruiser (1)) takes
+  the higher of the two by itself: the Slot `speed.byForce` (actor-character.mjs), no choice on the sheet.
+- **"Double it again"** doubles what was already doubled: Pain Addict (1)'s +1 is +2 below Injured and +4 below Critical.
+- **Spending Adversary Actions for one thing each** (Stable Foe (6), a Combat Condition stack each) asks how many at once and does
+  that many: the verb `shedForAdversaryActions` (moments-runtime.mjs).
