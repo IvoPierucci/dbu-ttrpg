@@ -5,6 +5,10 @@ What each version brought, in broad strokes. Every change is described in its co
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 0.3.13 (2026-11-28)
+
 - **16 Adversary Transformations** (the second contributor's, from the owner's links):
   - Lesser Awakenings: Overflowing Power, Pain Addict, Raid Boss, Sadistic Villain, Weak Slayer, Dramatic Antagonist.
   - Greater Awakenings: Archetypal Bruiser, Archetypal Speedster, Archetypal Trickster, Corruption, Terrifying Teamwork, Tireless,
