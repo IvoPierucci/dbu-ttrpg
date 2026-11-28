@@ -180,9 +180,9 @@ const foe = { documentName: "Actor", uuid: "A.foe", id: "foe", type: "character"
     [P.wonWithAnySkill({ context: { skill: "stealth" } }), P.wonWithAnySkill({ context: { skill: "" } })], [true, false]);
   const RC = read("module", "racial.mjs"), CH = read("module", "chat.mjs");
   check("wired: choose3 asked after the other two and kept apart from them, its row on the sheet; an Attribute list; the Ki on the Wound, not the Capacity",
-    [RC.includes("const last = await askChoice(source, source.choose3, { actor, earlier: [choice.value, second.value] });"),
+    [RC.includes("const last = (preset3 !== undefined) ? preset3 : await askChoice(source, source.choose3, { actor, earlier: [choice.value, second.value] });"),
      RC.includes("...(file.choose3 ? [await row(3, file.choose3, third, [first, second].filter(Boolean))] : []),"),
-     RC.includes("if (third) own = own.replaceAll(\"$choice3\", third);"),
+     RC.includes("if (file.choose3) own = fillChoice(own, \"$choice3\", third);"),
      RC.includes(".filter(([, skill]) => !attributes.length || attributes.includes(skill.attribute))"),
      CH.includes("const genius = await geniusWoundKi(attacker, struck);"),
      CH.includes("await requestActorUpdate(attacker, { \"system.ki.value\": attacker.system.ki.value - spent, [`flags.${SCOPE}.geniusWoundRound`]: roundKey() });"),

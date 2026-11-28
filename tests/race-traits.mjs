@@ -173,6 +173,31 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
     [true, true, true, "function", true, true, true, true, true]);
 }
 
+// A Trait's questions on one page (the user's, 2026-11-27): Functional Purpose's two Skills and its Option answered together; "a Skill you
+// have 2+ Skill Ranks in" may be None, its line left out.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const asked = [];
+  const answer = { "functional-purpose": { choices: { 1: "stealth", 2: "" }, options: { 2: ["destroyer"] }, optionChoices: {} },
+    "technological-being": { choices: {}, options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": "impulsive" } } };
+  globalThis.CSS = { escape: String };
+  globalThis.foundry.applications = { api: { DialogV2: { wait: async config => { asked.push(config.window.title); return answer[config.window.title === "Functional Purpose" ? "functional-purpose" : "technological-being"]; } } } };
+  const purpose = await RAC.racialItemFrom(getTrait("functional-purpose"), null, { partial: true });
+  const being = await RAC.racialItemFrom(getTrait("technological-being"), null, { partial: true });
+  delete globalThis.foundry.applications;
+  const item = made => ({ type: "racial", system: made.data.system, flags: made.data.flags });
+  check("one page each: Functional Purpose's Rank given, its Critical Target to None left out, Destroyer chosen; Technological Being's three Options and Enhanced Organism's Save",
+    [asked, purpose.data.system.script.includes("skill.stealth.ranks += 1;"), purpose.data.system.script.includes("criticalTarget"),
+     purpose.data.system.chosen.map(entry => [entry.key, entry.value]), RAC.unansweredOf(item(purpose)).length,
+     being.data.system.chosen.filter(entry => entry.key === "option").map(entry => entry.value), being.data.system.script.includes("save.racial.impulsive"),
+     RAC.unansweredOf(item(being)).length],
+    [["Functional Purpose", "Technological Being"], true, false,
+     [["functional-purpose", "stealth"], ["functional-purpose#2", ""], ["option", "destroyer"]], 0,
+     ["enhanced-organism", "surging-power", "hyper-resilience"], true, 0]);
+  check("None: a choice answered empty leaves out every line naming it", [RAC.fillChoice("a $choice2;\nb $choice;", "$choice2", ""), RAC.fillChoice("a $choice2;", "$choice2", "x")],
+    ["b $choice;", "a x;"]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

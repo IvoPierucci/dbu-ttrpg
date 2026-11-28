@@ -6656,3 +6656,29 @@
   flex: 0 0 auto;
   min-width: 90px;
 }
+
+/* A Trait's questions on one page (racial.mjs askTraitTogether): its choices first, a label and its list on a row; then each Option
+   effect under its hint, an Option's own choice beside its name. */
+.application.dbu-dialog .dbu-together {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.application.dbu-dialog .dbu-together-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.application.dbu-dialog .dbu-together-choice select {
+  flex: 1 1 auto;
+}
+.application.dbu-dialog .dbu-together-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+.application.dbu-dialog .dbu-together-group .dbu-respond-option select {
+  margin-left: auto;
+  max-width: 45%;
+}

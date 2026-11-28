@@ -20,7 +20,7 @@
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { getRace, isMinionRace } from "./races.mjs";
-import { addRacialTrait, answered, askChoice, askOptions, changeChoice, changeRacialOption, factorOf, minionRacialUnfit,
+import { addRacialTrait, answered, askChoice, askOptions, askTraitTogether, changeChoice, changeRacialOption, factorOf, minionRacialUnfit,
   ownedRacialTraits, racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait, replacedTraitOf,
   unansweredOf } from "./racial.mjs";
 import { withChoiceWizard } from "./choice-wizard.mjs";
@@ -332,8 +332,28 @@ export async function answerRaceTraitQuestions(actor) {
         if (!file) continue;
         const chosen = item.system?.chosen ?? [];
         const value = key => chosen.find(entry => entry.key === key)?.value ?? "";
+        const gaps = unansweredOf(item);
+        const openOf = group => group.options.filter(option => !chosen.some(entry => (entry.key === "option") && (entry.value === option.id)));
+        // Its missing questions on one page, as the race asked them (askTraitTogether) - or one at a time where that cannot be drawn.
+        const together = await askTraitTogether(file, actor,
+          gaps.filter(gap => gap.kind === "option").map(gap => ({ ...gap.group, options: openOf(gap.group), count: gap.missing })),
+          { which: gaps.filter(gap => gap.kind === "choice").map(gap => gap.which),
+            known: { 1: value(file.id), 2: value(`${file.id}#2`), 3: value(`${file.id}#3`) } });
+        if (together === null) continue;
+        if (together) {
+          for (const [n, picked] of Object.entries(together.choices ?? {})) out.push({ item, which: Number(n), value: picked });
+          for (const ids of Object.values(together.options ?? {})) {
+            for (const id of ids) {
+              const option = getTrait(id);
+              const extra = [];
+              const script = option ? await answered(option, extra, actor, together.optionChoices?.[id] ?? "") : null;
+              if (script !== null) out.push({ item, option: id, prepared: { script, extra } });
+            }
+          }
+          continue;
+        }
         const given = [];
-        for (const gap of unansweredOf(item)) {
+        for (const gap of gaps) {
           if (gap.kind === "option") {
             const open = gap.group.options.filter(option => !chosen.some(entry => (entry.key === "option") && (entry.value === option.id)));
             const picked = await askOptions(file, open, gap.missing, gap.group.effect);

@@ -149,7 +149,7 @@ class ChoiceSession {
       if (!this.pending || (this.pending.index !== index)) return;
       const value = button.callback ? await button.callback(event, element, dialog) : button.action;
       if (value === NOT_YET) {
-        const hint = body.querySelector(".dbu-respond-hint");
+        const hint = body.querySelector(".dbu-respond-hint.dbu-wizard-needs") ?? body.querySelector(".dbu-respond-hint");
         hint?.classList.add("dbu-wizard-needs");
         ui.notifications.warn(`${title}: ${hint?.textContent?.trim() || "not answered yet."}`);
         return;
@@ -240,6 +240,8 @@ function restore(body, values) {
     if (at >= values.length) return;
     if ((field.type === "checkbox") || (field.type === "radio")) field.checked = Boolean(values[at]);
     else field.value = values[at];
+    // What follows it - a later choice's list - follows again, before the next field is put back.
+    field.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }
 

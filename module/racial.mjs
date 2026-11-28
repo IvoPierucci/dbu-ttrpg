@@ -674,12 +674,15 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     // of a Genius's "Skills that use Scholarship or Insight").
     const attributes = listOf(source?.chooseAttribute).map(each => each.toLowerCase());
     const ranks = key => (Number(actor?.system?.skills?.[key]?.ranks) || 0) + earlier.filter(each => each === key).length;
-    return Object.entries(actor?.system?.skillTable ?? DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
+    const skills = Object.entries(actor?.system?.skillTable ?? DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
       .filter(([, skill]) => !attributes.length || attributes.includes(skill.attribute))
       .filter(([key]) => (kind === "skill") || (ranks(key) >= 2))
       // A second Skill chosen after a first is another one - Practiced's "2 different Skills".
       .filter(([key]) => (kind !== "skill") || !earlier.includes(key))
       .map(([key, skill]) => [key, skill.label]);
+    // "A Skill you have 2+ Skill Ranks in": None too, applying it to no Skill - never the question refused for having none (the user's,
+    // 2026-11-27). Its lines with that choice left out of the script (fillChoice).
+    return (kind === "skillRanked") ? [["", "None"], ...skills] : skills;
   }
   // Its own list, written beside it - `choices: Tiny, Enormous` (Alternate Scale Structure's).
   if (kind === "list") return listOf(source?.choices).map(label => [slug(label), label]);
@@ -927,11 +930,13 @@ export async function changeChoice(item, which, value) {
   if (which === "talent") return changeTalentChoice(item, file, value);
   // The Racial Trait a `grantsRacialOf` gave: the old one off, the new one on.
   if (which === "racial") return changeRacialGrant(item, file, value);
-  if (!file?.choose || !value) return false;
+  if (!file?.choose) return false;
   const key = (which === 3) ? `${file.id}#3` : (which === 2) ? `${file.id}#2` : file.id;
   const kind = (which === 3) ? file.choose3 : (which === 2) ? file.choose2 : file.choose;
   if (!kind) return false;
   const offered = await choicesFor(kind, file, { actor: item.actor ?? null });
+  // None ("") only where it is offered - a Skill with 2+ Ranks.
+  if (!value && !offered.some(([each]) => each === "")) return false;
   const label = offered.find(([each]) => each === value)?.[1] ?? value;
   let chosen = [...(item.system.chosen ?? []).filter(entry => entry.key !== key), { key, value, label: `${file.name}: ${label}` }];
   const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
@@ -945,11 +950,12 @@ export async function changeChoice(item, which, value) {
   }
   // Its own part: the file's script with both answers written in - a list's flags too; none while one is still unanswered (a race's
   // Trait whose window was closed, answered a choice at a time).
-  let own = (first && (!file.choose2 || second) && (!file.choose3 || third)) ? String(file.script ?? "").trim() : "";
-  if (third) own = own.replaceAll("$choice3", third);
-  if (second) own = own.replaceAll("$choice2", second);
+  const has = each => chosen.some(entry => entry.key === each);
+  let own = (has(file.id) && (!file.choose2 || has(`${file.id}#2`)) && (!file.choose3 || has(`${file.id}#3`))) ? String(file.script ?? "").trim() : "";
+  if (file.choose3) own = fillChoice(own, "$choice3", third);
+  if (file.choose2) own = fillChoice(own, "$choice2", second);
   const flags = (file.choose === "list") ? (await choicesFor("list", file)).map(([each]) => each).sort((a, b) => b.length - a.length) : [];
-  own = flags.reduce((text, each) => text.replaceAll(`$${each}`, (each === first) ? "1" : "0"), own.replaceAll("$choice", first));
+  own = flags.reduce((text, each) => text.replaceAll(`$${each}`, (each === first) ? "1" : "0"), fillChoice(own, "$choice", first));
   // And what an Option put after it, as it is.
   const script = String(item.system.script ?? "");
   const at = script.indexOf("#@ option");
@@ -1012,37 +1018,154 @@ async function favoredFeatureChoice(source, actor, techniqueId, advantageId) {
 }
 
 /** A part's script with its `choose:` answered - `$choice` replaced - and the choice recorded. */
-export async function answered(source, chosen, actor = null, preset = "") {
+export async function answered(source, chosen, actor = null, preset = "", presets = null) {
   let script = String(source.script ?? "").trim();
   if (!source.choose) return script;
-  // Named by what gives it - Plant Monster's Elemental (Plantlife) - not asked, where it is among those offered.
+  // Named by what gives it - Plant Monster's Elemental (Plantlife) - not asked, where it is among those offered. `presets` ({1, 2, 3}):
+  // answered already, on the Trait's one page (askTraitTogether) - "" a None.
+  const given = async (which, kind, earlier) => {
+    const value = presets?.[which];
+    if (value === undefined) return undefined;
+    const pair = (await choicesFor(kind, source, { actor, earlier })).find(([each]) => each === value);
+    return pair ? { value: pair[0], label: pair[1] } : null;
+  };
   const named = preset ? (await choicesFor(source.choose, source, { actor })).find(([value]) => value === preset) : null;
-  const choice = named ? { value: named[0], label: named[1] } : await askChoice(source, source.choose, { actor });
+  const first = named ? { value: named[0], label: named[1] } : await given(1, source.choose, []);
+  const choice = (first !== undefined) ? first : await askChoice(source, source.choose, { actor });
   if (!choice) return null;
   chosen.push({ key: source.id, value: choice.value, label: `${source.name}: ${choice.label}` });
   // A second choice after it - `choose2:`, `$choice2` - asked with the first known (Functional Purpose's).
   if (source.choose2) {
-    const second = await askChoice(source, source.choose2, { actor, earlier: [choice.value] });
+    const preset2 = await given(2, source.choose2, [choice.value]);
+    const second = (preset2 !== undefined) ? preset2 : await askChoice(source, source.choose2, { actor, earlier: [choice.value] });
     if (!second) return null;
     chosen.push({ key: `${source.id}#2`, value: second.value, label: `${source.name}: ${second.label}` });
-    script = script.replaceAll("$choice2", second.value);
+    script = fillChoice(script, "$choice2", second.value);
     // Favored Technique's Advantage, where it asks a choice of its own.
     const third = await favoredFeatureChoice(source, actor, choice.value, second.value);
     if (third === null) return null;
     if (third) chosen.push(third);
     // A third after both - `choose3:`, `$choice3` - Skills of a Genius's "select 3 Skills".
     if (source.choose3) {
-      const last = await askChoice(source, source.choose3, { actor, earlier: [choice.value, second.value] });
+      const preset3 = await given(3, source.choose3, [choice.value, second.value]);
+      const last = (preset3 !== undefined) ? preset3 : await askChoice(source, source.choose3, { actor, earlier: [choice.value, second.value] });
       if (!last) return null;
       chosen.push({ key: `${source.id}#3`, value: last.value, label: `${source.name}: ${last.label}` });
-      script = script.replaceAll("$choice3", last.value);
+      script = fillChoice(script, "$choice3", last.value);
     }
   }
   // A list's: each of its values a number too - `$tiny` 1 where Tiny was chosen, 0 where it was not.
   const flags = (source.choose === "list") ? (await choicesFor("list", source)).map(([value]) => value)
     .sort((a, b) => b.length - a.length) : [];
   return flags.reduce((text, value) => text.replaceAll(`$${value}`, (value === choice.value) ? "1" : "0"),
-    script.replaceAll("$choice", choice.value));
+    fillChoice(script, "$choice", choice.value));
+}
+
+/** A choice written into a script - or, answered None (""), every line naming it left out. */
+export function fillChoice(script, token, value) {
+  if (value) return String(script).replaceAll(token, value);
+  return String(script).split("\n").filter(line => !line.includes(token)).join("\n");
+}
+
+/**
+ * A Trait's own questions on one page (the user's, 2026-11-27: "for things of the same Trait, ask in the same window") - its choices
+ * (`choose`, `choose2`, `choose3`; a later one's list following the earlier ones') and each Option effect, with the choice of an Option
+ * under it. Its answers as {choices: {1, 2, 3}, options: {effect: [ids]}, optionChoices: {id: value}}; null where closed; undefined
+ * where it is asked as before, a question at a time - one question only, or one this page cannot draw (Favored Technique's, an
+ * Option's second choice). `which` the choices to ask (Set Racial Options: those still missing), `known` those already made.
+ */
+export async function askTraitTogether(trait, actor, groups, { which = [1, 2, 3], known = {} } = {}) {
+  const kindOf = n => (n === 1) ? trait.choose : (n === 2) ? (trait.choose && trait.choose2) : (trait.choose && trait.choose2 && trait.choose3);
+  const asked = which.filter(n => kindOf(n));
+  if (asked.some(n => kindOf(n) === "advantageUpTo10")) return undefined;
+  if (groups.some(group => group.options.some(option => option.choose2 || (option.choose === "advantageUpTo10")))) return undefined;
+  const questions = asked.length + groups.length;
+  if (questions < 2) return undefined;
+  const escape = Handlebars.escapeExpression;
+  // Each asked choice's list by the answers before it - the page's or those already made (Functional Purpose's 2+ Ranks counts the Rank
+  // just chosen): keyed by the page's earlier answers, "a|b".
+  const lists = {};
+  const build = async (at, picked) => {
+    if (at >= asked.length) return;
+    const n = asked[at];
+    const earlier = [1, 2, 3].filter(m => m < n).map(m => picked[m] ?? known[m]).filter(Boolean);
+    const key = asked.slice(0, at).map(m => picked[m]).join("|");
+    const pairs = await choicesFor(kindOf(n), trait, { actor, earlier });
+    (lists[n] ??= {})[key] = pairs;
+    for (const [value] of pairs) await build(at + 1, { ...picked, [n]: value });
+  };
+  await build(0, {});
+  const kinds = asked;
+  const optionPairs = {};
+  for (const group of groups) for (const option of group.options) if (option.choose) optionPairs[option.id] = await choicesFor(option.choose, option, { actor });
+  const select = (name, pairs) => `<select name="${name}">${pairs.map(([value, label]) =>
+    `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select>`;
+  const label = n => (n === 3) ? "3rd choice" : (n === 2) ? "2nd choice" : (trait.choose2 ? "1st choice" : "Choice");
+  const parts = asked.map(n => `<label class="dbu-respond-option dbu-together-choice"><span class="dbu-respond-name">${label(n)}</span>${
+    select(`choice${n}`, (n === asked[0]) ? (lists[n]?.[""] ?? []) : [])}</label>`);
+  for (const group of groups) {
+    const type = (group.count === 1) ? "radio" : "checkbox";
+    parts.push(`<div class="dbu-together-group" data-effect="${group.effect}" data-count="${group.count}">
+      <p class="dbu-respond-hint">${escape(group.effect ? `${ordinal(group.effect)} effect` : "Option")}: choose ${group.count}.</p>
+      ${group.options.map((option, index) => `<label class="dbu-respond-option" data-tooltip="${escape(plainText(option.text ?? option.description ?? ""))}">
+        <input type="${type}" name="option-${group.effect}" value="${escape(option.id)}" ${(index === 0) && (group.count === 1) ? "checked" : ""}/>
+        <span class="dbu-respond-name">${escape(option.name)}</span>
+        <span class="dbu-respond-source">${escape(plainText(option.description ?? ""))}</span>
+        ${optionPairs[option.id] ? select(`optchoice-${option.id}`, optionPairs[option.id]) : ""}</label>`).join("")}</div>`);
+  }
+  const fill = (element, pairs) => {
+    if (!element) return;
+    const keep = element.value;
+    element.innerHTML = pairs.map(([value, text]) => `<option value="${escape(value)}">${escape(text)}</option>`).join("");
+    if (pairs.some(([value]) => value === keep)) element.value = keep;
+  };
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: trait.name },
+    position: { width: 480 },
+    content: `<div class="dbu-together">${parts.join("")}</div>`,
+    render: (event, dialog) => {
+      const root = dialog.element;
+      const field = n => root.querySelector(`[name="choice${n}"]`);
+      // Each later choice's list follows the earlier ones on the page.
+      const follow = () => asked.forEach((n, at) => {
+        if (at) fill(field(n), lists[n]?.[asked.slice(0, at).map(m => field(m)?.value ?? "").join("|")] ?? []);
+      });
+      for (const n of asked) field(n)?.addEventListener("change", follow);
+      follow();
+    },
+    buttons: [
+      { action: "confirm", label: "Choose", default: true, callback: (event, button, dialog) => {
+        const root = dialog.element;
+        const options = {};
+        const optionChoices = {};
+        let short = false;
+        for (const box of root.querySelectorAll(".dbu-together-group")) {
+          const ticked = [...box.querySelectorAll("input:checked")].map(input => input.value);
+          const right = ticked.length === Number(box.dataset.count);
+          // Marked red as Next is pressed short - not while the window only looks ahead (choice-wizard.mjs's "probe").
+          if (event?.type !== "probe") box.querySelector(".dbu-respond-hint")?.classList.toggle("dbu-wizard-needs", !right);
+          if (!right) short = true;
+          options[box.dataset.effect] = ticked;
+          for (const id of ticked) {
+            const pick = root.querySelector(`[name="optchoice-${CSS.escape(id)}"]`);
+            if (pick) optionChoices[id] = pick.value;
+          }
+        }
+        if (short) return Symbol.for("dbu-ttrpg.notYet");
+        const choices = {};
+        for (const n of asked) choices[n] = root.querySelector(`[name="choice${n}"]`)?.value ?? "";
+        return { choices, options, optionChoices };
+      } },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (answer === Symbol.for("dbu-ttrpg.notYet")) {
+    ui.notifications.warn(`${trait.name}: choose as many as each Option effect asks.`);
+    return null;
+  }
+  return (answer && (typeof answer === "object")) ? answer : null;
 }
 
 /**
@@ -1053,9 +1176,13 @@ export async function answered(source, chosen, actor = null, preset = "") {
  */
 export async function racialItemFrom(trait, actor = null, { presetOption = "", presetChoice = "", partial = false } = {}) {
   const chosen = [];
+  // Its questions on one page where they may be (askTraitTogether) - not where something names its Option or choice.
+  const named = presetOption || presetChoice || trait.optionsByRace || trait.optionsFollow;
+  const together = named ? undefined : await askTraitTogether(trait, actor, optionGroupsOf(trait));
+  if ((together === null) && !partial) return null;
   // `partial` (a race's Traits, the user's 2026-11-27): a question left unanswered leaves that piece empty - its own part of the script
   // out, an Option not chosen - rather than the Trait not taken; Set Racial Options asks it later (unansweredOf).
-  let own = await answered(trait, chosen, actor, presetChoice);
+  let own = (together === null) ? null : await answered(trait, chosen, actor, presetChoice, together?.choices ?? null);
   if ((own === null) && partial) own = "";
   if (own === null) return null;
   const scripts = [own];
@@ -1084,15 +1211,16 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
   for (const group of optionGroupsOf(trait)) {
     const options = group.options;
     // Named by what gives it - Troll's "you must select Thick Hide for its Option effect" - not asked.
+    if (together === null) continue;
     const picked = (presetOption && (group.count === 1) && options.some(entry => entry.id === presetOption))
-      ? [presetOption] : await askOptions(trait, options, group.count, group.effect);
+      ? [presetOption] : together ? (together.options?.[group.effect] ?? null) : await askOptions(trait, options, group.count, group.effect);
     if (!picked && partial) continue;
     if (!picked) return null;
     for (const id of picked) {
       const option = options.find(entry => entry.id === id);
       const before = chosen.length;
       chosen.push({ key: "option", value: option.id, label: option.name });
-      const script = await answered(option, chosen);
+      const script = await answered(option, chosen, null, together?.optionChoices?.[option.id] ?? "");
       // Its own choice unanswered: the Option not chosen either, asked whole later.
       if ((script === null) && partial) {
         chosen.length = before;
