@@ -206,6 +206,9 @@ const TABLE = [
     doc: "Fired once a Combat Roll of yours came out a Critical Result - and when one is declared so (chat.mjs rollSide, "
        + "declareStrikeCritical) - Evolved Right Eye's Critical Eye. An attack's Strike or Wound names its `foundation` "
        + "(Archetype Focus's). What is the player's is asked in a window first." },
+  { key: "inflict-condition", label: "You inflict a Combat Condition on an Opponent", provides: [],
+    doc: "Fired for whoever put a Combat Condition on an Opponent, while something between them was being settled (chat.mjs "
+       + "conditionGained) - its context `inflictedUuid` (who gained it) and `condition`. What is the player's is asked in a window first." },
   { key: "inflict-shaken", label: "You inflict the Shaken Combat Condition on an Opponent", provides: [],
     doc: "Fired for whoever put Shaken on someone else - Terrify, the Bluff Attack, a Dirty Trick, a Technique's Condition, "
        + "Power Duel, and every mark kept on its giver's clock (chat.mjs shakenBy) - Terrifying Pressure's. What is the "
@@ -324,6 +327,9 @@ const TABLE = [
        + "three stacks, for anything answering this that takes the turn away. A skipped "
        + "turn is still your turn: you lost it, it did not stop existing. Durations "
        + "measured from this edge end on it either way." },
+  { key: "opponent-start-of-turn", label: "An Opponent's turn begins", provides: [],
+    doc: "Offered on that turn's own card (combat.mjs announceTurn adds whoever answers it to its subjects) - \"At the start of an "
+       + "Opponent's Turn\". Always chosen: never by itself." },
   { key: "power", label: "You use the Power Up Maneuver", provides: [] },
   { key: "transform", label: "You enter this Transformation", provides: [] },
   {

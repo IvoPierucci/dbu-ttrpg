@@ -121,6 +121,32 @@ export function adjacent(one, other) {
 }
 
 /**
+ * Whether two stand within this many Squares of each other (0: adjacent, as `adjacent`) - by their tokens on one scene; a
+ * Sphere AoE centred on one reaches the other when it is within the Sphere's radius less 1 (guidance.mjs SPHERE_RADIUS).
+ */
+export function withinSquares(one, other, squares) {
+  const tokenOf = who => (who?.documentName === "Actor") ? (who.getActiveTokens?.(false, true)?.[0] ?? null) : who;
+  const docA = tokenOf(one)?.document ?? tokenOf(one);
+  const docB = tokenOf(other)?.document ?? tokenOf(other);
+  const grid = globalThis.canvas?.grid?.size;
+  if (!docA || !docB || !grid || (docA === docB) || (docA.parent?.id !== docB.parent?.id)) return false;
+  const box = t => ({ x: t.x / grid, y: t.y / grid, w: t.width ?? 1, h: t.height ?? 1 });
+  const gap = (p, q, pSize, qSize) => Math.max(0, Math.max(p - (q + qSize), q - (p + pSize)));
+  const a = box(docA);
+  const b = box(docB);
+  return Math.max(Math.ceil(gap(a.x, b.x, a.w, b.w)), Math.ceil(gap(a.y, b.y, a.h, b.h))) <= Math.max(0, Number(squares) || 0);
+}
+
+/** The characters on the scene who are Opponents of this one, not Defeated - each once, however many tokens. */
+export function opponentsOnScene(who) {
+  const actor = actorOf(who);
+  if (!actor) return [];
+  return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated && areOpponents(token.actor, actor))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+}
+
+/**
  * Caste Combat's Rook chosen: "You can treat your Opponents as if they were your Allies for the effects of any Arlian Racial Traits" - read
  * off the Item, so a character's own preparation may ask it.
  */

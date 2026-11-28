@@ -15,6 +15,7 @@
  * Attack.
  */
 
+import { applySlot } from "./effects/interpreter.mjs";
 import { areAllies } from "./allies.mjs";
 import { isCharacter } from "./actor-types.mjs";
 import {
@@ -304,7 +305,9 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   if (kiFused) await joiner.setFlag("dbu-ttrpg", "kiFusionUnitedRound", round);
   await recordManeuverUse(joiner, united);
   // Teamwork (2)'s once a Round, spent.
-  const teamworkBonus = (teamwork && answer.teamwork) ? Math.max(1, Number(joiner.system?.tierOfPower) || 1) : 0;
+  // Doubled where an effect says so - "Double the bonuses from the 2nd effect of the Teamwork Talent" (`united.teamworkMultiplier`).
+  const teamworkTimes = Math.max(1, Number(applySlot(joiner.system?.effects?.slots, "united.teamworkMultiplier", 1)) || 1);
+  const teamworkBonus = (teamwork && answer.teamwork) ? Math.max(1, Number(joiner.system?.tierOfPower) || 1) * teamworkTimes : 0;
   if (teamworkBonus) {
     await joiner.setFlag("dbu-ttrpg", "teamworkRound", `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`);
   }

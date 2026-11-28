@@ -17,6 +17,7 @@
  */
 
 import { getSignatureFeature } from "./effects/traits.mjs";
+import { applySlot } from "./effects/interpreter.mjs";
 
 /**
  * What a feature needs from the table before an attack carrying it can be rolled.
@@ -78,7 +79,9 @@ export function advantageWoundParts(attacker, attack) {
 
   if ((attack.advantages ?? []).includes("charging-assault")) {
     const squares = Math.max(0, attack.squaresCharged ?? 0);
-    const bonus = Math.min(Math.max(0, squares - CHARGING_FREE_SQUARES), 2 * tier);
+    // Its cap 2(T), raised where an effect says - "can be as high as 6(T)" (`chargingAssault.capPerTier`).
+    const capPerTier = 2 + (Number(applySlot(attacker.system.effects?.slots, "chargingAssault.capPerTier", 0)) || 0);
+    const bonus = Math.min(Math.max(0, squares - CHARGING_FREE_SQUARES), capPerTier * tier);
     if (bonus) parts.push({ label: "Charging Assault", value: bonus });
   }
 

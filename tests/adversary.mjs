@@ -694,5 +694,38 @@ const ADV = await import(modUrl("adversary.mjs"));
     [true, true, true, true, true, true, true, true]);
 }
 
+// --- Adversary Transformations' machinery, second pass (2026-11-28) ------------------------------------------------------------
+{
+  const CHAT = read("module", "chat.mjs");
+  const RUN = read("module", "effects/moments-runtime.mjs");
+  const TR = read("module", "transformations.mjs");
+  check("costs N counter paid in every window: Moment cards, offered windows, a declared Maneuver, Respond and the hit",
+    [CHAT.includes("await payCounterCosts(actor, offered.filter(entry => ids.includes(entry.blockId)));"),
+     CHAT.includes("await payCounterCosts(actor, triggers.filter(entry => !before.has(entry.blockId)));"),
+     (CHAT.match(/await payTickedCounterCosts\(/g) ?? []).length],
+    [true, true, 2]);
+  check("Damage: halved by a Resource held for it (resourceHalvesDamage), a Resource worn down by it (resourceDrainedByDamage) leaving its Transformation at 0",
+    [CHAT.includes("await studiedShield(target, fromUuidSync(attack.attackerUuid ?? \"\"), await halveByResource(target, settledDamage))"),
+     CHAT.includes("await drainOnDamage(target, Math.max(0, damage - Math.max(0, Number(absorbed) || 0)));"),
+     CHAT.includes("await TR.leaveTransformations(target, [item.id]);"),
+     read("module", "effects/traits.mjs").includes("halvesDamage: Boolean(trait.resourceHalvesDamage),")],
+    [true, true, true, true]);
+  check("conditionOnLeave owed, gained as the Transformation is left; lifeBelowNextThreshold; shedForAdversaryActions; inflictedLosesKi",
+    [RUN.includes('case "conditionOnLeave": {'), TR.includes('const due = onLeave.filter(entry => entry.id === item.system?.transformationId);'),
+     RUN.includes('case "lifeBelowNextThreshold": {'), RUN.includes('case "shedForAdversaryActions": {'), RUN.includes('case "inflictedLosesKi": {')],
+    [true, true, true, true, true]);
+  check("inflict-condition fired for any Combat Condition on an Opponent; the Adversary Action Clash box; an Ally's Damage answered on its card",
+    [CHAT.includes('if (opponent && combat) answerFor(by, "inflict-condition", { inflictedUuid: actor.uuid, condition: key });'),
+     CHAT.includes("...adversaryBumpBonus(actor, clash, uuid),"),
+     CHAT.includes("offerAllyDamageBasic(message, armsUser, target);")],
+    [true, true, true]);
+  check("Charging Assault's cap, Teamwork (2) multiplied, Combat Recovery's 1/2 Surgency, Transformation Traits ignoring a Quality",
+    [read("module", "signature.mjs").includes('const capPerTier = 2 + (Number(applySlot(attacker.system.effects?.slots, "chargingAssault.capPerTier", 0)) || 0);'),
+     read("module", "united-attack.mjs").includes('applySlot(joiner.system?.effects?.slots, "united.teamworkMultiplier", 1)'),
+     read("traits", "maneuvers", "combat-recovery.dbu").includes('flagged("combatRecovery.halfSurgency")'),
+     read("module", "effects/registry.mjs").includes("traitFilesFor(fileOf(item)).flatMap(trait => [trait?.ignoresQualities ?? []].flat())")],
+    [true, true, true, true]);
+}
+
 console.log(failed ? `${failed} failing` : "all passing");
 process.exit(failed ? 1 : 0);

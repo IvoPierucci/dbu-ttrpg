@@ -342,7 +342,7 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       surgeKind: new fields.StringField({ required: true, blank: true, initial: "" }),
       /**
-       * Adversary Actions it costs - Overflowing Power (3)'s "spend an Adversary Action to use a Surge of your choice". An
+       * Adversary Actions it costs - "spend an Adversary Action to use a Surge of your choice". An
        * Elite's or a Villain's Counter Actions (actor-character.mjs), paid as it is used; refused without them.
        */
       adversaryActionCost: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

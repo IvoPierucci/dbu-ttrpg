@@ -104,6 +104,15 @@ if (actionsSpent >= 3) {
     expires(recovery, start-of-next-turn);
 }
 
+# Raised by 1/2 of your Surgency, Life and Ki alike, once a use (`combatRecovery.halfSurgency` - Dramatic Antagonist (2)'s) - Ki not
+# where none comes back this way.
+if ((actionsSpent >= 1) && flagged("combatRecovery.halfSurgency")) {
+    life.value += floor(surgency / 2);
+    if (!kiLocked) {
+        ki.value += floor(surgency / 2);
+    }
+}
+
 # Cosmic Flow (5): Divine Ki Points, 1/2 of your Surgency - all of it with Divine Entity (2); (6) doubled, its mark spent here (the doubling
 # above too: "double the amount of Life and Ki Points you regain from that use").
 if (flagged("cosmicFlow.recovery")) {

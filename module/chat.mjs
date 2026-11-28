@@ -796,6 +796,8 @@ export function conditionGained(actor, key) {
   if (opponent && combat) demonicBattlePower(by);
   // Sadistic Demon Lord: "If you inflict a Combat Condition upon an Opponent" - asked.
   if (opponent && combat) sadisticCondition(by, actor, key);
+  // Any effect answering it (inflict-condition) - Archetypal Trickster (5)'s.
+  if (opponent && combat) answerFor(by, "inflict-condition", { inflictedUuid: actor.uuid, condition: key });
 }
 
 /** Sadistic Demon Lord: "regain Ki Points equal to your Might" - once a Round, between a Combat Condition inflicted and a Defeat. */
@@ -944,12 +946,12 @@ async function honorableInstead(by, target, key) {
 }
 
 /**
- * Overflowing Power (4): "Use a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver" - one of theirs,
+ * "Use a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver" - one of theirs,
  * picked as Inherited Freedom's is (pickStandardManeuver), no Action paid. Unspent where none is picked or made.
  */
 export async function standardOutOfSequence(actor) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
-  const picked = await pickStandardManeuver(actor, `${actor.name}: Overflowing Power`);
+  const picked = await pickStandardManeuver(actor, `${actor.name}: a Standard Maneuver out of sequence`);
   if (!picked) return UNSPENT;
   const { useManeuver } = await import("./use-maneuver.mjs");
   return (await useManeuver(actor, picked, { outOfSequence: true })) ? undefined : UNSPENT;
@@ -8900,6 +8902,15 @@ function triggerTip(entry) {
  * name in front of the parameter - an effect answering one Threshold still answers the
  * Moment of being knocked through one.
  */
+/**
+ * Whoever else in the Combat answers this one's turn beginning (opponent-start-of-turn) - added to the subjects of that turn's
+ * own card (combat.mjs announceTurn), so their offers go on it rather than on a card of their own.
+ */
+export function opponentTurnWatchers(actor, others) {
+  return (others ?? []).filter(other => other && (other.uuid !== actor?.uuid) && areOpponents(other, actor)
+    && triggersFor(other, ["opponent-start-of-turn"]).length).map(other => other.uuid);
+}
+
 function triggersFor(actor, moments) {
   if (!actor || !moments.length) return [];
 
@@ -9021,7 +9032,8 @@ export async function offerTriggers(actor, moment, context = {}) {
   if (offersAnswered.moments.has(String(moment).split(/[(/]/)[0])) return;
   // Asked with what happened - who fell, for Lock On's and Burning Hatred's `requires` - or a `requires` reading it was
   // never true here, and the effect never offered.
-  if (!unarmedTriggers(actor, moment, context).length) return;
+  const offered = unarmedTriggers(actor, moment, context);
+  if (!offered.length) return;
   const player = playerOf(actor);
   let ids = [];
   if (player === game.user) ids = await showOutcomeWindow(actor, moment, context);
@@ -9031,6 +9043,8 @@ export async function offerTriggers(actor, moment, context = {}) {
   }
   const armed = actor.system.armedTalents ?? [];
   if (ids.some(id => !armed.includes(id))) await actor.update({ "system.armedTalents": [...new Set([...armed, ...ids])] });
+  // What was ticked at a Counter Action's price (an Elite's or a Villain's Adversary Actions) paid, or left unticked.
+  await payCounterCosts(actor, offered.filter(entry => ids.includes(entry.blockId)));
 }
 
 /**
@@ -9189,7 +9203,23 @@ export async function answerDeclare(actor, context) {
     const requires = entry.program.blocks?.[0]?.requires;
     return !requires || evaluate(requires, { data: actor.system, context, errors: [] });
   });
-  if (triggers.length) await prepareRoll(actor, triggers, context?.maneuver?.name ?? "Maneuver", "", { rolling: false });
+  if (!triggers.length) return;
+  const before = new Set(actor.system.armedTalents ?? []);
+  await prepareRoll(actor, triggers, context?.maneuver?.name ?? "Maneuver", "", { rolling: false });
+  // Its Counter Actions paid as it is ticked, or unticked (payCounterCosts).
+  await payCounterCosts(actor, triggers.filter(entry => !before.has(entry.blockId)));
+}
+
+/** The Counter Actions what was ticked in Respond costs (`costs 1 counter`), paid by block id - or unticked where they cannot be. */
+async function payTickedCounterCosts(actor, blockIds) {
+  if (!blockIds?.length || !game.combat?.started) return;
+  // Charged whether or not it has fired already (a Counter settled at once spends what answered it): ticked is chosen.
+  for (const entry of reactiveFor(actor).filter(entry => blockIds.includes(entry.blockId))) {
+    const cost = Number(entry.program.blocks?.[0]?.budget?.counter) || 0;
+    if (!cost || await spendActions(actor, cost, "counter")) continue;
+    ui.notifications.warn(`${actor.name}: no Counter Action left for ${entry.sourceName} - not applied.`);
+    await actor.update({ "system.armedTalents": (actor.system.armedTalents ?? []).filter(id => id !== entry.blockId) });
+  }
 }
 
 function relevantTriggers(actor, message, stage) {
@@ -10738,6 +10768,7 @@ async function applyHitChoice(message, attack, choice) {
   if (choice.convert > 0) await convertActions(actor, choice.convert);
   if (choice.triggers?.length) {
     await actor.update({ "system.armedTalents": [...new Set([...(actor.system.armedTalents ?? []), ...choice.triggers])] });
+    await payTickedCounterCosts(actor, choice.triggers);
   }
   if (entry.flare && (choice.wager !== null)) {
     const wager = Math.min(choice.wager, maxKiWager(actor));
@@ -10791,6 +10822,10 @@ async function dealDamageWindow(message, target, attack) {
   const life = Number(target.system.life?.value) || 0;
   const max = Number(target.system.life?.max) || 0;
   const category = DAMAGE_CATEGORIES[own.damageCategory]?.label ?? "";
+  // What it will be once a Resource held for it halves it (Numb's - halveByResource, as it is taken): what the Life Points lost, the
+  // Narrative Stamina and the Health Thresholds are shown for.
+  const halver = ((Number(own.damage) || 0) > 0) ? await halvingResourceOf(target) : null;
+  const taken = halver ? Math.floor((Number(own.damage) || 0) / 2) : (Number(own.damage) || 0);
   const row = (entry, name) => `<label class="dbu-respond-option"${triggerTip(entry)}>
       <input type="checkbox" name="${name}" value="${entry.blockId}"/>
       <span class="dbu-respond-name">${esc(entry.sourceName)}</span>
@@ -10799,11 +10834,11 @@ async function dealDamageWindow(message, target, attack) {
   // Narrative Stamina (the user's): what they have, a box for how much of it to spend - any mix of it and Life Points - the
   // Life Points lost for it, and their Life with the Health Thresholds marked, to see whether the hit knocks them through one.
   const lines = thresholdLines(max, DBUCharacterData.THRESHOLDS);
-  const staminaMost = Math.min(choices.stamina, Number(own.damage) || 0);
+  const staminaMost = Math.min(choices.stamina, taken);
   const staminaSection = choices.stamina ? `<div data-stamina>${rollSection("Narrative Stamina", `<div class="dbu-stamina-spend">
       <label><span>Stamina to spend</span><input type="number" name="stamina" value="0" min="0" max="${staminaMost}" step="1"/></label>
       <span class="dbu-stamina-have">of ${choices.stamina}</span>
-      <span class="dbu-stamina-lost">Life Points lost <b data-lost>${own.damage}</b></span>
+      <span class="dbu-stamina-lost">Life Points lost <b data-lost>${taken}</b></span>
       <button type="button" class="dbu-manage" data-stay data-tooltip="The least Narrative Stamina that keeps this hit from knocking them through the next Health Threshold">Stay above the line</button>
     </div>
     <div class="dbu-stamina-bar"><i class="dbu-stamina-after" data-after></i><i class="dbu-stamina-loss" data-loss></i>${
@@ -10815,14 +10850,14 @@ async function dealDamageWindow(message, target, attack) {
     return Math.max(0, Math.min(staminaMost, typed));
   };
   const body = `${staminaSection}${choices.chaosHalf ? rollSection("Channeled Chaos", `<label class="dbu-respond-option"><input type="checkbox" name="chaoshalf"/>
-      <span class="dbu-respond-name">Pure Chaos</span><span class="dbu-respond-source">Half the Damage (${Math.floor((Number(own.damage) || 0) / 2)}) - a stack of Channeled Chaos</span></label>`) : ""}${choices.before.length ? rollSection("Before the Damage", choices.before.map(entry => row(entry, "before")).join("")) : ""}${
+      <span class="dbu-respond-name">Pure Chaos</span><span class="dbu-respond-source">Half the Damage (${Math.floor(taken / 2)}) - a stack of Channeled Chaos</span></label>`) : ""}${choices.before.length ? rollSection("Before the Damage", choices.before.map(entry => row(entry, "before")).join("")) : ""}${
     choices.taken.length ? `<div data-taken>${rollSection("On taking Damage", choices.taken.map(entry => row(entry, "taken")).join(""))}</div>` : ""}${
     choices.none.length ? `<div data-none>${rollSection("On taking no Damage", choices.none.map(entry => row(entry, "none")).join(""))}</div>` : ""}`;
   const top = `<div class="dbu-roll-resources"><span>Life <b>${life}</b> / ${max}</span><span>Soak <b>${own.soak ?? target.system.soakValue ?? 0}</b></span>
     <span>DR <b>${own.reduction ?? target.system.damageReduction ?? 0}</b></span></div>${rollBoxHtml("", "")}`;
   const redraw = element => {
     const cancelled = Boolean(element.querySelector('input[name="before"]:checked'));
-    const damage = cancelled ? 0 : (Number(own.damage) || 0);
+    const damage = cancelled ? 0 : taken;
     // What the Narrative Stamina spent takes off the Life Points lost - the Damage itself as it was.
     const spent = damage ? staminaIn(element) : 0;
     const lost = Math.max(0, damage - spent);
@@ -10851,6 +10886,8 @@ async function dealDamageWindow(message, target, attack) {
         Number(own.barrier.total) || 0} ${esc(own.barrier.name)}</span>` : "")
       + (own.punchingDown ? ` + <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="Punching Down: 1d6(T), the target 2+ Size Categories smaller">${
         own.punchingDown} Punching Down</span>` : "")
+      // Halved by Numb's, a stack spent as it is taken.
+      + ((halver && !cancelled) ? ` &divide; <span class="dbu-formula-piece dbu-formula-bonus" data-tooltip="${esc(halver.label)}: the Damage halved, a stack spent">2 ${esc(halver.label)}</span>` : "")
       + ` = ${damage ? `<span class="dbu-roll-bad">${damage}</span>` : `${cancelled ? `<s>${own.damage}</s> ` : ""}<span class="dbu-roll-good">0</span>`}`;
     // Nothing taken: what answers taking it is gone, and what answers being hit for none comes in (the user's).
     const takenBox = element.querySelector("[data-taken]");
@@ -10869,7 +10906,7 @@ async function dealDamageWindow(message, target, attack) {
       dialog.element.querySelectorAll("input").forEach(input => input.addEventListener("change", () => redraw(dialog.element)));
       dialog.element.querySelector('input[name="stamina"]')?.addEventListener("input", () => redraw(dialog.element));
       dialog.element.querySelector("[data-stay]")?.addEventListener("click", () => {
-        const stay = staminaToStay(life, max, Number(own.damage) || 0, choices.stamina, DBUCharacterData.THRESHOLDS);
+        const stay = staminaToStay(life, max, taken, choices.stamina, DBUCharacterData.THRESHOLDS);
         dialog.element.querySelector('input[name="stamina"]').value = stay.needed;
         if (!stay.enough) ui.notifications.info(`${target.name}: all the Narrative Stamina there is does not keep this hit above the line.`);
         redraw(dialog.element);
@@ -11448,6 +11485,9 @@ async function applyResponses(message, chosen, attack) {
       await playCounter(message, choice.actor, choice.counter, attack,
         choice.defendOption ? { defence: choice.defendOption, kiWager: 0, foundation: choice.flareFoundation || "energy" } : null);
     }
+    // What was ticked at a Counter Action's price - an Adversary Action on Direct Hit - paid after the Counter played (that
+    // Counter's own Action first), or unticked.
+    await payTickedCounterCosts(choice.actor, choice.triggers);
   }
 }
 
@@ -12542,6 +12582,7 @@ function clashParts(kind, actor, clash, uuid) {
     ...corsairClashBonus(actor, clash, uuid), ...scholarClashBonus(actor, clash, uuid), ...scholarRevengeBonus(clash, uuid),
     ...rootedClashBonus(actor, clash, uuid), ...silkBindingBonus(actor, clash, uuid), ...angelRaisedClashBonus(actor, clash, uuid),
     ...vsOpponentClashBonus(actor, clash, uuid),
+    ...adversaryBumpBonus(actor, clash, uuid),
     ...fairyClashBonus(actor, clash, uuid), ...ogreClashBonus(actor, clash, uuid)];
 }
 
@@ -13822,6 +13863,8 @@ async function clashStage(message, actor) {
   const scholar = scholarRevengeOpen(actor, opened);
   // Fairy (5), (6): a box, each once a Round.
   const fairy = fairyClashOpen(actor, opened);
+  // An Adversary Action for 1(T) or 2 (`clash.adversaryBump`) - a box.
+  const bump = adversaryBumpOpen(actor, opened);
   // Skilled Ogre (3): an Oni's Skill Bonus for theirs, within their Area of Rule - a box, once a Round theirs.
   const ogre = ogreLendOpen(actor, opened, picked);
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
@@ -13830,6 +13873,7 @@ async function clashStage(message, actor) {
       boxes: [...(thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
         tip: "Once a Round. Won, the Basic Attack or a Signature Technique out of sequence at them." }] : []),
         ...(fairy ? [{ name: "fairy", label: `Fairy: +${fairy}`, tip: "Once a Round." }] : []),
+        ...(bump ? [{ name: "bump", label: `An Adversary Action: +${bump}`, tip: "Against an Opponent, on a Saving Throw or a Skill." }] : []),
         ...(ogre ? [{ name: "ogre", label: `Skilled Ogre: ${ogre.lender.name}'s Skill Bonus, +${ogre.value}`,
           tip: "Instead of your own - once a Round theirs." }] : []),
         ...(corsair ? [{ name: "corsair", label: `Sorcering Corsair: +${corsair.label}`,
@@ -13869,6 +13913,7 @@ async function clashStage(message, actor) {
   if (fairyTaken) {
     await requestActorUpdate(actor, { [`flags.${SCOPE}.${(((opened.category ?? "skill") === "save") ? "fairySaveRound" : "fairySkillRound")}`]: roundKey() });
   }
+  const bumpTaken = Boolean(bump) && (ready.boxes ?? []).includes("bump") && (!game.combat?.started || await spendActions(actor, 1, "counter"));
   const ogreTaken = Boolean(ogre) && (ready.boxes ?? []).includes("ogre");
   if (ogreTaken) await requestActorUpdate(ogre.lender, { [`flags.${SCOPE}.ogreLendRound`]: roundKey() });
   const thiefTaken = Boolean(thief) && (ready.boxes ?? []).includes("thief");
@@ -13882,6 +13927,7 @@ async function clashStage(message, actor) {
     ...answer,
     ...(thiefTaken ? { thiefBy: [...new Set([...(clash.thiefBy ?? []), actor.uuid])] } : {}),
     ...(fairyTaken ? { fairyBy: [...new Set([...(clash.fairyBy ?? []), actor.uuid])] } : {}),
+    ...(bumpTaken ? { adversaryBumpBy: [...new Set([...(clash.adversaryBumpBy ?? []), actor.uuid])] } : {}),
     ...(ogreTaken ? { ogreLent: [...(clash.ogreLent ?? []).filter(entry => entry.uuid !== actor.uuid),
       { uuid: actor.uuid, name: ogre.lender.name, value: ogre.value }] } : {}),
     ...(corsairTaken ? { corsairBy: [...new Set([...(clash.corsairBy ?? []), actor.uuid])] } : {}),
@@ -24071,6 +24117,24 @@ function offerTeamReliance(message, attack, target) {
 }
 
 /**
+ * `allyDamage.basicAttack`: "If an Ally ... deals Damage to an Opponent with an Attacking Maneuver, you may use the Basic Attack Maneuver as
+ * an Out-of-Sequence Maneuver ... you must target an Opponent that received Damage from your Ally's Attacking Maneuver" - offered on the
+ * attack's card to each Ally of the attacker holding it, once a Round (Terrifying Teamwork (5)'s; its Allies are the Villainous Team).
+ */
+function offerAllyDamageBasic(message, attacker, target) {
+  if (!message || !attacker || !target || !areOpponents(attacker, target)) return;
+  const offers = message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
+  for (const ally of alliesOnScene(attacker)) {
+    if (ally.system?.defeated || (ally.uuid === attacker.uuid) || (ally.uuid === target.uuid)
+      || (ally.system?.effects?.slots?.["allyDamage.basicAttack"] !== true) || (ally.getFlag?.(SCOPE, "allyDamageRound") === roundKey())
+      || offers.some(offer => (offer.grants?.roundFlag === "allyDamageRound") && (offer.actorUuid === ally.uuid))) continue;
+    requestEdit(message, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", targetUuid: target.uuid, reason: `${attacker.name} damaged ${target.name} - once a Round`,
+      grants: { roundFlag: "allyDamageRound" } } });
+  }
+}
+
+/**
  * Neo-Tuffle Genes (2): "If you receive Damage from an Opponent's Attacking Maneuver, you may spend 2 Adaptation Points to use the Basic
  * Attack Maneuver as an Out-of-Sequence Maneuver. You must target that Opponent for this Attacking Maneuver." Offered on the attack's card,
  * once a Round; the 2 paid as it is taken (takeOutOfSequence, `adaptationCost`).
@@ -25361,6 +25425,26 @@ function fairyClashOpen(actor, clash) {
   if ((category === "skill") && (slots["fairy.skill"] === true) && (actor.getFlag?.(SCOPE, "fairySkillRound") !== roundKey())) return "2";
   if ((category === "save") && (slots["fairy.save"] === true) && (actor.getFlag?.(SCOPE, "fairySaveRound") !== roundKey())) return "1(T)";
   return 0;
+}
+
+/**
+ * `clash.adversaryBump`: a Saving Throw or Skill Clash against an Opponent - an Adversary Action for its Dice Score 1(T) or 2
+ * higher respectively (Archetypal Trickster (4)'s). Its value as written, or 0 where it is not open.
+ */
+function adversaryBumpOpen(actor, clash) {
+  const category = clash?.category ?? "skill";
+  if ((actor?.system?.effects?.slots?.["clash.adversaryBump"] !== true) || !["save", "skill"].includes(category)) return 0;
+  const other = clashOpponent(clash, actor.uuid);
+  if (!other || !areOpponents(actor, other)) return 0;
+  if (game.combat?.started && (actionsWithin(actor, "counter") < 1)) return 0;
+  return (category === "save") ? "1(T)" : "2";
+}
+
+/** Its bonus, on the side that paid for it. */
+function adversaryBumpBonus(actor, clash, uuid) {
+  if (!(clash?.adversaryBumpBy ?? []).includes(uuid)) return [];
+  const save = (clash.category === "save");
+  return [{ label: "Adversary Action", written: save ? "+1(T)" : "+2", value: save ? Math.max(1, Number(actor.system.tierOfPower) || 1) : 2 }];
 }
 
 /** Fairy (5), (6)'s, on the side that took it. */
@@ -36196,6 +36280,13 @@ async function rollAttackWoundWork(message, attack) {
     const extra = techniqueDamageParts(attacker, attack, target, taken);
     // Rubbery Body: "Increase the Damage you receive from an Attacking Maneuver that has a Damage Category of Direct or
     // higher by 5(bT)" - Damage there already is.
+    // "Minions suffer double Damage from your Attacking Maneuvers" (damage.vsMinions.multiplier): the rest of it, on the Damage there is.
+    const minionTimes = Number(attacker?.system?.effects?.slots?.["damage.vsMinions.multiplier"]?.multiply) || 1;
+    // Any Minion, Special ones too - not the Thresholds rule's typical Minion (minion.mjs harness).
+    const struckMinion = (minionTimes > 1) && isMinion(target ?? null);
+    if (struckMinion && (taken > 0)) {
+      extra.push({ label: "Against a Minion", value: Math.floor(taken * (minionTimes - 1)) });
+    }
     const softer = Number(target.system.effects?.slots?.["incoming.damage.directOrHigher"]?.add) || 0;
     if (softer && (taken > 0) && ((DAMAGE_CATEGORIES[own.damageCategory]?.value ?? 1) >= DAMAGE_CATEGORIES.direct.value)) {
       extra.push({ label: `${DAMAGE_CATEGORIES[own.damageCategory].label} Damage`, value: softer });
@@ -39041,6 +39132,45 @@ async function dealAttackDamage(message, target, attack, { damageOverride = null
 /** The Moments a Deal Damage window answered, while its Damage is applied - offered no second time. */
 const offersAnswered = { moments: new Set() };
 
+/** The Resource held that halves an Attacking Maneuver's Damage (`resourceHalvesDamage`) - its definition, or null. Nothing spent. */
+async function halvingResourceOf(target) {
+  const { resourceDefinitions } = await import("./effects/traits.mjs");
+  return Object.values(resourceDefinitions()).find(definition => definition.halvesDamage
+    && ((Number(target.system?.resources?.[definition.name]?.stacks) || 0) > 0)) ?? null;
+}
+
+/** An Attacking Maneuver's Damage halved by a Resource held for it, a stack spent (`resourceHalvesDamage` - Numb's): the Damage left. */
+async function halveByResource(target, damage) {
+  if (!(damage > 0)) return damage;
+  const halver = await halvingResourceOf(target);
+  if (!halver) return damage;
+  await setResource(target, halver.name, (Number(target.system.resources?.[halver.name]?.stacks) || 0) - 1);
+  ui.notifications.info(`${target.name}: ${halver.label} - the Damage halved (${damage} → ${Math.floor(damage / 2)}).`);
+  return Math.floor(damage / 2);
+}
+
+/**
+ * The Resources an Attacking Maneuver's Damage wears down (`resourceDrainedByDamage`) - lowered by the Life Points it took off, and
+ * one emptied leaves the Transformation it names (`resourceEmptyLeaves`).
+ */
+async function drainOnDamage(target, lifeLost) {
+  if (!(lifeLost > 0)) return;
+  const { resourceDefinitions } = await import("./effects/traits.mjs");
+  for (const definition of Object.values(resourceDefinitions()).filter(each => each.drainedByDamage)) {
+    const held = Number(target.system?.resources?.[definition.name]?.stacks) || 0;
+    if (held <= 0) continue;
+    const left = Math.max(0, held - lifeLost);
+    await setResource(target, definition.name, left);
+    ui.notifications.info(`${target.name}: ${definition.label} ${held} → ${left}.`);
+    if (left || !definition.emptyLeaves) continue;
+    const TR = await import("./transformations.mjs");
+    const item = TR.transformationsInUse(target).find(each => each.system?.transformationId === definition.emptyLeaves);
+    if (!item) continue;
+    await TR.leaveTransformations(target, [item.id]);
+    ui.notifications.info(`${target.name}: ${definition.label} at 0 - ${item.name} left.`);
+  }
+}
+
 async function applyAttackDamage(message, target, attack, { damageOverride = null, absorbed = 0 } = {}) {
   const own = targetResult(attack, target.uuid);
   if (!own || own.applied) return;
@@ -39059,7 +39189,7 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
   // Intelligent Fighter (4): a Studied Ally about to be Defeated - their Surgency off it, asked. Dragon of Light (6): the same, its
   // Life Points given first.
   const shielded = (own.hit && !isAbsoluteMiss(own) && (settledDamage > 0))
-    ? await studiedShield(target, fromUuidSync(attack.attackerUuid ?? ""), settledDamage) : settledDamage;
+    ? await studiedShield(target, fromUuidSync(attack.attackerUuid ?? ""), await halveByResource(target, settledDamage)) : settledDamage;
   const damage = (own.hit && !isAbsoluteMiss(own) && (shielded > 0)) ? await lightRescue(target, shielded) : shielded;
 
   // Sweeping: "if you deal Damage with this Attacking Maneuver, double the amount of
@@ -39379,6 +39509,10 @@ async function applyAttackDamage(message, target, attack, { damageOverride = nul
   const breaks = attack.weapon?.breaker ? 2 : 1;
   if (knockedThrough) await sayApparelBreak(target, breaks);
   if (atApparel) await sayApparelBreak(target, breaks);
+  // What the Life Points lost wear down - Armor Points (`resourceDrainedByDamage`).
+  if (own.hit && !isAbsoluteMiss(own)) await drainOnDamage(target, Math.max(0, damage - Math.max(0, Number(absorbed) || 0)));
+  // An Ally of the attacker's answering their Damage with a Basic Attack at the same Opponent (`allyDamage.basicAttack`).
+  if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerAllyDamageBasic(message, armsUser, target);
 
   // "If you successfully Damage an Opponent" - which is answered here and nowhere
   // earlier. The Clash arrives as its own card, because it is a Clash: two characters,
@@ -39695,6 +39829,13 @@ function momentTriggers(actor, card) {
   // Nor what is set Automatic: it answered this by itself already - Warrior's Pride's Battle Born at the Encounter's start
   // is not offered again on its card (the user's).
   const automatic = automaticIds(actor);
+  // Another's turn beginning: what answers an Opponent's turn starting (opponent-start-of-turn), on that turn's own card.
+  if ((card.moment === "start-of-turn") && card.subjectUuid && (card.subjectUuid !== actor?.uuid)) {
+    const turnTaker = fromUuidSync(card.subjectUuid);
+    if (!turnTaker || !areOpponents(actor, turnTaker)) return lethal;
+    return [...triggersFor(actor, ["opponent-start-of-turn"]).filter(holds).filter(entry => !automatic.has(entry.blockId)
+      || chosenAsItHappens(entry.program.blocks?.[0])), ...lethal];
+  }
   const own = triggersFor(actor, [card.moment]).filter(holds)
     .filter(entry => !automatic.has(entry.blockId) || chosenAsItHappens(entry.program.blocks?.[0]))
     // Spectator (5): none but the Spectator State's own at a turn's or a Round's start.
@@ -40045,6 +40186,9 @@ async function answerMoment(message, card, actor) {
   const defeated = (card.moment === "defeated") && (card.subjectUuid === actor.uuid);
   if (!threshold && !defeated && !["start-of-round", "start-of-turn", "start-of-encounter", "end-of-turn", "transform"]
     .includes(card.moment)) return;
+  // Its Counter Actions (`costs 1 counter` - an Elite's or a Villain's Adversary Actions) paid as it is ticked; one that cannot be
+  // paid unticked, and not answering (payCounterCosts).
+  await payCounterCosts(actor, triggers.filter(entry => !before.has(entry.blockId)));
   const chosen = triggers.filter(entry => !before.has(entry.blockId)
     && (actor.system.armedTalents ?? []).includes(entry.blockId));
   if (!chosen.length) return;
@@ -40059,7 +40203,13 @@ async function answerMoment(message, card, actor) {
   const lethal = defeated ? chosen.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "").split(/[(/]/)[0] === "lethal-damage") : [];
   const keyword = chosen.filter(entry => !lethal.includes(entry));
   // What was ticked alone: what is Automatic answered the Moment when it happened, and is not answered twice.
-  if (keyword.length) {
+  // Another's turn beginning: what was ticked answers an Opponent's turn starting (opponent-start-of-turn, momentTriggers) - that
+  // Opponent the one it names (`opponentUuid`).
+  const opponentsTurn = (card.moment === "start-of-turn") && card.subjectUuid && (card.subjectUuid !== actor.uuid);
+  if (keyword.length && opponentsTurn) {
+    await fireMoment(actor, "opponent-start-of-turn", { opponentUuid: card.subjectUuid }, { blocks: keyword.map(entry => entry.blockId) });
+  }
+  else if (keyword.length) {
     await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold, from: card.thresholdFrom ?? "", knockerUuid: card.knockedBy ?? "" }
       : (defeated ? { damage: 0 } : ((card.moment === "transform") ? { ...(card.transformContext ?? {}), cardId: message.id } : {})),
       { blocks: keyword.map(entry => entry.blockId) });
@@ -43231,14 +43381,20 @@ export async function areaClash(actor, kind, size, outcomes = []) {
   const others = opponentsWithin(actor, gap);
   if (!others.length) return ui.notifications.info(`${actor.name}: no Opponent within the Sphere.`);
   const halfMight = Math.floor((Number(actor.system.might) || 0) / 2);
-  const conditions = outcomes.filter(each => each !== "halfMight");
-  const lifeLoss = outcomes.includes("halfMight") ? halfMight : 0;
+  // `fullMight`: "those Opponents have their Life Points reduced by your Might" - the whole of it.
+  const fullMight = Math.max(0, Number(actor.system.might) || 0);
+  const conditions = outcomes.filter(each => !["halfMight", "fullMight"].includes(each));
+  const lifeLoss = outcomes.includes("fullMight") ? fullMight : (outcomes.includes("halfMight") ? halfMight : 0);
   const said = [...(lifeLoss ? [`loses ${lifeLoss} Life Points`] : []),
     ...(conditions.length ? [`is ${conditions.map(key => getTrait(key)?.name ?? key).join(" and ")} until the start of ${actor.name}'s next turn`] : [])];
   for (const other of others) {
-    const leaves = { maneuverName: "Clash", reason: `Win and ${other.name} ${said.join(", and ")}.`,
+    const leaves = { maneuverName: "Clash", reason: said.length ? `Win and ${other.name} ${said.join(", and ")}.`
+      : `Win and ${other.name} may be moved away from ${actor.name} (on the map).`,
       winEffects: { applied: false, conditions, until: "start", lifeLoss } };
     if (kind === "might") await postMightClash(actor, other, { ...leaves, clashLabel: "Might Clash" });
+    // `impulsiveVsCorporeal`: "a Clash (Impulsive vs Impulsive/Corporeal)".
+    else if (kind === "impulsiveVsCorporeal") await postSaveClash(actor, other, { ...leaves, clashLabel: "Clash (Impulsive vs Impulsive/Corporeal)",
+      saves: ["impulsive"], defenderSaves: ["impulsive", "corporeal"] });
     else await postSaveClash(actor, other, { ...leaves, clashLabel: (kind === "cognitiveVsMorale") ? "Clash (Cognitive vs Cognitive/Morale)" : `Clash (${kind})`,
       saves: [(kind === "cognitiveVsMorale") ? "cognitive" : kind], defenderSaves: (kind === "cognitiveVsMorale") ? ["cognitive", "morale"] : [] });
   }

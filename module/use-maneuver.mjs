@@ -2706,7 +2706,30 @@ const TARGET_SIDE = Object.freeze({
 });
 
 /** Take the Actions, once the Maneuver has actually committed. */
+/**
+ * Why a Maneuver that spends Adversary Actions (header adversaryActionCost) cannot be used now - warned, true - or false:
+ * only an Elite or a Villain has them, and, in a Combat, the Adversary Actions themselves (actionsLeft), not Standard
+ * Actions turned into Counter Actions (actionsWithin).
+ */
+export function adversaryCostRefused(actor, maneuver) {
+  const cost = Number(maneuver?.adversaryActionCost) || 0;
+  if (cost <= 0) return false;
+  if (!actor.system?.adversaryNarrative) {
+    ui.notifications.warn(`${maneuver.name}: ${actor.name} has no Adversary Actions - an Elite's or a Villain's.`);
+    return true;
+  }
+  if (game.combat?.started && (actionsLeft(actor, "counter") < cost)) {
+    ui.notifications.warn(`${maneuver.name}: ${actor.name} has no Adversary Action left this Round.`);
+    return true;
+  }
+  return false;
+}
+
 async function payActions(actor, maneuver, spent = null) {
+  // A Maneuver that also spends Adversary Actions (header adversaryActionCost) - a Surge paid in them,
+  // "Spend an Adversary Action": checked before anything was paid (adversaryCostRefused), spent here beside its Action Cost.
+  const adversaryCost = Number(maneuver.adversaryActionCost) || 0;
+  if (adversaryCost > 0) await spendActions(actor, adversaryCost, "counter");
   const { kind, amount } = actionCostOf(maneuver, spent);
   // Any Counter Maneuver an effect makes free (chat.mjs payCounter).
   if ((kind === "counter") && amount) {
@@ -5618,6 +5641,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // A Maneuver that spends Adversary Actions (header adversaryActionCost): refused without enough of them, before anything is
+  // paid; spent in payActions.
+  if (adversaryCostRefused(actor, maneuver)) return false;
+
   if (maneuver.surge) {
     // takeSurge announces the outcome itself, naming the Maneuver; announcing the
     // Maneuver separately would put the same event in chat twice.
@@ -5626,19 +5653,6 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Liquid State's sixth effect is a Healing Surge and nothing else, and asking which
     // would be asking a question the rule already answered.
     // A Surge with a price - Divine Breathing's 5(bT), in Divine Ki - paid first, and given back if it is not taken.
-    // Overflowing Power (3): paid in Adversary Actions - an Elite's or a Villain's - and refused without enough of them.
-    const adversaryCost = Number(maneuver.adversaryActionCost) || 0;
-    if (adversaryCost > 0) {
-      if (!actor.system?.adversaryNarrative) {
-        ui.notifications.warn(`${maneuver.name}: ${actor.name} has no Adversary Actions - an Elite's or a Villain's.`);
-        return false;
-      }
-      // Adversary Actions themselves (actionsLeft), not Standard Actions turned into Counter Actions (actionsWithin).
-      if (game.combat?.started && (actionsLeft(actor, "counter") < adversaryCost)) {
-        ui.notifications.warn(`${maneuver.name}: ${actor.name} has no Adversary Action left this Round.`);
-        return false;
-      }
-    }
     const surgeCost = maneuverKiCost(maneuver, null, actor);
     if ((surgeCost > 0) && !await spendManeuverCost(actor, maneuver, surgeCost)) return false;
     if (!await takeSurge(actor, {
@@ -5652,7 +5666,6 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       if (surgeCost > 0) await refundManeuverCost(actor, maneuver);
       return false;
     }
-    if (adversaryCost > 0) await spendActions(actor, adversaryCost, "counter");
     await payActions(actor, maneuver);
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type);

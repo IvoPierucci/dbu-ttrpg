@@ -223,7 +223,7 @@ export const VERBS = Object.freeze({
   },
   standardOutOfSequence: {
     args: [0, 0],
-    doc: "A Standard Maneuver of 1 Action of the character's choice, out of sequence (Overflowing Power (4); chat.mjs "
+    doc: "A Standard Maneuver of 1 Action of the character's choice, out of sequence (chat.mjs "
        + "standardOutOfSequence). Unspent where none is picked."
   },
   surgeOutOfSequence: {
@@ -700,6 +700,30 @@ export const VERBS = Object.freeze({
     doc: "As that Transformation of yours is left: the Drained Combat Condition and 1/4 (rounded up) of your Maximum Life Points lost - "
        + "Power and Payment's (transformations.mjs leftTransformation)."
   },
+  shedForAdversaryActions: {
+    args: [0, 9],
+    names: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    doc: "Any number of Adversary Actions, asked (no more than those left, nor the Combat Condition stacks held but the ones named): "
+       + "as many stacks shed, one at a time - each stack its own Condition (moments-runtime.mjs)."
+  },
+  inflictedLosesKi: {
+    args: [1, 1],
+    names: [0],
+    doc: "Whoever the Moment says gained the Combat Condition (`inflictedUuid`) loses Ki Points equal to the named Attribute's "
+       + "Modifier of yours - `highest` for your highest (Archetypal Trickster (5)'s)."
+  },
+  lifeBelowNextThreshold: {
+    args: [0, 1],
+    names: [0],
+    doc: "Your Life Points set to 1 lower than the line of the next Health Threshold down - or, already below the Health Threshold "
+       + "named (Injured unless one is), to their lowest, Defeated (moments-runtime.mjs) - Desolated's at the end of your turn."
+  },
+  conditionOnLeave: {
+    args: [3, 4],
+    names: [0, 1, 3],
+    doc: "As that Transformation of yours is left: stacks of a Combat Condition gained - `conditionOnLeave(<transformation>, <condition>, "
+       + "<stacks>, <duration>)`, the duration as `expires` takes it (transformations.mjs leftTransformation)."
+  },
   instantOneOf: {
     args: [1, 3],
     names: [0, 1, 2],
@@ -707,11 +731,11 @@ export const VERBS = Object.freeze({
        + "used \"as an Instant Maneuver\" (Exponential Power (1), Speed Star (1))."
   },
   areaClash: {
-    args: [3, 4],
+    args: [2, 4],
     names: [0, 1, 2, 3],
     doc: "A Clash at every Opponent within a Sphere AoE centered on you (`minor`, `standard` ...): `might`, `cognitive`, or "
        + "`cognitiveVsMorale` (theirs Cognitive or Morale); won, each outcome - a Condition till the start of your next turn, or "
-       + "`halfMight` (their Life Points 1/2 of your Might lower) (chat.mjs areaClash) - Darkness Mixer's, Focused Evil (5)'s."
+       + "`halfMight` (their Life Points 1/2 of your Might lower), `fullMight` (by all of it), or none where winning only moves them (the table's) (chat.mjs areaClash; `impulsiveVsCorporeal` too) - Darkness Mixer's, Focused Evil (5)'s."
   },
   stopTranscended: {
     args: [1, 1],
@@ -888,6 +912,30 @@ export const VERBS = Object.freeze({
   lingeringPower: {
     args: [0, 0],
     doc: "Lingering Power (5): Combat Rolls 2(bT) by the Past Life's base Tier, till the end of your next turn (chat.mjs lingeringPower)."
+  },
+  knockedJustBelow: {
+    args: [0, 0],
+    doc: "Whoever the Moment knocked through a Health Threshold: their Life Points set to 1 lower than the line of the Health "
+       + "Threshold they are now in (\"set their Life Points to 1 lower than that threshold\")."
+  },
+  spendAdversaryActions: {
+    args: [1, 2],
+    names: [0, 1],
+    doc: "Spend an Elite's or a Villain's Adversary Actions - `all` of those left, or `any` number of them, asked - adding how "
+       + "many as stacks of the Resource named after. None to spend, nothing spent."
+  },
+  gainStamina: {
+    args: [1, 1],
+    doc: "Regain this much Narrative Stamina, never past its most."
+  },
+  spendStamina: {
+    args: [1, 1],
+    doc: "Spend this much Narrative Stamina; without enough, refused and nothing spent."
+  },
+  multiplyStamina: {
+    args: [1, 1],
+    doc: "Multiply the Narrative Stamina held - \"double your Narrative Stamina\" (2); past its most, until "
+       + "the next Combat Round refills it."
   },
   fillResource: {
     args: [1, 6],

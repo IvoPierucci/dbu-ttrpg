@@ -750,6 +750,53 @@ async function runVerb(actor, call, context) {
       return markKnocked(actor, context?.knockedUuid, String(args[0] ?? ""), Number(args[1]) || 1, String(args[2] ?? "end"));
     }
 
+    case "knockedJustBelow": {
+      // Whoever the Moment knocked through a Health Threshold (`knockedUuid`): their Life Points set to 1 lower than the line
+      // of the Health Threshold they are now in - "set their Life Points to 1 lower than that threshold".
+      const knocked = context?.knockedUuid ? fromUuidSync(context.knockedUuid) : null;
+      if (!knocked?.system?.life) return UNSPENT;
+      const { default: DBUCharacterData } = await import("../data/actor-character.mjs");
+      const keys = Object.keys(DBUCharacterData.THRESHOLDS);
+      const at = keys.indexOf(String(knocked.system.threshold?.key ?? "healthy"));
+      if (at < 1) return UNSPENT;
+      const max = Number(knocked.system.life.max) || 0;
+      const line = Math.floor(max * DBUCharacterData.THRESHOLDS[keys[at - 1]].above);
+      const set = Math.max(0, line - 1);
+      if (set === (Number(knocked.system.life.value) || 0)) return;
+      const { requestActorUpdate } = await import("../chat.mjs");
+      return requestActorUpdate(knocked, { "system.life.value": set });
+    }
+
+    case "inflictedLosesKi": {
+      const inflicted = context?.inflictedUuid ? fromUuidSync(context.inflictedUuid) : null;
+      if (!inflicted?.system?.ki) return UNSPENT;
+      const named = String(args[0] ?? "highest").toLowerCase();
+      const mods = Object.values(actor.system?.attributes ?? {}).map(attribute => Number(attribute?.mod) || 0);
+      const amount = Math.max(0, (named === "highest") ? Math.max(0, ...mods) : (Number(actor.system?.attributes?.[named]?.mod) || 0));
+      if (!amount) return UNSPENT;
+      const { requestActorUpdate } = await import("../chat.mjs");
+      return requestActorUpdate(inflicted, { "system.ki.value": Math.max(0, (Number(inflicted.system.ki.value) || 0) - amount) });
+    }
+
+    case "lifeBelowNextThreshold": {
+      // Your own Life Points set to 1 lower than the line of the next Health Threshold down - or, already below the one named, to their
+      // lowest (Defeated, where Defeat is allowed) - an Environmental Quality's at the end of a turn (Desolated's).
+      const life = actor.system?.life;
+      if (!life) return UNSPENT;
+      const { default: DBUCharacterData } = await import("../data/actor-character.mjs");
+      const keys = Object.keys(DBUCharacterData.THRESHOLDS);
+      const at = keys.indexOf(String(actor.system.threshold?.key ?? "healthy"));
+      const below = keys.indexOf(String(args[0] ?? "injured").toLowerCase());
+      const max = Number(life.max) || 0;
+      const line = Number(DBUCharacterData.THRESHOLDS[keys[at]]?.above);
+      const set = ((below >= 0) && (at > below)) || !Number.isFinite(line)
+        ? (Number(life.min) || 0)
+        : Math.min(Number(life.value) || 0, Math.floor(max * line) - 1);
+      if (set === (Number(life.value) || 0)) return;
+      const { requestActorUpdate } = await import("../chat.mjs");
+      return requestActorUpdate(actor, { "system.life.value": set });
+    }
+
     case "followAlly": {
       const { followAlly } = await import("../chat.mjs");
       return followAlly(actor);
@@ -813,6 +860,74 @@ async function runVerb(actor, call, context) {
       const { offerTriggers } = await import("../chat.mjs");
       await offerTriggers(actor, moment);
       return fireMoment(actor, moment, context);
+    }
+
+    case "spendAdversaryActions": {
+      // An Elite's or a Villain's Adversary Actions (the Counter Actions they have in their place): `all` of those left, or
+      // `any` number of them, asked. How many were spent, added as stacks of the Resource named after - what the rest of
+      // the effect reads (a Numb to count down, Energy Charges to add). None spent, nothing done.
+      if (!actor.system?.adversaryNarrative) return UNSPENT;
+      const { actionsLeft, spendActions } = await import("../combat.mjs");
+      const left = game.combat?.started ? actionsLeft(actor, "counter") : (Number(actor.system.actions?.counter) || 0);
+      if (left <= 0) return UNSPENT;
+      let spent = left;
+      if (String(args[0] ?? "all") === "any") {
+        const { askPlayerAmount } = await import("../chat.mjs");
+        spent = Math.max(0, Math.min(left, Math.floor(Number(await askPlayerAmount(actor, `${actor.name}: Adversary Actions`, left,
+          `Adversary Actions to spend (${left} left)`)) || 0)));
+      }
+      if (!spent) return UNSPENT;
+      if (game.combat?.started) await spendActions(actor, spent, "counter");
+      if (args[1]) {
+        const name = String(args[1]).toLowerCase();
+        const { setResource } = await import("../chat.mjs");
+        await setResource(actor, name, (Number(actor.system.resources?.[name]?.stacks) || 0) + spent);
+      }
+      return;
+    }
+
+    case "shedForAdversaryActions": {
+      // Any number of Adversary Actions, asked - no more than those left nor the Combat Condition stacks held (but the ones named):
+      // as many stacks shed, one at a time, which asked as shedCondition asks it. Each stack its own Condition (Stable Foe (6)'s).
+      if (!actor.system?.adversaryNarrative) return UNSPENT;
+      const besides = args.map(name => String(name).toLowerCase());
+      const stacksHeld = Object.entries(actor.system?.conditions ?? {}).filter(([key, stacks]) => ((Number(stacks) || 0) > 0)
+        && !besides.includes(key) && (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false))
+        .reduce((sum, [, stacks]) => sum + (Number(stacks) || 0), 0);
+      const { actionsLeft, spendActions } = await import("../combat.mjs");
+      const left = game.combat?.started ? actionsLeft(actor, "counter") : (Number(actor.system.actions?.counter) || 0);
+      const most = Math.min(left, stacksHeld);
+      if (most <= 0) return UNSPENT;
+      const { askPlayerAmount } = await import("../chat.mjs");
+      const spent = Math.max(0, Math.min(most, Math.floor(Number(await askPlayerAmount(actor, `${actor.name}: Combat Conditions off`, most,
+        "Adversary Actions to spend, a stack off each", { note: `${left} Adversary Action${(left === 1) ? "" : "s"} left, ${stacksHeld} stack${(stacksHeld === 1) ? "" : "s"} held` })) || 0)));
+      if (!spent) return UNSPENT;
+      if (game.combat?.started) await spendActions(actor, spent, "counter");
+      for (let shed = 0; shed < spent; shed++) await runVerbNamed(actor, "shedCondition", besides);
+      return;
+    }
+
+    case "gainStamina":
+    case "spendStamina":
+    case "multiplyStamina": {
+      // Narrative Stamina - an Elite's or a Villain's, refilled to its most each Combat Round (combat.mjs newRoundFor):
+      // regained (never past that most), spent (refused without enough of it), or multiplied ("double
+      // your Narrative Stamina", past its most until the Round refills it).
+      if (!actor.system?.adversaryNarrative) return UNSPENT;
+      const held = Number(actor.system.narrativeStamina?.value) || 0;
+      const most = Number(actor.system.narrativeStamina?.max) || 0;
+      const amount = Math.max(0, Math.floor(Number(args[0]) || 0));
+      let next = held;
+      if (verb === "gainStamina") next = Math.max(held, Math.min(most, held + amount));
+      else if (verb === "spendStamina") {
+        if (held < amount) {
+          ui.notifications.warn(`${actor.name} has ${held} Narrative Stamina; this needs ${amount}.`);
+          return UNSPENT;
+        }
+        next = held - amount;
+      } else next = Math.floor(held * (Number(args[0]) || 1));
+      if (next === held) return (verb === "spendStamina") ? undefined : UNSPENT;
+      return actor.update({ "system.narrativeStamina.value": next });
     }
 
     case "fillResource": {
@@ -887,6 +1002,12 @@ async function runVerb(actor, call, context) {
     case "regainAnyway": return (await import("../chat.mjs")).regainAnyway(actor, Number(args[0]) || 0, Number(args[1]) || 0);
     case "paymentOnLeave": return actor.setFlag("dbu-ttrpg", "paymentOnLeave", [...new Set([...(actor.getFlag?.("dbu-ttrpg", "paymentOnLeave") ?? []),
       String(args[0] ?? "")])]);
+    case "conditionOnLeave": {
+      const entry = { id: String(args[0] ?? ""), key: String(args[1] ?? ""), stacks: Math.max(1, Number(args[2]) || 1),
+        duration: String(args[3] ?? "") };
+      const owed = (actor.getFlag?.("dbu-ttrpg", "conditionsOnLeave") ?? []).filter(each => !((each.id === entry.id) && (each.key === entry.key)));
+      return actor.setFlag("dbu-ttrpg", "conditionsOnLeave", [...owed, entry]);
+    }
     case "instantOneOf": return (await import("../chat.mjs")).instantOneOf(actor, args.map(each => String(each ?? "")).filter(Boolean));
     case "offerOneOf": return (await import("../chat.mjs")).offerOneOf(actor, args.map(each => String(each ?? "")).filter(Boolean),
       call?.use ?? null, context);

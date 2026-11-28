@@ -19,8 +19,8 @@ import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { shelteredBy } from "../vehicle-crew.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { attributeShareScript } from "../fusion-of-ki.mjs";
-import { aspectScript, bonusScript, combineAspects, inUseScript, inAForm, transformationsInUse, transformationTraitProgram, transformationTraitScript }
-  from "../transformations.mjs";
+import { aspectScript, bonusScript, combineAspects, fileOf, inUseScript, inAForm, traitFilesFor, transformationsInUse, transformationTraitProgram,
+  transformationTraitScript } from "../transformations.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, categoryApplies, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
   topLayerPiece, wieldedWeapons, formScript, activeForm, buddiesOf, buddyScript,
@@ -795,8 +795,10 @@ export function qualitiesSuffered(actor) {
     ? null
     : getTrait(environmentIdOf(actor.system, getTrait));
   // Steaming Fury's: a Trait or Talent whose file says it ignores one - `ignoresQualities`.
-  const ignoredQualities = new Set(Array.from(actor.items ?? []).filter(item => ["racial", "talent"].includes(item.type))
-    .flatMap(item => [getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.ignoresQualities ?? []].flat())
+  // And a Transformation Trait of one in use whose file says so - Corruption's Corrupted Body (3), Desolated's.
+  const ignoredQualities = new Set([...Array.from(actor.items ?? []).filter(item => ["racial", "talent"].includes(item.type))
+    .flatMap(item => [getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.ignoresQualities ?? []].flat()),
+    ...transformationsInUse(actor).flatMap(item => traitFilesFor(fileOf(item)).flatMap(trait => [trait?.ignoresQualities ?? []].flat()))]
     .map(each => String(each).trim().toLowerCase()).filter(Boolean));
   return qualitiesOf(actor.system, standing, getTrait).filter(id => !ignoredQualities.has(id));
 }

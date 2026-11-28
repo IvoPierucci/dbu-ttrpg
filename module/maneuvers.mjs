@@ -2176,6 +2176,12 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   if (!noArea && (slots["heranGenes.area"] === true)) {
     declared = await askAddedArea(actor, declared, { title: "Heran Genes", flag: "heranAreaRound", ki: 0, adaptation: 2 });
   }
+  // An effect's "you may apply an AoE of your choice to that Attacking Maneuver" (slot area.anyAdded, its own limit and price in
+  // area.anyAddedRound / area.anyAddedAdversaryCost) and "that Attacking Maneuver gains a Destructive AoE of your choice"
+  // (area.destructiveAdded): the shape asked, on one with no AoE.
+  if (!noArea && !area() && ((slots["area.anyAdded"] === true) || (slots["area.destructiveAdded"] === true))) {
+    declared = await askAnyAddedArea(actor, declared, slots);
+  }
   // Magic Blaster (2): "If you use an Attacking Maneuver of the Magic Foundation, you may apply an AoE of your choice to that Attacking
   // Maneuver. If that Attacking Maneuver already possesses an AoE, you may instead increase the Magnitude of that AoE by 1 Category."
   if (magic && (slots["magicBlaster.area"] === true)) {
@@ -2226,6 +2232,36 @@ async function askMagicBlasterArea(actor, declared, area, noArea) {
   if (!["sphere", "cone", "line"].includes(shape)) return declared;
   await actor.setFlag("dbu-ttrpg", "magicBlasterAreaRound", round);
   return { ...declared, area: { shape }, areaAdded: true };
+}
+
+/**
+ * An AoE of your choice added to an attack with none: a Destructive one where an effect gives that (area.destructiveAdded), else
+ * Standard. Its limit once a Round where an effect says so (area.anyAddedRound), its price in Adversary Actions where one is
+ * named (area.anyAddedAdversaryCost) - refused without them. Asked; declined, nothing spent.
+ */
+async function askAnyAddedArea(actor, declared, slots) {
+  const destructive = slots["area.destructiveAdded"] === true;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const onceARound = !destructive && (slots["area.anyAddedRound"] === true);
+  if (onceARound && (actor.getFlag?.("dbu-ttrpg", "anyAreaRound") === round)) return declared;
+  const cost = destructive ? 0 : Math.max(0, Number(slots["area.anyAddedAdversaryCost"]) || 0);
+  if (cost) {
+    const { actionsLeft } = await import("./combat.mjs");
+    if (!actor.system?.adversaryNarrative || (game.combat?.started && (actionsLeft(actor, "counter") < cost))) return declared;
+  }
+  const magnitude = destructive ? "destructive" : "standard";
+  const price = cost ? ` for ${cost} Adversary Action${(cost === 1) ? "" : "s"}` : "";
+  const shape = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name}: an AoE` },
+    content: `<p>A ${destructive ? "Destructive" : "Standard"} AoE of your choice${price}?</p>`,
+    buttons: [{ action: "sphere", label: "Sphere" }, { action: "cone", label: "Cone" }, { action: "line", label: "Line" },
+      { action: "no", label: "No" }],
+    rejectClose: false
+  });
+  if (!["sphere", "cone", "line"].includes(shape)) return declared;
+  if (onceARound) await actor.setFlag("dbu-ttrpg", "anyAreaRound", round);
+  if (cost && game.combat?.started) await (await import("./combat.mjs")).spendActions(actor, cost, "counter");
+  return { ...declared, area: { shape, magnitude }, areaAdded: true };
 }
 
 /** A Cone or a Line, Standard (no Magnitude named - DEFAULT_AREA_MAGNITUDE), on an attack with no AoE: asked, once a Round. */

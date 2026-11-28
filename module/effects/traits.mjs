@@ -224,7 +224,14 @@ export function resourceDefinitions() {
       // `resourceOverflowWhen` names is set - Bottomless Combat Prowess (3)'s Bottomless Battle Born, onto the lowest of them
       // (moments-runtime.mjs gainOneOf).
       overflowOf: String([].concat(trait.resourceOverflowOf ?? [])[index] ?? "").trim().toLowerCase(),
-      overflowWhen: String(trait.resourceOverflowWhen ?? "").trim()
+      overflowWhen: String(trait.resourceOverflowWhen ?? "").trim(),
+      // A stack spent on each Attacking Maneuver that deals you Damage, the Damage halved (`resourceHalvesDamage: true`, chat.mjs
+      // halvingResource).
+      halvesDamage: Boolean(trait.resourceHalvesDamage),
+      // Lowered by as many Life Points as an Attacking Maneuver's Damage takes off you (`resourceDrainedByDamage: true`), and at 0
+      // the Transformation `resourceEmptyLeaves:` names left (chat.mjs drainOnDamage).
+      drainedByDamage: Boolean(trait.resourceDrainedByDamage),
+      emptyLeaves: String(trait.resourceEmptyLeaves ?? "").trim()
     };
     });
   }

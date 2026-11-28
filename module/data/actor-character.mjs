@@ -2796,7 +2796,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // And an Adversary's "Max LP per PL": "for each Power Level reached".
       // Statstick (2): "Double the amount of Maximum Life and Ki Points you gain due to your Adversary Category."
       lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel")
-        + (this.adversaryGains.lifePerLevel * ((this.effects?.slots?.["statstick.double"] === true) ? 2 : 1))
+        + (this.adversaryGains.lifePerLevel * ((this.effects?.slots?.["statstick.double"] === true) ? 2 : 1)
+          * (this.effects?.slots?.["adversaryLife.multiplier"]?.multiply ?? 1))
     });
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
     // Life Points (Minion Rules): "set their Maximum Life Points to 1/4 (rounded up) of what it would usually be."
@@ -2884,9 +2885,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     }
     // Narrative Stamina's most, a Round: "PCC*6(bT)" an Elite's, "PCC*12(bT)" a Villain's.
     if (this.narrativeStamina) {
-      // And what effects add to it - Overflowing Power (2) - only where there is Narrative Stamina at all: a Standard one has none.
+      // And what effects add to it, then what multiplies it (rounded down), only where there is Narrative Stamina at all: a
+      // Standard one has none.
       this.narrativeStamina.max = this.adversaryNarrative
-        ? Math.max(0, this.adversaryGains.staminaPerTier * (Number(this.baseTierOfPower) || 1) + slot(this, "narrativeStamina.max"))
+        ? Math.max(0, Math.floor((this.adversaryGains.staminaPerTier * (Number(this.baseTierOfPower) || 1) + slot(this, "narrativeStamina.max"))
+          * (this.effects.slots["narrativeStamina.multiplier"]?.multiply ?? 1)))
         : 0;
     }
 
@@ -2944,14 +2947,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Speed: Normal = 2 + (1/2 Agility Mod); Boosted = Agility Mod + 2.
     // Each Speed through its own Slot, then both through the one that names them
     // together. Outermost, so a blanket change lands on the finished Speed.
+    // "You may use your Force Modifier ... instead of your Agility Modifier" (speed.byForce): the higher of the two.
+    const speedMod = (this.effects?.slots?.["speed.byForce"] === true) ? Math.max(atts.force.mod, atts.agility.mod) : atts.agility.mod;
     this.speed = {
       normal: withEffects(this, "speed.all",
         withEffects(this, "speed.normal",
-          2 + Math.floor(atts.agility.mod / 2) + this.size.speedModifier),
+          2 + Math.floor(speedMod / 2) + this.size.speedModifier),
         { as: "speed.normal", wraps: true }),
       boosted: withEffects(this, "speed.all",
         withEffects(this, "speed.boosted",
-          atts.agility.mod + 2 + this.size.speedModifier),
+          speedMod + 2 + this.size.speedModifier),
         { as: "speed.boosted", wraps: true })
     };
 

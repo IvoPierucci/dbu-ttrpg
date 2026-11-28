@@ -8,8 +8,8 @@
  * it is reported.
  */
 
-import { areAllies, areOpponents, besideAnAlly, masterOf } from "../allies.mjs";
-import { alliesNear, withinAreaOfRule } from "../guidance.mjs";
+import { areAllies, areOpponents, besideAnAlly, masterOf, opponentsOnScene, withinSquares } from "../allies.mjs";
+import { alliesNear, withinAreaOfRule, SPHERE_RADIUS } from "../guidance.mjs";
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { traitAside, transformationQuestion, useTransformationQuestion } from "../aside.mjs";
@@ -721,6 +721,41 @@ const PREDICATES = {
   /** The Attacking Maneuver that answered `hit-opponent` made through the Basic Attack Maneuver (Ferocious Assault's). */
   hitThroughBasicAttack: scope => Boolean(scope.context?.basicAttack),
 
+  /** An Opponent, not Defeated, within your Melee Range - read as an adjacent Square (allies.mjs withinSquares). */
+  opponentInMelee: scope => opponentsOnScene(scope.data?.parent).some(other => withinSquares(scope.data?.parent, other, 0)),
+
+  /**
+   * An Opponent, not Defeated, on a Square a Sphere AoE of that Magnitude centred on you covers - "If no Opponent occupies a
+   * square within a Large Sphere AoE centered on you" is `!opponentWithin("large")`.
+   */
+  opponentWithin: (scope, magnitude) => {
+    const radius = SPHERE_RADIUS[String(magnitude?.value ?? magnitude ?? "").toLowerCase()];
+    if (!radius) return false;
+    return opponentsOnScene(scope.data?.parent).some(other => withinSquares(scope.data?.parent, other, radius - 1));
+  },
+
+  /** Every Opponent on the scene, not Defeated, of a lower Tier of Power than you - and at least one of them. */
+  allOpponentsLowerTier: scope => {
+    const mine = Number(scope.data?.tierOfPower) || 0;
+    const others = opponentsOnScene(scope.data?.parent);
+    return (others.length > 0) && others.every(other => (Number(other.system?.tierOfPower) || 0) < mine);
+  },
+
+  /** Every target of the Maneuver being resolved of a lower Tier of Power than you - and at least one of them. */
+  targetsAllLowerTier: scope => {
+    const mine = Number(scope.data?.tierOfPower) || 0;
+    const targets = targetActors(scope);
+    return (targets.length > 0) && targets.every(other => (Number(other.system?.tierOfPower) || 0) < mine);
+  },
+
+  /** A target of the Maneuver being resolved below that Health Threshold (Injured: Injured or Critical). */
+  targetBelowThreshold: (scope, name) => {
+    const order = ["healthy", "bruised", "injured", "critical"];
+    const line = order.indexOf(String(name?.value ?? name ?? "").toLowerCase());
+    if (line < 1) return false;
+    return targetActors(scope).some(other => order.indexOf(String(other.system?.threshold?.key ?? "healthy")) >= line);
+  },
+
   alliesStanding: scope => {
     const self = scope.data?.parent;
     if (!self) return false;
@@ -989,6 +1024,14 @@ const PREDICATES = {
   attacking: (scope, who) =>
     Boolean(scope.context?.attack) && matches(scope.context?.target, who, scope)
 };
+
+/** The targets of the Maneuver being resolved (context `targets`, else `target`), as Actors. */
+function targetActors(scope) {
+  const listed = scope.context?.targets ?? (scope.context?.target ? [scope.context.target] : []);
+  return listed.map(each => (typeof each === "string") ? globalThis.fromUuidSync?.(each) : (each?.actor ?? each))
+    .map(each => ((each?.documentName === "Actor") || !each?.actor) ? each : each.actor)
+    .filter(each => each?.system);
+}
 
 /** A character reference can be a uuid, a name, or a Ruling's stored value. */
 function matches(candidate, who, scope) {

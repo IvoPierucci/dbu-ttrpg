@@ -442,13 +442,15 @@ async function announceTurn(actor, { skipped = false, ran = [] } = {}) {
     ran.length ? `Ran out: ${ran.join(", ")}` : ""
   ].filter(Boolean);
 
+  // And whoever answers an Opponent's turn beginning (opponent-start-of-turn): their offers on this card too.
+  const watchers = game.combat ? (await import("./chat.mjs")).opponentTurnWatchers(actor, combatants(game.combat)) : [];
   return announce("start-of-turn", {
     title: skipped
       ? `${actor.name}'s turn is skipped`
       : `Start of ${actor.name}'s turn`,
     subjectUuid: actor.uuid,
     subjectName: actor.name,
-    subjects: [actor.uuid],
+    subjects: [actor.uuid, ...watchers],
     detail: notes.join(" ")
   });
 }

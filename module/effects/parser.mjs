@@ -484,6 +484,8 @@ class Parser {
 /** Questions the engine answers, as opposed to arithmetic it works out. */
 const PREDICATE_NAMES = new Set([
   "bonded",
+  // An Opponent within a Sphere centred on you; a target below a Health Threshold.
+  "opponentWithin", "targetBelowThreshold",
   "benefiting", "hasResource", "madeThrough", "inState", "hasCondition", "targets", "aoeHits", "attacking",
   // The Foundation of the attack whose roll answered the Moment - Archetype Focus's; the Focused Foundation (Archetype
   // Defense's).
@@ -528,7 +530,7 @@ const PREDICATE_NAMES = new Set([
 ]);
 
 /** The ones written without brackets, because they take nothing. */
-const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver", "paidWithDivine", "favoredAttack", "kiRegainHalved", "evolvedEntered", "inflictedOnOpponent", "opponentsBelowBruised", "knockedConditioned", "opponentsTurn", "ownOrAllyTurn", "targetConditioned", "conditionedOpponentAdjacent", "magicalUniqueThisRound",
+const BARE_PREDICATES = new Set(["opponentInMelee", "allOpponentsLowerTier", "targetsAllLowerTier", "defending", "isMinion", "attackingManeuver", "paidWithDivine", "favoredAttack", "kiRegainHalved", "evolvedEntered", "inflictedOnOpponent", "opponentsBelowBruised", "knockedConditioned", "opponentsTurn", "ownOrAllyTurn", "targetConditioned", "conditionedOpponentAdjacent", "magicalUniqueThisRound",
   // Bonded to an Ally - Power of the Weak (4)'s (Battle Yardrat's "While you are not Bonded").
   "bonded",
   "intendedForYou", "wieldingWeapon", "adventuring",
