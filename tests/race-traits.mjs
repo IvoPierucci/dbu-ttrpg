@@ -206,6 +206,19 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
      RTS.includes("if (had(file.id) || (extra.exchangedFor && had(extra.exchangedFor))) return;")], [["first", "second"], true, true]);
 }
 
+// Functional Purpose's pencil (the user's, 2026-11-28): its 1st choice's Rank, already in the Skills, counted once for the 2+ Ranks list.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const rowsWith = async ranks => {
+    const owner = { system: { skills: { investigation: { ranks } } } };
+    const item = { actor: owner, flags: { "dbu-ttrpg": { sourceId: "functional-purpose" } },
+      system: { chosen: [{ key: "functional-purpose", value: "investigation" }, { key: "functional-purpose#2", value: "" }] } };
+    return (await RAC.choiceRowsOf(item))[1].options.map(option => option.value);
+  };
+  check("2nd choice: Investigation at 1 Rank (the Trait's own) not offered; at 2 (one more of its own) offered; None always",
+    [await rowsWith(1), await rowsWith(2)], [[""], ["", "investigation"]]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

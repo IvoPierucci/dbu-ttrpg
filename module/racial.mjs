@@ -664,7 +664,7 @@ export function otherTraitsInOrder() {
 const slug = label => String(label ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 /** What a `choose:` header offers, as [value, label] pairs. */
-async function choicesFor(kind, source = null, { actor = null, earlier = [] } = {}) {
+async function choicesFor(kind, source = null, { actor = null, earlier = [], counted = [] } = {}) {
   // A Skill, any - or one the character has 2+ Skill Ranks in, the Rank just chosen counted (Functional Purpose's) - less
   // what `chooseExcept:` names ("You cannot choose Perception for either choice").
   if ((kind === "skill") || (kind === "skillRanked")) {
@@ -673,7 +673,9 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     // Or only those of one Attribute - Intelligent Fighter's "a Skill that uses Insight as its Attribute" - or of either of two (Skills
     // of a Genius's "Skills that use Scholarship or Insight").
     const attributes = listOf(source?.chooseAttribute).map(each => each.toLowerCase());
-    const ranks = key => (Number(actor?.system?.skills?.[key]?.ranks) || 0) + earlier.filter(each => each === key).length;
+    // `counted`: Ranks the character's Skills already show from this very choice (its Trait on them already - its pencil), not counted twice.
+    const ranks = key => (Number(actor?.system?.skills?.[key]?.ranks) || 0) + earlier.filter(each => each === key).length
+      - counted.filter(each => each === key).length;
     const skills = Object.entries(actor?.system?.skillTable ?? DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
       .filter(([, skill]) => !attributes.length || attributes.includes(skill.attribute))
       .filter(([key]) => (kind === "skill") || (ranks(key) >= 2))
@@ -882,11 +884,16 @@ export async function choiceRowsOf(item) {
   const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
   const second = chosen.find(entry => entry.key === `${file.id}#2`)?.value ?? "";
   const third = file.choose3 ? (chosen.find(entry => entry.key === `${file.id}#3`)?.value ?? "") : "";
+  // Its own part on the character already (every choice made - fillChoice), the Rank its 1st choice gives is in the Skills' Ranks: the
+  // 2+ Ranks list counts it once (the user's, 2026-11-28: Functional Purpose offered its 1st Skill at 1 Rank).
+  const complete = Boolean(first) && (!file.choose2 || chosen.some(entry => entry.key === `${file.id}#2`))
+    && (!file.choose3 || chosen.some(entry => entry.key === `${file.id}#3`));
+  const counted = (complete && item.actor) ? [first] : [];
   const row = async (which, kind, current, earlier) => ({ which, current,
     label: (which === 3) ? "3rd choice" : (which === 2) ? "2nd choice" : (file.choose2 ? "1st choice" : "Choice"),
-    options: (await choicesFor(kind, file, { actor, earlier }))
+    options: (await choicesFor(kind, file, { actor, earlier, counted: (which === 1) ? [] : counted }))
       // What it has now stays offered, whatever the list says of it today.
-      .concat((current && !(await choicesFor(kind, file, { actor, earlier })).some(([value]) => value === current))
+      .concat((current && !(await choicesFor(kind, file, { actor, earlier, counted: (which === 1) ? [] : counted })).some(([value]) => value === current))
         ? [[current, chosen.find(entry => entry.value === current)?.label?.split(": ").pop() ?? current]] : [])
       .map(([value, label]) => ({ value, label, selected: value === current })) });
   return [await row(1, file.choose, first, [second, third].filter(Boolean)),
