@@ -700,8 +700,9 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [], cou
   // "Select an additional Saving Throw to apply your Racial Saving Throw Bonus to" (Enhanced Organism's).
   if (kind === "savingThrow") {
     const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
-    // "Additional": not one its race's Racial Saving Throw Bonus applies to already - the Android's Cognitive (the user's, 2026-11-28).
-    const own = new Set(actor ? racialSavingThrows(actor.system?.race, actor.system?.racialSavingThrow) : []);
+    // "An additional Saving Throw" (`chooseExceptRacial: true` - Enhanced Organism's): not one its race's Racial Saving Throw Bonus applies
+    // to already - the Android's Cognitive (the user's, 2026-11-28). Any other - Willpower's, a Gene's "Any" - offers them all.
+    const own = new Set((actor && (source?.chooseExceptRacial === true)) ? racialSavingThrows(actor.system?.race, actor.system?.racialSavingThrow) : []);
     return Object.keys(DBUCharacterData.SAVING_THROWS).filter(key => !own.has(key))
       .map(key => [key, key.charAt(0).toUpperCase() + key.slice(1)]);
   }

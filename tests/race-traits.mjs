@@ -227,7 +227,10 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
   const with_ = async save => (await RAC.racialItemFrom(getTrait("technological-being"), androidActor, { answers: { choices: {},
     options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": save } } }))
     .data.system.chosen.filter(entry => entry.key === "option").map(entry => entry.value);
-  check("Enhanced Organism's Save: Impulsive taken, Cognitive (the Android's own) not offered - the Option left unanswered",
+    const willpower = await RAC.racialItemFrom({ ...getTrait("saiyan-genes") }, androidActor, { answers: { choices: { 1: "cognitive" }, options: {}, optionChoices: {} } });
+  check("only an \"additional\" Save leaves the race's own out (chooseExceptRacial): a Gene's \"Any\" may be the Android's Cognitive",
+    [getTrait("enhanced-organism").chooseExceptRacial, willpower.data.system.chosen.map(entry => entry.value)], [true, ["cognitive"]]);
+check("Enhanced Organism's Save: Impulsive taken, Cognitive (the Android's own) not offered - the Option left unanswered",
     [await with_("impulsive"), await with_("cognitive")], [["enhanced-organism", "surging-power", "hyper-resilience"], ["surging-power", "hyper-resilience"]]);
   const being = { id: "i-tb", type: "racial", system: { chosen: [{ key: "option", value: "enhanced-organism" }] }, flags: { "dbu-ttrpg": { sourceId: "technological-being" } } };
   const purpose = { id: "i-fp", type: "racial", system: { chosen: [] }, flags: { "dbu-ttrpg": { sourceId: "functional-purpose" } } };

@@ -5,6 +5,8 @@ optionOf: technological-being
 optionEffect: 2
 # A Saving Throw chosen as it is gained - its Racial Saving Throw Bonus.
 choose: savingThrow
+# "An additional Saving Throw": not the race's own (Cognitive).
+chooseExceptRacial: true
 # "You must exchange the Functional Purpose Racial Trait for the Factor Trait": Functional Purpose not given with the race; which
 # Alternate Upbringing Factor Trait in its place, asked instead (race-traits.mjs forcedExchange).
 exchangesRaceTrait: functional-purpose
