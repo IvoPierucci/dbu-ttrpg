@@ -213,8 +213,17 @@ function printedTraitLines(item) {
     while ((at + 1 < lines.length) && !/^\(\d+\)-/.test(lines[at + 1])) list.push(lines[++at]);
     if (option) {
       // Only this Option effect's own - Technological Being has two (the user's).
-      for (const chosen of picked.filter(each => optionBelongs(each, item, Number(/\d+/.exec(option[1])[0])))) {
+      const effect = Number(/\d+/.exec(option[1])[0]);
+      const mine = picked.filter(each => optionBelongs(each, item, effect));
+      for (const chosen of mine) {
         out.push({ html: lineHtml(`*${optionOwnLines(chosen, lines).join(" ")}`), bullet: true, gap: false });
+      }
+      // Fewer chosen than it asks - one left blank (the user's, 2026-11-28): the rest of its list still shown, what may yet be chosen.
+      const asks = optionGroupsOf(file).find(group => group.effect === effect)?.count ?? 1;
+      if (mine.length < asks) {
+        for (const entry of list.filter(each => each && !mine.some(chosen => each.replace(/^[*•]\s*/, "").startsWith(`${chosen.name} [`)))) {
+          out.push({ html: lineHtml(entry), bullet: /^[*•]/.test(entry), gap: false });
+        }
       }
     }
     else {
@@ -1075,8 +1084,8 @@ export function fillChoice(script, token, value) {
  * A Trait's own questions as one page of its race's window (race-window.mjs; the user's, 2026-11-27): its choices (`choose`, `choose2`,
  * `choose3` - a later one's list following the earlier ones on the page, as Functional Purpose's 2+ Ranks counts the Rank just chosen)
  * and each Option effect, an Option's own choice in a list beside its name. `{html, wire(root), read(root, pressed)}`: `read` gives
- * {choices: {n: value}, options: {effect: [ids]}, optionChoices: {id: value}} - or NOT_YET while an Option effect has fewer or more
- * ticked than it asks (marked red where `pressed`). Null where nothing is asked, or where something cannot be drawn on a page
+ * {choices: {n: value}, options: {effect: [ids]}, optionChoices: {id: value}} - or NOT_YET while an Option effect has more ticked than
+ * it asks (marked red where `pressed`); fewer may be left blank. Null where nothing is asked, or where something cannot be drawn on a page
  * (Favored Technique's Advantage, an Option's second choice): those ask in their own windows as they are given. `which` the choices to
  * ask (Set Racial Options: those still missing), `known` those already made.
  */
@@ -1150,7 +1159,9 @@ export async function traitPage(trait, actor, groups, { which = [1, 2, 3], known
       let short = false;
       for (const box of root.querySelectorAll(".dbu-together-group")) {
         const ticked = [...box.querySelectorAll("input:checked")].map(input => input.value);
-        const right = ticked.length === Number(box.dataset.count);
+        // Fewer than it asks may be left blank - asked again by Set Racial Options, its list still shown in its text (the user's,
+        // 2026-11-28); more is not.
+        const right = ticked.length <= Number(box.dataset.count);
         if (pressed) box.querySelector(".dbu-respond-hint")?.classList.toggle("dbu-wizard-needs", !right);
         if (!right) short = true;
         options[box.dataset.effect] = ticked;

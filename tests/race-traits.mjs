@@ -242,6 +242,22 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
     [true, true, true]);
 }
 
+// An Option effect left short (the user's, 2026-11-28): its text still lists what may yet be chosen; full, only what was chosen.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const text = getTrait("technological-being").text;
+  const shown = chosen => RAC.racialTraitLines({ type: "racial", flags: { "dbu-ttrpg": { sourceId: "technological-being" } },
+    system: { text, chosen: chosen.map(value => ({ key: "option", value })) } }).map(line => line.html).join(" ");
+  const one = shown(["enhanced-organism", "surging-power"]);
+  const full = shown(["enhanced-organism", "surging-power", "hyper-resilience"]);
+  check("Technological Being with one of its (3) two: Surging Power and the rest of the list (Weapon Ports...); with both, only those two",
+    [one.includes("Surging Power"), one.includes("Weapon Ports"), one.includes("Construct"), full.includes("Weapon Ports"), full.includes("Hyper Resilience")],
+    [true, true, false, false, true]);
+  globalThis.CSS = { escape: String };
+  const RACSRC = read("module", "racial.mjs");
+  check("its page lets an Option effect be left short, never over", [RACSRC.includes("const right = ticked.length <= Number(box.dataset.count);")], [true]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));
