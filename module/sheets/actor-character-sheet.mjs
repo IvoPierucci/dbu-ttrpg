@@ -8732,8 +8732,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** The Turn State's Reset (the user's): what cannot be taken off by hand, cleared - asked first, it cannot be taken back. */
   static async _onResetTurnState() {
     const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${this.actor.name} - Reset` },
-      content: "<p>Clear what cannot be taken off by hand - marks and their clocks?</p>"
-        + "<p>States, Conditions, Actions, Resources, uses spent and the Triggered/Automatic buttons stay as they are.</p>", rejectClose: false });
+      content: "<p>Clear what cannot be taken off by hand - marks, and every temporary effect with its clock (a State, Condition or Resource held "
+        + "for a while, Damage Over Time, Stat Drain)?</p>"
+        + "<p>What was put on by hand, Actions, uses spent and the Triggered/Automatic buttons stay as they are.</p>", rejectClose: false });
     if (!yes) return;
     const { resetTurnState } = await import("../combat.mjs");
     await resetTurnState(this.actor);

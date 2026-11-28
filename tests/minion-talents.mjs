@@ -290,9 +290,12 @@ const blocks = id => compile(getTrait(id).script).program.blocks.filter(b => b.m
     [TP.includes('data-action="resetTurnState"'), SH.includes("resetTurnState: DBUCharacterSheet._onResetTurnState,"),
      SH.includes("const yes = await foundry.applications.api.DialogV2.confirm({ classes: [\"dbu-dialog\"], window: { title: `${this.actor.name} - Reset` },"),
      body.includes("const marks = new Set(allConditions().filter(condition => !condition.combatCondition).map(condition => condition.key));"),
-     body.includes('await actor.update({ "system.conditions": replaceObject(conditions) });'), body.includes("await encounterEnded(actor);"),
-     /"system\.states"|actionsSpent|"system\.resources"|stopCharging|usedManeuvers|talentUses|armedTalents|automatic|life|karma|imminent/.test(body.split("*/")[1] ?? "")],
-    [true, true, true, true, true, true, false]);
+     body.includes('await actor.update({ "system.conditions": replaceObject(conditions) });'), body.includes("await allTimedEnded(actor);"),
+     /"system\.states"|actionsSpent|"system\.resources"|stopCharging|usedManeuvers|talentUses|armedTalents|automatic|life|karma|imminent/.test(body.split("*/")[1] ?? ""),
+     // And the temporary effects (the user's, 2026-11-28): what every clock held taken off, Stat Drain to 0.
+     body.includes('if (Number(actor.system.statDrain) > 0) await actor.update({ "system.statDrain": 0 });'),
+     read("module", "durations.mjs").includes("export async function allTimedEnded(actor) {")],
+    [true, true, true, true, true, true, false, true, true]);
 }
 
 // --- A Duplicate made by hand: whom it copies, chosen on Settings; its Progression tab locked --------------------------------------
