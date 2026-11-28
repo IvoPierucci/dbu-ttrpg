@@ -167,7 +167,8 @@ check("its sheet: the Fusion tab in its Progression's place, on its sheet only",
     skills: skills({ perception: 2, intimidation: 0, stealth: 1 }) }, [
     item("core", "maneuver", "Basic Attack", { system: { source: "Core Rule" } }),
     item("kame", "maneuver", "Kamehameha", { system: { tags: ["signature"] } }),
-    item("it", "maneuver", "Instant Transmission", { system: { tags: ["uniqueAbility"], unique: { free: false, advancements: [{ id: "a", free: false }] } } }),
+    // A Unique Ability's file says "Core Rule" as the Core Maneuvers' do (the user's, 2026-11-28: they were left behind).
+    item("it", "maneuver", "Instant Transmission", { system: { source: "Core Rule", tags: ["uniqueAbility"], unique: { free: false, advancements: [{ id: "a", free: false }] } } }),
     item("given", "maneuver", "Soar Burst", { system: { fromTrait: "x" } }),
     item("t1", "talent", "Quick Learner", { flags: { sourceId: "quick-learner" } }),
     item("sh", "racial", "Saiyan Heritage", { flags: { sourceId: "saiyan-heritage" }, system: { importance: "primary" } }),

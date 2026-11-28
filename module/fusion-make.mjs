@@ -168,6 +168,9 @@ export function highestRanks(actors) {
 
 /** Whether an Item is one of the Core Maneuvers every Character carries - the Fusion has its own. */
 function coreManeuver(item) {
+  // A Unique Ability's file says "Core Rule" too: it is not one of the Core Maneuvers every character has, and comes (the user's,
+  // 2026-11-28: "las Unique Abilities no se pasan en una Fusion").
+  if ((item.system?.tags ?? []).includes("uniqueAbility")) return false;
   return (item.type === "maneuver") && (String(item.system?.source ?? "") === "Core Rule");
 }
 
