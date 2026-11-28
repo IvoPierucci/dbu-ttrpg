@@ -1104,8 +1104,9 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
  * Requirements, marked as given by it so it goes with it; each Talent, kept if it is ever lost. One already held is not
  * given twice; a Talent or Unique Ability not written yet is named.
  */
-export async function addRacialTrait(actor, trait, { grantedBy = "", presetOption = "", presetChoice = "", transformation = "" } = {}) {
-  const made = await racialItemFrom(trait, actor, { presetOption, presetChoice });
+export async function addRacialTrait(actor, trait, { grantedBy = "", presetOption = "", presetChoice = "", transformation = "", made: given = null } = {}) {
+  // `made`: its Item's data already asked (race-traits.mjs, all of a race's asked in one window before any is made).
+  const made = given ?? await racialItemFrom(trait, actor, { presetOption, presetChoice });
   if (!made) return null;
   // Personified Dragon Ball: "select a set of Dragon Balls (including a Size Category from Nano to Small) and a number of
   // stars from among them".

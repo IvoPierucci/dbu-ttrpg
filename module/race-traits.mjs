@@ -18,10 +18,11 @@
  * another Trait gave.
  */
 
-import { getTrait } from "./effects/traits.mjs";
+import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { getRace, isMinionRace } from "./races.mjs";
-import { addRacialTrait, factorOf, minionRacialUnfit, racialFactor, racialTraitFiles, racialTraitUnfit, removeRacialTrait,
+import { addRacialTrait, factorOf, minionRacialUnfit, racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait,
   replacedTraitOf } from "./racial.mjs";
+import { withChoiceWizard } from "./choice-wizard.mjs";
 
 const SCOPE = "dbu-ttrpg";
 
@@ -78,12 +79,81 @@ export async function syncRaceTraits(actor, { raceChanged = false } = {}) {
   const changes = raceTraitChanges(actor, { raceChanged });
   if (!changes) return false;
   for (const id of changes.remove) if (actor.items.get(id)) await removeRacialTrait(actor, id);
-  for (const id of changes.add) {
-    const file = getTrait(id);
-    if (file) await addRacialTrait(actor, file);
-  }
+  const files = changes.add.map(id => getTrait(id)).filter(Boolean);
+  if (files.length) await addRaceTraitFiles(actor, files);
   await actor.setFlag(SCOPE, "raceTraitsSet", actor.system.race);
   return true;
+}
+
+/**
+ * The Factor a race Trait must be exchanged for, by an Option already chosen - in `chosen` lists (Items' `system.chosen`): Enhanced
+ * Organism's "You must exchange the Functional Purpose Racial Trait for the Factor Trait" (`exchangesRaceTrait: functional-purpose`,
+ * `exchangeFactor: alternate-upbringing` in the Option's header). "" where none.
+ */
+export function forcedExchange(traitId, chosen) {
+  for (const entry of chosen.flat()) {
+    if (entry?.key !== "option") continue;
+    const option = getTrait(entry.value);
+    if (option && (String(option.exchangesRaceTrait ?? "") === traitId) && option.exchangeFactor) return String(option.exchangeFactor);
+  }
+  return "";
+}
+
+/** Which of a Factor's Traits takes a race Trait's place - asked; its id, or "" (closed). */
+async function askExchangeFactor(file, factor) {
+  const escape = Handlebars.escapeExpression;
+  const offered = racialTraitFiles().filter(each => factorOf(each) === factor).sort((a, b) => a.name.localeCompare(b.name));
+  if (!offered.length) return "";
+  const name = racialFactor(factor)?.name ?? factor;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${file.name} - exchanged for a ${name} Factor Trait` },
+    content: `<p class="dbu-respond-hint">${escape(file.name)} is exchanged for a Factor Trait of ${escape(name)}: which?</p>
+      <select name="factor">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select>`,
+    buttons: [{ action: "take", label: "Choose", default: true,
+      callback: (event, button, dialog) => dialog.element.querySelector('[name="factor"]')?.value ?? "" },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  return offered.some(each => each.id === picked) ? picked : "";
+}
+
+/**
+ * A race's Traits given together (the user's, 2026-11-27): every Option and choice of them asked in one window, Last and Next between
+ * them (choice-wizard.mjs) - and only then are they made, what they ask as they are made (a Weapon's, a Unique Ability's) in the same
+ * window. One an Option already chosen exchanges for a Factor's (forcedExchange) is not given: which of that Factor's Traits takes its
+ * place is asked instead, and given remembering it (`exchangedFor`). One whose questions were closed is not given.
+ */
+export async function addRaceTraitFiles(actor, files) {
+  const title = `${actor.name} - Racial Traits`;
+  return withChoiceWizard(title, async wizard => {
+    const held = Array.from(actor.items ?? []).map(item => item.system?.chosen ?? []);
+    const entries = await wizard.rewindable(async () => {
+      const out = [];
+      // One an Option may exchange away asked last, once the Options that might are chosen.
+      const exchangeable = new Set([...traitsOfKind("races"), ...traitsOfKind("factors")].map(each => String(each.exchangesRaceTrait ?? "")).filter(Boolean));
+      const ordered = [...files.filter(file => !exchangeable.has(file.id)), ...files.filter(file => exchangeable.has(file.id))];
+      for (const file of ordered) {
+        const factor = forcedExchange(file.id, [...held, ...out.map(entry => entry.made?.data?.system?.chosen ?? [])]);
+        if (factor) {
+          const replacing = getTrait(await askExchangeFactor(file, factor));
+          const made = replacing ? await racialItemFrom(replacing, actor) : null;
+          if (made) made.data.flags[SCOPE].exchangedFor = file.id;
+          out.push({ file: replacing, made });
+          continue;
+        }
+        out.push({ file, made: await racialItemFrom(file, actor) });
+      }
+      return out;
+    });
+    const made = [];
+    for (const entry of entries) {
+      if (!entry.made || !entry.file) continue;
+      const item = await addRacialTrait(actor, entry.file, { made: entry.made });
+      if (item) made.push(item);
+    }
+    return made;
+  });
 }
 
 /**

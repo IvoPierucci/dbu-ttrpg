@@ -7,6 +7,10 @@ What each version brought, in broad strokes. Every change is described in its co
 
 - **Greater Mutation (3) and Mastered Reincarnated (1) built:** the race Trait their Factor's Factor Trait replaced comes back
   beside it while the Awakening is had (`allow restoreReplaced.<factor>;`, read by race-traits.mjs).
+- **A race's questions in one window:** the Options and choices of the Racial Traits a race gives are asked as pages of a single
+  window, with Last and Next and its close at the top right (`module/choice-wizard.mjs`); the Traits are made once all is answered.
+  An Option may exchange a race Trait for a Factor's (`exchangesRaceTrait:` / `exchangeFactor:`): Enhanced Organism gives no
+  Functional Purpose and asks which Alternate Upbringing Factor Trait takes its place.
 
 ## 0.3.12 (2026-11-27)
 

@@ -6606,3 +6606,50 @@
 .dbu-ttrpg .trait-arm.active[data-action="automateTrigger"]:focus {
   border-color: #7fb4d4;
 }
+
+/* One window for many questions (choice-wizard.mjs, the user's 2026-11-27): the question's title and number above, its own content,
+   its other answers ("None", "Later, by hand") beside it, and Last / Next below - Last left, Next right. */
+.application.dbu-choice-wizard .dbu-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.application.dbu-choice-wizard .dbu-wizard-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border-bottom: 1px solid var(--dbu-chat-rule);
+  padding-bottom: 4px;
+}
+.application.dbu-choice-wizard .dbu-wizard-head h3 {
+  margin: 0;
+  border: none;
+  font-size: 14px;
+  color: var(--dbu-chat-accent);
+}
+.application.dbu-choice-wizard .dbu-wizard-step {
+  font-size: 11px;
+  color: var(--dbu-chat-dim);
+  white-space: nowrap;
+}
+.application.dbu-choice-wizard .dbu-wizard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.application.dbu-choice-wizard .dbu-wizard-others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.application.dbu-choice-wizard .dbu-wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.application.dbu-choice-wizard .dbu-wizard-nav button {
+  flex: 0 0 auto;
+  min-width: 90px;
+}

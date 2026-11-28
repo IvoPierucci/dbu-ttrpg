@@ -127,6 +127,23 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
   check("Brute, exchanged for Powerful Physique, listed in its place", [at >= 0, listed.indexOf("brute") === order.indexOf("powerful-physique")], [true, true]);
 }
 
+// One window for a race's questions (choice-wizard.mjs); Enhanced Organism exchanges Functional Purpose for an Alternate Upbringing Trait.
+{
+  const WIZ = read("module", "choice-wizard.mjs");
+  const RTS = read("module", "race-traits.mjs");
+  check("Enhanced Organism names the exchange; chosen, Functional Purpose is exchanged for an Alternate Upbringing Factor Trait; not chosen, nothing",
+    [getTrait("enhanced-organism")?.exchangesRaceTrait, getTrait("enhanced-organism")?.exchangeFactor,
+     RT.forcedExchange("functional-purpose", [[{ key: "option", value: "construct" }], [{ key: "option", value: "enhanced-organism" }]]),
+     RT.forcedExchange("functional-purpose", [[{ key: "option", value: "construct" }]]), RT.forcedExchange("technological-being", [[{ key: "option", value: "enhanced-organism" }]])],
+    ["functional-purpose", "alternate-upbringing", "alternate-upbringing", "", ""]);
+  check("the race's Traits asked in one window (Last, Next, its close), made only after; the sync gives them through it",
+    [WIZ.includes("DialogV2.wait = config => session.ask(config);"), WIZ.includes("DialogV2.wait = original;"), WIZ.includes('data-wizard="last"'),
+     WIZ.includes('data-wizard="next"'), RTS.includes("if (files.length) await addRaceTraitFiles(actor, files);"),
+     RTS.includes("const entries = await wizard.rewindable(async () => {"), RTS.includes("made.data.flags[SCOPE].exchangedFor = file.id;"),
+     read("module", "racial.mjs").includes("const made = given ?? await racialItemFrom(trait, actor, { presetOption, presetChoice });")],
+    [true, true, true, true, true, true, true, true]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));
