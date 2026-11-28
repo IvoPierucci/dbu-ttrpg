@@ -801,12 +801,18 @@ export async function askOptions(trait, options, count = Math.max(1, Number(trai
         <span class="dbu-respond-name">${escape(option.name)}</span>
         <span class="dbu-respond-source">${escape(plainText(option.description ?? ""))}</span></label>`).join("")}`,
     buttons: [
+      // Not yet while fewer or more than it asks are ticked: in the one window of a race's Traits, Next stays off (choice-wizard.mjs).
       { action: "confirm", label: "Choose", default: true, callback: (event, button, dialog) =>
-        [...dialog.element.querySelectorAll('input[name="option"]:checked')].map(input => input.value) },
+        (picked => (picked.length === count) ? picked : Symbol.for("dbu-ttrpg.notYet"))(
+          [...dialog.element.querySelectorAll('input[name="option"]:checked')].map(input => input.value)) },
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
+  if (chosen === Symbol.for("dbu-ttrpg.notYet")) {
+    ui.notifications.warn(`${trait.name}: choose ${count}.`);
+    return null;
+  }
   if (!Array.isArray(chosen)) return null;
   if (chosen.length !== count) {
     ui.notifications.warn(`${trait.name}: choose ${count}.`);

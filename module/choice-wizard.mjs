@@ -16,6 +16,12 @@
 
 const REWIND = Symbol("rewind");
 const MORE = Symbol("more");
+/**
+ * What a question's default button answers while it cannot be answered yet - a Multi-Option's "choose two" with one ticked: Next stays
+ * off until it can (the user's, 2026-11-27). Symbol.for, so a module asking need not import this one; outside a wizard, a dialog closes
+ * with it and its asker reads it as not answered, as before.
+ */
+export const NOT_YET = Symbol.for("dbu-ttrpg.notYet");
 
 /** The window: a page drawn by the session - its class made when first wanted (Foundry's API is not there as this module loads headless). */
 let ChoiceWizardApp = null;
@@ -142,6 +148,7 @@ class ChoiceSession {
     const answer = async (button, element, event) => {
       if (!this.pending || (this.pending.index !== index)) return;
       const value = button.callback ? await button.callback(event, element, dialog) : button.action;
+      if (value === NOT_YET) return;
       this.snapshots[index] = { key, values: snapshot(body) };
       this.answers[index] = value;
       const pending = this.pending;
@@ -152,11 +159,8 @@ class ChoiceSession {
     next?.addEventListener("click", event => {
       const done = next.dataset.done === "1";
       answer(main, event.currentTarget, event).then(() => {
-        // Done: the page put away while what was answered is given.
-        if (done && !this.pending && root.querySelector(".dbu-wizard-body") === body) {
-          root.innerHTML = `<div class="dbu-wizard"><p class="dbu-wizard-step">Done.</p></div>`;
-          this.app?.setPosition({ height: "auto" });
-        }
+        // Done: the window closed at once (the user's) while what was answered is given - opened again only if making it asks more.
+        if (done && !this.pending && (root.querySelector(".dbu-wizard-body") === body)) this.hide();
       });
     });
     // Next or Done: Done where nothing would be asked after this answer (isLast) - found again as the answer changes.
@@ -168,6 +172,10 @@ class ChoiceSession {
       let value = null;
       try { value = main.callback ? await main.callback(new Event("probe"), next, dialog) : main.action; }
       catch (error) { value = null; }
+      if (value === NOT_YET) {
+        if (ticket === probing) next.disabled = true;
+        return;
+      }
       const last = await this.isLast(index, value);
       if (ticket !== probing) return;
       next.disabled = false;
@@ -197,6 +205,13 @@ class ChoiceSession {
     (body.querySelector("[autofocus]") ?? body.querySelector("input, select, textarea") ?? root.querySelector('[data-wizard="next"]'))?.focus?.();
     this.app.setPosition({ height: "auto" });
     label();
+  }
+
+  /** The window put away - a later question opens a new one. */
+  hide() {
+    const app = this.app;
+    this.app = null;
+    app?.close({ fromSession: true });
   }
 
   async finish() {
