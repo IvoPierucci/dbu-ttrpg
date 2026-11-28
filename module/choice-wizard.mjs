@@ -1,8 +1,10 @@
 /**
  * One window for many questions (the user's, 2026-11-27): choosing a race gives several Racial Traits at once, and each used to ask its
- * Options and choices in a window of its own, one after another and mixed. Inside `withChoiceWizard`, every DialogV2.wait asked on this
- * client is drawn as a page of a single window instead - its title the question's, its content and its own buttons as they were - with
- * Last and Next below and the window's close at the top right.
+ * Options and choices in a window of its own, one after another and mixed. Inside `withChoiceWizard`, every question asked through
+ * `dialogWait` (in place of DialogV2.wait - racial.mjs, race-traits.mjs) is drawn as a page of a single window instead - its title the
+ * question's, its content and its own buttons as they were - with Last and Next below and the window's close at the top right.
+ * Only those: Foundry's own dialogs and any other module's keep their windows (a first version took over DialogV2.wait itself, and an
+ * Actor's delete confirmation landed in the wizard).
  *
  * - **Next** answers as the question's default button would - **Done** where nothing is asked after it in the `rewindable` work (its
  *   end found by running that work again with this answer; the work makes nothing).
@@ -11,7 +13,7 @@
  *   done and things are being made with the answers.
  * - **Close** answers the question shown, and every one after it, as closing its own window would: nothing (null).
  *
- * Nothing here names a race, a Trait or a question: any code that asks through DialogV2.wait is drawn this way while a wizard runs.
+ * Nothing here names a race, a Trait or a question: any code that asks through dialogWait is drawn this way while a wizard runs.
  */
 
 const REWIND = Symbol("rewind");
@@ -248,15 +250,22 @@ function restore(body, values) {
 let active = null;
 
 /**
- * Run `work(wizard)` with every DialogV2.wait asked on this client drawn as a page of one window titled `title`. In it,
+ * DialogV2.wait for a question a wizard may draw: a page of the running wizard's window where one runs (withChoiceWizard), its own
+ * window where none does.
+ */
+export function dialogWait(config) {
+  if (active && !active.session.finished) return active.session.ask(config);
+  return foundry.applications.api.DialogV2.wait(config);
+}
+
+/**
+ * Run `work(wizard)` with every question asked through dialogWait drawn as a page of one window titled `title`. In it,
  * `wizard.rewindable(fn)` runs `fn` so that Last may go back into it: `fn` is run again from its start with the answers given, so it must
  * make nothing. The window shows only if something is asked, and closes when `work` is done.
  */
 export async function withChoiceWizard(title, work) {
   if (active) return work(active.handle);
-  const DialogV2 = foundry.applications.api.DialogV2;
   const session = new ChoiceSession(title);
-  const original = DialogV2.wait;
   const handle = {
     rewindable: async fn => {
       session.rewindable = true;
@@ -281,13 +290,12 @@ export async function withChoiceWizard(title, work) {
     get closed() { return session.closed; }
   };
   active = { session, handle };
-  DialogV2.wait = config => session.ask(config);
   try {
     return await work(handle);
   }
   finally {
-    DialogV2.wait = original;
     active = null;
+    session.finished = true;
     await session.finish();
   }
 }

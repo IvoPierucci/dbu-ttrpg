@@ -136,12 +136,13 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
      RT.forcedExchange("functional-purpose", [[{ key: "option", value: "construct" }], [{ key: "option", value: "enhanced-organism" }]]),
      RT.forcedExchange("functional-purpose", [[{ key: "option", value: "construct" }]]), RT.forcedExchange("technological-being", [[{ key: "option", value: "enhanced-organism" }]])],
     ["functional-purpose", "alternate-upbringing", "alternate-upbringing", "", ""]);
-  check("the race's Traits asked in one window (Last, Next, its close), made only after; the sync gives them through it",
-    [WIZ.includes("DialogV2.wait = config => session.ask(config);"), WIZ.includes("DialogV2.wait = original;"), WIZ.includes('data-wizard="last"'),
-     WIZ.includes('data-wizard="next"'), RTS.includes("if (files.length) await addRaceTraitFiles(actor, files);"),
+  const RACSRC = read("module", "racial.mjs");
+  check("the race's Traits asked in one window (Last, Next, its close), made only after; the sync gives them through it; only their own questions drawn there - Foundry's dialogs (an Actor's delete) never taken over",
+    [WIZ.includes("if (active && !active.session.finished) return active.session.ask(config);"), !WIZ.includes("DialogV2.wait ="), WIZ.includes('data-wizard="last"'),
+     WIZ.includes('data-wizard="next"'), RTS.includes("if (files.length) await addRaceTraitFiles(actor, files);"), !RACSRC.includes("DialogV2.wait(") && !RTS.includes("DialogV2.wait("),
      RTS.includes("const entries = await wizard.rewindable(async () => {"), RTS.includes("made.data.flags[SCOPE].exchangedFor = file.id;"),
      read("module", "racial.mjs").includes("const made = given ?? await racialItemFrom(trait, actor, { presetOption, presetChoice });")],
-    [true, true, true, true, true, true, true, true]);
+    [true, true, true, true, true, true, true, true, true]);
 }
 
 // The window closed before all is answered (the user's, 2026-11-27): the Trait given all the same, what was not answered empty; Set Racial

@@ -23,7 +23,7 @@ import { getRace, isMinionRace } from "./races.mjs";
 import { addRacialTrait, answered, askChoice, askOptions, askTraitTogether, changeChoice, changeRacialOption, factorOf, minionRacialUnfit,
   ownedRacialTraits, racialFactor, racialItemFrom, racialTraitFiles, racialTraitUnfit, removeRacialTrait, replacedTraitOf,
   unansweredOf } from "./racial.mjs";
-import { withChoiceWizard } from "./choice-wizard.mjs";
+import { dialogWait, withChoiceWizard } from "./choice-wizard.mjs";
 
 const SCOPE = "dbu-ttrpg";
 
@@ -106,7 +106,7 @@ async function askExchangeFactor(file, factor) {
   const offered = racialTraitFiles().filter(each => factorOf(each) === factor).sort((a, b) => a.name.localeCompare(b.name));
   if (!offered.length) return "";
   const name = racialFactor(factor)?.name ?? factor;
-  const picked = await foundry.applications.api.DialogV2.wait({
+  const picked = await dialogWait({
     classes: ["dbu-dialog"],
     window: { title: `${file.name} - exchanged for a ${name} Factor Trait` },
     content: `<p class="dbu-respond-hint">${escape(file.name)} is exchanged for a Factor Trait of ${escape(name)}: which?</p>

@@ -65,6 +65,7 @@
  * character has).
  */
 
+import { dialogWait } from "./choice-wizard.mjs";
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { isCharacter, isMinion } from "./actor-types.mjs";
 import { getRace, isMinionRace, subraceName } from "./races.mjs";
@@ -774,7 +775,7 @@ export async function askChoice(source, kind = source.choose, context = {}) {
     return null;
   }
   const escape = Handlebars.escapeExpression;
-  const chosen = await foundry.applications.api.DialogV2.wait({
+  const chosen = await dialogWait({
     classes: ["dbu-dialog"],
     window: { title: source.name },
     content: `<select name="choice">${offered.map(([value, label]) =>
@@ -794,7 +795,7 @@ export async function askChoice(source, kind = source.choose, context = {}) {
 export async function askOptions(trait, options, count = Math.max(1, Number(trait.options) || 1), effect = 0) {
   const escape = Handlebars.escapeExpression;
   const type = (count === 1) ? "radio" : "checkbox";
-  const chosen = await foundry.applications.api.DialogV2.wait({
+  const chosen = await dialogWait({
     classes: ["dbu-dialog"],
     window: { title: `${trait.name} - ${effect ? `${ordinal(effect)} effect` : "Option"}` },
     position: { width: 460 },
@@ -1001,7 +1002,7 @@ async function favoredFeatureChoice(source, actor, techniqueId, advantageId) {
   const offered = featureChoiceOptions(def, { ranks: 1, sig, actor });
   if (!offered.length) return "";
   const escape = Handlebars.escapeExpression;
-  const picked = await foundry.applications.api.DialogV2.wait({
+  const picked = await dialogWait({
     classes: ["dbu-dialog"],
     window: { title: `${source.name}: ${def.name}` },
     content: `<select name="choice">${offered.map(([value, label]) =>
@@ -1119,7 +1120,7 @@ export async function askTraitTogether(trait, actor, groups, { which = [1, 2, 3]
     element.innerHTML = pairs.map(([value, text]) => `<option value="${escape(value)}">${escape(text)}</option>`).join("");
     if (pairs.some(([value]) => value === keep)) element.value = keep;
   };
-  const answer = await foundry.applications.api.DialogV2.wait({
+  const answer = await dialogWait({
     classes: ["dbu-dialog"],
     window: { title: trait.name },
     position: { width: 480 },
@@ -1304,7 +1305,7 @@ export async function addRacialTrait(actor, trait, { grantedBy = "", presetOptio
       .sort((a, b) => a.name.localeCompare(b.name));
     if (offered.length) {
       const escape = Handlebars.escapeExpression;
-      const picked = await foundry.applications.api.DialogV2.wait({
+      const picked = await dialogWait({
         classes: ["dbu-dialog"], window: { title: `${trait.name} - a Talent` },
         content: `<label class="dbu-respond-option" data-tooltip="Its Prerequisites the table's"><span class="dbu-respond-name">Talent</span>
           <select name="talent">${offered.map(talent => `<option value="${escape(talent.id)}">${escape(talent.name)} (${escape(talentCategoryOf(talent)?.label ?? "")})</option>`).join("")}</select></label>`,
@@ -1430,7 +1431,7 @@ export async function askPastLife(actor, trait) {
   const escape = Handlebars.escapeExpression;
   const others = Array.from(globalThis.game?.actors ?? []).filter(other => (isCharacter(other)) && (other.id !== actor?.id))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const who = await foundry.applications.api.DialogV2.wait({
+  const who = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${trait.name} - your Past Life` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Past Life</span>
       <select name="past"><option value="">Not in this world - named</option>${others.map(other =>
@@ -1459,7 +1460,7 @@ export async function askPastLife(actor, trait) {
     .sort((a, b) => a.name.localeCompare(b.name));
   const tier = past ? (Number(past.system?.baseTierOfPower) || 1) : 1;
   const label = key => key.charAt(0).toUpperCase() + key.slice(1);
-  const answer = await foundry.applications.api.DialogV2.wait({
+  const answer = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${trait.name} - ${past?.name ?? (who.name || "your Past Life")}` },
     content: `<label class="dbu-respond-option" data-tooltip="Their Skill with the most Skill Ranks - a tie, yours to decide">
         <span class="dbu-respond-name">Skill Rank</span>
@@ -1490,7 +1491,7 @@ async function askNormalTrait(actor, item) {
   const own = ownedRacialTraits(actor).filter(each => (each.id !== item.id) && !each.system?.factor);
   if (!own.length) return;
   const escape = Handlebars.escapeExpression;
-  const picked = await foundry.applications.api.DialogV2.wait({
+  const picked = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${item.name} - your Normal Trait` },
     content: `<p class="dbu-respond-hint">The Secondary Racial Trait exchanged for it: kept, applying in every Combat Round your Were-Traits are not chosen for.</p>
       <label class="dbu-respond-option"><span class="dbu-respond-name">Normal Trait</span>
@@ -1506,7 +1507,7 @@ async function askNormalTrait(actor, item) {
 /** The Dragon Ball set asked for - its name, Size Category and stars - or null if backed out of. */
 async function askDragonBall(trait) {
   const sizes = [["nano", "Nano"], ["tiny", "Tiny"], ["small", "Small"]];
-  const answer = await foundry.applications.api.DialogV2.wait({
+  const answer = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${trait.name} - your Dragon Ball` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Set</span>
         <input type="text" name="set" value="" placeholder="Which set of Dragon Balls"/></label>
@@ -1539,7 +1540,7 @@ async function grantOtherTrait(actor, item, group, from = [], presets = {}) {
     return null;
   }
   const escape = Handlebars.escapeExpression;
-  const picked = await foundry.applications.api.DialogV2.wait({
+  const picked = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${item.name} - a ${name} Trait` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">${escape(name)} Trait</span>
       <select name="other">${offered.map(trait => `<option value="${escape(trait.id)}">${escape(trait.name)}</option>`)
@@ -1562,7 +1563,7 @@ async function grantFactorTrait(actor, item, factor) {
     .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || a.name.localeCompare(b.name));
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
-  const picked = await foundry.applications.api.DialogV2.wait({
+  const picked = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${item.name} - a ${factorName(factor)} Factor Trait` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Factor Trait</span>
       <select name="factor">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select></label>`,
@@ -1601,7 +1602,7 @@ async function grantRacialOf(actor, item, file) {
   const offered = racialGrantChoices(file, actor);
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
-  const picked = await foundry.applications.api.DialogV2.wait({
+  const picked = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${item.name} - a ${racialGrantLabel(file)}` },
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">${escape(racialGrantLabel(file))}</span>
       <select name="racial">${offered.map(each => `<option value="${escape(each.id)}">${escape(each.name)}</option>`).join("")}</select></label>`,
@@ -1658,7 +1659,7 @@ async function askDefaultCostume(actor) {
   const apparel = Array.from(actor.items ?? []).filter(item => (item.type === "gear") && (item.system?.crafted?.kind === "apparel"));
   const marked = apparel.find(item => item.getFlag?.("dbu-ttrpg", "defaultCostume"));
   if (marked) return marked;
-  const choice = apparel.length ? await foundry.applications.api.DialogV2.wait({
+  const choice = apparel.length ? await dialogWait({
     classes: ["dbu-dialog"], window: { title: "Majin Style - Default Costume" }, content: "",
     buttons: [...apparel.map(item => ({ action: item.id, label: item.name })), { action: "new", label: "A new one (Grade 2)" }],
     rejectClose: false
@@ -1695,7 +1696,7 @@ async function askUniqueChoice(actor, name, most, held, type = "") {
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
   const said = value => [].concat(value ?? []).join(", ");
-  const id = await foundry.applications.api.DialogV2.wait({
+  const id = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${actor.name} - ${name}` },
     content: `<p class="dbu-respond-hint">A ${type ? `${type.charAt(0).toUpperCase()}${type.slice(1)} ` : ""}Unique Ability of ${most} TP or less.</p>
       <select name="unique">${offered.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} - ${
@@ -1715,7 +1716,7 @@ async function askUniqueInstead(actor, had, most, held) {
   if (!offered.length) return null;
   const escape = Handlebars.escapeExpression;
   const said = value => [].concat(value ?? []).join(", ");
-  const id = await foundry.applications.api.DialogV2.wait({
+  const id = await dialogWait({
     classes: ["dbu-dialog"], window: { title: `${actor.name} already has ${had.name}` },
     content: `<p class="dbu-respond-hint">A Unique Ability of ${most} TP or less instead.</p>
       <select name="unique">${offered.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} - ${
@@ -1756,7 +1757,7 @@ async function giveGrants(actor, item, grants, name) {
     }
     let chosenType = "";
     if (definition.uaType === "both") {
-      chosenType = await foundry.applications.api.DialogV2.wait({
+      chosenType = await dialogWait({
         classes: ["dbu-dialog"],
         window: { title: `${definition.name} - Type` },
         content: "",
@@ -1909,7 +1910,7 @@ async function madeByOption(actor, item, option) {
       WEAPON_TYPES[each.weaponType]?.label ?? each.weaponType})`)}</option>`).join("")}</select></label>`;
   let picked = null;
   while (!picked) {
-    const answer = await foundry.applications.api.DialogV2.wait({
+    const answer = await dialogWait({
       classes: ["dbu-dialog"], window: { title: `${option.name} - Installed Weapons` },
       content: `<p class="dbu-respond-hint">Grade ${grade}, ${qualityIds.map(id => getTrait(id)?.name ?? id).join(", ")}${(count > 1) ? " - two different Weapon Types" : ""}.</p>
         ${Array.from({ length: count }, (each, index) => select(index + 1)).join("")}`,
