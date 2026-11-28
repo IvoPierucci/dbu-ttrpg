@@ -299,6 +299,20 @@ check("Enhanced Organism's Save: Impulsive taken, Cognitive (the Android's own) 
      RTS.includes("const empty = emptyGrantRows(item, spec);")], [true, true, true, true, true]);
 }
 
+// Every race given headless (2026-11-28): a Unique Ability of either Type it gives (Namekian Techniques' Telekinesis) and a Talent it gives
+// that asks something get their pages too; a page short of a choice leaves that part empty, never asks.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const keys = id => RAC.grantSpecsOf(getTrait(id)).map(spec => spec.key);
+  const tele = Object.entries(getTrait("namekian-techniques") ?? {}).some(([key, value]) => (key === "grantsUnique") && String(value).includes("telekinesis"));
+  globalThis.foundry.applications = { api: { DialogV2: { wait: async () => { throw new Error("asked"); } } } };
+  const short = await RAC.racialItemFrom(getTrait("skills-of-a-genius"), null, { answers: { choices: { 1: "investigation" }, options: {}, optionChoices: {} } });
+  delete globalThis.foundry.applications;
+  check("Telekinesis's Type a page; Skills of a Genius answered short given with its first Skill only, nothing asked",
+    [!tele || keys("namekian-techniques").includes("type:telekinesis"), short.data.system.chosen.map(entry => entry.key), short.data.system.script],
+    [true, ["skills-of-a-genius"], ""]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

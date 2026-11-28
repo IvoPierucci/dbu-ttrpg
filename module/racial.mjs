@@ -838,20 +838,22 @@ export async function askOptions(trait, options, count = Math.max(1, Number(trai
  * Performance's "Upon gaining this Talent, select an effect"): its Item's data with the scripts written in and the choices
  * kept - or null when backed out of. One with nothing to choose, as it was.
  */
-export async function answeredTalent(data, trait, actor) {
+export async function answeredTalent(data, trait, actor, answers = undefined) {
   const groups = optionGroupsOf(trait);
   if (!trait?.choose && !groups.length) return data;
   const chosen = [];
-  const script = await answered({ ...trait, script: data.system.script }, chosen, actor);
+  // `answers`: its page's on its race's window (a Talent a race's Trait gives - Skills of a Genius's three Skills); null, left empty.
+  const script = (answers === null) ? "" : await answered({ ...trait, script: data.system.script }, chosen, actor, "", answers?.choices ?? null);
   if (script === null) return null;
   const scripts = [script];
   for (const group of groups) {
-    const picked = await askOptions(trait, group.options, group.count, group.effect);
+    const picked = (answers !== undefined) ? (answers?.options?.[group.effect] ?? []) : await askOptions(trait, group.options, group.count, group.effect);
     if (!picked) return null;
     for (const id of picked) {
       const option = group.options.find(entry => entry.id === id);
+      if (!option) continue;
       chosen.push({ key: "option", value: option.id, label: option.name });
-      const own = await answered(option, chosen, actor);
+      const own = await answered(option, chosen, actor, "", (answers !== undefined) ? { 1: answers?.optionChoices?.[id] ?? "" } : null);
       if (own === null) return null;
       scripts.push(`#@ option ${option.id} | ${option.name}\n${own}\n#@ end`);
     }
@@ -1044,6 +1046,8 @@ export async function answered(source, chosen, actor = null, preset = "", preset
   // Named by what gives it - Plant Monster's Elemental (Plantlife) - not asked, where it is among those offered. `presets` ({1, 2, 3}):
   // answered already, on the Trait's page of its race's window (traitPage) - "" a None.
   const given = async (which, kind, earlier) => {
+    // Given a page's answers, one not there is left unanswered - never asked in a window of its own.
+    if (presets && !(which in presets)) return null;
     const value = presets?.[which];
     if (value === undefined) return undefined;
     const pair = (await choicesFor(kind, source, { actor, earlier })).find(([each]) => each === value);
@@ -1210,6 +1214,14 @@ export function grantSpecsOf(trait, optionIds = []) {
     }
   }
   if (unique) specs.push({ kind: "unique", key: "unique", most: unique, type: uniqueType });
+  // A Unique Ability it gives that is either Type (Telekinesis): which, asked. A Talent it gives that asks something (Skills of a Genius).
+  const options = optionIds.map(id => getTrait(id)).filter(Boolean);
+  for (const id of new Set([...listOf(trait.grantsUnique), ...options.flatMap(option => listOf(option.grantsUnique))])) {
+    if (getTrait(id)?.uaType === "both") specs.push({ kind: "uaType", key: `type:${id}`, unique: id });
+  }
+  for (const id of new Set([...listOf(trait.grantsTalent), ...options.flatMap(option => listOf(option.grantsTalent))])) {
+    if (traitPageable(getTrait(id))) specs.push({ kind: "talentQuestions", key: `talent:${id}`, talent: id });
+  }
   if (listOf(trait.grantsTalentChoiceFrom).length) specs.push({ kind: "talent", key: "talent" });
   if (trait.grantsFactorTraitOf) specs.push({ kind: "factor", key: "factor", factor: String(trait.grantsFactorTraitOf) });
   if (trait.dragonBall) specs.push({ kind: "dragonBall", key: "dragonBall" });
@@ -1262,6 +1274,8 @@ export function grantTitle(spec) {
   if (spec.kind === "talent") return "a Talent";
   if (spec.kind === "factor") return `a ${factorName(spec.factor)} Factor Trait`;
   if (spec.kind === "weapons") return "Installed Weapons";
+  if (spec.kind === "uaType") return `${getTrait(spec.unique)?.name ?? spec.unique}'s Type`;
+  if (spec.kind === "talentQuestions") return getTrait(spec.talent)?.name ?? spec.talent;
   return "your Dragon Ball";
 }
 
@@ -1303,6 +1317,13 @@ export async function grantPage(spec, trait, actor, { count = spec.count ?? 1, e
   }
   if (spec.kind === "factor") {
     return { html: row("Factor Trait", select("grant", factorGrantOffered(actor, spec.factor).map(each => [each.id, each.name]))), ...one("grant") };
+  }
+  if (spec.kind === "uaType") {
+    return { html: row("Type", select("grant", [["magical", "Magical"], ["technical", "Technical"]], false)), ...one("grant") };
+  }
+  if (spec.kind === "talentQuestions") {
+    const talent = getTrait(spec.talent);
+    return traitPage(talent, actor, optionGroupsOf(talent));
   }
   if (spec.kind === "dragonBall") {
     const sizes = [["nano", "Nano"], ["tiny", "Tiny"], ["small", "Small"]];
@@ -1491,6 +1512,8 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
   // a question, as any other Trait is.
   const together = answers;
   let own = (together === null) ? "" : await answered(trait, chosen, actor, presetChoice, together?.choices ?? null);
+  // A page's answer short of a choice: that part left empty, the Trait given all the same.
+  if ((own === null) && together) own = "";
   if (own === null) return null;
   const scripts = [own];
   const texts = [];
@@ -2099,7 +2122,8 @@ async function giveGrants(actor, item, grants, name, answers = undefined) {
       continue;
     }
     let chosenType = "";
-    if (definition.uaType === "both") {
+    if ((definition.uaType === "both") && (answers !== undefined)) chosenType = answers[`type:${definition.id}`] || "magical";
+    else if (definition.uaType === "both") {
       chosenType = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"],
         window: { title: `${definition.name} - Type` },
@@ -2150,7 +2174,8 @@ async function giveGrants(actor, item, grants, name, answers = undefined) {
     }
     if (talentsHeld.has(id)) continue;
     // Marked as a Racial Trait's: the Progression tab neither offers it nor takes it away.
-    const data = await answeredTalent(talentItemFrom(talent), talent, actor);
+    const asked = (answers !== undefined) && traitPageable(talent) ? (answers[`talent:${id}`] ?? null) : undefined;
+    const data = await answeredTalent(talentItemFrom(talent), talent, actor, asked);
     if (!data) continue;
     data.flags["dbu-ttrpg"].fromTrait = item.flags?.["dbu-ttrpg"]?.sourceId ?? item.id;
     created.push(data);
