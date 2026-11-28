@@ -17,9 +17,9 @@
 const REWIND = Symbol("rewind");
 const MORE = Symbol("more");
 /**
- * What a question's default button answers while it cannot be answered yet - a Multi-Option's "choose two" with one ticked: Next stays
- * off until it can (the user's, 2026-11-27). Symbol.for, so a module asking need not import this one; outside a wizard, a dialog closes
- * with it and its asker reads it as not answered, as before.
+ * What a question's default button answers while it cannot be answered yet - a Multi-Option's "choose two" with one ticked: Next pressed
+ * stays on that question, its hint ("Choose 2.") said again, rather than moving on (the user's, 2026-11-27). Symbol.for, so a module
+ * asking need not import this one; outside a wizard, a dialog closes with it and its asker reads it as not answered, as before.
  */
 export const NOT_YET = Symbol.for("dbu-ttrpg.notYet");
 
@@ -148,7 +148,12 @@ class ChoiceSession {
     const answer = async (button, element, event) => {
       if (!this.pending || (this.pending.index !== index)) return;
       const value = button.callback ? await button.callback(event, element, dialog) : button.action;
-      if (value === NOT_YET) return;
+      if (value === NOT_YET) {
+        const hint = body.querySelector(".dbu-respond-hint");
+        hint?.classList.add("dbu-wizard-needs");
+        ui.notifications.warn(`${title}: ${hint?.textContent?.trim() || "not answered yet."}`);
+        return;
+      }
       this.snapshots[index] = { key, values: snapshot(body) };
       this.answers[index] = value;
       const pending = this.pending;
@@ -173,7 +178,10 @@ class ChoiceSession {
       try { value = main.callback ? await main.callback(new Event("probe"), next, dialog) : main.action; }
       catch (error) { value = null; }
       if (value === NOT_YET) {
-        if (ticket === probing) next.disabled = true;
+        if (ticket !== probing) return;
+        next.disabled = false;
+        next.dataset.done = "0";
+        next.innerHTML = `Next <i class="fa-solid fa-chevron-right"></i>`;
         return;
       }
       const last = await this.isLast(index, value);

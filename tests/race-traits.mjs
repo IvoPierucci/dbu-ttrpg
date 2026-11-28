@@ -165,7 +165,7 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
     [["option 2:1", "option 3:2"], ["choice 1", "choice 2", "option 2:1"], []]);
   delete globalThis.foundry.applications;
   const P = read("templates", "parts", "actor-progression.hbs"), W = read("module", "choice-wizard.mjs");
-  check("Set Racial Options on the Racial Grants while any is left; the last question's Next said Done, closing the window at once; a Multi-Option's Next off until its count is ticked",
+  check("Set Racial Options on the Racial Grants while any is left; the last question's Next said Done, closing the window at once; a Multi-Option's Next, pressed short of its count, staying on it",
     [P.includes('data-action="setRacialOptions"'), P.includes("{{#if racialUnanswered}}"), read("module", "sheets", "actor-character-sheet.mjs").includes("setRacialOptions: DBUCharacterSheet._onSetRacialOptions,"),
      typeof RT.answerRaceTraitQuestions, W.includes("const last = await this.isLast(index, value);"), W.includes("Done <i class=\"fa-solid fa-check\"></i>"),
      W.includes("if (done && !this.pending && (root.querySelector(\".dbu-wizard-body\") === body)) this.hide();"),

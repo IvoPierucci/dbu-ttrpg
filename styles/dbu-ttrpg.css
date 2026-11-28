@@ -6649,6 +6649,9 @@
   justify-content: space-between;
   gap: 8px;
 }
+.application.dbu-choice-wizard .dbu-respond-hint.dbu-wizard-needs {
+  color: #e06c6c;
+}
 .application.dbu-choice-wizard .dbu-wizard-nav button {
   flex: 0 0 auto;
   min-width: 90px;
