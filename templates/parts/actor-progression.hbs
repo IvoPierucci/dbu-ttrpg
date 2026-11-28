@@ -69,6 +69,12 @@
   <section class="panel racial-grants">
     <h3 class="panel-title">
       Racial Grants
+      {{! Racial Options left unanswered as the race gave its Traits (the user's, 2026-11-27): a button beside the title, back to just
+          those; gone once all are answered, here or by each Trait's pencil. }}
+      {{#if racialUnanswered}}
+      <button type="button" class="dbu-manage dbu-set-options" data-action="setRacialOptions"
+              data-tooltip="Left unanswered ({{racialUnanswered.count}}): {{racialUnanswered.names}}">Set Racial Options</button>
+      {{/if}}
       <span class="panel-note">Granted at Power Level 1 &middot; Skill Ranks count toward the rank cap</span>
     </h3>
 
@@ -100,18 +106,6 @@
       <div class="racial-slots racial-skills racial-picks">
         <button type="button" class="benefit-pick{{#unless racialPicks.names}} empty{{/unless}}" data-action="pickRacialTraits"
                 {{#if racialPicks.names}}data-tooltip="{{racialPicks.names}}"{{/if}}><span class="benefit-text">{{#if racialPicks.names}}{{racialPicks.names}}{{else}}Choose&hellip;{{/if}}</span>{{#if racialPicks.left}}<span class="benefit-left">({{racialPicks.left}} left)</span>{{/if}}{{#if racialPicks.over}}<span class="benefit-over">(over the {{racialPicks.choose}})</span>{{/if}}</button>
-      </div>
-    </div>
-    {{/if}}
-
-    {{#if racialUnanswered}}
-    {{! Racial Options left unanswered as the race gave its Traits (the user's, 2026-11-27): back to just those; gone once all are answered,
-        here or by each Trait's pencil. }}
-    <div class="racial-row">
-      <span class="racial-row-label">Racial Options</span>
-      <div class="racial-slots racial-skills racial-picks">
-        <button type="button" class="benefit-pick empty" data-action="setRacialOptions"
-                data-tooltip="Left unanswered: {{racialUnanswered.names}}"><span class="benefit-text">Set Racial Options&hellip;</span><span class="benefit-left">({{racialUnanswered.count}} left)</span></button>
       </div>
     </div>
     {{/if}}

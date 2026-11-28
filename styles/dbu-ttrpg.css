@@ -6682,3 +6682,10 @@
   margin-left: auto;
   max-width: 45%;
 }
+
+/* Set Racial Options beside the Racial Grants' title (the user's, 2026-11-27). */
+.dbu-ttrpg .panel-title .dbu-set-options {
+  align-self: center;
+  margin: 0 auto 0 8px;
+  text-transform: none;
+}

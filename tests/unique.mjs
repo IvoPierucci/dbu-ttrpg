@@ -1224,8 +1224,8 @@ const check = (label, actual, expected) => {
      CSS.includes(".dbu-ttrpg .benefit-pick .benefit-text {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;"),
      !CSS.includes(".dbu-ttrpg .progression-table select {\n  width: 100%;\n  min-width: 130px;") && !CSS.includes(".dbu-ttrpg .dbu-combo {\n  position: relative;\n  min-width: 130px;") && !CSS.includes(".benefit-cell {\n  min-width: 200px;")],
     // Three colgroups: the Power Level table, the Character Perks, and the one row above them lined up with the first.
-    // Five Benefits buttons: the Racial Grants' Skill Ranks, Racial Trait picks and Set Racial Options (2026-11-27), a row's, a Perk's.
-    [true, 3, 5, 3, true, true]);
+    // Four Benefits buttons: the Racial Grants' Skill Ranks and Racial Trait picks (2026-11-27), a row's, a Perk's.
+    [true, 3, 4, 3, true, true]);
 }
 
 // --- Trait files read a few at a time, one failing asked for again ------------------------------------------------------------------
