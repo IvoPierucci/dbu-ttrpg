@@ -219,6 +219,29 @@ check("an exchanged Factor Trait stands for what it replaced: exchangeable again
     [await rowsWith(1), await rowsWith(2)], [[""], ["", "investigation"]]);
 }
 
+// The user's, 2026-11-28: Enhanced Organism's "additional" Saving Throw not the Android's own Cognitive; a Multi-Option's second pick added
+// beside the first; Functional Purpose kept where its exchange was not said, and asked by Set Racial Options.
+{
+  const RAC = await import(modUrl("racial.mjs"));
+  const androidActor = { type: "character", system: { race: "android", racialPicks: [] }, items: [], getFlag: () => undefined };
+  const with_ = async save => (await RAC.racialItemFrom(getTrait("technological-being"), androidActor, { answers: { choices: {},
+    options: { 2: ["enhanced-organism"], 3: ["surging-power", "hyper-resilience"] }, optionChoices: { "enhanced-organism": save } } }))
+    .data.system.chosen.filter(entry => entry.key === "option").map(entry => entry.value);
+  check("Enhanced Organism's Save: Impulsive taken, Cognitive (the Android's own) not offered - the Option left unanswered",
+    [await with_("impulsive"), await with_("cognitive")], [["enhanced-organism", "surging-power", "hyper-resilience"], ["surging-power", "hyper-resilience"]]);
+  const being = { id: "i-tb", type: "racial", system: { chosen: [{ key: "option", value: "enhanced-organism" }] }, flags: { "dbu-ttrpg": { sourceId: "technological-being" } } };
+  const purpose = { id: "i-fp", type: "racial", system: { chosen: [] }, flags: { "dbu-ttrpg": { sourceId: "functional-purpose" } } };
+  const withEO = { ...androidActor, items: [being, purpose] };
+  check("Functional Purpose held with Enhanced Organism chosen: an exchange owed, so Set Racial Options lists it",
+    [RT.owedExchange(withEO, purpose), RT.owedExchange(withEO, being)], ["alternate-upbringing", ""]);
+  const RACSRC = read("module", "racial.mjs"), RTS = read("module", "race-traits.mjs");
+  check("wired: a Multi-Option's second pick beside the first; Functional Purpose given where its exchange was not said; its exchange page in Set Racial Options",
+    [RACSRC.includes("const old = replacing || ((sameEffect.length >= asks) ? (sameEffect[0] ?? \"\") : \"\");"),
+     RTS.includes("    else await give(file);"),
+     RTS.includes("if (picked && actor.items.get(swap.item.id) && await exchangeRaceTrait(actor, swap.item.id, picked)) written++;")],
+    [true, true, true]);
+}
+
 // Its text names what it replaced in brackets, as a Primary's Factor Trait prints it - not where it names one already.
 {
   const RAC = await import(modUrl("racial.mjs"));

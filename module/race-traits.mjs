@@ -198,9 +198,11 @@ export async function addRaceTraitFiles(actor, files) {
       await give(file);
       continue;
     }
-    // Closed before which was said: none given in its place - Refresh Racial Traits asks again.
+    // Not said which (its window closed first): the race Trait itself kept, its questions left - Set Racial Options asks which then
+    // (the user's, 2026-11-28: "si no se eligió, sigue teniendo Functional Purpose").
     const replacing = getTrait(answers.get(`exchange:${file.id}`) ?? "");
     if (replacing) await give(replacing, { exchangedFor: file.id });
+    else await give(file);
   }
   return made;
 }
@@ -360,7 +362,14 @@ export async function resetRaceTraits(actors) {
 
 /** Its Racial and Factor Traits with something left unanswered (unansweredOf), in the Traits tab's order. */
 export function unansweredRaceTraits(actor) {
-  return ownedRacialTraits(actor).filter(item => !item.system?.other && !item.system?.transformation && unansweredOf(item).length);
+  return ownedRacialTraits(actor).filter(item => !item.system?.other && !item.system?.transformation
+    && (unansweredOf(item).length || owedExchange(actor, item)));
+}
+
+/** The Factor a race Trait it still holds must be exchanged for - Functional Purpose kept with Enhanced Organism chosen - or "". */
+export function owedExchange(actor, item) {
+  if (!isRaceTraitItem(item)) return "";
+  return forcedExchange(String(item.flags?.[SCOPE]?.sourceId ?? ""), Array.from(actor?.items ?? []).map(each => each.system?.chosen ?? []));
 }
 
 /**
@@ -382,12 +391,20 @@ export async function answerRaceTraitQuestions(actor) {
       which: gaps.filter(gap => gap.kind === "choice").map(gap => gap.which),
       known: { 1: value(file?.id), 2: value(`${file?.id}#2`), 3: value(`${file?.id}#3`) } };
   };
-  const pages = items.map(item => ({ item, ...askedOf(item) })).filter(entry => entry.file && traitPageable(entry.file, entry.groups))
+  // One an Option chose to exchange away (Functional Purpose with Enhanced Organism): which Factor Trait, in place of its own questions.
+  const swaps = items.filter(item => owedExchange(actor, item)).map(item => ({ key: `swap:${item.id}`, title: `${item.name} - exchanged`, item,
+    build: async () => exchangePage(getTrait(item.flags?.[SCOPE]?.sourceId ?? ""), owedExchange(actor, item)) }));
+  const pages = [...items.filter(item => !owedExchange(actor, item)).map(item => ({ item, ...askedOf(item) }))
+    .filter(entry => entry.file && traitPageable(entry.file, entry.groups))
     .map(entry => ({ key: `item:${entry.item.id}`, title: entry.item.name, entry,
-      build: () => traitPage(entry.file, actor, entry.groups, { which: entry.which, known: entry.known }) }));
+      build: () => traitPage(entry.file, actor, entry.groups, { which: entry.which, known: entry.known }) })), ...swaps];
   const answers = await askPages(`${actor.name} - Racial Options`, () => pages);
   let written = 0;
-  for (const page of pages) {
+  for (const swap of swaps) {
+    const picked = answers.get(swap.key);
+    if (picked && actor.items.get(swap.item.id) && await exchangeRaceTrait(actor, swap.item.id, picked)) written++;
+  }
+  for (const page of pages.filter(each => each.entry)) {
     const answer = answers.get(page.key);
     const item = actor.items.get(page.entry.item.id);
     if (!answer || !item) continue;

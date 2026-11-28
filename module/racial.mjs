@@ -67,7 +67,7 @@
 
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { isCharacter, isMinion } from "./actor-types.mjs";
-import { getRace, isMinionRace, subraceName } from "./races.mjs";
+import { getRace, isMinionRace, racialSavingThrows, subraceName } from "./races.mjs";
 import { racesOf } from "./fusion.mjs";
 import { grantedTechniqueItems, isTechniqueData, techniqueItemsFrom, whyNoNewTechnique } from "./full-power.mjs";
 import { traitAside } from "./aside.mjs";
@@ -691,7 +691,10 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [], cou
   // "Select an additional Saving Throw to apply your Racial Saving Throw Bonus to" (Enhanced Organism's).
   if (kind === "savingThrow") {
     const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
-    return Object.keys(DBUCharacterData.SAVING_THROWS).map(key => [key, key.charAt(0).toUpperCase() + key.slice(1)]);
+    // "Additional": not one its race's Racial Saving Throw Bonus applies to already - the Android's Cognitive (the user's, 2026-11-28).
+    const own = new Set(actor ? racialSavingThrows(actor.system?.race, actor.system?.racialSavingThrow) : []);
+    return Object.keys(DBUCharacterData.SAVING_THROWS).filter(key => !own.has(key))
+      .map(key => [key, key.charAt(0).toUpperCase() + key.slice(1)]);
   }
   if (kind === "knowledge") {
     const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
@@ -1216,7 +1219,8 @@ export async function racialItemFrom(trait, actor = null, { presetOption = "", p
       chosen.push({ key: "option", value: option.id, label: option.name });
       // Its own choice as its page answered it - not there, the Option not chosen either, asked whole later.
       const missing = together && option.choose && !(option.id in (together.optionChoices ?? {}));
-      const script = missing ? null : await answered(option, chosen, null, together?.optionChoices?.[option.id] ?? "");
+      const script = missing ? null : await answered(option, chosen, actor, "",
+        together ? { 1: together.optionChoices?.[option.id] ?? "" } : null);
       if ((script === null) && together) {
         chosen.length = before;
         continue;
@@ -1992,9 +1996,13 @@ export async function changeRacialOption(item, optionId, replacing = "", prepare
   const option = options.find(entry => entry.id === optionId);
   const had = chosenOptions(item).map(each => each.id);
   if (!option || had.includes(optionId)) return false;
-  // The one it takes the place of: the dropdown's own, or the one chosen for the same Option effect.
+  // The one it takes the place of: the dropdown's own, or the one chosen for the same Option effect - none while that effect has fewer
+  // chosen than it asks (Technological Being's (3) "choose two": the second added beside the first - the user's, 2026-11-28).
   const trait = getTrait(sourceId);
-  const old = replacing || had.find(id => optionEffectOf(getTrait(id), trait) === optionEffectOf(option, trait)) || "";
+  const effect = optionEffectOf(option, trait);
+  const sameEffect = had.filter(id => optionEffectOf(getTrait(id), trait) === effect);
+  const asks = optionGroupsOf(trait).find(group => group.effect === effect)?.count ?? 1;
+  const old = replacing || ((sameEffect.length >= asks) ? (sameEffect[0] ?? "") : "");
 
   // `prepared`: its own choices already asked ({script, extra} - Set Racial Options asks them all first).
   const extra = prepared ? [...prepared.extra] : [];
